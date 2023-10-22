@@ -135,6 +135,11 @@ str* init_string_len(char *strlit, size_t num);
 void free_string(str *str_struct);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief an intermediate function used to faciliate garbage cleanup 
+ *
+ * @param s A string container of type str
+ */
 void cleanup_string(str **s);
 // --------------------------------------------------------------------------------
 /**

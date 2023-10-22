@@ -53,7 +53,8 @@ of ``buff`` is less than the size of ``string`` plus the null terminator,
 the function will allocate enoug memory for the string and its null terminator.
 A user may decide to invoke a value of ``buff`` that is larger than the initial 
 string, if the string may grow in the future.  This will prevent the need 
-for allocating memory which can be time consuming.
+for allocating memory which can be time consuming.  This method has a
+space complexity of :math:`O(1)` and a time complexity of :math:`O(n)`.
 
 .. code-block:: bash 
 
@@ -170,7 +171,10 @@ that only works with ``gcc`` and ``clang`` compilers.
 
 See the :ref:`init string <init_string>` Section for a description of all 
 attributes.  The examples below show how to use this macro, notice that the 
-``free_string`` function is not called.
+``free_string`` function is not called.  While this initializing function will 
+automate the process of freeing memory, a user can still use the ``free_string``
+function if they decide to free memory manually. This method has a
+space complexity of :math:`O(1)` and a time complexity of :math:`O(n)`. 
 
 Example 1
 ---------
@@ -187,7 +191,7 @@ name and the macro.  The equal sign is accounted for in the macro.
    #include "print.h"
 
    int main() {
-       str *one init_string("Hello World!");
+       str *one init_string_gbc("Hello World!");
        print(one);
        print(string_length(one));
        // - This command is only used for demonstration.  Users should not try
@@ -217,7 +221,7 @@ name and the macro.  The equal sign is accounted for in the macro.
    #include "print.h"
 
    int main() {
-       str *one init_string("Hello World!", 30);
+       str *one init_string_gbc("Hello World!", 30);
        print(one);
        print(string_length(one));
        // - This command is only used for demonstration.  Users should not try
@@ -232,5 +236,120 @@ name and the macro.  The equal sign is accounted for in the macro.
    >> 11 
    >> 30
 
+Free String 
+===========
+The ``free_string`` function can be used to free all memory in an ``str``
+Struct to include the Struct itself. This method has a
+space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
 
+.. code-block:: bash 
 
+   void free_string(str str_struct);
+
+Parameters 
+----------
+
+- :c:`str_struct`: A string struct of type ``str``
+
+Example 
+-------
+
+.. code-block:: c 
+
+   #include "str.h"
+   #include "print.h"
+
+   int main() {
+       str *one init_string_gbc("Hello World!", 30);
+       free_string(one);
+       return 0;
+   }
+
+Get String
+==========
+While the user can directly interface with the ``str`` struct, it is not wise 
+to do so, since it enables the user to accidentally change an attribute that
+could cause undefined behavior.  The ``get_string`` function allows a user 
+to access the string variable in the ``str`` struct. This method has a
+space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
+
+.. code-block:: bash 
+
+   char* get_string(str *str_struct);
+
+Parameters 
+----------
+
+- :c:`str_struct`: A string container of type ``str``.
+
+Returns 
+-------
+
+- :c:`string`: A string of type ``char*``
+
+Example 
+-------
+The following example shows how the ``get_string`` function can be used to 
+retrieve a string.
+
+.. code-block:: c 
+
+   #include "str.h"
+   #include "print.h"
+
+   int main() {
+       str *one init_string("Hello World!");
+       print(get_string(one));
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Hello World!
+
+String Length 
+=============
+While the user can directly interface with the ``str`` struct, it is not wise 
+to do so, since it enables the user to accidentally change an attribute that
+could cause undefined behavior.  The ``string_length`` function allows a user 
+to access the length of the string variable in the ``str`` struct. Unlike 
+string literals in the C language, this container does not rely on a null 
+terminator to determine the string length, but instead an attribute of the 
+``str`` struct. This method has a
+space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
+
+.. code-block:: bash 
+
+   size_t string_length(str *str_struct);
+
+Parameters 
+----------
+
+- :c:`str_struct`: A string container of type ``str``.
+
+Returns 
+-------
+
+- :c:`len`: The length of the string in the ``str`` container minus the null terminator.
+
+Example 
+-------
+The following example shows how the ``get_string`` function can be used to 
+retrieve a string.
+
+.. code-block:: c 
+
+   #include "str.h"
+   #include "print.h"
+
+   int main() {
+       str *one init_string("Hello World!");
+       print(string_length(one));
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> 11
