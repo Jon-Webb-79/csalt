@@ -123,7 +123,9 @@ Contribute to Code Base
 
 #. Install packages to virtual environments from ``requirements.txt`` file
 
-    - ``pip install -r requirements.txt``
+   .. code-block:: bash 
+
+      pip install -r requirements.txt
 
 #. At this point you can build the files in the same way described in the 
    previous section and contribute to documentation.
