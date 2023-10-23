@@ -111,6 +111,84 @@ void test_string_init_post_free(void **state)
     assert_string_equal(get_string(one), "Hello!");
     free_string(one);
 }
+// --------------------------------------------------------------------------------
+
+/**
+ * Verify that get_string function fails properly whena a null str struct 
+ * is passed to it. Supressed stderr for this test
+ */
+void test_get_string_fail_one(void **state) {
+    (void) state;
+    // Redirect stderr to /dev/null
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    char *result = get_string(NULL);
+    assert_null(result);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Verify that get_string function fails properly when a str struct containing
+ * a null pointer to data is passed to it. Supressed stderr for this test
+ */ 
+void test_get_string_fail_two(void **state) {
+    (void) state;
+    // Redirect stderr to /dev/null
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    str string_struct = { .data = NULL, .len = 0, .alloc = 0 };
+    char *result = get_string(&string_struct);
+    assert_null(result);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+} 
+// --------------------------------------------------------------------------------
+
+/**
+ * Verify string_length will fail nicely when a NULL struct is passed to it.
+ * Suppressed stderr for this test.
+ */
+void test_string_length_fail_one(void **state) {
+    (void) state;
+    // Redirect stderr to /dev/null
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    size_t result = string_length(NULL);
+    assert_int_equal(result, -1);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Verify string_length will fail nicely when a NULL data pointer is passed to 
+ * it.  Suppressed stderr for this test.
+ */
+void test_string_length_fail_two(void **state) {
+    (void) state;
+    // Redirect stderr to /dev/null
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    str string_struct = { .data = NULL, .len = 0, .alloc = 0 };
+    size_t result = string_length(&string_struct);
+    assert_int_equal(result, -1);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+}
 // ================================================================================
 // ================================================================================
 // eof

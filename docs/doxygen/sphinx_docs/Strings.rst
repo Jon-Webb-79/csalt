@@ -69,7 +69,7 @@ Parameters
 Returns
 -------
 
-- :c:`str`: A string containter of type ``str``.
+- :c:`str`: A string containter of type ``str``. Will return NULL and print to stderr if a memory allocation error occurs.
 
 Example 1
 ---------
@@ -285,7 +285,7 @@ Parameters
 Returns 
 -------
 
-- :c:`string`: A string of type ``char*``
+- :c:`string`: A string of type ``char*``. Will return NULL and print to stderr if input points to NULL struct or string.
 
 Example 
 -------
@@ -326,7 +326,7 @@ space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`.
 Parameters 
 ----------
 
-- :c:`str_struct`: A string container of type ``str``.
+- :c:`str_struct`: A string container of type ``str``.  Will return -1 if input points to NULL struct or string.
 
 Returns 
 -------

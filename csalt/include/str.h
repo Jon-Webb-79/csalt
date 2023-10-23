@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -149,10 +150,10 @@ void cleanup_string(str **s);
  * a user to avoid directly interacting with the struct which could cause
  * undefined behavior if the user accidentally modified a value.
  *
- * @param string A string container of type str 
+ * @param str_struct A string container of type str 
  * @return The string encapsulated in the struct as a literal
  */
-char* get_string(str* string);
+char* get_string(str* str_struct);
 // --------------------------------------------------------------------------------
 
 /**
@@ -162,10 +163,13 @@ char* get_string(str* string);
  * to directly interact with the Struct which could cause undefined behavior
  * if the user accidentally modified a value.
  *
- * @param string A string container of type str 
+ * @param str_struct A string container of type str 
  * @return The length of a string 
  */
-size_t string_length(str* string);
+size_t string_length(str* str_struct);
+// --------------------------------------------------------------------------------
+
+bool insert_string(str *str_struct, char *string);
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

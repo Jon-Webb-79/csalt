@@ -13,13 +13,15 @@
 // Include modules here
 
 #include "include/str.h"
+#include <string.h>
 
 
 str* init_string_nol(const char *strlit) {
     // Allocate memory for the struct
     str *s = (str *)malloc(sizeof(str));
     if (!s) {
-        fprintf(stderr, "Failed to allocate memory for the string struct\n");
+        int errnum = errno;
+        fprintf(stderr, "Struct allocation error: %s\n", strerror(errnum));
         return NULL;
     }
     // Find the length of the string
@@ -27,8 +29,9 @@ str* init_string_nol(const char *strlit) {
     // Allocate memory for the data variable
     s->data = (char *)malloc(s->len + 1); // +1 for the null-terminator
     if (!s->data) {
+        int errnum = errno;
         free(s); // Make sure to free previously allocated memory to avoid leaks
-        fprintf(stderr, "Failed to allocate memory for string data\n");
+        fprintf(stderr, "String allocation error: %s\n", strerror(errnum));
         return NULL;
     }
     // Copy the string to the data variable
@@ -51,15 +54,17 @@ str* init_string_len(char *strlit, size_t num) {
     // Allocate memory for struct
     str* new_struct = (str*)malloc(sizeof(str));
     if (!new_struct) {
-        fprintf(stderr, "Struct Memory Allocation failed\n");
+        int errnum = errno;
+        fprintf(stderr, "Struct allocation error: %s\n", strerror(errnum));
         return NULL; 
     }
 
     // Allocate memory for string, accounting for the desired length
     char* new_data = malloc(sizeof(char) * alloc_len);
     if (!new_data) {
+        int errnum = errno;
         free(new_struct);
-        fprintf(stderr, "Memory Allocation Failed\n");
+        fprintf(stderr, "String allocation error: %s\n", strerror(errnum));
         return NULL;
     }
 
@@ -77,13 +82,29 @@ str* init_string_len(char *strlit, size_t num) {
 // ================================================================================
 // ================================================================================
 
-char* get_string(str* string) {
-    return string->data;
+char* get_string(str* str_struct) {
+    if (str_struct == NULL) {
+        fprintf(stderr, "get_string failed, empty struct\n");
+        return NULL;
+    }
+    if (str_struct->data == NULL) {
+        fprintf(stderr, "get_string failed, empty string\n");
+        return NULL;
+    }
+    return str_struct->data;
 }
 // --------------------------------------------------------------------------------
 
-size_t string_length(str* string) {
-    return string->len;
+size_t string_length(str* str_struct) {
+    if (str_struct == NULL) {
+        fprintf(stderr, "string_length failed, empty struct\n");
+        return -1;
+    }
+    if (str_struct->data == NULL) {
+        fprintf(stderr, "string_length failed, empty string\n");
+        return -1;
+    }
+    return str_struct->len;
 }
 // ================================================================================
 // ================================================================================
@@ -101,6 +122,38 @@ void cleanup_string(str **s) {
         free_string(*s);
     }
 }
+// --------------------------------------------------------------------------------
+
+bool insert_string_lit(str *str_struct, char *string, size_t index) {
+    if (!str_struct || !string) {
+        fprintf(stderr, "Null pointer provided to insert_string_lit.\n");
+        return false;
+    }
+    if (index > str_struct->len) {  // Allow insertion at the end by checking for > instead of >=
+        fprintf(stderr, "String insert location out of bounds\n");
+        return false;
+    }
+    size_t insert_len = strlen(string);
+    size_t new_len = str_struct->len + insert_len;  // Length after insertion
+    if (str_struct->alloc <= new_len) {  // Check if <= to ensure space for null terminator
+        size_t new_alloc = new_len + 1;
+        char *ptr = (char*)realloc(str_struct->data, new_alloc);
+        if (ptr == NULL) {
+            int errnum = errno;
+            fprintf(stderr, "String Realloc Failed: %s\n", strerror(errnum));
+            return false;
+        }
+        str_struct->data = ptr;
+        str_struct->alloc = new_alloc;
+    }
+    memmove(str_struct->data + index + insert_len, 
+            str_struct->data + index, 
+            str_struct->len - index + 1);  // +1 to include null terminator
+    memcpy(str_struct->data + index, string, insert_len);
+    str_struct->len = new_len;  // Update the length
+    return true;
+}
+
 // ================================================================================
 // ================================================================================
 // eof

@@ -29,7 +29,11 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_string_init_two_var_less),
         cmocka_unit_test(test_string_init_one_var_gbc),
         cmocka_unit_test(test_string_init_two_var_gbc),
-        cmocka_unit_test(test_string_init_two_var_less_gbc)
+        cmocka_unit_test(test_string_init_two_var_less_gbc),
+        cmocka_unit_test(test_get_string_fail_one),
+        cmocka_unit_test(test_get_string_fail_two),
+        cmocka_unit_test(test_string_length_fail_one),
+        cmocka_unit_test(test_string_length_fail_two)
 	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

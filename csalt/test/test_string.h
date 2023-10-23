@@ -21,6 +21,8 @@
 #include <setjmp.h>
 #include <stdint.h>
 #include <cmocka.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "../include/str.h"
 
@@ -30,6 +32,10 @@ void test_string_init_two_var_less(void **state);
 void test_string_init_one_var_gbc(void **state);
 void test_string_init_two_var_gbc(void **state);
 void test_string_init_two_var_less_gbc(void **state);
+void test_get_string_fail_one(void **state);
+void test_get_string_fail_two(void **state);
+void test_string_length_fail_one(void **state);
+void test_string_length_fail_two(void **state);
 #endif /* test_str_H */
 // ================================================================================
 // ================================================================================
