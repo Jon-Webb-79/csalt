@@ -236,6 +236,18 @@ bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index);
  * @return true if operation is succesful, false otherwise with stderr printout
  */
 bool trim_string(str *str_sturct);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Creates a deep copy of one string container
+ *
+ * This function will create a deep copy of an input string container to include 
+ * the memory allocation 
+ *
+ * @param str_struct A string container of type str 
+ * @return A string container of type str
+ */
+str* copy_string(str *str_struct);
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

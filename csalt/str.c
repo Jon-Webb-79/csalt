@@ -220,6 +220,12 @@ bool trim_string(str *str_struct) {
     str_struct->alloc = str_struct->len + 1;
     return true;
 }
+// --------------------------------------------------------------------------------
+
+str* copy_string(str *str_struct) {
+    str *one = init_string_len(str_struct->data, str_struct->alloc);
+    return one;
+}
 // ================================================================================
 // ================================================================================
 // eof

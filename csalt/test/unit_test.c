@@ -44,7 +44,8 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_trim_string_equal),
         cmocka_unit_test(test_trim_string_greater),
         cmocka_unit_test(test_trim_string_error_one),
-        cmocka_unit_test(test_trim_string_error_two)
+        cmocka_unit_test(test_trim_string_error_two),
+        cmocka_unit_test(test_copy_string)
 	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

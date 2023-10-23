@@ -643,13 +643,46 @@ Example where a NULL struct is passed to function.
    >> Null pointer provided to trim_string
    >> false
 
-Resize String 
-=============
-TBD
-
 Copy String 
 ===========
-TBD
+The ``copy_string`` function will create a deep copy of a string container to
+include the memory allocation.
+
+.. code-block:: c 
+
+   str* copy_string(str *str_struct);
+
+Parameters 
+----------
+
+- :c:`str_struct`: A string container of type ``str``
+
+Returns
+-------
+
+- :c:`str_copy`: A copy of the input ``str`` struct.
+
+Example 
+-------
+
+.. code-block:: c 
+
+   #include "str.h"
+   #include "print.h"
+
+   int main() {
+       str *one init_string("Hello", 20);
+       str *two = copy_string(one);
+       print(get_string(two));
+       print(string_length(two));
+       print(string_memory(two));
+       return 0;
+   }
+.. code-block:: bash 
+
+   >> Hello 
+   >> 5 
+   >> 20
 
 Compare String 
 ==============

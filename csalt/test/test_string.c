@@ -379,4 +379,19 @@ void test_trim_string_error_two(void **state) {
 }
 // ================================================================================
 // ================================================================================
+
+/**
+ * Test to ensure copy_string creates a deep copy of the string passed to it.
+ */
+void test_copy_string(void **state) {
+    str *one init_string("Hello", 20);
+    str *two = copy_string(one);
+    assert_string_equal(get_string(one), get_string(two));
+    assert_int_equal(string_length(one), string_length(two));
+    assert_int_equal(string_memory(one), string_memory(two));
+    free_string(one);
+    free_string(two);
+}
+// ================================================================================
+// ================================================================================
 // eof

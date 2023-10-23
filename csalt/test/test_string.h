@@ -47,6 +47,7 @@ void test_trim_string_equal(void **state);
 void test_trim_string_greater(void **state);
 void test_trim_string_error_one(void **state);
 void test_trim_string_error_two(void **state);
+void test_copy_string(void **state);
 #endif /* test_str_H */
 // ================================================================================
 // ================================================================================
