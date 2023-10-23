@@ -56,7 +56,7 @@ string, if the string may grow in the future.  This will prevent the need
 for allocating memory which can be time consuming.  This method has a
 space complexity of :math:`O(1)` and a time complexity of :math:`O(n)`.
 
-.. code-block:: bash 
+.. code-block:: c
 
    str* init_string(char* string, size_t buff);
 
@@ -146,7 +146,7 @@ described below.
 
 The example below shows how to use these functions.
 
-.. code-block:: bash 
+.. code-block:: c 
    
    #include "print.h"
    #include "str.h"
@@ -242,7 +242,7 @@ The ``free_string`` function can be used to free all memory in an ``str``
 Struct to include the Struct itself. This method has a
 space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
 
-.. code-block:: bash 
+.. code-block:: c
 
    void free_string(str str_struct);
 
@@ -273,7 +273,7 @@ could cause undefined behavior.  The ``get_string`` function allows a user
 to access the string variable in the ``str`` struct. This method has a
 space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
 
-.. code-block:: bash 
+.. code-block:: c
 
    char* get_string(str *str_struct);
 
@@ -319,7 +319,7 @@ terminator to determine the string length, but instead an attribute of the
 ``str`` struct. This method has a
 space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
 
-.. code-block:: bash 
+.. code-block:: c
 
    size_t string_length(str *str_struct);
 
@@ -353,3 +353,271 @@ retrieve a string.
 .. code-block:: bash 
 
    >> 11
+
+Insert String 
+=============
+The ``insert_string`` macro allows a user to insert a string literal 
+or another ``str`` container into a ``str`` container.  The underlying 
+functions will allow a user to insert the struct anywhere into the string.
+This function will return a false if the user supplies data that points to 
+NULL values, or if it is not able to allocate sufficient memory for the string 
+concatenations.  This macro and its underlying functions have a time 
+complexity of :math:`O(a+b)` where :math:`a` and :math:`b` are the lengths
+of the first and second strings.  However, if you insert at the end of string 
+:math:`a` this method will only be of order :math:`O(b)`.  The function also
+has a memory complexity of :math:`O(a+b)` 
+
+.. code-block:: c 
+
+   bool insert_string(str *str_one, char* || str* str_two, size_t index);
+
+Parameters
+----------
+
+- :c:`str_one`: A string container of type ``str``. This is the string that will be inserted into.
+- :c:`str_two`: A string literal or string container of type ``str``.
+- :c:`index`: The index where ``str_two`` will be inserted into ``str_one``.
+
+Returns
+-------
+
+- :c:`err_code`: true if the function executes succesfully, false otherwise with a ``stderr`` print out.
+
+Example 1 
+---------
+This example shows a use where a string literal is inserted into a ``str`` container.
+
+.. code-block:: c 
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *a init_string("Hello");
+       bool result = insert_string(a, " World!", get_length(one));
+       print(result);
+       print(a);
+       print(string_length(one));
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> true
+   >> Hello World!
+   >> 11
+
+Example 2
+---------
+This example shows a user where a ``str`` container is inserted into another 
+``str`` container.
+
+.. code-block:: c 
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *a init_string("Hello");
+       str *b init_string(" World!");
+       bool result = insert_string(a, b, 2);
+       print(result);
+       print(a);
+       print(string_length(one));
+       free_string(one);
+       free_string(two);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> true
+   >> He World!llo
+   >> 11
+
+Example 3
+---------
+This example shows how the function fails when an index out of bounds is
+selected.  The function can also fail for a failure to reallocate memory 
+if required, or if the user passes a NULL ``str`` container or string literal,
+or if one of the ``str`` containers has a NULL pointer to its string.
+
+
+.. code-block:: c 
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *a init_string("Hello");
+       str *b init_string(" World!");
+       bool result = insert_string(a, b, 50);
+       print(result);
+       print(a);
+       print(string_length(one));
+       free_string(one);
+       free_string(two);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> String insert location out of bounds
+   >> false
+   >> Hello
+   >> 5
+
+Underlying Functions 
+--------------------
+The ``insert_string`` macro relies on a ``_Generic`` operator that connects
+the following two functions which can be used in place of the ``insert_string``
+macro.
+
+.. code-block:: bash 
+
+   bool insert_string_lit(str *str_struct, char *string, size_t index);
+   bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index);
+
+.. code-block:: c 
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *a init_string("Hello");
+       str *b init_string(" World!");
+       bool result = insert_string(a, b, 2);
+       print(result);
+       print(a);
+       print(string_length(one));
+       free_string(one);
+       free_string(two);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> true
+   >> He World!llo
+   >> 11
+
+Trim String 
+===========
+The process of initializing a string can lead to an oversized memory allocation 
+that is later deemed un-necessary.  The ``trim_string`` function will downsize 
+the memory to the minimum necessary allocation.  This function will return ``true``
+if succesfully executed and ``false`` if unsuccesful.  The function may return 
+false if the memory is undersized, or if the user passes a NULL struct or string to 
+the function.
+
+.. code-block:: c 
+
+   bool trim_string(str *str_struct);
+
+Parameters 
+----------
+
+- :c:`str_struct`: A string container of type ``str``.
+
+Returns 
+-------
+
+- :c:`err_code`: true if the function executes succesfully, false otherwise with a stderr print out.
+
+Example 1
+---------
+Example for an oversized string 
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       // String is oversized in memory
+       str *one init_string("Hello", 30);
+       print(string_length(one));
+       // Be cautios when accessing a struct attribute directly
+       print(one->alloc);
+       bool val = trim_string(one);
+       print(val);
+       print(string_length(one));
+       print(one->alloc);
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> 5
+   >> 30
+   >> true 
+   >> 5 
+   >> 6
+
+Example 2 
+---------
+Example for a properly sized string 
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       // String is properly sized in memory
+       str *one init_string("Hello");
+       print(string_length(one));
+       // Be cautios when accessing a struct attribute directly
+       print(one->alloc);
+       bool val = trim_string(one);
+       print(val);
+       print(string_length(one));
+       print(one->alloc);
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> 5
+   >> 6
+   >> true 
+   >> 5 
+   >> 6
+
+Example 3 
+---------
+Example where a NULL struct is passed to function.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       // Passing a NULL struct
+       bool val = trim_string(NULL);
+       print(val);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Null pointer provided to trim_string
+   >> false
+
+Resize String 
+=============
+TBD
+
+Copy String 
+===========
+TBD
+
+Compare String 
+==============
+TBD 
+
+

@@ -33,7 +33,18 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_get_string_fail_one),
         cmocka_unit_test(test_get_string_fail_two),
         cmocka_unit_test(test_string_length_fail_one),
-        cmocka_unit_test(test_string_length_fail_two)
+        cmocka_unit_test(test_string_length_fail_two),
+        cmocka_unit_test(test_insert_string_lit_insert_end),
+        cmocka_unit_test(test_insert_string_lit_insert_middle),
+        cmocka_unit_test(test_insert_string_lit_error_one),
+        cmocka_unit_test(test_insert_string_lit_error_two),
+        cmocka_unit_test(test_insert_string_lit_error_three),
+        cmocka_unit_test(test_insert_string_str_insert_end),
+        cmocka_unit_test(test_insert_string_str_insert_middle),
+        cmocka_unit_test(test_trim_string_equal),
+        cmocka_unit_test(test_trim_string_greater),
+        cmocka_unit_test(test_trim_string_error_one),
+        cmocka_unit_test(test_trim_string_error_two)
 	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

@@ -169,7 +169,60 @@ char* get_string(str* str_struct);
 size_t string_length(str* str_struct);
 // --------------------------------------------------------------------------------
 
-bool insert_string(str *str_struct, char *string);
+/**
+ * @brief Inserts a string literal into a struct of type str 
+ *
+ * This function will insert a string literal into the string within a 
+ * str struct.  This function allows a user to insert a string at any 
+ * index within the existing string.
+ *
+ * @param str_struct A struct of type str.
+ * @param string A null terminated string literal.
+ * @return true if the function executes succesfully, false otherwise
+ */
+bool insert_string_lit(str *str_struct, char *string, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Inserts a string container into a struct of type str 
+ *
+ * This function will insert a string container into the string within a 
+ * str struct.  This function allows a user to insert a string at any 
+ * index within the existing string.
+ *
+ * @param str_struct_one A struct of type str whic contains the string to be modified.
+ * @param string A string container of type str which will be inserted into another container.
+ * @return true if the function executes succesfully, false otherwise
+ */
+bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A macro that inserts a string into another string 
+ *
+ * This macro will allow a string literal or a string container to be inserted 
+ * into a string container at a user defined location.
+ *
+ * @param str_one A string container of type str. This is the string having data inserted into it
+ * @param str_two A string literal or string container of type str 
+ * @param index An index that can range from 0 to the length of str_one
+ * @param true if the function executes succesfully, false otherwise.
+ */
+#define insert_string(str_one, str_two, index) _Generic((str_two), \
+    char*: insert_string_lit, \
+    default: insert_string_str) (str_one, str_two, index)
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Tims the string memory to the minimum necessary size 
+ *
+ * THis function will determine the minimum memory allocation needed to fit 
+ * the string and will resize to the minimum memory if oversized.
+ *
+ * @param str_struct A string container of type str 
+ * @return true if operation is succesful, false otherwise with stderr printout
+ */
+bool trim_string(str *str_sturct);
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

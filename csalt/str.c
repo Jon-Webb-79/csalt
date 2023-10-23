@@ -125,7 +125,7 @@ void cleanup_string(str **s) {
 // --------------------------------------------------------------------------------
 
 bool insert_string_lit(str *str_struct, char *string, size_t index) {
-    if (!str_struct || !string) {
+    if (!str_struct || !string || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to insert_string_lit.\n");
         return false;
     }
@@ -153,7 +153,60 @@ bool insert_string_lit(str *str_struct, char *string, size_t index) {
     str_struct->len = new_len;  // Update the length
     return true;
 }
+// --------------------------------------------------------------------------------
 
+bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index) {
+    if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
+        fprintf(stderr, "Null pointer provided to insert_string_lit.\n");
+        return false;
+    }
+    if (index > str_struct_one->len) {  // Allow insertion at the end by checking for > instead of >=
+        fprintf(stderr, "String insert location out of bounds\n");
+        return false;
+    }
+    size_t insert_len = str_struct_two->len;
+    size_t new_len = str_struct_one->len + insert_len;  // Length after insertion
+    if (str_struct_one->alloc <= new_len) {  // Check if <= to ensure space for null terminator
+        size_t new_alloc = new_len + 1;
+        char *ptr = (char*)realloc(str_struct_one->data, new_alloc);
+        if (ptr == NULL) {
+            int errnum = errno;
+            fprintf(stderr, "String Realloc Failed: %s\n", strerror(errnum));
+            return false;
+        }
+        str_struct_one->data = ptr;
+        str_struct_one->alloc = new_alloc;
+    }
+    memmove(str_struct_one->data + index + insert_len, 
+            str_struct_one->data + index, 
+            str_struct_one->len - index + 1);  // +1 to include null terminator
+    memcpy(str_struct_one->data + index, str_struct_two->data, insert_len);
+    str_struct_one->len = new_len;  // Update the length
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_string(str *str_struct) {
+    if (!str_struct || !str_struct->data) {
+        fprintf(stderr, "Null pointer provided to trim_string\n");
+        return false;
+    }
+    if (str_struct->len + 1 == str_struct->alloc)
+        return true;
+    if (str_struct->len + 1 > str_struct->alloc) {
+        fprintf(stderr, "Missized string passed to trim_string\n");
+        return false;
+    }
+    char *ptr = realloc(str_struct->data, str_struct->len + 1);
+    if (ptr == NULL) {
+        int errnum = errno;
+        fprintf(stderr, "String allocation error: %s\n", strerror(errnum));
+        return false;
+    }
+    str_struct->data = ptr;
+    str_struct->alloc = str_struct->len + 1;
+    return true;
+}
 // ================================================================================
 // ================================================================================
 // eof
