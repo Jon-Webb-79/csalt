@@ -147,9 +147,9 @@ bool insert_string_lit(str *str_struct, char *string, size_t index) {
         return false;
     }
     size_t insert_len = strlen(string);
-    size_t new_len = str_struct->len + insert_len;  // Length after insertion
+    size_t new_len = str_struct->len + insert_len;  
     if (str_struct->alloc <= new_len) {  // Check if <= to ensure space for null terminator
-        size_t new_alloc = new_len + 1;
+        size_t new_alloc = (new_len * 2) + 1;
         char *ptr = (char*)realloc(str_struct->data, new_alloc);
         if (ptr == NULL) {
             int errnum = errno;
@@ -180,7 +180,7 @@ bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index) {
     size_t insert_len = str_struct_two->len;
     size_t new_len = str_struct_one->len + insert_len;  // Length after insertion
     if (str_struct_one->alloc <= new_len) {  // Check if <= to ensure space for null terminator
-        size_t new_alloc = new_len + 1;
+        size_t new_alloc = (new_len * 2) + 1;
         char *ptr = (char*)realloc(str_struct_one->data, new_alloc);
         if (ptr == NULL) {
             int errnum = errno;

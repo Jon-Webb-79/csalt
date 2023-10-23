@@ -400,7 +400,9 @@ concatenations.  This macro and its underlying functions have a time
 complexity of :math:`O(a+b)` where :math:`a` and :math:`b` are the lengths
 of the first and second strings.  However, if you insert at the end of string 
 :math:`a` this method will only be of order :math:`O(b)`.  The function also
-has a memory complexity of :math:`O(a+b)` 
+has a memory complexity of :math:`O(a+b)`. In addition, if the buffer does 
+original and inserted strings together, doubling that number plus one, and 
+it will re-allocate memory for that buffer size.
 
 .. code-block:: c 
 

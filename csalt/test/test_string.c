@@ -200,7 +200,7 @@ void test_insert_string_lit_insert_end(void **state) {
     bool return_value = insert_string(one, " World!", string_length(one));
     assert_string_equal(get_string(one), "Hello World!");
     assert_int_equal(string_length(one), 12);
-    assert_int_equal(string_memory(one), 13);
+    assert_int_equal(string_memory(one), 25);
     free_string(one);
     assert_true(return_value);
 }
@@ -291,7 +291,7 @@ void test_insert_string_str_insert_end(void **state) {
     bool return_value = insert_string(one, two, string_length(one));
     assert_string_equal(get_string(one), "Hello World!");
     assert_int_equal(string_length(one), 12);
-    assert_int_equal(string_memory(one), 13);
+    assert_int_equal(string_memory(one), 25);
     free_string(one);
     free_string(two);
     assert_true(return_value);
