@@ -170,6 +170,19 @@ size_t string_length(str* str_struct);
 // --------------------------------------------------------------------------------
 
 /**
+ * @brief Returns the size of allocated memory in chars
+ *
+ * This function returns the memory allocation of the string, so the user does not have 
+ * to directly interact with the Struct which could cause undefined behavior
+ * if the user accidentally modified a value.
+ *
+ * @param str_struct A string container of type str 
+ * @return The memory allocation of a string in chars
+ */
+size_t string_memory(str* str_struct);
+// --------------------------------------------------------------------------------
+
+/**
  * @brief Inserts a string literal into a struct of type str 
  *
  * This function will insert a string literal into the string within a 

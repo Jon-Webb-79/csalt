@@ -15,7 +15,7 @@ as being so alien to the C language, that it was like puring salt into the wound
 of old C programmers.  Hen the name C Salt (i.e.csalt).
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    Strings <Strings>

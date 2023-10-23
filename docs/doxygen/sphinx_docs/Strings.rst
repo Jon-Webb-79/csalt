@@ -89,9 +89,7 @@ name and the macro.  The equal sign is accounted for in the macro.
        str *one init_string("Hello World!");
        print(one);
        print(string_length(one));
-       // - This command is only used for demonstration.  Users should not try
-       //   to directly access struct attributes.
-       print(one->alloc);
+       print(string_memory(one));
        free_string(one);
        return 0;
    }
@@ -120,9 +118,7 @@ name and the macro.  The equal sign is accounted for in the macro.
        str *one init_string("Hello World!", 30);
        print(one);
        print(string_length(one));
-       // - This command is only used for demonstration.  Users should not try
-       //   to directly access struct attributes.
-       print(one->alloc);
+       print(string_memory(one));
        free_string(one);
        return 0;
    }
@@ -194,9 +190,7 @@ name and the macro.  The equal sign is accounted for in the macro.
        str *one init_string_gbc("Hello World!");
        print(one);
        print(string_length(one));
-       // - This command is only used for demonstration.  Users should not try
-       //   to directly access struct attributes.
-       print(one->alloc);
+       print(string_memory(one));
        return 0;
    }
 
@@ -224,9 +218,7 @@ name and the macro.  The equal sign is accounted for in the macro.
        str *one init_string_gbc("Hello World!", 30);
        print(one);
        print(string_length(one));
-       // - This command is only used for demonstration.  Users should not try
-       //   to directly access struct attributes.
-       print(one->alloc);
+       print(string_memory(one));
        return 0;
    }
 
@@ -353,6 +345,49 @@ retrieve a string.
 .. code-block:: bash 
 
    >> 11
+
+String Memory 
+=============
+The ``string_memory`` function returns to a user the memory allocation for the 
+string in units of ``chars``.  The user can also access the memory via the
+``struct->alloc`` attribute; however, it can be dangerous to directly access 
+a struct attribute.  If a user were to accidentally change a value in a struct 
+attribute it could lead to undefined behavior.  This function will return a -1 
+and print to ``stderr`` if the user passes a NULL struct or a struct with 
+a NULL pointer to ``data``.
+
+.. code-block:: c 
+
+   size_t string_memory(str *str_struct);
+
+Parameters 
+----------
+
+- :c:`str_struct`: A struct of type str 
+
+Returns 
+-------
+
+- :c:`alloc`: The memory allocation in units of ``chars``.
+
+Example 
+-------
+
+.. code-block:: c 
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *one init_string("Hello", 20);
+       print("The string size is: ", string_memory(one));
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> The string size is: 20
 
 Insert String 
 =============
@@ -538,12 +573,11 @@ Example for an oversized string
        // String is oversized in memory
        str *one init_string("Hello", 30);
        print(string_length(one));
-       // Be cautios when accessing a struct attribute directly
-       print(one->alloc);
+       print(string_memory(one));
        bool val = trim_string(one);
        print(val);
        print(string_length(one));
-       print(one->alloc);
+       print(string_memory(one));
        free_string(one);
        return 0;
    }
@@ -569,12 +603,11 @@ Example for a properly sized string
        // String is properly sized in memory
        str *one init_string("Hello");
        print(string_length(one));
-       // Be cautios when accessing a struct attribute directly
-       print(one->alloc);
+       print(string_memory(one));
        bool val = trim_string(one);
        print(val);
        print(string_length(one));
-       print(one->alloc);
+       print(string_memory(one));
        free_string(one);
        return 0;
    }

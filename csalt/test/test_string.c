@@ -22,7 +22,7 @@ void test_string_init_one_var(void **state)
 	(void) state;
     str *one init_string("Hello!");
     assert_int_equal(6, string_length(one));
-    assert_int_equal(7, one->alloc);
+    assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
     free_string(one);
 }
@@ -36,7 +36,7 @@ void test_string_init_two_var(void **state)
 	(void) state;
     str *one init_string("Hello!", 20);
     assert_int_equal(6, string_length(one));
-    assert_int_equal(20, one->alloc);
+    assert_int_equal(20, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
     free_string(one);
 }
@@ -51,7 +51,7 @@ void test_string_init_two_var_less(void **state)
 	(void) state;
     str *one init_string("Hello!", 1);
     assert_int_equal(6, string_length(one));
-    assert_int_equal(7, one->alloc);
+    assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
     free_string(one);
 }
@@ -66,7 +66,7 @@ void test_string_init_one_var_gbc(void **state)
 	(void) state;
     str* one init_string_gbc("Hello!");
     assert_int_equal(6, string_length(one));
-    assert_int_equal(7, one->alloc);
+    assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
 }
 // --------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ void test_string_init_two_var_gbc(void **state)
 	(void) state;
     str *one init_string_gbc("Hello!", 20);
     assert_int_equal(6, string_length(one));
-    assert_int_equal(20, one->alloc);
+    assert_int_equal(20, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
 }
 // --------------------------------------------------------------------------------
@@ -93,7 +93,7 @@ void test_string_init_two_var_less_gbc(void **state)
 	(void) state;
     str *one init_string_gbc("Hello!", 1);
     assert_int_equal(6, string_length(one));
-    assert_int_equal(7, one->alloc);
+    assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
 }
 // --------------------------------------------------------------------------------
@@ -107,7 +107,7 @@ void test_string_init_post_free(void **state)
 	(void) state;
     str *one init_string_gbc("Hello!", 1);
     assert_int_equal(6, string_length(one));
-    assert_int_equal(7, one->alloc);
+    assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
     free_string(one);
 }
@@ -200,7 +200,7 @@ void test_insert_string_lit_insert_end(void **state) {
     bool return_value = insert_string(one, " World!", string_length(one));
     assert_string_equal(get_string(one), "Hello World!");
     assert_int_equal(string_length(one), 12);
-    assert_int_equal(one->alloc, 13);
+    assert_int_equal(string_memory(one), 13);
     free_string(one);
     assert_true(return_value);
 }
@@ -216,7 +216,7 @@ void test_insert_string_lit_insert_middle(void **state) {
     bool return_value = insert_string(one, " World!", 2);
     assert_string_equal(get_string(one), "He World!llo");
     assert_int_equal(string_length(one), 12);
-    assert_int_equal(one->alloc, 20);
+    assert_int_equal(string_memory(one), 20);
     free_string(one);
     assert_true(return_value);
 }
@@ -291,7 +291,7 @@ void test_insert_string_str_insert_end(void **state) {
     bool return_value = insert_string(one, two, string_length(one));
     assert_string_equal(get_string(one), "Hello World!");
     assert_int_equal(string_length(one), 12);
-    assert_int_equal(one->alloc, 13);
+    assert_int_equal(string_memory(one), 13);
     free_string(one);
     free_string(two);
     assert_true(return_value);
@@ -309,7 +309,7 @@ void test_insert_string_str_insert_middle(void **state) {
     bool return_value = insert_string(one, two, 2);
     assert_string_equal(get_string(one), "He World!llo");
     assert_int_equal(string_length(one), 12);
-    assert_int_equal(one->alloc, 20);
+    assert_int_equal(string_memory(one), 20);
     free_string(one);
     free_string(two);
     assert_true(return_value);
@@ -325,7 +325,7 @@ void test_trim_string_equal(void **state) {
     bool val = trim_string(one);
     assert_true(val);
     assert_int_equal(string_length(one), 5);
-    assert_int_equal(string_length(one) + 1, one->alloc);
+    assert_int_equal(string_length(one) + 1, string_memory(one));
     free_string(one);
 }
 // --------------------------------------------------------------------------------
@@ -339,7 +339,7 @@ void test_trim_string_greater(void **state) {
     bool val = trim_string(one);
     assert_true(val);
     assert_int_equal(string_length(one), 5);
-    assert_int_equal(string_length(one) + 1, one->alloc);
+    assert_int_equal(string_length(one) + 1, string_memory(one));
     free_string(one);
 }
 // --------------------------------------------------------------------------------

@@ -106,6 +106,19 @@ size_t string_length(str* str_struct) {
     }
     return str_struct->len;
 }
+// --------------------------------------------------------------------------------
+
+size_t string_memory(str* str_struct) {
+    if (str_struct == NULL) {
+        fprintf(stderr, "string_length failed, empty struct\n");
+        return -1;
+    }
+    if (str_struct->data == NULL) {
+        fprintf(stderr, "string_length failed, empty string\n");
+        return -1;
+    }
+    return str_struct->alloc;
+}
 // ================================================================================
 // ================================================================================
 
