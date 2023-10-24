@@ -248,6 +248,49 @@ bool trim_string(str *str_sturct);
  * @return A string container of type str
  */
 str* copy_string(str *str_struct);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Compares the string within a str container with a string literal 
+ *
+ * This function will compare the string within a str container with a 
+ * string literal.
+ *
+ * @param str_struct A string container of type str 
+ * @param string A string literal 
+ * @return 0 if the strings are equal, >0 if the first non-matching character in 
+ *         str_struct s greater than string, < 0 otherwise.
+ */
+int compare_strings_lit(str *str_struct, char *string);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Compare the string within a str struct with another str struct 
+ *
+ * This function will compare the strings between two str structs.
+ *
+ * @param str_struct_one A string container of type str 
+ * @param str_struct_two A string container of type str 
+ * @return 0 if the strings are equal, >0 if the first non-matching character in 
+ *         str_struct s greater than the other string, < 0 otherwise. 
+ */
+int compare_strings_str(str *str_struct_one, str *str_struct_two);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Compares two strings 
+ *
+ * This macro will compare two string containers or a string container with a
+ * string literal.
+ *
+ * @param str_one A string container of type str 
+ * @param str_two A string container or a string literal 
+ * @return 0 if the strings are equal, >0 if the first non-matching character in 
+ *         str_struct s greater than the other string, < 0 otherwise. 
+ */
+#define compare_strings(str_one, str_two) _Generic((str_two), \
+    char*: compare_strings_lit, \
+    default: compare_strings_str) (str_one, str_two) 
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

@@ -24,7 +24,7 @@
 // Begin code
 int main(int argc, const char * argv[]) {
 	const struct CMUnitTest test_string[] = {
-		cmocka_unit_test(test_string_init_one_var),
+	    cmocka_unit_test(test_string_init_one_var),
         cmocka_unit_test(test_string_init_two_var),
         cmocka_unit_test(test_string_init_two_var_less),
         cmocka_unit_test(test_string_init_one_var_gbc),
@@ -45,7 +45,15 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_trim_string_greater),
         cmocka_unit_test(test_trim_string_error_one),
         cmocka_unit_test(test_trim_string_error_two),
-        cmocka_unit_test(test_copy_string)
+        cmocka_unit_test(test_copy_string),
+        cmocka_unit_test(test_compare_strings_lit_equal),
+        cmocka_unit_test(test_compare_strings_lit_greater),
+        cmocka_unit_test(test_compare_strings_lit_less),
+        cmocka_unit_test(test_compare_strings_lit_oversize),
+        cmocka_unit_test(test_compare_strings_str_equal),
+        cmocka_unit_test(test_compare_strings_str_greater),
+        cmocka_unit_test(test_compare_strings_str_less),
+        cmocka_unit_test(test_compare_strings_str_oversize)
 	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

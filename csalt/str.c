@@ -228,4 +228,43 @@ str* copy_string(str *str_struct) {
 }
 // ================================================================================
 // ================================================================================
+
+int compare_strings_lit(str *str_struct, char *string) {
+    if (!str_struct || !string || !str_struct->data) {
+        // Handle null pointers appropriately
+        fprintf(stderr, "Null pointer provided to compare_strings_lit.\n");
+        return 0; // Or another designated error value
+    }
+
+    size_t string_len = strlen(string);
+    size_t min_len = (str_struct->len < string_len) ? str_struct->len : string_len;
+
+    for (size_t i = 0; i < min_len; i++) {
+        if (str_struct->data[i] != string[i]) {
+            return (unsigned char)str_struct->data[i] - (unsigned char)string[i];
+        }
+    }
+    return str_struct->len - string_len;
+}
+// --------------------------------------------------------------------------------
+
+int compare_strings_str(str *str_struct_one, str *str_struct_two) {
+    if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
+        // Handle null pointers appropriately
+        fprintf(stderr, "Null pointer provided to compare_strings_str.\n");
+        return 0; // Or another designated error value
+    } 
+
+    size_t string_len = str_struct_two->len;
+    size_t min_len = (str_struct_one->len < string_len) ? str_struct_one->len : string_len;
+
+    for (size_t i = 0; i < min_len; i++) {
+        if (str_struct_one->data[i] != str_struct_two->data[i]) {
+            return (unsigned char)str_struct_one->data[i] - (unsigned char)str_struct_two->data[i];
+        }
+    }
+    return str_struct_one->len - string_len;
+}
+// ================================================================================
+// ================================================================================
 // eof

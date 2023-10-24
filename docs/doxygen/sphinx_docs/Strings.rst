@@ -686,6 +686,92 @@ Example
 
 Compare String 
 ==============
-TBD 
+The ``compare_strings`` macro can be used to compare a string container to
+another string container or a string literal. This macro utilizes the ``_Generic``
+operator to select from one of two functions that allows a user to compare 
+a string container of type ``str`` with another ``str`` container or a string 
+literal.  The function will compare each ``char`` to see if they match.  The 
+difference between the first non matching characters will be returned as an
+integer difference, unless all ``char``'s match in which case it will return 
+0.  If the strings have a different length, the function will return the 
+difference in the lengths of the strings with the first container being the 
+basis for the difference.  Finally, if the user passes a NULL pointer as the 
+container, string literal, or if the container possesses a NULL pointer to 
+its contained string, the function will return 0 and write an message to 
+``stderr``.  Both underlying functions are safer to use than the ``strcmp``
+function in the ``string.h`` header file; however, comparing two string 
+containers is the safest option to ensure that a string literal is not 
+null terminated.
 
+.. code-block:: c
 
+   int compare_strings(str *str_one, str* || char* str_two);
+
+Parameters 
+----------
+
+- :c:`str_one`: A string container of type ``str``
+- :c:`str_two`: A string container of type ``str`` or a string literal
+
+Returns 
+-------
+
+- :c:`cmp`: 0 if strings are equal, < 0 if ``str_one`` is greater than ``str_two``, > 0 otherwise.
+
+Example 1
+---------
+This example shows the comparison between a string container and a string 
+literal.  This option is safer than the ``strcmp`` function in ``string.h``,
+however, it still runs the risk that the string literal is not null terminated,
+which could lead to an incorrect result.
+
+.. code-block:: c 
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *one init_string("Hello");
+       int val = compare_strings(one, "Helloo");
+       print(val);
+       free_string(one);
+   return 0;
+   }
+
+.. code-block:: bash 
+
+   >> -1
+
+Example 2 
+---------
+This example shows the comparison between two string containers which is the 
+safest opton for comparing two strings.
+
+.. code-block:: c 
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *one init_string("Hello");
+       str *two init_string("Hello");
+       int val = compare_strings(one, two);
+       print(val);
+       free_string(one);
+       free_string(two);
+   return 0;
+   }
+
+.. code-block:: bash 
+
+   >> 0
+
+Underlying Functions 
+--------------------
+The ``compare_strings`` macro uses the ``_Generic`` operator to select 
+from one of the two following functions that can be used in its place. 
+
+.. code-block:: c 
+
+   int compare_strings_lit(str *str_struct, char *string);
+   int compare_strings_str(str *str_struct_one, str *str_struct_two);

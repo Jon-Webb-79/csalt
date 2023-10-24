@@ -48,6 +48,15 @@ void test_trim_string_greater(void **state);
 void test_trim_string_error_one(void **state);
 void test_trim_string_error_two(void **state);
 void test_copy_string(void **state);
+void test_compare_strings_lit_equal(void **state);
+void test_compare_strings_lit_greater(void **state);
+void test_compare_strings_lit_less(void **state);
+void test_compare_strings_lit_oversize(void **state);
+void test_compare_strings_str_equal(void **state);
+void test_compare_strings_str_greater(void **state);
+void test_compare_strings_str_less(void **state);
+void test_compare_strings_str_oversize(void **state);
+
 #endif /* test_str_H */
 // ================================================================================
 // ================================================================================

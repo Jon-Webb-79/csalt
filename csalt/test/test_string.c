@@ -392,6 +392,78 @@ void test_copy_string(void **state) {
     free_string(one);
     free_string(two);
 }
+// --------------------------------------------------------------------------------
+
+void test_compare_strings_lit_equal(void **state) {
+    str *one init_string("Hello");
+    int val = compare_strings(one, "Hello");
+    assert_int_equal(val, 0);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_compare_strings_lit_greater(void **state) {
+    str *one init_string("Hello");
+    int val = compare_strings(one, "Henlo");
+    assert_int_equal(val, -2);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_compare_strings_lit_less(void **state) {
+    str *one init_string("Hello");
+    int val = compare_strings(one, "Healo");
+    assert_int_equal(val, 11);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_compare_strings_lit_oversize(void **state) {
+    str *one init_string("Hello");
+    int val = compare_strings(one, "Helloo");
+    assert_int_equal(val, -1);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_compare_strings_str_equal(void **state) {
+    str *one init_string("Hello");
+    str *two init_string("Hello");
+    int val = compare_strings(one, two);
+    assert_int_equal(val, 0);
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_compare_strings_str_greater(void **state) {
+    str *one init_string("Hello");
+    str *two init_string("Henlo");
+    int val = compare_strings(one, two);
+    assert_int_equal(val, -2);
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_compare_strings_str_less(void **state) {
+    str *one init_string("Hello");
+    str *two init_string("Healo");
+    int val = compare_strings(one, two);
+    assert_int_equal(val, 11);
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_compare_strings_str_oversize(void **state) {
+    str *one init_string("Hello");
+    str *two init_string("Helloo");
+    int val = compare_strings(one, two);
+    assert_int_equal(val, -1);
+    free_string(one);
+    free_string(two);
+}
 // ================================================================================
 // ================================================================================
 // eof
