@@ -68,6 +68,19 @@ void test_find_first_string_lit_oversized(void **state);
 void test_find_first_string_str(void **state);
 void test_find_first_string_str_null(void **state);
 void test_find_first_string_str_oversized(void **state);
+void test_find_last_string_lit(void **state);
+void test_find_last_string_lit_null(void **state);
+void test_find_last_string_lit_oversized(void **state);
+void test_find_last_string_str(void **state);
+void test_find_last_string_str_null(void **state);
+void test_find_last_string_str_oversized(void **state);
+void test_pop_string_end_char(void **state);
+void test_pop_string_end_null_struct(void **state);
+void test_pop_string_end_null_data(void **state);
+void test_pop_string_char(void **state);
+void test_pop_string_null_struct(void **state);
+void test_pop_string_null_data(void **state);
+void test_pop_string_out_of_bounds(void **state);
 #endif /* test_str_H */
 // ================================================================================
 // ================================================================================

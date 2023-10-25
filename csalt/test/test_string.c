@@ -600,6 +600,163 @@ void test_find_first_string_str_oversized(void **state) {
     free_string(one);
     free_string(two);
 }
+// --------------------------------------------------------------------------------
+
+void test_find_last_string_lit(void **state) {
+    (void) state;
+    str *one init_string("Hello this is Hello again!");
+    char *two = "Hello";
+    char *ptr = find_last_string(one, two);
+    assert_non_null(ptr);
+    assert_ptr_equal(ptr, one->data + 14);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_last_string_lit_null(void **state) {
+    (void) state;
+    str *one init_string("Where in the World is Carmen SanDiego!");
+    char *two = "What";
+    char *ptr = find_last_string(one, two);
+    assert_null(ptr);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_last_string_lit_oversized(void **state) {
+    (void) state;
+    str *one init_string("Where");
+    char *two = "What is going on";
+    char *ptr = find_last_string(one, two);
+    assert_null(ptr);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_last_string_str(void **state) {
+    (void) state;
+    str *one init_string("Hello this is Hello again!");
+    str *two init_string("Hello");
+    char *ptr = find_last_string(one, two);
+    assert_non_null(ptr);
+    assert_ptr_equal(ptr, one->data + 14);
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_last_string_str_null(void **state) {
+    (void) state;
+    str *one init_string("Where in the World is Carmen SanDiego!");
+    str *two init_string("What");
+    char *ptr = find_last_string(one, two);
+    assert_null(ptr);
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_last_string_str_oversized(void **state) {
+    (void) state;
+    str *one init_string("Where");
+    str *two init_string("What is going on");
+    char *ptr = find_last_string(one, two);
+    assert_null(ptr);
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_end_char(void **state) {
+    str *one init_string("Hello");
+    char var = pop_string_char(one);
+    assert_int_equal(var, 'o');
+    assert_string_equal(get_string(one), "Hell");
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_end_null_struct(void **state) {
+    (void) state;
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    str string_struct = { .data = NULL, .len = 0, .alloc = 0 };
+    char val = pop_string_char(&string_struct);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+    assert_int_equal(val, '\0');
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_end_null_data(void **state) {
+    (void) state;
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    char val = pop_string_char(NULL);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+    assert_int_equal(val, '\0');
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_char(void **state) {
+    str *one init_string("Hello");
+    char var = pop_string_char(one, 2);
+    assert_int_equal(var, 'l');
+    assert_string_equal(get_string(one), "Helo");
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_null_struct(void **state) {
+    (void) state;
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    str string_struct = { .data = NULL, .len = 0, .alloc = 0 };
+    char val = pop_string_char(&string_struct, 2);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+    assert_int_equal(val, '\0');
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_null_data(void **state) {
+    (void) state;
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    char val = pop_string_char(NULL, 2);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+    assert_int_equal(val, '\0');
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_out_of_bounds(void **state) {
+    (void) state;
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    str *one init_string("Hello");
+    char val = pop_string_char(one, 12);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+    assert_int_equal(val, '\0');
+    free_string(one);
+}
 // ================================================================================
 // ================================================================================
 // eof

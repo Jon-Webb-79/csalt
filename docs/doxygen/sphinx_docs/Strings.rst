@@ -840,3 +840,188 @@ An example to find the last char value.
        free_string(one); 
        return 0;
    }
+
+Find Strings 
+============
+The ``find_first_string`` and ``find_last_string`` macros can be used to find 
+the first or last sub-string in a string.  The underlying functions will return 
+a pointer to the sub-string.  If the sub-string does not exist in the primary
+string, the underlying functions will return a NULL pointer.  If the user 
+passes a NULL value for the ``str_one``, ``str_two`` variables or their 
+associated ``data`` pointers, the functions will return a NULL pointer and 
+write a message to ``stderr``.
+
+.. code-block:: c 
+
+   char* find_first_string(str *str_one, str* || char* str_two);
+   char* find_last_string(str *str_one, str* || char* str_two);
+
+Parameters 
+----------
+
+- :c:`str_one`: A string container of type ``str``.
+- :c:`str_two`: A string container of type ``str`` or a string literal of type ``char*``.  This represents the sub-string that will be searched for in ``str_one``.
+
+Returns
+-------
+
+- :c:`ptr`: A pointer to the first or last sub-string in ``str_one``.
+
+Example 1
+---------
+Look for the first occurance of a sub-string in a string, comparing a literal 
+to a string container and a container.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str *one init_string("one Hello and another Hello statement!");
+       char *two = "Hello"
+       char *ptr = find_first_strign(one, two);
+       print("Compare a literal to a container");
+       print(ptr);
+       print("Compare a container to a container");
+       str *three init_string("and");
+       char *new_ptr = find_first_string(one, three);
+       print(new_ptr);
+       free_string(one);
+       free_string(three);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Compare a literal to a container 
+   >> Hello and another Hello statement! 
+   >> Compare a container to a container 
+   >> and another Hello Statement!
+
+Example 2 
+---------
+Look for the last occurance of a sub-string, comparing a literal to a string 
+container and a container to a container.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str *one init_string("one Hello and another Hello statement!");
+       char *two = "Hello"
+       char *ptr = find_last_strign(one, two);
+       print("Compare a literal to a container");
+       print(ptr);
+       print("Compare a container to a container");
+       str *three init_string("and");
+       char *new_ptr = find_last_string(one, three);
+       print(new_ptr);
+       free_string(one);
+       free_string(three);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Compare a literal to a container 
+   >> Hello statement! 
+   >> Compare a container to a container 
+   >> and another Hello Statement!
+
+Underlying Functions 
+--------------------
+The ``find_first_string`` and ``find_last_string`` macros use a ``_Generic`` 
+operator to allow for function overloading.  While it is recommended that a 
+developer use the macros, they can also use the underlying functions shown 
+below.
+
+.. code-block:: c
+
+   char* find_first_lit_strstr(str *str_struct, char *string);
+   char* find_first_str_strstr(str *str_struct_one, str *str_struct_two);
+   char* find_last_lit_strstr(str *str_struct, char *string);
+   char* find_last_str_strstr(str *str_struct_one, str *str_struct_two);
+
+Pop Char 
+========
+The ``pop_string_char`` macro selects from one of two functions to pop data 
+from a string container.  The data is returned to the user and errors such as 
+null pointers or an out of bounds selection return a null terminator ``\0``
+and print a message to ``stderr``.
+
+.. code-block:: c 
+
+   char pop_string_char(str *str_struct, size_t index);
+
+Parameters 
+----------
+
+- :c:`str_struct`: A string container of type ``str``
+- :c:`index`: The index where data will be popped.  This variable is defaulted to the length of the string.
+
+Returns 
+-------
+
+- :c:`char_val`: The ``char`` value popped from the string.
+
+Example 1
+---------
+Pop data using the default value for index.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str *one init_string("Goodbye");
+       char val = pop_string_char(one);
+       print(val);
+       print(one);
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> e
+   >> Goodby 
+
+Example 2 
+---------
+Pop data from a specific index.  Note, this operation will consume more execution
+time than popping from the last index.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str *one init_string("Goodbye");
+       char val = pop_string_char(one, 3);
+       print(val);
+       print(one);
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> b
+   >> Goodye
+
+Underlying Functions 
+--------------------
+The ``pop_string_char`` macro selects from one of two functions to allow the 
+appearance of overloading.  The functions can be used in place of the macro and 
+they are shown below.
+
+.. code-block:: c
+
+   char pop_str_char(str *str_struct);
+   char pop_str_index(str *str_struct, size_t index);
+

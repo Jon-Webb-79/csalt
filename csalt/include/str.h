@@ -80,7 +80,7 @@ str* init_string_len(char *strlit, size_t num);
  * This Macro interacts with other Macros to support overloading in the 
  * process of initializing a string container.
  */
-#define INIT_STRING_SELECT(arg1, arg2, func, ...) func
+#define TWO_FUNC_SELECT(arg1, arg2, func, ...) func
 // --------------------------------------------------------------------------------
 
 /**
@@ -98,7 +98,7 @@ str* init_string_len(char *strlit, size_t num);
  * @param num A buffer size for the string, defaulted to strlen(string) + 1
  */
 #define init_string(...) \
-    = INIT_STRING_SELECT(__VA_ARGS__, init_string_len, init_string_nol)(__VA_ARGS__)
+    = TWO_FUNC_SELECT(__VA_ARGS__, init_string_len, init_string_nol)(__VA_ARGS__)
 // --------------------------------------------------------------------------------
 
 /**
@@ -118,7 +118,7 @@ str* init_string_len(char *strlit, size_t num);
  * @param num A buffer size for the string, defaulted to strlen(string) + 1
  */
 #define init_string_gbc(...) \
-    __attribute__((cleanup(cleanup_string))) = INIT_STRING_SELECT(__VA_ARGS__, init_string_len, init_string_nol)(__VA_ARGS__);
+    __attribute__((cleanup(cleanup_string))) = TWO_FUNC_SELECT(__VA_ARGS__, init_string_len, init_string_nol)(__VA_ARGS__);
 
 // ================================================================================
 // ================================================================================
@@ -316,6 +316,7 @@ char* find_first_char(str *str_struct, char c);
 char* find_last_char(str *str_struct, char c);
 // ================================================================================
 // ================================================================================
+
 /**
  * @brief Returns the first instance of a substring in a string container 
  *
@@ -347,6 +348,69 @@ char* find_first_str_strstr(str* str_struct_one, str *str_struct_two);
 #define find_first_string(str_one, str_two) _Generic((str_two), \
         char*: find_first_lit_strstr, \
         default: find_first_str_strstr) (str_one, str_two)
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the last instance of a substring in a string container 
+ *
+ * This function will return the last instance of a string in a string container.
+ * The string pattern is represented by a string literal in this function.
+ *
+ * @param str_struct A string container of type str 
+ * @param string A string literal
+ * @returns A char pointer to the last instance of a string
+ */
+char* find_last_lit_strstr(str* str_struct, char* string);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the last instance of a substring in a string container 
+ *
+ * This function will return the last instance of a string in a string 
+ * container.  The string pattern is represented by another string container
+ * in this function.
+ *
+ * @param str_struct_one A string container of type str 
+ * @param string A string literal
+ * @returns A char pointer to the last instance of a string
+ */
+char* find_last_str_strstr(str* str_struct_one, str *str_struct_two);
+// --------------------------------------------------------------------------------
+
+#define find_last_string(str_one, str_two) _Generic((str_two), \
+        char*: find_last_lit_strstr, \
+        default: find_last_str_strstr) (str_one, str_two)
+// ================================================================================
+// ================================================================================
+
+/**
+ * @brief pop and return the last char in a string container 
+ *
+ * This function will pop the last index prior to the null terminator from a
+ * string and return it it the user 
+ *
+ * @breif str_token A string container of type string
+ * @returns a char value
+ */
+char pop_str_char(str *str_token);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops and returns a char from a user defined index
+ *
+ * This function will remove a char from a user defined index and return it to
+ * the user.
+ *
+ * @brief str_token A string container of type str 
+ * @brief index An index to pop from
+ * @brief A char value
+ */
+char pop_str_char_index(str *str_token, size_t index);
+// --------------------------------------------------------------------------------
+
+#define pop_string_char(...) \
+    TWO_FUNC_SELECT(__VA_ARGS__, pop_str_char_index, pop_str_char)(__VA_ARGS__)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus
