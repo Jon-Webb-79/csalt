@@ -775,3 +775,68 @@ from one of the two following functions that can be used in its place.
 
    int compare_strings_lit(str *str_struct, char *string);
    int compare_strings_str(str *str_struct_one, str *str_struct_two);
+
+Find Char 
+=========
+The ``find_first_char`` and ``find_last_char`` functions can be used on a ``str``
+container in much the same way the ``strchr`` function in the ``string.h`` header 
+file is used.  These two functions will search for the first or last occurrances 
+of a ``char`` in a string and return a pointer to the ``char`` value.  If the 
+``char`` is not found the functions will return a NULL pointer.  In addition, 
+if the user passes a NULL pointer to the ``str`` struct or the pointer to 
+``data`` within the struct, the function will return NULL and write a message 
+to ``stderr``.  Also, if the ``char`` is not found, the function will return 
+a ``NULL`` value. **NOTE:** These functions can also be used to search for 
+the position of the null terminator.
+
+.. code-block:: c 
+
+   char* find_first_char(str *str_struct, char c);
+   char* find_last_char(str *str_struct, char c);
+
+Parameters 
+----------
+
+- :c:`str_struct`: A string container of type ``str``.
+- :c:`c`: A char value 
+
+Returns 
+-------
+
+- :c:`ptr`: A pointer to the ``char`` value within the string, or NULL if the value can not be found or the input data is a NULL pointer.
+
+Example 1
+---------
+An example to find the first char value 
+
+.. code-block:: c
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *one init_string("Hello");
+       char *ptr = find_first_char(one, 'l');
+       assert_non_null(ptr);
+       assert_ptr_equal(ptr, one->data + 2);
+       free_string(one); 
+       return 0;
+   }
+
+Example 2
+---------
+An example to find the last char value.
+
+.. code-block:: c
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *one init_string("Hello");
+       char *ptr = find_last_char(one, 'l');
+       assert_non_null(ptr);
+       assert_ptr_equal(ptr, one->data + 3);
+       free_string(one); 
+       return 0;
+   }

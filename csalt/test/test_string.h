@@ -56,7 +56,18 @@ void test_compare_strings_str_equal(void **state);
 void test_compare_strings_str_greater(void **state);
 void test_compare_strings_str_less(void **state);
 void test_compare_strings_str_oversize(void **state);
-
+void test_find_first_char(void **state);
+void test_find_first_char_does_not_exist(void **state);
+void test_find_first_char_null_terminator(void **state);
+void test_find_last_char(void **state);
+void test_find_last_char_does_not_exist(void **state);
+void test_find_last_char_null_terminator(void **state);
+void test_find_first_string_lit(void **state);
+void test_find_first_string_lit_null(void **state);
+void test_find_first_string_lit_oversized(void **state);
+void test_find_first_string_str(void **state);
+void test_find_first_string_str_null(void **state);
+void test_find_first_string_str_oversized(void **state);
 #endif /* test_str_H */
 // ================================================================================
 // ================================================================================

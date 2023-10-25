@@ -53,7 +53,19 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_compare_strings_str_equal),
         cmocka_unit_test(test_compare_strings_str_greater),
         cmocka_unit_test(test_compare_strings_str_less),
-        cmocka_unit_test(test_compare_strings_str_oversize)
+        cmocka_unit_test(test_compare_strings_str_oversize),
+        cmocka_unit_test(test_find_first_char),
+        cmocka_unit_test(test_find_first_char_does_not_exist),
+        cmocka_unit_test(test_find_first_char_null_terminator),
+        cmocka_unit_test(test_find_last_char),
+        cmocka_unit_test(test_find_last_char_does_not_exist),
+        cmocka_unit_test(test_find_last_char_null_terminator),
+        cmocka_unit_test(test_find_first_string_lit),
+        cmocka_unit_test(test_find_first_string_lit_null),
+        cmocka_unit_test(test_find_first_string_lit_oversized),
+        cmocka_unit_test(test_find_first_string_str),
+        cmocka_unit_test(test_find_first_string_str_null),
+        cmocka_unit_test(test_find_first_string_str_oversized),
 	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

@@ -321,6 +321,7 @@ void test_insert_string_str_insert_middle(void **state) {
  * Test trim_string to ensure nothing happens if string is properly sized
  */
 void test_trim_string_equal(void **state) {
+    (void) state;
     str *one init_string("Hello");
     bool val = trim_string(one);
     assert_true(val);
@@ -335,6 +336,7 @@ void test_trim_string_equal(void **state) {
  * approprioate
  */
 void test_trim_string_greater(void **state) {
+    (void) state;
     str *one init_string("Hello", 50);
     bool val = trim_string(one);
     assert_true(val);
@@ -349,6 +351,7 @@ void test_trim_string_greater(void **state) {
  * function is a NULL value.  stderr suppressed for this test.
  */
 void test_trim_string_error_one(void **state) {
+    (void) state;
     int stderr_copy = dup(STDERR_FILENO);
     int devnull = open("/dev/null", O_WRONLY);
     dup2(devnull, STDERR_FILENO);
@@ -366,6 +369,7 @@ void test_trim_string_error_one(void **state) {
  * function is a NULL value.  stderr suppressed for this test.
  */
 void test_trim_string_error_two(void **state) {
+    (void) state;
     int stderr_copy = dup(STDERR_FILENO);
     int devnull = open("/dev/null", O_WRONLY);
     dup2(devnull, STDERR_FILENO);
@@ -384,6 +388,7 @@ void test_trim_string_error_two(void **state) {
  * Test to ensure copy_string creates a deep copy of the string passed to it.
  */
 void test_copy_string(void **state) {
+    (void) state;
     str *one init_string("Hello", 20);
     str *two = copy_string(one);
     assert_string_equal(get_string(one), get_string(two));
@@ -395,6 +400,7 @@ void test_copy_string(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_compare_strings_lit_equal(void **state) {
+    (void) state;
     str *one init_string("Hello");
     int val = compare_strings(one, "Hello");
     assert_int_equal(val, 0);
@@ -403,6 +409,7 @@ void test_compare_strings_lit_equal(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_compare_strings_lit_greater(void **state) {
+    (void) state;
     str *one init_string("Hello");
     int val = compare_strings(one, "Henlo");
     assert_int_equal(val, -2);
@@ -411,6 +418,7 @@ void test_compare_strings_lit_greater(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_compare_strings_lit_less(void **state) {
+    (void) state;
     str *one init_string("Hello");
     int val = compare_strings(one, "Healo");
     assert_int_equal(val, 11);
@@ -419,6 +427,7 @@ void test_compare_strings_lit_less(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_compare_strings_lit_oversize(void **state) {
+    (void) state;
     str *one init_string("Hello");
     int val = compare_strings(one, "Helloo");
     assert_int_equal(val, -1);
@@ -427,6 +436,7 @@ void test_compare_strings_lit_oversize(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_compare_strings_str_equal(void **state) {
+    (void) state;
     str *one init_string("Hello");
     str *two init_string("Hello");
     int val = compare_strings(one, two);
@@ -437,6 +447,7 @@ void test_compare_strings_str_equal(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_compare_strings_str_greater(void **state) {
+    (void) state;
     str *one init_string("Hello");
     str *two init_string("Henlo");
     int val = compare_strings(one, two);
@@ -447,6 +458,7 @@ void test_compare_strings_str_greater(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_compare_strings_str_less(void **state) {
+    (void) state;
     str *one init_string("Hello");
     str *two init_string("Healo");
     int val = compare_strings(one, two);
@@ -457,10 +469,134 @@ void test_compare_strings_str_less(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_compare_strings_str_oversize(void **state) {
+    (void) state;
     str *one init_string("Hello");
     str *two init_string("Helloo");
     int val = compare_strings(one, two);
     assert_int_equal(val, -1);
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_char(void **state) {
+    (void) state;
+    str *one init_string("Hello");
+    char *ptr = find_first_char(one, 'l');
+    assert_non_null(ptr);
+    assert_ptr_equal(ptr, one->data + 2);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_char_does_not_exist(void **state) {
+    (void) state;
+    str *one init_string("Hello");
+    char *ptr = find_first_char(one, 'q');
+    assert_null(ptr);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_char_null_terminator(void **state) {
+    (void) state;
+    str *one init_string("Hello");
+    char *ptr = find_first_char(one, '\0');
+    assert_non_null(ptr);
+    assert_ptr_equal(ptr, one->data + 5);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_last_char(void **state) {
+    (void) state;
+    str *one init_string("Hello");
+    char *ptr = find_last_char(one, 'l');
+    assert_non_null(ptr);
+    assert_ptr_equal(ptr, one->data + 3);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_last_char_does_not_exist(void **state) {
+    (void) state;
+    str *one init_string("Hello");
+    char *ptr = find_last_char(one, 'q');
+    assert_null(ptr);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_last_char_null_terminator(void **state) {
+    (void) state;
+    str *one init_string("Hello");
+    char *ptr = find_last_char(one, '\0');
+    assert_non_null(ptr);
+    assert_ptr_equal(ptr, one->data + 5);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_string_lit(void **state) {
+    (void) state;
+    str *one init_string("Where in the World is Carmen SanDiego!");
+    char *two = "World";
+    char *ptr = find_first_string(one, two);
+    assert_non_null(ptr);
+    assert_ptr_equal(ptr, one->data + 13);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_string_lit_null(void **state) {
+    (void) state;
+    str *one init_string("Where in the World is Carmen SanDiego!");
+    char *two = "What";
+    char *ptr = find_first_string(one, two);
+    assert_null(ptr);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_string_lit_oversized(void **state) {
+    (void) state;
+    str *one init_string("Where");
+    char *two = "What is going on";
+    char *ptr = find_first_string(one, two);
+    assert_null(ptr);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_string_str(void **state) {
+    (void) state;
+    str *one init_string("Where in the World is Carmen SanDiego!");
+    str *two init_string("World");
+    char *ptr = find_first_string(one, two);
+    assert_non_null(ptr);
+    assert_ptr_equal(ptr, one->data + 13);
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_string_str_null(void **state) {
+    (void) state;
+    str *one init_string("Where in the World is Carmen SanDiego!");
+    str *two init_string("What");
+    char *ptr = find_first_string(one, two);
+    assert_null(ptr);
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_string_str_oversized(void **state) {
+    (void) state;
+    str *one init_string("Where");
+    str *two init_string("What is going on");
+    char *ptr = find_first_string(one, two);
+    assert_null(ptr);
     free_string(one);
     free_string(two);
 }

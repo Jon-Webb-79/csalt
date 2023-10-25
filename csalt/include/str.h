@@ -293,6 +293,62 @@ int compare_strings_str(str *str_struct_one, str *str_struct_two);
     default: compare_strings_str) (str_one, str_two) 
 // ================================================================================
 // ================================================================================
+
+/**
+ * @brief Returns a pointer to the first occurrance of a char in a string 
+ * string container.
+ *
+ * @param str_struct A string container of type str 
+ * @param string A string literal 
+ * @returns A pointer to the first occurance of a user specifiec char
+ */
+char* find_first_char(str *str_struct, char c);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a pointer to the last occurrance of a char in a string 
+ * string container.
+ *
+ * @param str_struct A string container of type str 
+ * @param string A string literal 
+ * @returns A pointer to the last occurance of a user specifiec char
+ */
+char* find_last_char(str *str_struct, char c);
+// ================================================================================
+// ================================================================================
+/**
+ * @brief Returns the first instance of a substring in a string container 
+ *
+ * This function will return the first instance of a string in a string container.
+ * The string pattern is represented by a string literal in this function.
+ *
+ * @param str_struct A string container of type str 
+ * @param string A string literal
+ * @returns A char pointer to the first instance of a string
+ */
+char* find_first_lit_strstr(str* str_struct, char* string);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the first instance of a substring in a string container 
+ *
+ * This function will return the first instance of a string in a string 
+ * container.  The string pattern is represented by another string container
+ * in this function.
+ *
+ * @param str_struct_one A string container of type str 
+ * @param string A string literal
+ * @returns A char pointer to the first instance of a string
+ */
+char* find_first_str_strstr(str* str_struct_one, str *str_struct_two);
+// --------------------------------------------------------------------------------
+
+#define find_first_string(str_one, str_two) _Generic((str_two), \
+        char*: find_first_lit_strstr, \
+        default: find_first_str_strstr) (str_one, str_two)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

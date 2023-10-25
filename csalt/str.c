@@ -267,4 +267,81 @@ int compare_strings_str(str *str_struct_one, str *str_struct_two) {
 }
 // ================================================================================
 // ================================================================================
+
+char* find_first_char(str *str_struct, char c) {
+    if ( !str_struct || !str_struct->data) {
+        fprintf(stderr, "Null pointer provided to find_char\n");
+        return NULL;
+    }
+    for (size_t i = 0; i <= str_struct->len; i++ ) {
+        if (str_struct->data[i] == c)
+            return str_struct->data + i;
+    }
+    return NULL;
+}
+// --------------------------------------------------------------------------------
+
+char* find_last_char(str *str_struct, char c) {
+    if (!str_struct || !str_struct->data) {
+        fprintf(stderr, "Null pointer provided to find_char\n");
+        return NULL;
+    }
+    // Note that we need to handle the case when str_struct->len is 0
+    if (str_struct->len == 0) {
+        return NULL;
+    }
+    for (int i = str_struct->len; i >= 0; i--) {
+        if (str_struct->data[i] == c)
+            return str_struct->data + i;
+    }
+    return NULL;
+}
+// ================================================================================
+// ================================================================================
+
+char* find_first_lit_strstr(str *str_struct, char *string) {
+    if (!str_struct || !str_struct->data || !string) {
+        fprintf(stderr, "Null pointer provided to find_first_lin_strstr\n");
+        return NULL;
+    }
+    size_t str_len = strlen(string);
+
+    if (str_len > str_struct->len)
+        return NULL;
+
+    size_t j;
+    for (size_t i = 0; i <= str_struct->len - str_len; i++) {
+        for (j = 0; j < str_len; j++) {
+           if (string[j] != str_struct->data[i + j])
+               break;
+        }
+        if (j == str_len) return str_struct->data + i;
+    }
+    return NULL;
+}
+// --------------------------------------------------------------------------------
+
+char* find_first_str_strstr(str *str_struct_one, str *str_struct_two) {
+    if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
+        // Handle null pointers appropriately
+        fprintf(stderr, "Null pointer provided to find_first_str_strstr.\n");
+        return 0; // Or another designated error value
+    } 
+    size_t str_len = str_struct_two->len;
+
+    if (str_len > str_struct_one->len)
+        return NULL;
+
+    size_t j;
+    for (size_t i = 0; i <= str_struct_one->len - str_len; i++) {
+        for (j = 0; j < str_len; j++) {
+           if (str_struct_two->data[j] != str_struct_one->data[i + j])
+               break;
+        }
+        if (j == str_len) return str_struct_one->data + i;
+    }
+    return NULL; 
+}
+// ================================================================================
+// ================================================================================
 // eof
