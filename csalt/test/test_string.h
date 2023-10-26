@@ -81,6 +81,15 @@ void test_pop_string_char(void **state);
 void test_pop_string_null_struct(void **state);
 void test_pop_string_null_data(void **state);
 void test_pop_string_out_of_bounds(void **state);
+void test_pop_string_token(void **state);
+void test_pop_string_token_no_token(void **state);
+void test_pop_string_token_null_struct(void **state);
+void test_pop_string_token_null_data(void **state);
+void test_pop_string_token_gbc_true(void **state);
+void test_pop_string_token_no_token_gbc_true(void **state);
+void test_pop_string_token_null_struct_gbc_true(void **state);
+void test_pop_string_token_null_data_gbc_true(void **state);
+void test_pop_string_token_gbc_false(void **state);
 #endif /* test_str_H */
 // ================================================================================
 // ================================================================================

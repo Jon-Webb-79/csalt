@@ -1025,3 +1025,88 @@ they are shown below.
    char pop_str_char(str *str_struct);
    char pop_str_index(str *str_struct, size_t index);
 
+Pop String Token
+================
+The ``pop_string_token`` macro wraps two functions that allow a user to pop 
+all data from a string to the right of the right most token.  If the function 
+recieved NULL pointers for the ``str`` struct, or the struct data, it will 
+return a NULL pointer, and write a message to ``stderr``.  The macro also 
+allows a user to return the string as a container that must be manually free 
+or as a string that will be automatically collected by a garbage collector and 
+freed.
+
+.. code-block:: c 
+
+   str* pop_string_token(str *str_struct, char token, bool gbc);
+
+Parameters
+----------
+
+- :c:`str_struct`: A string container of type ``str``
+- :c:`token`: A token that divides data to be popped 
+- :c:`gbc`: true of returned string is to be garbage collected, false otherwise.  Variable is defaulted to false.
+
+Returns 
+-------
+
+- :c:`str_struct`: A string container of type struct 
+
+Example 1
+---------
+Return a string that must be manually freed 
+
+.. code-block:: c
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *one init_string("2023/10/24");
+       str *two = pop_string_token(one, '/');
+       // The same as str *two = pop_string_token(one, '/', false);
+       print(one);
+       print(two);
+
+       free_string(one);
+       free_string(two);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> 2023/10 
+   >> 24 
+
+Example 2
+---------
+In this example we will create to strings that are garbage collected and 
+do not need to be manually freed.
+
+.. code-block:: c 
+
+
+   #define "print.h"
+   #define "str.h"
+
+   int main() {
+       str *one init_string_gbc("2023/10/24");
+       str *two = pop_string_token(one, '/', true);
+       print(one);
+       print(two);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> 2023/10 
+   >> 24
+
+Underlying Functions 
+--------------------
+The ``pop_string_token`` macro wraps two functions that can be used in place of
+the macro.  The functions are shown below.
+
+.. code-block:: c 
+
+   str* string_pop_token_wogbc(str *str_struct, char token);
+   str* string_pop_token_wgbc(str *str_struct, char token, bool gdb);

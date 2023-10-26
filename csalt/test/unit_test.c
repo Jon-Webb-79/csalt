@@ -78,7 +78,16 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_pop_string_char),
         cmocka_unit_test(test_pop_string_null_struct),
         cmocka_unit_test(test_pop_string_null_data),
-        cmocka_unit_test(test_pop_string_out_of_bounds)
+        cmocka_unit_test(test_pop_string_out_of_bounds),
+        cmocka_unit_test(test_pop_string_token),
+        cmocka_unit_test(test_pop_string_token_no_token),
+        cmocka_unit_test(test_pop_string_token_null_struct),
+        cmocka_unit_test(test_pop_string_token_null_data),
+        cmocka_unit_test(test_pop_string_token_gbc_true),
+        cmocka_unit_test(test_pop_string_token_no_token_gbc_true),
+        cmocka_unit_test(test_pop_string_token_null_struct_gbc_true),
+        cmocka_unit_test(test_pop_string_token_null_data_gbc_true),
+        cmocka_unit_test(test_pop_string_token_gbc_false)
 	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

@@ -429,4 +429,64 @@ char pop_str_char_index(str *str_struct, size_t index) {
 }
 // ================================================================================
 // ================================================================================
+
+str* pop_string_token_wogbc(str *str_struct, char token) {
+    if (!str_struct || !str_struct->data) {
+        fprintf(stderr, "Null pointer provided to pop_string_token\n");
+        return NULL;
+    }
+    if (str_struct->len == 0) {
+        return NULL;
+    }
+    for (int i = str_struct->len - 1; i >= 0; i--) {
+        if (str_struct->data[i] == token) {
+            str *one init_string(str_struct->data + (i + 1));
+            
+            // Set the null terminator after the token
+            str_struct->data[i] = '\0';
+            
+            // Update the length of str_struct
+            str_struct->len = i;
+
+            return one;
+        }
+    }
+    return NULL;
+}
+// --------------------------------------------------------------------------------
+
+str* pop_string_token_wgbc(str *str_struct, char token, bool gbc) {
+    if (!str_struct || !str_struct->data) {
+        fprintf(stderr, "Null pointer provided to pop_string_token\n");
+        return NULL;
+    }
+    if (str_struct->len == 0) {
+        return NULL;
+    }
+    for (int i = str_struct->len - 1; i >= 0; i--) {
+        if (str_struct->data[i] == token) {
+            if (gbc) {
+                str* one init_string_gbc(str_struct->data + (i + 1));
+                // Set the null terminator after the token
+                str_struct->data[i] = '\0';
+            
+                // Update the length of str_struct
+                str_struct->len = i;
+                return one;
+            }
+            else {
+                str *one init_string(str_struct->data + (i + 1));
+                // Set the null terminator after the token
+                str_struct->data[i] = '\0';
+            
+                // Update the length of str_struct
+                str_struct->len = i;
+                return one;
+            }
+        }
+    }
+    return NULL;
+}
+// ================================================================================
+// ================================================================================
 // eof

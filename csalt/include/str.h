@@ -413,6 +413,47 @@ char pop_str_char_index(str *str_token, size_t index);
     TWO_FUNC_SELECT(__VA_ARGS__, pop_str_char_index, pop_str_char)(__VA_ARGS__)
 // ================================================================================
 // ================================================================================
+
+/**
+ * @brief Pops a substring to the right of a token 
+ *
+ * This function will allow a user to pop the sub-string to the right of the right
+ * most token in a string.  This function returns a string container that must 
+ * be manually freed.
+ *
+ * @param str_struct A string container of type str 
+ * @param token a char token that divides string data 
+ * @returns A string container of type str
+ */
+str* pop_string_token_wogbc(str *str_struct, char token);
+// ------------------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a substring to the right of a token 
+ *
+ * This function will allow a user to pop the sub-string to the right of the right
+ * most token in a string.  This function returns a string container that will be
+ * garbage collected, or a string that must be manually free depending on the 
+ * developers entry for gbc
+ *
+ * @param str_struct A string container of type str 
+ * @param token a char token that divides string data 
+ * @param gbc true if garbage collection is to be enabled, false otherwise
+ * @returns A string container of type str
+ */
+str* pop_string_token_wgbc(str *str_struct, char token, bool gbc);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief a macro to support the selection between three funcs.
+ */
+#define SELECT_THREE_FUNCS(arg1, arg2, arg3, func, ...) func 
+// --------------------------------------------------------------------------------
+
+#define pop_string_token(...) \
+    SELECT_THREE_FUNCS(__VA_ARGS__, pop_string_token_wgbc, pop_string_token_wogbc, pop_string_token_wogbc) (__VA_ARGS__)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

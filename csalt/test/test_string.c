@@ -757,6 +757,121 @@ void test_pop_string_out_of_bounds(void **state) {
     assert_int_equal(val, '\0');
     free_string(one);
 }
+// --------------------------------------------------------------------------------
+
+void test_pop_string_token(void **state) {
+    (void) state;
+    str *one init_string("2023/10/24");
+    str *two = pop_string_token(one, '/');
+    assert_string_equal("24", get_string(two));
+    assert_string_equal("2023/10", get_string(one));
+    assert_int_equal(7, string_length(one));
+    free_string(one);
+    free_string(two);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_token_no_token(void **state) {
+    (void) state;
+    str *one init_string("2023/10/24");
+    str *two = pop_string_token(one, '+');
+    assert_null(two);
+    assert_string_equal("2023/10/24", get_string(one));
+    assert_int_equal(10, string_length(one));
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_token_null_struct(void **state) {
+    (void) state;
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    str string_struct = { .data = NULL, .len = 0, .alloc = 0 };
+    str *val = pop_string_token(&string_struct, '/');
+    assert_null(val);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_token_null_data(void **state) {
+    (void) state;
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    str *val = pop_string_token(NULL, '/');
+    assert_null(val);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);    
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_token_gbc_true(void **state) {
+    (void) state;
+    str *one init_string("2023/10/24");
+    str *two = pop_string_token(one, '/', true);
+    assert_string_equal("24", get_string(two));
+    assert_string_equal("2023/10", get_string(one));
+    assert_int_equal(7, string_length(one));
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_token_no_token_gbc_true(void **state) {
+    (void) state;
+    str *one init_string("2023/10/24");
+    str *two = pop_string_token(one, '+', true);
+    assert_null(two);
+    assert_string_equal("2023/10/24", get_string(one));
+    assert_int_equal(10, string_length(one));
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_token_null_struct_gbc_true(void **state) {
+    (void) state;
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    str string_struct = { .data = NULL, .len = 0, .alloc = 0 };
+    str *val = pop_string_token(&string_struct, '/', true);
+    assert_null(val);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_token_null_data_gbc_true(void **state) {
+    (void) state;
+    int stderr_copy = dup(STDERR_FILENO);
+    int devnull = open("/dev/null", O_WRONLY);
+    dup2(devnull, STDERR_FILENO);
+    close(devnull);
+    str *val = pop_string_token(NULL, '/', true);
+    assert_null(val);
+    // Restore stderr
+    dup2(stderr_copy, STDERR_FILENO);
+    close(stderr_copy);    
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_token_gbc_false(void **state) {
+    (void) state;
+    str *one init_string("2023/10/24");
+    str *two = pop_string_token(one, '/', false);
+    assert_string_equal("24", get_string(two));
+    assert_string_equal("2023/10", get_string(one));
+    assert_int_equal(7, string_length(one));
+    free_string(one);
+    free_string(two);
+}
 // ================================================================================
 // ================================================================================
 // eof
