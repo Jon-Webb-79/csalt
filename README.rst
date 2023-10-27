@@ -129,3 +129,9 @@ Contribute to Code Base
 
 #. At this point you can build the files in the same way described in the 
    previous section and contribute to documentation.
+
+Documentation 
+=============
+This code in this repository is further documented at the 
+`Read The Docs <https://csalt-lib.readthedocs.io/en/latest/>`_
+website

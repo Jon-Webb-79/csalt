@@ -11,6 +11,12 @@ inherent with C and can also increase the speed with which the C code
 process strings.  All functionality described in this Chapter can be
 accessed through the ``str.h`` header file.
 
+**DISCLAIMER:** This section of the csalt library will be updated with more
+functionality in the future.  In addition, their are certain macros that 
+enable garbage collection that only work on gcc and clang compilers.  The 
+software should still compile on other compilers, but it will have slightly
+reduced functionality.
+
 .. role:: c(code)
    :language: c
 
