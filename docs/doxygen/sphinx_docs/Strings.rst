@@ -75,10 +75,7 @@ Example 1
 ---------
 In this example we will initialize a string with a memory allocation just for
 the string. Notice that we have to manually free the memory in the struct 
-and the string with the ``free_string`` function.  You can also use the 
-``FREE_DAT`` macro which can be invoked from the ``dat_struct.h`` file.
-**NOTICE:** the fact that their is no equal sign between the variable 
-name and the macro.  The equal sign is accounted for in the macro.
+and the string with the ``free_string`` function.
 
 .. code-block:: c 
 
@@ -86,7 +83,7 @@ name and the macro.  The equal sign is accounted for in the macro.
    #include "print.h"
 
    int main() {
-       str *one init_string("Hello World!");
+       str *one = init_string("Hello World!");
        print(one);
        print(string_length(one));
        print(string_memory(one));
@@ -106,8 +103,6 @@ Example 2
 In this example we will initialize a string with a larger than necessary buffer 
 in order to reduce the time necessary to add characters to the string if 
 necessary later in the program.  This removes the need to reallocate memory.
-**NOTICE:** the fact that their is no equal sign between the variable 
-name and the macro.  The equal sign is accounted for in the macro.
 
 .. code-block:: c 
 
@@ -115,7 +110,7 @@ name and the macro.  The equal sign is accounted for in the macro.
    #include "print.h"
 
    int main() {
-       str *one init_string("Hello World!", 30);
+       str *one = init_string("Hello World!", 30);
        print(one);
        print(string_length(one));
        print(string_memory(one));
@@ -160,9 +155,8 @@ The example below shows how to use these functions.
 Initialize String with Garbage Collection
 =========================================
 The user can also initialize a string such that it will be automatically 
-garbage collected when it goes out of scope with the ``init_string_gbc``
-macro.  This macro uses the same underlying functions as the ``init_string``
-macro, but they are invoked with the ``__attribute__(cleanup))`` operator 
+garbage collected when it goes out of scope with the ``gbc_str``
+macro.  This macro invoked with the ``__attribute__(cleanup))`` operator 
 that only works with ``gcc`` and ``clang`` compilers.  
 
 See the :ref:`init string <init_string>` Section for a description of all 
@@ -175,11 +169,8 @@ space complexity of :math:`O(1)` and a time complexity of :math:`O(n)`.
 Example 1
 ---------
 In this example we will initialize a string with a memory allocation just for
-the string. Notice that we have to manually free the memory in the struct 
-and the string with the ``free_string`` function.  You can also use the 
-``FREE_DAT`` macro which can be invoked from the ``dat_struct.h`` file.
-**NOTICE:** the fact that their is no equal sign between the variable 
-name and the macro.  The equal sign is accounted for in the macro.
+the string. Notice that we do not have to manually free the memory in the struct 
+and the string with the ``free_string`` function.
 
 .. code-block:: c 
 
@@ -187,7 +178,7 @@ name and the macro.  The equal sign is accounted for in the macro.
    #include "print.h"
 
    int main() {
-       str *one init_string_gbc("Hello World!");
+       str *one = gbc_str init_string("Hello World!");
        print(one);
        print(string_length(one));
        print(string_memory(one));
@@ -215,7 +206,7 @@ name and the macro.  The equal sign is accounted for in the macro.
    #include "print.h"
 
    int main() {
-       str *one init_string_gbc("Hello World!", 30);
+       str *one gbc_str = init_string("Hello World!", 30);
        print(one);
        print(string_length(one));
        print(string_memory(one));
@@ -230,7 +221,7 @@ name and the macro.  The equal sign is accounted for in the macro.
 
 Free String 
 ===========
-The ``free_string`` function can be used to free all memory in an ``str``
+The ``free_string`` macro can be used to free all memory in an ``str``
 Struct to include the Struct itself. This method has a
 space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
 
@@ -252,7 +243,7 @@ Example
    #include "print.h"
 
    int main() {
-       str *one init_string_gbc("Hello World!", 30);
+       str *one = init_string("Hello World!", 30);
        free_string(one);
        return 0;
    }
@@ -290,7 +281,7 @@ retrieve a string.
    #include "print.h"
 
    int main() {
-       str *one init_string("Hello World!");
+       str *one = init_string("Hello World!");
        print(get_string(one));
        free_string(one);
        return 0;
@@ -336,7 +327,7 @@ retrieve a string.
    #include "print.h"
 
    int main() {
-       str *one init_string("Hello World!");
+       str *one = init_string("Hello World!");
        print(string_length(one));
        free_string(one);
        return 0;
@@ -379,7 +370,7 @@ Example
    #define "str.h"
 
    int main() {
-       str *one init_string("Hello", 20);
+       str *one = init_string("Hello", 20);
        print("The string size is: ", string_memory(one));
        free_string(one);
        return 0;
@@ -430,7 +421,7 @@ This example shows a use where a string literal is inserted into a ``str`` conta
    #define "str.h"
 
    int main() {
-       str *a init_string("Hello");
+       str *a = init_string("Hello");
        bool result = insert_string(a, " World!", get_length(one));
        print(result);
        print(a);
@@ -456,8 +447,8 @@ This example shows a user where a ``str`` container is inserted into another
    #define "str.h"
 
    int main() {
-       str *a init_string("Hello");
-       str *b init_string(" World!");
+       str *a = init_string("Hello");
+       str *b = init_string(" World!");
        bool result = insert_string(a, b, 2);
        print(result);
        print(a);
@@ -487,8 +478,8 @@ or if one of the ``str`` containers has a NULL pointer to its string.
    #define "str.h"
 
    int main() {
-       str *a init_string("Hello");
-       str *b init_string(" World!");
+       str *a = init_string("Hello");
+       str *b = init_string(" World!");
        bool result = insert_string(a, b, 50);
        print(result);
        print(a);
@@ -522,8 +513,8 @@ macro.
    #define "str.h"
 
    int main() {
-       str *a init_string("Hello");
-       str *b init_string(" World!");
+       str *a = init_string("Hello");
+       str *b = init_string(" World!");
        bool result = insert_string(a, b, 2);
        print(result);
        print(a);
@@ -573,7 +564,7 @@ Example for an oversized string
 
    int main() {
        // String is oversized in memory
-       str *one init_string("Hello", 30);
+       str *one = init_string("Hello", 30);
        print(string_length(one));
        print(string_memory(one));
        bool val = trim_string(one);
@@ -603,7 +594,7 @@ Example for a properly sized string
 
    int main() {
        // String is properly sized in memory
-       str *one init_string("Hello");
+       str *one = init_string("Hello");
        print(string_length(one));
        print(string_memory(one));
        bool val = trim_string(one);
@@ -671,7 +662,7 @@ Example
    #include "print.h"
 
    int main() {
-       str *one init_string("Hello", 20);
+       str *one = init_string("Hello", 20);
        str *two = copy_string(one);
        print(get_string(two));
        print(string_length(two));
@@ -731,7 +722,7 @@ which could lead to an incorrect result.
    #define "str.h"
 
    int main() {
-       str *one init_string("Hello");
+       str *one = init_string("Hello");
        int val = compare_strings(one, "Helloo");
        print(val);
        free_string(one);
@@ -753,8 +744,8 @@ safest opton for comparing two strings.
    #define "str.h"
 
    int main() {
-       str *one init_string("Hello");
-       str *two init_string("Hello");
+       str *one = init_string("Hello");
+       str *two = init_string("Hello");
        int val = compare_strings(one, two);
        print(val);
        free_string(one);
@@ -815,7 +806,7 @@ An example to find the first char value
    #define "str.h"
 
    int main() {
-       str *one init_string("Hello");
+       str *one = init_string("Hello");
        char *ptr = find_first_char(one, 'l');
        assert_non_null(ptr);
        assert_ptr_equal(ptr, one->data + 2);
@@ -833,7 +824,7 @@ An example to find the last char value.
    #define "str.h"
 
    int main() {
-       str *one init_string("Hello");
+       str *one = init_string("Hello");
        char *ptr = find_last_char(one, 'l');
        assert_non_null(ptr);
        assert_ptr_equal(ptr, one->data + 3);
@@ -878,7 +869,7 @@ to a string container and a container.
    #include "str.h"
 
    int main() {
-       str *one init_string("one Hello and another Hello statement!");
+       str *one = init_string("one Hello and another Hello statement!");
        char *two = "Hello"
        char *ptr = find_first_strign(one, two);
        print("Compare a literal to a container");
@@ -910,7 +901,7 @@ container and a container to a container.
    #include "str.h"
 
    int main() {
-       str *one init_string("one Hello and another Hello statement!");
+       str *one = init_string("one Hello and another Hello statement!");
        char *two = "Hello"
        char *ptr = find_last_strign(one, two);
        print("Compare a literal to a container");
@@ -977,7 +968,7 @@ Pop data using the default value for index.
    #include "str.h"
 
    int main() {
-       str *one init_string("Goodbye");
+       str *one = init_string("Goodbye");
        char val = pop_string_char(one);
        print(val);
        print(one);
@@ -1001,7 +992,7 @@ time than popping from the last index.
    #include "str.h"
 
    int main() {
-       str *one init_string("Goodbye");
+       str *one = init_string("Goodbye");
        char val = pop_string_char(one, 3);
        print(val);
        print(one);
@@ -1061,7 +1052,7 @@ Return a string that must be manually freed
    #define "str.h"
 
    int main() {
-       str *one init_string("2023/10/24");
+       str *one = init_string("2023/10/24");
        str *two = pop_string_token(one, '/');
        // The same as str *two = pop_string_token(one, '/', false);
        print(one);
@@ -1089,7 +1080,7 @@ do not need to be manually freed.
    #define "str.h"
 
    int main() {
-       str *one init_string_gbc("2023/10/24");
+       str *one = init_string_gbc("2023/10/24");
        str *two = pop_string_token(one, '/', true);
        print(one);
        print(two);

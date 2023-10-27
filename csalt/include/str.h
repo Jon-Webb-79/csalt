@@ -98,28 +98,7 @@ str* init_string_len(char *strlit, size_t num);
  * @param num A buffer size for the string, defaulted to strlen(string) + 1
  */
 #define init_string(...) \
-    = TWO_FUNC_SELECT(__VA_ARGS__, init_string_len, init_string_nol)(__VA_ARGS__)
-// --------------------------------------------------------------------------------
-
-/**
- * @brief This macro is used to initialize a string with automated garbage collection.
- *
- * This Macro allows a user to pass a variable number of arguments in the 
- * process of initializing a string container.  The user can pass just the 
- * string to encapsulate in the container, which will allocate memory just 
- * for that string, or the user can pass the string and a buffer size, which 
- * will allow for the overallocation of memory to better support future 
- * resizing.  In addition, this macro allows for automated garbage collection,
- * so memory does not have to be manually freed.  However, the memory can 
- * also be manually freed.
- *
- * @param str_struct A string container of type str 
- * @param string A string literal 
- * @param num A buffer size for the string, defaulted to strlen(string) + 1
- */
-#define init_string_gbc(...) \
-    __attribute__((cleanup(cleanup_string))) = TWO_FUNC_SELECT(__VA_ARGS__, init_string_len, init_string_nol)(__VA_ARGS__);
-
+    TWO_FUNC_SELECT(__VA_ARGS__, init_string_len, init_string_nol)(__VA_ARGS__)
 // ================================================================================
 // ================================================================================
 
@@ -133,16 +112,25 @@ str* init_string_len(char *strlit, size_t num);
  *
  * @param str_struct A string container of type str 
  */
-void free_string(str *str_struct);
+void _free_string(str **str_struct);
 // --------------------------------------------------------------------------------
 
 /**
- * @brief an intermediate function used to faciliate garbage cleanup 
- *
- * @param s A string container of type str
+ * Macro to add in front of ynamically allocated strings as an indicator to 
+ * collect the dynamically allocated variable and free it when it goes out
+ * of scope.
  */
-void cleanup_string(str **s);
+#define gbc_str __attribute__((cleanup(_free_string)))
 // --------------------------------------------------------------------------------
+
+/**
+ * Macro to free a str struct.  The macro allows a user to pass data without
+ * having to dereference it.
+ */
+#define free_string(str_struct) _free_string(&(str_struct))
+// ================================================================================
+// ================================================================================
+
 /**
  * @brief Retrieves the string value
  *
@@ -180,7 +168,8 @@ size_t string_length(str* str_struct);
  * @return The memory allocation of a string in chars
  */
 size_t string_memory(str* str_struct);
-// --------------------------------------------------------------------------------
+// ================================================================================
+// ================================================================================
 
 /**
  * @brief Inserts a string literal into a struct of type str 
@@ -224,7 +213,8 @@ bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index);
 #define insert_string(str_one, str_two, index) _Generic((str_two), \
     char*: insert_string_lit, \
     default: insert_string_str) (str_one, str_two, index)
-// --------------------------------------------------------------------------------
+// ================================================================================
+// ================================================================================
 
 /**
  * @brief Tims the string memory to the minimum necessary size 
@@ -290,7 +280,7 @@ int compare_strings_str(str *str_struct_one, str *str_struct_two);
  */
 #define compare_strings(str_one, str_two) _Generic((str_two), \
     char*: compare_strings_lit, \
-    default: compare_strings_str) (str_one, str_two) 
+    default: compare_strings_str) (str_one, str_two)
 // ================================================================================
 // ================================================================================
 
@@ -381,6 +371,39 @@ char* find_last_str_strstr(str* str_struct_one, str *str_struct_two);
 #define find_last_string(str_one, str_two) _Generic((str_two), \
         char*: find_last_lit_strstr, \
         default: find_last_str_strstr) (str_one, str_two)
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the last instance of a substring in a string container 
+ *
+ * This function will return the last instance of a string in a string container.
+ * The string pattern is represented by a string literal in this function.
+ *
+ * @param str_struct A string container of type str 
+ * @param string A string literal
+ * @returns A char pointer to the last instance of a string
+ */
+char* find_last_lit_strstr(str* str_struct, char* string);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the last instance of a substring in a string container 
+ *
+ * This function will return the last instance of a string in a string 
+ * container.  The string pattern is represented by another string container
+ * in this function.
+ *
+ * @param str_struct_one A string container of type str 
+ * @param string A string literal
+ * @returns A char pointer to the last instance of a string
+ */
+char* find_last_str_strstr(str* str_struct_one, str *str_struct_two);
+// --------------------------------------------------------------------------------
+
+#define find_last_string(str_one, str_two) _Generic((str_two), \
+        char*: find_last_lit_strstr, \
+        default: find_last_str_strstr) (str_one, str_two)
 // ================================================================================
 // ================================================================================
 
@@ -418,40 +441,13 @@ char pop_str_char_index(str *str_token, size_t index);
  * @brief Pops a substring to the right of a token 
  *
  * This function will allow a user to pop the sub-string to the right of the right
- * most token in a string.  This function returns a string container that must 
- * be manually freed.
+ * most token in a string.
  *
  * @param str_struct A string container of type str 
  * @param token a char token that divides string data 
  * @returns A string container of type str
  */
-str* pop_string_token_wogbc(str *str_struct, char token);
-// ------------------------------------------------------------------------------------------
-
-/**
- * @brief Pops a substring to the right of a token 
- *
- * This function will allow a user to pop the sub-string to the right of the right
- * most token in a string.  This function returns a string container that will be
- * garbage collected, or a string that must be manually free depending on the 
- * developers entry for gbc
- *
- * @param str_struct A string container of type str 
- * @param token a char token that divides string data 
- * @param gbc true if garbage collection is to be enabled, false otherwise
- * @returns A string container of type str
- */
-str* pop_string_token_wgbc(str *str_struct, char token, bool gbc);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief a macro to support the selection between three funcs.
- */
-#define SELECT_THREE_FUNCS(arg1, arg2, arg3, func, ...) func 
-// --------------------------------------------------------------------------------
-
-#define pop_string_token(...) \
-    SELECT_THREE_FUNCS(__VA_ARGS__, pop_string_token_wgbc, pop_string_token_wogbc, pop_string_token_wogbc) (__VA_ARGS__)
+str* pop_string_token(str *str_struct, char token);
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

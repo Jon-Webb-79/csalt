@@ -122,18 +122,16 @@ size_t string_memory(str* str_struct) {
 // ================================================================================
 // ================================================================================
 
-void free_string(str *str_struct) {
-    if (str_struct->data != NULL)
-        free(str_struct->data);
-    if (str_struct != NULL)
-        free(str_struct);
-}
-// --------------------------------------------------------------------------------
+void _free_string(str **str_struct_ptr) {
+    if (!str_struct_ptr || !*str_struct_ptr) return;
 
-void cleanup_string(str **s) {
-    if (s && *s) {
-        free_string(*s);
+    if ((*str_struct_ptr)->data) {
+        free((*str_struct_ptr)->data);
+        (*str_struct_ptr)->data = NULL; 
     }
+    
+    free(*str_struct_ptr);
+    *str_struct_ptr = NULL; 
 }
 // --------------------------------------------------------------------------------
 
@@ -222,8 +220,28 @@ bool trim_string(str *str_struct) {
 }
 // --------------------------------------------------------------------------------
 
+// str* copy_string(str *str_struct) {
+//     if (!str_struct || !str_struct->data) {
+//         // Handle null pointers appropriately
+//         fprintf(stderr, "Null pointer provided to copy_string_wo_gbc.\n");
+//         return 0; // Or another designated error value
+//     }
+//     char str_var[str_struct->len + 1];
+//     memcpy(str_var, str_struct->data, str_struct->len + 1);
+//     str *one = = init_string_len(str_var, str_struct->alloc);
+//     return one;
+// }
+// --------------------------------------------------------------------------------
+
 str* copy_string(str *str_struct) {
-    str *one = init_string_len(str_struct->data, str_struct->alloc);
+    if (!str_struct || !str_struct->data) {
+        // Handle null pointers appropriately
+        fprintf(stderr, "Null pointer provided to copy_string_wo_gbc.\n");
+        return 0; // Or another designated error value
+    }
+    char str_var[str_struct->len + 1];
+    memcpy(str_var, str_struct->data, str_struct->len + 1);
+    str *one = init_string_len(str_var, str_struct->alloc);
     return one;
 }
 // ================================================================================
@@ -430,7 +448,7 @@ char pop_str_char_index(str *str_struct, size_t index) {
 // ================================================================================
 // ================================================================================
 
-str* pop_string_token_wogbc(str *str_struct, char token) {
+str* pop_string_token(str *str_struct, char token) {
     if (!str_struct || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to pop_string_token\n");
         return NULL;
@@ -440,7 +458,7 @@ str* pop_string_token_wogbc(str *str_struct, char token) {
     }
     for (int i = str_struct->len - 1; i >= 0; i--) {
         if (str_struct->data[i] == token) {
-            str *one init_string(str_struct->data + (i + 1));
+            str *one = init_string(str_struct->data + (i + 1));
             
             // Set the null terminator after the token
             str_struct->data[i] = '\0';
@@ -449,40 +467,6 @@ str* pop_string_token_wogbc(str *str_struct, char token) {
             str_struct->len = i;
 
             return one;
-        }
-    }
-    return NULL;
-}
-// --------------------------------------------------------------------------------
-
-str* pop_string_token_wgbc(str *str_struct, char token, bool gbc) {
-    if (!str_struct || !str_struct->data) {
-        fprintf(stderr, "Null pointer provided to pop_string_token\n");
-        return NULL;
-    }
-    if (str_struct->len == 0) {
-        return NULL;
-    }
-    for (int i = str_struct->len - 1; i >= 0; i--) {
-        if (str_struct->data[i] == token) {
-            if (gbc) {
-                str* one init_string_gbc(str_struct->data + (i + 1));
-                // Set the null terminator after the token
-                str_struct->data[i] = '\0';
-            
-                // Update the length of str_struct
-                str_struct->len = i;
-                return one;
-            }
-            else {
-                str *one init_string(str_struct->data + (i + 1));
-                // Set the null terminator after the token
-                str_struct->data[i] = '\0';
-            
-                // Update the length of str_struct
-                str_struct->len = i;
-                return one;
-            }
         }
     }
     return NULL;

@@ -27,9 +27,8 @@ int main(int argc, const char * argv[]) {
 	    cmocka_unit_test(test_string_init_one_var),
         cmocka_unit_test(test_string_init_two_var),
         cmocka_unit_test(test_string_init_two_var_less),
-        cmocka_unit_test(test_string_init_one_var_gbc),
-        cmocka_unit_test(test_string_init_two_var_gbc),
-        cmocka_unit_test(test_string_init_two_var_less_gbc),
+        cmocka_unit_test(test_string_init_gbc),
+        cmocka_unit_test(test_string_init_post_free),
         cmocka_unit_test(test_get_string_fail_one),
         cmocka_unit_test(test_get_string_fail_two),
         cmocka_unit_test(test_string_length_fail_one),
@@ -46,6 +45,7 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_trim_string_error_one),
         cmocka_unit_test(test_trim_string_error_two),
         cmocka_unit_test(test_copy_string),
+        cmocka_unit_test(test_copy_string_w_gbc),
         cmocka_unit_test(test_compare_strings_lit_equal),
         cmocka_unit_test(test_compare_strings_lit_greater),
         cmocka_unit_test(test_compare_strings_lit_less),
@@ -83,12 +83,8 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_pop_string_token_no_token),
         cmocka_unit_test(test_pop_string_token_null_struct),
         cmocka_unit_test(test_pop_string_token_null_data),
-        cmocka_unit_test(test_pop_string_token_gbc_true),
-        cmocka_unit_test(test_pop_string_token_no_token_gbc_true),
-        cmocka_unit_test(test_pop_string_token_null_struct_gbc_true),
-        cmocka_unit_test(test_pop_string_token_null_data_gbc_true),
-        cmocka_unit_test(test_pop_string_token_gbc_false)
-	};
+        cmocka_unit_test(test_pop_string_token_gbc_true)
+     	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }
 // ================================================================================

@@ -20,7 +20,7 @@
 void test_string_init_one_var(void **state)
 {
 	(void) state;
-    str *one init_string("Hello!");
+    str *one = init_string("Hello!");
     assert_int_equal(6, string_length(one));
     assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
@@ -34,7 +34,7 @@ void test_string_init_one_var(void **state)
 void test_string_init_two_var(void **state)
 {
 	(void) state;
-    str *one init_string("Hello!", 20);
+    str *one = init_string("Hello!", 20);
     assert_int_equal(6, string_length(one));
     assert_int_equal(20, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
@@ -49,7 +49,7 @@ void test_string_init_two_var(void **state)
 void test_string_init_two_var_less(void **state)
 {
 	(void) state;
-    str *one init_string("Hello!", 1);
+    str *one = init_string("Hello!", 1);
     assert_int_equal(6, string_length(one));
     assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
@@ -58,54 +58,26 @@ void test_string_init_two_var_less(void **state)
 // --------------------------------------------------------------------------------
 
 /**
- * Test to ensure garbage collection works with one variable passed 
- * to init_string macro
+ * Test to ensure the gbc_str macro assigns a garbage collector to a variable
  */
-void test_string_init_one_var_gbc(void **state)
+void test_string_init_gbc(void **state)
 {
 	(void) state;
-    str* one init_string_gbc("Hello!");
+    str *one gbc_str = init_string("Hello!", 1);
     assert_int_equal(6, string_length(one));
     assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
 }
 // --------------------------------------------------------------------------------
-
-/**
- * Test to ensure garbage collection works with two variables passed 
- * to init_string macro
- */
-void test_string_init_two_var_gbc(void **state)
-{
-	(void) state;
-    str *one init_string_gbc("Hello!", 20);
-    assert_int_equal(6, string_length(one));
-    assert_int_equal(20, string_memory(one));
-    assert_string_equal(get_string(one), "Hello!");
-}
-// --------------------------------------------------------------------------------
-
-/**
- * Test to ensure garbage collection works with buffer undersized from string
- */
-void test_string_init_two_var_less_gbc(void **state)
-{
-	(void) state;
-    str *one init_string_gbc("Hello!", 1);
-    assert_int_equal(6, string_length(one));
-    assert_int_equal(7, string_memory(one));
-    assert_string_equal(get_string(one), "Hello!");
-}
-// --------------------------------------------------------------------------------
-
+//
 /**
  * Test to make sure an attempt to free memory after garbage collection is 
  * not harmful to code execution.
  */
 void test_string_init_post_free(void **state)
 {
-	(void) state;
-    str *one init_string_gbc("Hello!", 1);
+ 	(void) state;
+    str *one gbc_str = init_string("Hello!", 1);
     assert_int_equal(6, string_length(one));
     assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
@@ -196,7 +168,7 @@ void test_string_length_fail_two(void **state) {
  */
 void test_insert_string_lit_insert_end(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     bool return_value = insert_string(one, " World!", string_length(one));
     assert_string_equal(get_string(one), "Hello World!");
     assert_int_equal(string_length(one), 12);
@@ -212,7 +184,7 @@ void test_insert_string_lit_insert_end(void **state) {
  */
 void test_insert_string_lit_insert_middle(void **state) {
     (void) state;
-    str *one init_string("Hello", 20);
+    str *one = init_string("Hello", 20);
     bool return_value = insert_string(one, " World!", 2);
     assert_string_equal(get_string(one), "He World!llo");
     assert_int_equal(string_length(one), 12);
@@ -251,7 +223,7 @@ void test_insert_string_lit_error_two(void **state) {
     int devnull = open("/dev/null", O_WRONLY);
     dup2(devnull, STDERR_FILENO);
     close(devnull);
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     bool result = insert_string(one, NULL, 0);
     assert_false(result);
     // Restore stderr
@@ -271,7 +243,7 @@ void test_insert_string_lit_error_three(void **state) {
     int devnull = open("/dev/null", O_WRONLY);
     dup2(devnull, STDERR_FILENO);
     close(devnull);
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     bool result = insert_string(one, " World!", 50);
     assert_false(result);
     // Restore stderr
@@ -286,8 +258,8 @@ void test_insert_string_lit_error_three(void **state) {
  */
 void test_insert_string_str_insert_end(void **state) {
     (void) state;
-    str *one init_string("Hello");
-    str *two init_string(" World!");
+    str *one = init_string("Hello");
+    str *two = init_string(" World!");
     bool return_value = insert_string(one, two, string_length(one));
     assert_string_equal(get_string(one), "Hello World!");
     assert_int_equal(string_length(one), 12);
@@ -304,8 +276,8 @@ void test_insert_string_str_insert_end(void **state) {
  */
 void test_insert_string_str_insert_middle(void **state) {
     (void) state;
-    str *one init_string("Hello", 20);
-    str *two init_string(" World!");
+    str *one = init_string("Hello", 20);
+    str *two = init_string(" World!");
     bool return_value = insert_string(one, two, 2);
     assert_string_equal(get_string(one), "He World!llo");
     assert_int_equal(string_length(one), 12);
@@ -322,7 +294,7 @@ void test_insert_string_str_insert_middle(void **state) {
  */
 void test_trim_string_equal(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     bool val = trim_string(one);
     assert_true(val);
     assert_int_equal(string_length(one), 5);
@@ -337,7 +309,7 @@ void test_trim_string_equal(void **state) {
  */
 void test_trim_string_greater(void **state) {
     (void) state;
-    str *one init_string("Hello", 50);
+    str *one = init_string("Hello", 50);
     bool val = trim_string(one);
     assert_true(val);
     assert_int_equal(string_length(one), 5);
@@ -389,7 +361,7 @@ void test_trim_string_error_two(void **state) {
  */
 void test_copy_string(void **state) {
     (void) state;
-    str *one init_string("Hello", 20);
+    str *one = init_string("Hello", 20);
     str *two = copy_string(one);
     assert_string_equal(get_string(one), get_string(two));
     assert_int_equal(string_length(one), string_length(two));
@@ -399,9 +371,23 @@ void test_copy_string(void **state) {
 }
 // --------------------------------------------------------------------------------
 
+/**
+ * Test to ensure copy_string creates a deep copy of the string passed to it
+ * with garbage collection.
+ */
+void test_copy_string_w_gbc(void **state) {
+    (void) state;
+    str *one gbc_str = init_string("Hello", 20);
+    str *two gbc_str = copy_string(one);
+    assert_string_equal(get_string(one), get_string(two));
+    assert_int_equal(string_length(one), string_length(two));
+    assert_int_equal(string_memory(one), string_memory(two));
+}
+// --------------------------------------------------------------------------------
+
 void test_compare_strings_lit_equal(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     int val = compare_strings(one, "Hello");
     assert_int_equal(val, 0);
     free_string(one);
@@ -410,7 +396,7 @@ void test_compare_strings_lit_equal(void **state) {
 
 void test_compare_strings_lit_greater(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     int val = compare_strings(one, "Henlo");
     assert_int_equal(val, -2);
     free_string(one);
@@ -419,7 +405,7 @@ void test_compare_strings_lit_greater(void **state) {
 
 void test_compare_strings_lit_less(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     int val = compare_strings(one, "Healo");
     assert_int_equal(val, 11);
     free_string(one);
@@ -428,7 +414,7 @@ void test_compare_strings_lit_less(void **state) {
 
 void test_compare_strings_lit_oversize(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     int val = compare_strings(one, "Helloo");
     assert_int_equal(val, -1);
     free_string(one);
@@ -437,8 +423,8 @@ void test_compare_strings_lit_oversize(void **state) {
 
 void test_compare_strings_str_equal(void **state) {
     (void) state;
-    str *one init_string("Hello");
-    str *two init_string("Hello");
+    str *one = init_string("Hello");
+    str *two = init_string("Hello");
     int val = compare_strings(one, two);
     assert_int_equal(val, 0);
     free_string(one);
@@ -448,8 +434,8 @@ void test_compare_strings_str_equal(void **state) {
 
 void test_compare_strings_str_greater(void **state) {
     (void) state;
-    str *one init_string("Hello");
-    str *two init_string("Henlo");
+    str *one = init_string("Hello");
+    str *two = init_string("Henlo");
     int val = compare_strings(one, two);
     assert_int_equal(val, -2);
     free_string(one);
@@ -459,8 +445,8 @@ void test_compare_strings_str_greater(void **state) {
 
 void test_compare_strings_str_less(void **state) {
     (void) state;
-    str *one init_string("Hello");
-    str *two init_string("Healo");
+    str *one = init_string("Hello");
+    str *two = init_string("Healo");
     int val = compare_strings(one, two);
     assert_int_equal(val, 11);
     free_string(one);
@@ -470,8 +456,8 @@ void test_compare_strings_str_less(void **state) {
 
 void test_compare_strings_str_oversize(void **state) {
     (void) state;
-    str *one init_string("Hello");
-    str *two init_string("Helloo");
+    str *one = init_string("Hello");
+    str *two = init_string("Helloo");
     int val = compare_strings(one, two);
     assert_int_equal(val, -1);
     free_string(one);
@@ -481,7 +467,7 @@ void test_compare_strings_str_oversize(void **state) {
 
 void test_find_first_char(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     char *ptr = find_first_char(one, 'l');
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 2);
@@ -491,7 +477,7 @@ void test_find_first_char(void **state) {
 
 void test_find_first_char_does_not_exist(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     char *ptr = find_first_char(one, 'q');
     assert_null(ptr);
     free_string(one);
@@ -500,7 +486,7 @@ void test_find_first_char_does_not_exist(void **state) {
 
 void test_find_first_char_null_terminator(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     char *ptr = find_first_char(one, '\0');
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 5);
@@ -510,7 +496,7 @@ void test_find_first_char_null_terminator(void **state) {
 
 void test_find_last_char(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     char *ptr = find_last_char(one, 'l');
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 3);
@@ -520,7 +506,7 @@ void test_find_last_char(void **state) {
 
 void test_find_last_char_does_not_exist(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     char *ptr = find_last_char(one, 'q');
     assert_null(ptr);
     free_string(one);
@@ -529,7 +515,7 @@ void test_find_last_char_does_not_exist(void **state) {
 
 void test_find_last_char_null_terminator(void **state) {
     (void) state;
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     char *ptr = find_last_char(one, '\0');
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 5);
@@ -539,7 +525,7 @@ void test_find_last_char_null_terminator(void **state) {
 
 void test_find_first_string_lit(void **state) {
     (void) state;
-    str *one init_string("Where in the World is Carmen SanDiego!");
+    str *one = init_string("Where in the World is Carmen SanDiego!");
     char *two = "World";
     char *ptr = find_first_string(one, two);
     assert_non_null(ptr);
@@ -550,7 +536,7 @@ void test_find_first_string_lit(void **state) {
 
 void test_find_first_string_lit_null(void **state) {
     (void) state;
-    str *one init_string("Where in the World is Carmen SanDiego!");
+    str *one = init_string("Where in the World is Carmen SanDiego!");
     char *two = "What";
     char *ptr = find_first_string(one, two);
     assert_null(ptr);
@@ -560,7 +546,7 @@ void test_find_first_string_lit_null(void **state) {
 
 void test_find_first_string_lit_oversized(void **state) {
     (void) state;
-    str *one init_string("Where");
+    str *one = init_string("Where");
     char *two = "What is going on";
     char *ptr = find_first_string(one, two);
     assert_null(ptr);
@@ -570,8 +556,8 @@ void test_find_first_string_lit_oversized(void **state) {
 
 void test_find_first_string_str(void **state) {
     (void) state;
-    str *one init_string("Where in the World is Carmen SanDiego!");
-    str *two init_string("World");
+    str *one = init_string("Where in the World is Carmen SanDiego!");
+    str *two = init_string("World");
     char *ptr = find_first_string(one, two);
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 13);
@@ -582,8 +568,8 @@ void test_find_first_string_str(void **state) {
 
 void test_find_first_string_str_null(void **state) {
     (void) state;
-    str *one init_string("Where in the World is Carmen SanDiego!");
-    str *two init_string("What");
+    str *one = init_string("Where in the World is Carmen SanDiego!");
+    str *two = init_string("What");
     char *ptr = find_first_string(one, two);
     assert_null(ptr);
     free_string(one);
@@ -593,8 +579,8 @@ void test_find_first_string_str_null(void **state) {
 
 void test_find_first_string_str_oversized(void **state) {
     (void) state;
-    str *one init_string("Where");
-    str *two init_string("What is going on");
+    str *one = init_string("Where");
+    str *two = init_string("What is going on");
     char *ptr = find_first_string(one, two);
     assert_null(ptr);
     free_string(one);
@@ -604,7 +590,7 @@ void test_find_first_string_str_oversized(void **state) {
 
 void test_find_last_string_lit(void **state) {
     (void) state;
-    str *one init_string("Hello this is Hello again!");
+    str *one = init_string("Hello this is Hello again!");
     char *two = "Hello";
     char *ptr = find_last_string(one, two);
     assert_non_null(ptr);
@@ -615,7 +601,7 @@ void test_find_last_string_lit(void **state) {
 
 void test_find_last_string_lit_null(void **state) {
     (void) state;
-    str *one init_string("Where in the World is Carmen SanDiego!");
+    str *one = init_string("Where in the World is Carmen SanDiego!");
     char *two = "What";
     char *ptr = find_last_string(one, two);
     assert_null(ptr);
@@ -625,7 +611,7 @@ void test_find_last_string_lit_null(void **state) {
 
 void test_find_last_string_lit_oversized(void **state) {
     (void) state;
-    str *one init_string("Where");
+    str *one = init_string("Where");
     char *two = "What is going on";
     char *ptr = find_last_string(one, two);
     assert_null(ptr);
@@ -635,8 +621,8 @@ void test_find_last_string_lit_oversized(void **state) {
 
 void test_find_last_string_str(void **state) {
     (void) state;
-    str *one init_string("Hello this is Hello again!");
-    str *two init_string("Hello");
+    str *one = init_string("Hello this is Hello again!");
+    str *two = init_string("Hello");
     char *ptr = find_last_string(one, two);
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 14);
@@ -647,8 +633,8 @@ void test_find_last_string_str(void **state) {
 
 void test_find_last_string_str_null(void **state) {
     (void) state;
-    str *one init_string("Where in the World is Carmen SanDiego!");
-    str *two init_string("What");
+    str *one = init_string("Where in the World is Carmen SanDiego!");
+    str *two = init_string("What");
     char *ptr = find_last_string(one, two);
     assert_null(ptr);
     free_string(one);
@@ -658,8 +644,8 @@ void test_find_last_string_str_null(void **state) {
 
 void test_find_last_string_str_oversized(void **state) {
     (void) state;
-    str *one init_string("Where");
-    str *two init_string("What is going on");
+    str *one = init_string("Where");
+    str *two = init_string("What is going on");
     char *ptr = find_last_string(one, two);
     assert_null(ptr);
     free_string(one);
@@ -668,7 +654,7 @@ void test_find_last_string_str_oversized(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_pop_string_end_char(void **state) {
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     char var = pop_string_char(one);
     assert_int_equal(var, 'o');
     assert_string_equal(get_string(one), "Hell");
@@ -706,7 +692,7 @@ void test_pop_string_end_null_data(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_pop_string_char(void **state) {
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     char var = pop_string_char(one, 2);
     assert_int_equal(var, 'l');
     assert_string_equal(get_string(one), "Helo");
@@ -749,7 +735,7 @@ void test_pop_string_out_of_bounds(void **state) {
     int devnull = open("/dev/null", O_WRONLY);
     dup2(devnull, STDERR_FILENO);
     close(devnull);
-    str *one init_string("Hello");
+    str *one = init_string("Hello");
     char val = pop_string_char(one, 12);
     // Restore stderr
     dup2(stderr_copy, STDERR_FILENO);
@@ -761,7 +747,7 @@ void test_pop_string_out_of_bounds(void **state) {
 
 void test_pop_string_token(void **state) {
     (void) state;
-    str *one init_string("2023/10/24");
+    str *one = init_string("2023/10/24");
     str *two = pop_string_token(one, '/');
     assert_string_equal("24", get_string(two));
     assert_string_equal("2023/10", get_string(one));
@@ -773,7 +759,7 @@ void test_pop_string_token(void **state) {
 
 void test_pop_string_token_no_token(void **state) {
     (void) state;
-    str *one init_string("2023/10/24");
+    str *one = init_string("2023/10/24");
     str *two = pop_string_token(one, '+');
     assert_null(two);
     assert_string_equal("2023/10/24", get_string(one));
@@ -813,64 +799,12 @@ void test_pop_string_token_null_data(void **state) {
 
 void test_pop_string_token_gbc_true(void **state) {
     (void) state;
-    str *one init_string("2023/10/24");
-    str *two = pop_string_token(one, '/', true);
+    str *one = init_string("2023/10/24");
+    str *two gbc_str = pop_string_token(one, '/');
     assert_string_equal("24", get_string(two));
     assert_string_equal("2023/10", get_string(one));
     assert_int_equal(7, string_length(one));
     free_string(one);
-}
-// --------------------------------------------------------------------------------
-
-void test_pop_string_token_no_token_gbc_true(void **state) {
-    (void) state;
-    str *one init_string("2023/10/24");
-    str *two = pop_string_token(one, '+', true);
-    assert_null(two);
-    assert_string_equal("2023/10/24", get_string(one));
-    assert_int_equal(10, string_length(one));
-    free_string(one);
-}
-// --------------------------------------------------------------------------------
-
-void test_pop_string_token_null_struct_gbc_true(void **state) {
-    (void) state;
-    int stderr_copy = dup(STDERR_FILENO);
-    int devnull = open("/dev/null", O_WRONLY);
-    dup2(devnull, STDERR_FILENO);
-    close(devnull);
-    str string_struct = { .data = NULL, .len = 0, .alloc = 0 };
-    str *val = pop_string_token(&string_struct, '/', true);
-    assert_null(val);
-    // Restore stderr
-    dup2(stderr_copy, STDERR_FILENO);
-    close(stderr_copy);
-}
-// --------------------------------------------------------------------------------
-
-void test_pop_string_token_null_data_gbc_true(void **state) {
-    (void) state;
-    int stderr_copy = dup(STDERR_FILENO);
-    int devnull = open("/dev/null", O_WRONLY);
-    dup2(devnull, STDERR_FILENO);
-    close(devnull);
-    str *val = pop_string_token(NULL, '/', true);
-    assert_null(val);
-    // Restore stderr
-    dup2(stderr_copy, STDERR_FILENO);
-    close(stderr_copy);    
-}
-// --------------------------------------------------------------------------------
-
-void test_pop_string_token_gbc_false(void **state) {
-    (void) state;
-    str *one init_string("2023/10/24");
-    str *two = pop_string_token(one, '/', false);
-    assert_string_equal("24", get_string(two));
-    assert_string_equal("2023/10", get_string(one));
-    assert_int_equal(7, string_length(one));
-    free_string(one);
-    free_string(two);
 }
 // ================================================================================
 // ================================================================================
