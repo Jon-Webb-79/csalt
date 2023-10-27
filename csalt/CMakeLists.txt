@@ -26,6 +26,19 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic")
 endif()
 
+if(APPLE)
+    # Check for M1 architecture
+    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+        include_directories(/opt/homebrew/include)
+        link_directories(/opt/homebrew/lib)
+    else()
+        # for Intel Macs or older versions of macOS, adjust as needed
+        include_directories(/usr/local/include)
+        link_directories(/usr/local/lib)
+    endif()
+endif()
+
+
 # Define the library
 add_library(csalt
 	str.c)
