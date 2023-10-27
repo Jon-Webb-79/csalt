@@ -27,7 +27,9 @@ int main(int argc, const char * argv[]) {
 	    cmocka_unit_test(test_string_init_one_var),
         cmocka_unit_test(test_string_init_two_var),
         cmocka_unit_test(test_string_init_two_var_less),
+        #ifdef __GNUC__
         cmocka_unit_test(test_string_init_gbc),
+        #endif
         cmocka_unit_test(test_string_init_post_free),
         cmocka_unit_test(test_get_string_fail_one),
         cmocka_unit_test(test_get_string_fail_two),
@@ -45,7 +47,9 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_trim_string_error_one),
         cmocka_unit_test(test_trim_string_error_two),
         cmocka_unit_test(test_copy_string),
+        #ifdef __GNUC__
         cmocka_unit_test(test_copy_string_w_gbc),
+        #endif
         cmocka_unit_test(test_compare_strings_lit_equal),
         cmocka_unit_test(test_compare_strings_lit_greater),
         cmocka_unit_test(test_compare_strings_lit_less),
@@ -83,7 +87,9 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_pop_string_token_no_token),
         cmocka_unit_test(test_pop_string_token_null_struct),
         cmocka_unit_test(test_pop_string_token_null_data),
+        #ifdef __GNUC__
         cmocka_unit_test(test_pop_string_token_gbc_true)
+        #endif
      	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

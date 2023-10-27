@@ -29,7 +29,9 @@
 void test_string_init_one_var(void **state);
 void test_string_init_two_var(void **state);
 void test_string_init_two_var_less(void **state);
+#ifdef __GNUC__
 void test_string_init_gbc(void **state);
+#endif
 void test_string_init_post_free(void **state);
 void test_get_string_fail_one(void **state);
 void test_get_string_fail_two(void **state);
@@ -47,7 +49,9 @@ void test_trim_string_greater(void **state);
 void test_trim_string_error_one(void **state);
 void test_trim_string_error_two(void **state);
 void test_copy_string(void **state);
+#ifdef __GNUC__
 void test_copy_string_w_gbc(void **state);
+#endif
 void test_compare_strings_lit_equal(void **state);
 void test_compare_strings_lit_greater(void **state);
 void test_compare_strings_lit_less(void **state);
@@ -86,10 +90,11 @@ void test_pop_string_token_no_token(void **state);
 void test_pop_string_token_null_struct(void **state);
 void test_pop_string_token_null_data(void **state);
 void test_pop_string_token_gbc_true(void **state);
+#ifdef __GNUC__
 void test_pop_string_token_no_token_gbc_true(void **state);
-void test_pop_string_token_null_struct_gbc_true(void **state);
-void test_pop_string_token_null_data_gbc_true(void **state);
-void test_pop_string_token_gbc_false(void **state);
+#endif
+// ================================================================================
+// ================================================================================
 #endif /* test_str_H */
 // ================================================================================
 // ================================================================================

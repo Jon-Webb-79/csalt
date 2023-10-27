@@ -11,9 +11,6 @@
 // ================================================================================
 // ================================================================================
 // Include modules here
-#if !defined(__GNUC__) && !defined(__clang__)
-#error "This code is only compatible with GCC and Clang"
-#endif
 
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L
 #error "This code requires C11 or later."
@@ -31,6 +28,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * Macros to guide memory management.
+ */
+#define STR_THRESHOLD (1 * 1024 * 1024)  // 1 MB
+#define STR_FIXED_AMOUNT (1 * 1024 * 1024)  // 1 MB
 
 /**
  * @brief This struct acts as a container for string data types
@@ -125,9 +128,12 @@ void _free_string(str **str_struct);
 
 /**
  * Macro to free a str struct.  The macro allows a user to pass data without
- * having to dereference it.
+ * having to dereference it.  This macro only works with GCC and clang 
+ * compilers
  */
-#define free_string(str_struct) _free_string(&(str_struct))
+#if defined(__GNUC__) || defined(__clang__)
+    #define free_string(str_struct) _free_string(&(str_struct))
+#endif
 // ================================================================================
 // ================================================================================
 

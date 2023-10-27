@@ -3,11 +3,11 @@ Strings
 *******
 The standard C library does not have a string data type and instead allows 
 users to create string literals, or they can create an array of ``char``
-characters like shown.  While the C implementation for string literals 
+characters.  While the C implementation for string literals 
 is easy to use and is fairly efficient, it can lead to security issues,
 most noteably a buffer overflow attack.  This chapter outlines a ``str``
 data type created for this library, that can help minimize the security issues 
-inherent with C and can also increase the speed with which the C code and 
+inherent with C and can also increase the speed with which the C code 
 process strings.  All functionality described in this Chapter can be
 accessed through the ``str.h`` header file.
 
@@ -42,12 +42,12 @@ All strings in this library are encapsulated in a dynamically allocated
 ``str`` struct.  In addition, the memory required to store the string 
 within the struct is also dynamically allocated.  This means that the 
 string container and string needs to be freed after it has served its 
-purpose.  There are two methods that can be used to initialize a string 
-variable of type ``str``.
+purpose.
 
-The first method for initializing a string data type uses the ``init_string``
-macro described below.  In the implementation shown below, the variable 
-``buff`` is optional.  If it is not provided, the underlying function will 
+The ``init_string`` macro is used to instantiate and initialize a string 
+container.  The ``init_string`` macro wraps two functions in order to 
+provide an default values. In the implementation shown below, the variable 
+``buff`` is optional.  If ``buff`` is not provided, the underlying function will 
 allocate enough memory for the string and the null terminator.  If the value 
 of ``buff`` is less than the size of ``string`` plus the null terminator,
 the function will allocate enoug memory for the string and its null terminator.
@@ -154,17 +154,27 @@ The example below shows how to use these functions.
 
 Initialize String with Garbage Collection
 =========================================
-The user can also initialize a string such that it will be automatically 
-garbage collected when it goes out of scope with the ``gbc_str``
-macro.  This macro invoked with the ``__attribute__(cleanup))`` operator 
-that only works with ``gcc`` and ``clang`` compilers.  
+Their are serval functions in this library that return a ``str*`` data 
+type to include the ``init_string`` macro.  When a function returns a 
+``str*`` data type, the developer is then obligated to free the memory 
+allocations at some point in the program.  Instead of manually freeing the 
+memory, a developer can also choose to utilyze the ``gbc_str`` macro that 
+wraps the ``__attribute__(cleanup)`` operator.  This will assign the 
+returned variable of type ``str*`` for cleanup and eventual garbage collection.
+**NOTE:** This macro only works with gcc and clang compilers. In addition, 
+developers can also use the ``free_dat`` macro from the ``dat_struct.h``
+library, which has the advantage of providing a common interface for freeing 
+all data types in this library.
 
 See the :ref:`init string <init_string>` Section for a description of all 
 attributes.  The examples below show how to use this macro, notice that the 
 ``free_string`` function is not called.  While this initializing function will 
 automate the process of freeing memory, a user can still use the ``free_string``
-function if they decide to free memory manually. This method has a
+macro if they decide to free memory manually. This method has a
 space complexity of :math:`O(1)` and a time complexity of :math:`O(n)`. 
+**NOTE:** Once memory has been freed, the user should try to avoid accidentally 
+freeing the memory again; however, the underling function does have checks 
+to prevent accidentally freeing memory that has already been freed.
 
 Example 1
 ---------
@@ -178,7 +188,7 @@ and the string with the ``free_string`` function.
    #include "print.h"
 
    int main() {
-       str *one = gbc_str init_string("Hello World!");
+       str *one gbc_str = init_string("Hello World!");
        print(one);
        print(string_length(one));
        print(string_memory(one));
@@ -502,7 +512,7 @@ The ``insert_string`` macro relies on a ``_Generic`` operator that connects
 the following two functions which can be used in place of the ``insert_string``
 macro.
 
-.. code-block:: bash 
+.. code-block:: c
 
    bool insert_string_lit(str *str_struct, char *string, size_t index);
    bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index);
@@ -1081,7 +1091,7 @@ do not need to be manually freed.
 
    int main() {
        str *one = init_string_gbc("2023/10/24");
-       str *two = pop_string_token(one, '/', true);
+       str *two gbc_str = pop_string_token(one, '/');
        print(one);
        print(two);
        return 0;

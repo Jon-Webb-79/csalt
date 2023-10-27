@@ -36,6 +36,7 @@ str* init_string_nol(const char *strlit) {
     }
     // Copy the string to the data variable
     strcpy(s->data, strlit);
+    s->data[s->len] = '\0';
     // Populate the alloc variable
     s->alloc = s->len + 1;
     return s;
@@ -146,8 +147,19 @@ bool insert_string_lit(str *str_struct, char *string, size_t index) {
     }
     size_t insert_len = strlen(string);
     size_t new_len = str_struct->len + insert_len;  
-    if (str_struct->alloc <= new_len) {  // Check if <= to ensure space for null terminator
-        size_t new_alloc = (new_len * 2) + 1;
+    if (str_struct->alloc <= new_len) {  
+        size_t new_alloc;
+        if (str_struct->alloc < STR_THRESHOLD) {
+            // Geometric Growth
+            new_alloc = (new_len * 2) + 1;
+        } else {
+            // Linear Growth
+            new_alloc = str_struct->alloc + STR_FIXED_AMOUNT;
+            if (new_alloc < new_len + 1) {
+                new_alloc = new_len + 1; // ensure it's big enough for current request
+            }
+        }
+
         char *ptr = (char*)realloc(str_struct->data, new_alloc);
         if (ptr == NULL) {
             int errnum = errno;
@@ -157,6 +169,7 @@ bool insert_string_lit(str *str_struct, char *string, size_t index) {
         str_struct->data = ptr;
         str_struct->alloc = new_alloc;
     }
+
     memmove(str_struct->data + index + insert_len, 
             str_struct->data + index, 
             str_struct->len - index + 1);  // +1 to include null terminator
@@ -177,8 +190,20 @@ bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index) {
     }
     size_t insert_len = str_struct_two->len;
     size_t new_len = str_struct_one->len + insert_len;  // Length after insertion
-    if (str_struct_one->alloc <= new_len) {  // Check if <= to ensure space for null terminator
-        size_t new_alloc = (new_len * 2) + 1;
+
+    if (str_struct_one->alloc <= new_len) {  
+        size_t new_alloc;
+        if (str_struct_one->alloc < STR_THRESHOLD) {
+            // Geometric Growth
+            new_alloc = (new_len * 2) + 1;
+        } else {
+            // Linear Growth
+            new_alloc = str_struct_one->alloc + STR_FIXED_AMOUNT;
+            if (new_alloc < new_len + 1) {
+                new_alloc = new_len + 1; // ensure it's big enough for current request
+            }
+        }
+
         char *ptr = (char*)realloc(str_struct_one->data, new_alloc);
         if (ptr == NULL) {
             int errnum = errno;

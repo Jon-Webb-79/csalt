@@ -59,7 +59,8 @@ void test_string_init_two_var_less(void **state)
 
 /**
  * Test to ensure the gbc_str macro assigns a garbage collector to a variable
- */
+ */ 
+#ifdef __GNUC__
 void test_string_init_gbc(void **state)
 {
 	(void) state;
@@ -68,6 +69,7 @@ void test_string_init_gbc(void **state)
     assert_int_equal(7, string_memory(one));
     assert_string_equal(get_string(one), "Hello!");
 }
+#endif
 // --------------------------------------------------------------------------------
 //
 /**
@@ -375,6 +377,7 @@ void test_copy_string(void **state) {
  * Test to ensure copy_string creates a deep copy of the string passed to it
  * with garbage collection.
  */
+#ifdef __GNUC__
 void test_copy_string_w_gbc(void **state) {
     (void) state;
     str *one gbc_str = init_string("Hello", 20);
@@ -383,6 +386,7 @@ void test_copy_string_w_gbc(void **state) {
     assert_int_equal(string_length(one), string_length(two));
     assert_int_equal(string_memory(one), string_memory(two));
 }
+#endif
 // --------------------------------------------------------------------------------
 
 void test_compare_strings_lit_equal(void **state) {
@@ -797,6 +801,7 @@ void test_pop_string_token_null_data(void **state) {
 }
 // --------------------------------------------------------------------------------
 
+#ifdef __GNUC__
 void test_pop_string_token_gbc_true(void **state) {
     (void) state;
     str *one = init_string("2023/10/24");
@@ -806,6 +811,7 @@ void test_pop_string_token_gbc_true(void **state) {
     assert_int_equal(7, string_length(one));
     free_string(one);
 }
+#endif
 // ================================================================================
 // ================================================================================
 // eof
