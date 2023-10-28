@@ -88,6 +88,7 @@ void print_sstring(str* x);
 									   int: print_int, \
 									   unsigned int: print_uint, \
 									   bool: print_bool, \
+                                       str*: print_sstring, \
 									   char*: print_string)(T)
 // ================================================================================
 // ================================================================================
@@ -182,7 +183,7 @@ void print_sstring(str* x);
  * // >> The value of pi is 3.14000
  * @endcode
  */
-#define PRINT(...) GET_MACRO(__VA_ARGS__, PRINT8, PRINT7, PRINT6, PRINT5, PRINT4, PRINT3, PRINT2, PRINT1)(__VA_ARGS__)
+#define print(...) GET_MACRO(__VA_ARGS__, PRINT8, PRINT7, PRINT6, PRINT5, PRINT4, PRINT3, PRINT2, PRINT1)(__VA_ARGS__)
 // ================================================================================
 // ================================================================================
 

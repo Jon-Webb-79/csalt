@@ -41,7 +41,8 @@ endif()
 
 # Define the library
 add_library(csalt
-	str.c)
+	str.c
+    print.c)
 target_include_directories(csalt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Define the tests
