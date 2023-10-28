@@ -32,8 +32,8 @@ extern "C" {
 /**
  * Macros to guide memory management.
  */
-#define STR_THRESHOLD (1 * 1024 * 1024)  // 1 MB
-#define STR_FIXED_AMOUNT (1 * 1024 * 1024)  // 1 MB
+extern const size_t STR_THRESHOLD;
+extern const size_t STR_FIXED_AMOUNT;
 
 /**
  * @brief This struct acts as a container for string data types
@@ -59,7 +59,7 @@ typedef struct {
  * @param strlit The string literal to initialize the `str` structure with.
  * @return A pointer to the initialized `str` structure, or NULL if memory allocation fails.
  */
-str* init_string_nol(const char *strlit);
+str* init_string_nol(const char* strlit);
 // --------------------------------------------------------------------------------
 
 /**
@@ -74,7 +74,7 @@ str* init_string_nol(const char *strlit);
  * @param num The number of characters to allocate in the buffer size
  * @return A pointer to the initialized `str` structure, or NULL if memory allocation fails.
  */
-str* init_string_len(char *strlit, size_t num);
+str* init_string_len(char* strlit, size_t num);
 // --------------------------------------------------------------------------------
 
 /**
@@ -115,7 +115,7 @@ str* init_string_len(char *strlit, size_t num);
  *
  * @param str_struct A string container of type str 
  */
-void _free_string(str **str_struct);
+void _free_string(str** str_struct);
 // --------------------------------------------------------------------------------
 
 /**
@@ -188,7 +188,7 @@ size_t string_memory(str* str_struct);
  * @param string A null terminated string literal.
  * @return true if the function executes succesfully, false otherwise
  */
-bool insert_string_lit(str *str_struct, char *string, size_t index);
+bool insert_string_lit(str* str_struct, char* string, size_t index);
 // --------------------------------------------------------------------------------
 
 /**
@@ -202,7 +202,7 @@ bool insert_string_lit(str *str_struct, char *string, size_t index);
  * @param string A string container of type str which will be inserted into another container.
  * @return true if the function executes succesfully, false otherwise
  */
-bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index);
+bool insert_string_str(str* str_struct_one, str* str_struct_two, size_t index);
 // --------------------------------------------------------------------------------
 
 /**
@@ -231,7 +231,7 @@ bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index);
  * @param str_struct A string container of type str 
  * @return true if operation is succesful, false otherwise with stderr printout
  */
-bool trim_string(str *str_sturct);
+bool trim_string(str* str_sturct);
 // --------------------------------------------------------------------------------
 
 /**
@@ -243,7 +243,7 @@ bool trim_string(str *str_sturct);
  * @param str_struct A string container of type str 
  * @return A string container of type str
  */
-str* copy_string(str *str_struct);
+str* copy_string(str* str_struct);
 // --------------------------------------------------------------------------------
 
 /**
@@ -257,7 +257,7 @@ str* copy_string(str *str_struct);
  * @return 0 if the strings are equal, >0 if the first non-matching character in 
  *         str_struct s greater than string, < 0 otherwise.
  */
-int compare_strings_lit(str *str_struct, char *string);
+int compare_strings_lit(str* str_struct, char* string);
 // --------------------------------------------------------------------------------
 
 /**
@@ -270,7 +270,7 @@ int compare_strings_lit(str *str_struct, char *string);
  * @return 0 if the strings are equal, >0 if the first non-matching character in 
  *         str_struct s greater than the other string, < 0 otherwise. 
  */
-int compare_strings_str(str *str_struct_one, str *str_struct_two);
+int compare_strings_str(str* str_struct_one, str* str_struct_two);
 // --------------------------------------------------------------------------------
 
 /**
@@ -298,7 +298,7 @@ int compare_strings_str(str *str_struct_one, str *str_struct_two);
  * @param string A string literal 
  * @returns A pointer to the first occurance of a user specifiec char
  */
-char* find_first_char(str *str_struct, char c);
+char* find_first_char(str* str_struct, char c);
 // --------------------------------------------------------------------------------
 
 /**
@@ -309,7 +309,7 @@ char* find_first_char(str *str_struct, char c);
  * @param string A string literal 
  * @returns A pointer to the last occurance of a user specifiec char
  */
-char* find_last_char(str *str_struct, char c);
+char* find_last_char(str* str_struct, char c);
 // ================================================================================
 // ================================================================================
 
@@ -338,7 +338,7 @@ char* find_first_lit_strstr(str* str_struct, char* string);
  * @param string A string literal
  * @returns A char pointer to the first instance of a string
  */
-char* find_first_str_strstr(str* str_struct_one, str *str_struct_two);
+char* find_first_str_strstr(str* str_struct_one, str* str_struct_two);
 // --------------------------------------------------------------------------------
 
 #define find_first_string(str_one, str_two) _Generic((str_two), \
@@ -371,7 +371,7 @@ char* find_last_lit_strstr(str* str_struct, char* string);
  * @param string A string literal
  * @returns A char pointer to the last instance of a string
  */
-char* find_last_str_strstr(str* str_struct_one, str *str_struct_two);
+char* find_last_str_strstr(str* str_struct_one, str* str_struct_two);
 // --------------------------------------------------------------------------------
 
 #define find_last_string(str_one, str_two) _Generic((str_two), \
@@ -404,7 +404,7 @@ char* find_last_lit_strstr(str* str_struct, char* string);
  * @param string A string literal
  * @returns A char pointer to the last instance of a string
  */
-char* find_last_str_strstr(str* str_struct_one, str *str_struct_two);
+char* find_last_str_strstr(str* str_struct_one, str* str_struct_two);
 // --------------------------------------------------------------------------------
 
 #define find_last_string(str_one, str_two) _Generic((str_two), \
@@ -422,7 +422,7 @@ char* find_last_str_strstr(str* str_struct_one, str *str_struct_two);
  * @breif str_token A string container of type string
  * @returns a char value
  */
-char pop_str_char(str *str_token);
+char pop_str_char(str* str_token);
 // --------------------------------------------------------------------------------
 
 /**
@@ -435,7 +435,7 @@ char pop_str_char(str *str_token);
  * @brief index An index to pop from
  * @brief A char value
  */
-char pop_str_char_index(str *str_token, size_t index);
+char pop_str_char_index(str* str_token, size_t index);
 // --------------------------------------------------------------------------------
 
 #define pop_string_char(...) \
@@ -453,7 +453,7 @@ char pop_str_char_index(str *str_token, size_t index);
  * @param token a char token that divides string data 
  * @returns A string container of type str
  */
-str* pop_string_token(str *str_struct, char token);
+str* pop_string_token(str* str_struct, char token);
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

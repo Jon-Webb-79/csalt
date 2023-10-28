@@ -15,8 +15,10 @@
 #include "include/str.h"
 #include <string.h>
 
-
-str* init_string_nol(const char *strlit) {
+const size_t STR_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
+const size_t STR_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
+                                                    
+str* init_string_nol(const char* strlit) {
     // Allocate memory for the struct
     str *s = (str *)malloc(sizeof(str));
     if (!s) {
@@ -43,7 +45,7 @@ str* init_string_nol(const char *strlit) {
 }
 // --------------------------------------------------------------------------------
 
-str* init_string_len(char *strlit, size_t num) {
+str* init_string_len(char* strlit, size_t num) {
     size_t actual_len = strlen(strlit);
     size_t str_len = actual_len; // By default, set it to actual_len
     size_t alloc_len = actual_len + 1;
@@ -123,7 +125,7 @@ size_t string_memory(str* str_struct) {
 // ================================================================================
 // ================================================================================
 
-void _free_string(str **str_struct_ptr) {
+void _free_string(str** str_struct_ptr) {
     if (!str_struct_ptr || !*str_struct_ptr) return;
 
     if ((*str_struct_ptr)->data) {
@@ -136,7 +138,7 @@ void _free_string(str **str_struct_ptr) {
 }
 // --------------------------------------------------------------------------------
 
-bool insert_string_lit(str *str_struct, char *string, size_t index) {
+bool insert_string_lit(str* str_struct, char* string, size_t index) {
     if (!str_struct || !string || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to insert_string_lit.\n");
         return false;
@@ -179,7 +181,7 @@ bool insert_string_lit(str *str_struct, char *string, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index) {
+bool insert_string_str(str* str_struct_one, str* str_struct_two, size_t index) {
     if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
         fprintf(stderr, "Null pointer provided to insert_string_lit.\n");
         return false;
@@ -222,7 +224,7 @@ bool insert_string_str(str *str_struct_one, str *str_struct_two, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-bool trim_string(str *str_struct) {
+bool trim_string(str* str_struct) {
     if (!str_struct || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to trim_string\n");
         return false;
@@ -245,20 +247,7 @@ bool trim_string(str *str_struct) {
 }
 // --------------------------------------------------------------------------------
 
-// str* copy_string(str *str_struct) {
-//     if (!str_struct || !str_struct->data) {
-//         // Handle null pointers appropriately
-//         fprintf(stderr, "Null pointer provided to copy_string_wo_gbc.\n");
-//         return 0; // Or another designated error value
-//     }
-//     char str_var[str_struct->len + 1];
-//     memcpy(str_var, str_struct->data, str_struct->len + 1);
-//     str *one = = init_string_len(str_var, str_struct->alloc);
-//     return one;
-// }
-// --------------------------------------------------------------------------------
-
-str* copy_string(str *str_struct) {
+str* copy_string(str* str_struct) {
     if (!str_struct || !str_struct->data) {
         // Handle null pointers appropriately
         fprintf(stderr, "Null pointer provided to copy_string_wo_gbc.\n");
@@ -272,7 +261,7 @@ str* copy_string(str *str_struct) {
 // ================================================================================
 // ================================================================================
 
-int compare_strings_lit(str *str_struct, char *string) {
+int compare_strings_lit(str* str_struct, char* string) {
     if (!str_struct || !string || !str_struct->data) {
         // Handle null pointers appropriately
         fprintf(stderr, "Null pointer provided to compare_strings_lit.\n");
@@ -291,7 +280,7 @@ int compare_strings_lit(str *str_struct, char *string) {
 }
 // --------------------------------------------------------------------------------
 
-int compare_strings_str(str *str_struct_one, str *str_struct_two) {
+int compare_strings_str(str* str_struct_one, str* str_struct_two) {
     if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
         // Handle null pointers appropriately
         fprintf(stderr, "Null pointer provided to compare_strings_str.\n");
@@ -311,7 +300,7 @@ int compare_strings_str(str *str_struct_one, str *str_struct_two) {
 // ================================================================================
 // ================================================================================
 
-char* find_first_char(str *str_struct, char c) {
+char* find_first_char(str* str_struct, char c) {
     if ( !str_struct || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to find_char\n");
         return NULL;
@@ -324,7 +313,7 @@ char* find_first_char(str *str_struct, char c) {
 }
 // --------------------------------------------------------------------------------
 
-char* find_last_char(str *str_struct, char c) {
+char* find_last_char(str* str_struct, char c) {
     if (!str_struct || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to find_char\n");
         return NULL;
@@ -342,7 +331,7 @@ char* find_last_char(str *str_struct, char c) {
 // ================================================================================
 // ================================================================================
 
-char* find_first_lit_strstr(str *str_struct, char *string) {
+char* find_first_lit_strstr(str* str_struct, char* string) {
     if (!str_struct || !str_struct->data || !string) {
         fprintf(stderr, "Null pointer provided to find_first_lin_strstr\n");
         return NULL;
@@ -364,7 +353,7 @@ char* find_first_lit_strstr(str *str_struct, char *string) {
 }
 // --------------------------------------------------------------------------------
 
-char* find_first_str_strstr(str *str_struct_one, str *str_struct_two) {
+char* find_first_str_strstr(str* str_struct_one, str* str_struct_two) {
     if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
         // Handle null pointers appropriately
         fprintf(stderr, "Null pointer provided to find_first_str_strstr.\n");
@@ -387,7 +376,7 @@ char* find_first_str_strstr(str *str_struct_one, str *str_struct_two) {
 }
 // --------------------------------------------------------------------------------
 
-char* find_last_lit_strstr(str *str_struct, char *string) {
+char* find_last_lit_strstr(str* str_struct, char* string) {
     if (!str_struct || !str_struct->data || !string) {
         fprintf(stderr, "Null pointer provided to find_first_lin_strstr\n");
         return NULL;
@@ -409,7 +398,7 @@ char* find_last_lit_strstr(str *str_struct, char *string) {
 }
 // --------------------------------------------------------------------------------
 
-char* find_last_str_strstr(str *str_struct_one, str *str_struct_two) {
+char* find_last_str_strstr(str* str_struct_one, str* str_struct_two) {
     if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
         // Handle null pointers appropriately
         fprintf(stderr, "Null pointer provided to find_first_str_strstr.\n");
@@ -433,7 +422,7 @@ char* find_last_str_strstr(str *str_struct_one, str *str_struct_two) {
 // ================================================================================
 // ================================================================================
 
-char pop_str_char(str *str_struct) {
+char pop_str_char(str* str_struct) {
     if ( !str_struct || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to pop_str_char\n");
         return '\0';
@@ -451,7 +440,7 @@ char pop_str_char(str *str_struct) {
 }
 // --------------------------------------------------------------------------------
 
-char pop_str_char_index(str *str_struct, size_t index) {
+char pop_str_char_index(str* str_struct, size_t index) {
     if ( !str_struct || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to pop_str_char_index\n");
         return '\0';
@@ -473,7 +462,7 @@ char pop_str_char_index(str *str_struct, size_t index) {
 // ================================================================================
 // ================================================================================
 
-str* pop_string_token(str *str_struct, char token) {
+str* pop_string_token(str* str_struct, char token) {
     if (!str_struct || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to pop_string_token\n");
         return NULL;
