@@ -32,7 +32,17 @@ void print_char(char x) { printf("%c", x); }
 void print_uchar(unsigned char x) { printf("%hhu", x); }
 void print_bool(bool x) { printf(x ? "true" : "false"); }
 void print_string(char* x) { printf("%s", x); }
-void print_sstring(str* x) { printf("%s", x->data); }
+void print_sstring(str* x) { 
+    if (!x) { 
+        printf("This struct is a NULL pointer!");
+        return;
+    }
+    if (!x->data) {
+        printf("The string is a NULL pointer!");
+        return;
+    }
+    printf("%s", x->data); 
+}
 // ================================================================================
 // ================================================================================
 // eof

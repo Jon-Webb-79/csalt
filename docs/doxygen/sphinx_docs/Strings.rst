@@ -1,3 +1,5 @@
+.. _string_struct:
+
 *******
 Strings
 *******

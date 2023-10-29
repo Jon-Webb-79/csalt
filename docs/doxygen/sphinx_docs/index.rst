@@ -18,7 +18,8 @@ of old C programmers.  Hen the name C Salt (i.e.csalt).
    :maxdepth: 1
    :caption: Contents:
 
-   Strings <Strings>
+    Print <Print>
+    Strings <Strings>
 
 Indices and tables
 ==================
