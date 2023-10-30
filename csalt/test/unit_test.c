@@ -93,7 +93,9 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_char_iterator_for_loop),
         cmocka_unit_test(test_char_iterator_while_loop),
         cmocka_unit_test(test_char_iterator_forward),
-        cmocka_unit_test(test_char_iterator_forward)
+        cmocka_unit_test(test_char_iterator_forward),
+        cmocka_unit_test(test_convert_to_uppercase),
+        cmocka_unit_test(test_convert_to_lowercase)
      	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

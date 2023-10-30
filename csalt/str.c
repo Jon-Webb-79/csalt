@@ -491,11 +491,19 @@ str* pop_string_token(str* str_struct, char token) {
 // PRIVATE FUNCTIONS
 
 static char* _str_begin(str* s) {
+    if (!s || !s->data) {
+        fprintf(stderr, "Null pointer provided to dec_str_iter\n");
+        return NULL;
+    }
     return s->data;
 }
 // --------------------------------------------------------------------------------
 
 static char* _str_end(str* s) {
+    if (!s || !s->data) {
+        fprintf(stderr, "Null pointer provided to dec_str_iter\n");
+        return NULL;
+    }
     return s->data + s->len;
 }
 // --------------------------------------------------------------------------------
@@ -519,6 +527,10 @@ static char _str_get(char** current) {
 
 void dec_str_iter(str* str_struct, char* begin, char* end,
                   str_iter_dir direction, str_decorator decorator) {
+    if (!str_struct || !str_struct->data) {
+        fprintf(stderr, "Null pointer provided to dec_str_iter\n");
+        return;
+    }
     // Check the direction of iteration and validate iterators
     if (direction == FORWARD && end < begin) {
         fprintf(stderr, "Error: 'end' iterator should be after 'begin' for FORWARD iteration.\n");
@@ -548,6 +560,25 @@ str_iterator init_str_iterator() {
     iter.prev = _str_prev;
     iter.get = _str_get;
     return iter;
+}
+// ================================================================================
+// ================================================================================
+
+void to_uppercase(str *s) {
+    char* begin = s->data;
+    char* end = s->data + s->len;
+    for (char* i =  begin; i != end; i++) {
+        if (*i >= 'a' && *i <= 'z') *i -= 32;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void to_lowercase(str *s) {
+    char* begin = s->data;
+    char* end = s->data + s->len;
+    for (char* i =  begin; i != end; i++) {
+        if (*i >= 'A' && *i <= 'Z') *i += 32;
+    }
 }
 // ================================================================================
 // ================================================================================

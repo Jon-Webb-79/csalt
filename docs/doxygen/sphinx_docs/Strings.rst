@@ -1283,11 +1283,73 @@ the characters into capital characters.
 
 Uppercase 
 =========
-To be filled in 
+The ``to_uppercase`` function will convert an entire string to uppercase 
+characters.
+
+.. code-block:: c 
+
+   void to_uppercase(str *s);
+
+Parameters 
+----------
+
+- :c:`s` A string container of type ``str``
+
+Example 
+-------
+Convert a string to uppercase in memory.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str* one = init_string("this will be uppercase");
+       to_uppercase(one);
+       print(one);
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> THIS WILL BE UPPERCASE 
 
 Lowercase 
 =========
-To be filled in 
+The ``to_lowercase`` function will convert an entire string to lowercase 
+characters.
+
+.. code-block:: c 
+
+   void to_lowercase(str *s);
+
+Parameters 
+----------
+
+- :c:`s` A string container of type ``str``
+
+Example 
+-------
+Convert a string to lowercase in memory.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str* one = init_string("THIS WILL BE LOWERCASE");
+       to_lowercase(one);
+       print(one);
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> this will be lowercase
 
 Delete Substring 
 ================

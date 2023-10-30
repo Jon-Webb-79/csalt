@@ -875,6 +875,24 @@ void test_char_iterator_reverse(void **state) {
     assert_string_equal("THIS IS A LONG STRING", get_string(one));
     free_string(one);
 }
+// --------------------------------------------------------------------------------
+
+void test_convert_to_uppercase(void **state) {
+    (void) state;
+    str *one = init_string("This is a Long String"); 
+    to_uppercase(one);
+    assert_string_equal("THIS IS A LONG STRING", get_string(one));
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_convert_to_lowercase(void **state) {
+    (void) state;
+    str *one = init_string("This is a Long String"); 
+    to_lowercase(one);
+    assert_string_equal("this is a long string", get_string(one));
+    free_string(one);
+}
 // ================================================================================
 // ================================================================================
 // eof

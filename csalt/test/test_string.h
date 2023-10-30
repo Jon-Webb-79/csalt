@@ -99,6 +99,8 @@ void test_char_iterator_for_loop(void **state);
 void test_char_iterator_while_loop(void **state);
 void test_char_iterator_forward(void **state);
 void test_char_iterator_reverse(void **state);
+void test_convert_to_uppercase(void **state);
+void test_convert_to_lowercase(void **state);
 // ================================================================================
 // ================================================================================
 #endif /* test_str_H */

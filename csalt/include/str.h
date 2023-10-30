@@ -512,6 +512,23 @@ void dec_str_iter(str* str_struct, char* begin, char* end,
               str_iter_dir direction, str_decorator decorator);
 // ================================================================================
 // ================================================================================
+
+/**
+ * @brief Transforms chars in an array to uppercase in memory
+ *
+ * @param s A string container of type str
+ */
+void to_uppercase(str* s);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Transforms chars in an array to lowercase in memory 
+ *
+ * @param s A string container of type str
+ */
+void to_lowercase(str *s);
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
