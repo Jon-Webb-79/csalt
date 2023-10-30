@@ -88,8 +88,12 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_pop_string_token_null_struct),
         cmocka_unit_test(test_pop_string_token_null_data),
         #ifdef __GNUC__
-        cmocka_unit_test(test_pop_string_token_gbc_true)
+        cmocka_unit_test(test_pop_string_token_gbc_true),
         #endif
+        cmocka_unit_test(test_char_iterator_for_loop),
+        cmocka_unit_test(test_char_iterator_while_loop),
+        cmocka_unit_test(test_char_iterator_forward),
+        cmocka_unit_test(test_char_iterator_forward)
      	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

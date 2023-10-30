@@ -35,18 +35,26 @@ extern "C" {
 extern const size_t STR_THRESHOLD;
 extern const size_t STR_FIXED_AMOUNT;
 
+
+typedef void (*str_decorator)(char*);
+// --------------------------------------------------------------------------------
+
+typedef struct str str;  // Forward declaratioon
+
 /**
  * @brief This struct acts as a container for string data types
  *
- * @attr data A pointer to the string data in memory 
- * @attr len The length of the string 
- * @attr is_dynamic true if memory is dynamically allocated, false otherwise
+ * @attribute data A pointer to the string data in memory 
+ * @attribute len The length of the string 
+ * @attribute is_dynamic true if memory is dynamically allocated, false otherwise
+ * @function dec_iter A pointer to a function that provices a decorator to
+ *                    the str iterator.
  */
-typedef struct {
+struct str {
     char *data;
     size_t len;
     size_t alloc;
-} str;
+};
 //  --------------------------------------------------------------------------------
 
 /**
@@ -454,6 +462,54 @@ char pop_str_char_index(str* str_token, size_t index);
  * @returns A string container of type str
  */
 str* pop_string_token(str* str_struct, char token);
+// ================================================================================
+// ================================================================================
+// Define iterators
+
+typedef enum {
+    FORWARD,
+    REVERSE
+} str_iter_dir;
+
+/**
+ * @brief A struct that provides funciton pointers to various string iterator function.
+ *
+ * @function begin A pointer to a function that provides a pointer to the first 
+ *           pseudo index in a st data structure
+ * @function end A pointer to a function that provides a pointer to the last 
+ *               pseudo index in a data str structure
+ * @function next A pointer to a function that provides a pointer to the next 
+ *                psuedo index in a str data structure
+ * @function prev A pointer to a function that provides a pointer to the previous 
+ *                pseudo index in a str data structure.
+ */
+typedef struct {
+    char* (*begin) (str *s);
+    char* (*end) (str *s);
+    void (*next) (char** current);
+    void (*prev) (char** current);
+    char (*get) (char** current);
+} str_iterator;
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Initializes a char iterator
+ */
+str_iterator init_str_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * brief A forward iterator with a decarator
+ *
+ * This function acts as a decorator to a char iterator that allows a user
+ * to modify data within a str data type in memory.
+ *
+ * THis function encapsulates a forward iterator on a string container of type 
+ * str, such that a develepor can insert a function of their own making to 
+ * act on each char character in memory.
+ */
+void dec_str_iter(str* str_struct, char* begin, char* end,
+              str_iter_dir direction, str_decorator decorator);
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

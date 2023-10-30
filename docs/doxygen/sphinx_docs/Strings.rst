@@ -1119,3 +1119,181 @@ the macro.  The functions are shown below.
 
    str* string_pop_token_wogbc(str *str_struct, char token);
    str* string_pop_token_wgbc(str *str_struct, char token, bool gdb);
+
+Iterator
+========
+A string literal is in essence a statically allocated ``char`` array with a null 
+terminator, and the data stored in a ``str`` container is a dynamically 
+allocated ``char`` vector with a null terminator.  In both instances, a 
+developer can iterate over the contiguous indices to extract data from each 
+indice.  However, some data structures such as Binary Trees and Linked Lists 
+do not use contiguous memory.  An Iterator is a method that allows a developer 
+to use a common method to iterate through data structures with or without 
+continguous memory allocation to ensure commonality in how data is extracted 
+and processed.  In essence an iterator is a for or while loop that iterates
+through pointer references instead of indices.
+
+While a developer can use a for loop to iterate through 
+the data in a ``str`` container, it is highly encoruaged to use the 
+iterator method supplied in this section, which have a standard interface 
+for applications to other data structures.
+
+The ``str`` iterator relies on the use of the ``str_iterator`` struct which 
+contains pointers to several different functions.  The function namespace 
+within this struct is identical to iterators for other data structures in this 
+library.  The ``str_iterator`` is shown below.
+
+.. code-block:: c 
+
+   typedef struct {
+       char* (*begin) (str* s);  // Linked to _str_begin
+       char* (*end) (str* s);  // Linked to _str_end
+       void (*next) (char** current);  // Linked to _str_next
+       void (*prev) (char** current);  // Linked to _str_prev
+       char (*get) (char** current);  // Linked to __str_get
+   } str_iterator;
+
+Attributes 
+----------
+
+- :c:`begin`: A pointer to a function that will return a pointer to the first psuedo-index in the data structure. 
+- :c:`end`: A pointer to a function that will return a pointer to the last pseudo-index in the data structure.
+- :c:`next`: A pointer to a function that updates the address passed to it to the address of the next pseudo-index.
+- :c:`prev`: A pointer to a function that updates the address passed to it to the address of the previous pseudo-index.
+- :c:`get`: A pointer to a function that will return that ``char`` value contained at a pseudo-index.
+
+This struct is initialized in the ``init_str_iterator`` function which returns 
+a copy of an initialized ``str_iterator`` struct with the function pointers 
+linked to the appropriate functions in the ``str.c`` file.  The function 
+which are shown in the comments above, are static functions that are not 
+available outside of the ``str.c`` file.
+
+Example 1
+---------
+This example shows how to use the iterator with a for loop to iterate forwards 
+through data in a ``str`` container and Capitalize the values within the 
+string.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str *one = init_string("This is a Long String");
+       str_iterator it = init_str_iterator();
+       char* begin = it.begin(one);
+       char* end = it.end(one);
+       char a;
+       for (char* i =  begin; i != end; it.next(&i)) {
+           a = it.get(&i);
+           if (a >= 'a' && a <= 'z') *i -= 32;
+       }
+       print(one);
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> THIS IS A LONG STRING
+
+Example 2
+---------
+In this example we use an while loop to iterate through the desired
+data.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main () {
+       str *one = init_string("This is a Long String");
+       str_iterator it = init_str_iterator();
+       char* begin = it.begin(one);
+       char* end = it.end(one);
+       char a; 
+       while(begin != end) {
+           a = it.get(&begin);
+           if (a >= 'a' && a <= 'z') *begin -= 32;
+           it.next(&begin);
+       }
+       print(one);
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> THIS IS A LONG STRING
+
+Decorate Iterator 
+=================
+The ``dec_str_iter`` function utilizes the principles of an iterator and a 
+istrategy pattern to decouple the logic of iteration from the problem being
+solved.  The can decorate the ``dec_str_iter`` function with another function 
+of type ``void func(char*)`` to modify char variables in memory within the 
+``str`` container.
+
+.. code-block:: c 
+
+   void dec_str_iter(str* str_struct, char* begin, char* end,
+                     str_iter_dir direction, str_decorator decorator);
+
+Parameters
+----------
+
+- :c:`str_struct`: A string container of type ``str``.
+- :c:`begin`: A char pointer to a position in the data within ``str_struct``.
+- :c:`end`: A char pointer to a position in the data within ``str_struct``.
+- :c:`direction`: An enum of type ``str_iter_dir`` which can be ``FORWARD`` or ``REVERSE``.
+- :c:`decorator`: A function of type ``str_decorator`` which is an alias for ``void func(char*)``.
+
+Example 1
+---------
+An example where we iterate forward through a string to transform some of
+the characters into capital characters.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   void uppercase_char(char* a) {
+       if (*a >= 'a' && *a <= 'z') {
+           *a -= 32;
+       }
+   }
+
+   int main() {
+       str *one = init_string("This is a Long String");
+       str_iterator it = init_str_iterator();
+       char* begin = it.begin(one);
+       char* end = it.end(one); 
+       dec_str_iter(one, begin + 3, end, FORWARD, uppercase_char);
+       print(one);
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> ThiS IS A LONG STRING
+
+Uppercase 
+=========
+To be filled in 
+
+Lowercase 
+=========
+To be filled in 
+
+Delete Substring 
+================
+To be filled in 
+
+Replace Substring 
+=================
+To be filled in
+

@@ -14,6 +14,12 @@
 
 #include "test_string.h"
 
+void uppercase_char(char* a) {
+    if (*a >= 'a' && *a <= 'z') {
+        *a -= 32;
+    }
+}
+
 /**
  * Test to ensure the init_string macro works properly with one argument
  */
@@ -812,6 +818,63 @@ void test_pop_string_token_gbc_true(void **state) {
     free_string(one);
 }
 #endif
+// --------------------------------------------------------------------------------
+
+void test_char_iterator_for_loop(void **state) {
+    (void) state;
+    str *one = init_string("This is a Long String");
+    str_iterator it = init_str_iterator();
+    char* begin = it.begin(one);
+    char* end = it.end(one);
+    char a;
+    for (char* i =  begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        if (a >= 'a' && a <= 'z') *i -= 32;
+    }
+    assert_string_equal("THIS IS A LONG STRING", one->data);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_char_iterator_while_loop(void **state) {
+    (void) state;
+    str *one = init_string("This is a Long String");
+    str_iterator it = init_str_iterator();
+    char* begin = it.begin(one);
+    char* end = it.end(one);
+    char a; 
+    while(begin != end) {
+        a = it.get(&begin);
+        if (a >= 'a' && a <= 'z') *begin -= 32;
+        it.next(&begin);
+    }
+    assert_string_equal("THIS IS A LONG STRING", one->data); 
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_char_iterator_forward(void **state) {
+    (void) state;
+    str *one = init_string("This is a Long String");
+    str_iterator it = init_str_iterator();
+    char* begin = it.begin(one);
+    char* end = it.end(one); 
+    dec_str_iter(one, begin + 3, end, FORWARD, uppercase_char);
+    assert_string_equal("ThiS IS A LONG STRING", get_string(one));
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_char_iterator_reverse(void **state) {
+    (void) state;
+    str *one = init_string("This is a Long String");
+    str_iterator it = init_str_iterator();
+    char* begin = it.begin(one);
+    char* end = it.end(one); 
+    dec_str_iter(one, end, begin - 1, REVERSE, uppercase_char);
+    assert_string_equal("THIS IS A LONG STRING", get_string(one));
+    free_string(one);
+}
 // ================================================================================
 // ================================================================================
 // eof

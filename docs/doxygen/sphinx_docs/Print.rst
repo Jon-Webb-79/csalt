@@ -21,7 +21,7 @@ A basic example for the use of the ``print`` macro.
 
 .. code-block:: c 
 
-   #define "print.h"
+   #include "print.h"
 
    int main() {
        int a = 1;
@@ -50,8 +50,8 @@ data type.
 
 .. code-block:: c 
 
-   #define "print.h"
-   #define "str.h"
+   #include "print.h"
+   #include "str.h"
 
    int main() {
        char* one = "This is a string literal.\n";
@@ -78,8 +78,8 @@ this example demonstrates the logic for a fail nicely approach.
 
 .. code-block:: c
 
-   #define "print.h"
-   #define "str.h"
+   #include "print.h"
+   #include "str.h"
 
    int main() {
        

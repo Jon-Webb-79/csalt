@@ -26,6 +26,8 @@
 
 #include "../include/str.h"
 
+void uppercase_char(char* a);
+
 void test_string_init_one_var(void **state);
 void test_string_init_two_var(void **state);
 void test_string_init_two_var_less(void **state);
@@ -93,6 +95,10 @@ void test_pop_string_token_gbc_true(void **state);
 #ifdef __GNUC__
 void test_pop_string_token_no_token_gbc_true(void **state);
 #endif
+void test_char_iterator_for_loop(void **state);
+void test_char_iterator_while_loop(void **state);
+void test_char_iterator_forward(void **state);
+void test_char_iterator_reverse(void **state);
 // ================================================================================
 // ================================================================================
 #endif /* test_str_H */

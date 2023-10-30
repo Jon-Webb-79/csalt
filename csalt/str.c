@@ -41,6 +41,7 @@ str* init_string_nol(const char* strlit) {
     s->data[s->len] = '\0';
     // Populate the alloc variable
     s->alloc = s->len + 1;
+
     return s;
 }
 // --------------------------------------------------------------------------------
@@ -484,6 +485,69 @@ str* pop_string_token(str* str_struct, char token) {
         }
     }
     return NULL;
+}
+// ================================================================================
+// ================================================================================
+// PRIVATE FUNCTIONS
+
+static char* _str_begin(str* s) {
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static char* _str_end(str* s) {
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _str_next(char** current) {
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _str_prev(char** current) {
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static char _str_get(char** current) {
+    return **current;
+}
+
+// --------------------------------------------------------------------------------
+// PUBLIC FUNCTIONS
+
+void dec_str_iter(str* str_struct, char* begin, char* end,
+                  str_iter_dir direction, str_decorator decorator) {
+    // Check the direction of iteration and validate iterators
+    if (direction == FORWARD && end < begin) {
+        fprintf(stderr, "Error: 'end' iterator should be after 'begin' for FORWARD iteration.\n");
+        return;
+    }
+    if (direction == REVERSE && end > begin) {
+        fprintf(stderr, "Error: 'end' iterator should be before 'begin' for REVERSE iteration.\n");
+        return;
+    }
+    char* it = begin;
+    while ( it != end ) {
+        decorator(it);
+        if ( direction == FORWARD)
+            _str_next(&it);
+        else 
+            _str_prev(&it);
+    }
+}
+// --------------------------------------------------------------------------------
+
+str_iterator init_str_iterator() {
+    str_iterator iter;
+
+    iter.begin = _str_begin;
+    iter.end = _str_end;
+    iter.next = _str_next;
+    iter.prev = _str_prev;
+    iter.get = _str_get;
+    return iter;
 }
 // ================================================================================
 // ================================================================================
