@@ -464,6 +464,26 @@ char pop_str_char_index(str* str_token, size_t index);
 str* pop_string_token(str* str_struct, char token);
 // ================================================================================
 // ================================================================================
+/**
+ * @breif Determines if a pointer is within the string in a str container 
+ *
+ * @param str_struct A string container of type str 
+ * @param ptr A char pointer
+ * @returns true if pointer is inside container false otherwise
+ */
+bool ptr_in_str_container(str* str_struct, char* ptr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Determine if a pointer is within the min and maximum of a string literal 
+ *
+ * @brief ptr A char pointer 
+ * @brief min_ptr A pointer to the beginning of a string 
+ * @brief max_ptr A pointer to the end of a string
+ */
+bool ptr_in_literal(char* ptr, char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
 // Define iterators
 
 typedef enum {

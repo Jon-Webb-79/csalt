@@ -525,6 +525,22 @@ static char _str_get(char** current) {
 // --------------------------------------------------------------------------------
 // PUBLIC FUNCTIONS
 
+bool ptr_in_str_container(str* str_struct, char* ptr) {
+    if (ptr >= str_struct->data && ptr <= str_struct->data + str_struct->len) {
+        return true;
+    }
+    return false;
+}
+// --------------------------------------------------------------------------------
+
+bool ptr_in_literal(char* ptr, char* min_ptr, char* max_ptr) {
+    if (ptr >= min_ptr && ptr <= max_ptr) {
+        return true;
+    }
+    return false;
+}
+// --------------------------------------------------------------------------------
+
 void dec_str_iter(str* str_struct, char* begin, char* end,
                   str_iter_dir direction, str_decorator decorator) {
     if (!str_struct || !str_struct->data) {

@@ -1120,6 +1120,91 @@ the macro.  The functions are shown below.
    str* string_pop_token_wogbc(str *str_struct, char token);
    str* string_pop_token_wgbc(str *str_struct, char token, bool gdb);
 
+Test Pointer 
+============
+In order to enable many functions such as an iterator, it is necessary 
+to pass ``char`` pointers to a function.  It is necessary to check a pointer 
+before it is passed to a function to ensure that it exists within the bounds 
+of a string container or a string literal.  The functions 
+``ptr_in_str_container`` and ``ptr_in_literal`` can be used to check if a pointer 
+exists within the correct bounds.
+
+.. code-block:: c 
+
+   bool ptr_in_str_container(str* str_struct, char* ptr);
+   bool ptr_in_literal(char* ptr, char* min_ptr, char* max_ptr);
+
+Parameters 
+----------
+
+- :c:`str_struct`: A string container of type ``str``.
+- :c:`ptr`: The ``char`` pointer to be checked
+- :c:`min_ptr`: A pointer that represents the minimum bounds.
+- :c:`max_pt`: A pointer that represents the maximum bounds.
+
+Returns 
+-------
+
+- :c:`status`: true if ``ptr`` is in bounds, false otherwise.
+
+Example 1
+---------
+Example to check if a pointer is in the bounds of a literal before using 
+the pointer.  This example will print a string one character at a time.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       char* one = "Hello Again!";
+       char* begin = one + 1;
+       char* end = one + strlen(one);
+       if(pt_int_literal(begin, one, end)) {
+           for (char* i =  begin; i != end; i++) {
+               printf("%c", *i);
+           }
+        }
+       printf("%s", one);
+       printf("\n");
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Hello Again!
+
+Example 2
+---------
+Example to check if a pointer is in the bounds of a string container 
+using the pointer.  This example will print a string one character at 
+at a time.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       char* one = init_string("Hello Again!");
+       char* begin = one->data + 1;
+       char* end = one + string_length(one);
+       if(pt_int_str_container(one, begin)) {
+           for (char* i =  begin; i != end; i++) {
+               printf("%c", *i);
+           }
+        }
+       printf("%s", one);
+       printf("\n");
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Hello Again!
+
+
 Iterator
 ========
 A string literal is in essence a statically allocated ``char`` array with a null 

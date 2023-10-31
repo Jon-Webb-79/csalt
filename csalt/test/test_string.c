@@ -893,6 +893,40 @@ void test_convert_to_lowercase(void **state) {
     assert_string_equal("this is a long string", get_string(one));
     free_string(one);
 }
+// --------------------------------------------------------------------------------
+
+void test_ptr_in_container(void **state) {
+    (void) state;
+    str* one = init_string("Hello Again!");
+    bool  result = ptr_in_str_container(one, one->data + 3);
+    assert_true(result);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_ptr_not_in_container(void **state) {
+    (void) state;
+    str* one = init_string("Hello Again!");
+    bool  result = ptr_in_str_container(one, one->data - 3);
+    assert_false(result);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_ptr_in_literal(void **state) {
+    (void) state;
+    char* one = "Hello Again!";
+    bool result = ptr_in_literal(one + 2, one, one + strlen(one));
+    assert_true(result);
+}
+// --------------------------------------------------------------------------------
+
+void test_ptr_not_in_literal(void **state) {
+    (void) state;
+    char* one = "Hello Again!";
+    bool result = ptr_in_literal(one - 2, one, one + strlen(one));
+    assert_false(result);
+}
 // ================================================================================
 // ================================================================================
 // eof

@@ -101,6 +101,10 @@ void test_char_iterator_forward(void **state);
 void test_char_iterator_reverse(void **state);
 void test_convert_to_uppercase(void **state);
 void test_convert_to_lowercase(void **state);
+void test_ptr_in_container(void **state);
+void test_ptr_not_in_container(void **state);
+void test_ptr_in_literal(void **state);
+void test_ptr_not_in_literal(void **state);
 // ================================================================================
 // ================================================================================
 #endif /* test_str_H */
