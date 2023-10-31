@@ -99,7 +99,9 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_ptr_in_container),
         cmocka_unit_test(test_ptr_not_in_container),
         cmocka_unit_test(test_ptr_in_literal),
-        cmocka_unit_test(test_ptr_not_in_literal)
+        cmocka_unit_test(test_ptr_not_in_literal),
+        cmocka_unit_test(test_find_first_char_btw_pointers),
+        cmocka_unit_test(test_find_last_char_btw_pointers)
      	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

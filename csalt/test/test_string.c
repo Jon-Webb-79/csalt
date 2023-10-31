@@ -485,6 +485,15 @@ void test_find_first_char(void **state) {
 }
 // --------------------------------------------------------------------------------
 
+void test_find_first_char_btw_pointers(void **state) {
+    (void) state;
+    char* a = "abecdefghi";
+    char c = 'e';
+    char* b = first_char_btw_ptrs(c, a + 3, a + strlen(a));
+    assert_string_equal(b, "efghi");
+}
+// --------------------------------------------------------------------------------
+
 void test_find_first_char_does_not_exist(void **state) {
     (void) state;
     str *one = init_string("Hello");
@@ -511,6 +520,15 @@ void test_find_last_char(void **state) {
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 3);
     free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_last_char_btw_pointers(void **state) {
+    (void) state;
+    char* a = "abecdefghi";
+    char c = 'e';
+    char* b = last_char_btw_ptrs(c, a, a + strlen(a));
+    assert_string_equal(b, "efghi");
 }
 // --------------------------------------------------------------------------------
 
@@ -859,7 +877,7 @@ void test_char_iterator_forward(void **state) {
     str_iterator it = init_str_iterator();
     char* begin = it.begin(one);
     char* end = it.end(one); 
-    dec_str_iter(one, begin + 3, end, FORWARD, uppercase_char);
+    dec_str_iter(begin + 3, end, FORWARD, uppercase_char);
     assert_string_equal("ThiS IS A LONG STRING", get_string(one));
     free_string(one);
 }
@@ -871,7 +889,7 @@ void test_char_iterator_reverse(void **state) {
     str_iterator it = init_str_iterator();
     char* begin = it.begin(one);
     char* end = it.end(one); 
-    dec_str_iter(one, end, begin - 1, REVERSE, uppercase_char);
+    dec_str_iter(end, begin - 1, REVERSE, uppercase_char);
     assert_string_equal("THIS IS A LONG STRING", get_string(one));
     free_string(one);
 }

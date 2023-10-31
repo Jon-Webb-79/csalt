@@ -850,6 +850,51 @@ An example to find the last char value.
        return 0;
    }
 
+Find Char Between Pointers 
+==========================
+Much like ``find_first_char`` and ``find_last_char`` a developer can also use 
+the ``first_char_btw_ptrs`` and ``last_char_btw_ptrs`` functions to find a char 
+value that exists between user specified pointers.  The function will also 
+check to ensure that the ``min_ptr`` is smaller than the ``max_ptr`` and return 
+a NULL value with a ``stderr`` message if it is not.
+
+.. code-block:: c 
+
+   char* first_char_btw_ptrs(char a, char* min_ptr, char* max_ptr);
+   char* last_char_btw_ptrs(char a, char* min_ptr, char* max_ptr);
+
+Parameters 
+----------
+
+- :c:`a` The char being searched for 
+- :c:`min_ptr`: A pointer to the minimum position within a string being searched 
+- :c:`max_ptr`: A pointer to the maximum position within a string being searched
+
+Returns 
+-------
+
+- :c:`ptr`: A pointer to the character `a` or a NULL value.
+
+Example 
+-------
+An example where the ``min_ptr`` skips the first few characters of a string.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       char* a = "ababcdefg";
+       char* b = first_char_btw_ptrs('b', a + 2, a + strlen(a));
+       print(b);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> bcdefg
+
 Find Strings 
 ============
 The ``find_first_string`` and ``find_last_string`` macros can be used to find 

@@ -310,6 +310,20 @@ char* find_first_char(str* str_struct, char c);
 // --------------------------------------------------------------------------------
 
 /**
+ * @brief Finds the first occurance of a char between two pointers
+ *
+ * This function searches all chars between two char pointers and returns 
+ * the first occurance of a char character.
+ *
+ * @param c The char being searched for 
+ * @param min_ptr The min pointer position 
+ * @param max_ptr The max pointer position
+ * @return A char pointer to character c or a NULL pointer.
+ */
+char* first_char_btw_ptrs(char c, char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
+/**
  * @brief Returns a pointer to the last occurrance of a char in a string 
  * string container.
  *
@@ -318,6 +332,20 @@ char* find_first_char(str* str_struct, char c);
  * @returns A pointer to the last occurance of a user specifiec char
  */
 char* find_last_char(str* str_struct, char c);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Finds the last occurance of a char between two pointers
+ *
+ * This function searches all chars between two char pointers and returns 
+ * the last occurance of a char character.
+ *
+ * @param c The char being searched for 
+ * @param min_ptr The min pointer position 
+ * @param max_ptr The max pointer position
+ * @return A char pointer to character c or a NULL pointer.
+ */
+char* last_char_btw_ptrs(char c, char* min_ptr, char* max_ptr);
 // ================================================================================
 // ================================================================================
 

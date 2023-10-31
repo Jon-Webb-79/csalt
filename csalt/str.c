@@ -314,6 +314,32 @@ char* find_first_char(str* str_struct, char c) {
 }
 // --------------------------------------------------------------------------------
 
+char* first_char_btw_ptrs(char c, char* min_ptr, char* max_ptr) {
+    if (min_ptr > max_ptr) {
+        fprintf(stderr, "min_ptr is not smaller than max_ptr in first_char_btw_ptrs\n");
+        return NULL;
+    }
+    for (char* it = min_ptr; it != max_ptr; it++) {
+        if (*it == c )
+            return it;
+    }
+    return NULL;
+}
+// --------------------------------------------------------------------------------
+
+char* last_char_btw_ptrs(char c, char* min_ptr, char* max_ptr) {
+    if (min_ptr > max_ptr) {
+        fprintf(stderr, "min_ptr is not smaller than max_ptr in last_char_btw_ptrs\n");
+        return NULL;
+    }
+    for (char* it = max_ptr; it != min_ptr; it--) {
+        if (*it == c )
+            return it;
+    }
+    return NULL;
+}
+// --------------------------------------------------------------------------------
+
 char* find_last_char(str* str_struct, char c) {
     if (!str_struct || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to find_char\n");
