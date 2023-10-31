@@ -787,81 +787,15 @@ from one of the two following functions that can be used in its place.
 
 Find Char 
 =========
-The ``find_first_char`` and ``find_last_char`` functions can be used on a ``str``
-container in much the same way the ``strchr`` function in the ``string.h`` header 
-file is used.  These two functions will search for the first or last occurrances 
-of a ``char`` in a string and return a pointer to the ``char`` value.  If the 
-``char`` is not found the functions will return a NULL pointer.  In addition, 
-if the user passes a NULL pointer to the ``str`` struct or the pointer to 
-``data`` within the struct, the function will return NULL and write a message 
-to ``stderr``.  Also, if the ``char`` is not found, the function will return 
-a ``NULL`` value. **NOTE:** These functions can also be used to search for 
-the position of the null terminator.
+The ``first_char`` and ``last_char`` functions will find the first or last 
+occurance of a ``char`` value between two pointers.to find a char. The functions
+will also check to ensure that the ``min_ptr`` is smaller than the ``max_ptr``
+and return a NULL value with a ``stderr`` message if it is not.
 
 .. code-block:: c 
 
-   char* find_first_char(str *str_struct, char c);
-   char* find_last_char(str *str_struct, char c);
-
-Parameters 
-----------
-
-- :c:`str_struct`: A string container of type ``str``.
-- :c:`c`: A char value 
-
-Returns 
--------
-
-- :c:`ptr`: A pointer to the ``char`` value within the string, or NULL if the value can not be found or the input data is a NULL pointer.
-
-Example 1
----------
-An example to find the first char value 
-
-.. code-block:: c
-
-   #define "print.h"
-   #define "str.h"
-
-   int main() {
-       str *one = init_string("Hello");
-       char *ptr = find_first_char(one, 'l');
-       assert_non_null(ptr);
-       assert_ptr_equal(ptr, one->data + 2);
-       free_string(one); 
-       return 0;
-   }
-
-Example 2
----------
-An example to find the last char value.
-
-.. code-block:: c
-
-   #define "print.h"
-   #define "str.h"
-
-   int main() {
-       str *one = init_string("Hello");
-       char *ptr = find_last_char(one, 'l');
-       assert_non_null(ptr);
-       assert_ptr_equal(ptr, one->data + 3);
-       free_string(one); 
-       return 0;
-   }
-
-Find Char Between Pointers 
-==========================
-Much like ``find_first_char`` and ``find_last_char`` a developer can also use 
-the ``first_char_btw_ptrs`` and ``last_char_btw_ptrs`` functions to find a char 
-value that exists between user specified pointers.  The function will also 
-check to ensure that the ``min_ptr`` is smaller than the ``max_ptr`` and return 
-a NULL value with a ``stderr`` message if it is not.
-
-.. code-block:: c 
-
-   char* first_char_btw_ptrs(char a, char* min_ptr, char* max_ptr);
-   char* last_char_btw_ptrs(char a, char* min_ptr, char* max_ptr);
+   char* first_char(char a, char* min_ptr, char* max_ptr);
+   char* last_char(char a, char* min_ptr, char* max_ptr);
 
 Parameters 
 ----------
@@ -875,8 +809,33 @@ Returns
 
 - :c:`ptr`: A pointer to the character `a` or a NULL value.
 
-Example 
--------
+Example 1
+---------
+An example where the function is used to earch a string literal, and a string 
+container, beginning to end to find an instance of a character.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       char* one = "Hello this is a string function with another string in it";
+       str* two gbc_str = init_string(one);
+       char* ptr1 = first_char("string", one, one + strlen(one));
+       char* ptr2 = last_char("string"), get_string(two), get_string(two) + string_length(two));
+       print(ptr1);
+       print(ptr2);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> string function with another string in it 
+   >> string in it
+
+Example 2 
+---------
 An example where the ``min_ptr`` skips the first few characters of a string.
 
 .. code-block:: c 
@@ -886,7 +845,7 @@ An example where the ``min_ptr`` skips the first few characters of a string.
 
    int main() {
        char* a = "ababcdefg";
-       char* b = first_char_btw_ptrs('b', a + 2, a + strlen(a));
+       char* b = first_char('b', a + 2, a + strlen(a));
        print(b);
        return 0;
    }
@@ -895,109 +854,30 @@ An example where the ``min_ptr`` skips the first few characters of a string.
 
    >> bcdefg
 
-Find Strings 
-============
-The ``find_first_string`` and ``find_last_string`` macros can be used to find 
-the first or last sub-string in a string.  The underlying functions will return 
-a pointer to the sub-string.  If the sub-string does not exist in the primary
-string, the underlying functions will return a NULL pointer.  If the user 
-passes a NULL value for the ``str_one``, ``str_two`` variables or their 
-associated ``data`` pointers, the functions will return a NULL pointer and 
-write a message to ``stderr``.
+Example 3
+---------
+User passes a value of ``min_ptr`` that is greater than ``max_ptr``
 
 .. code-block:: c 
 
-   char* find_first_string(str *str_one, str* || char* str_two);
-   char* find_last_string(str *str_one, str* || char* str_two);
-
-Parameters 
-----------
-
-- :c:`str_one`: A string container of type ``str``.
-- :c:`str_two`: A string container of type ``str`` or a string literal of type ``char*``.  This represents the sub-string that will be searched for in ``str_one``.
-
-Returns
--------
-
-- :c:`ptr`: A pointer to the first or last sub-string in ``str_one``.
-
-Example 1
----------
-Look for the first occurance of a sub-string in a string, comparing a literal 
-to a string container and a container.
-
-.. code-block:: c
-
    #include "print.h"
    #include "str.h"
 
    int main() {
-       str *one = init_string("one Hello and another Hello statement!");
-       char *two = "Hello"
-       char *ptr = find_first_strign(one, two);
-       print("Compare a literal to a container");
-       print(ptr);
-       print("Compare a container to a container");
-       str *three init_string("and");
-       char *new_ptr = find_first_string(one, three);
-       print(new_ptr);
-       free_string(one);
-       free_string(three);
+       char* one = "Hello this is a string function with another string in it";
+       char* ptr1 = first_char("string", one + strlen(one), one);
+       print(ptr1);
        return 0;
    }
 
 .. code-block:: bash 
 
-   >> Compare a literal to a container 
-   >> Hello and another Hello statement! 
-   >> Compare a container to a container 
-   >> and another Hello Statement!
+   >> min_ptr is not smaller than max_ptr in first_char 
+   >> NULL
 
-Example 2 
----------
-Look for the last occurance of a sub-string, comparing a literal to a string 
-container and a container to a container.
-
-.. code-block:: c
-
-   #include "print.h"
-   #include "str.h"
-
-   int main() {
-       str *one = init_string("one Hello and another Hello statement!");
-       char *two = "Hello"
-       char *ptr = find_last_strign(one, two);
-       print("Compare a literal to a container");
-       print(ptr);
-       print("Compare a container to a container");
-       str *three init_string("and");
-       char *new_ptr = find_last_string(one, three);
-       print(new_ptr);
-       free_string(one);
-       free_string(three);
-       return 0;
-   }
-
-.. code-block:: bash 
-
-   >> Compare a literal to a container 
-   >> Hello statement! 
-   >> Compare a container to a container 
-   >> and another Hello Statement!
-
-Underlying Functions 
---------------------
-The ``find_first_string`` and ``find_last_string`` macros use a ``_Generic`` 
-operator to allow for function overloading.  While it is recommended that a 
-developer use the macros, they can also use the underlying functions shown 
-below.
-
-.. code-block:: c
-
-   char* find_first_lit_strstr(str *str_struct, char *string);
-   char* find_first_str_strstr(str *str_struct_one, str *str_struct_two);
-   char* find_last_lit_strstr(str *str_struct, char *string);
-   char* find_last_str_strstr(str *str_struct_one, str *str_struct_two);
+Find Strings 
+============
+TBD
 
 Pop Char 
 ========

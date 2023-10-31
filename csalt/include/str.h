@@ -299,17 +299,6 @@ int compare_strings_str(str* str_struct_one, str* str_struct_two);
 // ================================================================================
 
 /**
- * @brief Returns a pointer to the first occurrance of a char in a string 
- * string container.
- *
- * @param str_struct A string container of type str 
- * @param string A string literal 
- * @returns A pointer to the first occurance of a user specifiec char
- */
-char* find_first_char(str* str_struct, char c);
-// --------------------------------------------------------------------------------
-
-/**
  * @brief Finds the first occurance of a char between two pointers
  *
  * This function searches all chars between two char pointers and returns 
@@ -320,18 +309,7 @@ char* find_first_char(str* str_struct, char c);
  * @param max_ptr The max pointer position
  * @return A char pointer to character c or a NULL pointer.
  */
-char* first_char_btw_ptrs(char c, char* min_ptr, char* max_ptr);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Returns a pointer to the last occurrance of a char in a string 
- * string container.
- *
- * @param str_struct A string container of type str 
- * @param string A string literal 
- * @returns A pointer to the last occurance of a user specifiec char
- */
-char* find_last_char(str* str_struct, char c);
+char* first_char(char c, char* min_ptr, char* max_ptr);
 // --------------------------------------------------------------------------------
 
 /**
@@ -345,7 +323,7 @@ char* find_last_char(str* str_struct, char c);
  * @param max_ptr The max pointer position
  * @return A char pointer to character c or a NULL pointer.
  */
-char* last_char_btw_ptrs(char c, char* min_ptr, char* max_ptr);
+char* last_char(char c, char* min_ptr, char* max_ptr);
 // ================================================================================
 // ================================================================================
 
@@ -377,11 +355,40 @@ char* find_first_lit_strstr(str* str_struct, char* string);
 char* find_first_str_strstr(str* str_struct_one, str* str_struct_two);
 // --------------------------------------------------------------------------------
 
-#define find_first_string(str_one, str_two) _Generic((str_two), \
+#define first_substring(str_one, str_two) _Generic((str_two), \
         char*: find_first_lit_strstr, \
         default: find_first_str_strstr) (str_one, str_two)
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Finds the first occurance of a string literal between two pointers 
+ *
+ * @param string A string literal to be searched for 
+ * @param min_ptr A pointer to the minimum bounds of the string 
+ * @param max_ptr A pointer to the maximum bounds of the string.
+ * @return A pointer to the first occurance of a substring
+ */
+char* first_literal_between_ptrs(char* string, char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Finds the first occurance of a string container between two pointers 
+ *
+ * @param string A string literal to be searched for 
+ * @param min_ptr A pointer to the minimum bounds of the string 
+ * @param max_ptr A pointer to the maximum bounds of the string.
+ * @return A pointer to the first occurance of a substring
+ */
+char* first_str_between_ptrs(str* str_struct, char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Finds the first substring between two pointers
+ */
+#define first_string_btw_ptrs(string, min_ptr, max_ptr) _Generic((string), \
+        char*: first_literal_between_ptrs, \
+        default: first_str_between_ptrs) (string, min_ptr, max_ptr)
+// --------------------------------------------------------------------------------
 /**
  * @brief Returns the last instance of a substring in a string container 
  *
@@ -410,9 +417,33 @@ char* find_last_lit_strstr(str* str_struct, char* string);
 char* find_last_str_strstr(str* str_struct_one, str* str_struct_two);
 // --------------------------------------------------------------------------------
 
-#define find_last_string(str_one, str_two) _Generic((str_two), \
+#define last_substring(str_one, str_two) _Generic((str_two), \
         char*: find_last_lit_strstr, \
         default: find_last_str_strstr) (str_one, str_two)
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Finds the occurance occurance of a string literal between two pointers 
+ *
+ * @param string A string literal to be searched for 
+ * @param min_ptr A pointer to the minimum bounds of the string 
+ * @param max_ptr A pointer to the maximum bounds of the string.
+ * @return A pointer to the last occurance of a substring
+ */
+char* last_literal_between_ptrs(char* string, char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Finds the last occurance of a string container between two pointers 
+ *
+ * @param string A string literal to be searched for 
+ * @param min_ptr A pointer to the minimum bounds of the string 
+ * @param max_ptr A pointer to the maximum bounds of the string.
+ * @return A pointer to the last occurance of a substring
+ */
+char* last_str_between_ptrs(str* string, char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
 // --------------------------------------------------------------------------------
 
 /**

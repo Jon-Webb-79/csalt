@@ -107,6 +107,8 @@ void test_ptr_in_container(void **state);
 void test_ptr_not_in_container(void **state);
 void test_ptr_in_literal(void **state);
 void test_ptr_not_in_literal(void **state);
+void test_find_first_literal_btw_pointers(void **state);
+void test_find_first_str_btw_pointers(void **state);
 // ================================================================================
 // ================================================================================
 #endif /* test_str_H */

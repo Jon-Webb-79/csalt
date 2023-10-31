@@ -478,7 +478,8 @@ void test_compare_strings_str_oversize(void **state) {
 void test_find_first_char(void **state) {
     (void) state;
     str *one = init_string("Hello");
-    char *ptr = find_first_char(one, 'l');
+    char *ptr = first_char('l', get_string(one), get_string(one) + string_length(one));
+    //char *ptr = first_char(one, 'l');
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 2);
     free_string(one);
@@ -489,7 +490,7 @@ void test_find_first_char_btw_pointers(void **state) {
     (void) state;
     char* a = "abecdefghi";
     char c = 'e';
-    char* b = first_char_btw_ptrs(c, a + 3, a + strlen(a));
+    char* b = first_char(c, a + 3, a + strlen(a));
     assert_string_equal(b, "efghi");
 }
 // --------------------------------------------------------------------------------
@@ -497,7 +498,7 @@ void test_find_first_char_btw_pointers(void **state) {
 void test_find_first_char_does_not_exist(void **state) {
     (void) state;
     str *one = init_string("Hello");
-    char *ptr = find_first_char(one, 'q');
+    char* ptr = first_char('q', get_string(one), get_string(one) + string_length(one));
     assert_null(ptr);
     free_string(one);
 }
@@ -506,7 +507,7 @@ void test_find_first_char_does_not_exist(void **state) {
 void test_find_first_char_null_terminator(void **state) {
     (void) state;
     str *one = init_string("Hello");
-    char *ptr = find_first_char(one, '\0');
+    char* ptr = first_char('\0', get_string(one), get_string(one) + string_length(one) + 1);
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 5);
     free_string(one);
@@ -516,7 +517,7 @@ void test_find_first_char_null_terminator(void **state) {
 void test_find_last_char(void **state) {
     (void) state;
     str *one = init_string("Hello");
-    char *ptr = find_last_char(one, 'l');
+    char* ptr = last_char('l', get_string(one), get_string(one) + string_length(one));
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 3);
     free_string(one);
@@ -527,7 +528,7 @@ void test_find_last_char_btw_pointers(void **state) {
     (void) state;
     char* a = "abecdefghi";
     char c = 'e';
-    char* b = last_char_btw_ptrs(c, a, a + strlen(a));
+    char* b = last_char(c, a, a + strlen(a));
     assert_string_equal(b, "efghi");
 }
 // --------------------------------------------------------------------------------
@@ -535,7 +536,7 @@ void test_find_last_char_btw_pointers(void **state) {
 void test_find_last_char_does_not_exist(void **state) {
     (void) state;
     str *one = init_string("Hello");
-    char *ptr = find_last_char(one, 'q');
+    char* ptr = last_char('q', get_string(one), get_string(one) + string_length(one));
     assert_null(ptr);
     free_string(one);
 }
@@ -544,7 +545,7 @@ void test_find_last_char_does_not_exist(void **state) {
 void test_find_last_char_null_terminator(void **state) {
     (void) state;
     str *one = init_string("Hello");
-    char *ptr = find_last_char(one, '\0');
+    char* ptr = last_char('\0', get_string(one), get_string(one) + string_length(one));
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 5);
     free_string(one);
@@ -555,7 +556,7 @@ void test_find_first_string_lit(void **state) {
     (void) state;
     str *one = init_string("Where in the World is Carmen SanDiego!");
     char *two = "World";
-    char *ptr = find_first_string(one, two);
+    char *ptr = first_substring(one, two);
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 13);
     free_string(one);
@@ -566,7 +567,7 @@ void test_find_first_string_lit_null(void **state) {
     (void) state;
     str *one = init_string("Where in the World is Carmen SanDiego!");
     char *two = "What";
-    char *ptr = find_first_string(one, two);
+    char *ptr = first_substring(one, two);
     assert_null(ptr);
     free_string(one);
 }
@@ -576,7 +577,7 @@ void test_find_first_string_lit_oversized(void **state) {
     (void) state;
     str *one = init_string("Where");
     char *two = "What is going on";
-    char *ptr = find_first_string(one, two);
+    char *ptr = first_substring(one, two);
     assert_null(ptr);
     free_string(one);
 }
@@ -586,7 +587,7 @@ void test_find_first_string_str(void **state) {
     (void) state;
     str *one = init_string("Where in the World is Carmen SanDiego!");
     str *two = init_string("World");
-    char *ptr = find_first_string(one, two);
+    char *ptr = first_substring(one, two);
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 13);
     free_string(one);
@@ -598,7 +599,7 @@ void test_find_first_string_str_null(void **state) {
     (void) state;
     str *one = init_string("Where in the World is Carmen SanDiego!");
     str *two = init_string("What");
-    char *ptr = find_first_string(one, two);
+    char *ptr = first_substring(one, two);
     assert_null(ptr);
     free_string(one);
     free_string(two);
@@ -609,7 +610,7 @@ void test_find_first_string_str_oversized(void **state) {
     (void) state;
     str *one = init_string("Where");
     str *two = init_string("What is going on");
-    char *ptr = find_first_string(one, two);
+    char *ptr = first_substring(one, two);
     assert_null(ptr);
     free_string(one);
     free_string(two);
@@ -620,7 +621,7 @@ void test_find_last_string_lit(void **state) {
     (void) state;
     str *one = init_string("Hello this is Hello again!");
     char *two = "Hello";
-    char *ptr = find_last_string(one, two);
+    char *ptr = last_substring(one, two);
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 14);
     free_string(one);
@@ -631,7 +632,7 @@ void test_find_last_string_lit_null(void **state) {
     (void) state;
     str *one = init_string("Where in the World is Carmen SanDiego!");
     char *two = "What";
-    char *ptr = find_last_string(one, two);
+    char *ptr = last_substring(one, two);
     assert_null(ptr);
     free_string(one);
 }
@@ -641,7 +642,7 @@ void test_find_last_string_lit_oversized(void **state) {
     (void) state;
     str *one = init_string("Where");
     char *two = "What is going on";
-    char *ptr = find_last_string(one, two);
+    char *ptr = last_substring(one, two);
     assert_null(ptr);
     free_string(one);
 }
@@ -651,7 +652,7 @@ void test_find_last_string_str(void **state) {
     (void) state;
     str *one = init_string("Hello this is Hello again!");
     str *two = init_string("Hello");
-    char *ptr = find_last_string(one, two);
+    char *ptr = last_substring(one, two);
     assert_non_null(ptr);
     assert_ptr_equal(ptr, one->data + 14);
     free_string(one);
@@ -663,7 +664,7 @@ void test_find_last_string_str_null(void **state) {
     (void) state;
     str *one = init_string("Where in the World is Carmen SanDiego!");
     str *two = init_string("What");
-    char *ptr = find_last_string(one, two);
+    char *ptr = last_substring(one, two);
     assert_null(ptr);
     free_string(one);
     free_string(two);
@@ -674,7 +675,7 @@ void test_find_last_string_str_oversized(void **state) {
     (void) state;
     str *one = init_string("Where");
     str *two = init_string("What is going on");
-    char *ptr = find_last_string(one, two);
+    char *ptr = last_substring(one, two);
     assert_null(ptr);
     free_string(one);
     free_string(two);
@@ -944,6 +945,24 @@ void test_ptr_not_in_literal(void **state) {
     char* one = "Hello Again!";
     bool result = ptr_in_literal(one - 2, one, one + strlen(one));
     assert_false(result);
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_literal_btw_pointers(void **state) {
+    char* one = "this is this Test";
+    char* input = "this";
+    char* two = first_string_btw_ptrs(input, one + 5, one + strlen(one));
+    assert_string_equal(two, "this Test");
+}
+// --------------------------------------------------------------------------------
+
+void test_find_first_str_btw_pointers(void **state) {
+    str* one = init_string("this is this Test");
+    str* three = init_string("this");
+    char* two = first_string_btw_ptrs(three, one->data + 5, one->data + one->len);
+    assert_string_equal(two, "this Test");
+    free_string(one);
+    free_string(three);
 }
 // ================================================================================
 // ================================================================================

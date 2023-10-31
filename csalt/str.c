@@ -301,22 +301,9 @@ int compare_strings_str(str* str_struct_one, str* str_struct_two) {
 // ================================================================================
 // ================================================================================
 
-char* find_first_char(str* str_struct, char c) {
-    if ( !str_struct || !str_struct->data) {
-        fprintf(stderr, "Null pointer provided to find_char\n");
-        return NULL;
-    }
-    for (size_t i = 0; i <= str_struct->len; i++ ) {
-        if (str_struct->data[i] == c)
-            return str_struct->data + i;
-    }
-    return NULL;
-}
-// --------------------------------------------------------------------------------
-
-char* first_char_btw_ptrs(char c, char* min_ptr, char* max_ptr) {
+char* first_char(char c, char* min_ptr, char* max_ptr) {
     if (min_ptr > max_ptr) {
-        fprintf(stderr, "min_ptr is not smaller than max_ptr in first_char_btw_ptrs\n");
+        fprintf(stderr, "min_ptr is not smaller than max_ptr in first_char\n");
         return NULL;
     }
     for (char* it = min_ptr; it != max_ptr; it++) {
@@ -327,31 +314,14 @@ char* first_char_btw_ptrs(char c, char* min_ptr, char* max_ptr) {
 }
 // --------------------------------------------------------------------------------
 
-char* last_char_btw_ptrs(char c, char* min_ptr, char* max_ptr) {
+char* last_char(char c, char* min_ptr, char* max_ptr) {
     if (min_ptr > max_ptr) {
-        fprintf(stderr, "min_ptr is not smaller than max_ptr in last_char_btw_ptrs\n");
+        fprintf(stderr, "min_ptr is not smaller than max_ptr in last_char\n");
         return NULL;
     }
     for (char* it = max_ptr; it != min_ptr; it--) {
         if (*it == c )
             return it;
-    }
-    return NULL;
-}
-// --------------------------------------------------------------------------------
-
-char* find_last_char(str* str_struct, char c) {
-    if (!str_struct || !str_struct->data) {
-        fprintf(stderr, "Null pointer provided to find_char\n");
-        return NULL;
-    }
-    // Note that we need to handle the case when str_struct->len is 0
-    if (str_struct->len == 0) {
-        return NULL;
-    }
-    for (int i = str_struct->len; i >= 0; i--) {
-        if (str_struct->data[i] == c)
-            return str_struct->data + i;
     }
     return NULL;
 }
@@ -398,6 +368,40 @@ char* find_first_str_strstr(str* str_struct_one, str* str_struct_two) {
                break;
         }
         if (j == str_len) return str_struct_one->data + i;
+    }
+    return NULL; 
+}
+// --------------------------------------------------------------------------------
+
+char* first_literal_between_ptrs(char* string, char* min_ptr, char* max_ptr) {
+    if (min_ptr >= max_ptr) return NULL;
+    size_t str_len = strlen(string);
+    size_t j;
+
+    for (char* it = min_ptr; it < max_ptr - str_len + 1; it++) { // note the change in the condition
+        for (j = 0; j < str_len; j++) {
+            if (string[j] != *(it + j)) {
+                break;
+            }
+        }
+        if (j == str_len) return it;
+    }
+    return NULL; 
+}
+// --------------------------------------------------------------------------------
+
+char* first_str_between_ptrs(str* string, char* min_ptr, char* max_ptr) {
+    if (min_ptr >= max_ptr) return NULL;
+    size_t str_len = string->len;
+    size_t j;
+
+    for (char* it = min_ptr; it < max_ptr - str_len + 1; it++) { // note the change in the condition
+        for (j = 0; j < str_len; j++) {
+            if (string->data[j] != *(it + j)) {
+                break;
+            }
+        }
+        if (j == str_len) return it;
     }
     return NULL; 
 }
