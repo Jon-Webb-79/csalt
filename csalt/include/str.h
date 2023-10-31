@@ -521,15 +521,17 @@ str_iterator init_str_iterator();
 /**
  * brief A forward iterator with a decarator
  *
- * This function acts as a decorator to a char iterator that allows a user
- * to modify data within a str data type in memory.
- *
- * THis function encapsulates a forward iterator on a string container of type 
+ * This function encapsulates a forward iterator on a string container of type 
  * str, such that a develepor can insert a function of their own making to 
  * act on each char character in memory.
+ *
+ * @param begin A pointer to the start point of the iteration.
+ * @param end A pointer to the end point of the iteration.
+ * @param direction An enum that can either be FORWARD or REVERSE 
+ * @param decorator A function of type void func(char*)
  */
-void dec_str_iter(str* str_struct, char* begin, char* end,
-              str_iter_dir direction, str_decorator decorator);
+void dec_str_iter(char* begin, char* end,
+                  str_iter_dir direction, str_decorator decorator);
 // ================================================================================
 // ================================================================================
 

@@ -541,12 +541,8 @@ bool ptr_in_literal(char* ptr, char* min_ptr, char* max_ptr) {
 }
 // --------------------------------------------------------------------------------
 
-void dec_str_iter(str* str_struct, char* begin, char* end,
+void dec_str_iter(char* begin, char* end,
                   str_iter_dir direction, str_decorator decorator) {
-    if (!str_struct || !str_struct->data) {
-        fprintf(stderr, "Null pointer provided to dec_str_iter\n");
-        return;
-    }
     // Check the direction of iteration and validate iterators
     if (direction == FORWARD && end < begin) {
         fprintf(stderr, "Error: 'end' iterator should be after 'begin' for FORWARD iteration.\n");

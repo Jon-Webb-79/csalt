@@ -1323,13 +1323,12 @@ of type ``void func(char*)`` to modify char variables in memory within the
 
 .. code-block:: c 
 
-   void dec_str_iter(str* str_struct, char* begin, char* end,
+   void dec_str_iter(char* begin, char* end,
                      str_iter_dir direction, str_decorator decorator);
 
 Parameters
 ----------
 
-- :c:`str_struct`: A string container of type ``str``.
 - :c:`begin`: A char pointer to a position in the data within ``str_struct``.
 - :c:`end`: A char pointer to a position in the data within ``str_struct``.
 - :c:`direction`: An enum of type ``str_iter_dir`` which can be ``FORWARD`` or ``REVERSE``.
@@ -1356,7 +1355,7 @@ the characters into capital characters.
        str_iterator it = init_str_iterator();
        char* begin = it.begin(one);
        char* end = it.end(one); 
-       dec_str_iter(one, begin + 3, end, FORWARD, uppercase_char);
+       dec_str_iter(begin + 3, end, FORWARD, uppercase_char);
        print(one);
        free_string(one);
        return 0;
