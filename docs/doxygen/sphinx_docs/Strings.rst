@@ -877,7 +877,94 @@ User passes a value of ``min_ptr`` that is greater than ``max_ptr``
 
 Find Strings 
 ============
-TBD
+The ``first_substring`` and ``last_substring`` macros will look for the 
+first or last occurance of a sub-string in a string.  The macro will 
+search for the sub-string between an upper and lower pointer value.  If a 
+developer passes a NULL value for a sub-string pattern the function will 
+print an error to ``stderr`` and return a value of NULL.
+
+.. code-block:: c 
+
+   char* first_substring(str* string || char* string, char* min_ptr, char* max_ptr);
+   char* last_substring(str* string || char* string, char* min_ptr, char* max_ptr);
+
+Parameters 
+----------
+
+- :c:`string`: A string literal or a string container containing the sub-string pattern.
+- :c:`min_ptr`: A char pointer to the minimum location for a sub-string search.
+- :c:`max_ptr`: A char pointer to the maximum location for a sub-string search.
+
+Return 
+------
+
+- :c:`ptr`: A char pointer to the location of a sub-string in a string, or NULL if the sub-string does not exist.
+
+Example 1
+---------
+This is an example of ``first_substring`` applied to a search over an entire 
+string.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       char* one = "This is a string in a string");
+       char* two = "string";
+       char* three = first_substraing(two, one, one + strlen(one));
+       print(three);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> string in a string 
+
+Example 2 
+---------
+This is an example of ``first_substring`` applied to a portion of an string.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str* one gbc_str = init_string("This is a string in a string");
+       char* two = init_string("string");
+       char* three = first_substraing(two, get_string(one) + 18, get_string(one) + string_length(one));
+       print(three);
+       free_string(two);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> string
+
+Example 3 
+---------
+This is an example of ``last_substring`` with an error.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str* one gbc_str = init_string("This is a string in a string");
+       str* two = {.data=NULL, .len=0, .alloc=0};
+       char* three = first_substraing(two, get_string(one) + 18, get_string(one) + string_length(one));
+       print(three);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Null struct information provided for first_str_between_ptrs
+   >> NULL
 
 Pop Char 
 ========

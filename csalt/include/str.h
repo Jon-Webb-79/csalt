@@ -328,39 +328,6 @@ char* last_char(char c, char* min_ptr, char* max_ptr);
 // ================================================================================
 
 /**
- * @brief Returns the first instance of a substring in a string container 
- *
- * This function will return the first instance of a string in a string container.
- * The string pattern is represented by a string literal in this function.
- *
- * @param str_struct A string container of type str 
- * @param string A string literal
- * @returns A char pointer to the first instance of a string
- */
-char* find_first_lit_strstr(str* str_struct, char* string);
-
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Returns the first instance of a substring in a string container 
- *
- * This function will return the first instance of a string in a string 
- * container.  The string pattern is represented by another string container
- * in this function.
- *
- * @param str_struct_one A string container of type str 
- * @param string A string literal
- * @returns A char pointer to the first instance of a string
- */
-char* find_first_str_strstr(str* str_struct_one, str* str_struct_two);
-// --------------------------------------------------------------------------------
-
-#define first_substring(str_one, str_two) _Generic((str_two), \
-        char*: find_first_lit_strstr, \
-        default: find_first_str_strstr) (str_one, str_two)
-// --------------------------------------------------------------------------------
-
-/**
  * @brief Finds the first occurance of a string literal between two pointers 
  *
  * @param string A string literal to be searched for 
@@ -385,41 +352,9 @@ char* first_str_between_ptrs(str* str_struct, char* min_ptr, char* max_ptr);
 /**
  * @brief Finds the first substring between two pointers
  */
-#define first_string_btw_ptrs(string, min_ptr, max_ptr) _Generic((string), \
+#define first_substring(string, min_ptr, max_ptr) _Generic((string), \
         char*: first_literal_between_ptrs, \
         default: first_str_between_ptrs) (string, min_ptr, max_ptr)
-// --------------------------------------------------------------------------------
-/**
- * @brief Returns the last instance of a substring in a string container 
- *
- * This function will return the last instance of a string in a string container.
- * The string pattern is represented by a string literal in this function.
- *
- * @param str_struct A string container of type str 
- * @param string A string literal
- * @returns A char pointer to the last instance of a string
- */
-char* find_last_lit_strstr(str* str_struct, char* string);
-
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Returns the last instance of a substring in a string container 
- *
- * This function will return the last instance of a string in a string 
- * container.  The string pattern is represented by another string container
- * in this function.
- *
- * @param str_struct_one A string container of type str 
- * @param string A string literal
- * @returns A char pointer to the last instance of a string
- */
-char* find_last_str_strstr(str* str_struct_one, str* str_struct_two);
-// --------------------------------------------------------------------------------
-
-#define last_substring(str_one, str_two) _Generic((str_two), \
-        char*: find_last_lit_strstr, \
-        default: find_last_str_strstr) (str_one, str_two)
 // --------------------------------------------------------------------------------
 
 /**
@@ -443,40 +378,12 @@ char* last_literal_between_ptrs(char* string, char* min_ptr, char* max_ptr);
  */
 char* last_str_between_ptrs(str* string, char* min_ptr, char* max_ptr);
 // --------------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------------
-
 /**
- * @brief Returns the last instance of a substring in a string container 
- *
- * This function will return the last instance of a string in a string container.
- * The string pattern is represented by a string literal in this function.
- *
- * @param str_struct A string container of type str 
- * @param string A string literal
- * @returns A char pointer to the last instance of a string
+ * @brief Finds the first substring between two pointers
  */
-char* find_last_lit_strstr(str* str_struct, char* string);
-
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Returns the last instance of a substring in a string container 
- *
- * This function will return the last instance of a string in a string 
- * container.  The string pattern is represented by another string container
- * in this function.
- *
- * @param str_struct_one A string container of type str 
- * @param string A string literal
- * @returns A char pointer to the last instance of a string
- */
-char* find_last_str_strstr(str* str_struct_one, str* str_struct_two);
-// --------------------------------------------------------------------------------
-
-#define find_last_string(str_one, str_two) _Generic((str_two), \
-        char*: find_last_lit_strstr, \
-        default: find_last_str_strstr) (str_one, str_two)
+#define last_substring(string, min_ptr, max_ptr) _Generic((string), \
+        char*: last_literal_between_ptrs, \
+        default: last_str_between_ptrs) (string, min_ptr, max_ptr)
 // ================================================================================
 // ================================================================================
 

@@ -328,51 +328,6 @@ char* last_char(char c, char* min_ptr, char* max_ptr) {
 // ================================================================================
 // ================================================================================
 
-char* find_first_lit_strstr(str* str_struct, char* string) {
-    if (!str_struct || !str_struct->data || !string) {
-        fprintf(stderr, "Null pointer provided to find_first_lin_strstr\n");
-        return NULL;
-    }
-    size_t str_len = strlen(string);
-
-    if (str_len > str_struct->len)
-        return NULL;
-
-    size_t j;
-    for (size_t i = 0; i <= str_struct->len - str_len; i++) {
-        for (j = 0; j < str_len; j++) {
-           if (string[j] != str_struct->data[i + j])
-               break;
-        }
-        if (j == str_len) return str_struct->data + i;
-    }
-    return NULL;
-}
-// --------------------------------------------------------------------------------
-
-char* find_first_str_strstr(str* str_struct_one, str* str_struct_two) {
-    if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
-        // Handle null pointers appropriately
-        fprintf(stderr, "Null pointer provided to find_first_str_strstr.\n");
-        return 0; // Or another designated error value
-    } 
-    size_t str_len = str_struct_two->len;
-
-    if (str_len > str_struct_one->len)
-        return NULL;
-
-    size_t j;
-    for (size_t i = 0; i <= str_struct_one->len - str_len; i++) {
-        for (j = 0; j < str_len; j++) {
-           if (str_struct_two->data[j] != str_struct_one->data[i + j])
-               break;
-        }
-        if (j == str_len) return str_struct_one->data + i;
-    }
-    return NULL; 
-}
-// --------------------------------------------------------------------------------
-
 char* first_literal_between_ptrs(char* string, char* min_ptr, char* max_ptr) {
     if (min_ptr >= max_ptr) return NULL;
     size_t str_len = strlen(string);
@@ -391,7 +346,14 @@ char* first_literal_between_ptrs(char* string, char* min_ptr, char* max_ptr) {
 // --------------------------------------------------------------------------------
 
 char* first_str_between_ptrs(str* string, char* min_ptr, char* max_ptr) {
-    if (min_ptr >= max_ptr) return NULL;
+    if (!string || !string->data) {
+        fprintf(stderr, "Null struct information provided for first_str_between_ptrs\n");
+        return NULL;
+    }
+    if (min_ptr >= max_ptr) {
+        fprintf(stderr, "Min pointer larger than max pointer in first_str_between_ptrs");
+        return NULL;
+    }
     size_t str_len = string->len;
     size_t j;
 
@@ -407,49 +369,55 @@ char* first_str_between_ptrs(str* string, char* min_ptr, char* max_ptr) {
 }
 // --------------------------------------------------------------------------------
 
-char* find_last_lit_strstr(str* str_struct, char* string) {
-    if (!str_struct || !str_struct->data || !string) {
-        fprintf(stderr, "Null pointer provided to find_first_lin_strstr\n");
+char* last_literal_between_ptrs(char* string, char* min_ptr, char* max_ptr) {
+    if (!string) {
+        fprintf(stderr, "Null string provided for first_str_between_ptrs\n");
         return NULL;
     }
-    size_t str_len = strlen(string);
-
-    if (str_len > str_struct->len)
+    if (min_ptr >= max_ptr) {
+        fprintf(stderr, "Min pointer larger than max pointer in first_str_between_ptrs");
         return NULL;
-
+    }
+    if (min_ptr >= max_ptr) return NULL;
+    size_t str_len = strlen(string);
     size_t j;
-    for (int i = str_struct->len - str_len; i >= 0; i--) {
+
+    for (char* it = max_ptr - str_len; it > min_ptr; it--) { 
         for (j = 0; j < str_len; j++) {
-           if (string[j] != str_struct->data[i + j])
-               break;
+            if (string[j] != *(it + j)) {
+                break;
+            }
         }
-        if (j == str_len) return str_struct->data + i;
+        if (j == str_len) return it;
     }
     return NULL;
 }
 // --------------------------------------------------------------------------------
 
-char* find_last_str_strstr(str* str_struct_one, str* str_struct_two) {
-    if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
-        // Handle null pointers appropriately
-        fprintf(stderr, "Null pointer provided to find_first_str_strstr.\n");
-        return 0; // Or another designated error value
-    } 
-    size_t str_len = str_struct_two->len;
-
-    if (str_len > str_struct_one->len)
+char* last_str_between_ptrs(str* string, char* min_ptr, char* max_ptr) {
+    if (!string || !string->data) {
+        fprintf(stderr, "Null struct information provided for first_str_between_ptrs\n");
         return NULL;
-
+    }
+    if (min_ptr >= max_ptr) {
+        fprintf(stderr, "Min pointer larger than max pointer in first_str_between_ptrs");
+        return NULL;
+    }
+    size_t str_len = string->len;
     size_t j;
-    for (int i = str_struct_one->len - str_len; i >= 0; i--) {
+
+    for (char* it = max_ptr - str_len; it > min_ptr; it--) { 
         for (j = 0; j < str_len; j++) {
-           if (str_struct_two->data[j] != str_struct_one->data[i + j])
-               break;
+            if (string->data[j] != *(it + j)) {
+                break;
+            }
         }
-        if (j == str_len) return str_struct_one->data + i;
+        if (j == str_len) return it;
     }
     return NULL; 
 }
+// --------------------------------------------------------------------------------
+
 // ================================================================================
 // ================================================================================
 
