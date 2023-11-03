@@ -375,14 +375,14 @@ char* last_literal_between_ptrs(char* string, char* min_ptr, char* max_ptr) {
         return NULL;
     }
     if (min_ptr >= max_ptr) {
-        fprintf(stderr, "Min pointer larger than max pointer in first_str_between_ptrs");
+        fprintf(stderr, "Min pointer larger than max pointer in first_str_between_ptrs\n");
         return NULL;
     }
     if (min_ptr >= max_ptr) return NULL;
     size_t str_len = strlen(string);
     size_t j;
 
-    for (char* it = max_ptr - str_len; it > min_ptr; it--) { 
+    for (char* it = max_ptr - str_len; it >= min_ptr; it--) { 
         for (j = 0; j < str_len; j++) {
             if (string[j] != *(it + j)) {
                 break;
@@ -400,13 +400,13 @@ char* last_str_between_ptrs(str* string, char* min_ptr, char* max_ptr) {
         return NULL;
     }
     if (min_ptr >= max_ptr) {
-        fprintf(stderr, "Min pointer larger than max pointer in first_str_between_ptrs");
+        fprintf(stderr, "Min pointer larger than max pointer in first_str_between_ptrs\n");
         return NULL;
     }
     size_t str_len = string->len;
     size_t j;
 
-    for (char* it = max_ptr - str_len; it > min_ptr; it--) { 
+    for (char* it = max_ptr - str_len; it >= min_ptr; it--) { 
         for (j = 0; j < str_len; j++) {
             if (string->data[j] != *(it + j)) {
                 break;
@@ -589,6 +589,79 @@ void to_lowercase(str *s) {
     for (char* i =  begin; i != end; i++) {
         if (*i >= 'A' && *i <= 'Z') *i += 32;
     }
+}
+// ================================================================================
+// ================================================================================
+
+void drop_literal_substring(str* string, char* substring, char* min_ptr, char* max_ptr) {
+    if (!string || !substring || !string->data) {
+        fprintf(stderr, "Null data provided to drop_str_substring\n");
+        return;
+    }
+
+    size_t substr_len = strlen(substring);
+    if (string->len < substr_len) return;
+
+    char* begin = min_ptr;
+    char* end = max_ptr;
+    char* ptr = last_literal_between_ptrs(substring, begin, end);
+    size_t move_length;
+
+    while ((ptr = last_literal_between_ptrs(substring, begin, end))) {
+        move_length = end - ptr - (substr_len - 1);
+
+        // Check if the character after the substring is a space
+        if (*(ptr + substr_len) == ' ') {
+            move_length--;  // Move one less character
+            substr_len++;  // Include the space in the substring to be dropped
+        }
+
+        memmove(ptr, ptr + substr_len, move_length);
+        end -= substr_len;
+        string->len -= substr_len;
+
+        // Null-terminate the string at the new end
+        *(string->data + string->len) = '\0';
+
+        // Reset the substring length for the next iteration 
+        substr_len = strlen(substring);
+    } 
+}
+// --------------------------------------------------------------------------------
+
+void drop_str_substring(str* string, str* substring, char* min_ptr, char* max_ptr) {
+    if (!string || !substring || !string->data || !substring->data) {
+        fprintf(stderr, "Null data provided to drop_str_substring\n");
+        return;
+    }
+
+    size_t substr_len = substring->len;
+    if (string->len < substr_len) return;
+
+    char* begin = min_ptr;
+    char* end = max_ptr;
+    char* ptr = last_str_between_ptrs(substring, begin, end);
+    size_t move_length;
+
+    while ((ptr = last_str_between_ptrs(substring, begin, end))) {
+        move_length = end - ptr - (substr_len - 1);
+
+        // Check if the character after the substring is a space
+        if (*(ptr + substr_len) == ' ') {
+            move_length--;  // Move one less character
+            substr_len++;  // Include the space in the substring to be dropped
+        }
+
+        memmove(ptr, ptr + substr_len, move_length);
+        end -= substr_len;
+        string->len -= substr_len;
+
+        // Null-terminate the string at the new end
+        *(string->data + string->len) = '\0';
+
+        // Reset the substring length for the next iteration 
+        substr_len = string_length(substring);
+    }  
 }
 // ================================================================================
 // ================================================================================

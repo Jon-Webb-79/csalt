@@ -949,6 +949,7 @@ void test_ptr_not_in_literal(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_find_first_literal_btw_pointers(void **state) {
+    (void) state;
     char* one = "this is this Test";
     char* input = "this";
     char* two = first_substring(input, one + 5, one + strlen(one));
@@ -957,6 +958,7 @@ void test_find_first_literal_btw_pointers(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_find_first_str_btw_pointers(void **state) {
+    (void) state;
     str* one = init_string("this is this Test");
     str* three = init_string("this");
     char* two = first_substring(three, one->data + 5, one->data + one->len);
@@ -967,11 +969,34 @@ void test_find_first_str_btw_pointers(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_find_last_str_between_pointers(void **state) {
+    (void) state;
     char* one = "This is a test, I repeat, this is a test";
     char* two = "test";
     char* three = last_substring(two, one, one + 17);
     assert_string_equal(three, "test, I repeat, this is a test");
 }
+// --------------------------------------------------------------------------------
+
+void test_drop_str_substring_char(void **state) {
+    (void) state;
+    str* one = init_string("Remove all Remove instances from Remove");
+    char* pattern = "Remove";
+    drop_substring(one, pattern, get_string(one), get_string(one) + string_length(one));
+    assert_string_equal(one->data, "all instances from ");
+    free_string(one);
+}
+// -------------------------------------------------------------------------------
+
+void test_drop_str_substring_str(void **state) {
+    (void) state;
+    str* one = init_string("Remove all Remove instances from Remove");
+    str* pattern = init_string("Remove");
+    drop_substring(one, pattern, get_string(one), get_string(one) + string_length(one));
+    assert_string_equal(one->data, "all instances from ");
+    free_string(one);
+    free_string(pattern);
+}
+
 // ================================================================================
 // ================================================================================
 // eof

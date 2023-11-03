@@ -104,7 +104,9 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_find_last_char_btw_pointers),
         cmocka_unit_test(test_find_first_literal_btw_pointers),
         cmocka_unit_test(test_find_first_str_btw_pointers),
-        cmocka_unit_test(test_find_last_str_between_pointers)
+        cmocka_unit_test(test_find_last_str_between_pointers),
+        cmocka_unit_test(test_drop_str_substring_char),
+        cmocka_unit_test(test_drop_str_substring_str)
      	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

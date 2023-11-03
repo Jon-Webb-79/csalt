@@ -913,7 +913,7 @@ string.
    int main() {
        char* one = "This is a string in a string");
        char* two = "string";
-       char* three = first_substraing(two, one, one + strlen(one));
+       char* three = first_substring(two, one, one + strlen(one));
        print(three);
        return 0;
    }
@@ -934,7 +934,7 @@ This is an example of ``first_substring`` applied to a portion of an string.
    int main() {
        str* one gbc_str = init_string("This is a string in a string");
        char* two = init_string("string");
-       char* three = first_substraing(two, get_string(one) + 18, get_string(one) + string_length(one));
+       char* three = first_substring(two, get_string(one) + 18, get_string(one) + string_length(one));
        print(three);
        free_string(two);
        return 0;
@@ -956,7 +956,7 @@ This is an example of ``last_substring`` with an error.
    int main() {
        str* one gbc_str = init_string("This is a string in a string");
        str* two = {.data=NULL, .len=0, .alloc=0};
-       char* three = first_substraing(two, get_string(one) + 18, get_string(one) + string_length(one));
+       char* three = first_substring(two, get_string(one) + 18, get_string(one) + string_length(one));
        print(three);
        return 0;
    }
@@ -1449,7 +1449,75 @@ Convert a string to lowercase in memory.
 
 Delete Substring 
 ================
-To be filled in 
+The ``drop_substring`` macro selects one of two appropriate functions that 
+can be used to drop all occurances of a sub-string within a string between
+user defined set of pointers.  If a developer passes null pointer to the 
+function, it will print a message to ``stderr`` and return to the calling 
+program.
+
+.. code-block:: c 
+
+   bool drop_substring(str* string, str* substring || char* substring, char* min_ptr, char* max_ptr);
+
+Parameters 
+----------
+
+- :c:`string`: A string container of type ``str`` containing the sub-strings to be deleted
+- :c:`substring`: A substring patterns of type ``char*`` or ``str*``.
+- :c:`min_ptr`: A pointer to the minimum position to be searched 
+- :c:`max_ptr`: A pointer to the maximum position to be searched 
+
+Returns 
+-------
+
+- :c:`status`: true if function executes succesfully, false otherwise with a message printed to ``stderr``.
+
+Example 1
+---------
+A use case where the developer passes a string literal to the function to 
+remove all occurances of a string between two pointers.
+
+.. code-block:: c
+
+   #include "str.h"
+   #include "print.h"
+
+   int main() {
+       str* data = init_string("Remove all instances of Remove without this Remove");
+       char* pattern = "Remove";
+       drop_substring(data, pattern, get_string(one), get_string(one) + (string_length(one) - 7));
+       print(data)
+       free_string(data);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> all instances of without this Remove 
+
+Example 2 
+---------
+A user case where all instances of a sub-string are removed from the entire string 
+where the pattern is a string container.
+
+.. code-block:: c
+
+   #include "str.h"
+   #include "print.h"
+
+   int main() {
+       str* data = init_string("Remove all instances of Remove without this Remove");
+       str* pattern = init_string("Remove");
+       drop_substring(data, pattern, get_string(one), get_string(one) + (string_length(one));
+       print(data)
+       free_string(data);
+       free_string(pattern);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> all instances of without this 
 
 Replace Substring 
 =================

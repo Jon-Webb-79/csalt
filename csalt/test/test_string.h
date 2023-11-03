@@ -110,6 +110,8 @@ void test_ptr_not_in_literal(void **state);
 void test_find_first_literal_btw_pointers(void **state);
 void test_find_first_str_btw_pointers(void **state);
 void test_find_last_str_between_pointers(void **state);
+void test_drop_str_substring_char(void **state);
+void test_drop_str_substring_str(void **state);
 // ================================================================================
 // ================================================================================
 #endif /* test_str_H */

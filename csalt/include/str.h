@@ -517,6 +517,42 @@ void to_uppercase(str* s);
 void to_lowercase(str *s);
 // ================================================================================
 // ================================================================================
+
+/**
+ * @brief Removes all occurances of a sub-string from a string between the 
+ * bound of an upper an lower pointer value 
+ *
+ * This function looks for any occurance of a sub-string container in a string
+ * container and removes all instances of that string from another string 
+ * container.
+ *
+ * @param string The string containing the sub-string to be removed.
+ * @param substring The substring pattern to be removed from the string.
+ */
+void drop_str_substring(str* string, str* substring, char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes all occurances of a sub-string from a string between the 
+ * bound of an upper an lower pointer value 
+ *
+ * This function looks for any occurance of a sub-string container as a literal
+ * and removes all instances of that string from another string container.
+ *
+ * @param string The string containing the sub-string to be removed.
+ * @param substring The substring pattern to be removed from the string.
+ */
+void drop_literal_substring(str* string, char* substring, char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes all occurances of a sub-string from a string
+ */
+#define drop_substring(string, substring, min_ptr, max_ptr) _Generic((substring), \
+        str*: drop_str_substring, \
+        default: drop_literal_substring) (string, substring, min_ptr, max_ptr)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
