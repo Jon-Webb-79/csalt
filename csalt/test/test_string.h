@@ -114,6 +114,19 @@ void test_drop_str_substring_char(void **state);
 void test_drop_str_substring_str(void **state);
 // ================================================================================
 // ================================================================================
+// Test replace sub-string functions
+
+void test_replace_string_equal_size(void **state);
+void test_replace_string_smaller_size(void **state);
+void test_replace_string_larger_size(void **state);
+void test_replace_string_equal_size_ptr(void **state);
+void test_replace_string_smaller_size_ptr(void **state);
+void test_replace_string_larger_size_ptr(void **state);
+void test_replace_literal_equal_size(void **state);
+void test_replace_literal_smaller_size(void **state);
+void test_replace_literal_larger_size(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_str_H */
 // ================================================================================
 // ================================================================================

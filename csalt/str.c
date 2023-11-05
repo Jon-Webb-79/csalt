@@ -593,14 +593,20 @@ void to_lowercase(str *s) {
 // ================================================================================
 // ================================================================================
 
-void drop_literal_substring(str* string, char* substring, char* min_ptr, char* max_ptr) {
+bool drop_literal_substring(str* string, char* substring, char* min_ptr, char* max_ptr) {
     if (!string || !substring || !string->data) {
         fprintf(stderr, "Null data provided to drop_str_substring\n");
-        return;
+        return false;
+    }
+
+    // Check if min_ptr and max_ptr are within the string's data bounds.
+    if (min_ptr < string->data || max_ptr > string->data + string->len) {
+        fprintf(stderr, "Pointers out of bounds in drop_literaL_substring\n");
+        return false;
     }
 
     size_t substr_len = strlen(substring);
-    if (string->len < substr_len) return;
+    if (string->len < substr_len) return true;
 
     char* begin = min_ptr;
     char* end = max_ptr;
@@ -625,18 +631,25 @@ void drop_literal_substring(str* string, char* substring, char* min_ptr, char* m
 
         // Reset the substring length for the next iteration 
         substr_len = strlen(substring);
-    } 
+    }
+    return true;
 }
 // --------------------------------------------------------------------------------
 
-void drop_str_substring(str* string, str* substring, char* min_ptr, char* max_ptr) {
+bool drop_str_substring(str* string, str* substring, char* min_ptr, char* max_ptr) {
     if (!string || !substring || !string->data || !substring->data) {
         fprintf(stderr, "Null data provided to drop_str_substring\n");
-        return;
+        return false;
+    }
+
+    // Check if min_ptr and max_ptr are within the string's data bounds.
+    if (min_ptr < string->data || max_ptr > string->data + string->len) {
+        fprintf(stderr, "Pointers out of bounds in DROP_str_substring\n");
+        return false;
     }
 
     size_t substr_len = substring->len;
-    if (string->len < substr_len) return;
+    if (string->len < substr_len) return true;
 
     char* begin = min_ptr;
     char* end = max_ptr;
@@ -661,7 +674,177 @@ void drop_str_substring(str* string, str* substring, char* min_ptr, char* max_pt
 
         // Reset the substring length for the next iteration 
         substr_len = string_length(substring);
-    }  
+    } 
+    return true;
+}
+// ================================================================================
+// ================================================================================
+
+bool replace_str_substring(str* string, str* pattern, str* replace_string,
+                           char* min_ptr, char* max_ptr) {
+    if (!string || !string->data || !pattern || !pattern->data || 
+        !replace_string || !replace_string->data || !min_ptr || !max_ptr) {
+        fprintf(stderr, "Null data provided to replace_str_substring\n");
+        return false;
+    }
+    
+    // Check if min_ptr and max_ptr are within the string's data bounds.
+    if (min_ptr < string->data || max_ptr > string->data + string->len) {
+        fprintf(stderr, "Pointers out of bounds in replace_str_substring\n");
+        return false;
+    }
+    
+    // Calculate the delta between the pattern and replacement lengths.
+    int delta = replace_string->len - pattern->len;
+
+    char* ptr = last_str_between_ptrs(pattern, min_ptr, max_ptr);
+
+    while (ptr) {
+        // If the replacement string is the same length, copy it over.
+        if (delta == 0) {
+            memcpy(ptr, replace_string->data, replace_string->len);
+            max_ptr = ptr;
+        }
+
+        // - If replacement string is smaller, copy string, move memory to the 
+        //   left, and update length
+        else if (delta < 0) {
+            memcpy(ptr, replace_string->data, replace_string->len);
+
+            size_t tail_length = string->data + string->len - (ptr + pattern->len);
+            memmove(ptr + replace_string->len, ptr + pattern->len, tail_length);
+
+            string->len += delta; // delta is negative, so it reduces string->len
+
+            string->data[string->len] = '\0';
+
+            max_ptr -= pattern->len - replace_string->len;
+             string->data[string->len] = '\0';
+        }
+        else {
+            size_t min_pos = min_ptr - string->data;
+            size_t max_pos = max_ptr - string->data;
+            size_t ptr_pos = ptr - string->data;
+
+            // Calculate the new total memory required including the null terminator.
+            size_t new_memory_required = string->len + delta + 1; 
+            
+            if (new_memory_required > string->alloc) {
+                char* new_data = realloc(string->data, new_memory_required);
+                if (new_data == NULL) {
+                    fprintf(stderr, "Realloc failed in replace_str_substring\n");
+                    return false;
+                }
+
+                // After realloc, the memory may have been moved. Update string->data and ptr.
+                string->data = new_data;
+                string->alloc = new_memory_required;
+                min_ptr = string->data + min_pos;
+                max_ptr = string->data + max_pos;
+                ptr = string->data + ptr_pos;
+            }
+            memmove(ptr + replace_string->len,
+                    ptr + pattern->len,
+                    string->len - (ptr - string->data) - pattern->len);
+            memcpy(ptr, replace_string->data, replace_string->len);
+
+            string->len += delta;
+            string->data[string->len] = '\0';
+            max_ptr = ptr;
+        }        
+         // Find the next pattern instance within the updated pointer bounds.
+         if (min_ptr < max_ptr)
+            ptr = last_str_between_ptrs(pattern, min_ptr, max_ptr);
+         else
+            ptr = NULL;
+    }
+
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_literal_substring(str* string, char* pattern, char* replace_string,
+                               char* min_ptr, char* max_ptr) {
+    if (!string || !string->data || !pattern ||  !replace_string || 
+        !min_ptr || !max_ptr) {
+        fprintf(stderr, "Null data provided to replace_str_substring\n");
+        return false;
+    }
+    
+    // Check if min_ptr and max_ptr are within the string's data bounds.
+    if (min_ptr < string->data || max_ptr > string->data + string->len) {
+        fprintf(stderr, "Pointers out of bounds in replace_str_substring\n");
+        return false;
+    }
+    
+    // Calculate the delta between the pattern and replacement lengths.
+    int delta = strlen(replace_string) - strlen(pattern);
+
+    char* ptr = last_literal_between_ptrs(pattern, min_ptr, max_ptr);
+    size_t pattern_len = strlen(pattern);
+    size_t replace_len = strlen(replace_string);
+
+    while (ptr) {
+        // If the replacement string is the same length, copy it over.
+        if (delta == 0) {
+            memcpy(ptr, replace_string, replace_len);
+            max_ptr = ptr;
+        }
+
+        // - If replacement string is smaller, copy string, move memory to the 
+        //   left, and update length
+        else if (delta < 0) {
+            memcpy(ptr, replace_string, replace_len);
+
+            size_t tail_length = string->data + string->len - (ptr + pattern_len);
+            memmove(ptr + replace_len, ptr + pattern_len, tail_length);
+
+            string->len += delta; // delta is negative, so it reduces string->len
+
+            string->data[string->len] = '\0';
+
+            max_ptr -= pattern_len - replace_len;
+            string->data[string->len] = '\0';
+        }
+        else {
+            size_t min_pos = min_ptr - string->data;
+            size_t max_pos = max_ptr - string->data;
+            size_t ptr_pos = ptr - string->data;
+
+            // Calculate the new total memory required including the null terminator.
+            size_t new_memory_required = string->len + delta + 1; 
+            
+            if (new_memory_required > string->alloc) {
+                char* new_data = realloc(string->data, new_memory_required);
+                if (new_data == NULL) {
+                    fprintf(stderr, "Realloc failed in replace_str_substring\n");
+                    return false;
+                }
+
+                // After realloc, the memory may have been moved. Update string->data and ptr.
+                string->data = new_data;
+                string->alloc = new_memory_required;
+                min_ptr = string->data + min_pos;
+                max_ptr = string->data + max_pos;
+                ptr = string->data + ptr_pos;
+            }
+            memmove(ptr + replace_len,
+                    ptr + pattern_len,
+                    string->len - (ptr - string->data) - pattern_len);
+            memcpy(ptr, replace_string, replace_len);
+
+            string->len += delta;
+            string->data[string->len] = '\0';
+            max_ptr = ptr;
+        }        
+         // Find the next pattern instance within the updated pointer bounds.
+         if (min_ptr < max_ptr)
+            ptr = last_literal_between_ptrs(pattern, min_ptr, max_ptr);
+         else
+            ptr = NULL;
+    }
+
+    return true;
 }
 // ================================================================================
 // ================================================================================

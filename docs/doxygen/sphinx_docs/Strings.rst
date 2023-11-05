@@ -1521,5 +1521,137 @@ where the pattern is a string container.
 
 Replace Substring 
 =================
-To be filled in
+The ``replace_substring`` macro will select between one of two functions that 
+will search for a sub-string pattern in a string.  If it finds the substring 
+pattern it will replace the pattern with a developer supplied sub-string replacent.
+If the string, substring, or replacement sub-string points to NULL, it will 
+return a value of false, and print an message to the ``stderr`` buffer.
+Notice thatif the value of ``pattern_string`` is of type ``str*``, or ``char*``,
+then the value of ``replacement_string`` must match the same data type.
+
+.. code-block:: c
+
+   bool replace_substring(str* string, char* || str* pattern_string,
+                          char* || str* replacement_string,
+                          char* min_ptr, char* max_ptr);
+
+Parameters 
+----------
+
+- :c:`string`: The string container with the string containing sub-strings to be replaced
+- :c:`pattern_string`: The sub-string pattern which will be searched for in ``string``.
+- :c:`replacement_string`: The sub-string that will replace each instance of ``pattern_string``.
+- :c:`min_ptr`: A pointer to the minimum position in ``string`` to be searched.
+- :c:`max_ptr`: A pointer to the maximum position in ``string`` to be searched.
+
+Returns 
+-------
+
+- :c:`error_code`: true if the function executes succesfully, false otherwise.
+
+Example 1
+---------
+An example where the function replaces a sub-string with a larger sub-string.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str* one gbc_str = init_string("Remove all values of Remove with Remove!");
+       str* two gbc_str = init_string("Remove");
+       str* three gbc_str = init_string("Replace");
+       print("Length before: ", string_length(one));
+       print("Memory before: ", string_memory(one));
+       replace_substring(one, two, three, get_string(one), get_string(one) + string_length(one));
+       print(one);
+       print("Length after: ", string_length(one));
+       print("Memory after: ", string_memory(one));
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Length before: 40
+   >> Memory before: 41
+   >> Replace all values of Replace with Replace!
+   >> Length after: 43
+   >> Memory after: 44
+
+Example 2
+---------
+Example where a sub-string is replaced with a smaller sub-string
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str* one gbc_str = init_string("Remove all values of Remove with Remove!");
+       char* two = "Remove";
+       char* three = "touch";
+       print("Length before: ", string_length(one));
+       print("Memory before: ", string_memory(one));
+       replace_substring(one, two, three, get_string(one), get_string(one) + string_length(one));
+       print(one);
+       print("Length after: ", string_length(one));
+       print("Memory after: ", string_memory(one));
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Length before: 40
+   >> Memory before: 41
+   >> touch all values of touch with touch!
+   >> Length after: 37
+   >> Memory after: 41
+
+Example 3
+---------
+Example where only part of a string is searched 
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str* one gbc_str = init_string("Remove all values of Remove with Remove!");
+       char* two = "Remove";
+       char* three = "touch";
+       print("Length before: ", string_length(one));
+       print("Memory before: ", string_memory(one));
+       replace_substring(one, two, three, get_string(one), get_string(one) + string_length(one) - 9);
+       print(one);
+       print("Length after: ", string_length(one));
+       print("Memory after: ", string_memory(one));
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Length before: 40
+   >> Memory before: 41
+   >> touch all values of touch with Remove!
+   >> Length after: 38
+   >> Memory after: 41
+
+Underlying Functions 
+--------------------
+The ``replace_substring`` macro uses the ``_Generic`` operator to select from 
+one of two functions.  The developer can choose to directly use one of the functions 
+shown below in place of the ``replace_substring`` macro.
+
+.. code-block:: c
+
+   bool replace_str_substring(str* string, str* pattern_string,
+                              str* replacement_string,
+                              char* min_ptr, char* max_ptr);
+   bool replace_str_substring(str* string, char* pattern_string,
+                              char* replacement_string,
+                              char* min_ptr, char* max_ptr);
+
 

@@ -528,8 +528,9 @@ void to_lowercase(str *s);
  *
  * @param string The string containing the sub-string to be removed.
  * @param substring The substring pattern to be removed from the string.
+ * @return true if the function executes succesfully, false otherwise.
  */
-void drop_str_substring(str* string, str* substring, char* min_ptr, char* max_ptr);
+bool drop_str_substring(str* string, str* substring, char* min_ptr, char* max_ptr);
 // --------------------------------------------------------------------------------
 
 /**
@@ -541,8 +542,9 @@ void drop_str_substring(str* string, str* substring, char* min_ptr, char* max_pt
  *
  * @param string The string containing the sub-string to be removed.
  * @param substring The substring pattern to be removed from the string.
+ * @return true if function executes succesfully, false otherwise
  */
-void drop_literal_substring(str* string, char* substring, char* min_ptr, char* max_ptr);
+bool drop_literal_substring(str* string, char* substring, char* min_ptr, char* max_ptr);
 // --------------------------------------------------------------------------------
 
 /**
@@ -551,6 +553,62 @@ void drop_literal_substring(str* string, char* substring, char* min_ptr, char* m
 #define drop_substring(string, substring, min_ptr, max_ptr) _Generic((substring), \
         str*: drop_str_substring, \
         default: drop_literal_substring) (string, substring, min_ptr, max_ptr)
+// ================================================================================
+// ================================================================================
+
+/**
+ * @brief Replaces a sub-string in a string with another sub-string 
+ *
+ * This function replaces a sub-string within a string container with another 
+ * sub-string in a container.
+ *
+ * @param string A string containing a sub-string
+ * @param pattern The sub-string pattern to replace 
+ * @param replace_string The replacement pattern for a sub-string 
+ * @param min_ptr A pointer to the minimum pointer position 
+ * @param max_ptr A pointer to the max pointer position 
+ * @return true of function executes succesfully, false otherwise
+ */
+bool replace_str_substring(str* string, str* pattern, str* replace_string,
+                           char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Replaces a sub-string in another sub-string 
+ *
+ * This function replaces a sub-string within a string literal with another 
+ * sub-string 
+ *
+ * @param string A string containing a sub-string
+ * @param pattern The sub-string pattern to replace 
+ * @param replace_string The replacement pattern for a sub-string 
+ * @param min_ptr A pointer to the minimum pointer position 
+ * @param max_ptr A pointer to the max pointer position 
+ * @return true of function executes succesfully, false otherwise 
+ */
+bool replace_literal_substring(str* string, char* pattern, char* replace_string,
+                               char* min_ptr, char* max_ptr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Generic interface for functions that replace one sub-string with another.
+ *
+ * This function will select between the use of the replace_str_substring or
+ * the replace_literal_substring based on the data type of pattern.  This 
+ * allows a developer to use a string container or a string literal to represent
+ * the sub-string to be searched for and to replace the original sub-string.
+ *
+ * @param string A string containing a sub-string
+ * @param pattern The sub-string pattern to replace 
+ * @param replace_string The replacement pattern for a sub-string 
+ * @param min_ptr A pointer to the minimum pointer position 
+ * @param max_ptr A pointer to the max pointer position 
+ * @return true of function executes succesfully, false otherwise
+ */
+#define replace_substring(string, pattern, replace_string, min_ptr, max_ptr) \
+    _Generic((pattern), \
+    str*: replace_str_substring, \
+    default: replace_literal_substring) (string, pattern, replace_string, min_ptr, max_ptr)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

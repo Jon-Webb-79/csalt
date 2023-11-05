@@ -106,7 +106,16 @@ int main(int argc, const char * argv[]) {
         cmocka_unit_test(test_find_first_str_btw_pointers),
         cmocka_unit_test(test_find_last_str_between_pointers),
         cmocka_unit_test(test_drop_str_substring_char),
-        cmocka_unit_test(test_drop_str_substring_str)
+        cmocka_unit_test(test_drop_str_substring_str),
+        cmocka_unit_test(test_replace_string_equal_size),
+        cmocka_unit_test(test_replace_string_smaller_size),
+        cmocka_unit_test(test_replace_string_larger_size),
+        cmocka_unit_test(test_replace_string_equal_size_ptr),
+        cmocka_unit_test(test_replace_string_smaller_size_ptr),
+        cmocka_unit_test(test_replace_string_larger_size_ptr),
+        cmocka_unit_test(test_replace_literal_equal_size),
+        cmocka_unit_test(test_replace_literal_smaller_size),
+        cmocka_unit_test(test_replace_literal_larger_size)
      	};
 	return cmocka_run_group_tests(test_string, NULL, NULL);
 }

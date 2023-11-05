@@ -982,6 +982,7 @@ void test_drop_str_substring_char(void **state) {
     str* one = init_string("Remove all Remove instances from Remove");
     char* pattern = "Remove";
     drop_substring(one, pattern, get_string(one), get_string(one) + string_length(one));
+    assert_int_equal(one->len, 19);
     assert_string_equal(one->data, "all instances from ");
     free_string(one);
 }
@@ -993,10 +994,168 @@ void test_drop_str_substring_str(void **state) {
     str* pattern = init_string("Remove");
     drop_substring(one, pattern, get_string(one), get_string(one) + string_length(one));
     assert_string_equal(one->data, "all instances from ");
+    assert_int_equal(one->len, 19);
     free_string(one);
     free_string(pattern);
 }
+// ================================================================================
+// ================================================================================
 
+/**
+ * @brief Test replace_substring function to ensure it works properly with a 
+ * replacement string the same size as the original sub-string
+ */
+void test_replace_string_equal_size(void **state) {
+    (void) state;
+    str* one = init_string("Help all instances of Help in Help!");
+    str* pattern = init_string("Help");
+    str* replace = init_string("test");
+    replace_substring(one, pattern, replace, get_string(one),
+                      get_string(one) + string_length(one));
+    assert_string_equal("test all instances of test in test!", one->data);
+    free_string(one);
+    free_string(pattern);
+    free_string(replace);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Test replace_substring function to ensure it works properly with a 
+ * replacement string that is a smaller size than the original sub-string
+ */
+void test_replace_string_smaller_size(void **state) {
+    (void) state;
+    str* one = init_string("Help all instances of Help in Help!");
+    str* pattern = init_string("Help");
+    str* replace = init_string("tes");
+    replace_substring(one, pattern, replace, get_string(one),
+                      get_string(one) + string_length(one));
+    assert_string_equal("tes all instances of tes in tes!", one->data);
+    free_string(one);
+    free_string(pattern);
+    free_string(replace);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Test replace_substring function to ensure it works properly with a 
+ * replacement string that is a larger size than the original sub-string
+ */
+void test_replace_string_larger_size(void **state) {
+    (void) state;
+    str* one = init_string("Help all instances of Help in Help!");
+    str* pattern = init_string("Help");
+    str* replace = init_string("Replace");
+    replace_substring(one, pattern, replace, get_string(one),
+                      get_string(one) + string_length(one));
+    assert_string_equal("Replace all instances of Replace in Replace!", one->data);
+    free_string(one);
+    free_string(pattern);
+    free_string(replace);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Test replace_substring function to ensure it works properly with a 
+ * replacement string the same size as the original sub-string within ptrs
+ */
+void test_replace_string_equal_size_ptr(void **state) {
+    (void) state;
+    str* one = init_string("Help all instances of Help in Help!");
+    str* pattern = init_string("Help");
+    str* replace = init_string("test");
+    replace_substring(one, pattern, replace, get_string(one),
+                      get_string(one) + string_length(one) - 6);
+    assert_string_equal("test all instances of test in Help!", one->data);
+    free_string(one);
+    free_string(pattern);
+    free_string(replace);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Test replace_substring function to ensure it works properly with a 
+ * replacement string that is a smaller size than the original sub-string
+ * within pointers
+ */
+void test_replace_string_smaller_size_ptr(void **state) {
+    (void) state;
+    str* one = init_string("Help all instances of Help in Help!");
+    str* pattern = init_string("Help");
+    str* replace = init_string("tes");
+    replace_substring(one, pattern, replace, get_string(one),
+                      get_string(one) + string_length(one) - 6);
+    assert_string_equal("tes all instances of tes in Help!", one->data);
+    free_string(one);
+    free_string(pattern);
+    free_string(replace);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Test replace_substring function to ensure it works properly with a 
+ * replacement string that is a larger size than the original sub-string
+ * within range of pointers
+ */
+void test_replace_string_larger_size_ptr(void **state) {
+    (void) state;
+    str* one = init_string("Help all instances of Help in Help!");
+    str* pattern = init_string("Help");
+    str* replace = init_string("Replace");
+    replace_substring(one, pattern, replace, get_string(one),
+                      get_string(one) + string_length(one) - 6);
+    assert_string_equal("Replace all instances of Replace in Help!", one->data);
+    free_string(one);
+    free_string(pattern);
+    free_string(replace);
+}
+// --------------------------------------------------------------------------------
+/**
+ * @brief Test replace_substring function to ensure it works properly with a 
+ * replacement string the same size as the original sub-string
+ */
+void test_replace_literal_equal_size(void **state) {
+    (void) state;
+    str* one = init_string("Help all instances of Help in Help!");
+    char* pattern = "Help";
+    char* replace = "test";
+    replace_substring(one, pattern, replace, get_string(one),
+                      get_string(one) + string_length(one));
+    assert_string_equal("test all instances of test in test!", one->data);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Test replace_substring function to ensure it works properly with a 
+ * replacement string that is a smaller size than the original sub-string
+ */
+void test_replace_literal_smaller_size(void **state) {
+    (void) state;
+    str* one = init_string("Help all instances of Help in Help!");
+    char* pattern = "Help";
+    char* replace = "tes";
+    replace_substring(one, pattern, replace, get_string(one),
+                      get_string(one) + string_length(one));
+    assert_string_equal("tes all instances of tes in tes!", one->data);
+    free_string(one);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Test replace_substring function to ensure it works properly with a 
+ * replacement string that is a larger size than the original sub-string
+ */
+void test_replace_literal_larger_size(void **state) {
+    (void) state;
+    str* one = init_string("Help all instances of Help in Help!");
+    char* pattern = "Help";
+    char* replace = "Replace";
+    replace_substring(one, pattern, replace, get_string(one),
+                      get_string(one) + string_length(one));
+    assert_string_equal("Replace all instances of Replace in Replace!", one->data);
+    free_string(one);
+}
 // ================================================================================
 // ================================================================================
 // eof
