@@ -1,10 +1,8 @@
 .. _string_struct:
 
-.. role:: c(code)
-   :language: c
-
+*******
 Strings
-=======
+*******
 The standard C library does not provide a dedicated string data type but 
 instead allows users to create string literals or arrays of ``char`` characters. 
 While the implementation of string literals in the C language is straightforward 
@@ -17,6 +15,9 @@ are accessible through the ``str.h`` header file.
 Structure
 =========
 The ``str`` library utilizes the following structure to manage strings:
+
+.. role:: c(code)
+   :language: c
 
 .. code-block:: c
 
