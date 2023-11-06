@@ -1,89 +1,82 @@
 .. _string_struct:
 
-*******
-Strings
-*******
-The standard C library does not have a string data type and instead allows 
-users to create string literals, or they can create an array of ``char``
-characters.  While the C implementation for string literals 
-is easy to use and is fairly efficient, it can lead to security issues,
-most noteably a buffer overflow attack.  This chapter outlines a ``str``
-data type created for this library, that can help minimize the security issues 
-inherent with C and can also increase the speed with which the C code 
-process strings.  All functionality described in this Chapter can be
-accessed through the ``str.h`` header file.
-
-**DISCLAIMER:** This section of the csalt library will be updated with more
-functionality in the future.  In addition, their are certain macros that 
-enable garbage collection that only work on gcc and clang compilers.  The 
-software should still compile on other compilers, but it will have slightly
-reduced functionality.
-
 .. role:: c(code)
    :language: c
 
+Strings
+=======
+The standard C library does not provide a dedicated string data type but 
+instead allows users to create string literals or arrays of ``char`` characters. 
+While the implementation of string literals in the C language is straightforward 
+and efficient, it can lead to security issues, most notably buffer overflow attacks. 
+This chapter introduces a ``str`` data type created for this library that helps 
+minimize the security risks associated with C strings. It also aims to enhance 
+the efficiency of processing strings. All functionalities described in this chapter 
+are accessible through the ``str.h`` header file.
+
 Structure
 =========
-The ``str`` library relies on the following struct to contain information
+The ``str`` library utilizes the following structure to manage strings:
 
 .. code-block:: c
 
    typedef struct
    {
-       char *data;
-       size_t len;
-       size_t alloc;
+       char* data;   // Pointer to the string data
+       size_t len;   // Length of the string not including the null terminator
+       size_t alloc; // Total allocated space for the string in bytes
    } str;
 
 Attributes
 ----------
 
-- :c:`data`: A Pointer to the string
-- :c:`len`: The length of the string in number of bytes, minus the null terminator ``\0``
-- :c:`alloc`: The number of bytes allocated to the ``data`` pointer.
+- :c:`data`: A pointer to the string data.
+- :c:`len`: The length of the string in bytes, excluding the null terminator ``\0``.
+- :c:`alloc`: The total amount of allocated memory for the string data, in bytes.
 
 .. _init_string:
 
-Initialize String 
+Initialize String
 =================
-All strings in this library are encapsulated in a dynamically allocated 
-``str`` struct.  In addition, the memory required to store the string 
-within the struct is also dynamically allocated.  This means that the 
-string container and string needs to be freed after it has served its 
-purpose.
+Strings in this library are encapsulated within a dynamically allocated 
+``str`` structure. The memory required to store the string data is also 
+dynamically allocated, necessitating proper memory management. Both the 
+string structure and the data it contains must be freed after use.
 
-The ``init_string`` macro is used to instantiate and initialize a string 
-container.  The ``init_string`` macro wraps two functions in order to 
-provide an default values. In the implementation shown below, the variable 
-``buff`` is optional.  If ``buff`` is not provided, the underlying function will 
-allocate enough memory for the string and the null terminator.  If the value 
-of ``buff`` is less than the size of ``string`` plus the null terminator,
-the function will allocate enoug memory for the string and its null terminator.
-A user may decide to invoke a value of ``buff`` that is larger than the initial 
-string, if the string may grow in the future.  This will prevent the need 
-for allocating memory which can be time consuming.  This method has a
-space complexity of :math:`O(1)` and a time complexity of :math:`O(n)`.
+The ``init_string`` macro is designed to instantiate and initialize a string 
+structure. This macro simulates function overloading by wrapping two functions. 
+In the following implementation, the ``buff`` parameter is optional. Omitting 
+``buff`` prompts the function to allocate enough memory for the string plus the 
+null terminator. If ``buff`` is provided and is less than the length of the 
+string plus the null terminator, enough memory will be allocated to accommodate 
+the string and the terminator. Optionally, ``buff`` can be set larger than the 
+initial string length to avoid reallocations if the string is expected to grow, 
+thereby optimizing performance. The space complexity of this operation is 
+:math:`O(1)`, and the time complexity is :math:`O(n)`.
 
 .. code-block:: c
 
    str* init_string(char* string, size_t buff);
 
-Parameters 
+Parameters
 ----------
 
-- :c:`string`: A string literal.  If the user passes a character string, the function will attempt to add a null terminator, but it could lead to undefined behavior.
-- :c:`buff`: The number of characters to be allocated to store the ``string`` and any excess necessary.  This value is defaulted to the length of ``string``
+- :c:`string`: A string literal. Passing a non-null-terminated character array 
+  will yield a returen ``str`` data type with a NULL pointer to the ``data`` attribute.
+- :c:`buff`: The buffer size for allocating storage for the ``string`` and 
+  potential future growth. This value defaults to the length of ``string`` if not provided.
 
 Returns
 -------
 
-- :c:`str`: A string containter of type ``str``. Will return NULL and print to stderr if a memory allocation error occurs.
+- :c:`str*`: A pointer to the string structure of type ``str``. Returns NULL and 
+  logs an error to stderr in the event of a memory allocation failure.
 
 Example 1
 ---------
-In this example we will initialize a string with a memory allocation just for
-the string. Notice that we have to manually free the memory in the struct 
-and the string with the ``free_string`` function.
+The following example demonstrates initializing a string with just enough memory 
+for the string content. We must manually free both the structure and the string 
+using the ``free_string`` function.
 
 .. code-block:: c 
 
@@ -91,7 +84,7 @@ and the string with the ``free_string`` function.
    #include "print.h"
 
    int main() {
-       str *one = init_string("Hello World!");
+       str* one = init_string("Hello World!");
        print(one);
        print(string_length(one));
        print(string_memory(one));
@@ -105,12 +98,10 @@ and the string with the ``free_string`` function.
    >> 11
    >> 12
 
-
-Example 2 
+Example 2
 ---------
-In this example we will initialize a string with a larger than necessary buffer 
-in order to reduce the time necessary to add characters to the string if 
-necessary later in the program.  This removes the need to reallocate memory.
+This example illustrates initializing a string with a buffer larger than 
+necessary, anticipating future growth and avoiding the need for reallocation.
 
 .. code-block:: c 
 
@@ -118,7 +109,7 @@ necessary later in the program.  This removes the need to reallocate memory.
    #include "print.h"
 
    int main() {
-       str *one = init_string("Hello World!", 30);
+       str* one = init_string("Hello World!", 30);
        print(one);
        print(string_length(one));
        print(string_memory(one));
@@ -128,22 +119,21 @@ necessary later in the program.  This removes the need to reallocate memory.
 
 .. code-block:: bash 
 
-   >> Hello World! 
-   >> 11 
+   >> Hello World!
+   >> 11
    >> 30
 
 Underlying Functions
 --------------------
-The ``init_string`` macro uses the ``_Generic`` operator to wrap two 
-functions, which can be accessed in their place.  These functions are 
-described below.
+The ``init_string`` macro makes use of the C11 ``_Generic`` keyword to simulate 
+overloading, wrapping the following two functions:
 
-.. code-block:: bash 
+.. code-block:: c
 
    str init_string_nol(char *string);
    str init_string_len(char *string, size_t buff);
 
-The example below shows how to use these functions.
+Below is an example using these functions directly:
 
 .. code-block:: c 
    
@@ -151,308 +141,310 @@ The example below shows how to use these functions.
    #include "str.h"
   
    int main() {
-       str *one = init_string_nol("Hello!");
-       str *two = init_string_len("Hello!", 30);
+       str* one = init_string_nol("Hello!");
+       str* two = init_string_len("Hello!", 30);
        free_string(one);
        free_string(two);
        return 0;
    }
 
-
-
 Initialize String with Garbage Collection
 =========================================
-Their are serval functions in this library that return a ``str*`` data 
-type to include the ``init_string`` macro.  When a function returns a 
-``str*`` data type, the developer is then obligated to free the memory 
-allocations at some point in the program.  Instead of manually freeing the 
-memory, a developer can also choose to utilyze the ``gbc_str`` macro that 
-wraps the ``__attribute__(cleanup)`` operator.  This will assign the 
-returned variable of type ``str*`` for cleanup and eventual garbage collection.
-**NOTE:** This macro only works with gcc and clang compilers. In addition, 
-developers can also use the ``free_dat`` macro from the ``dat_struct.h``
-library, which has the advantage of providing a common interface for freeing 
-all data types in this library.
+Several functions in this library return a ``str*`` data type, including the 
+``init_string`` macro. When a function returns a ``str*``, the developer is 
+usually required to free the memory allocations at some point in the program. 
+To bypass manual memory management, developers can employ the ``gbc_str`` 
+macro that employs the ``__attribute__(cleanup)`` directive for automatic 
+memory cleanup, thus facilitating garbage collection. 
+**NOTE:** This macro is compatible only with the ``gcc`` and ``clang`` 
+compilers.
 
-See the :ref:`init string <init_string>` Section for a description of all 
-attributes.  The examples below show how to use this macro, notice that the 
-``free_string`` function is not called.  While this initializing function will 
-automate the process of freeing memory, a user can still use the ``free_string``
-macro if they decide to free memory manually. This method has a
-space complexity of :math:`O(1)` and a time complexity of :math:`O(n)`. 
-**NOTE:** Once memory has been freed, the user should try to avoid accidentally 
-freeing the memory again; however, the underling function does have checks 
-to prevent accidentally freeing memory that has already been freed.
+Refer to the :ref:`Initialize String <init_string>` section for attribute 
+details. The examples below illustrate how to use the ``gbc_str`` macro, 
+thereby obviating the need to call the ``free_string`` function explicitly. 
+Although this initialization automates memory management, the option to 
+manually call ``free_string`` remains. This method has a space complexity of 
+:math:`O(1)` and a time complexity of :math:`O(n)`. 
+**NOTE:** After freeing memory, caution should be taken to avoid double-free 
+errors, though the underlying function includes safeguards against this.
 
 Example 1
 ---------
-In this example we will initialize a string with a memory allocation just for
-the string. Notice that we do not have to manually free the memory in the struct 
-and the string with the ``free_string`` function.
+Here, a string is initialized with only the necessary memory allocation. 
+Note that the manual call to ``free_string`` is omitted.
 
-.. code-block:: c 
+.. code-block:: c
 
    #include "str.h"
    #include "print.h"
 
    int main() {
-       str *one gbc_str = init_string("Hello World!");
+       str* one gbc_str = init_string("Hello World!");
        print(one);
        print(string_length(one));
        print(string_memory(one));
+       // No need to call free_string(one);
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
    >> Hello World!
    >> 11
    >> 12
 
 
-Example 2 
+Example 2
 ---------
-In this example we will initialize a string with a larger than necessary buffer 
-in order to reduce the time necessary to add characters to the string if 
-necessary later in the program.  This removes the need to reallocate memory.
-**NOTICE:** the fact that their is no equal sign between the variable 
-name and the macro.  The equal sign is accounted for in the macro.
 
-.. code-block:: c 
-
-   #include "str.h"
-   #include "print.h"
-
-   int main() {
-       str *one gbc_str = init_string("Hello World!", 30);
-       print(one);
-       print(string_length(one));
-       print(string_memory(one));
-       return 0;
-   }
-
-.. code-block:: bash 
-
-   >> Hello World! 
-   >> 11 
-   >> 30
-
-Free String 
-===========
-The ``free_string`` macro can be used to free all memory in an ``str``
-Struct to include the Struct itself. This method has a
-space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
+This example initializes a string with additional buffer space to minimize 
+future allocations.
 
 .. code-block:: c
 
-   void free_string(str str_struct);
-
-Parameters 
-----------
-
-- :c:`str_struct`: A string struct of type ``str``
-
-Example 
--------
-
-.. code-block:: c 
-
    #include "str.h"
    #include "print.h"
 
    int main() {
-       str *one = init_string("Hello World!", 30);
+       str* one gbc_str = init_string("Hello World!", 30);
+       print(one);
+       print(string_length(one));
+       print(string_memory(one));
+       // No need to call free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Hello World!
+   >> 11
+   >> 30
+
+Free String
+===========
+The ``free_string`` function is designed to free all memory associated with 
+an ``str`` struct, including the struct itself and its dynamic memory 
+allocations. This function has a space complexity of :math:`O(1)` and a time 
+complexity of :math:`O(1)`.
+
+.. code-block:: c
+
+   void free_string(str* str_struct);
+
+Parameters
+----------
+
+- :c:`str_struct`: A pointer to a string struct of type ``str``.
+
+Example
+-------
+
+.. code-block:: c
+
+   #include "str.h"
+
+   int main() {
+       str* one = init_string("Hello World!", 30);
        free_string(one);
+       // After this point, 'one' should not be used without being reassigned.
        return 0;
    }
 
 Get String
 ==========
-While the user can directly interface with the ``str`` struct, it is not wise 
-to do so, since it enables the user to accidentally change an attribute that
-could cause undefined behavior.  The ``get_string`` function allows a user 
-to access the string variable in the ``str`` struct. This method has a
-space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
+Directly interfacing with the ``str`` struct is not recommended, as it poses 
+a risk of unintentionally modifying an attribute, potentially leading to 
+undefined behavior. The ``get_string`` function provides a safe way to access 
+the string content within the ``str`` struct without exposing the underlying 
+implementation. This function has a space complexity of 
+:math:`O(1)` and a time complexity of :math:`O(1)`.
 
 .. code-block:: c
 
-   char* get_string(str *str_struct);
-
-Parameters 
-----------
-
-- :c:`str_struct`: A string container of type ``str``.
-
-Returns 
--------
-
-- :c:`string`: A string of type ``char*``. Will return NULL and print to stderr if input points to NULL struct or string.
-
-Example 
--------
-The following example shows how the ``get_string`` function can be used to 
-retrieve a string.
-
-.. code-block:: c 
-
-   #include "str.h"
-   #include "print.h"
-
-   int main() {
-       str *one = init_string("Hello World!");
-       print(get_string(one));
-       free_string(one);
-       return 0;
-   }
-
-.. code-block:: bash 
-
-   >> Hello World!
-
-String Length 
-=============
-While the user can directly interface with the ``str`` struct, it is not wise 
-to do so, since it enables the user to accidentally change an attribute that
-could cause undefined behavior.  The ``string_length`` function allows a user 
-to access the length of the string variable in the ``str`` struct. Unlike 
-string literals in the C language, this container does not rely on a null 
-terminator to determine the string length, but instead an attribute of the 
-``str`` struct. This method has a
-space complexity of :math:`O(1)` and a time complexity of :math:`O(1)`. 
-
-.. code-block:: c
-
-   size_t string_length(str *str_struct);
-
-Parameters 
-----------
-
-- :c:`str_struct`: A string container of type ``str``.  Will return -1 if input points to NULL struct or string.
-
-Returns 
--------
-
-- :c:`len`: The length of the string in the ``str`` container minus the null terminator.
-
-Example 
--------
-The following example shows how the ``get_string`` function can be used to 
-retrieve a string.
-
-.. code-block:: c 
-
-   #include "str.h"
-   #include "print.h"
-
-   int main() {
-       str *one = init_string("Hello World!");
-       print(string_length(one));
-       free_string(one);
-       return 0;
-   }
-
-.. code-block:: bash 
-
-   >> 11
-
-String Memory 
-=============
-The ``string_memory`` function returns to a user the memory allocation for the 
-string in units of ``chars``.  The user can also access the memory via the
-``struct->alloc`` attribute; however, it can be dangerous to directly access 
-a struct attribute.  If a user were to accidentally change a value in a struct 
-attribute it could lead to undefined behavior.  This function will return a -1 
-and print to ``stderr`` if the user passes a NULL struct or a struct with 
-a NULL pointer to ``data``.
-
-.. code-block:: c 
-
-   size_t string_memory(str *str_struct);
-
-Parameters 
-----------
-
-- :c:`str_struct`: A struct of type str 
-
-Returns 
--------
-
-- :c:`alloc`: The memory allocation in units of ``chars``.
-
-Example 
--------
-
-.. code-block:: c 
-
-   #define "print.h"
-   #define "str.h"
-
-   int main() {
-       str *one = init_string("Hello", 20);
-       print("The string size is: ", string_memory(one));
-       free_string(one);
-       return 0;
-   }
-
-.. code-block:: bash 
-
-   >> The string size is: 20
-
-Insert String 
-=============
-The ``insert_string`` macro allows a user to insert a string literal 
-or another ``str`` container into a ``str`` container.  The underlying 
-functions will allow a user to insert the struct anywhere into the string.
-This function will return a false if the user supplies data that points to 
-NULL values, or if it is not able to allocate sufficient memory for the string 
-concatenations.  This macro and its underlying functions have a time 
-complexity of :math:`O(a+b)` where :math:`a` and :math:`b` are the lengths
-of the first and second strings.  However, if you insert at the end of string 
-:math:`a` this method will only be of order :math:`O(b)`.  The function also
-has a memory complexity of :math:`O(a+b)`. In addition, if the buffer does 
-original and inserted strings together, doubling that number plus one, and 
-it will re-allocate memory for that buffer size.
-
-.. code-block:: c 
-
-   bool insert_string(str *str_one, char* || str* str_two, size_t index);
+   char* get_string(const str* str_struct);
 
 Parameters
 ----------
 
-- :c:`str_one`: A string container of type ``str``. This is the string that will be inserted into.
-- :c:`str_two`: A string literal or string container of type ``str``.
-- :c:`index`: The index where ``str_two`` will be inserted into ``str_one``.
+- :c:`str_struct`: A pointer to a string container of type ``str``.
 
 Returns
 -------
 
-- :c:`err_code`: true if the function executes succesfully, false otherwise with a ``stderr`` print out.
+- A pointer to a string (``char*``). If the input is a NULL pointer, it will 
+  return `NULL` and print an error message to `stderr`.
 
-Example 1 
----------
-This example shows a use where a string literal is inserted into a ``str`` container.
+Example
+-------
+This example demonstrates how to use the ``get_string`` function to retrieve 
+a string from a ``str`` struct.
 
-.. code-block:: c 
+.. code-block:: c
 
-   #define "print.h"
-   #define "str.h"
+   #include "str.h"
+   #include "print.h"
 
    int main() {
-       str *a = init_string("Hello");
-       bool result = insert_string(a, " World!", get_length(one));
-       print(result);
-       print(a);
-       print(string_length(one));
+       str* one = init_string("Hello World!");
+       const char* string = get_string(one);
+       if (string) {
+           print(string);
+       }
        free_string(one);
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
-   >> true
    >> Hello World!
+
+String Length
+=============
+Direct interaction with the ``str`` struct is discouraged as it could lead to 
+unintentional modifications, causing undefined behavior. The ``string_length`` 
+function is provided for safely obtaining the length of the string stored in 
+a ``str`` struct. Unlike string literals in C, which use a null terminator to 
+denote the end of the string, the length in this implementation is stored as 
+an attribute of the ``str`` struct, providing constant-time access to the 
+string's length. This function has a space complexity of 
+:math:`O(1)` and a time complexity of :math:`O(1)`.
+
+.. code-block:: c
+
+   size_t string_length(const str* str_struct);
+
+Parameters
+----------
+
+- :c:`str_struct`: A pointer to a string container of type ``str``. If the 
+  input is NULL, it will return `0` and print an error message to `stderr`.
+
+Returns
+-------
+
+- The length of the string in the ``str`` container, not including the null terminator.
+
+Example
+-------
+This example demonstrates how to use the ``string_length`` function to obtain 
+the length of a string within a ``str`` struct.
+
+.. code-block:: c
+
+   #include "str.h"
+   #include "print.h"
+
+   int main() {
+       str* one = init_string("Hello World!");
+       size_t length = string_length(one);
+       if (one) {
+           print(length);
+       }
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash
+
    >> 11
+
+String Memory
+=============
+The ``string_memory`` function informs the user of the memory allocation size 
+for the string in units of ``chars``. While it is possible to access this 
+information through the ``struct->alloc`` attribute, direct manipulation of 
+struct attributes is risky and could result in undefined behavior. To prevent 
+such issues, this function provides a safe means to retrieve the allocation 
+size. This function has a space complexity of :math:`O(1)` and a time 
+complexity of :math:`O(1)`. 
+
+.. code-block:: c
+
+   int string_memory(const str *str_struct);
+
+Parameters
+----------
+
+- :c:`str_struct`: A pointer to a struct of type ``str``.
+
+Returns
+-------
+
+- :c:`alloc`: The memory allocation size for the string in units of ``chars``. If the input is NULL, it will return a value of -1.
+
+Example
+-------
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str *one = init_string("Hello", 20);
+       if (one) {
+           print("The string size is: %zu\n", string_memory(one));
+       }
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> The string size is: 20
+
+Insert String
+=============
+The ``insert_string`` function allows a user to insert a string literal or 
+another ``str`` container into a ``str`` container. The function can insert 
+the string at any position within the first string. If the provided data 
+contains NULL values, or if memory allocation for the string concatenation 
+fails, the function will return ``false``. The operation has a time complexity 
+of :math:`O(a+b)`, where :math:`a` and :math:`b` are the lengths of the 
+original and inserted strings respectively. Inserting at the end of the 
+original string has a time complexity of :math:`O(b)`. If additional memory 
+allocation is required, it may be up to the combined length of the two strings.
+
+.. code-block:: c
+
+   bool insert_string(str *str_one, const char* || str* str_two, size_t index);
+
+Parameters
+----------
+
+- :c:`str_one`: The ``str`` container into which the string will be inserted.
+- :c:`str_two`: Either a string literal or another ``str`` container to insert.
+- :c:`index`: The index at which ``str_two`` will be inserted into ``str_one``.
+
+Returns
+-------
+
+- Returns ``true`` if the function executes successfully, otherwise returns ``false`` and prints an error message to ``stderr``.
+
+Examples 1
+----------
+Example to show when a string literal is instered into a ``str`` container.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       str *a = init_string("Hello");
+       bool result = insert_string(a, " World!", string_length(a));
+       print("Operation successful: ", result);
+       print("Combined string: ", a);
+       print("Length of combined string: ", string_length(a));
+       free_string(a);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Operation successful: true
+   >> Combined string: Hello World!
+   >> Length of combined string: 12
 
 Example 2
 ---------
@@ -468,9 +460,9 @@ This example shows a user where a ``str`` container is inserted into another
        str *a = init_string("Hello");
        str *b = init_string(" World!");
        bool result = insert_string(a, b, 2);
-       print(result);
-       print(a);
-       print(string_length(one));
+       print("Operation succesful: ", result);
+       print("Combined string: ", a);
+       print("Length of combined string: ", string_length(one));
        free_string(one);
        free_string(two);
        return 0;
@@ -478,9 +470,9 @@ This example shows a user where a ``str`` container is inserted into another
 
 .. code-block:: bash 
 
-   >> true
-   >> He World!llo
-   >> 11
+   >> Operation succesful: true
+   >> Combined string: He World!llo
+   >> Length of combined string: 11
 
 Example 3
 ---------
@@ -488,7 +480,6 @@ This example shows how the function fails when an index out of bounds is
 selected.  The function can also fail for a failure to reallocate memory 
 if required, or if the user passes a NULL ``str`` container or string literal,
 or if one of the ``str`` containers has a NULL pointer to its string.
-
 
 .. code-block:: c 
 
@@ -499,9 +490,9 @@ or if one of the ``str`` containers has a NULL pointer to its string.
        str *a = init_string("Hello");
        str *b = init_string(" World!");
        bool result = insert_string(a, b, 50);
-       print(result);
-       print(a);
-       print(string_length(one));
+       print("Operation succesful: ", result);
+       print("Combined string: ", a);
+       print("Length of combined string: ", string_length(one));
        free_string(one);
        free_string(two);
        return 0;
@@ -509,10 +500,9 @@ or if one of the ``str`` containers has a NULL pointer to its string.
 
 .. code-block:: bash 
 
-   >> String insert location out of bounds
-   >> false
-   >> Hello
-   >> 5
+   >> Operation succesfull: false
+   >> Combined string: Hello
+   >> Length of combined string: 5
 
 Underlying Functions 
 --------------------
@@ -548,133 +538,147 @@ macro.
    >> He World!llo
    >> 11
 
-Trim String 
+Trim String
 ===========
-The process of initializing a string can lead to an oversized memory allocation 
-that is later deemed un-necessary.  The ``trim_string`` function will downsize 
-the memory to the minimum necessary allocation.  This function will return ``true``
-if succesfully executed and ``false`` if unsuccesful.  The function may return 
-false if the memory is undersized, or if the user passes a NULL struct or string to 
-the function.
+The ``trim_string`` function adjusts the memory allocated for a ``str`` 
+container so that it matches the length of the string plus one for the 
+null-terminator. This is useful for reclaiming memory if the original 
+allocation was larger than necessary. The function returns ``true`` if 
+successful. It may return ``false`` if the string container's memory is 
+already undersized relative to the string length, or if a NULL pointer is 
+passed for the string container or its data.
 
-.. code-block:: c 
+The function has a time complexity of :math:`O(1)`. It performs a single check 
+and a possible reallocation, but this does not depend on the length of the 
+string itself. The space complexity is :math:`O(n)`, where :math:`n` is the 
+length of the string. In the worst case, the function may reduce the 
+allocation to match exactly the space needed for the string, which includes 
+the string length plus one for the null terminator. 
+
+.. code-block:: c
 
    bool trim_string(str *str_struct);
 
-Parameters 
+Parameters
 ----------
 
-- :c:`str_struct`: A string container of type ``str``.
-
-Returns 
--------
-
-- :c:`err_code`: true if the function executes succesfully, false otherwise with a stderr print out.
-
-Example 1
----------
-Example for an oversized string 
-
-.. code-block:: c 
-
-   #include "print.h"
-   #include "str.h"
-
-   int main() {
-       // String is oversized in memory
-       str *one = init_string("Hello", 30);
-       print(string_length(one));
-       print(string_memory(one));
-       bool val = trim_string(one);
-       print(val);
-       print(string_length(one));
-       print(string_memory(one));
-       free_string(one);
-       return 0;
-   }
-
-.. code-block:: bash 
-
-   >> 5
-   >> 30
-   >> true 
-   >> 5 
-   >> 6
-
-Example 2 
----------
-Example for a properly sized string 
-
-.. code-block:: c 
-
-   #include "print.h"
-   #include "str.h"
-
-   int main() {
-       // String is properly sized in memory
-       str *one = init_string("Hello");
-       print(string_length(one));
-       print(string_memory(one));
-       bool val = trim_string(one);
-       print(val);
-       print(string_length(one));
-       print(string_memory(one));
-       free_string(one);
-       return 0;
-   }
-
-.. code-block:: bash 
-
-   >> 5
-   >> 6
-   >> true 
-   >> 5 
-   >> 6
-
-Example 3 
----------
-Example where a NULL struct is passed to function.
-
-.. code-block:: c 
-
-   #include "print.h"
-   #include "str.h"
-
-   int main() {
-       // Passing a NULL struct
-       bool val = trim_string(NULL);
-       print(val);
-       return 0;
-   }
-
-.. code-block:: bash 
-
-   >> Null pointer provided to trim_string
-   >> false
-
-Copy String 
-===========
-The ``copy_string`` function will create a deep copy of a string container to
-include the memory allocation.
-
-.. code-block:: c 
-
-   str* copy_string(str *str_struct);
-
-Parameters 
-----------
-
-- :c:`str_struct`: A string container of type ``str``
+- :c:`str_struct`: A string container of type ``str`` to be trimmed.
 
 Returns
 -------
 
-- :c:`str_copy`: A copy of the input ``str`` struct.
+- Returns ``true`` if the function executes successfully, otherwise returns ``false`` with an error message printed to ``stderr``.
 
-Example 
+Example 1
+---------
+Example for an oversized string
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       // String with oversized memory allocation
+       str *one = init_string("Hello", 30);
+       print("Length: ", one);
+       print("Allocated memory before trim: ", string_memory(one));
+       bool val = trim_string(one);
+       print("Trim successful: ", val);
+       print("Length after trim: ", string_length(one));
+       print("Allocated memory after trim: ", string_memory(one));
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Length: 5
+   >> Allocated memory before trim: 30
+   >> Trim successful: true
+   >> Length after trim: 5
+   >> Allocated memory after trim: 6
+
+Example 2
+---------
+Example for a properly sized string
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       // String with proper memory allocation
+       str *one = init_string("Hello");
+       print("Length: ", string_length(one));
+       print("Allocated memory before trim: ", string_memory(one));
+       bool val = trim_string(one);
+       print("Trim successful: ", val);
+       print("Length after trim: ", string_length(one));
+       print("Allocated memory after trim: ", string_memory(one));
+       free_string(one);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Length: 5
+   >> Allocated memory before trim: 6
+   >> Trim successful: true
+   >> Length after trim: 5
+   >> Allocated memory after trim: 6
+
+Example 3
+---------
+Example where a NULL struct is passed to the function.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "str.h"
+
+   int main() {
+       // Passing a NULL struct to the function
+       bool val = trim_string(NULL);
+       print("Trim successful: ", val);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Null pointer provided to trim_string
+   >> Trim successful: false
+
+Copy String
+===========
+The ``copy_string`` function creates a deep copy of a provided ``str`` container, 
+including a duplicate of the string data and its associated memory allocation. 
+If the copy is successful, a pointer to the new string container is returned. 
+If the function encounters an error, such as a NULL pointer as input or a 
+failure in memory allocation, it returns NULL.  This function has a time 
+complexity of :math:`O(n)` and a space complexity of :math:`O(max(n, num))` 
+where :math:`n` and :math:`num` represent the string length and the allocation 
+length respectively.
+
+.. code-block:: c
+
+   str* copy_string(str *str_struct);
+
+Parameters
+----------
+
+- :c:`str_struct`: A string container of type ``str`` to be copied.
+
+Returns
 -------
 
-.. code-block:: c 
+- Returns a pointer to the newly created copy of the input ``str`` struct, or NULL if an error occurs.
+
+Example
+-------
+
+.. code-block:: c
 
    #include "str.h"
    #include "print.h"
@@ -682,315 +686,340 @@ Example
    int main() {
        str *one = init_string("Hello", 20);
        str *two = copy_string(one);
-       print(get_string(two));
-       print(string_length(two));
-       print(string_memory(two));
+       if (two) {
+           print(get_string(two));
+           print(string_length(two));
+           print(string_memory(two));
+       }
+       // Remember to free the memory for both string containers
+       free_string(one);
+       free_string(two);
        return 0;
    }
-.. code-block:: bash 
 
-   >> Hello 
-   >> 5 
+.. code-block:: bash
+
+   >> Hello
+   >> 5
    >> 20
 
-Compare String 
-==============
-The ``compare_strings`` macro can be used to compare a string container to
-another string container or a string literal. This macro utilizes the ``_Generic``
-operator to select from one of two functions that allows a user to compare 
-a string container of type ``str`` with another ``str`` container or a string 
-literal.  The function will compare each ``char`` to see if they match.  The 
-difference between the first non matching characters will be returned as an
-integer difference, unless all ``char``'s match in which case it will return 
-0.  If the strings have a different length, the function will return the 
-difference in the lengths of the strings with the first container being the 
-basis for the difference.  Finally, if the user passes a NULL pointer as the 
-container, string literal, or if the container possesses a NULL pointer to 
-its contained string, the function will return 0 and write an message to 
-``stderr``.  Both underlying functions are safer to use than the ``strcmp``
-function in the ``string.h`` header file; however, comparing two string 
-containers is the safest option to ensure that a string literal is not 
-null terminated.
+Compare Strings
+===============
+
+The ``compare_strings`` macro is designed to compare a string container 
+against another string container or a string literal. This macro uses the C11 
+``_Generic`` keyword to choose the appropriate function for comparison based 
+on the type of the second argument. The functions perform a 
+character-by-character comparison and return an integer value that reflects 
+the comparison result. This macro has the time complexity 
+:math:`O(min(N,M))` where :math:`N` and :math:`M` represent then
+lengths of the two strings.  This function also has a space complexity of
+:math:`O(1)`.
 
 .. code-block:: c
 
-   int compare_strings(str *str_one, str* || char* str_two);
+    int compare_strings(str *str_one, str* || char* str_two);
 
-Parameters 
+Parameters
 ----------
 
-- :c:`str_one`: A string container of type ``str``
-- :c:`str_two`: A string container of type ``str`` or a string literal
+- ``str_one``: A pointer to a string container of type ``str``.
+- ``str_two``: Either a second string container of type ``str`` or a string literal (``char*``).
 
-Returns 
+Returns
 -------
 
-- :c:`cmp`: 0 if strings are equal, < 0 if ``str_one`` is greater than ``str_two``, > 0 otherwise.
+An ``int`` value:
 
-Example 1
----------
-This example shows the comparison between a string container and a string 
-literal.  This option is safer than the ``strcmp`` function in ``string.h``,
-however, it still runs the risk that the string literal is not null terminated,
-which could lead to an incorrect result.
+- ``INT_MIN`` if a NULL pointer is provided for any of the strings, or if a string's data is NULL.
+- ``0`` if both strings are equal.
+- A negative value if ``str_one`` is lexicographically less than ``str_two``.
+- A positive value if ``str_one`` is lexicographically greater than ``str_two``.
 
-.. code-block:: c 
+If a NULL pointer is provided for any of the strings, or if a string's data 
+is NULL, the function returns ``INT_MIN`` as defined in the ``limits.h``
+header file, and outputs an error message to ``stderr``.
 
-   #define "print.h"
-   #define "str.h"
+Example Usage
+-------------
+Example 1: Comparing a string container with a string literal.
 
-   int main() {
-       str *one = init_string("Hello");
-       int val = compare_strings(one, "Helloo");
-       print(val);
-       free_string(one);
-   return 0;
-   }
+.. code-block:: c
 
-.. code-block:: bash 
+    #include "print.h"
+    #include "str.h"
 
-   >> -1
+    int main() {
+        str *one = init_string("Hello");
+        int result = compare_strings(one, "Helloo");
+        print(result);
+        free_string(one);
+        return 0;
+    }
 
-Example 2 
----------
-This example shows the comparison between two string containers which is the 
-safest opton for comparing two strings.
+.. code-block:: bash
 
-.. code-block:: c 
+    >> -1
 
-   #define "print.h"
-   #define "str.h"
+Example 2: Comparing two string containers.
 
-   int main() {
-       str *one = init_string("Hello");
-       str *two = init_string("Hello");
-       int val = compare_strings(one, two);
-       print(val);
-       free_string(one);
-       free_string(two);
-   return 0;
-   }
+.. code-block:: c
 
-.. code-block:: bash 
+    #include "print.h"
+    #include "str.h"
 
-   >> 0
+    int main() {
+        str *one = init_string("Hello");
+        str *two = init_string("Hello");
+        int result = compare_strings(one, two);
+        print(result);
+        free_string(one);
+        free_string(two);
+        return 0;
+    }
 
-Underlying Functions 
+.. code-block:: bash
+
+    >> 0
+
+Underlying Functions
 --------------------
-The ``compare_strings`` macro uses the ``_Generic`` operator to select 
-from one of the two following functions that can be used in its place. 
 
-.. code-block:: c 
+The ``compare_strings`` macro relies on the following functions, chosen by 
+the ``_Generic`` keyword based on the type of the second argument:
 
-   int compare_strings_lit(str *str_struct, char *string);
-   int compare_strings_str(str *str_struct_one, str *str_struct_two);
+``compare_strings_lit``
+    Compares a string container with a string literal.
+
+    .. code-block:: c
+
+        int compare_strings_lit(str *str_struct, char *string);
+
+``compare_strings_str``
+    Compares two string containers.
+
+    .. code-block:: c
+
+        int compare_strings_str(str *str_struct_one, str *str_struct_two);
+
+The comparison is done lexicographically and is safe as long as the string 
+literals are null-terminated. When using string containers, both the length 
+and the content are compared, which is inherently safe and does not depend 
+on null-termination.
 
 Find Char 
 =========
-The ``first_char`` and ``last_char`` functions will find the first or last 
-occurance of a ``char`` value between two pointers.to find a char. The functions
-will also check to ensure that the ``min_ptr`` is smaller than the ``max_ptr``
-and return a NULL value with a ``stderr`` message if it is not.
+The ``first_char`` and ``last_char`` functions search for the first or last 
+occurrence of a character within the range specified by two pointers. They 
+ensure that ``min_ptr`` is not greater than ``max_ptr`` and return a NULL 
+pointer with a message to ``stderr`` if this condition is not met.
+These functions have a time complexity of :math:`O(n)` and a space 
+complexity of :math:`O(1)`.
 
-.. code-block:: c 
+.. code-block:: c
 
-   char* first_char(char a, char* min_ptr, char* max_ptr);
-   char* last_char(char a, char* min_ptr, char* max_ptr);
+   char* first_char(char c, char* min_ptr, char* max_ptr);
+   char* last_char(char c, char* min_ptr, char* max_ptr);
 
-Parameters 
+Parameters
 ----------
 
-- :c:`a` The char being searched for 
-- :c:`min_ptr`: A pointer to the minimum position within a string being searched 
-- :c:`max_ptr`: A pointer to the maximum position within a string being searched
+- :c:`c`: The character being searched for.
+- :c:`min_ptr`: A pointer to the starting position of the search range.
+- :c:`max_ptr`: A pointer to the ending position of the search range.
 
-Returns 
+Returns
 -------
 
-- :c:`ptr`: A pointer to the character `a` or a NULL value.
+- :c:`ptr`: A pointer to the found character `c`, or NULL if not found.
 
 Example 1
 ---------
-An example where the function is used to earch a string literal, and a string 
-container, beginning to end to find an instance of a character.
+An example of using the functions to search a string literal from beginning 
+to end for an instance of a character.
 
-.. code-block:: c 
+.. code-block:: c
 
    #include "print.h"
-   #include "str.h"
 
    int main() {
-       char* one = "Hello this is a string function with another string in it";
-       str* two gbc_str = init_string(one);
-       char* ptr1 = first_char("string", one, one + strlen(one));
-       char* ptr2 = last_char("string"), get_string(two), get_string(two) + string_length(two));
+       char* str = "Hello this is a string";
+       char* ptr1 = first_char('i', str, str + strlen(str));
+       char* ptr2 = last_char('i', str, str + strlen(str));
        print(ptr1);
        print(ptr2);
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
-   >> string function with another string in it 
-   >> string in it
+   >> is is a string
+   >> ing
 
-Example 2 
+Example 2
 ---------
-An example where the ``min_ptr`` skips the first few characters of a string.
+An example where ``min_ptr`` skips the first few characters of a string.
 
-.. code-block:: c 
+.. code-block:: c
 
    #include "print.h"
-   #include "str.h"
 
    int main() {
-       char* a = "ababcdefg";
-       char* b = first_char('b', a + 2, a + strlen(a));
-       print(b);
+       str* str = init_string("ababcdefg");
+       char* result = first_char('b', get_string(str), get_string(str) + string_length(str));
+       print(result);
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
    >> bcdefg
 
 Example 3
 ---------
-User passes a value of ``min_ptr`` that is greater than ``max_ptr``
+Example when the ``min_ptr`` is greater than ``max_ptr``.
 
-.. code-block:: c 
+.. code-block:: c
 
    #include "print.h"
-   #include "str.h"
 
    int main() {
-       char* one = "Hello this is a string function with another string in it";
-       char* ptr1 = first_char("string", one + strlen(one), one);
-       print(ptr1);
+       char* str = "Hello this is a string";
+       char* result = first_char('i', str + strlen(str), str);
+       print(result); // Expect NULL
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
-   >> min_ptr is not smaller than max_ptr in first_char 
+   >> Error: min_ptr is not smaller than max_ptr in first_char
    >> NULL
 
-Find Strings 
+Find Strings
 ============
-The ``first_substring`` and ``last_substring`` macros will look for the 
-first or last occurance of a sub-string in a string.  The macro will 
-search for the sub-string between an upper and lower pointer value.  If a 
-developer passes a NULL value for a sub-string pattern the function will 
-print an error to ``stderr`` and return a value of NULL.
+The ``first_substring`` and ``last_substring`` macros are designed to locate the 
+first or last occurrence of a sub-string within a specific section of a string. 
+These macros perform a search for the sub-string bounded by the given upper and 
+lower pointer values. Passing a NULL value for the sub-string pattern or an invalid 
+pointer range will result in an error message printed to ``stderr`` and a return 
+value of NULL. This macro has a time complexity of :math:`O(n*m)` where 
+:math:`n` and :math:`m` are the sizes of the string and sub-string 
+respectively, and the space complexity is :math:`O(1)`.
 
-.. code-block:: c 
+.. code-block:: c
 
    char* first_substring(str* string || char* string, char* min_ptr, char* max_ptr);
    char* last_substring(str* string || char* string, char* min_ptr, char* max_ptr);
 
-Parameters 
+Parameters
 ----------
 
-- :c:`string`: A string literal or a string container containing the sub-string pattern.
+- :c:`string`: A string literal or a string structure containing the sub-string pattern. It must not be NULL.
 - :c:`min_ptr`: A char pointer to the minimum location for a sub-string search.
-- :c:`max_ptr`: A char pointer to the maximum location for a sub-string search.
+- :c:`max_ptr`: A char pointer to the maximum location for a sub-string search. The search is conducted up to but not including `max_ptr`.
 
-Return 
+Return
 ------
 
-- :c:`ptr`: A char pointer to the location of a sub-string in a string, or NULL if the sub-string does not exist.
+- :c:`ptr`: A char pointer to the location of the sub-string within the specified range, or NULL if the sub-string is not found or in case of an error.
 
 Example 1
 ---------
-This is an example of ``first_substring`` applied to a search over an entire 
-string.
+Here is an example where ``first_substring`` is used to search an entire string.
 
-.. code-block:: c 
+.. code-block:: c
 
    #include "print.h"
    #include "str.h"
 
    int main() {
-       char* one = "This is a string in a string");
+       char* one = "This is a string in a string";
        char* two = "string";
        char* three = first_substring(two, one, one + strlen(one));
-       print(three);
+       print(three); // Output should be a pointer to the first occurrence of "string" in "one"
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
-   >> string in a string 
+   >> string in a string
 
-Example 2 
+Example 2
 ---------
-This is an example of ``first_substring`` applied to a portion of an string.
+This example demonstrates ``first_substring`` being applied to a portion of a string.
 
-.. code-block:: c 
+.. code-block:: c
 
    #include "print.h"
    #include "str.h"
 
    int main() {
-       str* one gbc_str = init_string("This is a string in a string");
-       char* two = init_string("string");
+       str* one = init_string("This is a string in a string");
+       char* two = "string";
        char* three = first_substring(two, get_string(one) + 18, get_string(one) + string_length(one));
-       print(three);
-       free_string(two);
+       print(three); // Output should be a pointer to "string" found after the 18th character in "one"
+       free_string(one);
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
    >> string
 
-Example 3 
+Example 3
 ---------
-This is an example of ``last_substring`` with an error.
+This example shows the usage of ``last_substring`` when an error occurs.
 
-.. code-block:: c 
+.. code-block:: c
 
    #include "print.h"
    #include "str.h"
 
    int main() {
-       str* one gbc_str = init_string("This is a string in a string");
+       str* one = init_string("This is a string in a string");
        str* two = {.data=NULL, .len=0, .alloc=0};
-       char* three = first_substring(two, get_string(one) + 18, get_string(one) + string_length(one));
+       char* three = last_substring(two, get_string(one) + 18, get_string(one) + string_length(one));
        print(three);
+       free_string(one);
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
-   >> Null struct information provided for first_str_between_ptrs
+   >> NUll struct information provided to first_str_between_ptrs
    >> NULL
 
 Pop Char 
 ========
-The ``pop_string_char`` macro selects from one of two functions to pop data 
-from a string container.  The data is returned to the user and errors such as 
-null pointers or an out of bounds selection return a null terminator ``\0``
-and print a message to ``stderr``.
+The ``pop_string_char`` macro provides a convenient way to remove a character 
+from a string container. It selects the appropriate function to call based on 
+the number of arguments provided: if an index is specified, it uses 
+``pop_str_char_index``; otherwise, it defaults to using ``pop_str_char``, 
+which removes the last character in the string. If errors such as null 
+pointers or an out of bounds index occur, the macro returns a null terminator 
+``\0`` and prints an error message to ``stderr``. This macro can have a 
+time complexity that ranges from :math:`O(1)` to :math:`O(n)` depending on
+where data is popped from in the string.  This function has a space complexity 
+of :math:`O(1)`.
 
 .. code-block:: c 
 
-   char pop_string_char(str *str_struct, size_t index);
+   char pop_string_char(str *str_struct[, size_t index]);
 
 Parameters 
 ----------
 
-- :c:`str_struct`: A string container of type ``str``
-- :c:`index`: The index where data will be popped.  This variable is defaulted to the length of the string.
+- :c:`str_struct`: A string container of type ``str``.
+- :c:`index`: [Optional] The index at which to pop the character. If not provided, the last character of the string is popped.
 
 Returns 
 -------
 
-- :c:`char_val`: The ``char`` value popped from the string.
+- :c:`char_val`: The ``char`` value popped from the string. If the string is empty or a null pointer is provided, ``'\0'`` is returned.
 
 Example 1
 ---------
-Pop data using the default value for index.
+Pop the last character from the string using `pop_string_char` without providing an index.
 
 .. code-block:: c
 
@@ -1000,8 +1029,8 @@ Pop data using the default value for index.
    int main() {
        str *one = init_string("Goodbye");
        char val = pop_string_char(one);
-       print(val);
-       print(one);
+       print(val);  // Outputs: e
+       print(one);  // Outputs: Goodby
        free_string(one);
        return 0;
    }
@@ -1013,8 +1042,8 @@ Pop data using the default value for index.
 
 Example 2 
 ---------
-Pop data from a specific index.  Note, this operation will consume more execution
-time than popping from the last index.
+Pop a character from a specific index in the string. This operation is more 
+costly than popping from the end of the string.
 
 .. code-block:: c
 
@@ -1024,8 +1053,8 @@ time than popping from the last index.
    int main() {
        str *one = init_string("Goodbye");
        char val = pop_string_char(one, 3);
-       print(val);
-       print(one);
+       print(val);  // Outputs: b
+       print(one);  // Outputs: Goode
        free_string(one);
        return 0;
    }
@@ -1033,7 +1062,7 @@ time than popping from the last index.
 .. code-block:: bash 
 
    >> b
-   >> Goodye
+   >> Goode
 
 Underlying Functions 
 --------------------
@@ -1051,26 +1080,22 @@ Pop String Token
 The ``pop_string_token`` macro wraps two functions that allow a user to pop 
 all data from a string to the right of the right most token.  If the function 
 recieved NULL pointers for the ``str`` struct, or the struct data, it will 
-return a NULL pointer, and write a message to ``stderr``.  The macro also 
-allows a user to return the string as a container that must be manually free 
-or as a string that will be automatically collected by a garbage collector and 
-freed.
+return a NULL pointer, and write a message to ``stderr``.
 
 .. code-block:: c 
 
-   str* pop_string_token(str *str_struct, char token, bool gbc);
+   str* pop_string_token(str *str_struct, char token);
 
 Parameters
 ----------
 
 - :c:`str_struct`: A string container of type ``str``
-- :c:`token`: A token that divides data to be popped 
-- :c:`gbc`: true of returned string is to be garbage collected, false otherwise.  Variable is defaulted to false.
+- :c:`token`: A character that denotes the division point in the string.
 
 Returns 
 -------
 
-- :c:`str_struct`: A string container of type struct 
+- :c:`str_struct`: a new ``str`` object containing the substring after the last occurrence of `token`. If `token` is not found, returns NULL.
 
 Example 1
 ---------
@@ -1132,138 +1157,124 @@ the macro.  The functions are shown below.
    str* string_pop_token_wogbc(str *str_struct, char token);
    str* string_pop_token_wgbc(str *str_struct, char token, bool gdb);
 
-Test Pointer 
+Test Pointer
 ============
-In order to enable many functions such as an iterator, it is necessary 
-to pass ``char`` pointers to a function.  It is necessary to check a pointer 
-before it is passed to a function to ensure that it exists within the bounds 
-of a string container or a string literal.  The functions 
-``ptr_in_str_container`` and ``ptr_in_literal`` can be used to check if a pointer 
-exists within the correct bounds.
+To support operations such as iteration, it is necessary to validate ``char`` 
+pointers before their use, ensuring they point within the bounds of a string 
+container or a string literal. The functions ``ptr_in_str_container`` 
+and ``ptr_in_literal`` can be used for such validations.
 
-.. code-block:: c 
+.. code-block:: c
 
-   bool ptr_in_str_container(str* str_struct, char* ptr);
-   bool ptr_in_literal(char* ptr, char* min_ptr, char* max_ptr);
+   bool ptr_in_str_container(str* string, char* ptr);
+   bool ptr_in_literal(char* string, char* ptr);
 
-Parameters 
+Parameters
 ----------
 
-- :c:`str_struct`: A string container of type ``str``.
-- :c:`ptr`: The ``char`` pointer to be checked
-- :c:`min_ptr`: A pointer that represents the minimum bounds.
-- :c:`max_pt`: A pointer that represents the maximum bounds.
+- :c:`string`: A null-terminated string for `ptr_in_literal` or ``str`` data type for ``ptr_in_str_container`` function.
+- :c:`ptr`: The `char` pointer to be validated.
 
-Returns 
+Returns
 -------
 
-- :c:`status`: true if ``ptr`` is in bounds, false otherwise.
+- :c:`status`: ``true`` if ``ptr`` is within the bounds of the string, ``false`` otherwise.
 
 Example 1
 ---------
-Example to check if a pointer is in the bounds of a literal before using 
-the pointer.  This example will print a string one character at a time.
+Check if a pointer is within the bounds of a literal before iterating over it. 
+This example prints a string one character at a time.
 
-.. code-block:: c 
+.. code-block:: c
 
-   #include "print.h"
+   #include <stdio.h>
    #include "str.h"
 
    int main() {
-       char* one = "Hello Again!";
-       char* begin = one + 1;
-       char* end = one + strlen(one);
-       if(pt_int_literal(begin, one, end)) {
-           for (char* i =  begin; i != end; i++) {
+       const char* one = "Hello Again!";
+       const char* begin = one;
+       const char* end = one + strlen(one);
+
+       for (const char* i = begin; i < end; i++) {
+           if(ptr_in_literal(one, i)) {
                printf("%c", *i);
            }
-        }
-       printf("%s", one);
+       }
        printf("\n");
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
    >> Hello Again!
 
 Example 2
 ---------
-Example to check if a pointer is in the bounds of a string container 
-using the pointer.  This example will print a string one character at 
-at a time.
+Check if a pointer is within the bounds of a string container before iterating 
+over it. This example prints the string one character at a time, starting from 
+the second character.
 
-.. code-block:: c 
+.. code-block:: c
 
-   #include "print.h"
+   #include <stdio.h>
    #include "str.h"
 
    int main() {
-       char* one = init_string("Hello Again!");
-       char* begin = one->data + 1;
-       char* end = one + string_length(one);
-       if(pt_int_str_container(one, begin)) {
-           for (char* i =  begin; i != end; i++) {
+       str* my_str = init_string("Hello Again!");
+       char* begin = my_str->data + 1;
+       char* end = my_str->data + my_str->len;
+
+       for (char* i = begin; i < end; i++) {
+           if(ptr_in_str_container(my_str, i)) {
                printf("%c", *i);
            }
-        }
-       printf("%s", one);
+       }
        printf("\n");
+       free_string(my_str);
        return 0;
    }
 
-.. code-block:: bash 
+.. code-block:: bash
 
-   >> Hello Again!
-
+   >> ello Again!
 
 Iterator
 ========
-A string literal is in essence a statically allocated ``char`` array with a null 
-terminator, and the data stored in a ``str`` container is a dynamically 
-allocated ``char`` vector with a null terminator.  In both instances, a 
-developer can iterate over the contiguous indices to extract data from each 
-indice.  However, some data structures such as Binary Trees and Linked Lists 
-do not use contiguous memory.  An Iterator is a method that allows a developer 
-to use a common method to iterate through data structures with or without 
-continguous memory allocation to ensure commonality in how data is extracted 
-and processed.  In essence an iterator is a for or while loop that iterates
-through pointer references instead of indices.
+Iterators are powerful tools in C that enable traversing data structures, 
+regardless of whether they have contiguous memory allocation or not, such as 
+arrays, linked lists, or trees. An iterator abstracts the process of stepping 
+through a collection, often using a pointer to reference current elements 
+rather than array indices.
 
-While a developer can use a for loop to iterate through 
-the data in a ``str`` container, it is highly encoruaged to use the 
-iterator method supplied in this section, which have a standard interface 
-for applications to other data structures.
+The ``str`` container in this library represents a dynamically allocated 
+string, and an iterator for this type facilitates the manipulation and 
+traversal of its characters. This is preferable to using raw loops and 
+indices, providing a common interface across different data structures.
 
-The ``str`` iterator relies on the use of the ``str_iterator`` struct which 
-contains pointers to several different functions.  The function namespace 
-within this struct is identical to iterators for other data structures in this 
-library.  The ``str_iterator`` is shown below.
+The ``str_iterator`` struct encapsulates function pointers for standard 
+iteration operations:
 
 .. code-block:: c 
 
    typedef struct {
-       char* (*begin) (str* s);  // Linked to _str_begin
-       char* (*end) (str* s);  // Linked to _str_end
-       void (*next) (char** current);  // Linked to _str_next
-       void (*prev) (char** current);  // Linked to _str_prev
-       char (*get) (char** current);  // Linked to __str_get
+       char* (*begin) (str* s);    // Returns pointer to first element
+       char* (*end) (str* s);      // Returns pointer to one past the last element
+       void (*next) (char** current);    // Advances the pointer to the next element
+       void (*prev) (char** current);    // Moves the pointer to the previous element
+       char (*get) (char** current);    // Returns the value at the current element
    } str_iterator;
 
 Attributes 
 ----------
 
-- :c:`begin`: A pointer to a function that will return a pointer to the first psuedo-index in the data structure. 
-- :c:`end`: A pointer to a function that will return a pointer to the last pseudo-index in the data structure.
-- :c:`next`: A pointer to a function that updates the address passed to it to the address of the next pseudo-index.
-- :c:`prev`: A pointer to a function that updates the address passed to it to the address of the previous pseudo-index.
-- :c:`get`: A pointer to a function that will return that ``char`` value contained at a pseudo-index.
+- :c:`begin`: This function pointer returns the address of the first character in a `str` container, or NULL if an error occurs (such as when a NULL pointer is provided).
+- :c:`end`: This function pointer returns the address of the null terminator in a `str` container, signifying one past the last valid character.
+- :c:`next`: This function pointer advances the current pointer to the next character.
+- :c:`prev`: This function pointer moves the current pointer to the previous character.
+- :c:`get`: This function pointer retrieves the character at the current position pointed to by the provided pointer address.
 
-This struct is initialized in the ``init_str_iterator`` function which returns 
-a copy of an initialized ``str_iterator`` struct with the function pointers 
-linked to the appropriate functions in the ``str.c`` file.  The function 
-which are shown in the comments above, are static functions that are not 
-available outside of the ``str.c`` file.
+To use the iterator, initialize it with the ``init_str_iterator`` function, 
+which sets up the function pointers to their corresponding internal functions.
 
 Example 1
 ---------
@@ -1325,13 +1336,14 @@ data.
 
    >> THIS IS A LONG STRING
 
-Decorate Iterator 
+Decorate Iterator
 =================
-The ``dec_str_iter`` function utilizes the principles of an iterator and a 
-istrategy pattern to decouple the logic of iteration from the problem being
-solved.  The can decorate the ``dec_str_iter`` function with another function 
-of type ``void func(char*)`` to modify char variables in memory within the 
-``str`` container.
+The `dec_str_iter` function is designed to apply a specified operation to each 
+character within a range of a string, as defined by `begin` and `end` pointers. 
+This operation is determined by a `decorator` function passed as an argument, 
+allowing for flexible manipulation of string characters. This approach is 
+based on the strategy pattern, effectively decoupling the iteration process 
+from the actions performed during iteration.
 
 .. code-block:: c 
 
@@ -1341,15 +1353,25 @@ of type ``void func(char*)`` to modify char variables in memory within the
 Parameters
 ----------
 
-- :c:`begin`: A char pointer to a position in the data within ``str_struct``.
-- :c:`end`: A char pointer to a position in the data within ``str_struct``.
-- :c:`direction`: An enum of type ``str_iter_dir`` which can be ``FORWARD`` or ``REVERSE``.
-- :c:`decorator`: A function of type ``str_decorator`` which is an alias for ``void func(char*)``.
+- :c:`begin`: A pointer to the starting character within a `str` container for decoration.
+- :c:`end`: A pointer to the character just past the last character to be decorated within a `str` container. The `end` character itself is not decorated.
+- :c:`direction`: An enumeration value of type `str_iter_dir` that specifies the direction of iteration; it can be `FORWARD` or `REVERSE`.
+- :c:`decorator`: A function pointer of type `str_decorator` which is an alias for `void func(char*)`. This function is applied to each character in the specified range.
+
+Error Handling
+--------------
+
+If the iterators are incorrectly ordered (e.g., `end` is before `begin` for 
+forward iteration), the function will report an error and not perform any 
+decoration. If the `decorator` function pointer is `NULL`, the function 
+should safely handle this case, print a message to ``stderr`` and return 
+control to the calling program.
 
 Example 1
 ---------
-An example where we iterate forward through a string to transform some of
-the characters into capital characters.
+The following example demonstrates how to use `dec_str_iter` to convert 
+lowercase characters to uppercase, starting from the fourth character of the 
+string.
 
 .. code-block:: c 
 
@@ -1377,10 +1399,10 @@ the characters into capital characters.
 
    >> ThiS IS A LONG STRING
 
-Uppercase 
+Uppercase
 =========
-The ``to_uppercase`` function will convert an entire string to uppercase 
-characters.
+The `to_uppercase` function converts all alphabetic characters in a string to 
+their uppercase equivalents. Other characters in the string are not affected.
 
 .. code-block:: c 
 
@@ -1389,7 +1411,14 @@ characters.
 Parameters 
 ----------
 
-- :c:`s` A string container of type ``str``
+- :c:`s`: A non-NULL string container of type `str` with `s->data` pointing to 
+  a valid null-terminated string.
+
+Error Handling
+--------------
+
+The function will output an error message to `stderr` if a null pointer is 
+passed either as the ``s`` parameter or within the ``s->data``.
 
 Example 
 -------
@@ -1412,10 +1441,10 @@ Convert a string to uppercase in memory.
 
    >> THIS WILL BE UPPERCASE 
 
-Lowercase 
+Lowercase
 =========
-The ``to_lowercase`` function will convert an entire string to lowercase 
-characters.
+The `to_lowercase` function converts all alphabetic characters in a string to 
+their lowercase equivalents. Other characters in the string remain unchanged.
 
 .. code-block:: c 
 
@@ -1424,7 +1453,13 @@ characters.
 Parameters 
 ----------
 
-- :c:`s` A string container of type ``str``
+- :c:`s`: A non-NULL string container of type `str` with `s->data` pointing to a valid null-terminated string.
+
+Error Handling
+--------------
+
+The function will output an error message to `stderr` if a null pointer is 
+passed either as the ``s`` parameter or within the ``s->data``.
 
 Example 
 -------
@@ -1447,30 +1482,32 @@ Convert a string to lowercase in memory.
 
    >> this will be lowercase
 
-Delete Substring 
+Delete Substring
 ================
-The ``drop_substring`` macro selects one of two appropriate functions that 
-can be used to drop all occurances of a sub-string within a string between
-user defined set of pointers.  If a developer passes null pointer to the 
-function, it will print a message to ``stderr`` and return to the calling 
-program.
+The ``drop_substring`` macro provides a way to remove all occurrences of a 
+specified substring within a given range of a string. It uses the C11 
+``_Generic`` keyword to dispatch to the correct function based on the type 
+of `substring` provided. The macro will handle string containers (``str*``) 
+or string literals (``char*``). If null pointers are passed, or if the provided 
+range is outside the bounds of the string, an error message is printed to 
+``stderr``.
 
 .. code-block:: c 
 
-   bool drop_substring(str* string, str* substring || char* substring, char* min_ptr, char* max_ptr);
+   bool drop_substring(str* string, str* || char* substring, char* min_ptr, char* max_ptr);
 
 Parameters 
 ----------
 
-- :c:`string`: A string container of type ``str`` containing the sub-strings to be deleted
-- :c:`substring`: A substring patterns of type ``char*`` or ``str*``.
-- :c:`min_ptr`: A pointer to the minimum position to be searched 
-- :c:`max_ptr`: A pointer to the maximum position to be searched 
+- :c:`string`: A non-NULL string container of type `str` from which substrings will be deleted.
+- :c:`substring`: The pattern to remove, which can be of type `char*` for string literals or `str*` for string containers.
+- :c:`min_ptr`: A pointer to the minimum position in `string` from where the search begins.
+- :c:`max_ptr`: A pointer to the maximum position in `string` to which the search is limited.
 
 Returns 
 -------
 
-- :c:`status`: true if function executes succesfully, false otherwise with a message printed to ``stderr``.
+- :c:`status`: Returns ``true`` if the function completes its search, which does not necessarily mean a substring was removed; returns ``false`` if an error occurs, with a corresponding message printed to `stderr`.
 
 Example 1
 ---------
@@ -1519,15 +1556,18 @@ where the pattern is a string container.
 
    >> all instances of without this 
 
-Replace Substring 
+Replace Substring
 =================
-The ``replace_substring`` macro will select between one of two functions that 
-will search for a sub-string pattern in a string.  If it finds the substring 
-pattern it will replace the pattern with a developer supplied sub-string replacent.
-If the string, substring, or replacement sub-string points to NULL, it will 
-return a value of false, and print an message to the ``stderr`` buffer.
-Notice thatif the value of ``pattern_string`` is of type ``str*``, or ``char*``,
-then the value of ``replacement_string`` must match the same data type.
+
+The ``replace_substring`` macro selects between two functions that search for 
+a substring pattern in a string. If the pattern is found, it replaces the 
+pattern with a developer-supplied replacement substring. The operation returns 
+``false`` and prints a message to ``stderr`` if any argument is ``NULL``.
+
+.. note::
+   The type of ``pattern_string`` and ``replacement_string`` must match. They can either be of type ``str*`` or ``char*``.
+
+Usage:
 
 .. code-block:: c
 
@@ -1535,123 +1575,100 @@ then the value of ``replacement_string`` must match the same data type.
                           char* || str* replacement_string,
                           char* min_ptr, char* max_ptr);
 
-Parameters 
+Parameters
 ----------
 
-- :c:`string`: The string container with the string containing sub-strings to be replaced
-- :c:`pattern_string`: The sub-string pattern which will be searched for in ``string``.
-- :c:`replacement_string`: The sub-string that will replace each instance of ``pattern_string``.
-- :c:`min_ptr`: A pointer to the minimum position in ``string`` to be searched.
-- :c:`max_ptr`: A pointer to the maximum position in ``string`` to be searched.
+- ``string``: The string object containing substrings to be replaced.
+- ``pattern_string``: The substring pattern to search for within ``string``.
+- ``replacement_string``: The substring that will replace each instance of ``pattern_string``.
+- ``min_ptr``: A pointer to the minimum position in ``string`` to start the search.
+- ``max_ptr``: A pointer to the maximum position in ``string`` to end the search.
 
-Returns 
--------
+Returns:
+--------
 
-- :c:`error_code`: true if the function executes succesfully, false otherwise.
+- ``bool``: ``true`` if the operation is successful, ``false`` otherwise.
 
-Example 1
----------
-An example where the function replaces a sub-string with a larger sub-string.
+Examples
+--------
 
-.. code-block:: c 
+Example 1: Replacing a substring with a longer one.
 
-   #include "print.h"
+.. code-block:: c
+
    #include "str.h"
 
    int main() {
-       str* one gbc_str = init_string("Remove all values of Remove with Remove!");
-       str* two gbc_str = init_string("Remove");
-       str* three gbc_str = init_string("Replace");
-       print("Length before: ", string_length(one));
-       print("Memory before: ", string_memory(one));
-       replace_substring(one, two, three, get_string(one), get_string(one) + string_length(one));
-       print(one);
-       print("Length after: ", string_length(one));
-       print("Memory after: ", string_memory(one));
+       str* my_string gbc_str = init_string("Remove all 'Remove' with 'Replace'!");
+       str* pattern gbc_str = init_string("Remove");
+       str* replacement gbc_str = init_string("Replace");
+       replace_substring(my_string, pattern, replacement, get_string(my_string), 
+                         get_string(my_string) + string_length(my_string));
+       print(my_string);
        return 0;
    }
 
 .. code-block:: bash 
 
-   >> Length before: 40
-   >> Memory before: 41
-   >> Replace all values of Replace with Replace!
-   >> Length after: 43
-   >> Memory after: 44
+   >> Replace all 'Replace' with 'Replace'!
 
-Example 2
----------
-Example where a sub-string is replaced with a smaller sub-string
+Example 2: Replacing a substring with a shorter one.
 
-.. code-block:: c 
+.. code-block:: c
 
-   #include "print.h"
    #include "str.h"
+   #include "print.h"
 
    int main() {
-       str* one gbc_str = init_string("Remove all values of Remove with Remove!");
-       char* two = "Remove";
-       char* three = "touch";
-       print("Length before: ", string_length(one));
-       print("Memory before: ", string_memory(one));
-       replace_substring(one, two, three, get_string(one), get_string(one) + string_length(one));
-       print(one);
-       print("Length after: ", string_length(one));
-       print("Memory after: ", string_memory(one));
+       str* my_string = init_string("Remove all 'Remove' with 'Replace'!");
+       char* pattern = "Remove";
+       char* replacement = "Rep";
+       replace_substring(my_string, pattern, replacement, get_string(my_string), 
+                         get_string(my_string) + string_length(my_string));
+       print(my_string);
+       free_string(my_string);
        return 0;
    }
 
 .. code-block:: bash 
 
-   >> Length before: 40
-   >> Memory before: 41
-   >> touch all values of touch with touch!
-   >> Length after: 37
-   >> Memory after: 41
+   >> Rep all 'Rep' with 'Rep'!
 
-Example 3
----------
-Example where only part of a string is searched 
+Example 3: Replacing a substring within part of the string.
 
-.. code-block:: c 
+.. code-block:: c
 
-   #include "print.h"
    #include "str.h"
+   #include "print.h"
 
    int main() {
-       str* one gbc_str = init_string("Remove all values of Remove with Remove!");
-       char* two = "Remove";
-       char* three = "touch";
-       print("Length before: ", string_length(one));
-       print("Memory before: ", string_memory(one));
-       replace_substring(one, two, three, get_string(one), get_string(one) + string_length(one) - 9);
-       print(one);
-       print("Length after: ", string_length(one));
-       print("Memory after: ", string_memory(one));
+       str* my_string = init_string("Remove all 'Remove' with 'Replace'!");
+       char* pattern = "Remove";
+       char* replacement = "Rep";
+       char* max_ptr = get_string(my_string) + string_length(my_string) - strlen(" with 'Replace'!");
+       replace_substring(my_string, pattern, replacement, get_string(my_string), max_ptr);
+       print(my_string);
+       free_string(my_string);
        return 0;
-   }
+   } 
 
 .. code-block:: bash 
 
-   >> Length before: 40
-   >> Memory before: 41
-   >> touch all values of touch with Remove!
-   >> Length after: 38
-   >> Memory after: 41
+   >> Rep all 'Rep' with 'Replace'!
 
-Underlying Functions 
+Underlying Functions
 --------------------
-The ``replace_substring`` macro uses the ``_Generic`` operator to select from 
-one of two functions.  The developer can choose to directly use one of the functions 
-shown below in place of the ``replace_substring`` macro.
+
+The ``replace_substring`` macro utilizes the ``_Generic`` keyword to choose 
+between the following two functions. These functions can be used directly in 
+lieu of the macro.
 
 .. code-block:: c
 
    bool replace_str_substring(str* string, str* pattern_string,
                               str* replacement_string,
                               char* min_ptr, char* max_ptr);
-   bool replace_str_substring(str* string, char* pattern_string,
-                              char* replacement_string,
-                              char* min_ptr, char* max_ptr);
-
+   bool replace_literal_substring(str* string, char* pattern_string,
+                                  char* replacement_string,
+                                  char* min_ptr, char* max_ptr);
 

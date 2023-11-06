@@ -935,7 +935,8 @@ void test_ptr_not_in_container(void **state) {
 void test_ptr_in_literal(void **state) {
     (void) state;
     char* one = "Hello Again!";
-    bool result = ptr_in_literal(one + 2, one, one + strlen(one));
+    char* ptr = one + 3;
+    bool result = ptr_in_literal(one, ptr);
     assert_true(result);
 }
 // --------------------------------------------------------------------------------
@@ -943,7 +944,8 @@ void test_ptr_in_literal(void **state) {
 void test_ptr_not_in_literal(void **state) {
     (void) state;
     char* one = "Hello Again!";
-    bool result = ptr_in_literal(one - 2, one, one + strlen(one));
+    char* ptr = one - 2;
+    bool result = ptr_in_literal(one, ptr);
     assert_false(result);
 }
 // --------------------------------------------------------------------------------

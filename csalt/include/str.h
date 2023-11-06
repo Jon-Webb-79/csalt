@@ -24,20 +24,21 @@
 #include <stdbool.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+// ================================================================================
+// ================================================================================
+// CONSTANTS FOR MEMORY MANAGEMENT STRATEGY
 
-/**
- * Macros to guide memory management.
- */
 extern const size_t STR_THRESHOLD;
 extern const size_t STR_FIXED_AMOUNT;
 
-
-typedef void (*str_decorator)(char*);
-// --------------------------------------------------------------------------------
+// ================================================================================
+// ================================================================================
+// STRUCT DEFINITION FOR STRING CONTAINER
 
 typedef struct str str;  // Forward declaratioon
 
@@ -55,7 +56,9 @@ struct str {
     size_t len;
     size_t alloc;
 };
-//  --------------------------------------------------------------------------------
+// ================================================================================
+// ================================================================================
+// PROTOTYPES FOR BASIC STRING OPERATIONS
 
 /**
  * @brief Initializes a string structure with the given string literal.
@@ -110,8 +113,7 @@ str* init_string_len(char* strlit, size_t num);
  */
 #define init_string(...) \
     TWO_FUNC_SELECT(__VA_ARGS__, init_string_len, init_string_nol)(__VA_ARGS__)
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 /**
  * @brief Frees all memory from a str container 
@@ -131,6 +133,7 @@ void _free_string(str** str_struct);
  * collect the dynamically allocated variable and free it when it goes out
  * of scope.
  */
+#if defined(__GNUC__) || defined(__clang__)
 #define gbc_str __attribute__((cleanup(_free_string)))
 // --------------------------------------------------------------------------------
 
@@ -139,11 +142,9 @@ void _free_string(str** str_struct);
  * having to dereference it.  This macro only works with GCC and clang 
  * compilers
  */
-#if defined(__GNUC__) || defined(__clang__)
     #define free_string(str_struct) _free_string(&(str_struct))
 #endif
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 /**
  * @brief Retrieves the string value
@@ -155,7 +156,7 @@ void _free_string(str** str_struct);
  * @param str_struct A string container of type str 
  * @return The string encapsulated in the struct as a literal
  */
-char* get_string(str* str_struct);
+char* get_string(const str* str_struct);
 // --------------------------------------------------------------------------------
 
 /**
@@ -168,7 +169,7 @@ char* get_string(str* str_struct);
  * @param str_struct A string container of type str 
  * @return The length of a string 
  */
-size_t string_length(str* str_struct);
+int string_length(str* str_struct);
 // --------------------------------------------------------------------------------
 
 /**
@@ -182,8 +183,7 @@ size_t string_length(str* str_struct);
  * @return The memory allocation of a string in chars
  */
 size_t string_memory(str* str_struct);
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 /**
  * @brief Inserts a string literal into a struct of type str 
@@ -196,7 +196,7 @@ size_t string_memory(str* str_struct);
  * @param string A null terminated string literal.
  * @return true if the function executes succesfully, false otherwise
  */
-bool insert_string_lit(str* str_struct, char* string, size_t index);
+bool insert_string_lit(str* str_struct, const char* string, size_t index);
 // --------------------------------------------------------------------------------
 
 /**
@@ -252,7 +252,8 @@ bool trim_string(str* str_sturct);
  * @return A string container of type str
  */
 str* copy_string(str* str_struct);
-// --------------------------------------------------------------------------------
+// ================================================================================
+// ================================================================================
 
 /**
  * @brief Compares the string within a str container with a string literal 
@@ -435,7 +436,7 @@ str* pop_string_token(str* str_struct, char token);
  *
  * @param str_struct A string container of type str 
  * @param ptr A char pointer
- * @returns true if pointer is inside container false otherwise
+ * @return true if pointer is inside container, false otherwise
  */
 bool ptr_in_str_container(str* str_struct, char* ptr);
 // --------------------------------------------------------------------------------
@@ -443,13 +444,13 @@ bool ptr_in_str_container(str* str_struct, char* ptr);
 /**
  * @brief Determine if a pointer is within the min and maximum of a string literal 
  *
+ * @brief A pointer to a char array or string literal.
  * @brief ptr A char pointer 
- * @brief min_ptr A pointer to the beginning of a string 
- * @brief max_ptr A pointer to the end of a string
+ * @return true if pointer is inside container, false otherwise
  */
-bool ptr_in_literal(char* ptr, char* min_ptr, char* max_ptr);
+bool ptr_in_literal(char* string, char* ptr);
 // --------------------------------------------------------------------------------
-
+typedef void (*str_decorator)(char*);
 // Define iterators
 
 typedef enum {

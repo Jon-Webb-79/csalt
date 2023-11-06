@@ -10,15 +10,36 @@
 // - Copyright: Copyright 2023, Jon Webb Inc.
 // ================================================================================
 // ================================================================================
-// Include modules here
+// Include statements here
 
 #include "include/str.h"
 #include <string.h>
+// ================================================================================
+// ================================================================================
+// CONSTANTS FOR MEMORY MANAGEMENT
 
 const size_t STR_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
 const size_t STR_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
-                                                    
+// ================================================================================
+// ================================================================================
+// DEFINTIONS FOR BASIC STRING OPERATIONS
+
 str* init_string_nol(const char* strlit) {
+    if (strlit == NULL) {
+        fprintf(stderr, "strlit is a NULL pointer in init_string_nol\n");
+        // Dynamically allocate memory for a str object.
+        str* a = malloc(sizeof(str));
+        // Check if the allocation was successful.
+        if (a == NULL) {
+            fprintf(stderr, "Memory allocation failed in init_string_nol\n");
+            return NULL;
+        }
+        // Initialize the members of the struct.
+        a->data = NULL;
+        a->len = 0;
+        a->alloc = 0;
+        return a;
+    }
     // Allocate memory for the struct
     str *s = (str *)malloc(sizeof(str));
     if (!s) {
@@ -47,6 +68,21 @@ str* init_string_nol(const char* strlit) {
 // --------------------------------------------------------------------------------
 
 str* init_string_len(char* strlit, size_t num) {
+    if (strlit == NULL) {
+        fprintf(stderr, "strlit is a NULL pointer in init_string_nol\n");
+        // Dynamically allocate memory for a str object.
+        str* a = malloc(sizeof(str));
+        // Check if the allocation was successful.
+        if (a == NULL) {
+            fprintf(stderr, "Memory allocation failed in init_string_nol\n");
+            return NULL;
+        }
+        // Initialize the members of the struct.
+        a->data = NULL;
+        a->len = 0;
+        a->alloc = 0;
+        return a;
+    }
     size_t actual_len = strlen(strlit);
     size_t str_len = actual_len; // By default, set it to actual_len
     size_t alloc_len = actual_len + 1;
@@ -83,10 +119,9 @@ str* init_string_len(char* strlit, size_t num) {
 
     return new_struct;
 }
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
-char* get_string(str* str_struct) {
+char* get_string(const str* str_struct) {
     if (str_struct == NULL) {
         fprintf(stderr, "get_string failed, empty struct\n");
         return NULL;
@@ -99,7 +134,7 @@ char* get_string(str* str_struct) {
 }
 // --------------------------------------------------------------------------------
 
-size_t string_length(str* str_struct) {
+int string_length(str* str_struct) {
     if (str_struct == NULL) {
         fprintf(stderr, "string_length failed, empty struct\n");
         return -1;
@@ -123,8 +158,7 @@ size_t string_memory(str* str_struct) {
     }
     return str_struct->alloc;
 }
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 void _free_string(str** str_struct_ptr) {
     if (!str_struct_ptr || !*str_struct_ptr) return;
@@ -139,7 +173,7 @@ void _free_string(str** str_struct_ptr) {
 }
 // --------------------------------------------------------------------------------
 
-bool insert_string_lit(str* str_struct, char* string, size_t index) {
+bool insert_string_lit(str* str_struct, const char* string, size_t index) {
     if (!str_struct || !string || !str_struct->data) {
         fprintf(stderr, "Null pointer provided to insert_string_lit.\n");
         return false;
@@ -223,7 +257,8 @@ bool insert_string_str(str* str_struct_one, str* str_struct_two, size_t index) {
     str_struct_one->len = new_len;  // Update the length
     return true;
 }
-// --------------------------------------------------------------------------------
+// ================================================================================
+// ================================================================================
 
 bool trim_string(str* str_struct) {
     if (!str_struct || !str_struct->data) {
@@ -254,9 +289,16 @@ str* copy_string(str* str_struct) {
         fprintf(stderr, "Null pointer provided to copy_string_wo_gbc.\n");
         return 0; // Or another designated error value
     }
-    char str_var[str_struct->len + 1];
+    // Allocate memory for the copy
+    char *str_var = (char*)malloc(str_struct->len + 1);
+    if (!str_var) {
+        fprintf(stderr, "Memory allocation failed in copy_string.\n");
+        return NULL;
+    }
+    //char str_var[str_struct->len + 1];
     memcpy(str_var, str_struct->data, str_struct->len + 1);
     str *one = init_string_len(str_var, str_struct->alloc);
+    free(str_var);
     return one;
 }
 // ================================================================================
@@ -266,7 +308,7 @@ int compare_strings_lit(str* str_struct, char* string) {
     if (!str_struct || !string || !str_struct->data) {
         // Handle null pointers appropriately
         fprintf(stderr, "Null pointer provided to compare_strings_lit.\n");
-        return 0; // Or another designated error value
+        return INT_MIN; // Or another designated error value
     }
 
     size_t string_len = strlen(string);
@@ -285,7 +327,7 @@ int compare_strings_str(str* str_struct_one, str* str_struct_two) {
     if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
         // Handle null pointers appropriately
         fprintf(stderr, "Null pointer provided to compare_strings_str.\n");
-        return 0; // Or another designated error value
+        return INT_MIN; // Or another designated error value
     } 
 
     size_t string_len = str_struct_two->len;
@@ -329,11 +371,18 @@ char* last_char(char c, char* min_ptr, char* max_ptr) {
 // ================================================================================
 
 char* first_literal_between_ptrs(char* string, char* min_ptr, char* max_ptr) {
-    if (min_ptr >= max_ptr) return NULL;
+    if (!string) {
+        fprintf(stderr, "Null string provided to first_literal_between_ptrs\n");
+        return NULL;
+    }
+    if (min_ptr >= max_ptr) {
+        fprintf(stderr, "Min pointer larger than max pointer in first_literal_between_ptrs\n");
+        return NULL;
+    }
     size_t str_len = strlen(string);
     size_t j;
 
-    for (char* it = min_ptr; it < max_ptr - str_len + 1; it++) { // note the change in the condition
+    for (char* it = min_ptr; it < max_ptr - str_len + 1; it++) {
         for (j = 0; j < str_len; j++) {
             if (string[j] != *(it + j)) {
                 break;
@@ -351,7 +400,7 @@ char* first_str_between_ptrs(str* string, char* min_ptr, char* max_ptr) {
         return NULL;
     }
     if (min_ptr >= max_ptr) {
-        fprintf(stderr, "Min pointer larger than max pointer in first_str_between_ptrs");
+        fprintf(stderr, "Min pointer larger than max pointer in first_str_between_ptrs\n");
         return NULL;
     }
     size_t str_len = string->len;
@@ -416,8 +465,6 @@ char* last_str_between_ptrs(str* string, char* min_ptr, char* max_ptr) {
     }
     return NULL; 
 }
-// --------------------------------------------------------------------------------
-
 // ================================================================================
 // ================================================================================
 
@@ -524,15 +571,27 @@ static char _str_get(char** current) {
 // PUBLIC FUNCTIONS
 
 bool ptr_in_str_container(str* str_struct, char* ptr) {
-    if (ptr >= str_struct->data && ptr <= str_struct->data + str_struct->len) {
+    if (!str_struct || !str_struct->data || !ptr) {
+        fprintf(stderr, "Invalid NULL parameter(s) provided to ptr_in_str_container\n");
+        return false; // Return false or handle the error as appropriate.
+    }
+
+    if (ptr >= str_struct->data && ptr < str_struct->data + str_struct->len) {
         return true;
     }
     return false;
 }
 // --------------------------------------------------------------------------------
 
-bool ptr_in_literal(char* ptr, char* min_ptr, char* max_ptr) {
-    if (ptr >= min_ptr && ptr <= max_ptr) {
+bool ptr_in_literal(char* string, char* ptr) {
+    if (!string || !ptr) {
+        fprintf(stderr, "Invalid NULL parameter(s) provided to ptr_in_literal\n");
+        return false; // Return false or handle the error as appropriate.
+    }
+
+    // Calculate the end of the string correctly.
+    char* max_ptr = string + strlen(string);
+    if (ptr >= string && ptr < max_ptr) {
         return true;
     }
     return false;
@@ -541,6 +600,9 @@ bool ptr_in_literal(char* ptr, char* min_ptr, char* max_ptr) {
 
 void dec_str_iter(char* begin, char* end,
                   str_iter_dir direction, str_decorator decorator) {
+    if ( decorator == NULL) {
+        fprintf(stderr, "Function pointer in dec_str_iter points to NULL\n");
+    }
     // Check the direction of iteration and validate iterators
     if (direction == FORWARD && end < begin) {
         fprintf(stderr, "Error: 'end' iterator should be after 'begin' for FORWARD iteration.\n");
@@ -575,6 +637,10 @@ str_iterator init_str_iterator() {
 // ================================================================================
 
 void to_uppercase(str *s) {
+    if(!s || !s->data) {
+        fprintf(stderr, "Null pointer provided to to_uppercase\n");
+        return;
+    }
     char* begin = s->data;
     char* end = s->data + s->len;
     for (char* i =  begin; i != end; i++) {
@@ -584,6 +650,10 @@ void to_uppercase(str *s) {
 // --------------------------------------------------------------------------------
 
 void to_lowercase(str *s) {
+    if(!s || !s->data) {
+        fprintf(stderr, "Null pointer provided to to_lowercase\n");
+        return;
+    }
     char* begin = s->data;
     char* end = s->data + s->len;
     for (char* i =  begin; i != end; i++) {
