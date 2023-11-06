@@ -599,7 +599,7 @@ bool ptr_in_literal(char* string, char* ptr) {
 // --------------------------------------------------------------------------------
 
 void dec_str_iter(char* begin, char* end,
-                  str_iter_dir direction, str_decorator decorator) {
+                  iter_dir direction, str_decorator decorator) {
     if ( decorator == NULL) {
         fprintf(stderr, "Function pointer in dec_str_iter points to NULL\n");
     }

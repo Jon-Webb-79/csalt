@@ -26,6 +26,8 @@
 #include <errno.h>
 #include <limits.h>
 
+#include "admin.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -453,11 +455,6 @@ bool ptr_in_literal(char* string, char* ptr);
 typedef void (*str_decorator)(char*);
 // Define iterators
 
-typedef enum {
-    FORWARD,
-    REVERSE
-} str_iter_dir;
-
 /**
  * @brief A struct that provides funciton pointers to various string iterator function.
  *
@@ -498,7 +495,7 @@ str_iterator init_str_iterator();
  * @param decorator A function of type void func(char*)
  */
 void dec_str_iter(char* begin, char* end,
-                  str_iter_dir direction, str_decorator decorator);
+                  iter_dir direction, str_decorator decorator);
 // ================================================================================
 // ================================================================================
 
