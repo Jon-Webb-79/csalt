@@ -43,6 +43,28 @@ typedef enum {
 // ================================================================================
 // ================================================================================
 
+/**
+ * @brief An enum containing keywords for function selections 
+ *
+ * This enum contains keywords that represent the data types of possible functions 
+ * that can be used to initialize data structures.
+ *
+ * @attribute dChar An alias for a char data type used to represent an integer 
+ * @attribute dUChar An alias for an unsigned char data type used to represent an integer 
+ * @attribute dShort An alias for a short int data type 
+ * @attribute dUShort An alias for an unsigned short data type 
+ * @attribute dInt An alias for an int data type 
+ * @attribute dUInt An alias for an unsigned int data type 
+ * @attribute dLong An alias for a long int data type 
+ * @attribute dULong An alias for an unsigned long data type 
+ * @attribute dLongLong An alias for a long long int data type 
+ * @attribute dULongLong An alias for an unsigned long long int data type 
+ * @attribute dFloat An alias for a float data type 
+ * @attribute dDouble An alias for a double data type 
+ * @attribute dLDouble An alias for a long double data type 
+ * @attribute dBool An alias for a bool data type 
+ * @attribute dStr An alias for a str data type
+ */
 typedef enum {
     dChar,  // Keyword for a char data type as an integer data type 
     dUChar,  // keyword for unsigned char data type as an integer data type 
