@@ -203,25 +203,6 @@ void test_insert_string_lit_insert_middle(void **state) {
 // --------------------------------------------------------------------------------
 
 /**
- * Test insert_string with a NULL original container insrted.
- * Suppressed stderr for this test
- */
-void test_insert_string_lit_error_one(void **state) {
-    (void) state; 
-    int stderr_copy = dup(STDERR_FILENO);
-    int devnull = open("/dev/null", O_WRONLY);
-    dup2(devnull, STDERR_FILENO);
-    close(devnull);
-    str string_struct = { .data = NULL, .len = 0, .alloc = 0 };
-    bool result = insert_string(&string_struct, "World!", 0);
-    assert_false(result);
-    // Restore stderr
-    dup2(stderr_copy, STDERR_FILENO);
-    close(stderr_copy);
-}
-// --------------------------------------------------------------------------------
-
-/**
  * Test insert_string with a NULL string_literal insrted.
  * Suppressed stderr for this test
  */

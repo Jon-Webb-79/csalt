@@ -174,15 +174,29 @@ void _free_string(str** str_struct_ptr) {
 // --------------------------------------------------------------------------------
 
 bool insert_string_lit(str* str_struct, const char* string, size_t index) {
-    if (!str_struct || !string || !str_struct->data) {
+    if ( !str_struct || !string ) {
         fprintf(stderr, "Null pointer provided to insert_string_lit.\n");
         return false;
     }
-    if (index > str_struct->len) {  // Allow insertion at the end by checking for > instead of >=
+    if ( index > str_struct->len ) {  // Allow insertion at the end by checking for > instead of >=
         fprintf(stderr, "String insert location out of bounds\n");
         return false;
     }
     size_t insert_len = strlen(string);
+
+    if ( str_struct->data == NULL ) {
+        char* ptr = malloc(insert_len + 1);
+        if ( ptr == NULL ) {
+            fprintf(stderr, "Error: Malloc failed in insert_string_lit\n");
+            return false;
+        }
+        str_struct->data = ptr;
+        memcpy(str_struct->data, string, insert_len);
+        str_struct->data[insert_len] = '\0';
+        str_struct->len = insert_len;
+        str_struct->alloc = insert_len + 1;
+    }
+
     size_t new_len = str_struct->len + insert_len;  
     if (str_struct->alloc <= new_len) {  
         size_t new_alloc;
@@ -217,7 +231,7 @@ bool insert_string_lit(str* str_struct, const char* string, size_t index) {
 // --------------------------------------------------------------------------------
 
 bool insert_string_str(str* str_struct_one, str* str_struct_two, size_t index) {
-    if (!str_struct_one || !str_struct_two || !str_struct_one->data || !str_struct_two->data) {
+    if (!str_struct_one || !str_struct_two || !str_struct_two->data) {
         fprintf(stderr, "Null pointer provided to insert_string_lit.\n");
         return false;
     }
@@ -226,6 +240,20 @@ bool insert_string_str(str* str_struct_one, str* str_struct_two, size_t index) {
         return false;
     }
     size_t insert_len = str_struct_two->len;
+
+    if ( str_struct_one->data == NULL ) {
+        char* ptr = malloc(insert_len + 1);
+        if ( ptr == NULL ) {
+            fprintf(stderr, "Error: Malloc failed in insert_string_lit\n");
+            return false;
+        }
+        str_struct_one->data = ptr;
+        memcpy(str_struct_one->data, str_struct_two->data, insert_len);
+        str_struct_one->data[insert_len] = '\0';
+        str_struct_one->len = insert_len;
+        str_struct_one->alloc = insert_len + 1;
+    }
+
     size_t new_len = str_struct_one->len + insert_len;  // Length after insertion
 
     if (str_struct_one->alloc <= new_len) {  

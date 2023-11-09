@@ -63,7 +63,7 @@ typedef enum {
  * @attribute dDouble An alias for a double data type 
  * @attribute dLDouble An alias for a long double data type 
  * @attribute dBool An alias for a bool data type 
- * @attribute dStr An alias for a str data type
+ * @attribute dString An alias for a str data type
  */
 typedef enum {
     dChar,  // Keyword for a char data type as an integer data type 
@@ -80,7 +80,7 @@ typedef enum {
     dDouble,  // Keyword for double data type 
     dLDouble,  // Keyword for long double data type 
     dBool,  // Keyword for bool data type 
-    dStr  // Keyword for str data type
+    dString  // Keyword for str data type
 } dtype;
 // ================================================================================
 // ================================================================================

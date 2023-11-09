@@ -41,7 +41,6 @@ void test_string_length_fail_one(void **state);
 void test_string_length_fail_two(void **state);
 void test_insert_string_lit_insert_end(void **state);
 void test_insert_string_lit_insert_middle(void **state);
-void test_insert_string_lit_error_one(void **state);
 void test_insert_string_lit_error_two(void **state);
 void test_insert_string_lit_error_three(void **state);
 void test_insert_string_str_insert_end(void **state);
