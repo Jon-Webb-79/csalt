@@ -561,7 +561,7 @@ bool push_bool_vector(bool_v* vec, bool var, size_t index);
 /**
  * @brief Inserts data into a dynamically allocated vector.
  *
- * This function allows a user to insert str data into dynamically 
+ * This function allows a user to insert string literal data into dynamically 
  * allocated vector, to a user specified location.
  *
  * @param vec A string_v struct.
@@ -570,6 +570,20 @@ bool push_bool_vector(bool_v* vec, bool var, size_t index);
  * @return true if the function executes succesfully, false otherwise. 
  */
 bool push_string_vector(string_v* vec, const char* var, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Inserts data into a dynamically allocated vectr. 
+ *
+ * This function allows a user to insert a str data type into a dynamically 
+ * allocated vector, to a user specified location.
+ *
+ * @param vec A string_v vstruct.
+ * @param var The variable being inserted.
+ * @param index The index where data is being inserted.
+ * @return true if the function executes succesfully, false otherwise.
+ */
+bool push_str_vector(string_v* vec, str* var, size_t index);
 // --------------------------------------------------------------------------------
 
 /**
@@ -599,6 +613,338 @@ bool push_string_vector(string_v* vec, const char* var, size_t index);
     ldouble_v*: push_ldouble_vector, \
     bool_v*: push_bool_vector, \
     default: push_string_vector) (vec, var, index)
+// ================================================================================
+// ================================================================================
+// GET_VECTOR FUNCTIONS
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type char_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A char value as in 8 bit integer on 64 bit machine or 4 bit integer on 32 bit machine.
+ */
+char get_char_vector(char_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type uchar_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A unsgined char value as in 8 bit integer on 64 bit machine or 4 bit integer on 32 bit machine.
+ */
+unsigned char get_uchar_vector(uchar_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type short_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A short int value
+ */
+short int get_short_vector(short_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type ushort_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return An unsigned short int value
+ */
+unsigned short int get_ushort_vector(ushort_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type int_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A int value
+ */
+int get_int_vector(int_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type uint_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A unsigned int value
+ */
+unsigned int get_uint_vector(uint_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type long_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A long int value
+ */
+long int get_long_vector(long_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type ulong_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A unsigned long int value
+ */
+unsigned long int get_ulong_vector(ulong_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type llong_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A long long int value
+ */
+long long int get_llong_vector(llong_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type ullong_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A unsigned long long int value
+ */
+unsigned long long int get_ullong_vector(ullong_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type float_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A float value
+ */
+float get_float_vector(float_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type double_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A double value
+ */
+double get_double_vector(double_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type ldouble_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A long double value
+ */
+long double get_ldouble_vector(ldouble_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type bool_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A bool value
+ */
+bool get_bool_vector(bool_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type string_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A char* value
+ */
+char* get_string_vector(string_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct
+ * @param index The index location for the retrieved data in the vector 
+ * @return return value
+ */
+#define get_vector(vec, index) _Generic((vec), \
+    char_v*: get_char_vector, \
+    uchar_v*: get_uchar_vector, \
+    short_v*: get_short_vector, \
+    ushort_v*: get_ushort_vector, \
+    int_v*: get_int_vector, \
+    uint_v*: get_uint_vector, \
+    long_v*: get_long_vector, \
+    ulong_v*: get_ulong_vector, \
+    llong_v*: get_llong_vector, \
+    ullong_v*: get_ullong_vector, \
+    float_v*: get_float_vector, \
+    double_v*: get_double_vector, \
+    ldouble_v*: get_ldouble_vector, \
+    bool_v*: get_bool_vector, \
+    string_v*: get_string_vector) (vec, index)
+// ================================================================================
+// ================================================================================
+// VECTOR_LENGTH FUNCTIONS 
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type char_v 
+ * @returns Length of the vector
+ */
+size_t char_vector_length(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type uchar_v 
+ * @returns Length of the vector
+ */
+size_t uchar_vector_length(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type short_v 
+ * @returns Length of the vector
+ */
+size_t short_vector_length(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type ushort_v 
+ * @returns Length of the vector
+ */
+size_t ushort_vector_length(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type int_v 
+ * @returns Length of the vector
+ */
+size_t int_vector_length(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type uint_v 
+ * @returns Length of the vector
+ */
+size_t uint_vector_length(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type long_v 
+ * @returns Length of the vector
+ */
+size_t long_vector_length(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type ulong_v 
+ * @returns Length of the vector
+ */
+size_t ulong_vector_length(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type llong_v 
+ * @returns Length of the vector
+ */
+size_t llong_vector_length(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type ullong_v 
+ * @returns Length of the vector
+ */
+size_t ullong_vector_length(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type float_v 
+ * @returns Length of the vector
+ */
+size_t float_vector_length(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type double_v 
+ * @returns Length of the vector
+ */
+size_t double_vector_length(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type ldouble_v 
+ * @returns Length of the vector
+ */
+size_t ldouble_vector_length(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type bool_v 
+ * @returns Length of the vector
+ */
+size_t bool_vector_length(bool_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the vector length 
+ *
+ * @param vac A vector struct of type string_v 
+ * @returns Length of the vector
+ */
+size_t string_vector_length(string_v* vec);
+// --------------------------------------------------------------------------------
+
+#define vector_length(vec) _Generic((vec), \
+    char_v*: char_vector_length, \
+    uchar_v*: uchar_vector_length, \
+    short_v*: short_vector_length, \
+    ushort_v*: ushort_vector_length, \
+    int_v*: int_vector_length, \
+    uint_v*: uint_vector_length, \
+    long_v*: long_vector_length, \
+    ulong_v*: ulong_vector_length, \
+    llong_v*: llong_vector_length, \
+    ullong_v*: ullong_vector_length, \
+    float_v*: float_vector_length, \
+    double_v*: double_vector_length, \
+    ldouble_v*: ldouble_vector_length, \
+    bool_v*: bool_vector_length, \
+    string_v*: string_vector_length) (vec)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

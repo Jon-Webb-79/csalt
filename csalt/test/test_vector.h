@@ -43,6 +43,7 @@ void test_init_double_vector(void **state);
 void test_init_ldouble_vector(void **state);
 void test_init_bool_vector(void **state);
 void test_init_string_vector(void **state);
+void test_init_str_vector(void **state);
 
 #endif /* test_H */
 // ================================================================================

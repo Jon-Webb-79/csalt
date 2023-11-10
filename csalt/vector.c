@@ -1142,6 +1142,470 @@ bool push_string_vector(string_v* vec, const char* var, size_t index) {
 
     return true;
 }
+// --------------------------------------------------------------------------------
+
+bool push_str_vector(string_v* vec, str* var, size_t index) {
+    if (!vec || index > vec->len) {
+        fprintf(stderr, "Error: Invalid pointer or index passed to push_str_vector\n");
+        return false;
+    }
+
+    if ( !var || !var->data ) {
+        fprintf(stderr, "Error: Null str pointer passed to push_str_vector\n");
+        return false;
+    }
+
+    // Check if there is enough space, if not, then realloc
+    if (vec->alloc <= vec->len) {
+        size_t new_alloc = vec->alloc == 0 ? 1 : vec->alloc;
+        if (new_alloc < VEC_THRESHOLD) {
+            new_alloc *= 2;
+        } else {
+            new_alloc += VEC_FIXED_AMOUNT;
+        }
+
+        // Allocate more space for the array of str structs
+        str* new_data = realloc(vec->data, new_alloc * sizeof(str));
+        if (!new_data) {
+            fprintf(stderr, "Error: Realloc failed in push_str_vector\n");
+            return false;
+        }
+        vec->data = new_data;
+        vec->alloc = new_alloc;
+    }
+
+    // Make space for the new element
+    if (index < vec->len) {
+        memmove(vec->data + index + 1,
+                vec->data + index,
+                (vec->len - index) * sizeof(str));
+    }
+
+    // Allocate memory for the string and copy it
+    size_t str_len = strlen(var->data);
+    vec->data[index].data = malloc(var->alloc); // +1 for the null terminator
+    if (!vec->data[index].data) {
+        fprintf(stderr, "Error: String malloc failed in push_string_vector\n");
+        return false;
+    }
+    strcpy(vec->data[index].data, var->data);
+    vec->data[index].alloc = var->alloc;
+    vec->data[index].len = str_len;
+
+    // Increment the vector length only after successful insertion
+    vec->len++;
+
+    return true;
+}
+// ================================================================================
+// ================================================================================
+// GET_VECTOR FUNCTIONS
+
+char get_char_vector(char_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_char_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_char_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned char get_uchar_vector(uchar_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_uchar_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_uchar_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+short int get_short_vector(short_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_short_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_short_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int get_ushort_vector(ushort_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_ushort_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_ushort_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+int get_int_vector(int_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_int_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_int_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned int get_uint_vector(uint_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_uint_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_uint_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+long int get_long_vector(long_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_long_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_long_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int get_ulong_vector(ulong_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_ulong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_ulong_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+long long int get_llong_vector(llong_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_llong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_llong_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int get_ullong_vector(ullong_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_ulong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_ullong_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+float get_float_vector(float_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_float_vector\n");
+        errno = EINVAL;
+        return 0.0f;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_float_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0.0f; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+double get_double_vector(double_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_double_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_double_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0.0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+long double get_ldouble_vector(ldouble_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_ldouble_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_int_vector\n");
+        errno = ERANGE; // Result not within range
+        return 0.0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+bool get_bool_vector(bool_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_bool_vector\n");
+        errno = EINVAL;
+        return false;
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_bool_vector\n");
+        errno = ERANGE; // Result not within range
+        return false; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index];
+}
+// --------------------------------------------------------------------------------
+
+char* get_string_vector(string_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to get_string_vector\n");
+        errno = EINVAL;
+        return "\0";
+    }
+    if (index >= vec->len) {
+        fprintf(stderr, "Error: Index out of bounds in get_string_vector\n");
+        errno = ERANGE; // Result not within range
+        return "\0"; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return vec->data[index].data;
+}
+// ================================================================================
+// ================================================================================
+// VECTOR_LENGTH FUNCTIONS
+
+size_t char_vector_length(char_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t uchar_vector_length(uchar_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t short_vector_length(short_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ushort_vector_length(ushort_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t int_vector_length(int_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t uint_vector_length(uint_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t long_vector_length(long_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ulong_vector_length(ulong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t llong_vector_length(llong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ullong_vector_length(ullong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t float_vector_length(float_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t double_vector_length(double_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ldouble_vector_length(ldouble_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t bool_vector_length(bool_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t string_vector_length(string_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->len;
+}
 // ================================================================================
 // ================================================================================
 // eof

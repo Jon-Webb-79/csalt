@@ -132,7 +132,8 @@ const struct CMUnitTest test_vector[] = {
     cmocka_unit_test(test_init_double_vector),
     cmocka_unit_test(test_init_ldouble_vector),
     cmocka_unit_test(test_init_bool_vector),
-    cmocka_unit_test(test_init_string_vector)
+    cmocka_unit_test(test_init_string_vector),
+    cmocka_unit_test(test_init_str_vector)
 };
 // Begin code
 int main(int argc, const char * argv[]) {

@@ -30,10 +30,10 @@ void test_init_char_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -51,10 +51,10 @@ void test_init_uchar_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -72,10 +72,10 @@ void test_init_short_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -93,10 +93,10 @@ void test_init_ushort_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -114,10 +114,10 @@ void test_init_int_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -135,10 +135,10 @@ void test_init_uint_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -156,10 +156,10 @@ void test_init_long_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+         assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -177,10 +177,10 @@ void test_init_ulong_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -198,10 +198,10 @@ void test_init_llong_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -219,10 +219,10 @@ void test_init_ullong_vector(void **state)
     push_vector(vec, 4, 0);
     int a[4] = { 4, 1, 2, 3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -240,10 +240,10 @@ void test_init_float_vector(void **state)
     push_vector(vec, 4.4f, 0);
     float a[4] = { 4.4, 1.1, 2.2, 3.3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_float_equal(a[i], vec->data[i], 1.0e-3);
+        assert_float_equal(a[i], get_vector(vec, i), 1.0e-3);
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -261,10 +261,10 @@ void test_init_double_vector(void **state)
     push_vector(vec, 4.4, 0);
     double a[4] = { 4.4, 1.1, 2.2, 3.3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_double_equal(a[i], vec->data[i], 1.0e-3);
+        assert_double_equal(a[i], get_vector(vec, i), 1.0e-3);
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -282,10 +282,10 @@ void test_init_ldouble_vector(void **state)
     push_vector(vec, 4.4, 0);
     double a[4] = { 4.4, 1.1, 2.2, 3.3 };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_double_equal(a[i], vec->data[i], 1.0e-3);
+        assert_double_equal(a[i], get_vector(vec, i), 1.0e-3);
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -303,10 +303,10 @@ void test_init_bool_vector(void **state)
     push_vector(vec, false, 0);
     bool a[4] = { false, true, true, false };
     for (size_t i = 0; i < vec->len; i++) {
-        assert_int_equal(a[i], vec->data[i]);
+        assert_int_equal(a[i], get_vector(vec, i));
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
 }
 // --------------------------------------------------------------------------------
@@ -322,13 +322,50 @@ void test_init_string_vector(void **state)
     push_vector(vec, "Two", vec->len);
     push_vector(vec, "Three", vec->len);
     push_vector(vec, "Four", 0);
+    size_t b[4] = {4, 3, 3, 5 };
+    size_t c[4] = {5, 4, 4, 6 };
     char *a[4] = {"Four", "One", "Two", "Three"};
     for (size_t i = 0; i < vec->len; i++) {
-        assert_string_equal(a[i], vec->data[i].data);
+        assert_string_equal(a[i], get_vector(vec, i));
+        assert_int_equal(b[i], vec->data[i].len);
+        assert_int_equal(c[i], vec->data[i].alloc);
     }
     assert_int_equal(vec->alloc, 20);
-    assert_int_equal(vec->len, 4);
+    assert_int_equal(vector_length(vec), 4);
     free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test the basic vector attributes of init, push and free for string data type.
+ */
+void test_init_str_vector(void **state)
+{
+	(void) state;
+    string_v* vec = init_vector(dString)(20);
+    str* one = init_string("One");
+    str* two = init_string("Two", 20);
+    str* three = init_string("Three");
+    str* four = init_string("Four");
+    push_str_vector(vec, one, vec->len);
+    push_str_vector(vec, two, vec->len);
+    push_str_vector(vec, three, vec->len);
+    push_str_vector(vec, four, 0);
+    char *a[4] = {"Four", "One", "Two", "Three"};
+    size_t b[4] = {4, 3, 3, 5};
+    size_t c[4] = {5, 4, 20, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_string_equal(a[i], get_vector(vec, i));
+        assert_int_equal(b[i], vec->data[i].len);
+        assert_int_equal(c[i], vec->data[i].alloc);
+    }
+    assert_int_equal(vec->alloc, 20);
+    assert_int_equal(vector_length(vec), 4);
+    free_vector(vec);
+    free_string(one);
+    free_string(two);
+    free_string(three);
+    free_string(four);
 }
 // ================================================================================
 // ================================================================================
