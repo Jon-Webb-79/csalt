@@ -929,6 +929,12 @@ size_t bool_vector_length(bool_v* vec);
 size_t string_vector_length(string_v* vec);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Macro to return the length of a vector to the user 
+ *
+ * @param vec A vector struct
+ * @return The length of a vector
+ */
 #define vector_length(vec) _Generic((vec), \
     char_v*: char_vector_length, \
     uchar_v*: uchar_vector_length, \
@@ -945,6 +951,167 @@ size_t string_vector_length(string_v* vec);
     ldouble_v*: ldouble_vector_length, \
     bool_v*: bool_vector_length, \
     string_v*: string_vector_length) (vec)
+// ================================================================================
+// ================================================================================
+// VECTOR_MEMORY FUNCTIONS 
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type char_v 
+ * @return The memory allocated in units of indices
+ */
+size_t char_vector_memory(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type uchar_v 
+ * @return The memory allocated in units of indices
+ */
+size_t uchar_vector_memory(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type short_v 
+ * @return The memory allocated in units of indices
+ */
+size_t short_vector_memory(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type ushort_v 
+ * @return The memory allocated in units of indices
+ */
+size_t ushort_vector_memory(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type int_v 
+ * @return The memory allocated in units of indices
+ */
+size_t int_vector_memory(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type uint_v 
+ * @return The memory allocated in units of indices
+ */
+size_t uint_vector_memory(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type long_v 
+ * @return The memory allocated in units of indices
+ */
+size_t long_vector_memory(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type ulong_v 
+ * @return The memory allocated in units of indices
+ */
+size_t ulong_vector_memory(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type llong_v 
+ * @return The memory allocated in units of indices
+ */
+size_t llong_vector_memory(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type ullong_v 
+ * @return The memory allocated in units of indices
+ */
+size_t ullong_vector_memory(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type float_v 
+ * @return The memory allocated in units of indices
+ */
+size_t float_vector_memory(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type double_v 
+ * @return The memory allocated in units of indices
+ */
+size_t double_vector_memory(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type ldouble_v 
+ * @return The memory allocated in units of indices
+ */
+size_t ldouble_vector_memory(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type bool_v 
+ * @return The memory allocated in units of indices
+ */
+size_t bool_vector_memory(bool_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct of type string_v 
+ * @return The memory allocated in units of indices
+ */
+size_t string_vector_memory(string_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a vector in number of indices 
+ *
+ * @param vec A vector struct 
+ * @return The allocated memory in units of indices 
+ */
+#define vector_memory(vec) _Generic((vec), \
+    char_v*: char_vector_memory, \
+    uchar_v*: uchar_vector_memory, \
+    short_v*: short_vector_memory, \
+    ushort_v*: ushort_vector_memory, \
+    int_v*: int_vector_memory, \
+    uint_v*: uint_vector_memory, \
+    long_v*: long_vector_memory, \
+    ulong_v*: ulong_vector_memory, \
+    llong_v*: llong_vector_memory, \
+    ullong_v*: ullong_vector_memory, \
+    float_v*: float_vector_memory, \
+    double_v*: double_vector_memory, \
+    ldouble_v*: ldouble_vector_memory, \
+    bool_v*: bool_vector_memory, \
+    string_v*: string_vector_memory) (vec)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

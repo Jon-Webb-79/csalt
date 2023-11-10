@@ -1608,4 +1608,171 @@ size_t string_vector_length(string_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+
+size_t char_vector_memory(char_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t uchar_vector_memory(uchar_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t short_vector_memory(short_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ushort_vector_memory(ushort_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t int_vector_memory(int_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+
+size_t uint_vector_memory(uint_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t long_vector_memory(long_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ulong_vector_memory(ulong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t llong_vector_memory(llong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ullong_vector_memory(ullong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t float_vector_memory(float_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t double_vector_memory(double_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ldouble_vector_memory(ldouble_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t bool_vector_memory(bool_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t string_vector_memory(string_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to char_vector_memory\n");
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return vec->alloc;
+}
+// ================================================================================
+// ================================================================================
 // eof

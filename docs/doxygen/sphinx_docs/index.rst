@@ -20,6 +20,7 @@ of old C programmers.  Hen the name C Salt (i.e.csalt).
 
     Print <Print>
     Strings <Strings>
+    Vector <Vector>
 
 Indices and tables
 ==================
