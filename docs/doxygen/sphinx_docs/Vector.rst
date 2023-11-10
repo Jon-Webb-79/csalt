@@ -75,3 +75,32 @@ data type is further described in the :ref:`String <string_struct>` section of t
    VECTOR_STRUCT(long double, ldouble_v);
    VECTOR_STRUCT(bool, bool_v);
    VECTOR_STRUCT(str, string_v);
+
+.. _type_enum:
+
+Enum Data Types 
+---------------
+This ``vector.h`` header file relies on the ``dtype`` enum stored in ``admin.h``
+to identify the data type of an instantiated vector.  The possible enum values
+that can be used are shown below and are further described in the upcoming sections 
+of this document.
+
+.. code-block:: c
+
+   typedef enum {
+       dChar,  // Keyword for a char data type as an integer data type 
+       dUChar,  // keyword for unsigned char data type as an integer data type 
+       dShort,  // Keyword for short int data type 
+       dUShort,  // Keyword for unsigned short int data type 
+       dInt,  // Keyword for int data type 
+       dUInt,  // Keyword for unsigned int data type 
+       dLong,  // Keyword for long int data type 
+       dULong,  // Keyword for unsigned long int data type 
+       dLongLong,  // Keyword for long long int data type 
+       dULongLong,  // Keyword for unsigned long long int data type 
+       dFloat,  // Keyword for float data type 
+       dDouble,  // Keyword for double data type 
+       dLDouble,  // Keyword for long double data type 
+       dBool,  // Keyword for bool data type 
+       dString  // Keyword for str data type
+   } dtype;
