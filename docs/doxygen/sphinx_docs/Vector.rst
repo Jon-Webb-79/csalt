@@ -104,3 +104,68 @@ of this document.
        dBool,  // Keyword for bool data type 
        dString  // Keyword for str data type
    } dtype;
+
+Initialize Vector 
+=================
+The ``vector.h`` header file provides the ``init_vector`` function for 
+initializing dynamically allocated arrays. This function is essentially a 
+function pointer, intelligently selecting the appropriate initialization 
+function based on the specified data type.
+
+.. code-block:: c
+
+   type init_vector(dtype dat_type)(size_t buff);
+
+Parameters 
+----------
+
+- :c:`dat_type`: The data type for the vector, represented by a ``dtype`` enum keyword as described in :ref:`Enum Data Types <type_enum>`.
+- :c:`buff`: An initial buffer size, indicating the number of indices to be allocated.
+
+Returns
+-------
+
+- :c:`type`: A struct representing the vector of the specified type, as outlined in the :ref:`Derived Data Types <vector_dat_type>` section.
+
+Example 
+-------
+Below is an example of using the ``init_vector`` function to create a dynamically 
+allocated vector of type ``float_v`` with an initial capacity of 5 indices.
+
+.. code-block:: c 
+
+   #include "vector.h"
+
+   int main() {
+       float_v* vec = init_vector(dFloat)(5);
+       // Operations on the vector...
+       // Remember to free dynamically allocated memory
+       free_vector(vec);
+       return 0;
+   }
+
+.. note:: The ``init_vector`` function abstracts the complexity of vector initialization, providing a straightforward way to instantiate vectors. It is crucial to manage the memory of these vectors properly, which includes freeing them after use.
+
+Underlying Functions 
+--------------------
+The ``init_vector`` selects from one of the functions below to initialize 
+a dynamically allocated array.  If the user desires, they can directly select 
+one of these functions instead of using the ``init_vector`` function.
+
+.. code-block:: c
+
+   char_v* init_char_vector(size_t buff);
+   uchar_v* init_uchar_vector(size_t buff);
+   short_v* init_short_vector(size_t buff);
+   ushort_v* init_ushort_vector(size_t buff);
+   int_v* init_int_vector(size_t buff);
+   uint_v* init_uint_vector(size_t buff);
+   long_v* init_long_vector(size_t buff);
+   ulong_v* init_ulong_vector(size_t buff);
+   llong_v* init_llong_vector(size_t buff);
+   ullong_v* init_ullong_vector(size_t buff);
+   float_v* init_float_vector(size_t buff);
+   double_v* init_double_vector(size_t buff);
+   ldouble_v* init_ldouble_vector(size_t buff);
+   bool_v* init_bool_vector(size_t buff);
+   string_v* init_string_vector(size_t buff);
