@@ -1400,7 +1400,7 @@ long double get_ldouble_vector(ldouble_v* vec, size_t index) {
         return 0.0;
     }
     if (index >= vec->len) {
-        fprintf(stderr, "Error: Index out of bounds in get_int_vector\n");
+        fprintf(stderr, "Error: Index out of bounds in get_ldoble_vector\n");
         errno = ERANGE; // Result not within range
         return 0.0; // Return value is irrelevant as we're signaling an error with errno
     }
@@ -1456,7 +1456,7 @@ size_t char_vector_length(char_v* vec) {
 
 size_t uchar_vector_length(uchar_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to uchar_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1467,7 +1467,7 @@ size_t uchar_vector_length(uchar_v* vec) {
 
 size_t short_vector_length(short_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to short_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1478,7 +1478,7 @@ size_t short_vector_length(short_v* vec) {
 
 size_t ushort_vector_length(ushort_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to ushort_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1489,7 +1489,7 @@ size_t ushort_vector_length(ushort_v* vec) {
 
 size_t int_vector_length(int_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to int_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1500,7 +1500,7 @@ size_t int_vector_length(int_v* vec) {
 
 size_t uint_vector_length(uint_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to uint_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1511,7 +1511,7 @@ size_t uint_vector_length(uint_v* vec) {
 
 size_t long_vector_length(long_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to long_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1522,7 +1522,7 @@ size_t long_vector_length(long_v* vec) {
 
 size_t ulong_vector_length(ulong_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to ulong_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1533,7 +1533,7 @@ size_t ulong_vector_length(ulong_v* vec) {
 
 size_t llong_vector_length(llong_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to llong_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1544,7 +1544,7 @@ size_t llong_vector_length(llong_v* vec) {
 
 size_t ullong_vector_length(ullong_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to ullong_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1555,7 +1555,7 @@ size_t ullong_vector_length(ullong_v* vec) {
 
 size_t float_vector_length(float_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to float_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1566,7 +1566,7 @@ size_t float_vector_length(float_v* vec) {
 
 size_t double_vector_length(double_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to double_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1577,7 +1577,7 @@ size_t double_vector_length(double_v* vec) {
 
 size_t ldouble_vector_length(ldouble_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to ldouble_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1588,7 +1588,7 @@ size_t ldouble_vector_length(ldouble_v* vec) {
 
 size_t bool_vector_length(bool_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to bool_vector_length\n");
         errno = EINVAL;
         return 0;
     }
@@ -1599,7 +1599,7 @@ size_t bool_vector_length(bool_v* vec) {
 
 size_t string_vector_length(string_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
-        fprintf(stderr, "Error: Null pointer passed to char_vector_length\n");
+        fprintf(stderr, "Error: Null pointer passed to string_vector_length\n");
         errno = EINVAL;
         return 0;
     }

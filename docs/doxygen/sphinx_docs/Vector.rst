@@ -397,6 +397,106 @@ the functions themselves which are shown below.
    void free_bool_vector(bool_v* vec);
    void free_string_vector(string_v* vec);
 
+Get Vector Data 
+===============
+Retrieving data from a dynamically allocated vector based on an index is a 
+common operation. Direct access to the ``data`` attribute is possible but risky, 
+as it might lead to accidental overwriting or misinterpretation of data. To 
+standardize data access and mitigate these risks, the ``get_vector`` macro was 
+developed. This macro uses the ``_Generic`` keyword to intelligently select the 
+appropriate function based on the vector's data type.
+
+.. code-block:: c
+
+   #define get_vector(vec, index) (/* Expression to retrieve data */)
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure as defined in :ref:`Vector Data Types <vector_dat_type>`.
+- :c:`index`: The index from which to retrieve data.
+
+Returns 
+-------
+
+- The value at the specified index in the vector. The return type matches the vector's data type.
+
+Example 1
+---------
+Demonstrating how to safely access data from a vector using the `get_vector` macro:
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       uint_v* vec = init_vector(dUInt)(5);
+       push_vector(vec, 2, vector_length(vec));
+       push_vector(vec, 12, vector_length(vec));
+       push_vector(vec, 22, vector_length(vec));
+       push_vector(vec, 1, vector_length(vec));
+       push_vector(vec, 80, vector_length(vec));
+       print("Index 2: ", get_vector(vec, 2));
+       print("Index 0: ", get_vector(vec, 0));
+       // This method works, but should be avoided for safety
+       print("Index 3: ", vec->data[3]);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Index 2: 22
+   >> Index 0: 0
+   >> Index 3: 1
+
+Example 2
+---------
+Error handling in `get_vector` includes detecting null pointers and out-of-bounds 
+indices:
+
+.. code-block:: c 
+
+   #include "vector.h"
+
+   int main() {
+       bool_v* vec = init_vector(dBool)(3)
+       push_vector(vec, true, vector_length(vec));
+       push_vector(vec, true, vector_length(vec));
+       push_vector(vec, false, vector_length(vec));
+       bool len = get_vector(vec, 6);
+       if (errno == ERANGE) print("Failure");
+   }
+
+.. code-block:: bash 
+
+   >> Error: Index out of bounds in get_bool_vector
+   >> Failure
+
+Underlying Functions 
+--------------------
+The ``get_vector`` macro utilizes ``_Generic`` for type-safe and convenient data 
+access. These underlying functions can be used directly for more control:
+
+.. code-block:: c
+
+   char get_char_vector(char_v* vec, size_t index);
+   unsigned char get_uchar_vector(uchar_v* vec, size_t index);
+   short int get_short_vector(short_v* vec, size_t index);
+   unsigned short int get_ushort_vector(ushort_v* vec, size_t index);
+   int get_int_vector(int_v* vec, size_t index);
+   unsigned int get_uint_vector(uint_v* vec, size_t index);
+   long int get_long_vector(long_v* vec, size_t index);
+   unsigned long int get_ulong_vector(ulong_v* vec, size_t index);
+   long long int get_llong_vector(llong_v* vec, size_t index);
+   unsigned long long int get_ullong_vector(ullong_v* vec, size_t index);
+   float get_float_vector(float_v* vec, size_t index);
+   double get_double_vector(double_v* vec, size_t index);
+   long double get_ldouble_vector(ldouble_v* vec, size_t index);
+   bool get_bool_vector(bool_v* vec, size_t index);
+   char* get_string_vector(string_v* vec, size_t index);
+
 Vector Length 
 =============
 The length of a dynamically allocated vector is maintained in the ``len`` 
@@ -414,14 +514,15 @@ Parameters
 ----------
 
 - :c:`vec`: A vector data structure from the :ref:`Vector Data Types <vector_dat_type>` section.
+- :c:`index`: The position within the index where data will be retrieved from.
 
 Returns 
 -------
 
 - The length of the actively populated vector, returned as a ``size_t`` type.
 
-Example 
--------
+Example 1
+---------
 This example demonstrates how to access the vector length using the ``vector_length`` 
 macro, compared to directly accessing the struct attribute. The latter should 
 be avoided to reduce the risk of unintentional modifications.
@@ -442,6 +543,7 @@ be avoided to reduce the risk of unintentional modifications.
        push_vector(vec, 7.7f, vec->len);
        print("Vector: ", vec);
        print("Vector Length: ", vector_length(vec));
+       free_vector(vec);
        return 0;
    }
 
@@ -449,6 +551,30 @@ be avoided to reduce the risk of unintentional modifications.
 
    >> Vector: [ 2.1, 7.4, 1.1, 43.5, 13.8, 7.7 ]
    >> Vector Length: 6
+
+Example 2
+---------
+It is possible to pass a NULL pointer to the ``vector_length`` macro 
+or a struct with a NULL pointer to data.  In this case, the ``vector_length``
+macro will throw a value of ``EINVAL`` to ``errno`` which can be checked
+to handle the error.  In this instance, the underlying functions will 
+return a value of 0, false, or a string with nothing but a null terminator.
+In addition, the function will print an error to ``stderr``.
+
+.. code-block:: c 
+
+   #include "vector.h"
+
+   int main() {
+       bool_v vec = {.data = NULL, .len = 0, .alloc = 0};
+       size_t len = vector_length(&vec);
+       if (errno == EINVAL) print("Failure");
+   }
+
+.. code-block:: bash 
+
+   >> Error: Null pointer passed to bool_vector_length 
+   >> Failure
 
 Underlying Functions 
 --------------------
