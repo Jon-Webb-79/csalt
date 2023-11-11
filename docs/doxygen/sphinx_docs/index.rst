@@ -14,6 +14,8 @@ idea to someone who was very seasoned in the C language, he described the concep
 as being so alien to the C language, that it was like puring salt into the wounds
 of old C programmers.  Hen the name C Salt (i.e.csalt).
 
+.. note:: This library does not uses ``char`` or ``unsigned char`` data types to represent characters, but instead to represent 8-bit integers.  Within this library char values are represented in string literals and the ``str`` derived data type
+
 .. toctree::
    :maxdepth: 1
    :caption: Contents:

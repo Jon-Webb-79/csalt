@@ -25,6 +25,7 @@
 #include <fcntl.h>
 
 #include "../include/vector.h"
+#include "../include/print.h"
 // ================================================================================
 // ================================================================================
 // TEST INIT, PUSH, and FREE FUNCTIONS
@@ -94,6 +95,7 @@ void test_get_bool_vector_null_data(void **state);
 void test_get_bool_vector_index_out_of_bounds(void **state);
 void test_get_string_vector_null_struct(void **state);
 void test_get_string_vector_null_data(void **state);
+void test_print(void **state);
 // ================================================================================
 // ================================================================================
 

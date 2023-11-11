@@ -79,7 +79,7 @@ data type is further described in the :ref:`String <string_struct>` section of t
 .. _type_enum:
 
 Enum Data Types 
----------------
+===============
 This ``vector.h`` header file relies on the ``dtype`` enum stored in ``admin.h``
 to identify the data type of an instantiated vector.  The possible enum values
 that can be used are shown below and are further described in the upcoming sections 

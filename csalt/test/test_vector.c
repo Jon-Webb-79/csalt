@@ -987,6 +987,17 @@ void test_get_string_vector_null_data(void **state) {
     assert_int_equal(errno, EINVAL);
     assert_string_equal(result, "\0");
 }
+// --------------------------------------------------------------------------------
+
+void test_print(void **state) {
+    float_v* vec = init_vector(dFloat)(5);
+    push_vector(vec, 1.0f, vec->len);
+    push_vector(vec, 2.0f, vec->len);
+    push_vector(vec, 3.0f, vec->len);
+    push_vector(vec, 4.0f, 0);
+    print(vec);
+    free_vector(vec);
+}
 // ================================================================================
 // ================================================================================
 // eof

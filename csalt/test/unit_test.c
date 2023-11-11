@@ -177,7 +177,7 @@ const struct CMUnitTest test_vector[] = {
     cmocka_unit_test(test_get_bool_vector_null_data),
     cmocka_unit_test(test_get_bool_vector_index_out_of_bounds),
     cmocka_unit_test(test_get_string_vector_null_struct), 
-    cmocka_unit_test(test_get_string_vector_null_data)
+    cmocka_unit_test(test_get_string_vector_null_data),
 };
 // Begin code
 int main(int argc, const char * argv[]) {

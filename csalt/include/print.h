@@ -22,8 +22,9 @@
 #include <stdio.h>
 
 #include "str.h"
+#include "vector.h"
 
-//extern const size_t PRINT_LENGTH;
+extern const size_t PRINT_LENGTH;
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,6 +47,21 @@ extern "C" {
 										 bool: true, \
 									     char*: true, \
                                          str*: true, \
+                                         char_v*: true, \
+                                         uchar_v*: true, \
+                                         short_v*: true, \
+                                         ushort_v*: true, \
+                                         int_v*: true, \
+                                         uint_v*: true, \
+                                         long_v*: true, \
+                                         ulong_v*: true, \
+                                         llong_v*: true, \
+                                         ullong_v*: true, \
+                                         float_v*: true, \
+                                         double_v*: true, \
+                                         ldouble_v*: true, \
+                                         bool_v*: true, \
+                                         string_v*: true, \
 										 default: false)
 // ================================================================================
 // ================================================================================
@@ -73,6 +89,27 @@ void print_sstring(str* x);
 // ================================================================================
 
 /**
+ * Prototypes for prting of all vector data types.
+ */
+void print_char_vector(char_v* vec);
+void print_uchar_vector(uchar_v* vec);
+void print_short_vector(short_v* vec);
+void print_ushort_vector(ushort_v* vec);
+void print_int_vector(int_v* vec);
+void print_uint_vector(uint_v* vec);
+void print_long_vector(long_v* vec);
+void print_ulong_vector(ulong_v* vec);
+void print_llong_vector(llong_v* vec);
+void print_ullong_vector(ullong_v* vec);
+void print_float_vector(float_v* vec);
+void print_double_vector(double_v* vec);
+void print_ldouble_vector(ldouble_v* vec);
+void print_bool_vector(bool_v* vec);
+void print_string_vector(string_v* vec);
+// ================================================================================
+// ================================================================================
+
+/**
  * Macro using _Generic operator to determine which functions get implemented
  * in a print statement.
  */
@@ -89,7 +126,22 @@ void print_sstring(str* x);
 									   unsigned int: print_uint, \
 									   bool: print_bool, \
                                        str*: print_sstring, \
-									   char*: print_string)(T)
+									   char*: print_string, \
+                                       char_v*: print_char_vector, \
+                                       uchar_v*: print_uchar_vector, \
+                                       short_v*: print_short_vector, \
+                                       ushort_v*: print_ushort_vector, \
+                                       int_v*: print_int_vector, \
+                                       uint_v*: print_uint_vector, \
+                                       long_v*: print_long_vector, \
+                                       ulong_v*: print_ulong_vector, \
+                                       llong_v*: print_llong_vector, \
+                                       ullong_v*: print_ullong_vector, \
+                                       float_v*: print_float_vector, \
+                                       double_v*: print_double_vector, \
+                                       ldouble_v*: print_ldouble_vector, \
+                                       bool_v*: print_bool_vector, \
+                                       string_v*: print_string_vector)(T)
 // ================================================================================
 // ================================================================================
 
