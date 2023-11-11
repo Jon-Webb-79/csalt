@@ -169,3 +169,144 @@ one of these functions instead of using the ``init_vector`` function.
    ldouble_v* init_ldouble_vector(size_t buff);
    bool_v* init_bool_vector(size_t buff);
    string_v* init_string_vector(size_t buff);
+
+Pushing Data to Vectors
+=======================
+The ``push_vector`` macro in the ``vector.h`` header file provides a versatile 
+way to insert data into dynamically allocated vectors. Unlike traditional 
+stack operations that adhere to a LIFO approach, this macro allows inserting 
+data at any specified index, offering greater flexibility in managing vector 
+elements. 
+
+The macro employs the ``_Generic`` keyword to determine the correct function for the 
+data type being inserted. This design makes ``push_vector`` a convenient and 
+type-safe way to work with vectors of different data types.
+
+.. code-block:: c
+
+   #define push_vector(dat_type, dat, index)
+
+Parameters 
+----------
+
+- :c:`dat_type`: The vector struct instance.
+- :c:`dat`: The data to be inserted, compatible with the vector's data type.
+- :c:`index`: The index at which to insert the data.
+
+Returns 
+-------
+
+- Returns `true` if the data is successfully inserted into the vector, `false` otherwise.
+
+.. note:: The function returns ``false`` and prints an error message to ``stderr`` in cases such as NULL vector pointers, index out of bounds, or memory allocation failures.
+
+Example 1
+---------
+This example demonstrates inserting unsigned integers into a vector using the 
+``len`` attribute to append data at the end or insert at a specific index.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       uint_v* vec = init_vector(dUInt)(4);
+       push_vector(vec, 1, vec->len);
+       push_vector(vec, 2, vec->len);
+       push_vector(vec, 3, vec->len);
+       push_vector(vec, 4, 0);
+       print(vec);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> [ 4, 1, 2, 3 ]
+
+Example 2
+---------
+An example showing how to insert string literals into a dynamically allocated 
+vector.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       string_v* vec = init_vector(dString)(4);
+       push_vector(vec, "One", vec->len);
+       push_vector(vec, "Two", vec->len);
+       push_vector(vec, "Three", vec->len);
+       push_vector(vec, "Four", 0);
+       print(vec);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> [ Four, One, Two, Three ]
+
+.. _push_str_dat:
+
+Example 3
+---------
+An example that demonstrates how to add ``str`` data to a dynamically allocated 
+vector.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+   #include "str.h"
+
+   int main() {
+       str one =  {.data = "One", .len = 3, .alloc = 4};
+       str two = {.data = "Two", .len = 3, .alloc = 4};
+       str three = {.data = "Three", .len = 5, .alloc = 6};
+       str four = {.data = "Four", .len = 4, .alloc = 5};
+
+       string_v* vec = init_vector(dString)(4);
+       push_str_vector(vec, &one, vec->len);
+       push_str_vector(vec, &two, vec->len);
+       push_str_vector(vec, &three, vec->len);
+       push_str_vector(vec, &four, 0);
+       print(vec);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> [ Four, One, Two, Three ]
+
+
+Underlying Functions 
+--------------------
+While the ``push_vector`` macro is the recommended approach due to its ease of 
+use and type safety, direct use of underlying functions is also possible. 
+These functions are particularly useful in scenarios where more control or 
+specific behavior is required.
+
+.. code-block:: c
+
+   bool push_char_vector(char_v* vec, char var, size_t index);
+   bool push_uchar_vector(uchar_v* vec, unsigned char var, size_t index);
+   bool push_short_vector(short_v* vec, short int var, size_t index);
+   bool push_ushort_vector(ushort_v* vec, unsigned short int var, size_t index);
+   bool push_int_vector(int_v* vec, int var, size_t index);
+   bool push_uint_vector(uint_v* vec, unsigned int var, size_t index);
+   bool push_long_vector(long_v* vec, long int var, size_t index);
+   bool push_ulong_vector(ulong_v* vec, unsigned long int var, size_t index);
+   bool push_llong_vector(llong_v* vec, long long int var, size_t index);
+   bool push_ullong_vector(ullong_v* vec, unsigned long long int var, size_t index);
+   bool push_float_vector(float_v* vec, float var, size_t index);
+   bool push_double_vector(double_v* vec, double var, size_t index);
+   bool push_ldouble_vector(ldouble_v* vec, long double var, size_t index);
+   bool push_bool_vector(bool_v* vec, bool var, size_t index);
+   bool push_string_vector(string_v* vec, const char* var, size_t index);
+   bool push_str_vector(string_v* vec, str* var, size_t index);
+
