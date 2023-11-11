@@ -569,7 +569,6 @@ In addition, the function will print an error to ``stderr``.
        bool_v vec = {.data = NULL, .len = 0, .alloc = 0};
        size_t len = vector_length(&vec);
        if (errno == EINVAL) print("Failure");
-   }
 
 .. code-block:: bash 
 
@@ -600,3 +599,92 @@ functions directly in advanced scenarios.
    size_t ldouble_vector_length(ldouble_v* vec);
    size_t bool_vector_length(bool_v* vec);
    size_t string_vector_length(string_v* vec);
+
+Get Vector Memory 
+=================
+Retrieving the memory allocation for a vector, measured by the number of 
+allocated indices, can be done through the ``alloc`` attribute of the vector 
+struct. Direct access to this attribute, however, poses a risk of accidental 
+overwriting, which could lead to unintended behavior. The ``vector_memory`` 
+macro provides a safe way to access this information without directly exposing 
+the ``alloc`` attribute.
+
+.. code-block:: c
+
+   #define vector_memory(vec) (/* Expression to retrieve memory allocation */) 
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure as defined in :ref:`Vector Data Types <vector_dat_type>`.
+
+Returns 
+-------
+
+- The number of indices allocated in memory for the vector, returned as a `size_t`.
+
+Example 1
+---------
+Demonstrating how to retrieve the memory allocation using the ``vector_memory`` macro:
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       float_v* vec = init_vector(dFloat)(15);
+       // ...pushing data into vec...
+       print("Vector Memory: ", vector_memory(vec));
+       free_vector(vec); 
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Vector Memory: 15 
+
+Example 2
+---------
+Error handling for scenarios where a NULL pointer is passed:
+
+.. code-block:: c 
+
+   #include "vector.h"
+
+   int main() {
+       bool_v* vec = NULL;
+       errno = 0; // Reset errno before calling vector_memory
+       size_t mem = vector_memory(vec);
+       if (errno == EINVAL) print("Failure: Null pointer error.");
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Failure: Null pointer error.
+
+Underlying Functions 
+--------------------
+The ``vector_memory`` macro employs the ``_Generic`` keyword to select the 
+appropriate function based on the vector's data type. While using the macro is 
+recommended, developers have the option to directly use the underlying functions 
+for specific requirements.
+
+.. code-block:: c 
+
+   size_t char_vector_memory(char_v* vec);
+   size_t uchar_vector_memory(uchar_v* vec);
+   size_t short_vector_memory(short_v* vec);
+   size_t ushort_vector_memory(ushort_v* vec);
+   size_t int_vector_memory(int_v* vec);
+   size_t uint_vector_memory(uint_v* vec);
+   size_t long_vector_memory(long_v* vec);
+   size_t ulong_vector_memory(ulong_v* vec);
+   size_t llong_vector_memory(llong_v* vec);
+   size_t ullong_vector_memory(ullong_v* vec);
+   size_t float_vector_memory(float_v* vec);
+   size_t double_vector_memory(double_v* vec);
+   size_t ldouble_vector_memory(ldouble_v* vec);
+   size_t bool_vector_memory(bool_v* vec);
+   size_t string_vector_memory(string_v* vec);
