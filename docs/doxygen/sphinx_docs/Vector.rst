@@ -127,6 +127,8 @@ Returns
 
 - :c:`type`: A struct representing the vector of the specified type, as outlined in the :ref:`Derived Data Types <vector_dat_type>` section.
 
+.. note:: The buffer size is only a guess, if the user exceeds this value, the underyling functions will allocate more memory in a geometric fashion, until the arrays becomes to large and then it will allocate in a linear fashion.
+
 Example 
 -------
 Below is an example of using the ``init_vector`` function to create a dynamically 
@@ -310,3 +312,165 @@ specific behavior is required.
    bool push_string_vector(string_v* vec, const char* var, size_t index);
    bool push_str_vector(string_v* vec, str* var, size_t index);
 
+Free Vector 
+===========
+The ``free_vector`` macro is designed to facilitate the proper freeing of 
+dynamically allocated vector data structures. It employs the ``_Generic`` 
+keyword to intelligently select the appropriate deallocation function based 
+on the vector's data type.  The underlying functions return a void data type.
+
+.. note:: **Caution:** Avoid freeing a vector more than once. While the underlying functions in this library are designed to handle double-free attempts gracefully, double freeing is generally considered bad practice and can lead to undefined behavior in C.
+
+.. code-block:: c
+
+   #define free_vector(vec)
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure of any type listed in the :ref:`Vector Data Types <vector_dat_type>` section.
+
+Usage Examples
+--------------
+
+Example 1: Proper Use
+^^^^^^^^^^^^^^^^^^^^^
+This example demonstrates the correct way to free a vector data structure.
+
+.. code-block:: c 
+
+   #include "vector.h"
+
+   int main() {
+       int_v* vec = init_vector(dInt)(4);
+       push_vector(vec, 1, vector_length(vec));
+       push_vector(vec, 2, vector_length(vec));
+       push_vector(vec, 3, vector_length(vec));
+       push_vector(vec, 4, vector_length(vec));
+       free_vector(vec);
+       return 0;
+   }
+
+Example 2: What to Avoid
+^^^^^^^^^^^^^^^^^^^^^^^^
+The following is an example of improper usage, where the vector is freed twice. 
+This is **not** recommended and is shown here for educational purposes only.
+
+.. code-block:: c 
+
+   #include "vector.h"
+
+   int main() {
+       int_v* vec = init_vector(dInt)(4);
+       push_vector(vec, 1, vector_length(vec));
+       push_vector(vec, 2, vector_length(vec));
+       push_vector(vec, 3, vector_length(vec));
+       push_vector(vec, 4, vector_length(vec));
+       free_vector(vec);
+       // Improper usage: Avoid double freeing a vector
+       free_vector(vec);
+       return 0;
+   }
+
+Underlying Functions 
+--------------------
+The ``free_vector`` macro uses the ``_Generic`` keyword to select the proper 
+function based on the type of the input variable.  While it is recommended that 
+a developer use the ``free_vector`` macro, they can also directly interact with 
+the functions themselves which are shown below.
+
+.. code-block:: c
+
+   void free_char_vector(char_v* vec);
+   void free_uchar_vector(uchar_v* vec);
+   void free_short_vector(short_v* vec);
+   void free_ushort_vector(ushort_v* vec);
+   void free_int_vector(int_v* vec);
+   void free_uint_vector(uint_v* vec);
+   void free_long_vector(long_v* vec);
+   void free_ulong_vector(ulong_v* vec);
+   void free_llong_vector(llong_v* vec);
+   void free_ullong_vector(ullong_v* vec);
+   void free_float_vector(float_v* vec);
+   void free_double_vector(double_v* vec);
+   void free_ldouble_vector(ldouble_v* vec);
+   void free_bool_vector(bool_v* vec);
+   void free_string_vector(string_v* vec);
+
+Vector Length 
+=============
+The length of a dynamically allocated vector is maintained in the ``len`` 
+attribute of the vector struct. While it's technically possible to access 
+this attribute directly, doing so can be risky as it might lead to accidental 
+modification of the length. To safely retrieve the vector's length without 
+exposing the internal attribute for modification, the ``vector_length`` macro 
+is provided.
+
+.. code-block:: c
+
+   #define vector_length(vec) (/* Expression to retrieve length */)
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure from the :ref:`Vector Data Types <vector_dat_type>` section.
+
+Returns 
+-------
+
+- The length of the actively populated vector, returned as a ``size_t`` type.
+
+Example 
+-------
+This example demonstrates how to access the vector length using the ``vector_length`` 
+macro, compared to directly accessing the struct attribute. The latter should 
+be avoided to reduce the risk of unintentional modifications.
+
+.. code-block:: c
+
+   #include "vector.h"
+   #include "print.h"
+
+   int main() {
+       float_v* vec = init_vector(dFloat)(5);
+       push_vector(vec, 2.1f, vector_length(vec));
+       // Avoid directly accessing vec->len like below.
+       push_vector(vec, 7.4f, vec->len);
+       push_vector(vec, 1.1f, vector_length(vec));
+       push_vector(vec, 43.5f, vec->len);
+       push_vector(vec, 13.8f, vector_length(vec));
+       push_vector(vec, 7.7f, vec->len);
+       print("Vector: ", vec);
+       print("Vector Length: ", vector_length(vec));
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Vector: [ 2.1, 7.4, 1.1, 43.5, 13.8, 7.7 ]
+   >> Vector Length: 6
+
+Underlying Functions 
+--------------------
+The ``vector_length`` macro utilizes the ``_Generic`` keyword to select the 
+appropriate function based on the vector's data type. While the macro is the 
+recommended way to access the vector's length, developers can use the underlying 
+functions directly in advanced scenarios.
+
+.. code-block:: c 
+
+   size_t char_vector_length(char_v* vec);
+   size_t uchar_vector_length(uchar_v* vec);
+   size_t short_vector_length(short_v* vec);
+   size_t ushort_vector_length(ushort_v* vec);
+   size_t int_vector_length(int_v* vec);
+   size_t uint_vector_length(uint_v* vec);
+   size_t long_vector_length(long_v* vec);
+   size_t ulong_vector_length(ulong_v* vec);
+   size_t llong_vector_length(llong_v* vec);
+   size_t ullong_vector_length(ullong_v* vec);
+   size_t float_vector_length(float_v* vec);
+   size_t double_vector_length(double_v* vec);
+   size_t ldouble_vector_length(ldouble_v* vec);
+   size_t bool_vector_length(bool_v* vec);
+   size_t string_vector_length(string_v* vec);
