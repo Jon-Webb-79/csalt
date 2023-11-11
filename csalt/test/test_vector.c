@@ -1000,4 +1000,308 @@ void test_print(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST POP FUNCTIONS 
+
+void test_pop_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    char var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    char var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    char a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    unsigned char var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    unsigned char var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    unsigned char a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    short var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    short var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    short a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    unsigned short var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    unsigned short var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    unsigned short a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    int var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    int var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    int a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    unsigned int var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    unsigned int var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    unsigned int a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    long int var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    long int var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    long int a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    unsigned long int var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    unsigned long int var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    unsigned long int a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    long long int var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    long long int var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    long long int a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+   
+    unsigned long long int var_one = pop_vector(vec, 4);
+    assert_int_equal(var_one, 5);
+    unsigned long long int var_two = pop_vector(vec, 0);
+    assert_int_equal(var_two, 1);
+    unsigned long long int a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_float_vector(void **state) {
+    float_v* vec = init_vector(dFloat)(5);
+    push_vector(vec, 1.f, vector_length(vec));
+    push_vector(vec, 2.f, vector_length(vec));
+    push_vector(vec, 3.f, vector_length(vec));
+    push_vector(vec, 4.f, vector_length(vec));
+    push_vector(vec, 5.f, vector_length(vec));
+   
+    float var_one = pop_vector(vec, 4);
+    assert_float_equal(var_one, 5.f, 1.0e-3);
+    float var_two = pop_vector(vec, 0);
+    assert_float_equal(var_two, 1.f, 1.0e-3);
+    float a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_float_equal(get_vector(vec, i), a[i], 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+   
+    double var_one = pop_vector(vec, 4);
+    assert_double_equal(var_one, 5.f, 1.0e-3);
+    double var_two = pop_vector(vec, 0);
+    assert_double_equal(var_two, 1.f, 1.0e-3);
+    double a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_double_equal(get_vector(vec, i), a[i], 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+   
+    long double var_one = pop_vector(vec, 4);
+    assert_double_equal(var_one, 5.f, 1.0e-3);
+    long double var_two = pop_vector(vec, 0);
+    assert_double_equal(var_two, 1.f, 1.0e-3);
+    long double a[3] = {2, 3, 4};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_double_equal(get_vector(vec, i), a[i], 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_bool_vector(void **state) {
+    bool_v* vec = init_vector(dBool)(5);
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+   
+    bool var_one = pop_vector(vec, 4);
+    assert_false(var_one);
+    bool var_two = pop_vector(vec, 0);
+    assert_true(var_two);
+    bool a[3] = {true, false, false};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_pop_string_vector(void **state) {
+    string_v* vec = init_vector(dString)(5);
+    push_vector(vec, "One", vector_length(vec));
+    push_vector(vec, "Two", vector_length(vec));
+    push_vector(vec, "Three", vector_length(vec));
+    push_vector(vec, "Four", vector_length(vec));
+    push_vector(vec, "Five", vector_length(vec));
+   
+    str* var_one = pop_vector(vec, 4);
+    assert_string_equal(get_string(var_one), "Five");
+    str* var_two = pop_vector(vec, 0);
+    assert_string_equal(get_string(var_two), "One");
+    char *a[3] = {"Two", "Three", "Four"};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_string_equal(get_vector(vec, i), a[i]);
+    }
+    free_vector(vec);
+    free_string(var_one);
+    free_string(var_two);
+}
+// ================================================================================
+// ================================================================================
 // eof

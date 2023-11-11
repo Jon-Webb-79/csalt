@@ -421,6 +421,20 @@ Returns
 
 - The value at the specified index in the vector. The return type matches the vector's data type.
 
+Error Handling
+--------------
+The ``get_vector`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``get_vector`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
+
+- ``ERANGE``: Suggests that the operation resulted in a value that is outside the range of representable values for the specified data type.
+
 Example 1
 ---------
 Demonstrating how to safely access data from a vector using the `get_vector` macro:
@@ -520,6 +534,18 @@ Returns
 -------
 
 - The length of the actively populated vector, returned as a ``size_t`` type.
+
+Error Handling
+--------------
+The ``vector_length`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``vector_length`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
 
 Example 1
 ---------
@@ -623,6 +649,18 @@ Returns
 
 - The number of indices allocated in memory for the vector, returned as a `size_t`.
 
+Error Handling
+--------------
+The ``vector_memory`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``vector_memory`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
+
 Example 1
 ---------
 Demonstrating how to retrieve the memory allocation using the ``vector_memory`` macro:
@@ -688,3 +726,127 @@ for specific requirements.
    size_t ldouble_vector_memory(ldouble_v* vec);
    size_t bool_vector_memory(bool_v* vec);
    size_t string_vector_memory(string_v* vec);
+
+Pop Vector 
+==========
+The ``pop_vector`` macro in this library allows for extracting data from a vector 
+at any index. While removing data from the end of the vector is an :math:`O(1)` 
+operation, typical of LIFO stack behavior, extracting from any other position 
+has an :math:`O(n)` time complexity due to the need to shift remaining elements.
+
+.. code-block:: c 
+
+   #define pop_vector(vec, index) (/* Expression to pop data from a vector */) 
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure as defined in :ref:`Vector Data Types <vector_dat_type>`.
+- :c:`index`: The index from which data will be retrieved.
+
+Returns 
+-------
+
+- The popped value's data type corresponds with the vector's data type. For ``str*`` data types, the returned string must be manually freed.
+
+Error Handling
+--------------
+The ``pop_vector`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``pop_vector`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
+
+- ``ERANGE``: Suggests that the operation resulted in a value that is outside the range of representable values for the specified data type.
+
+
+.. note:: When popping any other data type, the user can choose not to catch the returned variable int a variable namespace. However, for ``str`` data, the user must catch and free the string data. 
+
+Example 1 
+---------
+Extracting integer data from a vector:
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       int_v* vec = init_vector(dInt)(5);
+       push_vector(vec, 1, vector_length(vec));
+       push_vector(vec, 2, vector_length(vec));
+       push_vector(vec, 3, vector_length(vec));
+       push_vector(vec, 4, vector_length(vec));
+       push_vector(vec, 5, vector_length(vec));
+       int var_one = pop_vector(vec, 4);
+       int var_two = pop_vector(vec, 0);
+       print("Popped variables: ", var_one, " and ", var_two);
+       print("Remaining vector: ", vec);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Popped variables: 5 and 1
+   >> Remaining vector: [ 2, 3, 4 ]
+
+Example 2
+---------
+Extracting string data from a vector, demonstrating the need to free the returned ``str*``:
+
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       string_v* vec = init_vector(dString)(5);
+       push_vector(vec, "One", vector_length(vec));
+       push_vector(vec, "Two", vector_length(vec));
+       push_vector(vec, "Three", vector_length(vec));
+       push_vector(vec, "Four", vector_length(vec));
+       push_vector(vec, "Five", vector_length(vec));
+       str* var_one = pop_vector(vec, 4);
+       str* var_two = pop_vector(vec, 0);
+       print("Popped variables: ", var_one, " and ", var_two);
+       print("Remaining vector: ", vec);
+       free_vector(vec);
+       free_string(var_one);
+       free_string(var_two);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Popped variables: Five and One
+   >> Remaining vector: [ Two, Three, Four ]
+
+Underlying Functions 
+--------------------
+The ``pop_vector`` macro leverages ``_Generic`` to select the appropriate function 
+based on the vector's data type. While using the macro is recommended, 
+these underlying functions can be directly used for more specific control:
+
+.. code-block:: c
+
+   char pop_char_vector(char_v* vec, size_t index);
+   unsigned char pop_uchar_vector(uchar_v* vec, size_t index);
+   short int pop_short_vector(short_v* vec, size_t index);
+   unsigned short int pop_ushort_vector(ushort_v* vec, size_t index);
+   int pop_int_vector(int_v* vec, size_t index);
+   unsigned int pop_uint_vector(uint_v* vec, size_t index);
+   long int pop_long_vector(long_v* vec, size_t index);
+   unsigned long int pop_ulong_vector(ulong_v* vec, size_t index);
+   long long int pop_llong_vector(llong_v* vec, size_t index);
+   unsigned long long int pop_ullong_vector(ullong_v* vec, size_t index);
+   float pop_float_vector(float_v* vec, size_t index);
+   double pop_double_vector(double_v* vec, size_t index);
+   long double pop_ldouble_vector(ldouble_v* vec, size_t index);
+   bool pop_bool_vector(bool_v* vec, size_t index);
+   str* pop_string_vector(string_v* vec, size_t index);

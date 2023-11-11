@@ -1114,6 +1114,215 @@ size_t string_vector_memory(string_v* vec);
     string_v*: string_vector_memory) (vec)
 // ================================================================================
 // ================================================================================
+// POP VECTOR FUNCTIONS
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a char_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type char_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A char value
+ */
+char pop_char_vector(char_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a uchar_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type uchar_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A unsigned char value
+ */
+unsigned char pop_uchar_vector(uchar_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a short_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type short_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A short int value
+ */
+short int pop_short_vector(short_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a ushort_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type ushort_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A short int value
+ */
+unsigned short int pop_ushort_vector(ushort_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a int_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type int_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A unsigned int value
+ */
+int pop_int_vector(int_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a uint_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type uint_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A unsigned int value
+ */
+unsigned int pop_uint_vector(uint_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a long_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type long_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A long int value
+ */
+long int pop_long_vector(long_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a ulong_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type ulong_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A unsigned long int value
+ */
+unsigned long int pop_ulong_vector(ulong_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a llong_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type llong_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A long long int value
+ */
+long long int pop_llong_vector(llong_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a ullong_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type ullong_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A unsigned long long value
+ */
+unsigned long long int pop_ullong_vector(ullong_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a float_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type float_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A float value
+ */
+float pop_float_vector(float_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a double_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type double_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A double value
+ */
+double pop_double_vector(double_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a ldouble_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type ldouble_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A long double value
+ */
+long double pop_ldouble_vector(ldouble_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a bool_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type bool_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A bool value
+ */
+bool pop_bool_vector(bool_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a string_v vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector of type string_v 
+ * @param index An index in the vector where data will be removed.
+ * @return A str* double value
+ */
+str* pop_string_vector(string_v* vec, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a vector and returns it 
+ *
+ * This program pops a value from a vector and returns it to the user 
+ *
+ * @param vec A dynamically allocated vector
+ * @param index An index in the vector where data will be removed.
+ * @return a value of type consistent with vec
+ */
+#define pop_vector(vec, index) _Generic((vec), \
+    char_v*: pop_char_vector, \
+    uchar_v*: pop_uchar_vector, \
+    short_v*: pop_short_vector, \
+    ushort_v*: pop_ushort_vector, \
+    int_v*: pop_int_vector, \
+    uint_v*: pop_uint_vector, \
+    long_v*: pop_long_vector, \
+    ulong_v*: pop_ulong_vector, \
+    llong_v*: pop_llong_vector, \
+    ullong_v*: pop_ullong_vector, \
+    float_v*: pop_float_vector, \
+    double_v*: pop_double_vector, \
+    ldouble_v*: pop_ldouble_vector, \
+    bool_v*: pop_bool_vector, \
+    string_v*: pop_string_vector) (vec, index)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

@@ -1775,4 +1775,307 @@ size_t string_vector_memory(string_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+//POP VECTOR FUNCTIONS
+
+char pop_char_vector(char_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_char_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_char_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    char val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(char)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char pop_uchar_vector(uchar_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_uchar_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_uchar_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned char val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(unsigned char)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+short int pop_short_vector(short_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_ushort_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_ushort_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    short int val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(short int)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int pop_ushort_vector(ushort_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_ushort_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_ushort_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned short int val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(unsigned short int)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+int pop_int_vector(int_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_int_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_int_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    int val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(int)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int pop_uint_vector(uint_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_uint_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_uint_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned int val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(unsigned int)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+long int pop_long_vector(long_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_long_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_long_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    long int val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(long int)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int pop_ulong_vector(ulong_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_ulong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_ulong_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned long int val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(unsigned long int)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+long long int pop_llong_vector(llong_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_llong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_llong_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    long long int val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(long long int)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int pop_ullong_vector(ullong_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_ullong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_ullong_vector\n");
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned long long int val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(unsigned long long int)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+float pop_float_vector(float_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_float_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_float_vector\n");
+        errno = ERANGE;
+        return 0.f;
+    }
+    float val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(float)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+double pop_double_vector(double_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_double_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_double_vector\n");
+        errno = ERANGE;
+        return 0.;
+    }
+    double val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(double)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+long double pop_ldouble_vector(ldouble_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_ldouble_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_ldouble_vector\n");
+        errno = ERANGE;
+        return 0.;
+    }
+    long double val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(long double)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+bool pop_bool_vector(bool_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_bool_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > vec->len -1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_bool_vector\n");
+        errno = ERANGE;
+        return false;
+    }
+    bool val = vec->data[index];
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(bool)); 
+    vec->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+str* pop_string_vector(string_v* vec, size_t index) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to pop_string_vector\n");
+        errno = EINVAL;
+        return NULL;
+    }
+    if (index > vec->len - 1) {
+        fprintf(stderr, "Error: Index out of bounds in pop_string_vector\n");
+        errno = ERANGE;
+        return NULL;
+    }
+    str* val = init_string_nol(vec->data[index].data);
+    free(vec->data[index].data);
+    memmove(vec->data + index, 
+            vec->data + index + 1, 
+            (vec->len - index - 1) * sizeof(str)); 
+    vec->len -= 1;
+    return val;
+}
+// ================================================================================
+// ================================================================================
 // eof
