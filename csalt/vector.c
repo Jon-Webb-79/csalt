@@ -2610,4 +2610,188 @@ long double max_ldouble_vector(ldouble_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+// MIN VECTOR FUNCTIONS 
+
+char min_char_vector(char_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_char_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    char min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char min_uchar_vector(uchar_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_uchar_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned char min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+short int min_short_vector(short_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_short_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    short int min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int min_ushort_vector(ushort_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_ushort_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned short int min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+int min_int_vector(int_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_int_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    int min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int min_uint_vector(uint_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_uint_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned int min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+long int min_long_vector(long_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to min_char_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    long int min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int min_ulong_vector(ulong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_ulong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long int min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+long long int min_llong_vector(llong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_llong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    long long int min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int min_ullong_vector(ullong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_ullong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long long int min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+float min_float_vector(float_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_float_vector\n");
+        errno = EINVAL;
+        return 0.0f;
+    }
+    float min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+double min_double_vector(double_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_double_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    double min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+long double min_ldouble_vector(ldouble_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_ldouble_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long double min_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] < min_value) min_value = vec->data[i];
+    }
+    return min_value;
+}
+// ================================================================================
+// ================================================================================
 // eof

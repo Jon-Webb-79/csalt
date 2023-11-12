@@ -1624,6 +1624,141 @@ long double max_ldouble_vector(ldouble_v* vec);
     ldouble_v*: max_ldouble_vector) (vec)
 // ================================================================================
 // ================================================================================
+// MIN VECTOR FUNCTIONS 
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type char_v.
+ * @return The minimum value in the vector.
+ */
+char min_char_vector(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type uchar_v.
+ * @return The minimum value in the vector.
+ */
+unsigned char min_uchar_vector(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type short_v.
+ * @return The maximum value in the vector.
+ */
+short int min_short_vector(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type ushort_v.
+ * @return The minimum value in the vector.
+ */
+unsigned short int min_ushort_vector(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type int_v.
+ * @return The minimum value in the vector.
+ */
+int min_int_vector(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type uint_v.
+ * @return The minimum value in the vector.
+ */
+unsigned int min_uint_vector(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type long_v.
+ * @return The minimum value in the vector.
+ */
+long int min_long_vector(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type ulong_v.
+ * @return The minimum value in the vector.
+ */
+unsigned long int min_ulong_vector(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type llong_v.
+ * @return The minimum value in the vector.
+ */
+long long int min_llong_vector(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type ullong_v.
+ * @return The minimum value in the vector.
+ */
+unsigned long long int min_ullong_vector(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type float_v.
+ * @return The minimum value in the vector.
+ */
+float min_float_vector(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type double_v.
+ * @return The minimum value in the vector.
+ */
+double min_double_vector(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a vector 
+ *
+ * @param vec A vector data structure of type ldouble_v.
+ * @return The minimum value in the vector.
+ */
+long double min_ldouble_vector(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+#define min_vector(vec) _Generic((vec), \
+    char_v*: min_char_vector, \
+    uchar_v*: min_uchar_vector, \
+    short_v*: min_short_vector, \
+    ushort_v*: min_ushort_vector, \
+    int_v*: min_int_vector, \
+    uint_v*: min_uint_vector, \
+    long_v*: min_long_vector, \
+    ulong_v*: min_ulong_vector, \
+    llong_v*: min_llong_vector, \
+    ullong_v*: min_ullong_vector, \
+    float_v*: min_float_vector, \
+    double_v*: min_double_vector, \
+    ldouble_v*: min_ldouble_vector) (vec)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

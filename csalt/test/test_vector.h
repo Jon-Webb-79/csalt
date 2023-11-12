@@ -172,6 +172,23 @@ void test_max_double_vector(void **state);
 void test_max_ldouble_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST MIN VECTOR FUNCTIONS 
+
+void test_min_char_vector(void **state);
+void test_min_uchar_vector(void **state);
+void test_min_short_vector(void **state);
+void test_min_ushort_vector(void **state);
+void test_min_int_vector(void **state);
+void test_min_uint_vector(void **state);
+void test_min_long_vector(void **state);
+void test_min_ulong_vector(void **state);
+void test_min_llong_vector(void **state);
+void test_min_ullong_vector(void **state);
+void test_min_float_vector(void **state);
+void test_min_double_vector(void **state);
+void test_min_ldouble_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================

@@ -962,3 +962,99 @@ these underlying functions can be directly used for more specific control:
    void reverse_ldouble_vector(ldouble_v* vec);
    void reverse_bool_vector(bool_v* vec);
    void reverse_string_vector(string_v* vec);
+
+Max and Min Vector Values 
+=========================
+The ``min_vector`` and ``max_vector`` macros leverage the ``_Generic`` 
+keyword to select the appropriate function for determining the minimum and 
+maximum values in a dynamically allocated vector data structure. These macros 
+abstract the complexity of choosing the correct function based on the vector's 
+data type.
+
+.. code-block:: c
+
+   #define min_vector(vec) (/* Expression to find minimum value in vector */) 
+   #define max_vector(vec) (/* Expression to find maximum value in vector */)
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
+
+Returns 
+-------
+
+- Returns the minimum or maximum value in the vector, consistent with the vector's data type.
+
+Error Handling
+--------------
+The ``max_vector`` and ``min_vector`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
+Example 
+-------
+Example to find min and max values in vector data structure.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       float_v* vec = init_vector(dFloat)(5);
+       push_vector(vec, 12.1f, vector_length(vec));
+       push_vector(vec, 8.7f, vector_length(vec));
+       push_vector(vec, 22.18f, vector_length(vec));
+       push_vector(vec, 1.1f, vector_length(vec));
+       push_vector(vec, -27.6f, vector_length(vec));
+       print("Min Value: ", min_vector(vec));
+       print("Max Value: ", max_vector(vec));
+       free_string(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Min Value: -27.6000
+   >> Max Value: 22.18000
+
+Underlying Functions 
+--------------------
+The ``min_vector`` and ``max_vector`` macros use ``_Generic`` to select the 
+right function based on the vector's data type. For specific control, these 
+underlying functions can be used directly:
+
+.. code-block:: c
+
+   char max_char_vector(char_v* vec);
+   unsigned char max_uchar_vector(uchar_v* vec);
+   short int max_short_vector(short_v* vec);
+   unsigned short int max_ushort_vector(ushort_v* vec);
+   int max_int_vector(int_v* vec);
+   unsigned int max_uint_vector(uint_v* vec);
+   long int max_long_vector(long_v* vec);
+   unsigned long int max_ulong_vector(ulong_v* vec);
+   long long int max_llong_vector(llong_v* vec);
+   unsigned long long int max_ullong_vector(ullong_v* vec);
+   float max_float_vector(float_v* vec);
+   double max_double_vector(double_v* vec);
+   long double max_ldouble_vector(ldouble_v* vec);
+   char min_char_vector(char_v* vec);
+   unsigned char min_uchar_vector(uchar_v* vec);
+   short int min_short_vector(short_v* vec);
+   unsigned short int min_ushort_vector(ushort_v* vec);
+   int min_int_vector(int_v* vec);
+   unsigned int min_uint_vector(uint_v* vec);
+   long int min_long_vector(long_v* vec);
+   unsigned long int min_ulong_vector(ulong_v* vec);
+   long long int min_llong_vector(llong_v* vec);
+   unsigned long long int min_ullong_vector(ullong_v* vec);
+   float min_float_vector(float_v* vec);
+   double min_double_vector(double_v* vec);
+   long double min_ldouble_vector(ldouble_v* vec);
