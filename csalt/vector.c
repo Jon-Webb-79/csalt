@@ -2185,4 +2185,246 @@ str* pop_string_vector(string_v* vec, size_t index) {
 }
 // ================================================================================
 // ================================================================================
+// REVERSE FUNCTIONS 
+
+void reverse_char_vector(char_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_char_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_char(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_uchar_vector(uchar_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_uchar_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_uchar(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_short_vector(short_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_short_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_short(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_ushort_vector(ushort_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_ushort_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_ushort(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_int_vector(int_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_int_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_int(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_uint_vector(uint_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_uint_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_uint(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_long_vector(long_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_long_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_long(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_ulong_vector(ulong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_ulong_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_ulong(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_llong_vector(llong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_llong_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_llong(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_ullong_vector(ullong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_ullong_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_ullong(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_float_vector(float_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_double_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_float(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_double_vector(double_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_double_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_double(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_ldouble_vector(ldouble_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_ldouble_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_ldouble(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_bool_vector(bool_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_bool_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_bool(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_string_vector(string_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to reverse_string_vector\n");
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = vec->len - 1;
+    while (i < j) {
+       swap_string(&vec->data[i], &vec->data[j]);
+       i++;
+       j--;
+    }
+}
+// ================================================================================
+// ================================================================================
 // eof

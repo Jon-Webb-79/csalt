@@ -21,6 +21,25 @@
 
 #include "test_string.h"
 #include "test_vector.h"
+#include "test_swap.h"
+
+const struct CMUnitTest test_swap[] = {
+	cmocka_unit_test(test_swap_char),
+    cmocka_unit_test(test_swap_uchar),
+    cmocka_unit_test(test_swap_short),
+    cmocka_unit_test(test_swap_ushort),
+    cmocka_unit_test(test_swap_int),
+    cmocka_unit_test(test_swap_uint),
+    cmocka_unit_test(test_swap_long),
+    cmocka_unit_test(test_swap_ulong),
+    cmocka_unit_test(test_swap_llong),
+    cmocka_unit_test(test_swap_ullong),
+    cmocka_unit_test(test_swap_float),
+    cmocka_unit_test(test_swap_double),
+    cmocka_unit_test(test_swap_ldouble),
+    cmocka_unit_test(test_swap_bool),
+    cmocka_unit_test(test_swap_string)
+};
 
 const struct CMUnitTest test_string[] = {
 	cmocka_unit_test(test_string_init_one_var),
@@ -178,6 +197,7 @@ const struct CMUnitTest test_vector[] = {
     cmocka_unit_test(test_get_bool_vector_index_out_of_bounds),
     cmocka_unit_test(test_get_string_vector_null_struct), 
     cmocka_unit_test(test_get_string_vector_null_data),
+    #ifdef __GNUC__
     cmocka_unit_test(test_pop_char_vector),
     cmocka_unit_test(test_pop_uchar_vector),
     cmocka_unit_test(test_pop_short_vector),
@@ -207,12 +227,32 @@ const struct CMUnitTest test_vector[] = {
     cmocka_unit_test(test_double_garbage_vector),
     cmocka_unit_test(test_ldouble_garbage_vector),
     cmocka_unit_test(test_bool_garbage_vector),
-    cmocka_unit_test(test_string_garbage_vector)
+    cmocka_unit_test(test_string_garbage_vector),
+    #endif
+    cmocka_unit_test(test_reverse_char_vector),
+    cmocka_unit_test(test_reverse_uchar_vector),
+    cmocka_unit_test(test_reverse_short_vector),
+    cmocka_unit_test(test_reverse_ushort_vector),
+    cmocka_unit_test(test_reverse_int_vector),
+    cmocka_unit_test(test_reverse_uint_vector),
+    cmocka_unit_test(test_reverse_long_vector),
+    cmocka_unit_test(test_reverse_ulong_vector),
+    cmocka_unit_test(test_reverse_llong_vector),
+    cmocka_unit_test(test_reverse_ullong_vector),
+    cmocka_unit_test(test_reverse_float_vector),
+    cmocka_unit_test(test_reverse_double_vector),
+    cmocka_unit_test(test_reverse_ldouble_vector),
+    cmocka_unit_test(test_reverse_bool_vector),
+    cmocka_unit_test(test_reverse_string_vector)
 };
 // Begin code
 int main(int argc, const char * argv[]) {
     int status;
 
+    status = cmocka_run_group_tests(test_swap, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
     status = cmocka_run_group_tests(test_string, NULL, NULL);
     if (status != 0) {
         return status;

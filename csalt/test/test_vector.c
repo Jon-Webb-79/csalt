@@ -1486,4 +1486,246 @@ void test_string_garbage_vector(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST REVERSE VECTOR FUNCTINS 
+
+void test_reverse_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    char a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    unsigned char a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    short int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    unsigned short int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    unsigned int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    long int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    unsigned long int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    long long int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    reverse_vector(vec);
+    unsigned long long int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_float_vector(void **state) {
+    float_v* vec = init_vector(dFloat)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    reverse_vector(vec);
+    float a[5] = {5., 4., 3., 2., 1.};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_float_equal(get_vector(vec, i), a[i], 1.0e-3); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    reverse_vector(vec);
+    double a[5] = {5., 4., 3., 2., 1.};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_double_equal(get_vector(vec, i), a[i], 1.0e-3); 
+    }
+    free_vector(vec);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_reverse_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    reverse_vector(vec);
+    long double a[5] = {5., 4., 3., 2., 1.};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_double_equal(get_vector(vec, i), a[i], 1.0e-3); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_bool_vector(void **state) {
+    bool_v* vec = init_vector(dBool)(5);
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    reverse_vector(vec);
+    bool a[5] = {false, false, false, true, true};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_string_vector(void **state) {
+    string_v* vec = init_vector(dString)(5);
+    push_vector(vec, "One", vector_length(vec));
+    push_vector(vec, "Two", vector_length(vec));
+    push_vector(vec, "Three", vector_length(vec));
+    push_vector(vec, "Four", vector_length(vec));
+    push_vector(vec, "Five", vector_length(vec));
+    reverse_vector(vec);
+    char *a[5] = {"Five", "Four", "Three", "Two", "One"};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_string_equal(get_vector(vec, i), a[i]); 
+    }
+    free_vector(vec);
+}
+// ================================================================================
+// ================================================================================
 // eof

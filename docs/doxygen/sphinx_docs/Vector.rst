@@ -882,3 +882,83 @@ these underlying functions can be directly used for more specific control:
    long double pop_ldouble_vector(ldouble_v* vec, size_t index);
    bool pop_bool_vector(bool_v* vec, size_t index);
    str* pop_string_vector(string_v* vec, size_t index);
+
+Reverse Vector 
+==============
+The ``reverse_vector`` macro leverages the ``_Generic`` keyword to select from 
+several functions in order to reverse the order of data in a dynamically 
+allocated vector data structure.  The form and parameters of the ``reverse_vector``
+are shown below.
+
+.. code-block:: c
+
+   #define reverse_vector(vec) (/*Expression to reverse vector here*/) 
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure as defined in :ref:`Vector Data Types <vector_dat_type>`.
+
+Error Handling
+--------------
+The ``reverse_vector`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``reverse_vector`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
+
+Example 
+-------
+Example showing how to revserse the order of a string vector.
+
+.. code-block:: c
+
+   #include "vector.h"
+   #include "print.h"
+
+   int main() {
+       string_v* vec = init_vector(dString)(5);
+       push_vector(vec, "One", vector_length(vec));
+       push_vector(vec, "Two", vector_length(vec));
+       push_vector(vec, "Three", vector_length(vec));
+       push_vector(vec, "Four", vector_length(vec));
+       push_vector(vec, "Five", vector_length(vec));
+       print("Before reverse operation: ", vec);
+       reverse_vector(vec);
+       print("After reverse operation: ", vec);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Before reverse operation: [ One, Two, Three, Four, Five ]
+   >> After reverse operation: [ Five, Four, Three, Two, One ]
+
+Underlying Functions 
+--------------------
+The ``reverse_vector`` macro leverages ``_Generic`` to select the appropriate function 
+based on the vector's data type. While using the macro is recommended, 
+these underlying functions can be directly used for more specific control:
+
+.. code-block:: c
+
+   void reverse_char_vector(char_v* vec);
+   void reverse_uchar_vector(uchar_v* vec);
+   void reverse_short_vector(short_v* vec);
+   void reverse_ushort_vector(ushort_v* vec);
+   void reverse_int_vector(int_v* vec);
+   void reverse_uint_vector(uint_v* vec);
+   void reverse_long_vector(long_v* vec);
+   void reverse_ulong_vector(ulong_v* vec);
+   void reverse_llong_vector(llong_v* vec);
+   void reverse_ullong_vector(ullong_v* vec);
+   void reverse_float_vector(float_v* vec);
+   void reverse_double_vector(double_v* vec);
+   void reverse_ldouble_vector(ldouble_v* vec);
+   void reverse_bool_vector(bool_v* vec);
+   void reverse_string_vector(string_v* vec);

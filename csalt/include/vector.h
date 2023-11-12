@@ -23,6 +23,7 @@
 
 #include "admin.h"
 #include "str.h"
+#include "swap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1361,6 +1362,131 @@ str* pop_string_vector(string_v* vec, size_t index);
     ldouble_v*: pop_ldouble_vector, \
     bool_v*: pop_bool_vector, \
     string_v*: pop_string_vector) (vec, index)
+// ================================================================================
+// ================================================================================
+// REVERSE FUNCTIONS 
+
+/**
+ * @brief Reverse the order of a char_v vector 
+ * @param vec A vector of type char_v
+ */
+void reverse_char_vector(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a uchar_v vector 
+ * @param vec A vector of type uchar_v
+ */
+void reverse_uchar_vector(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a short_v vector 
+ * @param vec A vector of type short_v
+ */
+void reverse_short_vector(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a ushort_v vector 
+ * @param vec A vector of type ushort_v
+ */
+void reverse_ushort_vector(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a int_v vector 
+ * @param vec A vector of type int_v
+ */
+void reverse_int_vector(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a uint_v vector 
+ * @param vec A vector of type uint_v
+ */
+void reverse_uint_vector(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a long_v vector 
+ * @param vec A vector of type long_v
+ */
+void reverse_long_vector(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a ulong_v vector 
+ * @param vec A vector of type ulong_v
+ */
+void reverse_ulong_vector(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a llong_v vector 
+ * @param vec A vector of type llong_v
+ */
+void reverse_llong_vector(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a ullong_v vector 
+ * @param vec A vector of type ullong_v
+ */
+void reverse_ullong_vector(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of float_v vector 
+ * @param vec A vector of type float_v
+ */
+void reverse_float_vector(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a double_v vector 
+ * @param vec A vector of type double_v
+ */
+void reverse_double_vector(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a ldouble_v vector 
+ * @param vec A vector of type ldouble_v
+ */
+void reverse_ldouble_vector(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a bool_v vector 
+ * @param vec A vector of type bool_v
+ */
+void reverse_bool_vector(bool_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a string_v vector 
+ * @param vec A vector of type string_v
+ */
+void reverse_string_vector(string_v* vec);
+// --------------------------------------------------------------------------------
+
+#define reverse_vector(vec) _Generic((vec), \
+    char_v*: reverse_char_vector, \
+    uchar_v*: reverse_uchar_vector, \
+    short_v*: reverse_short_vector, \
+    ushort_v*: reverse_ushort_vector, \
+    int_v*: reverse_int_vector, \
+    uint_v*: reverse_uint_vector, \
+    long_v*: reverse_long_vector, \
+    ulong_v*: reverse_ulong_vector, \
+    llong_v*: reverse_llong_vector, \
+    ullong_v*: reverse_ullong_vector, \
+    float_v*: reverse_float_vector, \
+    double_v*: reverse_double_vector, \
+    ldouble_v*: reverse_ldouble_vector, \
+    bool_v*: reverse_bool_vector, \
+    string_v*: reverse_string_vector) (vec)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

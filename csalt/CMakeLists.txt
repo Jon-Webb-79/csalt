@@ -43,14 +43,16 @@ endif()
 add_library(csalt
 	str.c
     vector.c
-    print.c)
+    print.c
+    swap.c)
 target_include_directories(csalt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Define the tests
 add_executable(unit_tests
 	test/unit_test.c
 	test/test_string.c
-    test/test_vector.c)
+    test/test_vector.c
+    test/test_swap.c)
 target_link_libraries(unit_tests csalt cmocka)
 add_test(NAME unit_tests COMMAND unit_test)
 

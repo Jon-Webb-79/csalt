@@ -12,8 +12,8 @@
 // ================================================================================
 // Include modules here
 
-#ifndef test_H
-#define test_H
+#ifndef test_vector_H
+#define test_vector_H
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -136,7 +136,26 @@ void test_bool_garbage_vector(void **state);
 void test_string_garbage_vector(void **state);
 // ================================================================================
 // ================================================================================
-#endif /* test_H */
+// TEST REVERSE VECTOR FUNCTIONS 
+
+void test_reverse_char_vector(void **state);
+void test_reverse_uchar_vector(void **state);
+void test_reverse_short_vector(void **state);
+void test_reverse_ushort_vector(void **state);
+void test_reverse_int_vector(void **state);
+void test_reverse_uint_vector(void **state);
+void test_reverse_long_vector(void **state);
+void test_reverse_ulong_vector(void **state);
+void test_reverse_llong_vector(void **state);
+void test_reverse_ullong_vector(void **state);
+void test_reverse_float_vector(void **state);
+void test_reverse_double_vector(void **state);
+void test_reverse_ldouble_vector(void **state);
+void test_reverse_bool_vector(void **state);
+void test_reverse_string_vector(void **state);
+// ================================================================================
+// ================================================================================
+#endif /* test_vector_H */
 // ================================================================================
 // ================================================================================
 // eof
