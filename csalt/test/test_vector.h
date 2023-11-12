@@ -155,6 +155,23 @@ void test_reverse_bool_vector(void **state);
 void test_reverse_string_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST MAX VECTOR FUNCTIONS 
+
+void test_max_char_vector(void **state);
+void test_max_uchar_vector(void **state);
+void test_max_short_vector(void **state);
+void test_max_ushort_vector(void **state);
+void test_max_int_vector(void **state);
+void test_max_uint_vector(void **state);
+void test_max_long_vector(void **state);
+void test_max_ulong_vector(void **state);
+void test_max_llong_vector(void **state);
+void test_max_ullong_vector(void **state);
+void test_max_float_vector(void **state);
+void test_max_double_vector(void **state);
+void test_max_ldouble_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================

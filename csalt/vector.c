@@ -2427,4 +2427,187 @@ void reverse_string_vector(string_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+
+char max_char_vector(char_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_char_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    char max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char max_uchar_vector(uchar_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_uchar_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned char max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+short int max_short_vector(short_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_short_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    short int max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int max_ushort_vector(ushort_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_ushort_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned short int max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+int max_int_vector(int_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_int_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    int max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int max_uint_vector(uint_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_uint_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned int max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+long int max_long_vector(long_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to min_char_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    long int max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int max_ulong_vector(ulong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_ulong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long int max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+long long int max_llong_vector(llong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_llong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    long long int max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int max_ullong_vector(ullong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_ullong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long long int max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+float max_float_vector(float_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_float_vector\n");
+        errno = EINVAL;
+        return 0.0f;
+    }
+    float max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+double max_double_vector(double_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_double_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    double max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+long double max_ldouble_vector(ldouble_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to max_ldouble_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long double max_value = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        if (vec->data[i] > max_value) max_value = vec->data[i];
+    }
+    return max_value;
+}
+// ================================================================================
+// ================================================================================
 // eof

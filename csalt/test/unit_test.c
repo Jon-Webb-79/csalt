@@ -243,7 +243,20 @@ const struct CMUnitTest test_vector[] = {
     cmocka_unit_test(test_reverse_double_vector),
     cmocka_unit_test(test_reverse_ldouble_vector),
     cmocka_unit_test(test_reverse_bool_vector),
-    cmocka_unit_test(test_reverse_string_vector)
+    cmocka_unit_test(test_reverse_string_vector),
+    cmocka_unit_test(test_max_char_vector),
+    cmocka_unit_test(test_max_uchar_vector),
+    cmocka_unit_test(test_max_short_vector),
+    cmocka_unit_test(test_max_ushort_vector),
+    cmocka_unit_test(test_max_int_vector),
+    cmocka_unit_test(test_max_uint_vector),
+    cmocka_unit_test(test_max_long_vector),
+    cmocka_unit_test(test_max_ulong_vector),
+    cmocka_unit_test(test_max_llong_vector),
+    cmocka_unit_test(test_max_ullong_vector),
+    cmocka_unit_test(test_max_float_vector),
+    cmocka_unit_test(test_max_double_vector),
+    cmocka_unit_test(test_max_ldouble_vector)
 };
 // Begin code
 int main(int argc, const char * argv[]) {
