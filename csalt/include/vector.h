@@ -361,6 +361,46 @@ void free_string_vector(string_v* vec);
     default: free_string_vector) (vec)
 // ================================================================================
 // ================================================================================
+// Cleanup functions for garbage collection
+// - while being public functions, theese are not mean to be accessed directly
+//   by developers, and instead are prototypes for the garbage collection macros.
+
+void _free_char_vector(char_v** vec);
+void _free_uchar_vector(uchar_v** vec);
+void _free_short_vector(short_v** vec);
+void _free_ushort_vector(ushort_v** vec);
+void _free_int_vector(int_v** vec);
+void _free_uint_vector(uint_v** vec);
+void _free_long_vector(long_v** vec);
+void _free_ulong_vector(ulong_v** vec);
+void _free_llong_vector(llong_v** vec);
+void _free_ullong_vector(ullong_v** vec);
+void _free_float_vector(float_v** vec);
+void _free_double_vector(double_v** vec);
+void _free_ldouble_vector(ldouble_v** vec);
+void _free_bool_vector(bool_v** vec);
+void _free_sstring_vector(string_v** vec);
+// --------------------------------------------------------------------------------
+
+#if defined(__GNUC__) || defined(__clang__)
+#define gbc_char_v __attribute__((cleanup(_free_char_vector)))
+#define gbc_uchar_v __attribute__((cleanup(_free_uchar_vector)))
+#define gbc_short_v __attribute__((cleanup(_free_short_vector)))
+#define gbc_ushort_v __attribute__((cleanup(_free_ushort_vector)))
+#define gbc_int_v __attribute__((cleanup(_free_int_vector)))
+#define gbc_uint_v __attribute__((cleanup(_free_uint_vector)))
+#define gbc_long_v __attribute__((cleanup(_free_long_vector)))
+#define gbc_ulong_v __attribute__((cleanup(_free_ulong_vector)))
+#define gbc_llong_v __attribute__((cleanup(_free_llong_vector)))
+#define gbc_ullong_v __attribute__((cleanup(_free_ullong_vector)))
+#define gbc_float_v __attribute__((cleanup(_free_float_vector)))
+#define gbc_double_v __attribute__((cleanup(_free_double_vector)))
+#define gbc_ldouble_v __attribute__((cleanup(_free_ldouble_vector)))
+#define gbc_bool_v __attribute__((cleanup(_free_bool_vector)))
+#define gbc_string_v __attribute__((cleanup(_free_sstring_vector)))
+#endif
+// ================================================================================
+// ================================================================================
 // PUSH_VECTOR FUNCTIONS 
 
 /**

@@ -137,15 +137,14 @@ void _free_string(str** str_struct);
  */
 #if defined(__GNUC__) || defined(__clang__)
 #define gbc_str __attribute__((cleanup(_free_string)))
+#endif
 // --------------------------------------------------------------------------------
 
 /**
  * Macro to free a str struct.  The macro allows a user to pass data without
- * having to dereference it.  This macro only works with GCC and clang 
- * compilers
+ * having to dereference it.
  */
-    #define free_string(str_struct) _free_string(&(str_struct))
-#endif
+#define free_string(str_struct) _free_string(&(str_struct))
 // --------------------------------------------------------------------------------
 
 /**

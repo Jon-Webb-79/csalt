@@ -172,6 +172,38 @@ one of these functions instead of using the ``init_vector`` function.
    bool_v* init_bool_vector(size_t buff);
    string_v* init_string_vector(size_t buff);
 
+Garbage Collection with Vectors
+===============================
+Dynamically allocated vectors require explicit deallocation to free memory. 
+While developers often manually manage this using functions like ``free_vector``, 
+those compiling with GCC or Clang compilers have an alternative: automatic 
+garbage collection using a macro. This feature leverages the `cleanup` 
+attribute available in these compilers and is not part of the standard C language.
+
+The macro follows the naming convention ``gbc_<type>``, where ``<type>`` 
+corresponds to the derived data types mentioned in :ref:`Derived Data Types <vector_dat_type>`.
+
+Example 
+-------
+Below is an example demonstrating the use of garbage collection with a 
+``float_v`` vector. Notice the absence of a manual ``free_vector`` 
+call; the ``gbc_float_v`` macro ensures automatic deallocation when the 
+variable goes out of scope.
+
+.. code-block:: c
+
+   #include "vector.h"
+
+   int main() {
+       float_v* vec gbc_float_v = init_vector(dFloat)(4);
+       push_vector(vec, 1.1, vector_length(vec));
+       push_vector(vec, 2.2, vector_length(vec)); 
+       push_vector(vec, 3.3, vector_length(vec));
+       push_vector(vec, 4.4, vector_length(vec));
+       // Automatic cleanup happens here when vec goes out of scope
+       return 0;
+   }
+
 Pushing Data to Vectors
 =======================
 The ``push_vector`` macro in the ``vector.h`` header file provides a versatile 

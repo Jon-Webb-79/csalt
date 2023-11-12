@@ -1304,4 +1304,186 @@ void test_pop_string_vector(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST GARBAGE COLLECTION MACROS 
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_char_garbage_vector(void **state) {
+    char_v* vec gbc_char_v = init_vector(dChar)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_uchar_garbage_vector(void **state) {
+    uchar_v* vec gbc_uchar_v = init_vector(dUChar)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_short_garbage_vector(void **state) {
+    short_v* vec gbc_short_v = init_vector(dShort)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_ushort_garbage_vector(void **state) {
+    ushort_v* vec gbc_ushort_v = init_vector(dUShort)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_int_garbage_vector(void **state) {
+    int_v* vec gbc_int_v = init_vector(dInt)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_uint_garbage_vector(void **state) {
+    uint_v* vec gbc_uint_v = init_vector(dUInt)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_long_garbage_vector(void **state) {
+    long_v* vec gbc_long_v = init_vector(dLong)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_ulong_garbage_vector(void **state) {
+    ulong_v* vec gbc_ulong_v = init_vector(dULong)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_llong_garbage_vector(void **state) {
+    llong_v* vec gbc_llong_v = init_vector(dLongLong)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_ullong_garbage_vector(void **state) {
+    ullong_v* vec gbc_ullong_v = init_vector(dULongLong)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_float_garbage_vector(void **state) {
+    float_v* vec gbc_float_v = init_vector(dFloat)(4);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_double_garbage_vector(void **state) {
+    double_v* vec gbc_double_v = init_vector(dDouble)(4);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_ldouble_garbage_vector(void **state) {
+    ldouble_v* vec gbc_ldouble_v = init_vector(dLDouble)(4);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_bool_garbage_vector(void **state) {
+    bool_v* vec gbc_bool_v = init_vector(dBool)(4);
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * Test to ensure no valgrind failures without explicit call to free
+ */
+void test_string_garbage_vector(void **state) {
+    string_v* vec gbc_string_v = init_vector(dString)(4);
+    push_vector(vec, "One", vector_length(vec));
+    push_vector(vec, "Two", vector_length(vec));
+    push_vector(vec, "Three", vector_length(vec));
+    push_vector(vec, "Four", vector_length(vec));
+}
+// ================================================================================
+// ================================================================================
 // eof

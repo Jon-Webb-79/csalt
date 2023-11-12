@@ -117,6 +117,25 @@ void test_pop_bool_vector(void **state);
 void test_pop_string_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST GARBAGE COLLECTION MACROS
+
+void test_char_garbage_vector(void **state);
+void test_uchar_garbage_vector(void **state);
+void test_short_garbage_vector(void **state);
+void test_ushort_garbage_vector(void **state);
+void test_int_garbage_vector(void **state);
+void test_uint_garbage_vector(void **state);
+void test_long_garbage_vector(void **state);
+void test_ulong_garbage_vector(void **state);
+void test_llong_garbage_vector(void **state);
+void test_ullong_garbage_vector(void **state);
+void test_float_garbage_vector(void **state);
+void test_double_garbage_vector(void **state);
+void test_ldouble_garbage_vector(void **state);
+void test_bool_garbage_vector(void **state);
+void test_string_garbage_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_H */
 // ================================================================================
 // ================================================================================

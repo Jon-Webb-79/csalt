@@ -519,6 +519,113 @@ void free_string_vector(string_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+// Functions for garbage collection 
+
+void _free_char_vector(char_v** vec) {
+    if (vec && *vec) {
+        free_char_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_uchar_vector(uchar_v** vec) {
+    if (vec && *vec) {
+        free_uchar_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_short_vector(short_v** vec) {
+    if (vec && *vec) {
+        free_short_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_ushort_vector(ushort_v** vec) {
+    if (vec && *vec) {
+        free_ushort_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_int_vector(int_v** vec) {
+    if (vec && *vec) {
+        free_int_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_uint_vector(uint_v** vec) {
+    if (vec && *vec) {
+        free_uint_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_long_vector(long_v** vec) {
+    if (vec && *vec) {
+        free_long_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_ulong_vector(ulong_v** vec) {
+    if (vec && *vec) {
+        free_ulong_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_llong_vector(llong_v** vec) {
+    if (vec && *vec) {
+        free_llong_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_ullong_vector(ullong_v** vec) {
+    if (vec && *vec) {
+        free_ullong_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_float_vector(float_v** vec) {
+    if (vec && *vec) {
+        free_float_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_double_vector(double_v** vec) {
+    if (vec && *vec) {
+        free_double_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_ldouble_vector(ldouble_v** vec) {
+    if (vec && *vec) {
+        free_ldouble_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_bool_vector(bool_v** vec) {
+    if (vec && *vec) {
+        free_bool_vector(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_sstring_vector(string_v** vec) {
+    if (vec && *vec) {
+        free_string_vector(*vec);
+    }
+}
+// ================================================================================
+// ================================================================================
 
 bool push_char_vector(char_v* vec, char var, size_t index) {
     if (!vec || index > vec->len) {
