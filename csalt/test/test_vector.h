@@ -189,6 +189,23 @@ void test_min_double_vector(void **state);
 void test_min_ldouble_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST SUM VECTOR FUNCTIONS 
+
+void test_sum_char_vector(void **state);
+void test_sum_uchar_vector(void **state);
+void test_sum_short_vector(void **state);
+void test_sum_ushort_vector(void **state);
+void test_sum_int_vector(void **state);
+void test_sum_uint_vector(void **state);
+void test_sum_long_vector(void **state);
+void test_sum_ulong_vector(void **state);
+void test_sum_llong_vector(void **state);
+void test_sum_ullong_vector(void **state);
+void test_sum_float_vector(void **state);
+void test_sum_double_vector(void **state);
+void test_sum_ldouble_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================

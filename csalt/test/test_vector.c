@@ -1908,7 +1908,7 @@ void test_min_char_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    char min = max_vector(vec);
+    char min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -1921,7 +1921,7 @@ void test_min_uchar_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    unsigned char min = max_vector(vec);
+    unsigned char min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -1934,7 +1934,7 @@ void test_min_short_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    short int min = max_vector(vec);
+    short int min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -1947,7 +1947,7 @@ void test_min_ushort_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    unsigned short int min = max_vector(vec);
+    unsigned short int min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -1960,7 +1960,7 @@ void test_min_int_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    int min = max_vector(vec);
+    int min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -1973,7 +1973,7 @@ void test_min_uint_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    unsigned short int min = max_vector(vec);
+    unsigned short int min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -1986,7 +1986,7 @@ void test_min_long_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    long int min = max_vector(vec);
+    long int min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -1999,7 +1999,7 @@ void test_min_ulong_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    unsigned long int min = max_vector(vec);
+    unsigned long int min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -2012,7 +2012,7 @@ void test_min_llong_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    long long int min = max_vector(vec);
+    long long int min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -2025,7 +2025,7 @@ void test_min_ullong_vector(void **state) {
     push_vector(vec, 10, vector_length(vec));
     push_vector(vec, 4, vector_length(vec));
     push_vector(vec, 5, vector_length(vec));
-    unsigned long long int min = max_vector(vec);
+    unsigned long long int min = min_vector(vec);
     free_vector(vec);
     assert_int_equal(min, 1);
 }
@@ -2038,7 +2038,7 @@ void test_min_float_vector(void **state) {
     push_vector(vec, 10.3f, vector_length(vec));
     push_vector(vec, 4.f, vector_length(vec));
     push_vector(vec, 5.f, vector_length(vec));
-    float min = max_vector(vec);
+    float min = min_vector(vec);
     free_vector(vec);
     assert_float_equal(min, 1.f, 1.0e-3);
 }
@@ -2051,7 +2051,7 @@ void test_min_double_vector(void **state) {
     push_vector(vec, 10.3, vector_length(vec));
     push_vector(vec, 4., vector_length(vec));
     push_vector(vec, 5., vector_length(vec));
-    double min = max_vector(vec);
+    double min = min_vector(vec);
     free_vector(vec);
     assert_double_equal(min, 1.0, 1.0e-3);
 }
@@ -2064,9 +2064,180 @@ void test_min_ldouble_vector(void **state) {
     push_vector(vec, 10.3, vector_length(vec));
     push_vector(vec, 4., vector_length(vec));
     push_vector(vec, 5., vector_length(vec));
-    long double min = max_vector(vec);
+    long double min = min_vector(vec);
     free_vector(vec);
     assert_double_equal(min, 1.0, 1.0e-3);
+}
+// ================================================================================
+// ================================================================================
+// TEST SUM VECTOR FUNCTIONS
+
+void test_sum_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    char sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    unsigned char sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    short int sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    unsigned short int sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    int sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    unsigned short int sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    long int sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    unsigned long int sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    long long int sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    unsigned long long int sum = sum_vector(vec);
+    free_vector(vec);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_float_vector(void **state) {
+    float_v* vec = init_vector(dFloat)(5);
+    push_vector(vec, 1.f, vector_length(vec));
+    push_vector(vec, 2.f, vector_length(vec));
+    push_vector(vec, 10.3f, vector_length(vec));
+    push_vector(vec, 4.f, vector_length(vec));
+    push_vector(vec, 5.f, vector_length(vec));
+    float sum = sum_vector(vec);
+    free_vector(vec);
+    assert_float_equal(sum, 22.3f, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 10.3, vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    double sum = sum_vector(vec);
+    free_vector(vec);
+    assert_double_equal(sum, 22.3, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 10.3, vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    long double sum = sum_vector(vec);
+    free_vector(vec);
+    assert_double_equal(sum, 22.3, 1.0e-3);
 }
 // ================================================================================
 // ================================================================================

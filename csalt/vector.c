@@ -2794,4 +2794,188 @@ long double min_ldouble_vector(ldouble_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+// SUM VECTOR FUNCTIONS 
+
+char sum_char_vector(char_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_char_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    char sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char sum_uchar_vector(uchar_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_uchar_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    unsigned char sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+short int sum_short_vector(short_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to short_uchar_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    short int sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int sum_ushort_vector(ushort_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_ushort_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    unsigned short int sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+int sum_int_vector(int_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_int_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    int sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int sum_uint_vector(uint_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_uint_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    unsigned int sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+long int sum_long_vector(long_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_long_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long int sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int sum_ulong_vector(ulong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_ulong_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    unsigned long int sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+long long int sum_llong_vector(llong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_llong_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long long int sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int sum_ullong_vector(ullong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_ullong_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    unsigned long long int sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+float sum_float_vector(float_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_float_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    float sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+double sum_double_vector(double_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_double_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    double sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+long double sum_ldouble_vector(ldouble_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to sum_ldouble_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long double sum = vec->data[0];
+    for (size_t i = 1; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum;
+}
+// ================================================================================
+// ================================================================================
 // eof

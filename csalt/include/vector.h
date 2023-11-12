@@ -1759,6 +1759,141 @@ long double min_ldouble_vector(ldouble_v* vec);
     ldouble_v*: min_ldouble_vector) (vec)
 // ================================================================================
 // ================================================================================
+// SUM VECTOR FUNCTIONS 
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type char_v 
+ * @return The sum of all values in a vector.
+ */
+char sum_char_vector(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type uchar_v 
+ * @return The sum of all values in a vector.
+ */
+unsigned char sum_uchar_vector(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type short_v 
+ * @return The sum of all values in a vector.
+ */
+short int sum_short_vector(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type ushort_v 
+ * @return The sum of all values in a vector.
+ */
+unsigned short int sum_ushort_vector(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type int_v 
+ * @return The sum of all values in a vector.
+ */
+int sum_int_vector(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type uint_v 
+ * @return The sum of all values in a vector.
+ */
+unsigned int sum_uint_vector(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type long_v 
+ * @return The sum of all values in a vector.
+ */
+long int sum_long_vector(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type ulong_v 
+ * @return The sum of all values in a vector.
+ */
+unsigned long int sum_ulong_vector(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type llong_v 
+ * @return The sum of all values in a vector.
+ */
+long long int sum_llong_vector(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type ullong_v 
+ * @return The sum of all values in a vector.
+ */
+unsigned long long int sum_ullong_vector(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type float_v 
+ * @return The sum of all values in a vector.
+ */
+float sum_float_vector(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type double_v 
+ * @return The sum of all values in a vector.
+ */
+double sum_double_vector(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a vector.
+ *
+ * @param vec A vector data structure of type ldouble_v 
+ * @return The sum of all values in a vector.
+ */
+long double sum_ldouble_vector(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+#define sum_vector(vec) _Generic((vec), \
+    char_v*: sum_char_vector, \
+    uchar_v*: sum_uchar_vector, \
+    short_v*: sum_short_vector, \
+    ushort_v*: sum_ushort_vector, \
+    int_v*: sum_int_vector, \
+    uint_v*: sum_uint_vector, \
+    long_v*: sum_long_vector, \
+    ulong_v*: sum_ulong_vector, \
+    llong_v*: sum_llong_vector, \
+    ullong_v*: sum_ullong_vector, \
+    float_v*: sum_float_vector, \
+    double_v*: sum_double_vector, \
+    ldouble_v*: sum_ldouble_vector) (vec)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

@@ -969,7 +969,8 @@ The ``min_vector`` and ``max_vector`` macros leverage the ``_Generic``
 keyword to select the appropriate function for determining the minimum and 
 maximum values in a dynamically allocated vector data structure. These macros 
 abstract the complexity of choosing the correct function based on the vector's 
-data type.
+data type. These macros do not work on ``bool_v`` and ``string_v`` derived 
+data types.
 
 .. code-block:: c
 
@@ -1058,3 +1059,84 @@ underlying functions can be used directly:
    float min_float_vector(float_v* vec);
    double min_double_vector(double_v* vec);
    long double min_ldouble_vector(ldouble_v* vec);
+
+Sum of Vector Values 
+====================
+The ``sum_vector`` macros leverage the ``_Generic`` 
+keyword to select the appropriate function for determining the minimum and 
+maximum values in a dynamically allocated vector data structure. These macros 
+abstract the complexity of choosing the correct function based on the vector's 
+data type. These macros do not work on ``bool_v`` and ``string_v`` derived 
+data types.
+
+.. code-block:: c
+
+   #define sum_vector(vec) (/* Expression to find sum of values in a vector */) 
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
+
+Returns 
+-------
+
+- Returns the summation of valuea in the vector, consistent with the vector's data type.
+
+Error Handling
+--------------
+The ``sum_vector`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
+Example 
+-------
+Example to find min and max values in vector data structure.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       float_v* vec = init_vector(dFloat)(5);
+       push_vector(vec, 12.1f, vector_length(vec));
+       push_vector(vec, 8.7f, vector_length(vec));
+       push_vector(vec, 22.18f, vector_length(vec));
+       push_vector(vec, 1.1f, vector_length(vec));
+       push_vector(vec, -27.6f, vector_length(vec));
+       print("Sum Value: ", sum_vector(vec));
+       free_string(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Sum Value: 16.48
+
+Underlying Functions 
+--------------------
+The ``sum_vector`` macro use ``_Generic`` to select the 
+right function based on the vector's data type. For specific control, these 
+underlying functions can be used directly:
+
+.. code-block:: c
+
+   char sum_char_vector(char_v* vec);
+   unsigned char sum_uchar_vector(uchar_v* vec);
+   short int sum_short_vector(short_v* vec);
+   unsigned short int sum_ushort_vector(ushort_v* vec);
+   int sum_int_vector(int_v* vec);
+   unsigned int sum_uint_vector(uint_v* vec);
+   long int sum_long_vector(long_v* vec);
+   unsigned long int sum_ulong_vector(ulong_v* vec);
+   long long int sum_llong_vector(llong_v* vec);
+   unsigned long long int sum_ullong_vector(ullong_v* vec);
+   float sum_float_vector(float_v* vec);
+   double sum_double_vector(double_v* vec);
+   long double sum_ldouble_vector(ldouble_v* vec);
