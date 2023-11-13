@@ -1140,3 +1140,76 @@ underlying functions can be used directly:
    float sum_float_vector(float_v* vec);
    double sum_double_vector(double_v* vec);
    long double sum_ldouble_vector(ldouble_v* vec);
+
+Average Vector Value 
+====================
+The ``vector_average`` macro uses the ``_Generic`` keyword to intelligently 
+select from several functions to determine the average value within a vector 
+data structure. The form of the ``vector_average`` macro is shown below.
+
+.. code-block:: c 
+
+   #define vector_average(vec) (/* Expressions to determine the vector average */)
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
+
+Returns 
+-------
+
+- Calculates and returns the arithmetic mean of the elements within ``vec``.
+
+.. note:: The return type varies based on the input vector's data type:
+   
+   - For ``char_v``, ``uchar_v``, ``short_v``, ``ushort_v``, and ``float_v``, the return type is ``float``.
+   - For ``int_v``, ``uint_v``, ``long_v``, ``ulong_v``, and ``double_v``, the return type is ``double``.
+   - For all other inputs, the return type is ``long double``.
+
+Example 
+-------
+An example with ``int_v`` data types.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       int_v* vec = init_vector(dInt)(5);
+       push_vector(vec, 12, vector_length(vec));
+       push_vector(vec, 8, vector_length(vec));
+       push_vector(vec, 22, vector_length(vec));
+       push_vector(vec, 1, vector_length(vec));
+       push_vector(vec, -27, vector_length(vec));
+       print("Average Value: ", vector_average(vec));
+       free_string(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Average Value: 3.2000
+
+Underlying Functions 
+--------------------
+The ``vector_average`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c
+
+   char average_char_vector(char_v* vec);
+   unsigned char average_uchar_vector(uchar_v* vec);
+   short int average_short_vector(short_v* vec);
+   unsigned short int average_ushort_vector(ushort_v* vec);
+   int average_int_vector(int_v* vec);
+   unsigned int average_uint_vector(uint_v* vec);
+   long int average_long_vector(long_v* vec);
+   unsigned long int average_ulong_vector(ulong_v* vec);
+   long long int average_llong_vector(llong_v* vec);
+   unsigned long long int average_ullong_vector(ullong_v* vec);
+   float average_float_vector(float_v* vec);
+   double average_double_vector(double_v* vec);
+   long double average_ldouble_vector(ldouble_v* vec);

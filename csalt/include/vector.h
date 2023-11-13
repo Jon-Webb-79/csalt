@@ -1894,6 +1894,141 @@ long double sum_ldouble_vector(ldouble_v* vec);
     ldouble_v*: sum_ldouble_vector) (vec)
 // ================================================================================
 // ================================================================================
+// AVERAGE VECTOR FUNCTIONS 
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type char_v 
+ * @return The average value of type float
+ */
+float average_char_vector(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type uchar_v 
+ * @return The average value of type float
+ */
+float average_uchar_vector(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type short_v 
+ * @return The average value of type float
+ */
+float average_short_vector(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type ushort_v 
+ * @return The average value of type float
+ */
+float average_ushort_vector(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type int_v 
+ * @return The average value of type double
+ */
+double average_int_vector(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type uint_v 
+ * @return The average value of type double
+ */
+double average_uint_vector(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type long_v 
+ * @return The average value of type double
+ */
+double average_long_vector(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type ulong_v 
+ * @return The average value of type double
+ */
+double average_ulong_vector(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type llong_v 
+ * @return The average value of type long double
+ */
+long double average_llong_vector(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type ullong_v 
+ * @return The average value of type long double
+ */
+long double average_ullong_vector(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type float_v 
+ * @return The average value of type float
+ */
+float average_float_vector(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type double_v 
+ * @return The average value of type double
+ */
+double average_double_vector(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a vector.
+ *
+ * @param vec A vector of type ldouble_v 
+ * @return The average value of type long double
+ */
+long double average_ldouble_vector(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+#define vector_average(vec) _Generic((vec), \
+    char_v*: average_char_vector, \
+    uchar_v*: average_uchar_vector, \
+    short_v*: average_short_vector, \
+    ushort_v*: average_ushort_vector, \
+    int_v*: average_int_vector, \
+    uint_v*: average_uint_vector, \
+    long_v*: average_long_vector, \
+    ulong_v*: average_ulong_vector, \
+    llong_v*: average_llong_vector, \
+    ullong_v*: average_ullong_vector, \
+    float_v*: average_float_vector, \
+    double_v*: average_double_vector, \
+    ldouble_v*: average_ldouble_vector) (vec)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

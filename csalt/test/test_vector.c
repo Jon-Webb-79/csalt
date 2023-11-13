@@ -2241,4 +2241,175 @@ void test_sum_ldouble_vector(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST AVERAGE VECTOR FUNCTIONS 
+
+void test_average_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    float average = vector_average(vec);
+    free_vector(vec);
+    assert_float_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    float average = vector_average(vec);
+    free_vector(vec);
+    assert_float_equal(average, 4.40, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    float average = vector_average(vec);
+    free_vector(vec);
+    assert_float_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    float average = vector_average(vec);
+    free_vector(vec);
+    assert_float_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    double average = vector_average(vec);
+    free_vector(vec);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    double average = vector_average(vec);
+    free_vector(vec);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    double average = vector_average(vec);
+    free_vector(vec);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    double average = vector_average(vec);
+    free_vector(vec);
+    assert_float_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    long double average = vector_average(vec);
+    free_vector(vec);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    long double average = vector_average(vec);
+    free_vector(vec);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_float_vector(void **state) {
+    float_v* vec = init_vector(dFloat)(5);
+    push_vector(vec, 1.f, vector_length(vec));
+    push_vector(vec, 2.f, vector_length(vec));
+    push_vector(vec, 10.3f, vector_length(vec));
+    push_vector(vec, 4.f, vector_length(vec));
+    push_vector(vec, 5.f, vector_length(vec));
+    float average = vector_average(vec);
+    free_vector(vec);
+    assert_float_equal(average, 4.46f, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 10.3, vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    double average = vector_average(vec);
+    free_vector(vec);
+    assert_double_equal(average, 4.46, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 10.3, vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    long double average = vector_average(vec);
+    free_vector(vec);
+    assert_double_equal(average, 4.46, 1.0e-3);
+}
+// ================================================================================
+// ================================================================================
 // eof

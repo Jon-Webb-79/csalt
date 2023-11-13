@@ -2978,4 +2978,188 @@ long double sum_ldouble_vector(ldouble_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+// AVERAGE VECTOR FUNCTIONS 
+
+float average_char_vector(char_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_char_vector\n");
+        errno = EINVAL;
+        return 0.0f;
+    }
+    long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (float)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+float average_uchar_vector(uchar_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_uchar_vector\n");
+        errno = EINVAL;
+        return 0.0f;
+    }
+    long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (float)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+float average_short_vector(short_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_short_vector\n");
+        errno = EINVAL;
+        return 0.0f;
+    }
+    long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (float)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+float average_ushort_vector(ushort_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_ushort_vector\n");
+        errno = EINVAL;
+        return 0.0f;
+    }
+    long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (float)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_int_vector(int_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_int_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (double)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_uint_vector(uint_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_uint_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (double)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_long_vector(long_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_long_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (double)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_ulong_vector(ulong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_ulong_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (double)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+long double average_llong_vector(llong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_llong_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (long double)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+long double average_ullong_vector(ullong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_ullong_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return (long double)sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+float average_float_vector(float_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_float_vector\n");
+        errno = EINVAL;
+        return 0.0f;
+    }
+    float sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum / vec->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_double_vector(double_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_double_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    double sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum / (double)vec->len;
+}
+// --------------------------------------------------------------------------------
+
+long double average_ldouble_vector(ldouble_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to average_ldouble_vector\n");
+        errno = EINVAL;
+        return 0.0;
+    }
+    long double sum = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum += vec->data[i];
+    }
+    return sum / (long double)vec->len;
+}
+// ================================================================================
+// ================================================================================
 // eof

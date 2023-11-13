@@ -206,6 +206,23 @@ void test_sum_double_vector(void **state);
 void test_sum_ldouble_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST AVERAGE VECTOR CUNTIONS 
+
+void test_average_char_vector(void **state);
+void test_average_uchar_vector(void **state);
+void test_average_short_vector(void **state);
+void test_average_ushort_vector(void **state);
+void test_average_int_vector(void **state);
+void test_average_uint_vector(void **state);
+void test_average_long_vector(void **state);
+void test_average_ulong_vector(void **state);
+void test_average_llong_vector(void **state);
+void test_average_ullong_vector(void **state);
+void test_average_float_vector(void **state);
+void test_average_double_vector(void **state);
+void test_average_ldouble_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================
