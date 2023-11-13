@@ -2287,6 +2287,161 @@ ldouble_v* cumsum_ldouble_vector(ldouble_v* vec);
     ldouble_v*: cumsum_ldouble_vector) (vec)
 // ================================================================================
 // ================================================================================
+// COPY VECTOR FUNCTIONS 
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type char_v 
+ * @return A vector of type char_v
+ */
+char_v* copy_char_vector(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type uchar_v 
+ * @return A vector of type uchar_v
+ */
+uchar_v* copy_uchar_vector(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type short_v 
+ * @return A vector of type short_v
+ */
+short_v* copy_short_vector(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type ushort_v 
+ * @return A vector of type ushort_v
+ */
+ushort_v* copy_ushort_vector(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type int_v 
+ * @return A vector of type int_v
+ */
+int_v* copy_int_vector(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type uint_v 
+ * @return A vector of type uint_v
+ */
+uint_v* copy_uint_vector(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type long_v 
+ * @return A vector of type long_v
+ */
+long_v* copy_long_vector(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type ulong_v 
+ * @return A vector of type ulong_v
+ */
+ulong_v* copy_ulong_vector(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type llong_v 
+ * @return A vector of type llong_v
+ */
+llong_v* copy_llong_vector(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type ullong_v 
+ * @return A vector of type ullong_v
+ */
+ullong_v* copy_ullong_vector(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type float_v 
+ * @return A vector of type float_v
+ */
+float_v* copy_float_vector(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type double_v 
+ * @return A vector of type double_v
+ */
+double_v* copy_double_vector(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type ldouble_v 
+ * @return A vector of type louble_v
+ */
+ldouble_v* copy_ldouble_vector(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type bool_v 
+ * @return A vector of type bool_v
+ */
+bool_v* copy_bool_vector(bool_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a deep copy of a vector data structure.
+ *
+ * @param vec A vectory of type string_v 
+ * @return A vector of type string_v
+ */
+string_v* copy_string_vector(string_v* vec);
+// --------------------------------------------------------------------------------
+
+#define vector_copy(vec) _Generic((vec), \
+    char_v*: copy_char_vector, \
+    uchar_v*: copy_uchar_vector, \
+    short_v*: copy_short_vector, \
+    ushort_v*: copy_ushort_vector, \
+    int_v*: copy_int_vector, \
+    uint_v*: copy_uint_vector, \
+    long_v*: copy_long_vector, \
+    ulong_v*: copy_ulong_vector, \
+    llong_v*: copy_llong_vector, \
+    ullong_v*: copy_ullong_vector, \
+    float_v*: copy_float_vector, \
+    double_v*: copy_double_vector, \
+    ldouble_v*: copy_ldouble_vector, \
+    bool_v*: copy_bool_vector, \
+    string_v*: copy_string_vector) (vec)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

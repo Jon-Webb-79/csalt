@@ -2806,4 +2806,276 @@ void test_cumsum_ldouble_vector(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST COPY VECTOR 
+
+void test_copy_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    char_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    uchar_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    short_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+} 
+// --------------------------------------------------------------------------------
+
+void test_copy_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    ushort_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    int_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    uint_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    long_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    ulong_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    llong_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    ullong_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_float_vector(void **state) {
+    float_v* vec = init_vector(dFloat)(5);
+    push_vector(vec, 1.f, vector_length(vec));
+    push_vector(vec, 2.f, vector_length(vec));
+    push_vector(vec, 3.f, vector_length(vec));
+    push_vector(vec, 4.f, vector_length(vec));
+    push_vector(vec, 5.f, vector_length(vec));
+    float_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_float_equal(vec->data[i], new_vec->data[i], 1.0e-3);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(5);
+    push_vector(vec, 1.f, vector_length(vec));
+    push_vector(vec, 2.f, vector_length(vec));
+    push_vector(vec, 3.f, vector_length(vec));
+    push_vector(vec, 4.f, vector_length(vec));
+    push_vector(vec, 5.f, vector_length(vec));
+    double_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_double_equal(vec->data[i], new_vec->data[i], 1.0e-3);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(5);
+    push_vector(vec, 1.f, vector_length(vec));
+    push_vector(vec, 2.f, vector_length(vec));
+    push_vector(vec, 3.f, vector_length(vec));
+    push_vector(vec, 4.f, vector_length(vec));
+    push_vector(vec, 5.f, vector_length(vec));
+    ldouble_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_double_equal(vec->data[i], new_vec->data[i], 1.0e-3);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_bool_vector(void **state) {
+    bool_v* vec = init_vector(dBool)(5);
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    bool_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(vec->data[i], new_vec->data[i]);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_copy_string_vector(void **state) {
+    string_v* vec = init_vector(dString)(5);
+    push_vector(vec, "One", vector_length(vec));
+    push_vector(vec, "Two", vector_length(vec));
+    push_vector(vec, "Three", vector_length(vec));
+    push_vector(vec, "Four", vector_length(vec));
+    push_vector(vec, "Five", vector_length(vec));
+    string_v* new_vec = vector_copy(vec); 
+    assert_int_equal(vec->alloc, new_vec->alloc);
+    assert_int_equal(vec->len, new_vec->len);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_string_equal(vec->data[i].data, new_vec->data[i].data);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// ================================================================================
+// ================================================================================
 // eof

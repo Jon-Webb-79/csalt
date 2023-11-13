@@ -3582,4 +3582,141 @@ ldouble_v* cumsum_ldouble_vector(ldouble_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+// COPY VECTOR FUNCTIONS 
+
+char_v* copy_char_vector(char_v* vec) {
+    char_v* new_vec = init_char_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_char_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+uchar_v* copy_uchar_vector(uchar_v* vec) {
+    uchar_v* new_vec = init_uchar_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_uchar_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+short_v* copy_short_vector(short_v* vec) {
+    short_v* new_vec = init_short_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_short_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+ushort_v* copy_ushort_vector(ushort_v* vec) {
+    ushort_v* new_vec = init_ushort_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_ushort_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+int_v* copy_int_vector(int_v* vec) {
+    int_v* new_vec = init_int_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_int_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+uint_v* copy_uint_vector(uint_v* vec) {
+    uint_v* new_vec = init_uint_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_uint_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+long_v* copy_long_vector(long_v* vec) {
+    long_v* new_vec = init_long_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_long_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+ulong_v* copy_ulong_vector(ulong_v* vec) {
+    ulong_v* new_vec = init_ulong_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_ulong_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+llong_v* copy_llong_vector(llong_v* vec) {
+    llong_v* new_vec = init_llong_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_llong_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+ullong_v* copy_ullong_vector(ullong_v* vec) {
+    ullong_v* new_vec = init_ullong_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_ullong_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+float_v* copy_float_vector(float_v* vec) {
+    float_v* new_vec = init_float_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_float_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+double_v* copy_double_vector(double_v* vec) {
+    double_v* new_vec = init_double_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_double_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+ldouble_v* copy_ldouble_vector(ldouble_v* vec) {
+    ldouble_v* new_vec = init_ldouble_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_ldouble_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+bool_v* copy_bool_vector(bool_v* vec) {
+    bool_v* new_vec = init_bool_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_bool_vector(new_vec, vec->data[i], i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+string_v* copy_string_vector(string_v* vec) {
+    string_v* new_vec = init_string_vector(vec->alloc);
+    for (size_t i = 0; i < vec->len; i++) {
+        push_string_vector(new_vec, vec->data[i].data, i);
+    }
+    return new_vec;
+}
+// ================================================================================
+// ================================================================================
 // eof

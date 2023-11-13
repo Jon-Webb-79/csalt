@@ -257,6 +257,25 @@ void test_cumsum_double_vector(void **state);
 void test_cumsum_ldouble_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST COPY VECTOR 
+
+void test_copy_char_vector(void **state);
+void test_copy_uchar_vector(void **state);
+void test_copy_short_vector(void **state);
+void test_copy_ushort_vector(void **state);
+void test_copy_int_vector(void **state);
+void test_copy_uint_vector(void **state);
+void test_copy_long_vector(void **state);
+void test_copy_ulong_vector(void **state);
+void test_copy_llong_vector(void **state);
+void test_copy_ullong_vector(void **state);
+void test_copy_float_vector(void **state);
+void test_copy_double_vector(void **state);
+void test_copy_ldouble_vector(void **state);
+void test_copy_bool_vector(void **state);
+void test_copy_string_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================

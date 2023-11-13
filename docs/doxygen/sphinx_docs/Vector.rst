@@ -1391,3 +1391,87 @@ functions can be used directly:
    float cumsum_float_vector(float_v* vec);
    double cumsum_double_vector(double_v* vec);
    long double cumsum_ldouble_vector(ldouble_v* vec);
+
+Copy Vector 
+===========
+The ``vector_copy`` macro uses the ``_Generic`` keyword to intelligently select 
+the best function to create a deep copy of the input vector.  The parameters 
+of the ``vector_copy`` macro are described below.
+
+.. code-block:: c 
+
+   #define vector_copy(vec) ( /* Expression to copy vector */ )  
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`, except for ``bool_v`` and ``string_v``..
+
+Returns 
+-------
+
+- Returns a vector data structure as the same type as ``vec`` with a deep copy of the values in ``vec`` to included allocated length.
+
+Error Handling
+--------------
+The ``vector_copy`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
+Example 
+-------
+An example of ``vector_copy`` creating a deep copy of a vector.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       float_v* vec = init_vector(dFloat)(5);
+       push_vector(vec, 1.f, vector_length(vec));
+       push_vector(vec, 2.f, vector_length(vec));
+       push_vector(vec, 10.3f, vector_length(vec));
+       push_vector(vec, 4.f, vector_length(vec));
+       push_vector(vec, 5.f, vector_length(vec));
+       float copy = vector_copy(vec);
+       print("Original: ", vec);
+       print("New: ", copy);
+       free_vector(vec);
+       free_vector(copy);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Original: [ 1.00000, 2.00000, 10.30000, 4.00000, 5.00000 ]
+   >> New: [ 1.00000, 2.00000, 10.30000, 4.00000, 5.00000 ] 
+
+Underlying Functions 
+--------------------
+The ``vector_copy`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c
+
+   char copy_char_vector(char_v* vec);
+   unsigned char copy_uchar_vector(uchar_v* vec);
+   short int copy_short_vector(short_v* vec);
+   unsigned short int copy_ushort_vector(ushort_v* vec);
+   int copy_int_vector(int_v* vec);
+   unsigned int copy_uint_vector(uint_v* vec);
+   long int copy_long_vector(long_v* vec);
+   unsigned long int copy_ulong_vector(ulong_v* vec);
+   long long int copy_llong_vector(llong_v* vec);
+   unsigned long long int copy_ullong_vector(ullong_v* vec);
+   float copy_float_vector(float_v* vec);
+   double copy_double_vector(double_v* vec);
+   long double copy_ldouble_vector(ldouble_v* vec);
+   double copy_bool_vector(double_v* vec);
+   long double copy_string_vector(ldouble_v* vec);
