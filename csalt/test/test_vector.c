@@ -2583,4 +2583,227 @@ void test_stdev_ldouble_vector(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST CUMSUM FUNCTIONS 
+
+void test_cumsum_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    char_v* new_vec = vector_cumsum(vec);
+    char a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    uchar_v* new_vec = vector_cumsum(vec);
+    unsigned char a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    short_v* new_vec = vector_cumsum(vec);
+    short int a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    ushort_v* new_vec = vector_cumsum(vec);
+    unsigned short int a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    int_v* new_vec = vector_cumsum(vec);
+    int a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    uint_v* new_vec = vector_cumsum(vec);
+    unsigned int a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    long_v* new_vec = vector_cumsum(vec);
+    long int a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    ulong_v* new_vec = vector_cumsum(vec);
+    unsigned long int a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    llong_v* new_vec = vector_cumsum(vec);
+    long long int a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    ullong_v* new_vec = vector_cumsum(vec);
+    unsigned long long int a[5] = {1, 3, 6, 10, 15};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_int_equal(a[i], get_vector(new_vec, i));
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_float_vector(void **state) {
+    float_v* vec = init_vector(dFloat)(5);
+    push_vector(vec, 1.f, vector_length(vec));
+    push_vector(vec, 2.f, vector_length(vec));
+    push_vector(vec, 3.f, vector_length(vec));
+    push_vector(vec, 4.f, vector_length(vec));
+    push_vector(vec, 5.f, vector_length(vec));
+    float_v* new_vec = vector_cumsum(vec);
+    float a[5] = {1., 3., 6., 10., 15.};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_float_equal(a[i], get_vector(new_vec, i), 1.0e-3);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    double_v* new_vec = vector_cumsum(vec);
+    double a[5] = {1., 3., 6., 10., 15.};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_double_equal(a[i], get_vector(new_vec, i), 1.0e-3);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_cumsum_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    ldouble_v* new_vec = vector_cumsum(vec);
+    long double a[5] = {1., 3., 6., 10., 15.};
+    for (size_t i = 0; i < vector_length(vec); i++) {
+        assert_double_equal(a[i], get_vector(new_vec, i), 1.0e-3);
+    }
+    free_vector(vec);
+    free_vector(new_vec);
+}
+// ================================================================================
+// ================================================================================
 // eof

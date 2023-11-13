@@ -1310,3 +1310,84 @@ functions can be used directly:
    float stdev_float_vector(float_v* vec);
    double stdev_double_vector(double_v* vec);
    long double stdev_ldouble_vector(ldouble_v* vec);
+
+Cumulative Sum of Vector 
+========================
+The ``vector_cumsum`` macro utilizes the ``_Generic`` keyword to select the  
+appropriate function to build the cumulative sum of an input vector as 
+another vector data structure.  The parameters of the ``vector_cumsum`` 
+macro is shown below.
+
+.. code-block:: c 
+
+   #define vector_cumsum(vec) ( /* Expression to develop a cumulative sum */ )
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`, except for ``bool_v`` and ``string_v``..
+
+Returns 
+-------
+
+- Returns a vector data structure as the same type as ``vec`` with the cumulative sum of the values in ``vec``.
+
+Error Handling
+--------------
+The ``vector_cumsum`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
+Example 
+-------
+An example with a ``double_v`` derived data type. 
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       float_v* vec = init_vector(dFloat)(5);
+       push_vector(vec, 1.f, vector_length(vec));
+       push_vector(vec, 2.f, vector_length(vec));
+       push_vector(vec, 3.f, vector_length(vec));
+       push_vector(vec, 4.f, vector_length(vec));
+       push_vector(vec, 5.f, vector_length(vec));
+       float_v* cumulative = vector_cumsum(vec);
+       print("Cumulative: ", cumulative);
+       free_vector(vec);
+       free_vector(cumulative);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Cumulative: [ 1.000000, 3.000000, 6.000000, 10.000000, 15.000000 ]
+
+Underlying Functions 
+--------------------
+The ``vector_cumsum`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c
+
+   char cumsum_char_vector(char_v* vec);
+   unsigned char cumsum_uchar_vector(uchar_v* vec);
+   short int cumsum_short_vector(short_v* vec);
+   unsigned short int cumsum_ushort_vector(ushort_v* vec);
+   int cumsum_int_vector(int_v* vec);
+   unsigned int cumsum_uint_vector(uint_v* vec);
+   long int cumsum_long_vector(long_v* vec);
+   unsigned long int cumsum_ulong_vector(ulong_v* vec);
+   long long int cumsum_llong_vector(llong_v* vec);
+   unsigned long long int cumsum_ullong_vector(ullong_v* vec);
+   float cumsum_float_vector(float_v* vec);
+   double cumsum_double_vector(double_v* vec);
+   long double cumsum_ldouble_vector(ldouble_v* vec);

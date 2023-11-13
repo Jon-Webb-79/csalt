@@ -3359,4 +3359,227 @@ long double stdev_ldouble_vector(ldouble_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+// CUMULATIVE SUM FUNCTIONS 
+
+char_v* cumsum_char_vector(char_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_char_vector\n");
+        errno = EINVAL;
+        return init_char_vector(1);
+    }
+    char_v* new_vec = init_char_vector(vec->len);
+    char dat = vec->data[0];
+    push_char_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_char_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+uchar_v* cumsum_uchar_vector(uchar_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_uchar_vector\n");
+        errno = EINVAL;
+        return init_uchar_vector(1);
+    }
+    uchar_v* new_vec = init_uchar_vector(vec->len);
+    unsigned char dat = vec->data[0];
+    push_uchar_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_uchar_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+short_v* cumsum_short_vector(short_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_short_vector\n");
+        errno = EINVAL;
+        return init_short_vector(1);
+    }
+    short_v* new_vec = init_short_vector(vec->len);
+    short int dat = vec->data[0];
+    push_short_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_short_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+ushort_v* cumsum_ushort_vector(ushort_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_ushort_vector\n");
+        errno = EINVAL;
+        return init_ushort_vector(1);
+    }
+    ushort_v* new_vec = init_ushort_vector(vec->len);
+    unsigned short int dat = vec->data[0];
+    push_ushort_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_ushort_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+int_v* cumsum_int_vector(int_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_int_vector\n");
+        errno = EINVAL;
+        return init_int_vector(1);
+    }
+    int_v* new_vec = init_int_vector(vec->len);
+    int dat = vec->data[0];
+    push_int_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_int_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+uint_v* cumsum_uint_vector(uint_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_uint_vector\n");
+        errno = EINVAL;
+        return init_uint_vector(1);
+    }
+    uint_v* new_vec = init_uint_vector(vec->len);
+    unsigned int dat = vec->data[0];
+    push_uint_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_uint_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+long_v* cumsum_long_vector(long_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_long_vector\n");
+        errno = EINVAL;
+        return init_long_vector(1);
+    }
+    long_v* new_vec = init_long_vector(vec->len);
+    long int dat = vec->data[0];
+    push_long_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_long_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+ulong_v* cumsum_ulong_vector(ulong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_ulong_vector\n");
+        errno = EINVAL;
+        return init_ulong_vector(1);
+    }
+    ulong_v* new_vec = init_ulong_vector(vec->len);
+    unsigned long int dat = vec->data[0];
+    push_ulong_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_ulong_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+llong_v* cumsum_llong_vector(llong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_llong_vector\n");
+        errno = EINVAL;
+        return init_llong_vector(1);
+    }
+    llong_v* new_vec = init_llong_vector(vec->len);
+    long long int dat = vec->data[0];
+    push_llong_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_llong_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+ullong_v* cumsum_ullong_vector(ullong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_ullong_vector\n");
+        errno = EINVAL;
+        return init_ullong_vector(1);
+    }
+    ullong_v* new_vec = init_ullong_vector(vec->len);
+    unsigned long long int dat = vec->data[0];
+    push_ullong_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_ullong_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+float_v* cumsum_float_vector(float_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_float_vector\n");
+        errno = EINVAL;
+        return init_float_vector(1);
+    }
+    float_v* new_vec = init_float_vector(vec->len);
+    float dat = vec->data[0];
+    push_float_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_float_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+double_v* cumsum_double_vector(double_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_double_vector\n");
+        errno = EINVAL;
+        return init_double_vector(1);
+    }
+    double_v* new_vec = init_double_vector(vec->len);
+    double dat = vec->data[0];
+    push_double_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_double_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// --------------------------------------------------------------------------------
+
+ldouble_v* cumsum_ldouble_vector(ldouble_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to cumsum_ldouble_vector\n");
+        errno = EINVAL;
+        return init_ldouble_vector(1);
+    }
+    ldouble_v* new_vec = init_ldouble_vector(vec->len);
+    double dat = vec->data[0];
+    push_ldouble_vector(new_vec, dat, 0);
+    for (size_t i = 1; i < vec->len; i++) {
+        dat += vec->data[i];
+        push_ldouble_vector(new_vec, dat, i);
+    }
+    return new_vec;
+}
+// ================================================================================
+// ================================================================================
 // eof

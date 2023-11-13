@@ -2165,6 +2165,128 @@ long double stdev_ldouble_vector(ldouble_v* vec);
     ldouble_v*: stdev_ldouble_vector) (vec)
 // ================================================================================
 // ================================================================================
+// CUMULATIVE SUM FUNCTIONS 
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type char_v 
+ * @return A vector of type char_v
+ */
+char_v* cumsum_char_vector(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type uchar_v 
+ * @return A vector of type uchar_v
+ */
+uchar_v* cumsum_uchar_vector(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type short_v 
+ * @return A vector of type short_v
+ */
+short_v* cumsum_short_vector(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type ushort_v 
+ * @return A vector of type ushort_v
+ */
+ushort_v* cumsum_ushort_vector(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type int_v 
+ * @return A vector of type int_v
+ */
+int_v* cumsum_int_vector(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type uint_v 
+ * @return A vector of type unit_v
+ */
+uint_v* cumsum_uint_vector(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type long_v 
+ * @return A vector of type long_v
+ */
+long_v* cumsum_long_vector(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type ulong_v 
+ * @return A vector of type ulong_v
+ */
+ulong_v* cumsum_ulong_vector(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type llong_v 
+ * @return A vector of type llong_v
+ */
+llong_v* cumsum_llong_vector(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type ullong_v 
+ * @return A vector of type ullong_v
+ */
+ullong_v* cumsum_ullong_vector(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type float_v 
+ * @return A vector of type float_v
+ */
+float_v* cumsum_float_vector(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type double_v 
+ * @return A vector of type double_v
+ */
+double_v* cumsum_double_vector(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector containing the cumulative sum of the input vectr.
+ * @param A vector of type ldouble_v 
+ * @return A vector of type ldouble_v
+ */
+ldouble_v* cumsum_ldouble_vector(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+#define vector_cumsum(vec) _Generic((vec), \
+    char_v*: cumsum_char_vector, \
+    uchar_v*: cumsum_uchar_vector, \
+    short_v*: cumsum_short_vector, \
+    ushort_v*: cumsum_ushort_vector, \
+    int_v*: cumsum_int_vector, \
+    uint_v*: cumsum_uint_vector, \
+    long_v*: cumsum_long_vector, \
+    ulong_v*: cumsum_ulong_vector, \
+    llong_v*: cumsum_llong_vector, \
+    ullong_v*: cumsum_ullong_vector, \
+    float_v*: cumsum_float_vector, \
+    double_v*: cumsum_double_vector, \
+    ldouble_v*: cumsum_ldouble_vector) (vec)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

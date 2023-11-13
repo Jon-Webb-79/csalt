@@ -240,6 +240,23 @@ void test_stdev_double_vector(void **state);
 void test_stdev_ldouble_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST CUMSUM FUNCTIONS 
+
+void test_cumsum_char_vector(void **state);
+void test_cumsum_uchar_vector(void **state);
+void test_cumsum_short_vector(void **state);
+void test_cumsum_ushort_vector(void **state);
+void test_cumsum_int_vector(void **state);
+void test_cumsum_uint_vector(void **state);
+void test_cumsum_long_vector(void **state);
+void test_cumsum_ulong_vector(void **state);
+void test_cumsum_llong_vector(void **state);
+void test_cumsum_ullong_vector(void **state);
+void test_cumsum_float_vector(void **state);
+void test_cumsum_double_vector(void **state);
+void test_cumsum_ldouble_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================
