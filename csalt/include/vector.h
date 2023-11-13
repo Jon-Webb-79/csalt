@@ -20,6 +20,7 @@
 #define vector_H
 
 #include <stdio.h>
+#include <math.h>
 
 #include "admin.h"
 #include "str.h"
@@ -2027,6 +2028,141 @@ long double average_ldouble_vector(ldouble_v* vec);
     float_v*: average_float_vector, \
     double_v*: average_double_vector, \
     ldouble_v*: average_ldouble_vector) (vec)
+// ================================================================================
+// ================================================================================
+// VECTOR STDEV FUNCTIONS 
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type char_v.
+ * @return The standard deviation as a float type.
+ */
+float stdev_char_vector(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type uchar_v.
+ * @return The standard deviation as a float type.
+ */
+float stdev_uchar_vector(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type short_v.
+ * @return The standard deviation as a float type.
+ */
+float stdev_short_vector(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type ushort_v.
+ * @return The standard deviation as a float type.
+ */
+float stdev_ushort_vector(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type int_v.
+ * @return The standard deviation as a double type.
+ */
+double stdev_int_vector(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type uint_v.
+ * @return The standard deviation as a double type.
+ */
+double stdev_uint_vector(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type long_v.
+ * @return The standard deviation as a double type.
+ */
+double stdev_long_vector(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type ulong_v.
+ * @return The standard deviation as a double type.
+ */
+double stdev_ulong_vector(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type llong_v.
+ * @return The standard deviation as a long double type.
+ */
+long double stdev_llong_vector(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type ullong_v.
+ * @return The standard deviation as a long double type.
+ */
+long double stdev_ullong_vector(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type float_v.
+ * @return The standard deviation as a float type.
+ */
+float stdev_float_vector(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type double_v.
+ * @return The standard deviation as a double type.
+ */
+double stdev_double_vector(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a vector.
+ *
+ * @param A vector of type ldouble_v.
+ * @return The standard deviation as a long double type.
+ */
+long double stdev_ldouble_vector(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+#define vector_stdev(vec) _Generic((vec), \
+    char_v*: stdev_char_vector, \
+    uchar_v*: stdev_uchar_vector, \
+    short_v*: stdev_short_vector, \
+    ushort_v*: stdev_ushort_vector, \
+    int_v*: stdev_int_vector, \
+    uint_v*: stdev_uint_vector, \
+    long_v*: stdev_long_vector, \
+    ulong_v*: stdev_ulong_vector, \
+    llong_v*: stdev_llong_vector, \
+    ullong_v*: stdev_ullong_vector, \
+    float_v*: stdev_float_vector, \
+    double_v*: stdev_double_vector, \
+    ldouble_v*: stdev_ldouble_vector) (vec)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

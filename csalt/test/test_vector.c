@@ -2412,4 +2412,175 @@ void test_average_ldouble_vector(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST STDEV FUNCTIONS 
+
+void test_stdev_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    float stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    float stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    float stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    float stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    double stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    double stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    double stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    double stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    long double stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(5);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 10, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    long double stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_float_vector(void **state) {
+    float_v* vec = init_vector(dFloat)(5);
+    push_vector(vec, 1.f, vector_length(vec));
+    push_vector(vec, 2.f, vector_length(vec));
+    push_vector(vec, 10.3f, vector_length(vec));
+    push_vector(vec, 4.f, vector_length(vec));
+    push_vector(vec, 5.f, vector_length(vec));
+    float stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_float_equal(stdev, 3.24444, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 10.3, vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    double stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_double_equal(stdev, 3.24444, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(5);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 10.3, vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    long double stdev = vector_stdev(vec);
+    free_vector(vec);
+    assert_double_equal(stdev, 3.24444, 1.0e-3);
+}
+// ================================================================================
+// ================================================================================
 // eof

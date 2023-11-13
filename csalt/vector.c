@@ -2572,7 +2572,7 @@ float max_float_vector(float_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to max_float_vector\n");
         errno = EINVAL;
-        return 0.0f;
+        return 0.f;
     }
     float max_value = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2586,7 +2586,7 @@ double max_double_vector(double_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to max_double_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0.;
     }
     double max_value = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2600,7 +2600,7 @@ long double max_ldouble_vector(ldouble_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to max_ldouble_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0.;
     }
     long double max_value = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2756,7 +2756,7 @@ float min_float_vector(float_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to max_float_vector\n");
         errno = EINVAL;
-        return 0.0f;
+        return 0.f;
     }
     float min_value = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2770,7 +2770,7 @@ double min_double_vector(double_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to max_double_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0.;
     }
     double min_value = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2784,7 +2784,7 @@ long double min_ldouble_vector(ldouble_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to max_ldouble_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0.;
     }
     long double min_value = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2800,7 +2800,7 @@ char sum_char_vector(char_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_char_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     char sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2814,7 +2814,7 @@ unsigned char sum_uchar_vector(uchar_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_uchar_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     unsigned char sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2828,7 +2828,7 @@ short int sum_short_vector(short_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to short_uchar_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     short int sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2842,7 +2842,7 @@ unsigned short int sum_ushort_vector(ushort_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_ushort_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     unsigned short int sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2856,7 +2856,7 @@ int sum_int_vector(int_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_int_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     int sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2870,7 +2870,7 @@ unsigned int sum_uint_vector(uint_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_uint_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     unsigned int sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2884,7 +2884,7 @@ long int sum_long_vector(long_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_long_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     long int sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2898,7 +2898,7 @@ unsigned long int sum_ulong_vector(ulong_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_ulong_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     unsigned long int sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2912,7 +2912,7 @@ long long int sum_llong_vector(llong_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_llong_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     long long int sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2926,7 +2926,7 @@ unsigned long long int sum_ullong_vector(ullong_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_ullong_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     unsigned long long int sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2940,7 +2940,7 @@ float sum_float_vector(float_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_float_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0.f;
     }
     float sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2954,7 +2954,7 @@ double sum_double_vector(double_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_double_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0.;
     }
     double sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2968,7 +2968,7 @@ long double sum_ldouble_vector(ldouble_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to sum_ldouble_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0.;
     }
     long double sum = vec->data[0];
     for (size_t i = 1; i < vec->len; i++) {
@@ -2984,7 +2984,7 @@ float average_char_vector(char_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_char_vector\n");
         errno = EINVAL;
-        return 0.0f;
+        return 0;
     }
     long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -2998,7 +2998,7 @@ float average_uchar_vector(uchar_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_uchar_vector\n");
         errno = EINVAL;
-        return 0.0f;
+        return 0;
     }
     long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3012,7 +3012,7 @@ float average_short_vector(short_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_short_vector\n");
         errno = EINVAL;
-        return 0.0f;
+        return 0;
     }
     long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3026,7 +3026,7 @@ float average_ushort_vector(ushort_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_ushort_vector\n");
         errno = EINVAL;
-        return 0.0f;
+        return 0;
     }
     long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3040,7 +3040,7 @@ double average_int_vector(int_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_int_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     long long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3054,7 +3054,7 @@ double average_uint_vector(uint_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_uint_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     long long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3068,7 +3068,7 @@ double average_long_vector(long_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_long_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     long long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3082,7 +3082,7 @@ double average_ulong_vector(ulong_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_ulong_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     long long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3096,7 +3096,7 @@ long double average_llong_vector(llong_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_llong_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     long long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3110,7 +3110,7 @@ long double average_ullong_vector(ullong_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_ullong_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0;
     }
     long long sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3124,7 +3124,7 @@ float average_float_vector(float_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_float_vector\n");
         errno = EINVAL;
-        return 0.0f;
+        return 0.f;
     }
     float sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3138,7 +3138,7 @@ double average_double_vector(double_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_double_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0.;
     }
     double sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
@@ -3152,13 +3152,210 @@ long double average_ldouble_vector(ldouble_v* vec) {
     if ( vec == NULL || vec->data == NULL ) {
         fprintf(stderr, "Error: Null pointer passed to average_ldouble_vector\n");
         errno = EINVAL;
-        return 0.0;
+        return 0.;
     }
     long double sum = 0;
     for (size_t i = 0; i < vec->len; i++) {
         sum += vec->data[i];
     }
     return sum / (long double)vec->len;
+}
+// ================================================================================
+// ================================================================================
+// STDEV VECTOR FUNCTIONS 
+
+float stdev_char_vector(char_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_char_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    float avg = average_char_vector(vec);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+float stdev_uchar_vector(uchar_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_uchar_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    float avg = average_uchar_vector(vec);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+float stdev_short_vector(short_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_short_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    float avg = average_short_vector(vec);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+float stdev_ushort_vector(ushort_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_ushort_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    float avg = average_ushort_vector(vec);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_int_vector(int_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_int_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    double avg = average_int_vector(vec);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_uint_vector(uint_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_uint_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    double avg = average_uint_vector(vec);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_long_vector(long_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_long_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    double avg = average_long_vector(vec);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_ulong_vector(ulong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_ulong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    double avg = average_ulong_vector(vec);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+long double stdev_llong_vector(llong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_llong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    long double avg = average_llong_vector(vec);
+    long double sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+long double stdev_ullong_vector(ullong_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_ullong_vector\n");
+        errno = EINVAL;
+        return 0;
+    }
+    long double avg = average_ullong_vector(vec);
+    long double sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+float stdev_float_vector(float_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_float_vector\n");
+        errno = EINVAL;
+        return 0.f;
+    }
+    float avg = average_float_vector(vec);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_double_vector(double_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_double_vector\n");
+        errno = EINVAL;
+        return 0.;
+    }
+    double avg = average_double_vector(vec);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
+}
+// --------------------------------------------------------------------------------
+
+long double stdev_ldouble_vector(ldouble_v* vec) {
+    if ( vec == NULL || vec->data == NULL ) {
+        fprintf(stderr, "Error: Null pointer passed to stdev_ldouble_vector\n");
+        errno = EINVAL;
+        return 0.;
+    }
+    long double avg = average_ldouble_vector(vec);
+    long double sum_sq_diff = 0;
+    for (size_t i = 0; i < vec->len; i++) {
+        sum_sq_diff += (vec->data[i] - avg) * (vec->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / vec->len);
 }
 // ================================================================================
 // ================================================================================

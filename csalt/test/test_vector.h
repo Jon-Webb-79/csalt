@@ -223,6 +223,23 @@ void test_average_double_vector(void **state);
 void test_average_ldouble_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST STDEV FUNCTIONS 
+
+void test_stdev_char_vector(void **state);
+void test_stdev_uchar_vector(void **state);
+void test_stdev_short_vector(void **state);
+void test_stdev_ushort_vector(void **state);
+void test_stdev_int_vector(void **state);
+void test_stdev_uint_vector(void **state);
+void test_stdev_long_vector(void **state);
+void test_stdev_ulong_vector(void **state);
+void test_stdev_llong_vector(void **state);
+void test_stdev_ullong_vector(void **state);
+void test_stdev_float_vector(void **state);
+void test_stdev_double_vector(void **state);
+void test_stdev_ldouble_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================

@@ -1016,7 +1016,7 @@ Example to find min and max values in vector data structure.
        push_vector(vec, -27.6f, vector_length(vec));
        print("Min Value: ", min_vector(vec));
        print("Max Value: ", max_vector(vec));
-       free_string(vec);
+       free_vector(vec);
        return 0;
    }
 
@@ -1111,7 +1111,7 @@ Example to find min and max values in vector data structure.
        push_vector(vec, 1.1f, vector_length(vec));
        push_vector(vec, -27.6f, vector_length(vec));
        print("Sum Value: ", sum_vector(vec));
-       free_string(vec);
+       free_vector(vec);
        return 0;
    }
 
@@ -1167,6 +1167,17 @@ Returns
    - For ``int_v``, ``uint_v``, ``long_v``, ``ulong_v``, and ``double_v``, the return type is ``double``.
    - For all other inputs, the return type is ``long double``.
 
+Error Handling
+--------------
+The ``vector_average`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
 Example 
 -------
 An example with ``int_v`` data types.
@@ -1184,7 +1195,7 @@ An example with ``int_v`` data types.
        push_vector(vec, 1, vector_length(vec));
        push_vector(vec, -27, vector_length(vec));
        print("Average Value: ", vector_average(vec));
-       free_string(vec);
+       free_vector(vec);
        return 0;
    }
 
@@ -1213,3 +1224,89 @@ functions can be used directly:
    float average_float_vector(float_v* vec);
    double average_double_vector(double_v* vec);
    long double average_ldouble_vector(ldouble_v* vec);
+
+Standard Deviation of a Vector 
+==============================
+The ``vector_stdev`` macro uses the ``_Generic`` keyword to select the 
+appropriate function to calculate and return the standard deviation of
+the values in a vector data structure.  The parameters of the ``vector_stdev``
+macro are shown below.
+
+.. code-block:: c 
+
+   #define vector_stdev(vec) ( /*Expressions to calculate standard deviation */)  
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
+
+Returns 
+-------
+
+- Calculates and returns the arithmetic mean of the elements within ``vec``.
+
+.. note:: The return type varies based on the input vector's data type:
+   
+   - For ``char_v``, ``uchar_v``, ``short_v``, ``ushort_v``, and ``float_v``, the return type is ``float``.
+   - For ``int_v``, ``uint_v``, ``long_v``, ``ulong_v``, and ``double_v``, the return type is ``double``.
+   - For all other inputs, the return type is ``long double``.
+
+Error Handling
+--------------
+The ``vector_stdev`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
+Example 
+------- 
+An example to calculate the standard deviation of a ``float_v`` type.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       float_v* vec = init_vector(dFloat)(5);
+       push_vector(vec, 1.f, vector_length(vec));
+       push_vector(vec, 2.f, vector_length(vec));
+       push_vector(vec, 10.3f, vector_length(vec));
+       push_vector(vec, 4.f, vector_length(vec));
+       push_vector(vec, 5.f, vector_length(vec));
+       float stdev = vector_stdev(vec);
+       print("Stdev: ", stdev);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Stdev: 3.2444414
+
+Underlying Functions 
+--------------------
+The ``vector_average`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c
+
+   char stdev_char_vector(char_v* vec);
+   unsigned char stdev_uchar_vector(uchar_v* vec);
+   short int stdev_short_vector(short_v* vec);
+   unsigned short int stdev_ushort_vector(ushort_v* vec);
+   int stdev_int_vector(int_v* vec);
+   unsigned int stdev_uint_vector(uint_v* vec);
+   long int stdev_long_vector(long_v* vec);
+   unsigned long int stdev_ulong_vector(ulong_v* vec);
+   long long int stdev_llong_vector(llong_v* vec);
+   unsigned long long int stdev_ullong_vector(ullong_v* vec);
+   float stdev_float_vector(float_v* vec);
+   double stdev_double_vector(double_v* vec);
+   long double stdev_ldouble_vector(ldouble_v* vec);
