@@ -129,6 +129,18 @@ Returns
 
 .. note:: The buffer size is only a guess, if the user exceeds this value, the underyling functions will allocate more memory in a geometric fashion, until the arrays becomes to large and then it will allocate in a linear fashion.
 
+Error Handling
+--------------
+The ``init_vector`` macro has one primary failure mechanism, which is a failure 
+to allocate memory.  If this occurs, the underlying functions will return a 
+NULL pointer in place of the data struct, and will also set the value of 
+``errno`` to ``ENOMEM``.  The developer can check for any of these two 
+conditions to determine if an error occurred.
+
+Possible error codes:
+
+- ``ENOMEM``: Indicates a failure to allocate memory.
+
 Example 
 -------
 Below is an example of using the ``init_vector`` function to create a dynamically 
@@ -140,10 +152,14 @@ allocated vector of type ``float_v`` with an initial capacity of 5 indices.
 
    int main() {
        float_v* vec = init_vector(dFloat)(5);
+       if (vec == NUL) {
+           fprintf(stderr, "Error: Memory allocation failure\n");
+           return EXIT_FAILURE;
+       }
        // Operations on the vector...
        // Remember to free dynamically allocated memory
        free_vector(vec);
-       return 0;
+       return EXIT_SUCCESS;
    }
 
 .. note:: The ``init_vector`` function abstracts the complexity of vector initialization, providing a straightforward way to instantiate vectors. It is crucial to manage the memory of these vectors properly, which includes freeing them after use.
@@ -230,9 +246,20 @@ Parameters
 Returns 
 -------
 
-- Returns `true` if the data is successfully inserted into the vector, `false` otherwise.
+- Returns ``true`` if the data is successfully inserted into the vector, ``false`` otherwise.
 
-.. note:: The function returns ``false`` and prints an error message to ``stderr`` in cases such as NULL vector pointers, index out of bounds, or memory allocation failures.
+Error Handling
+--------------
+The ``push_vector`` macro has three primary failure mechanisms to include an 
+index out of bounds, failure to allocate memory, and an invalid argument.
+If any of these occure, the following error macros will be passed to 
+errno.  In addition, the function will return a value false.
+
+Possible error codes:
+
+- ``ENOMEM``: Indicates a failure to allocate memory.
+- ``EINVAL``: Indicates an invalid argument passed for ``vec``.
+- ``ERANGE``: Indicates the value of ``index`` was out of bounds.
 
 Example 1
 ---------
@@ -317,6 +344,37 @@ vector.
 
    >> [ Four, One, Two, Three ]
 
+Example 4 
+---------
+Example with error code processing.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+   #include "str.h"
+
+   int main() {
+       str one =  {.data = "One", .len = 3, .alloc = 4};
+       str two = {.data = "Two", .len = 3, .alloc = 4};
+       str three = {.data = "Three", .len = 5, .alloc = 6};
+       str four = {.data = "Four", .len = 4, .alloc = 5};
+
+       string_v* vec = init_vector(dString)(4);
+       push_str_vector(vec, &one, vec->len);
+       push_str_vector(vec, &two, vec->len);
+       push_str_vector(vec, &three, vec->len);
+       push_str_vector(vec, &four, 10);
+       if (errno == ERANGE) fprintf(stderr, "Error, index out of bounds\n");
+       print(vec);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> [ One, Two, Three ]
+   >> Error: Index out of bounds
 
 Underlying Functions 
 --------------------
@@ -361,6 +419,18 @@ Parameters
 ----------
 
 - :c:`vec`: A vector data structure of any type listed in the :ref:`Vector Data Types <vector_dat_type>` section.
+
+Error Handling
+--------------
+The ``free_vector`` macro has one primary failure mechanism, which is a the 
+use of an invalid variable. If this occurs the function will return a 
+void as it would if the function executes succesfully; however, it will 
+also write a macro value of ``EINVAL`` to ``errno`` which can be checked in 
+the calling program.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid value (i.e. NULL pointer) for the value of ``vec``.
 
 Usage Examples
 --------------
