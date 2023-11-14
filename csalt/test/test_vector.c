@@ -3078,4 +3078,200 @@ void test_copy_string_vector(void **state) {
 }
 // ================================================================================
 // ================================================================================
+
+void test_trim_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_float_vector(void **state) {
+    char_v* vec = init_vector(dFloat)(15);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    push_vector(vec, 5., vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(15);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    push_vector(vec, 5, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_bool_vector(void **state) {
+    bool_v* vec = init_vector(dBool)(15);
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, false, vector_length(vec));
+    push_vector(vec, true, vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_trim_string_vector(void **state) {
+    string_v* vec = init_vector(dString)(15);
+    push_vector(vec, "One", vector_length(vec));
+    push_vector(vec, "Two", vector_length(vec));
+    push_vector(vec, "Three", vector_length(vec));
+    push_vector(vec, "Four", vector_length(vec));
+    push_vector(vec, "Five", vector_length(vec));
+    trim_vector(vec); 
+    assert_int_equal(vec->alloc, 5);
+    free_vector(vec);
+}
+// ================================================================================
+// ================================================================================
 // eof

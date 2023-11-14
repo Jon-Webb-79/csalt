@@ -3578,4 +3578,336 @@ string_v* copy_string_vector(string_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+// TRIM VECTOR FUNCTIONS 
+
+bool trim_char_vector(char_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    char* ptr = realloc(vec->data, sizeof(char) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_uchar_vector(uchar_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    unsigned char* ptr = realloc(vec->data, sizeof(unsigned char) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_short_vector(short_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    short int* ptr = realloc(vec->data, sizeof(short int) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_ushort_vector(ushort_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    unsigned short int* ptr = realloc(vec->data, sizeof(unsigned short int) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_int_vector(int_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    int* ptr = realloc(vec->data, sizeof(int) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_uint_vector(uint_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    unsigned int* ptr = realloc(vec->data, sizeof(unsigned int) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_long_vector(long_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    long int* ptr = realloc(vec->data, sizeof(long int) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_ulong_vector(ulong_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    unsigned long int* ptr = realloc(vec->data, sizeof(unsigned long int) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_llong_vector(llong_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    long long int* ptr = realloc(vec->data, sizeof(long long int) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_ullong_vector(ullong_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    unsigned long long int* ptr = realloc(vec->data, sizeof(unsigned long long int) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_float_vector(float_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    float* ptr = realloc(vec->data, sizeof(float) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_double_vector(double_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    double* ptr = realloc(vec->data, sizeof(double) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_ldouble_vector(ldouble_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    long double* ptr = realloc(vec->data, sizeof(long double) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_bool_vector(bool_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    bool* ptr = realloc(vec->data, sizeof(bool) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool trim_string_vector(string_v* vec) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    // If vec->len is already equal to vec->alloc, no resizing needed
+    if (vec->len == vec->alloc) {
+        return true;
+    }
+    str* ptr = realloc(vec->data, sizeof(str) * vec->len);
+    if (ptr == NULL) {
+        // realloc failed, but vec->data still points to the original memory
+        return false;
+    }
+    // Update the vector to use the newly allocated memory
+    vec->data = ptr;
+    vec->alloc = vec->len;
+    return true;
+}
+// ================================================================================
+// ================================================================================
 // eof

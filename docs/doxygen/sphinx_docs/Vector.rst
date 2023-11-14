@@ -539,7 +539,7 @@ The possible error codes set by ``get_vector`` include:
 
 Example 1
 ---------
-Demonstrating how to safely access data from a vector using the `get_vector` macro:
+Demonstrating how to safely access data from a vector using the ``get_vector`` macro:
 
 .. code-block:: c
 
@@ -1545,3 +1545,63 @@ functions can be used directly:
    long double copy_ldouble_vector(ldouble_v* vec);
    double copy_bool_vector(double_v* vec);
    long double copy_string_vector(ldouble_v* vec);
+
+Trim Vector
+===========
+It is very possible the a vector data structure may over-allocate memory,
+which needs to be reduced later in the lifecycle of the vector.  The 
+``trim_vector`` macro can be used to reduce the allocated memory to the minimum 
+size necessary to container an array.
+
+.. code-block:: c 
+
+   #define trim_memory(vec)  ( /* Expression to reduce the memory allocation */) 
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`, except for ``bool_v`` and ``string_v``..
+
+Returns 
+--------
+
+- Returns ``true`` if function executes sucessfully, ``false`` otherwise.
+
+Error Handling
+--------------
+The ``trim_vecot`` macro may fail if it is unable to reallocate memory.
+If this occures, the function will set the globale variable ``errno``
+to a value of ``ENOMEN``.  In addition, if the user passes an invalid 
+value for ``vec`` (i.e. a NULL pointer).  The function will set ``errno``
+to a value of ``EINVAL``.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+- ``ENOMEM``: Indicates a failure to allocate memory.
+
+Example 
+-------
+An example with a ``double_v`` derived data type. 
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+        double_v* vec = init_vector(dDouble)(15);
+        push_vector(vec, 1, vector_length(vec));
+        push_vector(vec, 2, vector_length(vec));
+        push_vector(vec, 3, vector_length(vec));
+        push_vector(vec, 4, vector_length(vec));
+        push_vector(vec, 5, vector_length(vec));
+        trim_vector(vec); 
+        print(vec->alloc);
+        free_vector(vec);
+        return 0;
+    }
+
+.. code-block:: bash 
+
+   >> 5

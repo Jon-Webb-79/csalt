@@ -276,6 +276,25 @@ void test_copy_bool_vector(void **state);
 void test_copy_string_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST TRIM VECTOR FUNCTIONS 
+
+void test_trim_char_vector(void **state);
+void test_trim_uchar_vector(void **state);
+void test_trim_short_vector(void **state);
+void test_trim_ushort_vector(void **state);
+void test_trim_int_vector(void **state);
+void test_trim_uint_vector(void **state);
+void test_trim_long_vector(void **state);
+void test_trim_ulong_vector(void **state);
+void test_trim_llong_vector(void **state);
+void test_trim_ullong_vector(void **state);
+void test_trim_float_vector(void **state);
+void test_trim_double_vector(void **state);
+void test_trim_ldouble_vector(void **state);
+void test_trim_bool_vector(void **state);
+void test_trim_string_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================

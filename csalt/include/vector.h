@@ -2442,6 +2442,146 @@ string_v* copy_string_vector(string_v* vec);
     string_v*: copy_string_vector) (vec)
 // ================================================================================
 // ================================================================================
+//  TRIM VECTOR FUNCTIONS 
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type char_v 
+ */
+bool trim_char_vector(char_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type uchar_v 
+ */
+bool trim_uchar_vector(uchar_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type short_v 
+ */
+bool trim_short_vector(short_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type ushort_v 
+ */
+bool trim_ushort_vector(ushort_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type int_v 
+ */
+bool trim_int_vector(int_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type uint_v 
+ */
+bool trim_uint_vector(uint_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type long_v 
+ */
+bool trim_long_vector(long_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type ulong_v 
+ */
+bool trim_ulong_vector(ulong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type llong_v 
+ */
+bool trim_llong_vector(llong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type ullong_v 
+ */
+bool trim_ullong_vector(ullong_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type float_v 
+ */
+bool trim_float_vector(float_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type double_v 
+ */
+bool trim_double_vector(double_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type ldouble_v 
+ */
+bool trim_ldouble_vector(ldouble_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type bool_v 
+ */
+bool trim_bool_vector(bool_v* vec);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief reduces vector memory to the minimum value necessary 
+ *
+ * @param vec A vector data structure of type string_v 
+ */
+bool trim_string_vector(string_v* vec);
+// --------------------------------------------------------------------------------
+
+#define trim_vector(vec) _Generic((vec), \
+    char_v*: trim_char_vector, \
+    uchar_v*: trim_uchar_vector, \
+    short_v*: trim_short_vector, \
+    ushort_v*: trim_ushort_vector, \
+    int_v*: trim_int_vector, \
+    uint_v*: trim_uint_vector, \
+    long_v*: trim_long_vector, \
+    ulong_v*: trim_ulong_vector, \
+    llong_v*: trim_llong_vector, \
+    ullong_v*: trim_ullong_vector, \
+    float_v*: trim_float_vector, \
+    double_v*: trim_double_vector, \
+    ldouble_v*: trim_ldouble_vector, \
+    bool_v*: trim_bool_vector, \
+    string_v*: trim_string_vector) (vec)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
