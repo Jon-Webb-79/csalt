@@ -295,6 +295,26 @@ void test_trim_bool_vector(void **state);
 void test_trim_string_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST REPLACE VECTOR FUNCTIONS 
+
+void test_replace_char_vector(void **state);
+void test_replace_uchar_vector(void **state);
+void test_replace_short_vector(void **state);
+void test_replace_ushort_vector(void **state);
+void test_replace_int_vector(void **state);
+void test_replace_uint_vector(void **state);
+void test_replace_long_vector(void **state);
+void test_replace_ulong_vector(void **state);
+void test_replace_llong_vector(void **state);
+void test_replace_ullong_vector(void **state);
+void test_replace_float_vector(void **state);
+void test_replace_double_vector(void **state);
+void test_replace_ldouble_vector(void **state);
+void test_replace_bool_vector(void **state);
+void test_replace_string_vector(void **state);
+void test_replace_str_vector(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================

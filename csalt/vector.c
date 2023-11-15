@@ -3910,4 +3910,258 @@ bool trim_string_vector(string_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+// REPLACE INDEX FUNCTIONS 
+
+bool replace_char_vector_index(char_v* vec, char dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_uchar_vector_index(uchar_v* vec, unsigned char dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_short_vector_index(short_v* vec, short int dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ushort_vector_index(ushort_v* vec, unsigned short int dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_int_vector_index(int_v* vec, int dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_uint_vector_index(uint_v* vec, unsigned int dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_long_vector_index(long_v* vec, long int dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ulong_vector_index(ulong_v* vec, unsigned long dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_llong_vector_index(llong_v* vec, long long int dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ullong_vector_index(ullong_v* vec, unsigned long long dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_float_vector_index(float_v* vec, float dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_double_vector_index(double_v* vec, double dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ldouble_vector_index(ldouble_v* vec, long double dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_bool_vector_index(bool_v* vec, bool dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    vec->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_string_vector_index(string_v* vec, char* dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    char* new_dat = malloc(sizeof(char) * strlen(dat) + 1);
+    if (new_dat == NULL) {
+        return false;
+    }
+    strcpy(new_dat, dat);
+    free(vec->data[index].data);
+    vec->data[index].data = new_dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_str_vector_index(string_v* vec, str* dat, size_t index) {
+    if (vec == NULL || vec->data == NULL || vec->len == 0) {
+        // Handle invalid input or empty vector
+        errno = EINVAL;
+        return false;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    char* new_dat = malloc(sizeof(char) * dat->len + 1);
+    if (new_dat == NULL) {
+        return false;
+    }
+    strcpy(new_dat, dat->data);
+    free(vec->data[index].data);
+    vec->data[index].data = new_dat;
+    return true;
+}
+// ================================================================================
+// ================================================================================
 // eof

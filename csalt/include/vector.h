@@ -2582,6 +2582,202 @@ bool trim_string_vector(string_v* vec);
     string_v*: trim_string_vector) (vec)
 // ================================================================================
 // ================================================================================
+// REPLACE INDEX FUNCTIONS 
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type char_v 
+ * @param dat The data replacement of type char
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_char_vector_index(char_v* vec, char dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type uchar_v 
+ * @param dat The data replacement of type unsgned char 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_uchar_vector_index(uchar_v* vec, unsigned char dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type short_v 
+ * @param dat The data replacement of type short int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_short_vector_index(short_v* vec, short int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type ushort_v 
+ * @param dat The data replacement of type unsigned short int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_ushort_vector_index(ushort_v* vec, unsigned short int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type int_v 
+ * @param dat The data replacement of type int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_int_vector_index(int_v* vec, int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type uint_v 
+ * @param dat The data replacement of type unsigned int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_uint_vector_index(uint_v* vec, unsigned int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type long_v 
+ * @param dat The data replacement of type long int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_long_vector_index(long_v* vec, long int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type ulong_v 
+ * @param dat The data replacement of type unsigned long int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_ulong_vector_index(ulong_v* vec, unsigned long int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type llong_v 
+ * @param dat The data replacement of type long long int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_llong_vector_index(llong_v* vec, long long int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type ullong_v 
+ * @param dat The data replacement of type unsigned long long int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_ullong_vector_index(ullong_v* vec, unsigned long long int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type float_v 
+ * @param dat The data replacement of type float 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_float_vector_index(float_v* vec, float dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type double_v 
+ * @param dat The data replacement of type double 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_double_vector_index(double_v* vec, double dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type short_v 
+ * @param dat The data replacement of type long double 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_ldouble_vector_index(ldouble_v* vec, long double dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type ushort_v 
+ * @param The data replacement of type bool 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_bool_vector_index(bool_v* vec, bool dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type short_v 
+ * @param dat The data replacement of type char*
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_string_vector_index(string_v* vec, char* dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param vec A vector of type string_v
+ * @param dat The data replacement of type string_v
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_str_vector_index(string_v* vec, str* dat, size_t index);
+// --------------------------------------------------------------------------------
+
+#define replace_vector_index(vec, dat, index) _Generic((vec), \
+    char_v*: replace_char_vector_index, \
+    uchar_v*: replace_uchar_vector_index, \
+    short_v*: replace_short_vector_index, \
+    ushort_v*: replace_ushort_vector_index, \
+    int_v*: replace_int_vector_index, \
+    uint_v*: replace_uint_vector_index, \
+    long_v*: replace_long_vector_index, \
+    ulong_v*: replace_ulong_vector_index, \
+    llong_v*: replace_llong_vector_index, \
+    ullong_v*: replace_ullong_vector_index, \
+    float_v*: replace_float_vector_index, \
+    double_v*: replace_double_vector_index, \
+    ldouble_v*: replace_ldouble_vector_index, \
+    bool_v*: replace_bool_vector_index, \
+    string_v*: replace_string_vector_index) (vec, dat, index)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

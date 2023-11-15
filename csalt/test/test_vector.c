@@ -343,7 +343,7 @@ void test_init_string_vector(void **state)
     push_vector(vec, "Four", 0);
     size_t b[4] = {4, 3, 3, 5 };
     size_t c[4] = {5, 4, 4, 6 };
-    char *a[4] = {"Four", "One", "Two", "Three"};
+    char* a[4] = {"Four", "One", "Two", "Three"};
     for (size_t i = 0; i < vec->len; i++) {
         assert_string_equal(a[i], get_vector(vec, i));
         assert_int_equal(b[i], string_length(&vec->data[i]));
@@ -3271,6 +3271,250 @@ void test_trim_string_vector(void **state) {
     trim_vector(vec); 
     assert_int_equal(vec->alloc, 5);
     free_vector(vec);
+}
+// ================================================================================
+// ================================================================================
+// TEST REPLACE VECTOR FUNCTIONS 
+
+void test_replace_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    char a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    unsigned char a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    short int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    unsigned short int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    unsigned int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    long int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    unsigned long int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    long long int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(4);
+    push_vector(vec, 1, vector_length(vec));
+    push_vector(vec, 2, vector_length(vec));
+    push_vector(vec, 3, vector_length(vec));
+    push_vector(vec, 4, vector_length(vec));
+    replace_vector_index(vec, 5, 1);
+    unsigned long long int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_float_vector(void **state) {
+    float_v* vec = init_vector(dFloat)(4);
+    push_vector(vec, 1.f, vector_length(vec));
+    push_vector(vec, 2.f, vector_length(vec));
+    push_vector(vec, 3.f, vector_length(vec));
+    push_vector(vec, 4.f, vector_length(vec));
+    replace_vector_index(vec, 5.f, 1);
+    float a[4] = {1., 5., 3., 4.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_float_equal(a[i], get_vector(vec, i), 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(4);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    replace_vector_index(vec, 5., 1);
+    double a[4] = {1., 5., 3., 4.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_float_equal(a[i], get_vector(vec, i), 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(4);
+    push_vector(vec, 1., vector_length(vec));
+    push_vector(vec, 2., vector_length(vec));
+    push_vector(vec, 3., vector_length(vec));
+    push_vector(vec, 4., vector_length(vec));
+    replace_vector_index(vec, 5., 1);
+    long double a[4] = {1., 5., 3., 4.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_float_equal(a[i], get_vector(vec, i), 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_bool_vector(void **state) {
+    bool_v* vec = init_vector(dBool)(4);
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, true, vector_length(vec));
+    push_vector(vec, true, vector_length(vec));
+    replace_vector_index(vec, false, 1);
+    bool a[4] = {true, false, true, true};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_string_vector(void **state) {
+    string_v* vec = init_vector(dString)(4);
+    push_vector(vec, "One", vector_length(vec));
+    push_vector(vec, "Two", vector_length(vec));
+    push_vector(vec, "Three", vector_length(vec));
+    push_vector(vec, "Four", vector_length(vec));
+    replace_vector_index(vec, "One", 1);
+    char *a[4] = {"One", "One", "Three", "Four"};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_string_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_str_vector(void **state) {
+    string_v* vec = init_vector(dString)(4);
+    push_vector(vec, "One", vector_length(vec));
+    push_vector(vec, "Two", vector_length(vec));
+    push_vector(vec, "Three", vector_length(vec));
+    push_vector(vec, "Four", vector_length(vec));
+    str* b = init_string("One");
+    replace_str_vector_index(vec, b, 1);
+    char *a[4] = {"One", "One", "Three", "Four"};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_string_equal(a[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+    free_string(b);
 }
 // ================================================================================
 // ================================================================================

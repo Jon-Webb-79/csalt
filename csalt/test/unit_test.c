@@ -351,7 +351,23 @@ const struct CMUnitTest test_vector[] = {
     cmocka_unit_test(test_trim_double_vector),
     cmocka_unit_test(test_trim_ldouble_vector),
     cmocka_unit_test(test_trim_bool_vector),
-    cmocka_unit_test(test_copy_string_vector)
+    cmocka_unit_test(test_copy_string_vector),
+    cmocka_unit_test(test_replace_char_vector),
+    cmocka_unit_test(test_replace_uchar_vector),
+    cmocka_unit_test(test_replace_short_vector),
+    cmocka_unit_test(test_replace_ushort_vector),
+    cmocka_unit_test(test_replace_int_vector),
+    cmocka_unit_test(test_replace_uint_vector),
+    cmocka_unit_test(test_replace_long_vector),
+    cmocka_unit_test(test_replace_ulong_vector),
+    cmocka_unit_test(test_replace_llong_vector),
+    cmocka_unit_test(test_replace_ullong_vector),
+    cmocka_unit_test(test_replace_float_vector),
+    cmocka_unit_test(test_replace_double_vector),
+    cmocka_unit_test(test_replace_ldouble_vector),
+    cmocka_unit_test(test_replace_bool_vector),
+    cmocka_unit_test(test_replace_string_vector),
+    cmocka_unit_test(test_replace_str_vector)
 };
 // Begin code
 int main(int argc, const char * argv[]) {

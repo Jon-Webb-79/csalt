@@ -1475,7 +1475,7 @@ of the ``vector_copy`` macro are described below.
 Parameters 
 ----------
 
-- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`, except for ``bool_v`` and ``string_v``..
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
 
 Returns 
 -------
@@ -1560,7 +1560,7 @@ size necessary to container an array.
 Parameters 
 ----------
 
-- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`, except for ``bool_v`` and ``string_v``..
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
 
 Returns 
 --------
@@ -1569,7 +1569,7 @@ Returns
 
 Error Handling
 --------------
-The ``trim_vecot`` macro may fail if it is unable to reallocate memory.
+The ``trim_vector`` macro may fail if it is unable to reallocate memory.
 If this occures, the function will set the globale variable ``errno``
 to a value of ``ENOMEN``.  In addition, if the user passes an invalid 
 value for ``vec`` (i.e. a NULL pointer).  The function will set ``errno``
@@ -1605,3 +1605,146 @@ An example with a ``double_v`` derived data type.
 .. code-block:: bash 
 
    >> 5
+
+Underlying Functions 
+--------------------
+The ``trim_vector`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c
+
+   char trim_char_vector(char_v* vec);
+   unsigned char trim_uchar_vector(uchar_v* vec);
+   short int trim_short_vector(short_v* vec);
+   unsigned short int trim_ushort_vector(ushort_v* vec);
+   int trim_int_vector(int_v* vec);
+   unsigned int trim_uint_vector(uint_v* vec);
+   long int trim_long_vector(long_v* vec);
+   unsigned long int trim_ulong_vector(ulong_v* vec);
+   long long int trim_llong_vector(llong_v* vec);
+   unsigned long long int trim_ullong_vector(ullong_v* vec);
+   float trim_float_vector(float_v* vec);
+   double trim_double_vector(double_v* vec);
+   long double trim_ldouble_vector(ldouble_v* vec);
+   double trim_bool_vector(double_v* vec);
+   long double trim_string_vector(ldouble_v* vec);
+
+Replace Vector Index 
+====================
+The ``replace_vector_index`` macro utilizes the ``_Generic`` keyword to select 
+from several functions that replace data at a user-specified index in a vector 
+data structure. 
+
+.. note:: This macro supports string literals for replacing string values in a ``string_v`` array. To replace a string value with a ``str`` data type, use the ``replace_str_vector_index`` function.
+
+.. code-block:: c 
+
+   #define replace_vector_index(vec, dat, index) ( /* Expression to replace index value */ )  
+   bool replace_str_vector_index(string_v* vec, str* dat, size_t index);
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
+- :c:`dat`: The data to replace the current value at ``index``.
+- :c:`index`: The index where data will be replaced.
+
+Return 
+------
+
+- Returns ``true`` if the operation is successful, ``false`` otherwise.
+
+Error Handling
+--------------
+The ``replace_vector_index`` macro may encounter errors such as memory 
+allocation failure or invalid input. If these occur, underlying functions set 
+the global variable ``errno`` to indicate the specific error.
+
+Possible error codes:
+
+- ``EINVAL``: Invalid argument was passed to the function.
+- ``ENOMEM``: Memory allocation failure.
+- ``ERANGE``: Index is out of bounds.
+
+Example 1 
+---------
+Replacing a string value with a string literal:
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       string_v* vec = init_vector(dString)(4);
+       push_vector(vec, "This", 0);
+       push_vector(vec, "Is", 1);
+       push_vector(vec, "a", 2);
+       push_vector(vec, "Test", 3);
+       print(vec);
+       replace_vector_index(vec, "Trap", 3);
+       print(vec);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> This is a Test 
+   >> This is a Trap
+
+Example 2
+---------
+An example showing the replacement of a string value with a ``str`` data container.
+
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       string_v* vec = init_vector(dString)(4);
+       push_vector(vec, "This", 0);
+       push_vector(vec, "Is", 1);
+       push_vector(vec, "a", 2);
+       push_vector(vec, "Test", 3);
+       print(vec);
+       str* a = init_string("Trap");
+       replace_str_vector_index(vec, a, 3);
+       print(vec);
+       free_vector(vec);
+       free_string(a);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> This is a Test 
+   >> This is a Trap
+
+Underlying Functions 
+--------------------
+The ``replace_vector_index`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c 
+
+   bool replace_char_vector_index(char_v* vec, char dat, size_t index);
+   bool replace_uchar_vector_index(uchar_v* vec, unsigned char dat, size_t index);
+   bool replace_short_vector_index(short_v* vec, short int dat, size_t index);
+   bool replace_ushort_vector_index(ushort_v* vec, unsigned short int dat, size_t index);
+   bool replace_int_vector_index(int_v* vec, int dat, size_t index);
+   bool replace_uint_vector_index(uint_v* vec, unsigned int dat, size_t index);
+   bool replace_long_vector_index(long_v* vec, long int dat, size_t index);
+   bool replace_ulong_vector_index(ulong_v* vec, unsigned long int dat, size_t index);
+   bool replace_llong_vector_index(llong_v* vec, long long int dat, size_t index);
+   bool replace_ullong_vector_index(ullong_v* vec, unsigned long long int dat, size_t index);
+   bool replace_float_vector_index(float_v* vec, float dat, size_t index);
+   bool replace_double_vector_index(double_v* vec, double dat, size_t index);
+   bool replace_ldouble_vector_index(ldouble_v* vec, long double dat, size_t index);
+   bool replace_bool_vector_index(bool_v* vec, bool dat, size_t index);
+   bool replace_string_vector_index(string_v* vec, char* dat, size_t index);
+   bool replace_str_vector_index(string_v* vec, str* dat, size_t index);
