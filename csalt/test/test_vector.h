@@ -313,6 +313,26 @@ void test_replace_ldouble_vector(void **state);
 void test_replace_bool_vector(void **state);
 void test_replace_string_vector(void **state);
 void test_replace_str_vector(void **state);
+// ================================================================================ 
+// ================================================================================
+// TEST ITERATORS 
+
+void test_iter_char_vector(void **state);
+void test_iter_uchar_vector(void **state);
+void test_iter_short_vector(void **state);
+void test_iter_ushort_vector(void **state);
+void test_iter_int_vector(void **state);
+void test_iter_uint_vector(void **state);
+void test_iter_long_vector(void **state);
+void test_iter_ulong_vector(void **state);
+void test_iter_llong_vector(void **state);
+void test_iter_ullong_vector(void **state);
+void test_iter_float_vector(void **state);
+void test_iter_double_vector(void **state);
+void test_iter_ldouble_vector(void **state);
+void test_iter_bool_vector(void **state);
+void test_iter_string_vector(void **state);
+void test_iter_str_vector(void **state);
 // ================================================================================
 // ================================================================================
 #endif /* test_vector_H */

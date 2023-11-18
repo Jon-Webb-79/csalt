@@ -2778,6 +2778,162 @@ bool replace_str_vector_index(string_v* vec, str* dat, size_t index);
     string_v*: replace_string_vector_index) (vec, dat, index)
 // ================================================================================
 // ================================================================================
+
+/**
+ * @brief Macro to create vector iterator structs for each data type.
+ *
+ * This macro creates a struct with pointers to a function that returns 
+ * a pointer to the first variable in a data structure (begin), a pointer 
+ * to the last variable in a data structure (en), a pointer to the next 
+ * variable in a data structure (next), a pointer to the previous variable 
+ * in a data structure (prev), and one that returns tha data at a position 
+ * in the data structure (get)
+ *
+ * @param type_one The data type contained in a vector data structure.
+ * @param type_two The derived data type for the vector data structure.
+ */
+#define VECTOR_ITERATOR(type_one, type_two) \
+    typedef struct { \
+        type_one* (*begin) (type_two *s); \
+        type_one* (*end) (type_two *s); \
+        void (*next) (type_one** current); \
+        void (*prev) (type_one** current); \
+        type_one (*get) (type_one** current); \
+    } type_two##_iterator;
+// --------------------------------------------------------------------------------
+
+VECTOR_ITERATOR(char, char_v)
+VECTOR_ITERATOR(unsigned char, uchar_v)
+VECTOR_ITERATOR(short int, short_v)
+VECTOR_ITERATOR(unsigned short int, ushort_v)
+VECTOR_ITERATOR(int, int_v)
+VECTOR_ITERATOR(unsigned int, uint_v)
+VECTOR_ITERATOR(long int, long_v)
+VECTOR_ITERATOR(unsigned long int, ulong_v)
+VECTOR_ITERATOR(long long int, llong_v)
+VECTOR_ITERATOR(unsigned long long int, ullong_v)
+VECTOR_ITERATOR(float, float_v)
+VECTOR_ITERATOR(double, double_v)
+VECTOR_ITERATOR(long double, ldouble_v)
+VECTOR_ITERATOR(bool, bool_v)
+
+typedef struct {
+    str* (*begin) (string_v *s);
+    str* (*end) (string_v* s);
+    void (*next) (str** current);
+    void (*prev) (str** current);
+    char* (*get) (str** current);
+} string_v_iterator;
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type char_v vectors.
+ */
+char_v_iterator init_char_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type uchar_v vectors.
+ */
+uchar_v_iterator init_uchar_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type short_v vectors.
+ */
+short_v_iterator init_short_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type ushort_v vectors.
+ */
+ushort_v_iterator init_ushort_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type int_v vectors.
+ */
+int_v_iterator init_int_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type uint_v vectors.
+ */
+uint_v_iterator init_uint_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type long_v vectors.
+ */
+long_v_iterator init_long_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type ulong_v vectors.
+ */
+ulong_v_iterator init_ulong_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type llong_v vectors.
+ */
+llong_v_iterator init_llong_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type llong_v vectors.
+ */
+ullong_v_iterator init_ullong_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type float_v vectors.
+ */
+float_v_iterator init_float_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type double_v vectors.
+ */
+double_v_iterator init_double_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type ldouble_v vectors.
+ */
+ldouble_v_iterator init_ldouble_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type bool_v vectors.
+ */
+bool_v_iterator init_bool_vector_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type string_v vectors.
+ */
+string_v_iterator init_string_vector_iterator();
+// --------------------------------------------------------------------------------
+
+#define vector_iterator(vec) _Generic((vec), \
+    char_v*: init_char_vector_iterator, \
+    uchar_v*: init_uchar_vector_iterator, \
+    short_v*: init_short_vector_iterator, \
+    ushort_v*: init_ushort_vector_iterator, \
+    int_v*: init_int_vector_iterator, \
+    uint_v*: init_uint_vector_iterator, \
+    long_v*: init_long_vector_iterator, \
+    ulong_v*: init_ulong_vector_iterator, \
+    llong_v*: init_llong_vector_iterator, \
+    ullong_v*: init_ullong_vector_iterator, \
+    float_v*: init_float_vector_iterator, \
+    double_v*: init_double_vector_iterator, \
+    ldouble_v*: init_ldouble_vector_iterator, \
+    bool_v*: init_bool_vector_iterator, \
+    string_v*: init_string_vector_iterator) ()
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

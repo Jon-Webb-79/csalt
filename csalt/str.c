@@ -594,7 +594,6 @@ static void _str_prev(char** current) {
 static char _str_get(char** current) {
     return **current;
 }
-
 // --------------------------------------------------------------------------------
 // PUBLIC FUNCTIONS
 

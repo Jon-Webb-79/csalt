@@ -1748,3 +1748,155 @@ functions can be used directly:
    bool replace_bool_vector_index(bool_v* vec, bool dat, size_t index);
    bool replace_string_vector_index(string_v* vec, char* dat, size_t index);
    bool replace_str_vector_index(string_v* vec, str* dat, size_t index);
+
+.. _vector_iterator:
+
+Vector Iterator Struct 
+======================
+While vectors are stored in contiguous memory and can be accessed using for 
+loops, other data structures may not support such direct access. To provide a 
+uniform method for traversing different data structures, this library offers 
+a generic iterator mechanism.
+
+The core of this mechanism is a struct of function pointers, each corresponding 
+to a typical iterator operation. These function pointers allow for traversing 
+and accessing elements within the data structure. The general form of this 
+iterator struct is defined using the following macro:
+
+.. code-block:: c 
+
+   #define VECTOR_ITERATOR(type_one, type_two) \
+       typedef struct { \
+           type_one* (*begin) (type_two *s); \
+           type_one* (*end) (type_two *s); \
+           void (*next) (type_one** current); \
+           void (*prev) (type_one** current); \
+           type_one (*get) (type_one** current); \
+       } type_two##_iterator;
+
+Parameters 
+----------
+
+- :c:`type_one`: The derived vector data type consistent with :ref:`Vector Data Types <vector_dat_type>`. 
+- :c:`type_two`: The C data type that is consistent with :ref:`Vector Data Types <vector_dat_type>`. 
+
+Derived Iterator Types 
+----------------------
+The `VECTOR_ITERATOR` macro is used to create specific iterator types for 
+various data structures, including a specialized iterator for `string_v`, 
+which is slightly different in its `get` function:
+
+.. code-block:: c 
+
+   VECTOR_ITERATOR(char, char_v)
+   VECTOR_ITERATOR(unsigned char, uchar_v)
+   VECTOR_ITERATOR(short int, short_v)
+   VECTOR_ITERATOR(unsigned short int, ushort_v)
+   VECTOR_ITERATOR(int, int_v)
+   VECTOR_ITERATOR(unsigned int, uint_v)
+   VECTOR_ITERATOR(long int, long_v)
+   VECTOR_ITERATOR(unsigned long int, ulong_v)
+   VECTOR_ITERATOR(long long int, llong_v)
+   VECTOR_ITERATOR(unsigned long long int, ullong_v)
+   VECTOR_ITERATOR(float, float_v)
+   VECTOR_ITERATOR(double, double_v)
+   VECTOR_ITERATOR(long double, ldouble_v)
+   VECTOR_ITERATOR(bool, bool_v)
+
+   typedef struct {
+       str* (*begin) (string_v *s);
+       str* (*end) (string_v* s);
+       void (*next) (str** current);
+       void (*prev) (str** current);
+       char* (*get) (str** current);
+   } string_v_iterator;
+
+Vector Iterator 
+===============
+While vectors are stored in contiguous memory and can be accessed using for 
+loops, not all data structures support such direct access. To provide a 
+uniform method for traversing different data structures, this library offers 
+a generic iterator mechanism. The `vector_iterator` macro allows easy access 
+to the appropriate iterator for a given vector type.
+
+.. code-block:: c 
+
+   #define vector_iterator(vec) ( /* Expression to select iterator */) 
+   
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
+
+Return 
+------
+
+- A struct of types described in :ref:`Vector Iterator <vector_iterator>` that contains function pointers to applicable iterator functions.
+
+
+Error Handling
+--------------
+The `vector_iterator` macro selects the appropriate iterator based on the 
+vector's data type. If an error occurs, such as an invalid vector type or 
+memory allocation failure, the underlying functions set `errno` to indicate 
+the specific error.
+
+Possible error codes:
+
+- ``EINVAL``: Invalid argument was passed to the function.
+
+Example 1 
+---------
+An example using a ``string_v_iterator``.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       string_v* vec = init_vector(dString)(4);
+       push_vector(vec, "One", vector_length(vec));
+       push_vector(vec, "Two", vector_length(vec));
+       push_vector(vec, "Three", vector_length(vec));
+       push_vector(vec, "Four", vector_length(vec));
+       string_v_iterator it = init_vector(vec);
+       str* begin = it.begin(vec);
+       str* end = it.end(vec);
+       for (str* i = begin; i != end; it.next(&i)) {
+           print(it.get(&i));
+       }
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> One 
+   >> Two 
+   >> Three 
+   >> Four
+
+Underlying Functions 
+--------------------
+The ``vector_iterator`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c 
+
+   char_v_iterator init_char_vector_iterator();
+   uchar_v_iterator init_uchar_vector_iterator();
+   short_v_iterator init_short_vector_iterator();
+   ushort_v_iterator init_ushort_vector_iterator();
+   int_v_iterator init_int_vector_iterator();
+   uint_v_iterator init_uint_vector_iterator();
+   long_v_iterator init_long_vector_iterator();
+   ulong_v_iterator init_ulong_vector_iterator();
+   llong_v_iterator init_llong_vector_iterator();
+   ullong_v_iterator init_ullong_vector_iterator();
+   float_v_iterator init_float_vector_iterator();
+   double_v_iterator init_double_vector_iterator();
+   ldouble_v_iterator init_ldouble_vector_iterator();
+   bool_v_iterator init_bool_vector_iterator();
+   string_v_iterator init_string_vector_iterator();

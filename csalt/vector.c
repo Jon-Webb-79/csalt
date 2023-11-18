@@ -13,6 +13,7 @@
 // Include modules here
 
 #include "include/vector.h"
+#include <linux/limits.h>
 
 // ================================================================================
 // ================================================================================
@@ -4161,6 +4162,865 @@ bool replace_str_vector_index(string_v* vec, str* dat, size_t index) {
     free(vec->data[index].data);
     vec->data[index].data = new_dat;
     return true;
+}
+// ================================================================================
+// ================================================================================
+// ITERATOR SUPPORT (PRIVATE FUNCTIONS) 
+
+static char* _char_v_begin(char_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static char* _char_v_end(char_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _char_v_next(char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _char_v_prev(char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static char _char_v_get(char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned char* _uchar_v_begin(uchar_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned char* _uchar_v_end(uchar_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _uchar_v_next(unsigned char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _uchar_v_prev(unsigned char** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned char _uchar_v_get(unsigned char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return **current;
+}
+// ================================================================================
+
+static short int* _short_v_begin(short_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static short int* _short_v_end(short_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _short_v_next(short int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _short_v_prev(short int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static short int _short_v_get(short int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned short int* _ushort_v_begin(ushort_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned short int* _ushort_v_end(ushort_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _ushort_v_next(unsigned short int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _ushort_v_prev(unsigned short int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned short int _ushort_v_get(unsigned short int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static int* _int_v_begin(int_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static int* _int_v_end(int_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _int_v_next(int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _int_v_prev(int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static int _int_v_get(int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned int* _uint_v_begin(uint_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned int* _uint_v_end(uint_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _uint_v_next(unsigned int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _uint_v_prev(unsigned int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned int _uint_v_get(unsigned int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static long int* _long_v_begin(long_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static long int* _long_v_end(long_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _long_v_next(long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _long_v_prev(long int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static long int _long_v_get(long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned long int* _ulong_v_begin(ulong_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long int* _ulong_v_end(ulong_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _ulong_v_next(unsigned long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _ulong_v_prev(unsigned long int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long int _ulong_v_get(unsigned long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static long long int* _llong_v_begin(llong_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static long long int* _llong_v_end(llong_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _llong_v_next(long long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _llong_v_prev(long long int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static long long int _llong_v_get(long long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned long long int* _ullong_v_begin(ullong_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long long int* _ullong_v_end(ullong_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _ullong_v_next(unsigned long long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _ullong_v_prev(unsigned long long int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long long int _ullong_v_get(unsigned long long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static float* _float_v_begin(float_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static float* _float_v_end(float_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _float_v_next(float** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _float_v_prev(float** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static float _float_v_get(float** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0.0f;
+    }
+    return **current;
+} 
+// ================================================================================
+
+static double* _double_v_begin(double_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static double* _double_v_end(double_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _double_v_next(double** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _double_v_prev(double** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static double _double_v_get(double** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0.0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static long double* _ldouble_v_begin(ldouble_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static long double* _ldouble_v_end(ldouble_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _ldouble_v_next(long double** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _ldouble_v_prev(long double** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static long double _ldouble_v_get(long double** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0.0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static bool* _bool_v_begin(bool_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static bool* _bool_v_end(bool_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _bool_v_next(bool** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _bool_v_prev(bool** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static bool _bool_v_get(bool** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return false;
+    }
+    return **current;
+}
+// ================================================================================
+
+static str* _string_v_begin(string_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static str* _string_v_end(string_v* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _string_v_next(str** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _string_v_prev(str** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static char* _string_v_get(str** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return (*current)->data;
+}
+// ================================================================================
+// ================================================================================
+// INIT VECTOR ITERATOR FUNCTIONS 
+
+char_v_iterator init_char_vector_iterator() {
+    char_v_iterator iter;
+
+    iter.begin = _char_v_begin;
+    iter.end = _char_v_end;
+    iter.next = _char_v_next;
+    iter.prev = _char_v_prev;
+    iter.get = _char_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+uchar_v_iterator init_uchar_vector_iterator() {
+    uchar_v_iterator iter;
+
+    iter.begin = _uchar_v_begin;
+    iter.end = _uchar_v_end;
+    iter.next = _uchar_v_next;
+    iter.prev = _uchar_v_prev;
+    iter.get = _uchar_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+short_v_iterator init_short_vector_iterator() {
+    short_v_iterator iter;
+
+    iter.begin = _short_v_begin;
+    iter.end = _short_v_end;
+    iter.next = _short_v_next;
+    iter.prev = _short_v_prev;
+    iter.get = _short_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ushort_v_iterator init_ushort_vector_iterator() {
+    ushort_v_iterator iter;
+
+    iter.begin = _ushort_v_begin;
+    iter.end = _ushort_v_end;
+    iter.next = _ushort_v_next;
+    iter.prev = _ushort_v_prev;
+    iter.get = _ushort_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+int_v_iterator init_int_vector_iterator() {
+    int_v_iterator iter;
+
+    iter.begin = _int_v_begin;
+    iter.end = _int_v_end;
+    iter.next = _int_v_next;
+    iter.prev = _int_v_prev;
+    iter.get = _int_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+uint_v_iterator init_uint_vector_iterator() {
+    uint_v_iterator iter;
+
+    iter.begin = _uint_v_begin;
+    iter.end = _uint_v_end;
+    iter.next = _uint_v_next;
+    iter.prev = _uint_v_prev;
+    iter.get = _uint_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+long_v_iterator init_long_vector_iterator() {
+    long_v_iterator iter;
+
+    iter.begin = _long_v_begin;
+    iter.end = _long_v_end;
+    iter.next = _long_v_next;
+    iter.prev = _long_v_prev;
+    iter.get = _long_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ulong_v_iterator init_ulong_vector_iterator() {
+    ulong_v_iterator iter;
+
+    iter.begin = _ulong_v_begin;
+    iter.end = _ulong_v_end;
+    iter.next = _ulong_v_next;
+    iter.prev = _ulong_v_prev;
+    iter.get = _ulong_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+llong_v_iterator init_llong_vector_iterator() {
+    llong_v_iterator iter;
+
+    iter.begin = _llong_v_begin;
+    iter.end = _llong_v_end;
+    iter.next = _llong_v_next;
+    iter.prev = _llong_v_prev;
+    iter.get = _llong_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ullong_v_iterator init_ullong_vector_iterator() {
+    ullong_v_iterator iter;
+
+    iter.begin = _ullong_v_begin;
+    iter.end = _ullong_v_end;
+    iter.next = _ullong_v_next;
+    iter.prev = _ullong_v_prev;
+    iter.get = _ullong_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+float_v_iterator init_float_vector_iterator() {
+    float_v_iterator iter;
+
+    iter.begin = _float_v_begin;
+    iter.end = _float_v_end;
+    iter.next = _float_v_next;
+    iter.prev = _float_v_prev;
+    iter.get = _float_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+double_v_iterator init_double_vector_iterator() {
+    double_v_iterator iter;
+
+    iter.begin = _double_v_begin;
+    iter.end = _double_v_end;
+    iter.next = _double_v_next;
+    iter.prev = _double_v_prev;
+    iter.get = _double_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ldouble_v_iterator init_ldouble_vector_iterator() {
+    ldouble_v_iterator iter;
+
+    iter.begin = _ldouble_v_begin;
+    iter.end = _ldouble_v_end;
+    iter.next = _ldouble_v_next;
+    iter.prev = _ldouble_v_prev;
+    iter.get = _ldouble_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+bool_v_iterator init_bool_vector_iterator() {
+    bool_v_iterator iter;
+
+    iter.begin = _bool_v_begin;
+    iter.end = _bool_v_end;
+    iter.next = _bool_v_next;
+    iter.prev = _bool_v_prev;
+    iter.get = _bool_v_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+string_v_iterator init_string_vector_iterator() {
+    string_v_iterator iter;
+
+    iter.begin = _string_v_begin;
+    iter.end = _string_v_end;
+    iter.next = _string_v_next;
+    iter.prev = _string_v_prev;
+    iter.get = _string_v_get;
+    return iter; 
 }
 // ================================================================================
 // ================================================================================

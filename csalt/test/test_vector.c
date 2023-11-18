@@ -3518,4 +3518,346 @@ void test_replace_str_vector(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST ITERATOR FUNCTIONS 
+
+void test_iter_char_vector(void **state) {
+    char_v* vec = init_vector(dChar)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    char_v_iterator it = vector_iterator(vec);
+    char* begin = it.begin(vec);
+    char* end = it.end(vec);
+    char a;
+    for (char* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    char b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_uchar_vector(void **state) {
+    uchar_v* vec = init_vector(dUChar)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    uchar_v_iterator it = vector_iterator(vec);
+    unsigned char* begin = it.begin(vec);
+    unsigned char* end = it.end(vec);
+    unsigned char a;
+    for (unsigned char* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned char b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_short_vector(void **state) {
+    short_v* vec = init_vector(dShort)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    short_v_iterator it = vector_iterator(vec);
+    short int* begin = it.begin(vec);
+    short int* end = it.end(vec);
+    short int a;
+    for (short int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    short int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_ushort_vector(void **state) {
+    ushort_v* vec = init_vector(dUShort)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    ushort_v_iterator it = vector_iterator(vec);
+    unsigned short int* begin = it.begin(vec);
+    unsigned short int* end = it.end(vec);
+    unsigned short int a;
+    for (unsigned short int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned short int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_int_vector(void **state) {
+    int_v* vec = init_vector(dInt)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    int_v_iterator it = vector_iterator(vec);
+    int* begin = it.begin(vec);
+    int* end = it.end(vec);
+    int a;
+    for (int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_uint_vector(void **state) {
+    uint_v* vec = init_vector(dUInt)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    uint_v_iterator it = vector_iterator(vec);
+    unsigned int* begin = it.begin(vec);
+    unsigned int* end = it.end(vec);
+    unsigned int a;
+    for (unsigned int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_long_vector(void **state) {
+    long_v* vec = init_vector(dLong)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    long_v_iterator it = vector_iterator(vec);
+    long int* begin = it.begin(vec);
+    long int* end = it.end(vec);
+    long int a;
+    for (long int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    long int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_ulong_vector(void **state) {
+    ulong_v* vec = init_vector(dULong)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    ulong_v_iterator it = vector_iterator(vec);
+    unsigned long int* begin = it.begin(vec);
+    unsigned long int* end = it.end(vec);
+    unsigned long int a;
+    for (unsigned long int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned long int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_llong_vector(void **state) {
+    llong_v* vec = init_vector(dLongLong)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    llong_v_iterator it = vector_iterator(vec);
+    long long int* begin = it.begin(vec);
+    long long int* end = it.end(vec);
+    long long int a;
+    for (long long int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    long long int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_ullong_vector(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(5);
+    push_vector(vec, 1, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 3, 2);
+    push_vector(vec, 4, 3);
+    push_vector(vec, 5, 4);
+    ullong_v_iterator it = vector_iterator(vec);
+    unsigned long long int* begin = it.begin(vec);
+    unsigned long long int* end = it.end(vec);
+    unsigned long long int a;
+    for (unsigned long long int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned long long int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_float_vector(void **state) {
+    float_v* vec = init_vector(dFloat)(5);
+    push_vector(vec, 1., 0);
+    push_vector(vec, 2., 1);
+    push_vector(vec, 3., 2);
+    push_vector(vec, 4., 3);
+    push_vector(vec, 5., 4);
+    float_v_iterator it = vector_iterator(vec);
+    float* begin = it.begin(vec);
+    float* end = it.end(vec);
+    float a;
+    for (float* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10.f;
+    }
+    float b[5] = {11., 12., 13., 14., 15.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_float_equal(b[i], get_vector(vec, i), 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_double_vector(void **state) {
+    double_v* vec = init_vector(dDouble)(5);
+    push_vector(vec, 1., 0);
+    push_vector(vec, 2., 1);
+    push_vector(vec, 3., 2);
+    push_vector(vec, 4., 3);
+    push_vector(vec, 5., 4);
+    double_v_iterator it = vector_iterator(vec);
+    double* begin = it.begin(vec);
+    double* end = it.end(vec);
+    double a;
+    for (double* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10.f;
+    }
+    double b[5] = {11., 12., 13., 14., 15.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_double_equal(b[i], get_vector(vec, i), 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_ldouble_vector(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(5);
+    push_vector(vec, 1., 0);
+    push_vector(vec, 2., 1);
+    push_vector(vec, 3., 2);
+    push_vector(vec, 4., 3);
+    push_vector(vec, 5., 4);
+    ldouble_v_iterator it = vector_iterator(vec);
+    long double* begin = it.begin(vec);
+    long double* end = it.end(vec);
+    long double a;
+    for (long double* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10.f;
+    }
+    long double b[5] = {11., 12., 13., 14., 15.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_double_equal(b[i], get_vector(vec, i), 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_bool_vector(void **state) {
+    bool_v* vec = init_vector(dBool)(5);
+    push_vector(vec, false, 0);
+    push_vector(vec, false, 1);
+    push_vector(vec, false, 2);
+    push_vector(vec, false, 3);
+    push_vector(vec, false, 4);
+    bool_v_iterator it = vector_iterator(vec);
+    bool* begin = it.begin(vec);
+    bool* end = it.end(vec);
+    for (bool* i = begin; i != end; it.next(&i)) {
+        *i = true;
+    }
+    bool b[5] = {true, true, true, true, true};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], get_vector(vec, i));
+    }
+    free_vector(vec);
+} 
+// --------------------------------------------------------------------------------
+
+void test_iter_string_vector(void **state) {
+    string_v* vec = init_vector(dString)(5);
+    push_vector(vec, "One", 0);
+    push_vector(vec, "Two", 1);
+    push_vector(vec, "Three", 2);
+    push_vector(vec, "Four", 3);
+    push_vector(vec, "Five", 4);
+    string_v_iterator it = vector_iterator(vec);
+    str* begin = it.begin(vec);
+    str* end = it.end(vec);
+    size_t j = 0;
+    char *a[5] = {"One", "Two", "Three", "Four", "Five"};
+    for (str* i = begin; i != end; it.next(&i)) {
+        assert_string_equal(a[j], it.get(&i)); 
+        j++;
+    }
+    free_vector(vec);
+}
+// ================================================================================
+// ================================================================================
 // eof
