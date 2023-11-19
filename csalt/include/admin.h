@@ -44,6 +44,27 @@ typedef enum {
 // ================================================================================
 
 /**
+ * @brief An enum containing keywords for sorting algorithms 
+ *
+ * This enum contains keywords that are used to describe the appropriate 
+ * sorting algorithm to be used for sorting a data structure.
+ *
+ * @attribute BUBBLE Keyword for Bubble Sorting algorithm 
+ * @attribute INSERT Keyword for Insert Sorting algorithm
+ * @attribute MERGE Keyword for Merge Sorting algorithm 
+ * @attribute TIM Keyword for Tim Sorting algorithm
+ */
+typedef enum {
+    BUBBLE, 
+    INSERT, 
+    MERGE, 
+    QUICK, 
+    TIM 
+} sort_type;
+// ================================================================================
+// ================================================================================
+
+/**
  * @brief An enum containing keywords for function selections 
  *
  * This enum contains keywords that represent the data types of possible functions 
@@ -82,6 +103,12 @@ typedef enum {
     dBool,  // Keyword for bool data type 
     dString  // Keyword for str data type
 } dtype;
+// ================================================================================
+// ================================================================================
+// Extra functions and macros 
+
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

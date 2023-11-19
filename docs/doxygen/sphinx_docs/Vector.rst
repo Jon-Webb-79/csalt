@@ -1033,6 +1033,113 @@ these underlying functions can be directly used for more specific control:
    void reverse_bool_vector(bool_v* vec);
    void reverse_string_vector(string_v* vec);
 
+Sort Vector 
+===========
+The ``sort_vector`` macro is a versatile tool for sorting vector data structures 
+in either ``FORWARD`` or ``REVERSE`` direction. It intelligently selects the 
+appropriate sorting function based on the vector type and the specified sorting 
+algorithm, ensuring type safety through the use of the ``_Generic`` keyword.
+
+.. code-block:: c 
+
+   #define sort_vector(vec, stype, direction) ( /* Expressions to sort vector */)   
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
+- :c:`stype`: An ``enum`` of type ``sort_type`` including ``BUBBLE``, ``INSERT``, ``MERGE``, ``QUICK``, and ``TIM``, representing various sorting algorithms.
+- :c:`direction`: An ``enum`` of type ``iter_dir`` with possible values ``FORWARD`` or ``REVERSE``, representing the sorting direction.
+
+The following table describes the parameters of the various sorting algorithms.
+
+.. list-table:: Sorting Algorithms Complexity and Stability
+   :widths: 25 25 25 25
+   :header-rows: 1
+
+   * - Algorithm
+     - Time Complexity (Average/Worst)
+     - Space Complexity
+     - Stability
+   * - Bubble Sort
+     - O(n^2) / O(n^2)
+     - O(1)
+     - Stable
+   * - Insertion Sort
+     - O(n^2) / O(n^2)
+     - O(1)
+     - Stable
+   * - Merge Sort
+     - O(n log n) / O(n log n)
+     - O(n)
+     - Stable
+   * - Quick Sort
+     - O(n log n) / O(n^2)
+     - O(log n)
+     - Not Stable
+   * - Tim Sort
+     - O(n log n) / O(n log n)
+     - O(n)
+     - Stable
+
+
+Error Handling
+--------------
+The macro sets the ``errno`` global variable to indicate errors, such as:
+
+- ``EINVAL``: Passed if ``vec`` is NULL or if an unsupported ``stype`` is provided.
+
+Example 
+-------
+An example for sorting a vector using the quick sort algorithm in the ``FORWARD`` direction.
+
+.. code-block:: c
+
+   #include "vector.h"
+   #include "print.h"
+
+   int main() {
+       int_v* vec = init_vector(dInt)(5);
+       push_vector(vec, 5, vector_length(vec));
+       push_vector(vec, 1, vector_length(vec));
+       push_vector(vec, 3, vector_length(vec));
+       push_vector(vec, 2, vector_length(vec));
+       push_vector(vec, -4, vector_length(vec));
+       print("Before sorting operation: ", vec);
+       sort_vector(vec, QUICK, FORWARD);
+       print("After sorting operation: ", vec);
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Before sorting operation: [ 5, 1, 3, 2, -4 ]
+   >> After sorting operation: [ -4, 1, 2, 3, 5 ]
+
+Underlying Functions 
+--------------------
+While the ``sort_vector`` macro is recommended for its ease of use and type safety, 
+developers may also directly call the specific sorting functions:
+
+.. code-block:: c 
+
+   void sort_char_vector(char_v* vec, sort_type stype, iter_dir direction);
+   void sort_uchar_vector(uchar_v* vec, sort_type stype, iter_dir direction);
+   void sort_short_vector(short_v* vec, sort_type stype, iter_dir direction);
+   void sort_ushort_vector(ushort_v* vec, sort_type stype, iter_dir direction);
+   void sort_int_vector(int_v* vec, sort_type stype, iter_dir direction);
+   void sort_uint_vector(uint_v* vec, sort_type stype, iter_dir direction);
+   void sort_long_vector(long_v* vec, sort_type stype, iter_dir direction);
+   void sort_ulong_vector(ulong_v* vec, sort_type stype, iter_dir direction);
+   void sort_llong_vector(llong_v* vec, sort_type stype, iter_dir direction);
+   void sort_ullong_vector(ullong_v* vec, sort_type stype, iter_dir direction);
+   void sort_float_vector(float_v* vec, sort_type stype, iter_dir direction);
+   void sort_double_vector(double_v* vec, sort_type stype, iter_dir direction);
+   void sort_ldouble_vector(ldouble_v* vec, sort_type stype, iter_dir direction);
+   void sort_bool_vector(bool_v* vec, sort_type stype, iter_dir direction);
+   void sort_string_vector(string_v* vec, sort_type stype, iter_dir direction);
+
 Max and Min Vector Values 
 =========================
 The ``min_vector`` and ``max_vector`` macros leverage the ``_Generic`` 
@@ -1833,6 +1940,7 @@ Return
 
 - A struct of types described in :ref:`Vector Iterator <vector_iterator>` that contains function pointers to applicable iterator functions.
 
+.. note:: Passing the value of ``vec`` to the ``vector_iterator`` macro does **NOT** associate the data of the vector with the iterator, and instead this only informs the macro of the data type to use.
 
 Error Handling
 --------------

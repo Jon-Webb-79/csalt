@@ -21,6 +21,9 @@
 
 const size_t VEC_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
 const size_t VEC_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
+
+// Constants to manage Tim sort algorithm
+const size_t RUN = 32;
 // ================================================================================
 // ================================================================================
 // INIT FUNCTIONS
@@ -5021,6 +5024,2668 @@ string_v_iterator init_string_vector_iterator() {
     iter.prev = _string_v_prev;
     iter.get = _string_v_get;
     return iter; 
+}
+// ================================================================================
+// ================================================================================
+// SORTING FUNCTIONS (PRIVATE FUNNCTIONS)
+
+static void _bubble_sort_char(char* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_char(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_uchar(unsigned char* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_uchar(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_short(short int* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_short(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_ushort(unsigned short int* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_ushort(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_int(int* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_int(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_uint(unsigned int* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_uint(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_long(long int* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_long(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_ulong(unsigned long int* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_ulong(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_llong(long long int* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_llong(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_ullong(unsigned long long int* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_ullong(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_float(float* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_float(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_double(double* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_double(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_ldouble(long double* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_ldouble(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_bool(bool* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && vec[j] > vec[j + 1]) ||
+                (direction == REVERSE && vec[j] < vec[j + 1])) {
+                swap_bool(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_string(str* vec, size_t len, iter_dir direction) {
+    for (size_t i = 0; i < len - 1; i++) {
+        for (size_t j = 0; j < len - i - 1; j++) {
+            if ((direction == FORWARD && compare_strings_str(&vec[j], &vec[j + 1]) > 0) ||
+                (direction == REVERSE && compare_strings_str(&vec[j], &vec[j + 1]) < 0)) {
+                swap_string(&vec[j], &vec[j + 1]);
+            }
+        }
+    } 
+}
+// ================================================================================
+// INSERT SORT FUNCTIONS (PRIVATE FUNCTIONS) 
+
+static void _insert_sort_char(char* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        char key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_uchar(unsigned char* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        unsigned char key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_short(short int* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        short int key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_ushort(unsigned short int* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        unsigned short int key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_int(int* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        int key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_uint(unsigned int* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        unsigned int key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_long(long int* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        long int key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_ulong(unsigned long int* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        unsigned int key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_llong(long long int* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        long long int key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_ullong(unsigned long long int* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        unsigned long long int key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_float(float* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        float key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_double(double* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        unsigned int key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_ldouble(long double* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        long double key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_bool(bool* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        bool key = vec[i];
+        j = i - 1;
+
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && vec[j] > key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && vec[j] < key) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_string(str* vec, size_t len, iter_dir direction) {
+    int j;
+    for (size_t i = 1; i < len; i++) {
+        str key = vec[i];
+        j = i - 1;
+        // Move elements of array[0..i-1], that are greater/smaller than key,
+        // to one position ahead of their current position
+        if (direction == FORWARD) {
+            while (j >= 0 && compare_strings_str(&vec[j], &key) > 0) {
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        } else { // REVERSE
+            while (j >= 0 && compare_strings_str(&vec[j], &key) < 0) { 
+                vec[j + 1] = vec[j];
+                j--;
+            }
+        }
+        vec[j + 1] = key;
+    } 
+}
+// ================================================================================
+// Merge sort algorithms (PRIVATE FUNCTIONS)
+
+void _merge_char(char *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    char L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_char(char* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_char(vec, l, m, direction);
+        _merge_sort_char(vec, m + 1, r, direction);
+
+        _merge_char(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_uchar(unsigned char *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    unsigned char L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_uchar(unsigned char* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_uchar(vec, l, m, direction);
+        _merge_sort_uchar(vec, m + 1, r, direction);
+
+        _merge_uchar(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_short(short int *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    short int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_short(short int* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_short(vec, l, m, direction);
+        _merge_sort_short(vec, m + 1, r, direction);
+
+        _merge_short(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_ushort(unsigned short int *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    unsigned short int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_ushort(unsigned short int* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_ushort(vec, l, m, direction);
+        _merge_sort_ushort(vec, m + 1, r, direction);
+
+        _merge_ushort(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_int(int *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_int(int* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_int(vec, l, m, direction);
+        _merge_sort_int(vec, m + 1, r, direction);
+
+        _merge_int(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_uint(unsigned int *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    unsigned int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_uint(unsigned int* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_uint(vec, l, m, direction);
+        _merge_sort_uint(vec, m + 1, r, direction);
+
+        _merge_uint(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_long(long int *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    long int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_long(long int* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_long(vec, l, m, direction);
+        _merge_sort_long(vec, m + 1, r, direction);
+
+        _merge_long(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_ulong(unsigned long int *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    unsigned long int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_ulong(unsigned long int* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_ulong(vec, l, m, direction);
+        _merge_sort_ulong(vec, m + 1, r, direction);
+
+        _merge_ulong(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_llong(long long int *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    long long int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_llong(long long int* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_llong(vec, l, m, direction);
+        _merge_sort_llong(vec, m + 1, r, direction);
+
+        _merge_llong(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_ullong(unsigned long long int *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    unsigned long long int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_ullong(unsigned long long int* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_ullong(vec, l, m, direction);
+        _merge_sort_ullong(vec, m + 1, r, direction);
+
+        _merge_ullong(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_float(float *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    float L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_float(float* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_float(vec, l, m, direction);
+        _merge_sort_float(vec, m + 1, r, direction);
+
+        _merge_float(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_double(double *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    double L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_double(double* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_double(vec, l, m, direction);
+        _merge_sort_double(vec, m + 1, r, direction);
+
+        _merge_double(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_ldouble(long double *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    long double L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_ldouble(long double* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_ldouble(vec, l, m, direction);
+        _merge_sort_ldouble(vec, m + 1, r, direction);
+
+        _merge_ldouble(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_bool(bool *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    bool L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if ((direction == FORWARD && L[i] <= R[j]) ||
+            (direction == REVERSE && L[i] >= R[j])) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_bool(bool* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_bool(vec, l, m, direction);
+        _merge_sort_bool(vec, m + 1, r, direction);
+
+        _merge_bool(vec, l, m, r, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _merge_string(str *vec, int l, int m, int r, iter_dir direction) {
+    // l, m, r represent left, middle, and rightmost indices in array
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    str L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = vec[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = vec[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) { 
+        if ((direction == FORWARD && compare_strings_str(&L[i], &R[j]) <= 0) ||
+            (direction == REVERSE && compare_strings_str(&L[i], &R[j]) >= 0)) {
+            vec[k] = L[i];
+            i++;
+        } else {
+            vec[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        vec[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        vec[k] = R[j];
+        j++;
+        k++;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_string(str* vec, int l, int r, iter_dir direction) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        _merge_sort_string(vec, l, m, direction);
+        _merge_sort_string(vec, m + 1, r, direction);
+
+        _merge_string(vec, l, m, r, direction);
+    }
+}
+// ================================================================================
+// QUICKSORT FUNCTIONS (PRIVATE FUNCTIONS)
+
+static int _partition_char(char* vec, int low, int high, iter_dir direction) {
+    char pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_char(&vec[i], &vec[j]);
+        }
+    }
+    swap_char(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_char(char* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_char(vec, low, high, direction);
+
+        _quicksort_char(vec, low, pi - 1, direction);
+        _quicksort_char(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_uchar(unsigned char* vec, int low, int high, iter_dir direction) {
+    unsigned char pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_uchar(&vec[i], &vec[j]);
+        }
+    }
+    swap_uchar(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_uchar(unsigned char* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_uchar(vec, low, high, direction);
+
+        _quicksort_uchar(vec, low, pi - 1, direction);
+        _quicksort_uchar(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_short(short int* vec, int low, int high, iter_dir direction) {
+    short int pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_short(&vec[i], &vec[j]);
+        }
+    }
+    swap_short(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_short(short int* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_short(vec, low, high, direction);
+
+        _quicksort_short(vec, low, pi - 1, direction);
+        _quicksort_short(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_ushort(unsigned short int* vec, int low, int high, iter_dir direction) {
+    unsigned short int pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_ushort(&vec[i], &vec[j]);
+        }
+    }
+    swap_ushort(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_ushort(unsigned short int* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_ushort(vec, low, high, direction);
+
+        _quicksort_ushort(vec, low, pi - 1, direction);
+        _quicksort_ushort(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_int(int* vec, int low, int high, iter_dir direction) {
+    int pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_int(&vec[i], &vec[j]);
+        }
+    }
+    swap_int(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_int(int* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_int(vec, low, high, direction);
+
+        _quicksort_int(vec, low, pi - 1, direction);
+        _quicksort_int(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_uint(unsigned int* vec, int low, int high, iter_dir direction) {
+    unsigned int pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_uint(&vec[i], &vec[j]);
+        }
+    }
+    swap_uint(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_uint(unsigned int* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_uint(vec, low, high, direction);
+
+        _quicksort_uint(vec, low, pi - 1, direction);
+        _quicksort_uint(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_long(long int* vec, int low, int high, iter_dir direction) {
+    long int pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_long(&vec[i], &vec[j]);
+        }
+    }
+    swap_long(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_long(long int* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_long(vec, low, high, direction);
+
+        _quicksort_long(vec, low, pi - 1, direction);
+        _quicksort_long(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_ulong(unsigned long int* vec, int low, int high, iter_dir direction) {
+    unsigned long int pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_ulong(&vec[i], &vec[j]);
+        }
+    }
+    swap_ulong(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_ulong(unsigned long int* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_ulong(vec, low, high, direction);
+
+        _quicksort_ulong(vec, low, pi - 1, direction);
+        _quicksort_ulong(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_llong(long long int* vec, int low, int high, iter_dir direction) {
+    long long int pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_llong(&vec[i], &vec[j]);
+        }
+    }
+    swap_llong(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_llong(long long int* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_llong(vec, low, high, direction);
+
+        _quicksort_llong(vec, low, pi - 1, direction);
+        _quicksort_llong(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_ullong(unsigned long long int* vec, int low, int high, iter_dir direction) {
+    unsigned long long int pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_ullong(&vec[i], &vec[j]);
+        }
+    }
+    swap_ullong(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_ullong(unsigned long long int* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_ullong(vec, low, high, direction);
+
+        _quicksort_ullong(vec, low, pi - 1, direction);
+        _quicksort_ullong(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_float(float* vec, int low, int high, iter_dir direction) {
+    float pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_float(&vec[i], &vec[j]);
+        }
+    }
+    swap_float(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_float(float* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_float(vec, low, high, direction);
+
+        _quicksort_float(vec, low, pi - 1, direction);
+        _quicksort_float(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_double(double* vec, int low, int high, iter_dir direction) {
+    double pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_double(&vec[i], &vec[j]);
+        }
+    }
+    swap_double(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_double(double* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_double(vec, low, high, direction);
+
+        _quicksort_double(vec, low, pi - 1, direction);
+        _quicksort_double(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_ldouble(long double* vec, int low, int high, iter_dir direction) {
+    long double pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_ldouble(&vec[i], &vec[j]);
+        }
+    }
+    swap_ldouble(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_ldouble(long double* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_ldouble(vec, low, high, direction);
+
+        _quicksort_ldouble(vec, low, pi - 1, direction);
+        _quicksort_ldouble(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_bool(bool* vec, int low, int high, iter_dir direction) {
+    bool pivot = vec[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && vec[j] < pivot) ||
+            (direction == REVERSE && vec[j] > pivot)) {
+            i++;
+            swap_bool(&vec[i], &vec[j]);
+        }
+    }
+    swap_bool(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_bool(bool* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_bool(vec, low, high, direction);
+
+        _quicksort_bool(vec, low, pi - 1, direction);
+        _quicksort_bool(vec, pi + 1, high, direction);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static int _partition_string(str* vec, int low, int high, iter_dir direction) {
+    str pivot = vec[high];
+    int i = (low - 1);
+    for (int j = low; j <= high - 1; j++) {
+        if ((direction == FORWARD && compare_strings_str(&vec[j], &pivot) < 0) ||
+            (direction == REVERSE && compare_strings_str(&vec[j], &pivot) > 0)) {
+            i++;
+            swap_string(&vec[i], &vec[j]);
+        }
+    }
+    swap_string(&vec[i + 1], &vec[high]);
+    return (i + 1);
+}
+// --------------------------------------------------------------------------------
+
+static void _quicksort_string(str* vec, int low, int high, iter_dir direction) {
+    if (low < high) {
+        int pi = _partition_string(vec, low, high, direction);
+
+        _quicksort_string(vec, low, pi - 1, direction);
+        _quicksort_string(vec, pi + 1, high, direction);
+    }
+}
+// ================================================================================
+// TIM SORT ALGORITHM (PRIVATE FUNCTIONS) 
+// - Shamless adaptation from geeks for geeks 
+// - May want to allow for adaptive RUN size in future iterations.
+
+static void _insertion_sort_for_timsort_char(char* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        char temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_char(char* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_char(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_char(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_uchar(unsigned char* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        unsigned char temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_uchar(unsigned char* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_uchar(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_uchar(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_short(short int* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        short int temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_short(short int* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_short(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_short(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_ushort(unsigned short int* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        unsigned short int temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_ushort(unsigned short int* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_ushort(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_ushort(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_int(int* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        int temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_int(int* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_int(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_int(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_uint(unsigned int* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        unsigned int temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_uint(unsigned int* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_uint(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_uint(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_long(long int* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        long int temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_long(long int* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_long(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_long(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_ulong(unsigned long int* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        unsigned long int temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_ulong(unsigned long int* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_ulong(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_ulong(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_llong(long long int* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        long long int temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_llong(long long int* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_llong(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_llong(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_ullong(unsigned long long int* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        unsigned long long int temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_ullong(unsigned long long int* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_ullong(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_ullong(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_float(float* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        float temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_float(float* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_float(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_float(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_double(double* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        double temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_double(double* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_double(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_double(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_ldouble(long double* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        long double temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_ldouble(long double* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_ldouble(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_ldouble(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_bool(bool* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        bool temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && vec[j] > temp) || 
+                             (direction == REVERSE && vec[j] < temp))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_bool(bool* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_bool(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_bool(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insertion_sort_for_timsort_string(str* vec, int left, int right, iter_dir direction) {
+    for (int i = left + 1; i <= right; i++) {
+        str temp = vec[i];
+        int j = i - 1;
+        while (j >= left && ((direction == FORWARD && compare_strings_str(&vec[j], &temp) > 0) || 
+                             (direction == REVERSE && compare_strings_str(&vec[j], &temp) < 0))) {
+            vec[j + 1] = vec[j];
+            j--;
+        }
+        vec[j + 1] = temp;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _timsort_string(str* vec, int n, iter_dir direction) {
+    // Sort individual subarrays of size RUN
+    for (int i = 0; i < n; i += RUN) {
+        _insertion_sort_for_timsort_string(vec, i, min((i + RUN - 1), (n - 1)), direction);
+    }
+
+    // Start merging from size RUN (or 32). It will merge to form size 64, then 128, 256, and so on.
+    for (int size = RUN; size < n; size = 2 * size) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = left + size - 1;
+            int right = min((left + 2 * size - 1), (n - 1));
+            if (mid < right) {
+                _merge_string(vec, left, mid, right, direction);
+            }
+        }
+    }
+}
+// ================================================================================
+// Actual interfaces for sort algoorithms 
+
+void sort_char_vector(char_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_char(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_char(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_char(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_char(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_char(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_uchar_vector(uchar_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_uchar(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_uchar(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_uchar(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_uchar(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_uchar(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_short_vector(short_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_short(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_short(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_short(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_short(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_short(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_ushort_vector(ushort_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_ushort(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_ushort(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_ushort(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_ushort(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_ushort(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_int_vector(int_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_int(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_int(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_int(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_int(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_int(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_uint_vector(uint_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_uint(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_uint(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_uint(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_uint(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_uint(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_long_vector(long_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_long(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_long(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_long(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_long(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_long(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_ulong_vector(ulong_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_ulong(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_ulong(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_ulong(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_ulong(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_ulong(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_llong_vector(llong_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_llong(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_llong(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_llong(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_llong(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_llong(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_ullong_vector(ullong_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_ullong(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_ullong(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_ullong(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_ullong(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_ullong(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_float_vector(float_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_float(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_float(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_float(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_float(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_float(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_double_vector(double_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_double(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_double(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_double(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_double(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_double(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_ldouble_vector(ldouble_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_ldouble(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_ldouble(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_ldouble(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_ldouble(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_ldouble(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_bool_vector(bool_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_bool(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_bool(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_bool(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_bool(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_bool(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_string_vector(string_v* vec, sort_type stype, iter_dir direction) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return;
+    }
+    switch (stype) {
+        case BUBBLE: 
+            _bubble_sort_string(vec->data, vec->len, direction);
+            break;
+        case INSERT:
+            _insert_sort_string(vec->data, vec->len, direction);
+            break;
+        case MERGE:
+            _merge_sort_string(vec->data, 0, vec->len - 1, direction);
+            break;
+        case QUICK:
+            _quicksort_string(vec->data, 0, vec->len - 1, direction);
+            break;
+        case TIM:
+            _timsort_string(vec->data, vec->len, direction);
+            break;
+        default:
+            errno = EINVAL;
+            return;
+    }
 }
 // ================================================================================
 // ================================================================================

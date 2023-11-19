@@ -335,6 +335,176 @@ void test_iter_string_vector(void **state);
 void test_iter_str_vector(void **state);
 // ================================================================================
 // ================================================================================
+// TEST BUBBLE SORT FUNCTIONS 
+
+void test_bubble_sort_char_vector_forward(void **state);
+void test_bubble_sort_char_vector_reverse(void **state);
+void test_bubble_sort_uchar_vector_forward(void **state);
+void test_bubble_sort_uchar_vector_reverse(void **state);
+void test_bubble_sort_short_vector_forward(void **state);
+void test_bubble_sort_short_vector_reverse(void **state);
+void test_bubble_sort_ushort_vector_forward(void **state);
+void test_bubble_sort_ushort_vector_reverse(void **state);
+void test_bubble_sort_int_vector_forward(void **state);
+void test_bubble_sort_int_vector_reverse(void **state);
+void test_bubble_sort_uint_vector_forward(void **state);
+void test_bubble_sort_uint_vector_reverse(void **state);
+void test_bubble_sort_long_vector_forward(void **state);
+void test_bubble_sort_long_vector_reverse(void **state);
+void test_bubble_sort_ulong_vector_forward(void **state);
+void test_bubble_sort_ulong_vector_reverse(void **state);
+void test_bubble_sort_llong_vector_forward(void **state);
+void test_bubble_sort_llong_vector_reverse(void **state);
+void test_bubble_sort_ullong_vector_forward(void **state);
+void test_bubble_sort_ullong_vector_reverse(void **state);
+void test_bubble_sort_float_vector_forward(void **state);
+void test_bubble_sort_float_vector_reverse(void **state);
+void test_bubble_sort_double_vector_forward(void **state);
+void test_bubble_sort_double_vector_reverse(void **state);
+void test_bubble_sort_ldouble_vector_forward(void **state);
+void test_bubble_sort_ldouble_vector_reverse(void **state);
+void test_bubble_sort_bool_vector_forward(void **state);
+void test_bubble_sort_bool_vector_reverse(void **state);
+void test_bubble_sort_string_vector_forward(void **state);
+void test_bubble_sort_string_vector_reverse(void **state);
+// ================================================================================
+// ================================================================================
+// TEST INSERT SORT FUNCTIONS
+
+void test_insert_sort_char_vector_forward(void **state);
+void test_insert_sort_char_vector_reverse(void **state);
+void test_insert_sort_uchar_vector_forward(void **state);
+void test_insert_sort_uchar_vector_reverse(void **state);
+void test_insert_sort_short_vector_forward(void **state);
+void test_insert_sort_short_vector_reverse(void **state);
+void test_insert_sort_ushort_vector_forward(void **state);
+void test_insert_sort_ushort_vector_reverse(void **state);
+void test_insert_sort_int_vector_forward(void **state);
+void test_insert_sort_int_vector_reverse(void **state);
+void test_insert_sort_uint_vector_forward(void **state);
+void test_insert_sort_uint_vector_reverse(void **state);
+void test_insert_sort_long_vector_forward(void **state);
+void test_insert_sort_long_vector_reverse(void **state);
+void test_insert_sort_ulong_vector_forward(void **state);
+void test_insert_sort_ulong_vector_reverse(void **state);
+void test_insert_sort_llong_vector_forward(void **state);
+void test_insert_sort_llong_vector_reverse(void **state);
+void test_insert_sort_ullong_vector_forward(void **state);
+void test_insert_sort_ullong_vector_reverse(void **state);
+void test_insert_sort_float_vector_forward(void **state);
+void test_insert_sort_float_vector_reverse(void **state);
+void test_insert_sort_double_vector_forward(void **state);
+void test_insert_sort_double_vector_reverse(void **state);
+void test_insert_sort_ldouble_vector_forward(void **state);
+void test_insert_sort_ldouble_vector_reverse(void **state);
+void test_insert_sort_bool_vector_forward(void **state);
+void test_insert_sort_bool_vector_reverse(void **state);
+void test_insert_sort_string_vector_forward(void **state);
+void test_insert_sort_string_vector_reverse(void **state);
+// ================================================================================
+// ================================================================================
+// TEST MERGE SORT FUNCTIONS
+
+void test_merge_sort_char_vector_forward(void **state);
+void test_merge_sort_char_vector_reverse(void **state);
+void test_merge_sort_uchar_vector_forward(void **state);
+void test_merge_sort_uchar_vector_reverse(void **state);
+void test_merge_sort_short_vector_forward(void **state);
+void test_merge_sort_short_vector_reverse(void **state);
+void test_merge_sort_ushort_vector_forward(void **state);
+void test_merge_sort_ushort_vector_reverse(void **state);
+void test_merge_sort_int_vector_forward(void **state);
+void test_merge_sort_int_vector_reverse(void **state);
+void test_merge_sort_uint_vector_forward(void **state);
+void test_merge_sort_uint_vector_reverse(void **state);
+void test_merge_sort_long_vector_forward(void **state);
+void test_merge_sort_long_vector_reverse(void **state);
+void test_merge_sort_ulong_vector_forward(void **state);
+void test_merge_sort_ulong_vector_reverse(void **state);
+void test_merge_sort_llong_vector_forward(void **state);
+void test_merge_sort_llong_vector_reverse(void **state);
+void test_merge_sort_ullong_vector_forward(void **state);
+void test_merge_sort_ullong_vector_reverse(void **state);
+void test_merge_sort_float_vector_forward(void **state);
+void test_merge_sort_float_vector_reverse(void **state);
+void test_merge_sort_double_vector_forward(void **state);
+void test_merge_sort_double_vector_reverse(void **state);
+void test_merge_sort_ldouble_vector_forward(void **state);
+void test_merge_sort_ldouble_vector_reverse(void **state);
+void test_merge_sort_bool_vector_forward(void **state);
+void test_merge_sort_bool_vector_reverse(void **state);
+void test_merge_sort_string_vector_forward(void **state);
+void test_merge_sort_string_vector_reverse(void **state);
+// ================================================================================
+// ================================================================================
+// TEST QUICK SORT FUNCTIONS
+
+void test_quick_sort_char_vector_forward(void **state);
+void test_quick_sort_char_vector_reverse(void **state);
+void test_quick_sort_uchar_vector_forward(void **state);
+void test_quick_sort_uchar_vector_reverse(void **state);
+void test_quick_sort_short_vector_forward(void **state);
+void test_quick_sort_short_vector_reverse(void **state);
+void test_quick_sort_ushort_vector_forward(void **state);
+void test_quick_sort_ushort_vector_reverse(void **state);
+void test_quick_sort_int_vector_forward(void **state);
+void test_quick_sort_int_vector_reverse(void **state);
+void test_quick_sort_uint_vector_forward(void **state);
+void test_quick_sort_uint_vector_reverse(void **state);
+void test_quick_sort_long_vector_forward(void **state);
+void test_quick_sort_long_vector_reverse(void **state);
+void test_quick_sort_ulong_vector_forward(void **state);
+void test_quick_sort_ulong_vector_reverse(void **state);
+void test_quick_sort_llong_vector_forward(void **state);
+void test_quick_sort_llong_vector_reverse(void **state);
+void test_quick_sort_ullong_vector_forward(void **state);
+void test_quick_sort_ullong_vector_reverse(void **state);
+void test_quick_sort_float_vector_forward(void **state);
+void test_quick_sort_float_vector_reverse(void **state);
+void test_quick_sort_double_vector_forward(void **state);
+void test_quick_sort_double_vector_reverse(void **state);
+void test_quick_sort_ldouble_vector_forward(void **state);
+void test_quick_sort_ldouble_vector_reverse(void **state);
+void test_quick_sort_bool_vector_forward(void **state);
+void test_quick_sort_bool_vector_reverse(void **state);
+void test_quick_sort_string_vector_forward(void **state);
+void test_quick_sort_string_vector_reverse(void **state);
+// ================================================================================
+// ================================================================================
+// TEST QUICK SORT FUNCTIONS
+
+void test_tim_sort_char_vector_forward(void **state);
+void test_tim_sort_char_vector_reverse(void **state);
+void test_tim_sort_uchar_vector_forward(void **state);
+void test_tim_sort_uchar_vector_reverse(void **state);
+void test_tim_sort_short_vector_forward(void **state);
+void test_tim_sort_short_vector_reverse(void **state);
+void test_tim_sort_ushort_vector_forward(void **state);
+void test_tim_sort_ushort_vector_reverse(void **state);
+void test_tim_sort_int_vector_forward(void **state);
+void test_tim_sort_int_vector_reverse(void **state);
+void test_tim_sort_uint_vector_forward(void **state);
+void test_tim_sort_uint_vector_reverse(void **state);
+void test_tim_sort_long_vector_forward(void **state);
+void test_tim_sort_long_vector_reverse(void **state);
+void test_tim_sort_ulong_vector_forward(void **state);
+void test_tim_sort_ulong_vector_reverse(void **state);
+void test_tim_sort_llong_vector_forward(void **state);
+void test_tim_sort_llong_vector_reverse(void **state);
+void test_tim_sort_ullong_vector_forward(void **state);
+void test_tim_sort_ullong_vector_reverse(void **state);
+void test_tim_sort_float_vector_forward(void **state);
+void test_tim_sort_float_vector_reverse(void **state);
+void test_tim_sort_double_vector_forward(void **state);
+void test_tim_sort_double_vector_reverse(void **state);
+void test_tim_sort_ldouble_vector_forward(void **state);
+void test_tim_sort_ldouble_vector_reverse(void **state);
+void test_tim_sort_bool_vector_forward(void **state);
+void test_tim_sort_bool_vector_reverse(void **state);
+void test_tim_sort_string_vector_forward(void **state);
+void test_tim_sort_string_vector_reverse(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================

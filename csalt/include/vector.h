@@ -35,6 +35,7 @@ extern "C" {
 
 extern const size_t VEC_THRESHOLD;
 extern const size_t VEC_FIXED_AMOUNT;
+extern const size_t RUN;
 // ================================================================================
 // ================================================================================
 // Vector data type structs 
@@ -2932,6 +2933,225 @@ string_v_iterator init_string_vector_iterator();
     ldouble_v*: init_ldouble_vector_iterator, \
     bool_v*: init_bool_vector_iterator, \
     string_v*: init_string_vector_iterator) ()
+// ================================================================================
+// ================================================================================
+// SORT VECTOR FUNCTIONS
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type char_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_char_vector(char_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type uchar_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_uchar_vector(uchar_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type short_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_short_vector(short_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type ushort_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_ushort_vector(ushort_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type int_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_int_vector(int_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type uint_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_uint_vector(uint_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type long_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_long_vector(long_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type ulong_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_ulong_vector(ulong_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type llong_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_llong_vector(llong_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type ullong_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_ullong_vector(ullong_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type float_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_float_vector(float_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type double_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_double_vector(double_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type ldouble_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_ldouble_vector(ldouble_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type bool_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_bool_vector(bool_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param vec A vector of type string_v.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_string_vector(string_v* vec, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+#define sort_vector(vec, stype, direction) _Generic((vec), \
+    char_v*: sort_char_vector, \
+    uchar_v*: sort_uchar_vector, \
+    short_v*: sort_short_vector, \
+    ushort_v*: sort_ushort_vector, \
+    int_v*: sort_int_vector, \
+    uint_v*: sort_uint_vector, \
+    long_v*: sort_long_vector, \
+    ulong_v*: sort_ulong_vector, \
+    llong_v*: sort_llong_vector, \
+    ullong_v*: sort_ullong_vector, \
+    float_v*: sort_float_vector, \
+    double_v*: sort_double_vector, \
+    ldouble_v*: sort_ldouble_vector, \
+    bool_v*: sort_bool_vector, \
+    string_v*: sort_string_vector) (vec, stype, direction)
+// ================================================================================
+// ================================================================================
+// SORT VECTOR FUNCTIONS 
+
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus
