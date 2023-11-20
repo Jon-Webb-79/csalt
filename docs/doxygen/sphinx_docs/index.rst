@@ -24,6 +24,7 @@ lets pour some seasoning on our C-code and get started.
     Swap <Swap>
     Print <Print>
     Strings <Strings>
+    Array <Array>
     Vector <Vector>
 
 Indices and tables
