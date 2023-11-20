@@ -1140,8 +1140,117 @@ developers may also directly call the specific sorting functions:
    void sort_bool_vector(bool_v* vec, sort_type stype, iter_dir direction);
    void sort_string_vector(string_v* vec, sort_type stype, iter_dir direction);
 
+Binary Search 
+=============
+The ``bsearch_vector`` macro leverages the ``_Generic`` keyword to select the 
+appropriate function for conducting a binary search of a dynamically allocated 
+vector to find the index where a value resides.
+
+.. note:: The input vector must be sorted for this function to work properly.  If the function has not been previously sorted, the user should enter ``false`` for the ``sorted`` variable.
+
+.. code-block:: c
+
+   #define bsearch_vector(vec, val, sorted) ( /*Expression to search a vector */) 
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
+- :c:`val`: The value being searched for.
+- :c:`sorted`: ``true`` if the vector is already sorted, ``false`` otherwise.
+
+Returns 
+-------
+
+- Returns the index associated with the value of ``val``, or -1 if the value is not found.
+
+Error Handling
+--------------
+The macro sets the ``errno`` global variable to indicate errors, such as:
+
+- ``EINVAL``: Passed if ``vec`` is NULL or if ``val`` does not exist in the vector
+
+Example 1 
+---------
+An example showing how to conduct a binary search of an unsorted vector.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       string_v* vec = init_vector(dString)(5);
+       char *a[5] = {"One", "Two", "Three", "Four", "Five"};
+       for (size_t i = 0; i < 5; i++) {
+           push_vector(vec, a[i], vector_length(vec));
+       }
+       int b = bsearch_vector(vec, "Three", false);
+       print("This is the value: ", get_vector(b));
+       free_vector(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> This is the value: Three 
+
+Example 2 
+---------
+An example showing how to search for a ``str`` data type which can not be accomplished
+with the ``bsearch_vector`` macro.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "vector.h"
+
+   int main() {
+       string_v* vec = init_vector(dString)(5);
+       char *a[5] = {"One", "Two", "Three", "Four", "Five"};
+       for (size_t i = 0; i < 5; i++) {
+           push_vector(vec, a[i], vector_length(vec));
+       }
+       str* c = init_string("Three");
+       int b = bsearch_str_vector(vec, c, false);
+       print("This is the value: ", get_vector(b));
+       free_vector(vec);
+       free_string(c);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> This is the value: Three
+
+Underlying Functions 
+--------------------
+While the ``bsearch_vector`` macro is recommended for its ease of use and type safety, 
+developers may also directly call the specific sorting functions:
 Max and Min Vector Values 
-=========================
+
+.. code-block:: c 
+
+   int bsearch_char_vector(char_v* vec, char val, bool sorted);
+   int bsearch_uchar_vector(uchar_v* vec, unsigned char val, bool sorted);
+   int bsearch_short_vector(short_v* vec, short int val, bool sorted);
+   int bsearch_ushort_vector(ushort_v* vec, unsigned short int val, bool sorted);
+   int bsearch_int_vector(int_v* vec, int val, bool sorted);
+   int bsearch_uint_vector(uint_v* vec, unsigned int val, bool sorted);
+   int bsearch_long_vector(long_v* vec, long int val, bool sorted);
+   int bsearch_ulong_vector(ulong_v* vec, unsigned long int val, bool sorted);
+   int bsearch_llong_vector(llong_v* vec, long long int val, bool sorted);
+   int bsearch_ullong_vector(ullong_v* vec, unsigned long long int val, bool sorted);
+   int bsearch_float_vector(float_v* vec, float val, bool sorted);
+   int bsearch_double_vector(double_v* vec, double val, bool sorted);
+   int bsearch_ldouble_vector(ldouble_v* vec, long double val, bool sorted);
+   int bsearch_bool_vector(bool_v* vec, bool val, bool sorted);
+   int bsearch_string_vector(string_v* vec, char* val, bool sorted);
+   int bsearch_string_vector(string_v* vec, char* val, bool sorted);
+   int bsearch_str_vector(string_v* vec, str* val, bool sorted);
+
+Min and Max Vector Value
+========================
 The ``min_vector`` and ``max_vector`` macros leverage the ``_Generic`` 
 keyword to select the appropriate function for determining the minimum and 
 maximum values in a dynamically allocated vector data structure. These macros 
