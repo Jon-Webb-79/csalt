@@ -505,6 +505,26 @@ void test_tim_sort_string_vector_forward(void **state);
 void test_tim_sort_string_vector_reverse(void **state);
 // ================================================================================
 // ================================================================================
+// TEST BINARY SEARCH FUNCTIONS 
+
+void test_char_binary_vector_search(void **state);
+void test_uchar_binary_vector_search(void **state);
+void test_short_binary_vector_search(void **state);
+void test_ushort_binary_vector_search(void **state);
+void test_int_binary_vector_search(void **state);
+void test_uint_binary_vector_search(void **state);
+void test_long_binary_vector_search(void **state);
+void test_ulong_binary_vector_search(void **state);
+void test_llong_binary_vector_search(void **state);
+void test_ullong_binary_vector_search(void **state);
+void test_float_binary_vector_search(void **state);
+void test_double_binary_vector_search(void **state);
+void test_ldouble_binary_vector_search(void **state);
+void test_bool_binary_vector_search(void **state);
+void test_string_binary_vector_search(void **state);
+void test_str_binary_vector_search(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_vector_H */
 // ================================================================================
 // ================================================================================

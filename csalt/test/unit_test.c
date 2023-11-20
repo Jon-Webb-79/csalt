@@ -532,7 +532,23 @@ const struct CMUnitTest test_vector[] = {
     cmocka_unit_test(test_tim_sort_bool_vector_forward),
     cmocka_unit_test(test_tim_sort_bool_vector_reverse),
     cmocka_unit_test(test_tim_sort_string_vector_forward),
-    cmocka_unit_test(test_tim_sort_string_vector_reverse)
+    cmocka_unit_test(test_tim_sort_string_vector_reverse),
+    cmocka_unit_test(test_char_binary_vector_search),
+    cmocka_unit_test(test_uchar_binary_vector_search),
+    cmocka_unit_test(test_short_binary_vector_search),
+    cmocka_unit_test(test_ushort_binary_vector_search),
+    cmocka_unit_test(test_int_binary_vector_search),
+    cmocka_unit_test(test_uint_binary_vector_search),
+    cmocka_unit_test(test_long_binary_vector_search),
+    cmocka_unit_test(test_ulong_binary_vector_search),
+    cmocka_unit_test(test_llong_binary_vector_search),
+    cmocka_unit_test(test_ullong_binary_vector_search),
+    cmocka_unit_test(test_float_binary_vector_search),
+    cmocka_unit_test(test_double_binary_vector_search),
+    cmocka_unit_test(test_ldouble_binary_vector_search),
+    cmocka_unit_test(test_bool_binary_vector_search),
+    cmocka_unit_test(test_string_binary_vector_search),
+    cmocka_unit_test(test_str_binary_vector_search)
 };
 // Begin code
 int main(int argc, const char * argv[]) {

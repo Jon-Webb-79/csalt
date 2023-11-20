@@ -6570,4 +6570,203 @@ void test_tim_sort_string_vector_reverse(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST BINARY SEARCH FUNCTIONS 
+
+void test_char_binary_vector_search(void **state) {
+    char_v* vec = init_vector(dChar)(20);
+    char a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_uchar_binary_vector_search(void **state) {
+    uchar_v* vec = init_vector(dUChar)(20);
+    unsigned char a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_short_binary_vector_search(void **state) {
+    short_v* vec = init_vector(dShort)(20);
+    short int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_ushort_binary_vector_search(void **state) {
+    ushort_v* vec = init_vector(dUShort)(20);
+    unsigned short int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_int_binary_vector_search(void **state) {
+    int_v* vec = init_vector(dInt)(20);
+    int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_uint_binary_vector_search(void **state) {
+    uint_v* vec = init_vector(dUInt)(20);
+    unsigned int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_long_binary_vector_search(void **state) {
+    long_v* vec = init_vector(dLong)(20);
+    long int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_ulong_binary_vector_search(void **state) {
+    ulong_v* vec = init_vector(dULong)(20);
+    unsigned long int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_llong_binary_vector_search(void **state) {
+    llong_v* vec = init_vector(dLongLong)(20);
+    short int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_ullong_binary_vector_search(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(20);
+    unsigned long long int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 13, false);
+    assert_int_equal(vec->data[(size_t)b], 13);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_float_binary_vector_search(void **state) {
+    float_v* vec = init_vector(dFloat)(20);
+    float a[20] = { 1.2, 5.6, 2.1, 7.7, 8., 9., 4.2, 3.8, 6.1, 14.4, 13.6, 
+                    12.9, 11.11, 10.01, 16.3, 17.4, 18.5, 19.6, 20.7, 15.8 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 11.11, false);
+    assert_float_equal(vec->data[(size_t)b], 11.11, 1.0e-6);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_double_binary_vector_search(void **state) {
+    double_v* vec = init_vector(dDouble)(20);
+    double a[20] = { 1.2, 5.6, 2.1, 7.7, 8., 9., 4.2, 3.8, 6.1, 14.4, 13.6, 
+                    12.9, 11.11, 10.01, 16.3, 17.4, 18.5, 19.6, 20.7, 15.8 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 11.11, false);
+    assert_double_equal(vec->data[(size_t)b], 11.11, 1.0e-6);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_ldouble_binary_vector_search(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(20);
+    long double a[20] = { 1.2, 5.6, 2.1, 7.7, 8., 9., 4.2, 3.8, 6.1, 14.4, 13.6, 
+                    12.9, 11.11, 10.01, 16.3, 17.4, 18.5, 19.6, 20.7, 15.8 };
+    for (size_t i = 0; i < 20; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, 11.11, false);
+    assert_double_equal(vec->data[(size_t)b], 11.11, 1.0e-6);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_bool_binary_vector_search(void **state) {
+    bool_v* vec = init_vector(dBool)(5);
+    bool a[5] = {false, true, false, true, false};
+    for (size_t i = 0; i < 5; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, true, false);
+    assert_int_equal(vec->data[(size_t)b], true);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_string_binary_vector_search(void **state) {
+    string_v* vec = init_vector(dString)(5);
+    char *a[5] = {"One", "Two", "Three", "Four", "Five"};
+    for (size_t i = 0; i < 5; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    int b = bsearch_vector(vec, "Three", false);
+    assert_string_equal(vec->data[(size_t)b].data, "Three");
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_str_binary_vector_search(void **state) {
+    string_v* vec = init_vector(dString)(5);
+    char *a[5] = {"One", "Two", "Three", "Four", "Five"};
+    for (size_t i = 0; i < 5; i++) {
+        push_vector(vec, a[i], vector_length(vec));
+    }
+    str* c = init_string("Three");
+    int b = bsearch_str_vector(vec, c, false);
+    assert_string_equal(vec->data[(size_t)b].data, "Three");
+    free_vector(vec);
+    free_string(c);
+}
+// ================================================================================
+// ================================================================================
 // eof

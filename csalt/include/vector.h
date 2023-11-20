@@ -3150,8 +3150,211 @@ void sort_string_vector(string_v* vec, sort_type stype, iter_dir direction);
     string_v*: sort_string_vector) (vec, stype, direction)
 // ================================================================================
 // ================================================================================
-// SORT VECTOR FUNCTIONS 
+// BINARY SEARCH FUNCTIONS 
 
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type char_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists.
+ */
+int bsearch_char_vector(char_v* vec, char val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type uchar_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_uchar_vector(uchar_v* vec, unsigned char val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type short_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_short_vector(short_v* vec, short int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type ushort_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists.
+ */
+int bsearch_ushort_vector(ushort_v* vec, unsigned short int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type int_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists.
+ */
+int bsearch_int_vector(int_v* vec, int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type uint_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_uint_vector(uint_v* vec, unsigned int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type long_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_long_vector(long_v* vec, long int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type ulong_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_ulong_vector(ulong_v* vec, unsigned long int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type llong_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_llong_vector(llong_v* vec, long long int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type ullong_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_ullong_vector(ullong_v* vec, unsigned long long int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type float_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_float_vector(float_v* vec, float val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type double_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_double_vector(double_v* vec, double val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type ldouble_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_ldouble_vector(ldouble_v* vec, long double val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type bool_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_bool_vector(bool_v* vec, bool val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type string_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for.
+ * @return The index where a variable exists. 
+ */
+int bsearch_string_vector(string_v* vec, char* val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type string_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for.
+ * @return The index where a variable exists. 
+ */
+int bsearch_string_vector(string_v* vec, char* val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param vec A vector data structure of type string_v 
+ * @param sorted: true if the vector is already sorted, false otherwise.
+ * @param val The value being searched for.
+ * @return The index where a variable exists. 
+ */
+int bsearch_str_vector(string_v* vec, str* val, bool sorted);
+// --------------------------------------------------------------------------------
+
+#define bsearch_vector(vec, val, sorted) _Generic((vec), \
+    char_v*: bsearch_char_vector, \
+    uchar_v*: bsearch_uchar_vector, \
+    short_v*: bsearch_short_vector, \
+    ushort_v*: bsearch_ushort_vector, \
+    int_v*: bsearch_int_vector, \
+    uint_v*: bsearch_uint_vector, \
+    long_v*: bsearch_long_vector, \
+    ulong_v*: bsearch_ulong_vector, \
+    llong_v*: bsearch_llong_vector, \
+    ullong_v*: bsearch_ullong_vector, \
+    float_v*: bsearch_float_vector, \
+    double_v*: bsearch_double_vector, \
+    ldouble_v*: bsearch_ldouble_vector, \
+    bool_v*: bsearch_bool_vector, \
+    string_v*: bsearch_string_vector) (vec, val, sorted)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

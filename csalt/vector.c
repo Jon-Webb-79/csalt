@@ -7689,4 +7689,388 @@ void sort_string_vector(string_v* vec, sort_type stype, iter_dir direction) {
 }
 // ================================================================================
 // ================================================================================
+// BINARY SEARCH FUNCTIONS 
+
+int bsearch_char_vector(char_v* vec, char val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_char_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_uchar_vector(uchar_v* vec, unsigned char val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_uchar_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_short_vector(short_v* vec, short int val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_short_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_ushort_vector(ushort_v* vec, unsigned short int val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_ushort_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_int_vector(int_v* vec, int val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_int_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_uint_vector(uint_v* vec, unsigned int val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_uint_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_long_vector(long_v* vec, long int val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_long_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_ulong_vector(ulong_v* vec, unsigned long val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_ulong_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_llong_vector(llong_v* vec, long long int val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_llong_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_ullong_vector(ullong_v* vec, unsigned long long int val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_ullong_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_float_vector(float_v* vec, float val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_float_vector(vec, TIM, FORWARD);
+    float tolerance = 1.0e-6;
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    float delta;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        delta = fabs(vec->data[mid] - val);
+        if (delta <= tolerance)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_double_vector(double_v* vec, double val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_double_vector(vec, TIM, FORWARD);
+    double tolerance = 1.0e-6;
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    double delta;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        delta = fabs(vec->data[mid] - val);
+        if (delta <= tolerance)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_ldouble_vector(ldouble_v* vec, long double val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_ldouble_vector(vec, TIM, FORWARD);
+    long double tolerance = 1.0e-6;
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    long double delta;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        delta = vec->data[mid] - val;
+        if (delta < 0) delta = delta * -1.0;
+        if (delta <= tolerance)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_bool_vector(bool_v* vec, bool val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_bool_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (vec->data[mid] == val)
+            return mid; // Element found
+        if (vec->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_string_vector(string_v* vec, char* val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_string_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    int cmp;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        cmp = strcmp(vec->data[(size_t)mid].data, val);
+        if (cmp == 0)
+            return mid; // Element found
+        if (cmp < 0)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_str_vector(string_v* vec, str* val, bool sorted) {
+    if (vec == NULL || vec->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_string_vector(vec, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = vec->len - 1;
+    int cmp;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        cmp = compare_strings_str(&vec->data[(size_t)mid], val);
+        if (cmp == 0)
+            return mid; // Element found
+        if (cmp < 0)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// ================================================================================
+// ================================================================================
 // eof
