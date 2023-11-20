@@ -108,34 +108,6 @@ bool_arr init_bool_array(bool* arr, size_t buff, size_t len) {
     bool_arr arr_struct = {.data=arr, .len=len, .alloc=buff};
     return arr_struct;
 }
-// --------------------------------------------------------------------------------
-
-string_arr init_string_array(str* arr, size_t buff, size_t len) {
-    string_arr arr_struct = {.data=arr, .len=len, .alloc=buff};
-    return arr_struct;
-}
-// --------------------------------------------------------------------------------
-
-InitArrFunc init_array(dtype dat_type) {
-    switch(dat_type) {
-        case dChar: return (InitArrFunc)init_char_array;
-        case dUChar: return (InitArrFunc)init_uchar_array;
-        case dShort: return (InitArrFunc)init_short_array;
-        case dUShort: return (InitArrFunc)init_ushort_array;
-        case dInt: return (InitArrFunc)init_int_array;
-        case dUInt: return (InitArrFunc)init_uint_array;
-        case dLong: return (InitArrFunc)init_long_array;
-        case dULong: return (InitArrFunc)init_ulong_array;
-        case dLongLong: return (InitArrFunc)init_llong_array;
-        case dULongLong: return (InitArrFunc)init_ullong_array;
-        case dFloat: return (InitArrFunc)init_float_array;
-        case dDouble: return (InitArrFunc)init_double_array;
-        case dLDouble: return (InitArrFunc)init_ldouble_array;
-        case dBool: return (InitArrFunc)init_bool_array;
-        case dString: return (InitArrFunc)init_string_array;
-        default: return NULL;
-    }
-}
 // ================================================================================
 // ================================================================================
 // PUSH ARRAY FUNCTIONS 
@@ -434,8 +406,740 @@ bool push_bool_array(bool_arr* arr, bool var, size_t index) {
 }
 // ================================================================================
 // ================================================================================
-// POP ARRAY FUNCTIONS 
+// GET ARRAY FUNCTIONS 
 
+char get_char_array(char_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned char get_uchar_array(uchar_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+short int get_short_array(short_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int get_ushort_array(ushort_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+int get_int_array(int_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned int get_uint_array(uint_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+long int get_long_array(long_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int get_ulong_array(ulong_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+long long int get_llong_array(llong_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int get_ullong_array(ullong_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+float get_float_array(float_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.0f;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0.0f; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+double get_double_array(double_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0.0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+long double get_ldouble_array(ldouble_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.0;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return 0.0; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// --------------------------------------------------------------------------------
+
+bool get_bool_array(bool_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return false;
+    }
+    if (index >= arr->len) {
+        errno = ERANGE; // Result not within range
+        return false; // Return value is irrelevant as we're signaling an error with errno
+    }
+    errno = 0;
+    return arr->data[index];
+}
+// ================================================================================
+// ================================================================================
+// VECTOR LENGTH FUNCTIONS 
+
+size_t char_array_length(char_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t uchar_array_length(uchar_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t short_array_length(short_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ushort_array_length(ushort_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t int_array_length(int_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t uint_array_length(uint_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t long_array_length(long_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ulong_array_length(ulong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t llong_array_length(llong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ullong_array_length(ullong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t float_array_length(float_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t double_array_length(double_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ldouble_array_length(ldouble_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t bool_array_length(bool_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->len;
+}
+// ================================================================================
+// ================================================================================
+// ARRAY MEMORY FUNCTIONS 
+
+size_t char_array_memory(char_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t uchar_array_memory(uchar_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t short_array_memory(short_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ushort_array_memory(ushort_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t int_array_memory(int_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+
+size_t uint_array_memory(uint_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t long_array_memory(long_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ulong_array_memory(ulong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t llong_array_memory(llong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ullong_array_memory(ullong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t float_array_memory(float_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t double_array_memory(double_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ldouble_array_memory(ldouble_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t bool_array_memory(bool_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    errno = 0;
+    return arr->alloc;
+}
+// ================================================================================
+// ================================================================================
+// POP ARRAY FUNCTIONS 
+char pop_char_array(char_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    char val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(char)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char pop_uchar_array(uchar_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned char val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(unsigned char)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+short int pop_short_array(short_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    short int val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(short int)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int pop_ushort_array(ushort_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned short int val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(unsigned short int)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+int pop_int_array(int_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    int val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(int)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int pop_uint_array(uint_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned int val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(unsigned int)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+long int pop_long_array(long_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    long int val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(long int)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int pop_ulong_array(ulong_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned long int val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(unsigned long int)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+long long int pop_llong_array(llong_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    long long int val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(long long int)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int pop_ullong_array(ullong_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0;
+    }
+    unsigned long long int val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(unsigned long long int)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+float pop_float_array(float_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0.f;
+    }
+    float val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(float)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+double pop_double_array(double_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0.;
+    }
+    double val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(double)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+long double pop_ldouble_array(ldouble_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return 0.;
+    }
+    long double val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(long double)); 
+    arr->len -= 1;
+    return val;
+}
+// --------------------------------------------------------------------------------
+
+bool pop_bool_array(bool_arr* arr, size_t index) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    if (index > arr->len -1) {
+        errno = ERANGE;
+        return false;
+    }
+    bool val = arr->data[index];
+    memmove(arr->data + index, 
+            arr->data + index + 1, 
+            (arr->len - index - 1) * sizeof(bool)); 
+    arr->len -= 1;
+    return val;
+}
 // ================================================================================
 // ================================================================================
 // eof

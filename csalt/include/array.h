@@ -65,24 +65,9 @@ ARRAY_STRUCT(float, float_arr);
 ARRAY_STRUCT(double, double_arr);
 ARRAY_STRUCT(long double, ldouble_arr);
 ARRAY_STRUCT(bool, bool_arr);
-ARRAY_STRUCT(str, string_arr);
 // ================================================================================
 // ================================================================================
 // Initialization functions 
-
-/**
- * @brief typedef function pointer to support init_vector functions
- */
-typedef void* (*InitArrFunc)(size_t);
-
-/**
- * @brief Function that selects the correct vector initialization function based on type 
- *
- * @param dat_type An enum of type dtype containing a keyword defining the data type 
- * @return A vector initialization function for a specific data type.
- */
-InitArrFunc init_array(dtype dat_type);
-// --------------------------------------------------------------------------------
 
 /**
  * @breif Initializes and returns a charv struct for a dynamically allocated array
@@ -210,13 +195,21 @@ ldouble_arr init_ldouble_array(long double* arr, size_t buff, size_t len);
 bool_arr init_bool_array(bool* arr, size_t buff, size_t len);
 // --------------------------------------------------------------------------------
 
-/**
- * @breif Initializes and returns a charv struct for a dynamically allocated array
- *
- * @param buff A buffer size where buffer is measured in number of str indices
- * @return A string_arr struct 
- */
-string_arr init_string_array(str* arr, size_t buff, size_t len);
+#define init_array(arr, buff, len) _Generic((arr), \
+    char*: init_char_array, \
+    unsigned char*: init_uchar_array, \
+    short int*: init_short_array, \
+    unsigned short int*: init_ushort_array, \
+    int*: init_int_array, \
+    unsigned int*: init_uint_array, \
+    long int*: init_long_array, \
+    unsigned long int*: init_ulong_array, \
+    long long int*: init_llong_array, \
+    unsigned long long int*: init_ullong_array, \
+    float*: init_float_array, \
+    double*: init_double_array, \
+    long double*: init_ldouble_array, \
+    bool*: init_bool_array) (arr, buff, len)
 // ================================================================================
 // ================================================================================
 // PUSH_ARRAY FUNCTIONS 
@@ -417,34 +410,6 @@ bool push_bool_array(bool_arr* arr, bool var, size_t index);
 // --------------------------------------------------------------------------------
 
 /**
- * @brief Inserts data into a dynamically allocated arrtor.
- *
- * This function allows a user to insert string literal data into dynamically 
- * allocated arrtor, to a user specified location.
- *
- * @param arr A string_arr struct.
- * @param var The variable being inserted.
- * @param index The index where data is being inserted.
- * @return true if the function executes succesfully, false otherwise. 
- */
-bool push_string_array(string_arr* arr, const char* var, size_t index);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Inserts data into a dynamically allocated arrtr. 
- *
- * This function allows a user to insert a str data type into a dynamically 
- * allocated arrtor, to a user specified location.
- *
- * @param arr A string_arr vstruct.
- * @param var The variable being inserted.
- * @param index The index where data is being inserted.
- * @return true if the function executes succesfully, false otherwise.
- */
-bool push_str_array(string_arr* arr, str* var, size_t index);
-// --------------------------------------------------------------------------------
-
-/**
  * @brief Inserts data into a dynamically allocated vector 
  *
  * This function allows a user to insert data of any type into 
@@ -456,21 +421,684 @@ bool push_str_array(string_arr* arr, str* var, size_t index);
  * @return true of the function executes succesfully, false otherwise.
  */
 #define push_array(arr, var,index) _Generic((arr), \
-    char_v*: push_char_array, \
-    uchar_v*: push_uchar_array, \
-    short_v*: push_short_array, \
-    ushort_v*: push_ushort_array, \
-    int_v*: push_int_array, \
-    uint_v*: push_uint_array, \
-    long_v*: push_long_array, \
-    ulong_v*: push_ulong_array, \
-    llong_v*: push_llong_array, \
-    ullong_v*: push_ullong_array, \
-    float_v*: push_float_array, \
-    double_v*: push_double_array, \
-    ldouble_v*: push_ldouble_array, \
-    bool_v*: push_bool_array, \
-    default: push_string_array) (arr, var, index)
+    char_arr: push_char_array, \
+    uchar_arr: push_uchar_array, \
+    short_arr: push_short_array, \
+    ushort_arr: push_ushort_array, \
+    int_arr: push_int_array, \
+    uint_arr: push_uint_array, \
+    long_arr: push_long_array, \
+    ulong_arr: push_ulong_array, \
+    llong_arr: push_llong_array, \
+    ullong_arr: push_ullong_array, \
+    float_arr: push_float_array, \
+    double_arr: push_double_array, \
+    ldouble_arr: push_ldouble_array, \
+    bool_arr: push_bool_array) (&arr, var, index)
+// ================================================================================
+// ================================================================================
+// GET_ARRAY FUNCTIONS 
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct of type char_v 
+ * @param index The index location for the retrieved data in the vector 
+ * @return A char value as in 8 bit integer on 64 bit machine or 4 bit integer on 32 bit machine.
+ */
+char get_char_array(char_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type uchar_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A unsgined char value as in 8 bit integer on 64 bit machine or 4 bit integer on 32 bit machine.
+ */
+unsigned char get_uchar_array(uchar_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type short_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A short int value
+ */
+short int get_short_array(short_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type ushort_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return An unsigned short int value
+ */
+unsigned short int get_ushort_array(ushort_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type int_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A int value
+ */
+int get_int_array(int_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type uint_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A unsigned int value
+ */
+unsigned int get_uint_array(uint_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type long_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A long int value
+ */
+long int get_long_array(long_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type ulong_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A unsigned long int value
+ */
+unsigned long int get_ulong_array(ulong_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type llong_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A long long int value
+ */
+long long int get_llong_array(llong_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type ullong_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A unsigned long long int value
+ */
+unsigned long long int get_ullong_array(ullong_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type float_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A float value
+ */
+float get_float_array(float_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type double_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A double value
+ */
+double get_double_array(double_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type ldouble_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A long double value
+ */
+long double get_ldouble_array(ldouble_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a arrtor.
+ *
+ * @param arr A dynamically allocated vector struct of type bool_arr 
+ * @param index The index location for the retrieved data in the arrtor 
+ * @return A bool value
+ */
+bool get_bool_array(bool_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief A function to retrieve data from a specific index in a vector.
+ *
+ * @param vec A dynamically allocated vector struct
+ * @param index The index location for the retrieved data in the vector 
+ * @return return value
+ */
+#define get_array(arr, index) _Generic((arr), \
+    char_arr: get_char_array, \
+    uchar_arr: get_uchar_array, \
+    short_arr: get_short_array, \
+    ushort_arr: get_ushort_array, \
+    int_arr: get_int_array, \
+    uint_arr: get_uint_array, \
+    long_arr: get_long_array, \
+    ulong_arr: get_ulong_array, \
+    llong_arr: get_llong_array, \
+    ullong_arr: get_ullong_array, \
+    float_arr: get_float_array, \
+    double_arr: get_double_array, \
+    ldouble_arr: get_ldouble_array, \
+    bool_arr: get_bool_array) (&arr, index)
+// ================================================================================
+// ================================================================================
+// VECTOR LENGTH FUNCTIONS  
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type char_arr 
+ * @returns Length of the array
+ */
+size_t char_array_length(char_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type uchar_arr 
+ * @returns Length of the array
+ */
+size_t uchar_array_length(uchar_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type short_arr 
+ * @returns Length of the array
+ */
+size_t short_array_length(short_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type ushort_arr 
+ * @returns Length of the array
+ */
+size_t ushort_array_length(ushort_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type int_arr 
+ * @returns Length of the array
+ */
+size_t int_array_length(int_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type uint_arr 
+ * @returns Length of the array
+ */
+size_t uint_array_length(uint_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type long_arr 
+ * @returns Length of the array
+ */
+size_t long_array_length(long_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type ulong_arr 
+ * @returns Length of the array
+ */
+size_t ulong_array_length(ulong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type llong_arr 
+ * @returns Length of the array
+ */
+size_t llong_array_length(llong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type ullong_arr 
+ * @returns Length of the array
+ */
+size_t ullong_array_length(ullong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type float_arr 
+ * @returns Length of the array
+ */
+size_t float_array_length(float_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type double_arr 
+ * @returns Length of the array
+ */
+size_t double_array_length(double_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type ldouble_arr 
+ * @returns Length of the array
+ */
+size_t ldouble_array_length(ldouble_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief retrieves the array length 
+ *
+ * @param vac A array struct of type bool_arr 
+ * @returns Length of the array
+ */
+size_t bool_array_length(bool_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Macro to return the length of a array to the user 
+ *
+ * @param arr A array struct
+ * @return The length of a array
+ */
+#define array_length(arr) _Generic((arr), \
+    char_arr: char_array_length, \
+    uchar_arr: uchar_array_length, \
+    short_arr: short_array_length, \
+    ushort_arr: ushort_array_length, \
+    int_arr: int_array_length, \
+    uint_arr: uint_array_length, \
+    long_arr: long_array_length, \
+    ulong_arr: ulong_array_length, \
+    llong_arr: llong_array_length, \
+    ullong_arr: ullong_array_length, \
+    float_arr: float_array_length, \
+    double_arr: double_array_length, \
+    ldouble_arr: ldouble_array_length, \
+    bool_arr: bool_array_length) (&arr)
+// ================================================================================
+// ================================================================================
+// ARRAY MEMORY FUNCTIONS 
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type char_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t char_array_memory(char_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type uchar_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t uchar_array_memory(uchar_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type short_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t short_array_memory(short_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type ushort_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t ushort_array_memory(ushort_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type int_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t int_array_memory(int_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type uint_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t uint_array_memory(uint_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type long_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t long_array_memory(long_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type ulong_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t ulong_array_memory(ulong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type llong_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t llong_array_memory(llong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type ullong_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t ullong_array_memory(ullong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type float_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t float_array_memory(float_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type double_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t double_array_memory(double_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type ldouble_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t ldouble_array_memory(ldouble_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct of type bool_arr 
+ * @return The memory allocated in units of indices
+ */
+size_t bool_array_memory(bool_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the memory allocated to a array in number of indices 
+ *
+ * @param arr A array struct 
+ * @return The allocated memory in units of indices 
+ */
+#define array_memory(arr) _Generic((arr), \
+    char_arr: char_array_memory, \
+    uchar_arr: uchar_array_memory, \
+    short_arr: short_array_memory, \
+    ushort_arr: ushort_array_memory, \
+    int_arr: int_array_memory, \
+    uint_arr: uint_array_memory, \
+    long_arr: long_array_memory, \
+    ulong_arr: ulong_array_memory, \
+    llong_arr: llong_array_memory, \
+    ullong_arr: ullong_array_memory, \
+    float_arr: float_array_memory, \
+    double_arr: double_array_memory, \
+    ldouble_arr: ldouble_array_memory, \
+    bool_arr: bool_array_memory) (&arr)
+// ================================================================================
+// ================================================================================
+// POP ARRAY FUNCTIONS 
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a char_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type char_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A char value
+ */
+char pop_char_array(char_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a uchar_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type uchar_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A unsigned char value
+ */
+unsigned char pop_uchar_array(uchar_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a short_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type short_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A short int value
+ */
+short int pop_short_array(short_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a ushort_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type ushort_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A short int value
+ */
+unsigned short int pop_ushort_array(ushort_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a int_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type int_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A unsigned int value
+ */
+int pop_int_array(int_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a uint_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type uint_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A unsigned int value
+ */
+unsigned int pop_uint_array(uint_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a long_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type long_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A long int value
+ */
+long int pop_long_array(long_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a ulong_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type ulong_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A unsigned long int value
+ */
+unsigned long int pop_ulong_array(ulong_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a llong_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type llong_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A long long int value
+ */
+long long int pop_llong_array(llong_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a ullong_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type ullong_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A unsigned long long value
+ */
+unsigned long long int pop_ullong_array(ullong_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a float_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type float_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A float value
+ */
+float pop_float_array(float_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a double_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type double_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A double value
+ */
+double pop_double_array(double_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a ldouble_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type ldouble_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A long double value
+ */
+long double pop_ldouble_array(ldouble_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a bool_arr array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array of type bool_arr 
+ * @param index An index in the array where data will be removed.
+ * @return A bool value
+ */
+bool pop_bool_array(bool_arr* arr, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops a value from a user defined index in a array and returns it 
+ *
+ * This program pops a value from a array and returns it to the user 
+ *
+ * @param arr A dynamically allocated array
+ * @param index An index in the array where data will be removed.
+ * @return a value of type consistent with arr
+ */
+#define pop_array(arr, index) _Generic((vec), \
+    char_arr: pop_char_array, \
+    uchar_arr: pop_uchar_array, \
+    short_arr: pop_short_array, \
+    ushort_arr: pop_ushort_array, \
+    int_arr: pop_int_array, \
+    uint_arr: pop_uint_array, \
+    long_arr: pop_long_array, \
+    ulong_arr: pop_ulong_array, \
+    llong_arr: pop_llong_array, \
+    ullong_arr: pop_ullong_array, \
+    float_arr: pop_float_array, \
+    double_arr: pop_double_array, \
+    ldouble_arr: pop_ldouble_array, \
+    bool_arr: pop_bool_array) (&arr, index)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

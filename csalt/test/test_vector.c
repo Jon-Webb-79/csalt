@@ -995,7 +995,6 @@ void test_print(void **state) {
     push_vector(vec, 2.0f, vec->len);
     push_vector(vec, 3.0f, vec->len);
     push_vector(vec, 4.0f, 0);
-    print(vec);
     free_vector(vec);
 }
 // ================================================================================

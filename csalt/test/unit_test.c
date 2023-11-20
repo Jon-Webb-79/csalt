@@ -22,6 +22,7 @@
 #include "test_string.h"
 #include "test_vector.h"
 #include "test_swap.h"
+#include "test_array.h"
 
 const struct CMUnitTest test_swap[] = {
 	cmocka_unit_test(test_swap_char),
@@ -550,6 +551,23 @@ const struct CMUnitTest test_vector[] = {
     cmocka_unit_test(test_string_binary_vector_search),
     cmocka_unit_test(test_str_binary_vector_search)
 };
+
+const struct CMUnitTest test_array[] = {
+	cmocka_unit_test(test_init_char_array),
+    cmocka_unit_test(test_init_char_array),
+    cmocka_unit_test(test_init_short_array),
+    cmocka_unit_test(test_init_ushort_array),
+    cmocka_unit_test(test_init_int_array),
+    cmocka_unit_test(test_init_uint_array),
+    cmocka_unit_test(test_init_long_array),
+    cmocka_unit_test(test_init_ulong_array),
+    cmocka_unit_test(test_init_llong_array),
+    cmocka_unit_test(test_init_ullong_array),
+    cmocka_unit_test(test_init_float_array),
+    cmocka_unit_test(test_init_double_array),
+    cmocka_unit_test(test_init_ldouble_array),
+    cmocka_unit_test(test_init_bool_array),
+};
 // Begin code
 int main(int argc, const char * argv[]) {
     int status;
@@ -563,6 +581,10 @@ int main(int argc, const char * argv[]) {
         return status;
     }
     status = cmocka_run_group_tests(test_vector, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
+    status = cmocka_run_group_tests(test_array, NULL, NULL);
 	return status;
 }
 // ================================================================================
