@@ -377,4 +377,313 @@ void print_string_vector(string_v* vec) {
 }
 // ================================================================================
 // ================================================================================
+
+void print_char_array(char_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_char(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_char(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_uchar_array(uchar_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_uchar(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_uchar(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_short_array(short_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_short(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_short(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_ushort_array(ushort_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_ushort(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_ushort(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_int_array(int_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_int(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_int(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_uint_array(uint_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_uint(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_uint(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_long_array(long_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_long(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_long(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_ulong_array(ulong_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_ulong(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_ulong(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_llong_array(llong_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_llong(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_llong(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_ullong_array(ullong_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_ullong(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_ullong(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_float_array(float_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_float(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_float(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_double_array(double_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_double(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_double(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_ldouble_array(ldouble_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_longdouble(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_longdouble(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_bool_array(bool_arr* arr) {
+    if (arr->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < arr->len - 1; i++) {
+        print_bool(arr->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_bool(arr->data[arr->len - 1]);
+    printf(" ]");
+}
+// ================================================================================
+// ================================================================================
 // eof

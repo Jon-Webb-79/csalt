@@ -122,7 +122,7 @@ An example demonstrating the initialization of a float array.
    int main() {
        float a[10] = {1.1, 2.2, 3.3};
        float_arr arr = init_array(a, 10, 3);
-       print(arr);  // Assuming print_array is a function for printing array contents
+       print(&arr);  // Assuming print_array is a function for printing array contents
        return 0;
    }
 
@@ -145,7 +145,7 @@ An example illustrating incorrect instantiation of an array data structure.
        // Incorrectly passing len as 0 instead of 3
        // This may lead to undefined behavior.
        float_arr arr = init_array(a, 10, 0);
-       print(arr);
+       print(&arr);
        return 0;
    }
 
@@ -226,7 +226,7 @@ An example of adding data to an integer array at various locations.
        push_array(arr, 3, array_length(arr));
        push_array(arr, 4, array_length(arr));
        push_array(arr, 5, 0);
-       print(arr);
+       print(&arr);
        return 0;
    }
 
@@ -254,7 +254,7 @@ out-of-bounds index.
        if (!test) {
            print("Failed to push data: ", strerror(errno));
        }
-       print(arr);
+       print(&arr);
        return 0;
    }
 
@@ -376,7 +376,6 @@ indices:
 
 .. code-block:: bash 
 
-   >> Error: Index out of bounds in get_bool_vector
    >> Failure
 
 Underlying Functions 
@@ -457,7 +456,7 @@ be avoided to reduce the risk of unintentional modifications.
        push_array(arr, 43.5f, arr->len);
        push_array(arr, 13.8f, array_length(arr));
        push_array(arr, 7.7f, arr->len);
-       print("Array: ", arr);
+       print("Array: ", &arr);
        print("Array Length: ", array_length(arr));
        return 0;
    }
@@ -672,7 +671,7 @@ An example showing how to pop and catch data, or choose not to catch data.
        int var = pop_array(arr, 0);
        pop_array(arr, 4);
        print(var);
-       print(arr);
+       print(&arr);
        return 0;
    }
 
@@ -702,7 +701,7 @@ Example showing the results of an out of bounds index.
        int var = pop_array(arr, 0);
        pop_array(arr, 14);
        if (errno == ERANGE) print("Index out of range")
-       print(var);
+       print(&var);
        print(arr);
        return 0;
    }

@@ -23,6 +23,7 @@
 
 #include "str.h"
 #include "vector.h"
+#include "array.h"
 
 extern const size_t PRINT_LENGTH;
 
@@ -62,6 +63,20 @@ extern "C" {
                                          ldouble_v*: true, \
                                          bool_v*: true, \
                                          string_v*: true, \
+                                         char_arr*: true, \
+                                         uchar_arr*: true, \
+                                         short_arr*: true, \
+                                         ushort_arr*: true, \
+                                         int_arr*: true, \
+                                         uint_arr*: true, \
+                                         long_arr*: true, \
+                                         ulong_arr*: true, \
+                                         llong_arr*: true, \
+                                         ullong_arr*: true, \
+                                         float_arr*: true, \
+                                         double_arr*: true, \
+                                         ldouble_arr*: true, \
+                                         bool_arr*: true, \
 										 default: false)
 // ================================================================================
 // ================================================================================
@@ -109,6 +124,23 @@ void print_string_vector(string_v* vec);
 // ================================================================================
 // ================================================================================
 
+void print_char_array(char_arr* arr);
+void print_uchar_array(uchar_arr* arr);
+void print_short_array(short_arr* arr);
+void print_ushort_array(ushort_arr* arr);
+void print_int_array(int_arr* arr);
+void print_uint_array(uint_arr* arr);
+void print_long_array(long_arr* arr);
+void print_ulong_array(ulong_arr* arr);
+void print_llong_array(llong_arr* arr);
+void print_ullong_array(ullong_arr* arr);
+void print_float_array(float_arr* arr);
+void print_double_array(double_arr* arr);
+void print_ldouble_array(ldouble_arr* arr);
+void print_bool_array(bool_arr* arr);
+// ================================================================================
+// ================================================================================
+
 /**
  * Macro using _Generic operator to determine which functions get implemented
  * in a print statement.
@@ -141,7 +173,21 @@ void print_string_vector(string_v* vec);
                                        double_v*: print_double_vector, \
                                        ldouble_v*: print_ldouble_vector, \
                                        bool_v*: print_bool_vector, \
-                                       string_v*: print_string_vector)(T)
+                                       string_v*: print_string_vector, \
+                                       char_arr*: print_char_array, \
+                                       uchar_arr*: print_uchar_array, \
+                                       short_arr*: print_short_array, \
+                                       ushort_arr*: print_ushort_array, \
+                                       int_arr*: print_int_array, \
+                                       uint_arr*: print_uint_array, \
+                                       long_arr*: print_long_array, \
+                                       ulong_arr*: print_ulong_array, \
+                                       llong_arr*: print_llong_array, \
+                                       ullong_arr*: print_ullong_array, \
+                                       float_arr*: print_float_array, \
+                                       double_arr*: print_double_array, \
+                                       ldouble_arr*: print_ldouble_array, \
+                                       bool_arr*: print_bool_array)(T)
 // ================================================================================
 // ================================================================================
 

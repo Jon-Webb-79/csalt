@@ -890,6 +890,7 @@ size_t bool_array_memory(bool_arr* arr) {
 // ================================================================================
 // ================================================================================
 // POP ARRAY FUNCTIONS 
+
 char pop_char_array(char_arr* arr, size_t index) {
     if ( arr == NULL || arr->data == NULL ) {
         errno = EINVAL;
