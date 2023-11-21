@@ -46,6 +46,27 @@ void test_init_string_array(void **state);
 void test_init_str_array(void **state);
 // ================================================================================
 // ================================================================================
+// TEST POP ARRAY FUNCTIONS 
+
+void test_pop_char_array(void **state);
+void test_pop_uchar_array(void **state);
+void test_pop_short_array(void **state);
+void test_pop_ushort_array(void **state);
+void test_pop_int_array(void **state);
+void test_pop_uint_array(void **state);
+void test_pop_long_array(void **state);
+void test_pop_ulong_array(void **state);
+void test_pop_ulong_array(void **state);
+void test_pop_llong_array(void **state);
+void test_pop_ullong_array(void **state);
+void test_pop_float_array(void **state);
+void test_pop_double_array(void **state);
+void test_pop_ldouble_array(void **state);
+void test_pop_bool_array(void **state);
+void test_pop_string_array(void **state);
+void test_pop_str_array(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_H */
 // ================================================================================
 // ================================================================================

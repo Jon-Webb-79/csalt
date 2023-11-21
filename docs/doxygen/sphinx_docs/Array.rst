@@ -615,3 +615,125 @@ for specific requirements.
    size_t ldouble_array_memory(ldoublearr* arr);
    size_t bool_array_memory(boolarr* arr);
    size_t string_array_memory(stringarr* arr);
+
+Pop Array 
+=========
+The ``pop_array`` macro in this library allows for extracting of data from a vector at
+any index.  While removing data from the end of the vector is an :math:`O(1)` operation,
+typical of LIFO stack behavior, extracting data from any other position has an :math:`O(n)`
+time complexity due to the need to shift remaining elements.
+
+.. code-block:: c 
+
+   #define pop_array(arr, index) ( /*Expression to pop data from an array */) 
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure as defined in :ref:`Array Data Types <array_dat_type>`.
+- :c:`index`: The index from which data shall be retrieved.
+
+Returns 
+-------
+
+- The popped values data type corresponds with the vector's data type.
+
+Error Handling
+--------------
+The ``pop_array`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``pop_array`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
+- ``ERANGE``: Suggests that the value of ``index`` was outside a valid range.
+
+Example 1
+---------
+An example showing how to pop and catch data, or choose not to catch data.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       int a[6];
+       int_arr arr = init_array(a, 6, 0);
+       push_array(arr, 1, 0);
+       push_array(arr, 2, 1);
+       push_array(arr, 3, 2);
+       push_array(arr, 4, 3);
+       push_array(arr, 5, 4);
+       push_array(arr, 6, 5);
+       int var = pop_array(arr, 0);
+       pop_array(arr, 4);
+       print(var);
+       print(arr);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> 1
+   >> [ 1, 2, 3, 4 ]
+
+Example 2 
+---------
+Example showing the results of an out of bounds index.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       int a[6];
+       int_arr arr = init_array(a, 6, 0);
+       push_array(arr, 1, 0);
+       push_array(arr, 2, 1);
+       push_array(arr, 3, 2);
+       push_array(arr, 4, 3);
+       push_array(arr, 5, 4);
+       push_array(arr, 6, 5);
+       int var = pop_array(arr, 0);
+       pop_array(arr, 14);
+       if (errno == ERANGE) print("Index out of range")
+       print(var);
+       print(arr);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> 1
+   >> Index out of range
+   >> [ 1, 2, 3, 4, 5 ]
+
+Underlying Functions 
+--------------------
+The ``pop_array`` macro employs the ``_Generic`` keyword to select the 
+appropriate function based on the vector's data type. While using the macro is 
+recommended, developers have the option to directly use the underlying functions 
+for specific requirements.
+
+.. code-block:: c 
+
+   char pop_char_array(char_arr* arr, size_t index);
+   unsigned char pop_uchar_array(uchar_arr* arr, size_t index);
+   short int pop_short_array(short_arr* arr, size_t index);
+   unsigned short int pop_ushort_array(ushort_arr* arr, size_t index);
+   int pop_int_array(int_arr* arr, size_t index);
+   unsigned int pop_uint_array(uint_arr* arr, size_t index);
+   long int pop_long_array(long_arr* arr, size_t index);
+   unsigned long int pop_ulong_array(ulong_arr* arr, size_t index);
+   long long int pop_llong_array(llong_arr* arr, size_t index);
+   unsigned long long int pop_ullong_array(ullong_arr* arr, size_t index);
+   float pop_float_array(float_arr* arr, size_t index);
+   double pop_double_array(double_arr* arr, size_t index);
+   long double pop_ldouble_array(ldouble_arr* arr, size_t index);
+   bool pop_bool_array(bool_arr* arr, size_t index);
+

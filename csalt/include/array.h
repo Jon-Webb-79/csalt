@@ -1084,7 +1084,7 @@ bool pop_bool_array(bool_arr* arr, size_t index);
  * @param index An index in the array where data will be removed.
  * @return a value of type consistent with arr
  */
-#define pop_array(arr, index) _Generic((vec), \
+#define pop_array(arr, index) _Generic((arr), \
     char_arr: pop_char_array, \
     uchar_arr: pop_uchar_array, \
     short_arr: pop_short_array, \
