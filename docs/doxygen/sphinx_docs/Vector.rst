@@ -630,7 +630,6 @@ Parameters
 ----------
 
 - :c:`vec`: A vector data structure from the :ref:`Vector Data Types <vector_dat_type>` section.
-- :c:`index`: The position within the index where data will be retrieved from.
 
 Returns 
 -------

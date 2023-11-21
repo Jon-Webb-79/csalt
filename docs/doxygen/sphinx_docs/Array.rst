@@ -345,7 +345,6 @@ Demonstrating how to safely access data from a vector using the ``get_array`` ma
        print("Index 0: ", get_array(arr, 0));
        // This method works, but should be avoided for safety
        print("Index 3: ", arr->data[3]);
-       free_arrtor(arr);
        return 0;
    }
 
@@ -401,3 +400,218 @@ access. These underlying functions can be used directly for more control:
    double get_double_array(double_arr* arr, size_t index);
    long double get_ldouble_array(ldouble_arr* arr, size_t index);
    bool get_bool_array(bool_arr* arr, size_t index);
+
+Array Length 
+============
+The length of a statically allocated array is maintained in the ``len`` 
+attribute of the vector struct. While it's technically possible to access 
+this attribute directly, doing so can be risky as it might lead to accidental 
+modification of the length. To safely retrieve the vector's length without 
+exposing the internal attribute for modification, the ``array_length`` macro 
+is provided.
+
+.. code-block:: c
+
+   #define array_length(arr) (/* Expression to retrieve length */)
+
+Parameters 
+----------
+
+- :c:`arr`: An array data structure from the :ref:`Array Data Types <array_dat_type>` section.
+
+Returns 
+-------
+
+- The length of the actively populated vector, returned as a ``size_t`` type.
+
+Error Handling
+--------------
+The ``array_length`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``array_length`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
+
+Example 1
+---------
+This example demonstrates how to access the vector length using the ``array_length`` 
+macro, compared to directly accessing the struct attribute. The latter should 
+be avoided to reduce the risk of unintentional modifications.
+
+.. code-block:: c
+
+   #include "array.h"
+   #include "print.h"
+
+   int main() {
+       float a[5];
+       float_arr* arr = init_array(arr, 5, 0);
+       push_array(arr, 2.1f, array_length(arr));
+       // Avoid directly accessing arr->len like below.
+       push_array(arr, 7.4f, arr->len);
+       push_array(arr, 1.1f, array_length(arr));
+       push_array(arr, 43.5f, arr->len);
+       push_array(arr, 13.8f, array_length(arr));
+       push_array(arr, 7.7f, arr->len);
+       print("Array: ", arr);
+       print("Array Length: ", array_length(arr));
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Array: [ 2.1, 7.4, 1.1, 43.5, 13.8, 7.7 ]
+   >> Array Length: 6
+
+Example 2
+---------
+It is possible to pass a NULL pointer to the ``array_length`` macro 
+or a struct with a NULL pointer to data.  In this case, the ``array_length``
+macro will throw a value of ``EINVAL`` to ``errno`` which can be checked
+to handle the error.  In this instance, the underlying functions will 
+return a value of 0, false, or a string with nothing but a null terminator.
+In addition, the function will print an error to ``stderr``.
+
+.. code-block:: c 
+
+   #include "array.h"
+
+   int main() {
+       bool_arr arr = {.data = NULL, .len = 0, .alloc = 0};
+       size_t len = array_length(&vec);
+       if (errno == EINVAL) print("Failure");
+
+.. code-block:: bash 
+
+   >> Error: Null pointer passed to bool_vector_length 
+   >> Failure
+
+Underlying Functions 
+--------------------
+The ``array_length`` macro utilizes the ``_Generic`` keyword to select the 
+appropriate function based on the vector's data type. While the macro is the 
+recommended way to access the vector's length, developers can use the underlying 
+functions directly in advanced scenarios.
+
+.. code-block:: c 
+
+   size_t char_array_length(char_arr* arr);
+   size_t uchar_array_length(uchar_arr* arr);
+   size_t short_array_length(short_arr* arr);
+   size_t ushort_array_length(ushort_arr* arr);
+   size_t int_array_length(int_arr* arr);
+   size_t uint_array_length(uint_arr* arr);
+   size_t long_array_length(long_arr* arr);
+   size_t ulong_array_length(ulong_arr* arr);
+   size_t llong_array_length(llong_arr* arr);
+   size_t ullong_array_length(ullong_arr* arr);
+   size_t float_array_length(float_arr* arr);
+   size_t double_array_length(double_arr* arr);
+   size_t ldouble_array_length(ldouble_arr* arr);
+   size_t bool_array_length(bool_arr* arr);
+   size_t string_array_length(string_arr* arr);
+
+Array Memory 
+============
+Retrieving the memory allocation for an array, measured by the number of 
+allocated indices, can be done through the ``alloc`` attribute of the vector 
+struct. Direct access to this attribute, however, poses a risk of accidental 
+overwriting, which could lead to unintended behavior. The ``array_memory`` 
+macro provides a safe way to access this information without directly exposing 
+the ``alloc`` attribute.
+
+.. code-block:: c
+
+   #define array_memory(arr) (/* Expression to retrieve memory allocation */) 
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure as defined in :ref:`Array Data Types <array_dat_type>`.
+
+Returns 
+-------
+
+- The number of indices allocated in memory for the vector, returned as a `size_t`.
+
+Error Handling
+--------------
+The ``array_memory`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``array_memory`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
+
+Example 1
+---------
+Demonstrating how to retrieve the memory allocation using the ``array_memory`` macro:
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       float a[15];
+       float_arr* vec = init_array(arr, 15, 0);
+       // ...pushing data into vec...
+       print("Array Memory: ", array_memory(vec));
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Array Memory: 15 
+
+Example 2
+---------
+Error handling for scenarios where a NULL pointer is passed:
+
+.. code-block:: c 
+
+   #include "array.h"
+
+   int main() {
+       bool_arr* vec = NULL;
+       errno = 0; // Reset errno before calling vector_memory
+       size_t mem = array_memory(vec);
+       if (errno == EINVAL) print("Failure: Null pointer error.");
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Failure: Null pointer error.
+
+Underlying Functions 
+--------------------
+The ``array_memory`` macro employs the ``_Generic`` keyword to select the 
+appropriate function based on the vector's data type. While using the macro is 
+recommended, developers have the option to directly use the underlying functions 
+for specific requirements.
+
+.. code-block:: c 
+
+   size_t char_array_memory(chararr* arr);
+   size_t uchar_array_memory(uchararr* arr);
+   size_t short_array_memory(shortarr* arr);
+   size_t ushort_array_memory(ushortarr* arr);
+   size_t int_array_memory(intarr* arr);
+   size_t uint_array_memory(uintarr* arr);
+   size_t long_array_memory(longarr* arr);
+   size_t ulong_array_memory(ulongarr* arr);
+   size_t llong_array_memory(llongarr* arr);
+   size_t ullong_array_memory(ullongarr* arr);
+   size_t float_array_memory(floatarr* arr);
+   size_t double_array_memory(doublearr* arr);
+   size_t ldouble_array_memory(ldoublearr* arr);
+   size_t bool_array_memory(boolarr* arr);
+   size_t string_array_memory(stringarr* arr);
