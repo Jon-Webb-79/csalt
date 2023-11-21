@@ -151,7 +151,6 @@ An example illustrating incorrect instantiation of an array data structure.
 
 Underlying Functions
 --------------------
-
 The ``init_array`` macro utilizes the ``_Generic`` keyword to select from 
 several potential functions. While the macro is recommended for its type 
 safety and generic capabilities, users may opt to directly use one of the 
@@ -174,3 +173,231 @@ underlying functions listed below.
    ldouble_arr init_ldouble_array(long double* arr, size_t buff, size_t len);
    bool_arr init_bool_array(bool* arr, size_t buff, size_t len);
 
+Pushing Data to Arrays
+======================
+The ``push_array`` macro in the ``array.h`` header file offers a method to 
+insert data into static arrays. Unlike stack operations that typically follow 
+a Last In, First Out (LIFO) approach, this macro allows data insertion at any 
+specified index within the bounds of the array, providing flexibility in 
+managing array elements.
+
+The macro uses the ``_Generic`` keyword to determine the correct function 
+based on the data type of the array, making ``push_array`` a convenient and 
+type-safe tool for working with different data types.
+
+.. code-block:: c
+
+   #define push_array(arr, dat, index) ( /* Expression to add data to array */ )
+
+Parameters
+----------
+- :c:`arr`: An array container structure as defined in :ref:`Array Data Types <array_dat_type>`.
+- :c:`dat`: The data to be inserted, compatible with the array's data type.
+- :c:`index`: The index at which to insert the data.
+
+Returns
+-------
+- Returns ``true`` if the data is successfully inserted into the array, ``false`` otherwise.
+
+Error Handling
+--------------
+The ``push_array`` macro may encounter errors such as invalid input or index out 
+of bounds. In these cases, underlying functions set the global variable 
+``errno`` to indicate the specific error.
+
+Possible error codes:
+- ``EINVAL``: Invalid argument was passed to the function.
+- ``ERANGE``: Index is out of bounds.
+
+Example 1
+---------
+An example of adding data to an integer array at various locations.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       int dat[20];
+       int_arr arr = init_array(dat, 20, 0);
+       push_array(arr, 1, array_length(arr));
+       push_array(arr, 2, array_length(arr));
+       push_array(arr, 3, array_length(arr));
+       push_array(arr, 4, array_length(arr));
+       push_array(arr, 5, 0);
+       print(arr);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> [ 5, 1, 2, 3, 4 ]
+
+Example 2
+---------
+An example demonstrating a failure caused by attempting to push data to an 
+out-of-bounds index.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       int dat[20];
+       int_arr arr = init_array(dat, 20, 0);
+       push_array(arr, 1, array_length(arr));
+       push_array(arr, 2, array_length(arr));
+       push_array(arr, 3, array_length(arr));
+       bool test = push_array(arr, 4, 21);  // Index 21 is out of bounds
+       if (!test) {
+           print("Failed to push data: ", strerror(errno));
+       }
+       print(arr);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Failed to push data: Range error in math function.
+   >> [ 1, 2, 3 ]
+
+Underlying Functions
+--------------------
+The ``push_array`` macro employs the ``_Generic`` keyword to select from several 
+potential functions. While using the macro is recommended for type safety and 
+generic capabilities, users may choose to directly utilize one of the underlying 
+functions listed below.
+
+.. code-block:: c
+
+   bool push_char_array(char_arr* arr, char var, size_t index);
+   bool push_uchar_array(uchar_arr* arr, unsigned char var, size_t index);
+   bool push_short_array(short_arr* arr, short int var, size_t index);
+   bool push_ushort_array(ushort_arr* arr, unsigned short int var, size_t index);
+   bool push_int_array(int_arr* arr, int var, size_t index);
+   bool push_uint_array(uint_arr* arr, unsigned int var, size_t index);
+   bool push_long_array(long_arr* arr, long int var, size_t index);
+   bool push_ulong_array(ulong_arr* arr, unsigned long int var, size_t index);
+   bool push_llong_array(llong_arr* arr, long long int var, size_t index);
+   bool push_ullong_array(ullong_arr* arr, unsigned long long int var, size_t index);
+   bool push_float_array(float_arr* arr, float var, size_t index);
+   bool push_double_array(double_arr* arr, double var, size_t index);
+   bool push_ldouble_array(ldouble_arr* arr, long double var, size_t index);
+   bool push_bool_array(bool_arr* arr, bool var, size_t index);
+
+Get Array Data 
+==============
+Retrieving data from a statically allocated vector based on an index is a common 
+operation.  Direct access to the ``data`` attribute is possible but risky,
+as it might lead to accidentally overwriting of data.  To standardize data 
+access and mitigate these risks, the ``get_array`` macro was developed.
+This macro uses the ``_Generic`` keyword to intelligently select the appropriate 
+function based on the arrays data type.
+
+.. code-block:: c
+
+   #define get_array(arr, index) (/* Expression to retrieve data */)
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure as defined in :ref:`Array Data Types <array_dat_type>`.
+- :c:`index`: The index from which to retrieve data.
+
+Returns 
+-------
+
+- The value at the specified index in the vector. The return type matches the vector's data type.
+
+Error Handling
+--------------
+The ``get_array`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``get_array`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
+- ``ERANGE``: Suggests that the operation resulted in a value that is outside the range of representable values for the specified data type.
+
+Example 1
+---------
+Demonstrating how to safely access data from a vector using the ``get_array`` macro:
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       unsigned int a[5];
+       uint_arr* vec = init_array(arr, 5, 0);
+       push_array(arr, 2, array_length(arr));
+       push_array(arr, 12, array_length(arr));
+       push_array(arr, 22, array_length(arr));
+       push_array(arr, 1, array_length(arr));
+       push_array(arr, 80, array_length(arr));
+       print("Index 2: ", get_array(arr, 2));
+       print("Index 0: ", get_array(arr, 0));
+       // This method works, but should be avoided for safety
+       print("Index 3: ", arr->data[3]);
+       free_arrtor(arr);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Index 2: 22
+   >> Index 0: 0
+   >> Index 3: 1
+
+Example 2
+---------
+Error handling in `get_vector` includes detecting null pointers and out-of-bounds 
+indices:
+
+.. code-block:: c 
+
+   #include "array.h"
+   #include "print.h"
+
+   int main() {
+       bool a[3];
+       bool_arr* arr = init_array(arr, 3, 0)
+       push_array(arr, true, array_length(arr));
+       push_array(arr, true, array_length(arr));
+       push_array(arr, false, array_length(arr));
+       bool len = get_array(arr, 6);
+       if (errno == ERANGE) print("Failure");
+   }
+
+.. code-block:: bash 
+
+   >> Error: Index out of bounds in get_bool_vector
+   >> Failure
+
+Underlying Functions 
+--------------------
+The ``get_array`` macro utilizes ``_Generic`` for type-safe and convenient data 
+access. These underlying functions can be used directly for more control:
+
+.. code-block:: c
+
+   char get_char_array(char_arr* arr, size_t index);
+   unsigned char get_uchar_array(uchar_arr* arr, size_t index);
+   short int get_short_array(short_arr* arr, size_t index);
+   unsigned short int get_ushort_array(ushort_arr* arr, size_t index);
+   int get_int_array(int_arr* arr, size_t index);
+   unsigned int get_uint_array(uint_arr* arr, size_t index);
+   long int get_long_array(long_arr* arr, size_t index);
+   unsigned long int get_ulong_array(ulong_arr* arr, size_t index);
+   long long int get_llong_array(llong_arr* arr, size_t index);
+   unsigned long long int get_ullong_array(ullong_arr* arr, size_t index);
+   float get_float_array(float_arr* arr, size_t index);
+   double get_double_array(double_arr* arr, size_t index);
+   long double get_ldouble_array(ldouble_arr* arr, size_t index);
+   bool get_bool_array(bool_arr* arr, size_t index);
