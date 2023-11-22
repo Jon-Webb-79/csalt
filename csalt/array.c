@@ -1143,4 +1143,215 @@ bool pop_bool_array(bool_arr* arr, size_t index) {
 }
 // ================================================================================
 // ================================================================================
+
+void reverse_char_array(char_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_char(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_uchar_array(uchar_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_uchar(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_short_array(short_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_short(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_ushort_array(ushort_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_ushort(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_int_array(int_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_int(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_uint_array(uint_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_uint(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_long_array(long_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_long(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_ulong_array(ulong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_ulong(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_llong_array(llong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_llong(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_ullong_array(ullong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_ullong(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_float_array(float_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_float(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_double_array(double_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_double(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_ldouble_array(ldouble_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_ldouble(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void reverse_bool_array(bool_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return;
+    } 
+    int i = 0;
+    int j = arr->len - 1;
+    while (i < j) {
+       swap_bool(&arr->data[i], &arr->data[j]);
+       i++;
+       j--;
+    }
+}
+// ================================================================================
+// ================================================================================
 // eof

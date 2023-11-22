@@ -1101,6 +1101,122 @@ bool pop_bool_array(bool_arr* arr, size_t index);
     bool_arr: pop_bool_array) (&arr, index)
 // ================================================================================
 // ================================================================================
+
+/**
+ * @brief Reverse the order of a char_arr array 
+ * @param arr A array of type char_arr
+ */
+void reverse_char_array(char_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a uchar_arr array 
+ * @param arr A array of type uchar_arr
+ */
+void reverse_uchar_array(uchar_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a short_arr array 
+ * @param arr A array of type short_arr
+ */
+void reverse_short_array(short_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a ushort_arr array 
+ * @param arr A array of type ushort_arr
+ */
+void reverse_ushort_array(ushort_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a int_arr array 
+ * @param arr A array of type int_arr
+ */
+void reverse_int_array(int_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a uint_arr array 
+ * @param arr A array of type uint_arr
+ */
+void reverse_uint_array(uint_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a long_arr array 
+ * @param arr A array of type long_arr
+ */
+void reverse_long_array(long_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a ulong_arr array 
+ * @param arr A array of type ulong_arr
+ */
+void reverse_ulong_array(ulong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a llong_arr array 
+ * @param arr A array of type llong_arr
+ */
+void reverse_llong_array(llong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a ullong_arr array 
+ * @param arr A array of type ullong_arr
+ */
+void reverse_ullong_array(ullong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of float_arr array 
+ * @param arr A array of type float_arr
+ */
+void reverse_float_array(float_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a double_arr array 
+ * @param arr A array of type double_arr
+ */
+void reverse_double_array(double_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a ldouble_arr array 
+ * @param arr A array of type ldouble_arr
+ */
+void reverse_ldouble_array(ldouble_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverse the order of a bool_arr array 
+ * @param arr A array of type bool_arr
+ */
+void reverse_bool_array(bool_arr* arr);
+// --------------------------------------------------------------------------------
+
+#define reverse_array(arr) _Generic((arr), \
+    char_arr: reverse_char_array, \
+    uchar_arr: reverse_uchar_array, \
+    short_arr: reverse_short_array, \
+    ushort_arr: reverse_ushort_array, \
+    int_arr: reverse_int_array, \
+    uint_arr: reverse_uint_array, \
+    long_arr: reverse_long_array, \
+    ulong_arr: reverse_ulong_array, \
+    llong_arr: reverse_llong_array, \
+    ullong_arr: reverse_ullong_array, \
+    float_arr: reverse_float_array, \
+    double_arr: reverse_double_array, \
+    ldouble_arr: reverse_ldouble_array, \
+    bool_arr: reverse_bool_array) (&arr)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

@@ -736,3 +736,83 @@ for specific requirements.
    long double pop_ldouble_array(ldouble_arr* arr, size_t index);
    bool pop_bool_array(bool_arr* arr, size_t index);
 
+Reverse Array 
+=============
+The ``reverse_array`` macro leverages the ``_Generic`` keyword to select from 
+several functions in order to reverse the order of data in a statically
+allocated array data structure.  The form and parameters of the ``reverse_array``
+are shown below.
+
+.. code-block:: c
+
+   #define reverse_array(arr) (/*Expression to reverse vector here*/) 
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure as defined in :ref:`Array Data Types <array_dat_type>`.
+
+Error Handling
+--------------
+The ``reverse_array`` macro may encounter several error conditions during its 
+execution. In such cases, the function sets the ``errno`` global variable to 
+indicate the specific error. Users of this function should check ``errno`` 
+immediately after the function call to determine if an error occurred and to 
+understand the nature of the error.
+
+The possible error codes set by ``reverse_array`` include:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function. This error is set when the input parameters are out of the expected range or format.
+
+Example 
+-------
+Example showing how to revserse the order of a string vector.
+
+.. code-block:: c
+
+   #include "array.h"
+   #include "print.h"
+
+   int main() {
+       int a[5];
+       int_arr arr = init_array(a, 5, 0);
+       push_array(arr, 1, array_length(arr));
+       push_array(arr, 2, array_length(arr));
+       push_array(arr, 3, array_length(arr));
+       push_array(arr, 4, array_length(arr));
+       push_array(arr, 5, array_length(arr));
+       print("Before reverse operation: ", arr);
+       reverse_array(arr);
+       print("After reverse operation: ", arr);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Before reverse operation: [ 1, 2, 3, 4 ]
+   >> After reverse operation: [ 4, 3, 2, 1 ]
+
+Underlying Functions 
+--------------------
+The ``reverse_array`` macro leverages ``_Generic`` to select the appropriate function 
+based on the array's data type. While using the macro is recommended, 
+these underlying functions can be directly used for more specific control:
+
+.. code-block:: c
+
+   void reverse_char_array(char_arr* arr);
+   void reverse_uchar_array(uchar_arr* arr);
+   void reverse_short_array(short_arr* arr);
+   void reverse_ushort_array(ushort_arr* arr);
+   void reverse_int_array(int_arr* arr);
+   void reverse_uint_array(uint_arr* arr);
+   void reverse_long_array(long_arr* arr);
+   void reverse_ulong_array(ulong_arr* arr);
+   void reverse_llong_array(llong_arr* arr);
+   void reverse_ullong_array(ullong_arr* arr);
+   void reverse_float_array(float_arr* arr);
+   void reverse_double_array(double_arr* arr);
+   void reverse_ldouble_array(ldouble_arr* arr);
+   void reverse_bool_array(bool_arr* arr);
+   void reverse_string_array(string_arr* arr);
+

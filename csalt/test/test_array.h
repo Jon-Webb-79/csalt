@@ -68,6 +68,25 @@ void test_pop_string_array(void **state);
 void test_pop_str_array(void **state);
 // ================================================================================
 // ================================================================================
+
+void test_reverse_char_array(void **state);
+void test_reverse_uchar_array(void **state);
+void test_reverse_short_array(void **state);
+void test_reverse_ushort_array(void **state);
+void test_reverse_int_array(void **state);
+void test_reverse_uint_array(void **state);
+void test_reverse_long_array(void **state);
+void test_reverse_ulong_array(void **state);
+void test_reverse_ulong_array(void **state);
+void test_reverse_llong_array(void **state);
+void test_reverse_ullong_array(void **state);
+void test_reverse_float_array(void **state);
+void test_reverse_double_array(void **state);
+void test_reverse_ldouble_array(void **state);
+void test_reverse_bool_array(void **state);
+void test_reverse_string_array(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_H */
 // ================================================================================
 // ================================================================================

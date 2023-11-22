@@ -552,4 +552,229 @@ void test_pop_bool_array(void **state) {
 }
 // ================================================================================
 // ================================================================================
+
+void test_reverse_char_array(void **state) {
+    char b[6];
+    char_arr arr = init_array(b, 6, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    char a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_uchar_array(void **state) {
+    unsigned char b[6];
+    uchar_arr arr = init_array(b, 6, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    unsigned char a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_short_array(void **state) {
+    short int b[6];
+    short_arr arr = init_array(b, 6, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    short int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_ushort_array(void **state) {
+    unsigned short int b[5];
+    ushort_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    unsigned short int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_int_array(void **state) {
+    int b[5];
+    int_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_uint_array(void **state) {
+    unsigned int b[5];
+    uint_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    unsigned int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_long_array(void **state) {
+    long int b[5];
+    long_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    long int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_ulong_array(void **state) {
+    unsigned long int b[5];
+    ulong_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    unsigned long int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_llong_array(void **state) {
+    long long int b[5];
+    llong_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    long long int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_ullong_array(void **state) {
+    unsigned long long int b[5];
+    ullong_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    reverse_array(arr);
+    unsigned long long int a[5] = {5, 4, 3, 2, 1};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_float_array(void **state) {
+    float b[5];
+    float_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 3., array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    reverse_array(arr);
+    float a[5] = {5., 4., 3., 2., 1.};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_float_equal(get_array(arr, i), a[i], 1.0e-3); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_double_array(void **state) {
+    double b[5];
+    double_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 3., array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    reverse_array(arr);
+    double a[5] = {5., 4., 3., 2., 1.};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_double_equal(get_array(arr, i), a[i], 1.0e-3); 
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void test_reverse_ldouble_array(void **state) {
+    long double b[5];
+    ldouble_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 3., array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    reverse_array(arr);
+    long double a[5] = {5., 4., 3., 2., 1.};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_double_equal(get_array(arr, i), a[i], 1.0e-3); 
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_reverse_bool_array(void **state) {
+    bool b[5];
+    bool_arr arr = init_array(b, 5, 0);
+    push_array(arr, true, array_length(arr));
+    push_array(arr, true, array_length(arr));
+    push_array(arr, false, array_length(arr));
+    push_array(arr, false, array_length(arr));
+    push_array(arr, false, array_length(arr));
+    reverse_array(arr);
+    bool a[5] = {false, false, false, true, true};
+    for (size_t i = 0; i < array_length(arr); i++) {
+        assert_int_equal(get_array(arr, i), a[i]); 
+    }
+}
+// ================================================================================
+// ================================================================================
 // eof
