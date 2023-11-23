@@ -84,7 +84,69 @@ void test_reverse_float_array(void **state);
 void test_reverse_double_array(void **state);
 void test_reverse_ldouble_array(void **state);
 void test_reverse_bool_array(void **state);
-void test_reverse_string_array(void **state);
+// ================================================================================
+// ================================================================================
+// TEST BUBBLE SORT FUNCTIONS 
+
+void test_bubble_sort_char_array_forward(void **state);
+void test_bubble_sort_char_array_reverse(void **state);
+void test_bubble_sort_uchar_array_forward(void **state);
+void test_bubble_sort_uchar_array_reverse(void **state);
+void test_bubble_sort_short_array_forward(void **state);
+void test_bubble_sort_short_array_reverse(void **state);
+void test_bubble_sort_ushort_array_forward(void **state);
+void test_bubble_sort_ushort_array_reverse(void **state);
+void test_bubble_sort_int_array_forward(void **state);
+void test_bubble_sort_int_array_reverse(void **state);
+void test_bubble_sort_uint_array_forward(void **state);
+void test_bubble_sort_uint_array_reverse(void **state);
+void test_bubble_sort_long_array_forward(void **state);
+void test_bubble_sort_long_array_reverse(void **state);
+void test_bubble_sort_ulong_array_forward(void **state);
+void test_bubble_sort_ulong_array_reverse(void **state);
+void test_bubble_sort_llong_array_forward(void **state);
+void test_bubble_sort_llong_array_reverse(void **state);
+void test_bubble_sort_ullong_array_forward(void **state);
+void test_bubble_sort_ullong_array_reverse(void **state);
+void test_bubble_sort_float_array_forward(void **state);
+void test_bubble_sort_float_array_reverse(void **state);
+void test_bubble_sort_double_array_forward(void **state);
+void test_bubble_sort_double_array_reverse(void **state);
+void test_bubble_sort_ldouble_array_forward(void **state);
+void test_bubble_sort_ldouble_array_reverse(void **state);
+void test_bubble_sort_bool_array_forward(void **state);
+void test_bubble_sort_bool_array_reverse(void **state);
+// ================================================================================
+// ================================================================================
+
+void test_insert_sort_char_array_forward(void **state);
+void test_insert_sort_char_array_reverse(void **state);
+void test_insert_sort_uchar_array_forward(void **state);
+void test_insert_sort_uchar_array_reverse(void **state);
+void test_insert_sort_short_array_forward(void **state);
+void test_insert_sort_short_array_reverse(void **state);
+void test_insert_sort_ushort_array_forward(void **state);
+void test_insert_sort_ushort_array_reverse(void **state);
+void test_insert_sort_int_array_forward(void **state);
+void test_insert_sort_int_array_reverse(void **state);
+void test_insert_sort_uint_array_forward(void **state);
+void test_insert_sort_uint_array_reverse(void **state);
+void test_insert_sort_long_array_forward(void **state);
+void test_insert_sort_long_array_reverse(void **state);
+void test_insert_sort_ulong_array_forward(void **state);
+void test_insert_sort_ulong_array_reverse(void **state);
+void test_insert_sort_llong_array_forward(void **state);
+void test_insert_sort_llong_array_reverse(void **state);
+void test_insert_sort_ullong_array_forward(void **state);
+void test_insert_sort_ullong_array_reverse(void **state);
+void test_insert_sort_float_array_forward(void **state);
+void test_insert_sort_float_array_reverse(void **state);
+void test_insert_sort_double_array_forward(void **state);
+void test_insert_sort_double_array_reverse(void **state);
+void test_insert_sort_ldouble_array_forward(void **state);
+void test_insert_sort_ldouble_array_reverse(void **state);
+void test_insert_sort_bool_array_forward(void **state);
+void test_insert_sort_bool_array_reverse(void **state);
 // ================================================================================
 // ================================================================================
 #endif /* test_H */

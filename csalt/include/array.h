@@ -1217,6 +1217,207 @@ void reverse_bool_array(bool_arr* arr);
     bool_arr: reverse_bool_array) (&arr)
 // ================================================================================
 // ================================================================================
+// SORT ARRAY FUNCTIONS
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type char_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_char_array(char_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type uchar_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_uchar_array(uchar_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type short_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_short_array(short_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type ushort_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_ushort_array(ushort_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type int_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_int_array(int_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type uint_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_uint_array(uint_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type long_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_long_array(long_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type ulong_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_ulong_array(ulong_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type llong_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_llong_array(llong_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type ullong_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_ullong_array(ullong_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type float_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_float_array(float_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type double_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_double_array(double_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type ldouble_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_ldouble_array(ldouble_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Function to sort data in forward or reverse order 
+ *
+ * This function allows users to select the appropriate sorting algorithm and 
+ * direction for their data.
+ *
+ * @param arr A array of type bool_arr.
+ * @param sort_type An enum that can be BUBBLE, INSERT, MERGE, QUICK, or TIM.
+ * @param direction An enum that can be FORWARD or REVERSE.
+ */
+void sort_bool_array(bool_arr* arr, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+#define sort_array(arr, stype, direction) _Generic((arr), \
+    char_arr: sort_char_array, \
+    uchar_arr: sort_uchar_array, \
+    short_arr: sort_short_array, \
+    ushort_arr: sort_ushort_array, \
+    int_arr: sort_int_array, \
+    uint_arr: sort_uint_array, \
+    long_arr: sort_long_array, \
+    ulong_arr: sort_ulong_array, \
+    llong_arr: sort_llong_array, \
+    ullong_arr: sort_ullong_array, \
+    float_arr: sort_float_array, \
+    double_arr: sort_double_array, \
+    ldouble_arr: sort_ldouble_array, \
+    bool_arr: sort_bool_array) (&arr, stype, direction)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

@@ -5569,7 +5569,7 @@ static void _insert_sort_string(str* vec, size_t len, iter_dir direction) {
 // ================================================================================
 // Merge sort algorithms (PRIVATE FUNCTIONS)
 
-void _merge_char(char *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_char(char *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -5623,7 +5623,7 @@ static void _merge_sort_char(char* vec, int l, int r, iter_dir direction) {
 }
 // --------------------------------------------------------------------------------
 
-void _merge_uchar(unsigned char *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_uchar(unsigned char *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -5677,7 +5677,7 @@ static void _merge_sort_uchar(unsigned char* vec, int l, int r, iter_dir directi
 }
 // --------------------------------------------------------------------------------
 
-void _merge_short(short int *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_short(short int *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -5731,7 +5731,7 @@ static void _merge_sort_short(short int* vec, int l, int r, iter_dir direction) 
 }
 // --------------------------------------------------------------------------------
 
-void _merge_ushort(unsigned short int *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_ushort(unsigned short int *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -5785,7 +5785,7 @@ static void _merge_sort_ushort(unsigned short int* vec, int l, int r, iter_dir d
 }
 // --------------------------------------------------------------------------------
 
-void _merge_int(int *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_int(int *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -5839,7 +5839,7 @@ static void _merge_sort_int(int* vec, int l, int r, iter_dir direction) {
 }
 // --------------------------------------------------------------------------------
 
-void _merge_uint(unsigned int *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_uint(unsigned int *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -5893,7 +5893,7 @@ static void _merge_sort_uint(unsigned int* vec, int l, int r, iter_dir direction
 }
 // --------------------------------------------------------------------------------
 
-void _merge_long(long int *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_long(long int *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -5947,7 +5947,7 @@ static void _merge_sort_long(long int* vec, int l, int r, iter_dir direction) {
 }
 // --------------------------------------------------------------------------------
 
-void _merge_ulong(unsigned long int *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_ulong(unsigned long int *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -6001,7 +6001,7 @@ static void _merge_sort_ulong(unsigned long int* vec, int l, int r, iter_dir dir
 }
 // --------------------------------------------------------------------------------
 
-void _merge_llong(long long int *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_llong(long long int *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -6055,7 +6055,7 @@ static void _merge_sort_llong(long long int* vec, int l, int r, iter_dir directi
 }
 // --------------------------------------------------------------------------------
 
-void _merge_ullong(unsigned long long int *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_ullong(unsigned long long int *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -6109,7 +6109,7 @@ static void _merge_sort_ullong(unsigned long long int* vec, int l, int r, iter_d
 }
 // --------------------------------------------------------------------------------
 
-void _merge_float(float *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_float(float *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -6163,7 +6163,7 @@ static void _merge_sort_float(float* vec, int l, int r, iter_dir direction) {
 }
 // --------------------------------------------------------------------------------
 
-void _merge_double(double *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_double(double *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -6217,7 +6217,7 @@ static void _merge_sort_double(double* vec, int l, int r, iter_dir direction) {
 }
 // --------------------------------------------------------------------------------
 
-void _merge_ldouble(long double *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_ldouble(long double *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -6271,7 +6271,7 @@ static void _merge_sort_ldouble(long double* vec, int l, int r, iter_dir directi
 }
 // --------------------------------------------------------------------------------
 
-void _merge_bool(bool *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_bool(bool *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
@@ -6325,7 +6325,7 @@ static void _merge_sort_bool(bool* vec, int l, int r, iter_dir direction) {
 }
 // --------------------------------------------------------------------------------
 
-void _merge_string(str *vec, int l, int m, int r, iter_dir direction) {
+static void _merge_string(str *vec, int l, int m, int r, iter_dir direction) {
     // l, m, r represent left, middle, and rightmost indices in array
     int i, j, k;
     int n1 = m - l + 1;
