@@ -816,3 +816,110 @@ these underlying functions can be directly used for more specific control:
    void reverse_bool_array(bool_arr* arr);
    void reverse_string_array(string_arr* arr);
 
+Sort Array
+==========
+The ``sort_array`` macro is a versatile tool for sorting array data structures 
+in either ``FORWARD`` or ``REVERSE`` direction. It intelligently selects the 
+appropriate sorting function based on the vector type and the specified sorting 
+algorithm, ensuring type safety through the use of the ``_Generic`` keyword.
+
+.. code-block:: c 
+
+   #define sort_array(arr, stype, direction) ( /* Expressions to sort vector */)   
+
+Parameters 
+----------
+
+- :c:`arr`: An array data structure defined in :ref:`Array Data Types <array_dat_type>`.
+- :c:`stype`: An ``enum`` of type ``sort_type`` including ``BUBBLE``, ``INSERT``, ``MERGE``, ``QUICK``, and ``TIM``, representing various sorting algorithms.
+- :c:`direction`: An ``enum`` of type ``iter_dir`` with possible values ``FORWARD`` or ``REVERSE``, representing the sorting direction.
+
+The following table describes the parameters of the various sorting algorithms.
+
+.. list-table:: Sorting Algorithms Complexity and Stability
+   :widths: 25 25 25 25
+   :header-rows: 1
+
+   * - Algorithm
+     - Time Complexity (Average/Worst)
+     - Space Complexity
+     - Stability
+   * - Bubble Sort
+     - O(n^2) / O(n^2)
+     - O(1)
+     - Stable
+   * - Insertion Sort
+     - O(n^2) / O(n^2)
+     - O(1)
+     - Stable
+   * - Merge Sort
+     - O(n log n) / O(n log n)
+     - O(n)
+     - Stable
+   * - Quick Sort
+     - O(n log n) / O(n^2)
+     - O(log n)
+     - Not Stable
+   * - Tim Sort
+     - O(n log n) / O(n log n)
+     - O(n)
+     - Stable
+
+
+Error Handling
+--------------
+The macro sets the ``errno`` global variable to indicate errors, such as:
+
+- ``EINVAL``: Passed if ``vec`` is NULL or if an unsupported ``stype`` is provided.
+
+Example 
+-------
+An example for sorting a array using the quick sort algorithm in the ``FORWARD`` direction.
+
+.. code-block:: c
+
+   #include "array.h"
+   #include "print.h"
+
+   int main() {
+       int a[5];
+       int_arr arr = init_array(a, 5, 0);
+       push_array(arr, 5, array_length(arr));
+       push_array(arr, 1, array_length(arr));
+       push_array(arr, 3, array_length(arr));
+       push_array(arr, 2, array_length(arr));
+       push_array(arr, -4, array_length(arr));
+       print("Before sorting operation: ", arr);
+       sort_array(arr, QUICK, FORWARD);
+       print("After sorting operation: ", arr);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Before sorting operation: [ 5, 1, 3, 2, -4 ]
+   >> After sorting operation: [ -4, 1, 2, 3, 5 ]
+
+Underlying Functions 
+--------------------
+While the ``sort_array`` macro is recommended for its ease of use and type safety, 
+developers may also directly call the specific sorting functions:
+
+.. code-block:: c 
+
+   void sort_char_array(char_arr* arr, sort_type stype, iter_dir direction);
+   void sort_uchar_array(uchar_arr* arr, sort_type stype, iter_dir direction);
+   void sort_short_array(short_arr* arr, sort_type stype, iter_dir direction);
+   void sort_ushort_array(ushort_arr* arr, sort_type stype, iter_dir direction);
+   void sort_int_array(int_arr* arr, sort_type stype, iter_dir direction);
+   void sort_uint_array(uint_arr* arr, sort_type stype, iter_dir direction);
+   void sort_long_array(long_arr* arr, sort_type stype, iter_dir direction);
+   void sort_ulong_array(ulong_arr* arr, sort_type stype, iter_dir direction);
+   void sort_llong_array(llong_arr* arr, sort_type stype, iter_dir direction);
+   void sort_ullong_array(ullong_arr* arr, sort_type stype, iter_dir direction);
+   void sort_float_array(float_arr* arr, sort_type stype, iter_dir direction);
+   void sort_double_array(double_arr* arr, sort_type stype, iter_dir direction);
+   void sort_ldouble_array(ldouble_arr* arr, sort_type stype, iter_dir direction);
+   void sort_bool_array(bool_arr* arr, sort_type stype, iter_dir direction);
+   void sort_string_array(string_arr* arr, sort_type stype, iter_dir direction);
+
