@@ -1418,6 +1418,276 @@ void sort_bool_array(bool_arr* arr, sort_type stype, iter_dir direction);
     bool_arr: sort_bool_array) (&arr, stype, direction)
 // ================================================================================
 // ================================================================================
+// MAX ARRAY FUNCTIONS 
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type char_arr.
+ * @return The maximum value in the array.
+ */
+char max_char_array(char_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type uchar_arr.
+ * @return The maximum value in the array.
+ */
+unsigned char max_uchar_array(uchar_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type short_arr.
+ * @return The maximum value in the array.
+ */
+short int max_short_array(short_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type ushort_arr.
+ * @return The maximum value in the array.
+ */
+unsigned short int max_ushort_array(ushort_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type int_arr.
+ * @return The maximum value in the array.
+ */
+int max_int_array(int_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type uint_arr.
+ * @return The maximum value in the array.
+ */
+unsigned int max_uint_array(uint_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type long_arr.
+ * @return The maximum value in the array.
+ */
+long int max_long_array(long_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type ulong_arr.
+ * @return The maximum value in the array.
+ */
+unsigned long int max_ulong_array(ulong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type llong_arr.
+ * @return The maximum value in the array.
+ */
+long long int max_llong_array(llong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type ullong_arr.
+ * @return The maximum value in the array.
+ */
+unsigned long long int max_ullong_array(ullong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type float_arr.
+ * @return The maximum value in the array.
+ */
+float max_float_array(float_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type double_arr.
+ * @return The maximum value in the array.
+ */
+double max_double_array(double_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the maximum value in a array 
+ *
+ * @param arr A array data structure of type ldouble_arr.
+ * @return The maximum value in the array.
+ */
+long double max_ldouble_array(ldouble_arr* arr);
+// --------------------------------------------------------------------------------
+
+#define max_array(arr) _Generic((arr), \
+    char_arr: max_char_array, \
+    uchar_arr: max_uchar_array, \
+    short_arr: max_short_array, \
+    ushort_arr: max_ushort_array, \
+    int_arr: max_int_array, \
+    uint_arr: max_uint_array, \
+    long_arr: max_long_array, \
+    ulong_arr: max_ulong_array, \
+    llong_arr: max_llong_array, \
+    ullong_arr: max_ullong_array, \
+    float_arr: max_float_array, \
+    double_arr: max_double_array, \
+    ldouble_arr: max_ldouble_array) (&arr)
+// ================================================================================
+// ================================================================================
+// MIN ARRAY FUNCTIONS 
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type char_arr.
+ * @return The minimum value in the array.
+ */
+char min_char_array(char_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type uchar_arr.
+ * @return The minimum value in the array.
+ */
+unsigned char min_uchar_array(uchar_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type short_arr.
+ * @return The maximum value in the array.
+ */
+short int min_short_array(short_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type ushort_arr.
+ * @return The minimum value in the array.
+ */
+unsigned short int min_ushort_array(ushort_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type int_arr.
+ * @return The minimum value in the array.
+ */
+int min_int_array(int_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type uint_arr.
+ * @return The minimum value in the array.
+ */
+unsigned int min_uint_array(uint_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type long_arr.
+ * @return The minimum value in the array.
+ */
+long int min_long_array(long_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type ulong_arr.
+ * @return The minimum value in the array.
+ */
+unsigned long int min_ulong_array(ulong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type llong_arr.
+ * @return The minimum value in the array.
+ */
+long long int min_llong_array(llong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type ullong_arr.
+ * @return The minimum value in the array.
+ */
+unsigned long long int min_ullong_array(ullong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type float_arr.
+ * @return The minimum value in the array.
+ */
+float min_float_array(float_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type double_arr.
+ * @return The minimum value in the array.
+ */
+double min_double_array(double_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Detrmines the minimum value in a array 
+ *
+ * @param arr A array data structure of type ldouble_arr.
+ * @return The minimum value in the array.
+ */
+long double min_ldouble_array(ldouble_arr* arr);
+// --------------------------------------------------------------------------------
+
+#define min_array(arr) _Generic((arr), \
+    char_arr: min_char_array, \
+    uchar_arr: min_uchar_array, \
+    short_arr: min_short_array, \
+    ushort_arr: min_ushort_array, \
+    int_arr: min_int_array, \
+    uint_arr: min_uint_array, \
+    long_arr: min_long_array, \
+    ulong_arr: min_ulong_array, \
+    llong_arr: min_llong_array, \
+    ullong_arr: min_ullong_array, \
+    float_arr: min_float_array, \
+    double_arr: min_double_array, \
+    ldouble_arr: min_ldouble_array) (&arr)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

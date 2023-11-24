@@ -3841,4 +3841,345 @@ void sort_bool_array(bool_arr* vec, sort_type stype, iter_dir direction) {
 }
 // ================================================================================
 // ================================================================================
+
+char max_char_array(char_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    char max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char max_uchar_array(uchar_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned char max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+short int max_short_array(short_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    short int max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int max_ushort_array(ushort_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned short int max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+int max_int_array(int_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    int max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int max_uint_array(uint_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned int max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+long int max_long_array(long_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long int max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int max_ulong_array(ulong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long int max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+long long int max_llong_array(llong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long long int max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int max_ullong_array(ullong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long long int max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+float max_float_array(float_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.f;
+    }
+    float max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+double max_double_array(double_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    double max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// --------------------------------------------------------------------------------
+
+long double max_ldouble_array(ldouble_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    long double max_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] > max_value) max_value = arr->data[i];
+    }
+    return max_value;
+}
+// ================================================================================
+// ================================================================================
+// MIN ARRAY FUNCTIONS 
+
+char min_char_array(char_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    char min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char min_uchar_array(uchar_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned char min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+short int min_short_array(short_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    short int min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int min_ushort_array(ushort_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned short int min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+int min_int_array(int_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    int min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int min_uint_array(uint_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned int min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+long int min_long_array(long_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long int min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int min_ulong_array(ulong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long int min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+long long int min_llong_array(llong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long long int min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int min_ullong_array(ullong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long long int min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+float min_float_array(float_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.f;
+    }
+    float min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+double min_double_array(double_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    double min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// --------------------------------------------------------------------------------
+
+long double min_ldouble_array(ldouble_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    long double min_value = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        if (arr->data[i] < min_value) min_value = arr->data[i];
+    }
+    return min_value;
+}
+// ================================================================================
+// ================================================================================
 // eof

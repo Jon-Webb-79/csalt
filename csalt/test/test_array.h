@@ -242,6 +242,38 @@ void test_tim_sort_bool_array_forward(void **state);
 void test_tim_sort_bool_array_reverse(void **state);
 // ================================================================================
 // ================================================================================
+
+void test_max_char_array(void **state);
+void test_max_uchar_array(void **state);
+void test_max_short_array(void **state);
+void test_max_ushort_array(void **state);
+void test_max_int_array(void **state);
+void test_max_uint_array(void **state);
+void test_max_long_array(void **state);
+void test_max_ulong_array(void **state);
+void test_max_llong_array(void **state);
+void test_max_ullong_array(void **state);
+void test_max_float_array(void **state);
+void test_max_double_array(void **state);
+void test_max_ldouble_array(void **state);
+// ================================================================================
+// ================================================================================
+
+void test_min_char_array(void **state);
+void test_min_uchar_array(void **state);
+void test_min_short_array(void **state);
+void test_min_ushort_array(void **state);
+void test_min_int_array(void **state);
+void test_min_uint_array(void **state);
+void test_min_long_array(void **state);
+void test_min_ulong_array(void **state);
+void test_min_llong_array(void **state);
+void test_min_ullong_array(void **state);
+void test_min_float_array(void **state);
+void test_min_double_array(void **state);
+void test_min_ldouble_array(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_H */
 // ================================================================================
 // ================================================================================

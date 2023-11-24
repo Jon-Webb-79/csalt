@@ -923,3 +923,99 @@ developers may also directly call the specific sorting functions:
    void sort_bool_array(bool_arr* arr, sort_type stype, iter_dir direction);
    void sort_string_array(string_arr* arr, sort_type stype, iter_dir direction);
 
+Min and Max Array Value
+=======================
+The ``min_array`` and ``max_array`` macros leverage the ``_Generic`` 
+keyword to select the appropriate function for determining the minimum and 
+maximum values in a statically allocated array data structure. These macros 
+abstract the complexity of choosing the correct function based on the vector's 
+data type. These macros do not work on ``bool_arr`` and ``string_arr`` derived 
+data types.
+
+.. code-block:: c
+
+   #define min_array(arr) (/* Expression to find minimum value in vector */) 
+   #define max_array(arr) (/* Expression to find maximum value in vector */)
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure defined in :ref:`Array Data Types <array_dat_type>`.
+
+Returns 
+-------
+
+- Returns the minimum or maximum value in the vector, consistent with the vector's data type.
+
+Error Handling
+--------------
+The ``max_array`` and ``min_array`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
+Example 
+-------
+Example to find min and max values in vector data structure.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       float a[5];
+       float_v vec = init_array(a, 5, 0);
+       push_array(vec, 12.1f, array_length(vec));
+       push_array(vec, 8.7f, array_length(vec));
+       push_array(vec, 22.18f, array_length(vec));
+       push_array(vec, 1.1f, array_length(vec));
+       push_array(vec, -27.6f, array_length(vec));
+       print("Min Value: ", min_array(vec));
+       print("Max Value: ", max_array(vec));
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Min Value: -27.6000
+   >> Max Value: 22.18000
+
+Underlying Functions 
+--------------------
+The ``min_array`` and ``max_array`` macros use ``_Generic`` to select the 
+right function based on the vector's data type. For specific control, these 
+underlying functions can be used directly:
+
+.. code-block:: c
+
+   char max_char_array(char_arr* arr);
+   unsigned char max_uchar_array(uchar_arr* arr);
+   short int max_short_array(short_arr* arr);
+   unsigned short int max_ushort_array(ushort_arr* arr);
+   int max_int_array(int_arr* arr);
+   unsigned int max_uint_array(uint_arr* arr);
+   long int max_long_array(long_arr* arr);
+   unsigned long int max_ulong_array(ulong_arr* arr);
+   long long int max_llong_array(llong_arr* arr);
+   unsigned long long int max_ullong_array(ullong_arr* arr);
+   float max_float_array(float_arr* arr);
+   double max_double_array(double_arr* arr);
+   long double max_ldouble_array(ldouble_arr* arr);
+   char min_char_array(char_arr* arr);
+   unsigned char min_uchar_array(uchar_arr* arr);
+   short int min_short_array(short_arr* arr);
+   unsigned short int min_ushort_array(ushort_arr* arr);
+   int min_int_array(int_arr* arr);
+   unsigned int min_uint_array(uint_arr* arr);
+   long int min_long_array(long_arr* arr);
+   unsigned long int min_ulong_array(ulong_arr* arr);
+   long long int min_llong_array(llong_arr* arr);
+   unsigned long long int min_ullong_array(ullong_arr* arr);
+   float min_float_array(float_arr* arr);
+   double min_double_array(double_arr* arr);
+   long double min_ldouble_array(ldouble_arr* arr);
