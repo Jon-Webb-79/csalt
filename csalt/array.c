@@ -4182,4 +4182,338 @@ long double min_ldouble_array(ldouble_arr* arr) {
 }
 // ================================================================================
 // ================================================================================
+// BINARY SEARCH FUNCTIONS 
+
+int bsearch_char_array(char_arr* arr, char val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_char_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_uchar_array(uchar_arr* arr, unsigned char val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_uchar_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_short_array(short_arr* arr, short int val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_short_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_ushort_array(ushort_arr* arr, unsigned short int val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_ushort_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_int_array(int_arr* arr, int val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_int_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_uint_array(uint_arr* arr, unsigned int val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_uint_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_long_array(long_arr* arr, long int val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_long_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_ulong_array(ulong_arr* arr, unsigned long val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_ulong_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_llong_array(llong_arr* arr, long long int val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_llong_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_ullong_array(ullong_arr* arr, unsigned long long int val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_ullong_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_float_array(float_arr* arr, float val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_float_array(arr, TIM, FORWARD);
+    float tolerance = 1.0e-6;
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    float delta;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        delta = fabs(arr->data[mid] - val);
+        if (delta <= tolerance)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_double_array(double_arr* arr, double val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_double_array(arr, TIM, FORWARD);
+    double tolerance = 1.0e-6;
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    double delta;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        delta = fabs(arr->data[mid] - val);
+        if (delta <= tolerance)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_ldouble_array(ldouble_arr* arr, long double val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_ldouble_array(arr, TIM, FORWARD);
+    long double tolerance = 1.0e-6;
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    long double delta;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        delta = arr->data[mid] - val;
+        if (delta < 0) delta = delta * -1.0;
+        if (delta <= tolerance)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// --------------------------------------------------------------------------------
+
+int bsearch_bool_array(bool_arr* arr, bool val, bool sorted) {
+    if (arr == NULL || arr->data == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!sorted)
+        sort_bool_array(arr, TIM, FORWARD);
+    size_t start = 0;
+    size_t end = arr->len - 1;
+    while (start <= end) {
+        size_t mid = start + (end - start) / 2;
+        if (arr->data[mid] == val)
+            return mid; // Element found
+        if (arr->data[mid] < val)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    } 
+    errno = EINVAL;
+    return -1;
+}
+// ================================================================================
+// ================================================================================
 // eof

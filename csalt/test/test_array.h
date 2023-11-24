@@ -274,6 +274,23 @@ void test_min_double_array(void **state);
 void test_min_ldouble_array(void **state);
 // ================================================================================
 // ================================================================================
+
+void test_binary_search_char_array(void **state);
+void test_binary_search_uchar_array(void **state);
+void test_binary_search_short_array(void **state);
+void test_binary_search_ushort_array(void **state);
+void test_binary_search_int_array(void **state);
+void test_binary_search_uint_array(void **state);
+void test_binary_search_long_array(void **state);
+void test_binary_search_ulong_array(void **state);
+void test_binary_search_llong_array(void **state);
+void test_binary_search_ullong_array(void **state);
+void test_binary_search_float_array(void **state);
+void test_binary_search_double_array(void **state);
+void test_binary_search_ldouble_array(void **state);
+void test_binary_search_bool_array(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_H */
 // ================================================================================
 // ================================================================================

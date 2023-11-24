@@ -1019,3 +1019,84 @@ underlying functions can be used directly:
    float min_float_array(float_arr* arr);
    double min_double_array(double_arr* arr);
    long double min_ldouble_array(ldouble_arr* arr);
+
+Binary Search 
+=============
+The ``bsearch_array`` macro leverages the ``_Generic`` keyword to select the 
+appropriate function for conducting a binary search of a statically allocated 
+array to find the index where a value resides.
+
+.. note:: The input vector must be sorted for this function to work properly.  If the function has not been previously sorted, the user should enter ``false`` for the ``sorted`` variable.
+
+.. code-block:: c
+
+   #define bsearch_array(arr, val, sorted) ( /*Expression to search a vector */) 
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure defined in :ref:`Array Data Types <array_dat_type>`.
+- :c:`val`: The value being searched for.
+- :c:`sorted`: ``true`` if the vector is already sorted, ``false`` otherwise.
+
+Returns 
+-------
+
+- Returns the index associated with the value of ``val``, or -1 if the value is not found.
+
+Error Handling
+--------------
+The macro sets the ``errno`` global variable to indicate errors, such as:
+
+- ``EINVAL``: Passed if ``vec`` is NULL or if ``val`` does not exist in the vector
+
+Example 1 
+---------
+An example showing how to conduct a binary search of an unsorted vector.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       int a[5];
+       string_v arr = init_array(a, 5, 0);
+       int a[5] = {1, 2, 3, 4, 5};
+       for (size_t i = 0; i < 5; i++) {
+           push_array(arr, a[i], array_length(vec));
+       }
+       int b = bsearch_array(arr, "3, false);
+       print("This is the value: ", get_array(b));
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> This is the value: 3
+
+Underlying Functions 
+--------------------
+While the ``bsearch_array`` macro is recommended for its ease of use and type safety, 
+developers may also directly call the specific sorting functions:
+Max and Min Vector Values 
+
+.. code-block:: c 
+
+   int bsearch_char_array(char_arr* arr, char val, bool sorted);
+   int bsearch_uchar_array(uchar_arr* arr, unsigned char val, bool sorted);
+   int bsearch_short_array(short_arr* arr, short int val, bool sorted);
+   int bsearch_ushort_array(ushort_arr* arr, unsigned short int val, bool sorted);
+   int bsearch_int_array(int_arr* arr, int val, bool sorted);
+   int bsearch_uint_array(uint_arr* arr, unsigned int val, bool sorted);
+   int bsearch_long_array(long_arr* arr, long int val, bool sorted);
+   int bsearch_ulong_array(ulong_arr* arr, unsigned long int val, bool sorted);
+   int bsearch_llong_array(llong_arr* arr, long long int val, bool sorted);
+   int bsearch_ullong_array(ullong_arr* arr, unsigned long long int val, bool sorted);
+   int bsearch_float_array(float_arr* arr, float val, bool sorted);
+   int bsearch_double_array(double_arr* arr, double val, bool sorted);
+   int bsearch_ldouble_array(ldouble_arr* arr, long double val, bool sorted);
+   int bsearch_bool_array(bool_arr* arr, bool val, bool sorted);
+   int bsearch_string_array(string_arr* arr, char* val, bool sorted);
+   int bsearch_string_array(string_arr* arr, char* val, bool sorted);
+   int bsearch_str_array(string_arr* arr, str* val, bool sorted);

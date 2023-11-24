@@ -3641,6 +3641,179 @@ void test_min_ldouble_array(void **state) {
     push_array(arr, 5., array_length(arr));
     long double min = min_array(arr);
     assert_double_equal(min, 1.0, 1.0e-3);
+}  
+// ================================================================================
+// ================================================================================
+// TEST BINARY SEARCH FUNCTIONS 
+
+void test_binary_search_char_array(void **state) {
+    char c[20];
+    char_arr arr = init_array(c, 20, 0);
+    char a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_uchar_array(void **state) {
+    unsigned char c[20];
+    uchar_arr arr = init_array(c, 20, 0);
+    unsigned char a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_short_array(void **state) {
+    short int c[20];
+    short_arr arr = init_array(c, 20, 0);
+    short int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_ushort_array(void **state) {
+    unsigned short int c[20];
+    ushort_arr arr = init_array(c, 20, 0);
+    unsigned short int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_int_array(void **state) {
+    int c[20];
+    int_arr arr = init_array(c, 20, 0);
+    int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_uint_array(void **state) {
+    unsigned int c[20];
+    uint_arr arr = init_array(c, 20, 0);
+    unsigned int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_long_array(void **state) {
+    long int c[20];
+    long_arr arr = init_array(c, 20, 0);
+    long int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_ulong_array(void **state) {
+    unsigned long int c[20];
+    ulong_arr arr = init_array(c, 20, 0);
+    unsigned long int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_llong_array(void **state) {
+    long long int c[20];
+    llong_arr arr = init_array(c, 20, 0);
+    short int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_ullong_array(void **state) {
+    unsigned long long int c[20];
+    ullong_arr arr = init_array(c, 20, 0);
+    unsigned long long int a[20] = { 1, 5, 2, 7, 8, 9, 4, 3, 6, 14, 13, 12, 11, 10, 16, 17, 18, 19, 20, 15 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 13, false);
+    assert_int_equal(arr.data[(size_t)b], 13);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_float_array(void **state) {
+    float c[20];
+    float_arr arr = init_array(c, 20, 0);
+    float a[20] = { 1.2, 5.6, 2.1, 7.7, 8., 9., 4.2, 3.8, 6.1, 14.4, 13.6, 
+                    12.9, 11.11, 10.01, 16.3, 17.4, 18.5, 19.6, 20.7, 15.8 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 11.11, false);
+    assert_float_equal(arr.data[(size_t)b], 11.11, 1.0e-6);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_double_array(void **state) {
+    double c[20];
+    double_arr arr = init_array(c, 20, 0);
+    double a[20] = { 1.2, 5.6, 2.1, 7.7, 8., 9., 4.2, 3.8, 6.1, 14.4, 13.6, 
+                    12.9, 11.11, 10.01, 16.3, 17.4, 18.5, 19.6, 20.7, 15.8 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 11.11, false);
+    assert_double_equal(arr.data[(size_t)b], 11.11, 1.0e-6);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_ldouble_array(void **state) {
+    long double c[20];
+    ldouble_arr arr = init_array(c, 20, 0);
+    long double a[20] = { 1.2, 5.6, 2.1, 7.7, 8., 9., 4.2, 3.8, 6.1, 14.4, 13.6, 
+                    12.9, 11.11, 10.01, 16.3, 17.4, 18.5, 19.6, 20.7, 15.8 };
+    for (size_t i = 0; i < 20; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, 11.11, false);
+    assert_double_equal(arr.data[(size_t)b], 11.11, 1.0e-6);
+}
+// --------------------------------------------------------------------------------
+
+void test_binary_search_bool_array(void **state) {
+    bool c[20];
+    bool_arr arr = init_array(c, 5, 0);
+    bool a[5] = {false, true, false, true, false};
+    for (size_t i = 0; i < 5; i++) {
+        push_array(arr, a[i], array_length(arr));
+    }
+    int b = bsearch_array(arr, true, false);
+    assert_int_equal(arr.data[(size_t)b], true);
 }
 // ================================================================================
 // ================================================================================

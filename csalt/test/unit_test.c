@@ -760,7 +760,21 @@ const struct CMUnitTest test_array[] = {
     cmocka_unit_test(test_min_ullong_array),
     cmocka_unit_test(test_min_float_array),
     cmocka_unit_test(test_min_double_array),
-    cmocka_unit_test(test_min_ldouble_array)
+    cmocka_unit_test(test_min_ldouble_array),
+    cmocka_unit_test(test_binary_search_char_array),
+    cmocka_unit_test(test_binary_search_uchar_array),
+    cmocka_unit_test(test_binary_search_short_array),
+    cmocka_unit_test(test_binary_search_ushort_array),
+    cmocka_unit_test(test_binary_search_int_array),
+    cmocka_unit_test(test_binary_search_uint_array),
+    cmocka_unit_test(test_binary_search_long_array),
+    cmocka_unit_test(test_binary_search_ulong_array),
+    cmocka_unit_test(test_binary_search_llong_array),
+    cmocka_unit_test(test_binary_search_ullong_array),
+    cmocka_unit_test(test_binary_search_float_array),
+    cmocka_unit_test(test_binary_search_double_array),
+    cmocka_unit_test(test_binary_search_ldouble_array),
+    cmocka_unit_test(test_binary_search_bool_array)
 };
 // Begin code
 int main(int argc, const char * argv[]) {

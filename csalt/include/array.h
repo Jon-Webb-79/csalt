@@ -1688,6 +1688,179 @@ long double min_ldouble_array(ldouble_arr* arr);
     ldouble_arr: min_ldouble_array) (&arr)
 // ================================================================================
 // ================================================================================
+// BINARY SEARCH FUNCTIONS 
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type char_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists.
+ */
+int bsearch_char_array(char_arr* arr, char val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type uchar_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_uchar_array(uchar_arr* arr, unsigned char val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type short_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_short_array(short_arr* arr, short int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type ushort_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists.
+ */
+int bsearch_ushort_array(ushort_arr* arr, unsigned short int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type int_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists.
+ */
+int bsearch_int_array(int_arr* arr, int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type uint_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_uint_array(uint_arr* arr, unsigned int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type long_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_long_array(long_arr* arr, long int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type ulong_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_ulong_array(ulong_arr* arr, unsigned long int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type llong_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_llong_array(llong_arr* arr, long long int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type ullong_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_ullong_array(ullong_arr* arr, unsigned long long int val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type float_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_float_array(float_arr* arr, float val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type double_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_double_array(double_arr* arr, double val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type ldouble_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_ldouble_array(ldouble_arr* arr, long double val, bool sorted);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the index where the first occurance of a value occurs.
+ *
+ * @param arr A array data structure of type bool_arr 
+ * @param sorted: true if the array is already sorted, false otherwise.
+ * @param val The value being searched for. 
+ * @return The index where a variable exists. 
+ */
+int bsearch_bool_array(bool_arr* arr, bool val, bool sorted);
+// --------------------------------------------------------------------------------
+
+#define bsearch_array(arr, val, sorted) _Generic((arr), \
+    char_arr: bsearch_char_array, \
+    uchar_arr: bsearch_uchar_array, \
+    short_arr: bsearch_short_array, \
+    ushort_arr: bsearch_ushort_array, \
+    int_arr: bsearch_int_array, \
+    uint_arr: bsearch_uint_array, \
+    long_arr: bsearch_long_array, \
+    ulong_arr: bsearch_ulong_array, \
+    llong_arr: bsearch_llong_array, \
+    ullong_arr: bsearch_ullong_array, \
+    float_arr: bsearch_float_array, \
+    double_arr: bsearch_double_array, \
+    ldouble_arr: bsearch_ldouble_array, \
+    bool_arr: bsearch_bool_array) (&arr, val, sorted)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
