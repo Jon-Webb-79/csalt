@@ -3307,169 +3307,169 @@ void test_tim_sort_bool_array_reverse(void **state) {
 
 void test_max_char_array(void **state) {
     char b[5];
-    char_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    char max = max_array(vec);
+    char_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    char max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_uchar_array(void **state) {
     unsigned char b[5];
-    uchar_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    unsigned char max = max_array(vec);
+    uchar_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned char max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_short_array(void **state) {
     short int b[5];
-    short_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    short int max = max_array(vec);
+    short_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    short int max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_ushort_array(void **state) {
     unsigned short int b[5];
-    ushort_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    unsigned short int max = max_array(vec);
+    ushort_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned short int max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_int_array(void **state) {
     int b[5];
-    int_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    int max = max_array(vec);
+    int_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    int max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_uint_array(void **state) {
     unsigned int b[5];
-    uint_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    unsigned short int max = max_array(vec);
+    uint_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned short int max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_long_array(void **state) {
     long int b[5];
-    long_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    long int max = max_array(vec);
+    long_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    long int max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_ulong_array(void **state) {
     unsigned long int b[5];
-    ulong_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    unsigned long int max = max_array(vec);
+    ulong_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned long int max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_llong_array(void **state) {
     long long int b[5];
-    llong_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    long long int max = max_array(vec);
+    llong_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    long long int max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_ullong_array(void **state) {
     unsigned long long int b[5];
-    ullong_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1, array_length(vec));
-    push_array(vec, 2, array_length(vec));
-    push_array(vec, 10, array_length(vec));
-    push_array(vec, 4, array_length(vec));
-    push_array(vec, 5, array_length(vec));
-    unsigned long long int max = max_array(vec);
+    ullong_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned long long int max = max_array(arr);
     assert_int_equal(max, 10);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_float_array(void **state) {
     float b[5];
-    float_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1.f, array_length(vec));
-    push_array(vec, 2.f, array_length(vec));
-    push_array(vec, 10.3f, array_length(vec));
-    push_array(vec, 4.f, array_length(vec));
-    push_array(vec, 5.f, array_length(vec));
-    float max = max_array(vec);
+    float_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1.f, array_length(arr));
+    push_array(arr, 2.f, array_length(arr));
+    push_array(arr, 10.3f, array_length(arr));
+    push_array(arr, 4.f, array_length(arr));
+    push_array(arr, 5.f, array_length(arr));
+    float max = max_array(arr);
     assert_float_equal(max, 10.3, 1.0e-3);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_double_array(void **state) {
     double b[5];
-    double_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1., array_length(vec));
-    push_array(vec, 2., array_length(vec));
-    push_array(vec, 10.3, array_length(vec));
-    push_array(vec, 4., array_length(vec));
-    push_array(vec, 5., array_length(vec));
-    double max = max_array(vec);
+    double_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 10.3, array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    double max = max_array(arr);
     assert_double_equal(max, 10.3, 1.0e-3);
 }
 // --------------------------------------------------------------------------------
 
 void test_max_ldouble_array(void **state) {
     long double b[5];
-    ldouble_arr vec = init_array(b, 5, 0);
-    push_array(vec, 1., array_length(vec));
-    push_array(vec, 2., array_length(vec));
-    push_array(vec, 10.3, array_length(vec));
-    push_array(vec, 4., array_length(vec));
-    push_array(vec, 5., array_length(vec));
-    long double max = max_array(vec);
+    ldouble_arr arr = init_array(b, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 10.3, array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    long double max = max_array(arr);
     assert_double_equal(max, 10.3, 1.0e-3);
 }
 // ================================================================================
@@ -3814,6 +3814,176 @@ void test_binary_search_bool_array(void **state) {
     }
     int b = bsearch_array(arr, true, false);
     assert_int_equal(arr.data[(size_t)b], true);
+}
+// ================================================================================
+// ================================================================================
+
+void test_sum_char_array(void **state) {
+    char a[5];
+    char_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    char sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_uchar_array(void **state) {
+    unsigned char a[5];
+    uchar_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned char sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_short_array(void **state) {
+    short int a[5];
+    short_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    short int sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_ushort_array(void **state) {
+    unsigned short int a[5];
+    ushort_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned short int sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_int_array(void **state) {
+    int a[5];
+    int_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    int sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_uint_array(void **state) {
+    unsigned int a[5];
+    uint_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned short int sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_long_array(void **state) {
+    long int a[5];
+    long_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    long int sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_ulong_array(void **state) {
+    unsigned long int a[5];
+    ulong_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned long int sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_llong_array(void **state) {
+    long long int a[5];
+    llong_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    long long int sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_ullong_array(void **state) {
+    unsigned long long int a[5];
+    ullong_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    unsigned long long int sum = sum_array(arr);
+    assert_int_equal(sum, 22);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_float_array(void **state) {
+    float a[5];
+    float_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1.f, array_length(arr));
+    push_array(arr, 2.f, array_length(arr));
+    push_array(arr, 10.3f, array_length(arr));
+    push_array(arr, 4.f, array_length(arr));
+    push_array(arr, 5.f, array_length(arr));
+    float sum = sum_array(arr);
+    assert_float_equal(sum, 22.3f, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_double_array(void **state) {
+    double a[5];
+    double_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 10.3, array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    double sum = sum_array(arr);
+    assert_double_equal(sum, 22.3, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_sum_ldouble_array(void **state) {
+    long double a[5];
+    ldouble_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 10.3, array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    long double sum = sum_array(arr);
+    assert_double_equal(sum, 22.3, 1.0e-3);
 }
 // ================================================================================
 // ================================================================================

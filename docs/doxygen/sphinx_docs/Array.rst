@@ -1100,3 +1100,84 @@ Max and Min Vector Values
    int bsearch_string_array(string_arr* arr, char* val, bool sorted);
    int bsearch_string_array(string_arr* arr, char* val, bool sorted);
    int bsearch_str_array(string_arr* arr, str* val, bool sorted);
+
+Sum of Array Values 
+===================
+The ``sum_array`` macros leverage the ``_Generic`` 
+keyword to select the appropriate function for determining the minimum and 
+maximum values in a statically allocated array data structure. These macros 
+abstract the complexity of choosing the correct function based on the vector's 
+data type. These macros do not work on ``bool_v`` and ``string_v`` derived 
+data types.
+
+.. code-block:: c
+
+   #define sum_array(arr) (/* Expression to find sum of values in a vector */) 
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure defined in :ref:`Array Data Types <array_dat_type>`.
+
+Returns 
+-------
+
+- Returns the summation of valuea in the vector, consistent with the vector's data type.
+
+Error Handling
+--------------
+The ``sum_array`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
+Example 
+-------
+Example to find min and max values in vector data structure.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       float a[5];
+       float_v arr = init_arrtor(a, 5, 0);
+       push_array(arr, 12.1f, array_length(arr));
+       push_array(arr, 8.7f, array_length(arr));
+       push_array(arr, 22.18f, array_length(arr));
+       push_array(arr, 1.1f, array_length(arr));
+       push_array(arr, -27.6f, array_length(arr));
+       print("Sum Value: ", sum_array(arr));
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Sum Value: 16.48
+
+Underlying Functions 
+--------------------
+The ``sum_array`` macro use ``_Generic`` to select the 
+right function based on the array's data type. For specific control, these 
+underlying functions can be used directly:
+
+.. code-block:: c
+
+   char sum_char_array(char_arr* arr);
+   unsigned char sum_uchar_array(uchar_arr* arr);
+   short int sum_short_array(short_arr* arr);
+   unsigned short int sum_ushort_array(ushort_arr* arr);
+   int sum_int_array(int_arr* arr);
+   unsigned int sum_uint_array(uint_arr* arr);
+   long int sum_long_array(long_arr* arr);
+   unsigned long int sum_ulong_array(ulong_arr* arr);
+   long long int sum_llong_array(llong_arr* arr);
+   unsigned long long int sum_ullong_array(ullong_arr* arr);
+   float sum_float_array(float_arr* arr);
+   double sum_double_array(double_arr* arr);
+   long double sum_ldouble_array(ldouble_arr* arr);

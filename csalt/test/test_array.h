@@ -291,6 +291,23 @@ void test_binary_search_ldouble_array(void **state);
 void test_binary_search_bool_array(void **state);
 // ================================================================================
 // ================================================================================
+// TEST SUM ARRAY FUNCTIONS 
+
+void test_sum_char_array(void **state);
+void test_sum_uchar_array(void **state);
+void test_sum_short_array(void **state);
+void test_sum_ushort_array(void **state);
+void test_sum_int_array(void **state);
+void test_sum_uint_array(void **state);
+void test_sum_long_array(void **state);
+void test_sum_ulong_array(void **state);
+void test_sum_llong_array(void **state);
+void test_sum_ullong_array(void **state);
+void test_sum_float_array(void **state);
+void test_sum_double_array(void **state);
+void test_sum_ldouble_array(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_H */
 // ================================================================================
 // ================================================================================

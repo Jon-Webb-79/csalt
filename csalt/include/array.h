@@ -1861,6 +1861,141 @@ int bsearch_bool_array(bool_arr* arr, bool val, bool sorted);
     bool_arr: bsearch_bool_array) (&arr, val, sorted)
 // ================================================================================
 // ================================================================================
+// SUM FUNCTIONS 
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type char_arr 
+ * @return The sum of all values in a array.
+ */
+char sum_char_array(char_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type uchar_arr 
+ * @return The sum of all values in a array.
+ */
+unsigned char sum_uchar_array(uchar_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type short_arr 
+ * @return The sum of all values in a array.
+ */
+short int sum_short_array(short_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type ushort_arr 
+ * @return The sum of all values in a array.
+ */
+unsigned short int sum_ushort_array(ushort_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type int_arr 
+ * @return The sum of all values in a array.
+ */
+int sum_int_array(int_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type uint_arr 
+ * @return The sum of all values in a array.
+ */
+unsigned int sum_uint_array(uint_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type long_arr 
+ * @return The sum of all values in a array.
+ */
+long int sum_long_array(long_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type ulong_arr 
+ * @return The sum of all values in a array.
+ */
+unsigned long int sum_ulong_array(ulong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type llong_arr 
+ * @return The sum of all values in a array.
+ */
+long long int sum_llong_array(llong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type ullong_arr 
+ * @return The sum of all values in a array.
+ */
+unsigned long long int sum_ullong_array(ullong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type float_arr 
+ * @return The sum of all values in a array.
+ */
+float sum_float_array(float_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type double_arr 
+ * @return The sum of all values in a array.
+ */
+double sum_double_array(double_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the summation of all values in a array.
+ *
+ * @param arr A array data structure of type ldouble_arr 
+ * @return The sum of all values in a array.
+ */
+long double sum_ldouble_array(ldouble_arr* arr);
+// --------------------------------------------------------------------------------
+
+#define sum_array(arr) _Generic((arr), \
+    char_arr: sum_char_array, \
+    uchar_arr: sum_uchar_array, \
+    short_arr: sum_short_array, \
+    ushort_arr: sum_ushort_array, \
+    int_arr: sum_int_array, \
+    uint_arr: sum_uint_array, \
+    long_arr: sum_long_array, \
+    ulong_arr: sum_ulong_array, \
+    llong_arr: sum_llong_array, \
+    ullong_arr: sum_ullong_array, \
+    float_arr: sum_float_array, \
+    double_arr: sum_double_array, \
+    ldouble_arr: sum_ldouble_array) (&arr)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

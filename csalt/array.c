@@ -4516,4 +4516,175 @@ int bsearch_bool_array(bool_arr* arr, bool val, bool sorted) {
 }
 // ================================================================================
 // ================================================================================
+// SUM FUNCTIONS 
+
+char sum_char_array(char_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    char sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char sum_uchar_array(uchar_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned char sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+short int sum_short_array(short_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    short int sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int sum_ushort_array(ushort_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned short int sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+int sum_int_array(int_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    int sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int sum_uint_array(uint_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned int sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+long int sum_long_array(long_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long int sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int sum_ulong_array(ulong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long int sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+long long int sum_llong_array(llong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long long int sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int sum_ullong_array(ullong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    unsigned long long int sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+float sum_float_array(float_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.f;
+    }
+    float sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+double sum_double_array(double_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    double sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// --------------------------------------------------------------------------------
+
+long double sum_ldouble_array(ldouble_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    long double sum = arr->data[0];
+    for (size_t i = 1; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum;
+}
+// ================================================================================
+// ================================================================================
 // eof
