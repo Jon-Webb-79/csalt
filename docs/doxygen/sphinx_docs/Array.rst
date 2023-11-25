@@ -1351,3 +1351,89 @@ functions can be used directly:
    float stdev_float_array(float_arr* arr);
    double stdev_double_array(double_arr* arr);
    long double stdev_ldouble_array(ldouble_arr* arr);
+
+Replace Array Index 
+===================
+The ``replace_array_index`` macro utilizes the ``_Generic`` keyword to select 
+from several functions that replace data at a user-specified index in a vector 
+data structure. 
+
+.. code-block:: c 
+
+   #define replace_array_index(arr, dat, index) ( /* Expression to replace index value */ )  
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure defined in :ref:`Array Data Types <array_dat_type>`.
+- :c:`dat`: The data to replace the current value at ``index``.
+- :c:`index`: The index where data will be replaced.
+
+Return 
+------
+
+- Returns ``true`` if the operation is successful, ``false`` otherwise.
+
+Error Handling
+--------------
+The ``replace_array_index`` macro may encounter errors such as memory 
+allocation failure or invalid input. If these occur, underlying functions set 
+the global variable ``errno`` to indicate the specific error.
+
+Possible error codes:
+
+- ``EINVAL``: Invalid argument was passed to the function.
+- ``ENOMEM``: Memory allocation failure.
+- ``ERANGE``: Index is out of bounds.
+
+Example 1 
+---------
+Replacing a string value with a string literal:
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       int a[4];
+       int_arr arr = init_array(a, 4, 0);
+       push_array(arr, 10, 0);
+       push_array(arr, 10, 1);
+       push_array(arr, 10, 2);
+       push_array(arr, 10, 3);
+       print(arr);
+       replace_array_index(arr, 0, 3);
+       print(vec);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> [ 10, 10, 10, 10 ]
+   >> { 10, 10, 10, 0 ]
+
+Underlying Functions 
+--------------------
+The ``replace_array_index`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c 
+
+   bool replace_char_array_index(char_arr* arr, char dat, size_t index);
+   bool replace_uchar_array_index(uchar_arr* arr, unsigned char dat, size_t index);
+   bool replace_short_array_index(short_arr* arr, short int dat, size_t index);
+   bool replace_ushort_array_index(ushort_arr* arr, unsigned short int dat, size_t index);
+   bool replace_int_array_index(int_arr* arr, int dat, size_t index);
+   bool replace_uint_array_index(uint_arr* arr, unsigned int dat, size_t index);
+   bool replace_long_array_index(long_arr* arr, long int dat, size_t index);
+   bool replace_ulong_array_index(ulong_arr* arr, unsigned long int dat, size_t index);
+   bool replace_llong_array_index(llong_arr* arr, long long int dat, size_t index);
+   bool replace_ullong_array_index(ullong_arr* arr, unsigned long long int dat, size_t index);
+   bool replace_float_array_index(float_arr* arr, float dat, size_t index);
+   bool replace_double_array_index(double_arr* arr, double dat, size_t index);
+   bool replace_ldouble_array_index(ldouble_arr* arr, long double dat, size_t index);
+   bool replace_bool_array_index(bool_arr* arr, bool dat, size_t index);
+   bool replace_string_array_index(string_arr* arr, char* dat, size_t index);
+   bool replace_str_array_index(string_arr* arr, str* dat, size_t index);

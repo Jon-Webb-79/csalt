@@ -4329,4 +4329,216 @@ void test_stdev_ldouble_array(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST REPLACE ARRAY FUNCTIONS 
+
+void test_replace_char_array(void **state) {
+    char b[4];
+    char_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    char a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_uchar_array(void **state) {
+    unsigned char b[4];
+    uchar_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    unsigned char a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_short_array(void **state) {
+    short int b[4];
+    short_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    short int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_ushort_array(void **state) {
+    unsigned short int b[4];
+    ushort_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    unsigned short int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_int_array(void **state) {
+    int b[4];
+    int_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_uint_array(void **state) {
+    unsigned int b[4];
+    uint_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    unsigned int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_long_array(void **state) {
+    long int b[4];
+    long_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    long int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_ulong_array(void **state) {
+    unsigned long int b[4];
+    ulong_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    unsigned long int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_llong_array(void **state) {
+    long long int b[4];
+    llong_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    long long int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_ullong_array(void **state) {
+    unsigned long long int b[4];
+    ullong_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 3, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    replace_array_index(arr, 5, 1);
+    unsigned long long int a[4] = {1, 5, 3, 4};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_float_array(void **state) {
+    float b[4];
+    float_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1.f, array_length(arr));
+    push_array(arr, 2.f, array_length(arr));
+    push_array(arr, 3.f, array_length(arr));
+    push_array(arr, 4.f, array_length(arr));
+    replace_array_index(arr, 5.f, 1);
+    float a[4] = {1., 5., 3., 4.};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_float_equal(a[i], get_array(arr, i), 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_double_array(void **state) {
+    double b[4];
+    double_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 3., array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    replace_array_index(arr, 5., 1);
+    double a[4] = {1., 5., 3., 4.};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_float_equal(a[i], get_array(arr, i), 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_ldouble_array(void **state) {
+    long double b[4];
+    ldouble_arr arr = init_array(b, 4, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 3., array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    replace_array_index(arr, 5., 1);
+    long double a[4] = {1., 5., 3., 4.};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_float_equal(a[i], get_array(arr, i), 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_replace_bool_array(void **state) {
+    bool b[4];
+    bool_arr arr = init_array(b, 4, 0);
+    push_array(arr, true, array_length(arr));
+    push_array(arr, true, array_length(arr));
+    push_array(arr, true, array_length(arr));
+    push_array(arr, true, array_length(arr));
+    replace_array_index(arr, false, 1);
+    bool a[4] = {true, false, true, true};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], get_array(arr, i));
+    }
+}
+// ================================================================================
+// ================================================================================
 // eof

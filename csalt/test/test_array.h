@@ -341,6 +341,25 @@ void test_stdev_double_array(void **state);
 void test_stdev_ldouble_array(void **state);
 // ================================================================================
 // ================================================================================
+// TEST REPLACE ARRAY FUNCTIONS 
+
+void test_replace_char_array(void **state);
+void test_replace_uchar_array(void **state);
+void test_replace_short_array(void **state);
+void test_replace_ushort_array(void **state);
+void test_replace_int_array(void **state);
+void test_replace_uint_array(void **state);
+void test_replace_long_array(void **state);
+void test_replace_ulong_array(void **state);
+void test_replace_llong_array(void **state);
+void test_replace_ullong_array(void **state);
+void test_replace_float_array(void **state);
+void test_replace_double_array(void **state);
+void test_replace_ldouble_array(void **state);
+void test_replace_bool_array(void **state);
+void test_replace_string_array(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_H */
 // ================================================================================
 // ================================================================================

@@ -2266,6 +2266,178 @@ long double stdev_ldouble_array(ldouble_arr* arr);
     ldouble_arr: stdev_ldouble_array) (&arr)
 // ================================================================================
 // ================================================================================
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type char_arr 
+ * @param dat The data replacement of type char
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_char_array_index(char_arr* arr, char dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type uchar_arr 
+ * @param dat The data replacement of type unsgned char 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_uchar_array_index(uchar_arr* arr, unsigned char dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type short_arr 
+ * @param dat The data replacement of type short int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_short_array_index(short_arr* arr, short int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type ushort_arr 
+ * @param dat The data replacement of type unsigned short int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_ushort_array_index(ushort_arr* arr, unsigned short int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type int_arr 
+ * @param dat The data replacement of type int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_int_array_index(int_arr* arr, int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type uint_arr 
+ * @param dat The data replacement of type unsigned int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_uint_array_index(uint_arr* arr, unsigned int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type long_arr 
+ * @param dat The data replacement of type long int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_long_array_index(long_arr* arr, long int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type ulong_arr 
+ * @param dat The data replacement of type unsigned long int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_ulong_array_index(ulong_arr* arr, unsigned long int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type llong_arr 
+ * @param dat The data replacement of type long long int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_llong_array_index(llong_arr* arr, long long int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type ullong_arr 
+ * @param dat The data replacement of type unsigned long long int 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_ullong_array_index(ullong_arr* arr, unsigned long long int dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type float_arr 
+ * @param dat The data replacement of type float 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_float_array_index(float_arr* arr, float dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type double_arr 
+ * @param dat The data replacement of type double 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_double_array_index(double_arr* arr, double dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type short_arr 
+ * @param dat The data replacement of type long double 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_ldouble_array_index(ldouble_arr* arr, long double dat, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allows a usert to replace data at an index.
+ *
+ * @param arr A array of type ushort_arr 
+ * @param The data replacement of type bool 
+ * @param index The index where data will be replaced 
+ * @return true if function executes succesfully, false otherwise.
+ */
+bool replace_bool_array_index(bool_arr* arr, bool dat, size_t index);
+// --------------------------------------------------------------------------------
+
+#define replace_array_index(arr, dat, index) _Generic((arr), \
+    char_arr: replace_char_array_index, \
+    uchar_arr: replace_uchar_array_index, \
+    short_arr: replace_short_array_index, \
+    ushort_arr: replace_ushort_array_index, \
+    int_arr: replace_int_array_index, \
+    uint_arr: replace_uint_array_index, \
+    long_arr: replace_long_array_index, \
+    ulong_arr: replace_ulong_array_index, \
+    llong_arr: replace_llong_array_index, \
+    ullong_arr: replace_ullong_array_index, \
+    float_arr: replace_float_array_index, \
+    double_arr: replace_double_array_index, \
+    ldouble_arr: replace_ldouble_array_index, \
+    bool_arr: replace_bool_array_index) (&arr, dat, index)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

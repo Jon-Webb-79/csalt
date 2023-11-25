@@ -5042,4 +5042,215 @@ long double stdev_ldouble_array(ldouble_arr* arr) {
 }
 // ================================================================================
 // ================================================================================
+
+bool replace_char_array_index(char_arr* arr, char dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_uchar_array_index(uchar_arr* arr, unsigned char dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_short_array_index(short_arr* arr, short int dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ushort_array_index(ushort_arr* arr, unsigned short int dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_int_array_index(int_arr* arr, int dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_uint_array_index(uint_arr* arr, unsigned int dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_long_array_index(long_arr* arr, long int dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ulong_array_index(ulong_arr* arr, unsigned long dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_llong_array_index(llong_arr* arr, long long int dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ullong_array_index(ullong_arr* arr, unsigned long long dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_float_array_index(float_arr* arr, float dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_double_array_index(double_arr* arr, double dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ldouble_array_index(ldouble_arr* arr, long double dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool replace_bool_array_index(bool_arr* arr, bool dat, size_t index) {
+    if (arr == NULL || arr->data == NULL || arr->len == 0) {
+        // Handle invalid input or empty array
+        errno = EINVAL;
+        return false;
+    }
+    if (index > arr->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    arr->data[index] = dat;
+    return true;
+}
+// ================================================================================
+// ================================================================================
 // eof
