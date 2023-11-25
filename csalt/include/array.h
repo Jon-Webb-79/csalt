@@ -2438,6 +2438,147 @@ bool replace_bool_array_index(bool_arr* arr, bool dat, size_t index);
     bool_arr: replace_bool_array_index) (&arr, dat, index)
 // ================================================================================
 // ================================================================================
+
+/**
+ * @brief Macro to create vector iterator structs for each data type.
+ *
+ * This macro creates a struct with pointers to a function that returns 
+ * a pointer to the first variable in a data structure (begin), a pointer 
+ * to the last variable in a data structure (en), a pointer to the next 
+ * variable in a data structure (next), a pointer to the previous variable 
+ * in a data structure (prev), and one that returns tha data at a position 
+ * in the data structure (get)
+ *
+ * @param type_one The data type contained in a vector data structure.
+ * @param type_two The derived data type for the vector data structure.
+ */
+#define ARRAY_ITERATOR(type_one, type_two) \
+    typedef struct { \
+        type_one* (*begin) (type_two *s); \
+        type_one* (*end) (type_two *s); \
+        void (*next) (type_one** current); \
+        void (*prev) (type_one** current); \
+        type_one (*get) (type_one** current); \
+    } type_two##_iterator;
+// --------------------------------------------------------------------------------
+
+ARRAY_ITERATOR(char, char_arr)
+ARRAY_ITERATOR(unsigned char, uchar_arr)
+ARRAY_ITERATOR(short int, short_arr)
+ARRAY_ITERATOR(unsigned short int, ushort_arr)
+ARRAY_ITERATOR(int, int_arr)
+ARRAY_ITERATOR(unsigned int, uint_arr)
+ARRAY_ITERATOR(long int, long_arr)
+ARRAY_ITERATOR(unsigned long int, ulong_arr)
+ARRAY_ITERATOR(long long int, llong_arr)
+ARRAY_ITERATOR(unsigned long long int, ullong_arr)
+ARRAY_ITERATOR(float, float_arr)
+ARRAY_ITERATOR(double, double_arr)
+ARRAY_ITERATOR(long double, ldouble_arr)
+ARRAY_ITERATOR(bool, bool_arr)
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type char_v vectors.
+ */
+char_arr_iterator init_char_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a vector iterator for type uchar_v vectors.
+ */
+uchar_arr_iterator init_uchar_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type short_arr vectors.
+ */
+short_arr_iterator init_short_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type ushort_arr vectors.
+ */
+ushort_arr_iterator init_ushort_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type int_arr vectors.
+ */
+int_arr_iterator init_int_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type uint_arr vectors.
+ */
+uint_arr_iterator init_uint_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type long_arr vectors.
+ */
+long_arr_iterator init_long_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type ulong_arr vectors.
+ */
+ulong_arr_iterator init_ulong_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type llong_arr vectors.
+ */
+llong_arr_iterator init_llong_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type llong_arr vectors.
+ */
+ullong_arr_iterator init_ullong_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type float_arr vectors.
+ */
+float_arr_iterator init_float_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type double_arr vectors.
+ */
+double_arr_iterator init_double_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type ldouble_arr vectors.
+ */
+ldouble_arr_iterator init_ldouble_array_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a array iterator for type bool_arr vectors.
+ */
+bool_arr_iterator init_bool_array_iterator();
+// --------------------------------------------------------------------------------
+
+#define array_iterator(vec) _Generic((vec), \
+    char_arr: init_char_array_iterator, \
+    uchar_arr: init_uchar_array_iterator, \
+    short_arr: init_short_array_iterator, \
+    ushort_arr: init_ushort_array_iterator, \
+    int_arr: init_int_array_iterator, \
+    uint_arr: init_uint_array_iterator, \
+    long_arr: init_long_array_iterator, \
+    ulong_arr: init_ulong_array_iterator, \
+    llong_arr: init_llong_array_iterator, \
+    ullong_arr: init_ullong_array_iterator, \
+    float_arr: init_float_array_iterator, \
+    double_arr: init_double_array_iterator, \
+    ldouble_arr: init_ldouble_array_iterator, \
+    bool_arr: init_bool_array_iterator) ()
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

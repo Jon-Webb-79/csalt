@@ -358,6 +358,26 @@ void test_replace_double_array(void **state);
 void test_replace_ldouble_array(void **state);
 void test_replace_bool_array(void **state);
 void test_replace_string_array(void **state);
+// ================================================================================ 
+// ================================================================================
+// TEST ITERATORS 
+
+void test_iter_char_array(void **state);
+void test_iter_uchar_array(void **state);
+void test_iter_short_array(void **state);
+void test_iter_ushort_array(void **state);
+void test_iter_int_array(void **state);
+void test_iter_uint_array(void **state);
+void test_iter_long_array(void **state);
+void test_iter_ulong_array(void **state);
+void test_iter_llong_array(void **state);
+void test_iter_ullong_array(void **state);
+void test_iter_float_array(void **state);
+void test_iter_double_array(void **state);
+void test_iter_ldouble_array(void **state);
+void test_iter_bool_array(void **state);
+void test_iter_string_array(void **state);
+void test_iter_str_array(void **state);
 // ================================================================================
 // ================================================================================
 #endif /* test_H */

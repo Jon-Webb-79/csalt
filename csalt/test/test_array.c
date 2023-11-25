@@ -4541,4 +4541,326 @@ void test_replace_bool_array(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST ITERATOR FUNCTIONS 
+
+void test_iter_char_array(void **state) {
+    char c[5];
+    char_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    char_arr_iterator it = array_iterator(arr);
+    char* begin = it.begin(&arr);
+    char* end = it.end(&arr);
+    char a;
+    for (char* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    char b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_uchar_array(void **state) {
+    unsigned char c[5];
+    uchar_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    uchar_arr_iterator it = array_iterator(arr);
+    unsigned char* begin = it.begin(&arr);
+    unsigned char* end = it.end(&arr);
+    unsigned char a;
+    for (unsigned char* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned char b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_short_array(void **state) {
+    short int c[5];
+    short_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    short_arr_iterator it = array_iterator(arr);
+    short int* begin = it.begin(&arr);
+    short int* end = it.end(&arr);
+    short int a;
+    for (short int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    short int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_ushort_array(void **state) {
+    unsigned short int c[5];
+    ushort_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    ushort_arr_iterator it = array_iterator(arr);
+    unsigned short int* begin = it.begin(&arr);
+    unsigned short int* end = it.end(&arr);
+    unsigned short int a;
+    for (unsigned short int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned short int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_int_array(void **state) {
+    int c[5];
+    int_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    int_arr_iterator it = array_iterator(arr);
+    int* begin = it.begin(&arr);
+    int* end = it.end(&arr);
+    int a;
+    for (int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_uint_array(void **state) {
+    unsigned int c[5];
+    uint_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    uint_arr_iterator it = array_iterator(arr);
+    unsigned int* begin = it.begin(&arr);
+    unsigned int* end = it.end(&arr);
+    unsigned int a;
+    for (unsigned int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_long_array(void **state) {
+    long int c[5];
+    long_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    long_arr_iterator it = array_iterator(arr);
+    long int* begin = it.begin(&arr);
+    long int* end = it.end(&arr);
+    long int a;
+    for (long int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    long int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_ulong_array(void **state) {
+    unsigned long int c[5];
+    ulong_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    ulong_arr_iterator it = array_iterator(arr);
+    unsigned long int* begin = it.begin(&arr);
+    unsigned long int* end = it.end(&arr);
+    unsigned long int a;
+    for (unsigned long int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned long int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_llong_array(void **state) {
+    long long int c[5];
+    llong_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    llong_arr_iterator it = array_iterator(arr);
+    long long int* begin = it.begin(&arr);
+    long long int* end = it.end(&arr);
+    long long int a;
+    for (long long int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    long long int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_ullong_array(void **state) {
+    unsigned long long int c[5];
+    ullong_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 3, 2);
+    push_array(arr, 4, 3);
+    push_array(arr, 5, 4);
+    ullong_arr_iterator it = array_iterator(arr);
+    unsigned long long int* begin = it.begin(&arr);
+    unsigned long long int* end = it.end(&arr);
+    unsigned long long int a;
+    for (unsigned long long int* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10;
+    }
+    unsigned long long int b[5] = {11, 12, 13, 14, 15};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_float_array(void **state) {
+    float c[5];
+    float_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1., 0);
+    push_array(arr, 2., 1);
+    push_array(arr, 3., 2);
+    push_array(arr, 4., 3);
+    push_array(arr, 5., 4);
+    float_arr_iterator it = array_iterator(arr);
+    float* begin = it.begin(&arr);
+    float* end = it.end(&arr);
+    float a;
+    for (float* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10.f;
+    }
+    float b[5] = {11., 12., 13., 14., 15.};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_float_equal(b[i], get_array(arr, i), 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_double_array(void **state) {
+    double c[5];
+    double_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1., 0);
+    push_array(arr, 2., 1);
+    push_array(arr, 3., 2);
+    push_array(arr, 4., 3);
+    push_array(arr, 5., 4);
+    double_arr_iterator it = array_iterator(arr);
+    double* begin = it.begin(&arr);
+    double* end = it.end(&arr);
+    double a;
+    for (double* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10.f;
+    }
+    double b[5] = {11., 12., 13., 14., 15.};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_double_equal(b[i], get_array(arr, i), 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_ldouble_array(void **state) {
+    long double c[5];
+    ldouble_arr arr = init_array(c, 5, 0);
+    push_array(arr, 1., 0);
+    push_array(arr, 2., 1);
+    push_array(arr, 3., 2);
+    push_array(arr, 4., 3);
+    push_array(arr, 5., 4);
+    ldouble_arr_iterator it = array_iterator(arr);
+    long double* begin = it.begin(&arr);
+    long double* end = it.end(&arr);
+    long double a;
+    for (long double* i = begin; i != end; it.next(&i)) {
+        a = it.get(&i);
+        *i = a + 10.f;
+    }
+    long double b[5] = {11., 12., 13., 14., 15.};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_double_equal(b[i], get_array(arr, i), 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_iter_bool_array(void **state) {
+    bool c[5];
+    bool_arr arr = init_array(c, 5, 0);
+    push_array(arr, false, 0);
+    push_array(arr, false, 1);
+    push_array(arr, false, 2);
+    push_array(arr, false, 3);
+    push_array(arr, false, 4);
+    bool_arr_iterator it = array_iterator(arr);
+    bool* begin = it.begin(&arr);
+    bool* end = it.end(&arr);
+    for (bool* i = begin; i != end; it.next(&i)) {
+        *i = true;
+    }
+    bool b[5] = {true, true, true, true, true};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(b[i], get_array(arr, i));
+    }
+}
+// ================================================================================
+// ================================================================================
 // eof

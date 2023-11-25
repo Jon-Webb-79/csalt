@@ -1437,3 +1437,146 @@ functions can be used directly:
    bool replace_bool_array_index(bool_arr* arr, bool dat, size_t index);
    bool replace_string_array_index(string_arr* arr, char* dat, size_t index);
    bool replace_str_array_index(string_arr* arr, str* dat, size_t index);
+
+Array Iterator Struct 
+=====================
+While array are stored in contiguous memory and can be accessed using for 
+loops, other data structures may not support such direct access. To provide a 
+uniform method for traversing different data structures, this library offers 
+a generic iterator mechanism.
+
+The core of this mechanism is a struct of function pointers, each corresponding 
+to a typical iterator operation. These function pointers allow for traversing 
+and accessing elements within the data structure. The general form of this 
+iterator struct is defined using the following macro:
+
+.. code-block:: c 
+
+   #define ARRAY_ITERATOR(type_one, type_two) \
+       typedef struct { \
+           type_one* (*begin) (type_two *s); \
+           type_one* (*end) (type_two *s); \
+           void (*next) (type_one** current); \
+           void (*prev) (type_one** current); \
+           type_one (*get) (type_one** current); \
+       } type_two##_iterator;
+
+Parameters 
+----------
+
+- :c:`type_one`: The derived vector data type consistent with :ref:`Array Data Types <array_dat_type>`. 
+- :c:`type_two`: The C data type that is consistent with :ref:`Array Data Types <array_dat_type>`. 
+
+Derived Iterator Types 
+----------------------
+The `ARRAY_ITERATOR` macro is used to create specific iterator types for 
+various data structures:
+
+.. code-block:: c 
+
+   ARRAY_ITERATOR(char, char_arr)
+   ARRAY_ITERATOR(unsigned char, uchar_arr)
+   ARRAY_ITERATOR(short int, short_arr)
+   ARRAY_ITERATOR(unsigned short int, ushort_arr)
+   ARRAY_ITERATOR(int, int_arr)
+   ARRAY_ITERATOR(unsigned int, uint_arr)
+   ARRAY_ITERATOR(long int, long_arr)
+   ARRAY_ITERATOR(unsigned long int, ulong_arr)
+   ARRAY_ITERATOR(long long int, llong_arr)
+   ARRAY_ITERATOR(unsigned long long int, ullong_arr)
+   ARRAY_ITERATOR(float, float_arr)
+   ARRAY_ITERATOR(double, double_arr)
+   ARRAY_ITERATOR(long double, ldouble_arr)
+   ARRAY_ITERATOR(bool, bool_arr)
+
+.. _array_iterator:
+
+Array Iterator 
+==============
+While array are stored in contiguous memory and can be accessed using for 
+loops, not all data structures support such direct access. To provide a 
+uniform method for traversing different data structures, this library offers 
+a generic iterator mechanism. The `array_iterator` macro allows easy access 
+to the appropriate iterator for a given vector type.
+
+.. code-block:: c 
+
+   #define array_iterator(arr) ( /* Expression to select iterator */) 
+   
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure defined in :ref:`Array Data Types <array_dat_type>`.
+
+Return 
+------
+
+- A struct of types described in :ref:`Array Iterator <array_iterator>` that contains function pointers to applicable iterator functions.
+
+.. note:: Passing the value of ``arr`` to the ``array_iterator`` macro does **NOT** associate the data of the array with the iterator, and instead this only informs the macro of the data type to use.
+
+Error Handling
+--------------
+The `array_iterator` macro selects the appropriate iterator based on the 
+array's data type. If an error occurs, such as an invalid vector type or 
+memory allocation failure, the underlying functions set `errno` to indicate 
+the specific error.
+
+Possible error codes:
+
+- ``EINVAL``: Invalid argument was passed to the function.
+
+Example 1 
+---------
+An example using a ``int_arr_iterator``.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       int a[4];
+       string_arr arr = init_array(a, 4, 0);
+       push_array(arr, 1, array_length(arr));
+       push_array(arr, 4, array_length(arr));
+       push_array(arr, 2, array_length(arr));
+       push_array(arr, 3, array_length(arr));
+       int_arr_iterator it = init_array(arr);
+       int* begin = it.begin(arr);
+       int* end = it.end(arr);
+       for (str* i = begin; i != end; it.next(&i)) {
+           print(it.get(&i));
+       }
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> 1
+   >> 4 
+   >> 2 
+   >> 3
+
+Underlying Functions 
+--------------------
+The ``array_iterator`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c 
+
+   char_arr_iterator init_char_array_iterator();
+   uchar_arr_iterator init_uchar_array_iterator();
+   short_arr_iterator init_short_array_iterator();
+   ushort_arr_iterator init_ushort_array_iterator();
+   int_arr_iterator init_int_array_iterator();
+   uint_arr_iterator init_uint_array_iterator();
+   long_arr_iterator init_long_array_iterator();
+   ulong_arr_iterator init_ulong_array_iterator();
+   llong_arr_iterator init_llong_array_iterator();
+   ullong_arr_iterator init_ullong_array_iterator();
+   float_arr_iterator init_float_array_iterator();
+   double_arr_iterator init_double_array_iterator();
+   ldouble_arr_iterator init_ldouble_array_iterator();
+   bool_arr_iterator init_bool_array_iterator();

@@ -827,7 +827,21 @@ const struct CMUnitTest test_array[] = {
     cmocka_unit_test(test_replace_float_array),
     cmocka_unit_test(test_replace_double_array),
     cmocka_unit_test(test_replace_ldouble_array),
-    cmocka_unit_test(test_replace_bool_array)
+    cmocka_unit_test(test_replace_bool_array),
+    cmocka_unit_test(test_iter_char_array),
+    cmocka_unit_test(test_iter_uchar_array),
+    cmocka_unit_test(test_iter_short_array),
+    cmocka_unit_test(test_iter_ushort_array),
+    cmocka_unit_test(test_iter_int_array),
+    cmocka_unit_test(test_iter_uint_array),
+    cmocka_unit_test(test_iter_long_array),
+    cmocka_unit_test(test_iter_ulong_array),
+    cmocka_unit_test(test_iter_llong_array),
+    cmocka_unit_test(test_iter_ullong_array),
+    cmocka_unit_test(test_iter_float_array),
+    cmocka_unit_test(test_iter_double_array),
+    cmocka_unit_test(test_iter_ldouble_array),
+    cmocka_unit_test(test_iter_bool_array)
 };
 // Begin code
 int main(int argc, const char * argv[]) {

@@ -5253,4 +5253,806 @@ bool replace_bool_array_index(bool_arr* arr, bool dat, size_t index) {
 }
 // ================================================================================
 // ================================================================================
+// ITERATOR SUPPORT (PRIVATE FUNCTIONS) 
+
+static char* _char_arr_begin(char_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static char* _char_arr_end(char_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _char_arr_next(char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _char_arr_prev(char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static char _char_arr_get(char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned char* _uchar_arr_begin(uchar_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned char* _uchar_arr_end(uchar_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _uchar_arr_next(unsigned char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _uchar_arr_prev(unsigned char** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned char _uchar_arr_get(unsigned char** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return **current;
+}
+// ================================================================================
+
+static short int* _short_arr_begin(short_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static short int* _short_arr_end(short_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _short_arr_next(short int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _short_arr_prev(short int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static short int _short_arr_get(short int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned short int* _ushort_arr_begin(ushort_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned short int* _ushort_arr_end(ushort_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _ushort_arr_next(unsigned short int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _ushort_arr_prev(unsigned short int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned short int _ushort_arr_get(unsigned short int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static int* _int_arr_begin(int_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static int* _int_arr_end(int_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _int_arr_next(int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _int_arr_prev(int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static int _int_arr_get(int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned int* _uint_arr_begin(uint_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned int* _uint_arr_end(uint_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _uint_arr_next(unsigned int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _uint_arr_prev(unsigned int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned int _uint_arr_get(unsigned int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static long int* _long_arr_begin(long_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static long int* _long_arr_end(long_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _long_arr_next(long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _long_arr_prev(long int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static long int _long_arr_get(long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned long int* _ulong_arr_begin(ulong_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long int* _ulong_arr_end(ulong_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _ulong_arr_next(unsigned long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _ulong_arr_prev(unsigned long int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long int _ulong_arr_get(unsigned long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static long long int* _llong_arr_begin(llong_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static long long int* _llong_arr_end(llong_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _llong_arr_next(long long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _llong_arr_prev(long long int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static long long int _llong_arr_get(long long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static unsigned long long int* _ullong_arr_begin(ullong_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long long int* _ullong_arr_end(ullong_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _ullong_arr_next(unsigned long long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _ullong_arr_prev(unsigned long long int** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long long int _ullong_arr_get(unsigned long long int** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static float* _float_arr_begin(float_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static float* _float_arr_end(float_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _float_arr_next(float** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _float_arr_prev(float** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static float _float_arr_get(float** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0.0f;
+    }
+    return **current;
+} 
+// ================================================================================
+
+static double* _double_arr_begin(double_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static double* _double_arr_end(double_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _double_arr_next(double** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _double_arr_prev(double** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static double _double_arr_get(double** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0.0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static long double* _ldouble_arr_begin(ldouble_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static long double* _ldouble_arr_end(ldouble_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _ldouble_arr_next(long double** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _ldouble_arr_prev(long double** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static long double _ldouble_arr_get(long double** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return 0.0;
+    }
+    return **current;
+}
+// ================================================================================
+
+static bool* _bool_arr_begin(bool_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data;
+}
+// --------------------------------------------------------------------------------
+
+static bool* _bool_arr_end(bool_arr* s) {
+    if (!s || !s->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->data + s->len;
+}
+// --------------------------------------------------------------------------------
+
+static void _bool_arr_next(bool** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)++;
+}
+// --------------------------------------------------------------------------------
+
+static void _bool_arr_prev(bool** current) {
+ if ( current == NULL ) {
+        errno = EINVAL;
+        return;
+    }
+    (*current)--;
+}
+// --------------------------------------------------------------------------------
+
+static bool _bool_arr_get(bool** current) {
+    if ( current == NULL ) {
+        errno = EINVAL;
+        return false;
+    }
+    return **current;
+}
+// ================================================================================
+// ================================================================================
+// INIT VECTOR ITERATOR FUNCTIONS 
+
+char_arr_iterator init_char_array_iterator() {
+    char_arr_iterator iter;
+
+    iter.begin = _char_arr_begin;
+    iter.end = _char_arr_end;
+    iter.next = _char_arr_next;
+    iter.prev = _char_arr_prev;
+    iter.get = _char_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+uchar_arr_iterator init_uchar_array_iterator() {
+    uchar_arr_iterator iter;
+
+    iter.begin = _uchar_arr_begin;
+    iter.end = _uchar_arr_end;
+    iter.next = _uchar_arr_next;
+    iter.prev = _uchar_arr_prev;
+    iter.get = _uchar_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+short_arr_iterator init_short_array_iterator() {
+    short_arr_iterator iter;
+
+    iter.begin = _short_arr_begin;
+    iter.end = _short_arr_end;
+    iter.next = _short_arr_next;
+    iter.prev = _short_arr_prev;
+    iter.get = _short_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ushort_arr_iterator init_ushort_array_iterator() {
+    ushort_arr_iterator iter;
+
+    iter.begin = _ushort_arr_begin;
+    iter.end = _ushort_arr_end;
+    iter.next = _ushort_arr_next;
+    iter.prev = _ushort_arr_prev;
+    iter.get = _ushort_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+int_arr_iterator init_int_array_iterator() {
+    int_arr_iterator iter;
+
+    iter.begin = _int_arr_begin;
+    iter.end = _int_arr_end;
+    iter.next = _int_arr_next;
+    iter.prev = _int_arr_prev;
+    iter.get = _int_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+uint_arr_iterator init_uint_array_iterator() {
+    uint_arr_iterator iter;
+
+    iter.begin = _uint_arr_begin;
+    iter.end = _uint_arr_end;
+    iter.next = _uint_arr_next;
+    iter.prev = _uint_arr_prev;
+    iter.get = _uint_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+long_arr_iterator init_long_array_iterator() {
+    long_arr_iterator iter;
+
+    iter.begin = _long_arr_begin;
+    iter.end = _long_arr_end;
+    iter.next = _long_arr_next;
+    iter.prev = _long_arr_prev;
+    iter.get = _long_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ulong_arr_iterator init_ulong_array_iterator() {
+    ulong_arr_iterator iter;
+
+    iter.begin = _ulong_arr_begin;
+    iter.end = _ulong_arr_end;
+    iter.next = _ulong_arr_next;
+    iter.prev = _ulong_arr_prev;
+    iter.get = _ulong_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+llong_arr_iterator init_llong_array_iterator() {
+    llong_arr_iterator iter;
+
+    iter.begin = _llong_arr_begin;
+    iter.end = _llong_arr_end;
+    iter.next = _llong_arr_next;
+    iter.prev = _llong_arr_prev;
+    iter.get = _llong_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ullong_arr_iterator init_ullong_array_iterator() {
+    ullong_arr_iterator iter;
+
+    iter.begin = _ullong_arr_begin;
+    iter.end = _ullong_arr_end;
+    iter.next = _ullong_arr_next;
+    iter.prev = _ullong_arr_prev;
+    iter.get = _ullong_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+float_arr_iterator init_float_array_iterator() {
+    float_arr_iterator iter;
+
+    iter.begin = _float_arr_begin;
+    iter.end = _float_arr_end;
+    iter.next = _float_arr_next;
+    iter.prev = _float_arr_prev;
+    iter.get = _float_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+double_arr_iterator init_double_array_iterator() {
+    double_arr_iterator iter;
+
+    iter.begin = _double_arr_begin;
+    iter.end = _double_arr_end;
+    iter.next = _double_arr_next;
+    iter.prev = _double_arr_prev;
+    iter.get = _double_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ldouble_arr_iterator init_ldouble_array_iterator() {
+    ldouble_arr_iterator iter;
+
+    iter.begin = _ldouble_arr_begin;
+    iter.end = _ldouble_arr_end;
+    iter.next = _ldouble_arr_next;
+    iter.prev = _ldouble_arr_prev;
+    iter.get = _ldouble_arr_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+bool_arr_iterator init_bool_array_iterator() {
+    bool_arr_iterator iter;
+
+    iter.begin = _bool_arr_begin;
+    iter.end = _bool_arr_end;
+    iter.next = _bool_arr_next;
+    iter.prev = _bool_arr_prev;
+    iter.get = _bool_arr_get;
+    return iter; 
+}
+// ================================================================================
+// ================================================================================
 // eof
