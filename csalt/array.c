@@ -4687,4 +4687,359 @@ long double sum_ldouble_array(ldouble_arr* arr) {
 }
 // ================================================================================
 // ================================================================================
+// AVERAGE VECTOR FUNCTIONS 
+
+float average_char_array(char_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (float)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+float average_uchar_array(uchar_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (float)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+float average_short_array(short_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (float)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+float average_ushort_array(ushort_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (float)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_int_array(int_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (double)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_uint_array(uint_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (double)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_long_array(long_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (double)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_ulong_array(ulong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (double)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+long double average_llong_array(llong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (long double)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+long double average_ullong_array(ullong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long long sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return (long double)sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+float average_float_array(float_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.f;
+    }
+    float sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum / arr->len;
+}
+// --------------------------------------------------------------------------------
+
+double average_double_array(double_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    double sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum / (double)arr->len;
+}
+// --------------------------------------------------------------------------------
+
+long double average_ldouble_array(ldouble_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    long double sum = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum += arr->data[i];
+    }
+    return sum / (long double)arr->len;
+}
+// ================================================================================
+// ================================================================================
+// STDEV ARRAY FUNCTIONS 
+
+float stdev_char_array(char_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    float avg = average_char_array(arr);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+float stdev_uchar_array(uchar_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    float avg = average_uchar_array(arr);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+float stdev_short_array(short_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    float avg = average_short_array(arr);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+float stdev_ushort_array(ushort_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    float avg = average_ushort_array(arr);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_int_array(int_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    double avg = average_int_array(arr);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_uint_array(uint_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    double avg = average_uint_array(arr);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_long_array(long_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    double avg = average_long_array(arr);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_ulong_array(ulong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    double avg = average_ulong_array(arr);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+long double stdev_llong_array(llong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long double avg = average_llong_array(arr);
+    long double sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+long double stdev_ullong_array(ullong_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0;
+    }
+    long double avg = average_ullong_array(arr);
+    long double sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+float stdev_float_array(float_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.f;
+    }
+    float avg = average_float_array(arr);
+    float sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+double stdev_double_array(double_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    double avg = average_double_array(arr);
+    double sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// --------------------------------------------------------------------------------
+
+long double stdev_ldouble_array(ldouble_arr* arr) {
+    if ( arr == NULL || arr->data == NULL ) {
+        errno = EINVAL;
+        return 0.;
+    }
+    long double avg = average_ldouble_array(arr);
+    long double sum_sq_diff = 0;
+    for (size_t i = 0; i < arr->len; i++) {
+        sum_sq_diff += (arr->data[i] - avg) * (arr->data[i] - avg);
+    }
+    return sqrt(sum_sq_diff / arr->len);
+}
+// ================================================================================
+// ================================================================================
 // eof

@@ -308,6 +308,39 @@ void test_sum_double_array(void **state);
 void test_sum_ldouble_array(void **state);
 // ================================================================================
 // ================================================================================
+
+void test_average_char_array(void **state);
+void test_average_uchar_array(void **state);
+void test_average_short_array(void **state);
+void test_average_ushort_array(void **state);
+void test_average_int_array(void **state);
+void test_average_uint_array(void **state);
+void test_average_long_array(void **state);
+void test_average_ulong_array(void **state);
+void test_average_llong_array(void **state);
+void test_average_ullong_array(void **state);
+void test_average_float_array(void **state);
+void test_average_double_array(void **state);
+void test_average_ldouble_array(void **state);
+// ================================================================================
+// ================================================================================
+// TEST STDEV FUNCTIONS 
+
+void test_stdev_char_array(void **state);
+void test_stdev_uchar_array(void **state);
+void test_stdev_short_array(void **state);
+void test_stdev_ushort_array(void **state);
+void test_stdev_int_array(void **state);
+void test_stdev_uint_array(void **state);
+void test_stdev_long_array(void **state);
+void test_stdev_ulong_array(void **state);
+void test_stdev_llong_array(void **state);
+void test_stdev_ullong_array(void **state);
+void test_stdev_float_array(void **state);
+void test_stdev_double_array(void **state);
+void test_stdev_ldouble_array(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_H */
 // ================================================================================
 // ================================================================================

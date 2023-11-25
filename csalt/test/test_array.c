@@ -3987,4 +3987,346 @@ void test_sum_ldouble_array(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST AVERAGE VECTOR FUNCTIONS 
+
+void test_average_char_array(void **state) {
+    char a[5];
+    char_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    float average = array_average(arr);
+    assert_float_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_uchar_array(void **state) {
+    unsigned char a[5];
+    uchar_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    float average = array_average(arr);
+    assert_float_equal(average, 4.40, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_short_array(void **state) {
+    short int a[5];
+    short_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    float average = array_average(arr);
+    assert_float_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_ushort_array(void **state) {
+    unsigned short int a[5];
+    ushort_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    float average = array_average(arr);
+    assert_float_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_int_array(void **state) {
+    int a[5];
+    int_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    double average = array_average(arr);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_uint_array(void **state) {
+    unsigned int a[5];
+    uint_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    double average = array_average(arr);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_long_array(void **state) {
+    long int a[5];
+    long_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    double average = array_average(arr);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_ulong_array(void **state) {
+    unsigned long int a[5];
+    ulong_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    double average = array_average(arr);
+    assert_float_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_llong_array(void **state) {
+    long long int a[5];
+    llong_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    long double average = array_average(arr);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_ullong_array(void **state) {
+    unsigned long long int a[5];
+    ullong_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    long double average = array_average(arr);
+    assert_double_equal(average, 4.4, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_float_array(void **state) {
+    float a[5];
+    float_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1.f, array_length(arr));
+    push_array(arr, 2.f, array_length(arr));
+    push_array(arr, 10.3f, array_length(arr));
+    push_array(arr, 4.f, array_length(arr));
+    push_array(arr, 5.f, array_length(arr));
+    float average = array_average(arr);
+    assert_float_equal(average, 4.46f, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_double_array(void **state) {
+    double a[5];
+    double_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 10.3, array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    double average = array_average(arr);
+    assert_double_equal(average, 4.46, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_average_ldouble_array(void **state) {
+    long double a[5];
+    ldouble_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 10.3, array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    long double average = array_average(arr);
+    assert_double_equal(average, 4.46, 1.0e-3);
+}
+// ================================================================================
+// ================================================================================
+// TEST STDEV FUNCTIONS 
+
+void test_stdev_char_array(void **state) {
+    char a[5];
+    char_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    float stdev = array_stdev(arr);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_uchar_array(void **state) {
+    unsigned char a[5];
+    uchar_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    float stdev = array_stdev(arr);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_short_array(void **state) {
+    short int a[5];
+    short_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    float stdev = array_stdev(arr);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_ushort_array(void **state) {
+    unsigned short int a[5];
+    ushort_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    float stdev = array_stdev(arr);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_int_array(void **state) {
+    int a[5];
+    int_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    double stdev = array_stdev(arr);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_uint_array(void **state) {
+    unsigned int a[5];
+    uint_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    double stdev = array_stdev(arr);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_long_array(void **state) {
+    long int a[5];
+    long_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    double stdev = array_stdev(arr);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_ulong_array(void **state) {
+    unsigned long int a[5];
+    ulong_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    double stdev = array_stdev(arr);
+    assert_float_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_llong_array(void **state) {
+    long long int a[5];
+    llong_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    long double stdev = array_stdev(arr);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_ullong_array(void **state) {
+    unsigned long long int a[5];
+    ullong_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1, array_length(arr));
+    push_array(arr, 2, array_length(arr));
+    push_array(arr, 10, array_length(arr));
+    push_array(arr, 4, array_length(arr));
+    push_array(arr, 5, array_length(arr));
+    long double stdev = array_stdev(arr);
+    assert_double_equal(stdev, 3.13687, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_float_array(void **state) {
+    float a[5];
+    float_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1.f, array_length(arr));
+    push_array(arr, 2.f, array_length(arr));
+    push_array(arr, 10.3f, array_length(arr));
+    push_array(arr, 4.f, array_length(arr));
+    push_array(arr, 5.f, array_length(arr));
+    float stdev = array_stdev(arr);
+    assert_float_equal(stdev, 3.24444, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_double_array(void **state) {
+    double a[5];
+    double_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 10.3, array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    double stdev = array_stdev(arr);
+    assert_double_equal(stdev, 3.24444, 1.0e-3);
+}
+// --------------------------------------------------------------------------------
+
+void test_stdev_ldouble_array(void **state) {
+    long double a[5];
+    ldouble_arr arr = init_array(a, 5, 0);
+    push_array(arr, 1., array_length(arr));
+    push_array(arr, 2., array_length(arr));
+    push_array(arr, 10.3, array_length(arr));
+    push_array(arr, 4., array_length(arr));
+    push_array(arr, 5., array_length(arr));
+    long double stdev = array_stdev(arr);
+    assert_double_equal(stdev, 3.24444, 1.0e-3);
+}
+// ================================================================================
+// ================================================================================
 // eof

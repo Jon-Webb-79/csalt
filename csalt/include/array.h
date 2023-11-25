@@ -1996,6 +1996,276 @@ long double sum_ldouble_array(ldouble_arr* arr);
     ldouble_arr: sum_ldouble_array) (&arr)
 // ================================================================================
 // ================================================================================
+// AVERAGE FUNCTIONS 
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type char_arr 
+ * @return The average value of type float
+ */
+float average_char_array(char_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type uchar_arr 
+ * @return The average value of type float
+ */
+float average_uchar_array(uchar_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type short_arr 
+ * @return The average value of type float
+ */
+float average_short_array(short_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type ushort_arr 
+ * @return The average value of type float
+ */
+float average_ushort_array(ushort_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type int_arr 
+ * @return The average value of type double
+ */
+double average_int_array(int_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type uint_arr 
+ * @return The average value of type double
+ */
+double average_uint_array(uint_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type long_arr 
+ * @return The average value of type double
+ */
+double average_long_array(long_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type ulong_arr 
+ * @return The average value of type double
+ */
+double average_ulong_array(ulong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type llong_arr 
+ * @return The average value of type long double
+ */
+long double average_llong_array(llong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type ullong_arr 
+ * @return The average value of type long double
+ */
+long double average_ullong_array(ullong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type float_arr 
+ * @return The average value of type float
+ */
+float average_float_array(float_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type double_arr 
+ * @return The average value of type double
+ */
+double average_double_array(double_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the average value for the data in a array.
+ *
+ * @param arr A array of type ldouble_arr 
+ * @return The average value of type long double
+ */
+long double average_ldouble_array(ldouble_arr* arr);
+// --------------------------------------------------------------------------------
+
+#define array_average(arr) _Generic((arr), \
+    char_arr: average_char_array, \
+    uchar_arr: average_uchar_array, \
+    short_arr: average_short_array, \
+    ushort_arr: average_ushort_array, \
+    int_arr: average_int_array, \
+    uint_arr: average_uint_array, \
+    long_arr: average_long_array, \
+    ulong_arr: average_ulong_array, \
+    llong_arr: average_llong_array, \
+    ullong_arr: average_ullong_array, \
+    float_arr: average_float_array, \
+    double_arr: average_double_array, \
+    ldouble_arr: average_ldouble_array) (&arr)
+// ================================================================================
+// ================================================================================
+// ARRAY STDEV FUNCTIONS 
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type char_arr.
+ * @return The standard deviation as a float type.
+ */
+float stdev_char_array(char_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type uchar_arr.
+ * @return The standard deviation as a float type.
+ */
+float stdev_uchar_array(uchar_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type short_arr.
+ * @return The standard deviation as a float type.
+ */
+float stdev_short_array(short_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type ushort_arr.
+ * @return The standard deviation as a float type.
+ */
+float stdev_ushort_array(ushort_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type int_arr.
+ * @return The standard deviation as a double type.
+ */
+double stdev_int_array(int_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type uint_arr.
+ * @return The standard deviation as a double type.
+ */
+double stdev_uint_array(uint_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type long_arr.
+ * @return The standard deviation as a double type.
+ */
+double stdev_long_array(long_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type ulong_arr.
+ * @return The standard deviation as a double type.
+ */
+double stdev_ulong_array(ulong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type llong_arr.
+ * @return The standard deviation as a long double type.
+ */
+long double stdev_llong_array(llong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type ullong_arr.
+ * @return The standard deviation as a long double type.
+ */
+long double stdev_ullong_array(ullong_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type float_arr.
+ * @return The standard deviation as a float type.
+ */
+float stdev_float_array(float_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type double_arr.
+ * @return The standard deviation as a double type.
+ */
+double stdev_double_array(double_arr* arr);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the standard deviation of the values in a array.
+ *
+ * @param A array of type ldouble_arr.
+ * @return The standard deviation as a long double type.
+ */
+long double stdev_ldouble_array(ldouble_arr* arr);
+// --------------------------------------------------------------------------------
+
+#define array_stdev(arr) _Generic((arr), \
+    char_arr: stdev_char_array, \
+    uchar_arr: stdev_uchar_array, \
+    short_arr: stdev_short_array, \
+    ushort_arr: stdev_ushort_array, \
+    int_arr: stdev_int_array, \
+    uint_arr: stdev_uint_array, \
+    long_arr: stdev_long_array, \
+    ulong_arr: stdev_ulong_array, \
+    llong_arr: stdev_llong_array, \
+    ullong_arr: stdev_ullong_array, \
+    float_arr: stdev_float_array, \
+    double_arr: stdev_double_array, \
+    ldouble_arr: stdev_ldouble_array) (&arr)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
