@@ -1181,3 +1181,173 @@ underlying functions can be used directly:
    float sum_float_array(float_arr* arr);
    double sum_double_array(double_arr* arr);
    long double sum_ldouble_array(ldouble_arr* arr);
+
+Average Array Value 
+===================
+The ``array_average`` macro uses the ``_Generic`` keyword to intelligently 
+select from several functions to determine the average value within an array
+data structure. The form of the ``average_average`` macro is shown below.
+
+.. code-block:: c 
+
+   #define array_average(arr) (/* Expressions to determine the vector average */)
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure defined in :ref:`Array Data Types <array_dat_type>`.
+
+Returns 
+-------
+
+- Calculates and returns the arithmetic mean of the elements within ``arr``.
+
+.. note:: The return type varies based on the input vector's data type:
+   
+   - For ``char_arr``, ``uchar_arr``, ``short_arr``, ``ushort_arr``, and ``float_arr``, the return type is ``float``.
+   - For ``int_arr``, ``uint_arr``, ``long_arr``, ``ulong_arr``, and ``double_arr``, the return type is ``double``.
+   - For all other inputs, the return type is ``long double``.
+
+Error Handling
+--------------
+The ``array_average`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
+Example 
+-------
+An example with ``int_arr`` data types.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       int a[5];
+       int_arr arr = init_array(a, 5, 0);
+       push_array(arr, 12, array_length(arr));
+       push_array(arr, 8, array_length(arr));
+       push_array(arr, 22, array_length(arr));
+       push_array(arr, 1, array_length(arr));
+       push_array(arr, -27, array_length(arr));
+       print("Average Value: ", array_average(arr));
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Average Value: 3.2000
+
+Underlying Functions 
+--------------------
+The ``array_average`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c
+
+   char average_char_array(char_arr* arr);
+   unsigned char average_uchar_array(uchar_arr* arr);
+   short int average_short_array(short_arr* arr);
+   unsigned short int average_ushort_array(ushort_arr* arr);
+   int average_int_array(int_arr* arr);
+   unsigned int average_uint_array(uint_arr* arr);
+   long int average_long_array(long_arr* arr);
+   unsigned long int average_ulong_array(ulong_arr* arr);
+   long long int average_llong_array(llong_arr* arr);
+   unsigned long long int average_ullong_array(ullong_arr* arr);
+   float average_float_array(float_arr* arr);
+   double average_double_array(double_arr* arr);
+   long double average_ldouble_array(ldouble_arr* arr);
+
+Standard Deviation of an Array
+==============================
+The ``array_stdev`` macro uses the ``_Generic`` keyword to select the 
+appropriate function to calculate and return the standard deviation of
+the values in an array data structure.  The parameters of the ``array_stdev``
+macro are shown below.
+
+.. code-block:: c 
+
+   #define array_stdev(arr) ( /*Expressions to calculate standard deviation */)  
+
+Parameters 
+----------
+
+- :c:`arr`: A vector data structure defined in :ref:`Array Data Types <array_dat_type>`.
+
+Returns 
+-------
+
+- Calculates and returns the arithmetic mean of the elements within ``arr``.
+
+.. note:: The return type varies based on the input vector's data type:
+   
+   - For ``char_arr``, ``uchar_arr``, ``short_arr``, ``ushort_arr``, and ``float_arr``, the return type is ``float``.
+   - For ``int_arr``, ``uint_arr``, ``long_arr``, ``ulong_arr``, and ``double_arr``, the return type is ``double``.
+   - For all other inputs, the return type is ``long double``.
+
+Error Handling
+--------------
+The ``array_stdev`` macros handle several error conditions, 
+setting the ``errno`` global variable to indicate specific errors. Users 
+should check ``errno`` after the function call to identify and understand 
+any errors.
+
+Possible error codes:
+
+- ``EINVAL``: Indicates an invalid argument was passed to the function.
+
+Example 
+------- 
+An example to calculate the standard deviation of a ``float_arr`` type.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "array.h"
+
+   int main() {
+       float a[5];
+       float_v arr = init_array(a, 5, 0);
+       push_array(vec, 1.f, array_length(vec));
+       push_array(vec, 2.f, array_length(vec));
+       push_array(vec, 10.3f, array_length(vec));
+       push_array(vec, 4.f, array_length(vec));
+       push_array(vec, 5.f, array_length(vec));
+       float stdev = array_stdev(vec);
+       print("Stdev: ", stdev);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Stdev: 3.2444414
+
+Underlying Functions 
+--------------------
+The ``array_average`` macro uses ``_Generic`` to select the right function 
+based on the array's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c
+
+   char stdev_char_array(char_arr* arr);
+   unsigned char stdev_uchar_array(uchar_arr* arr);
+   short int stdev_short_array(short_arr* arr);
+   unsigned short int stdev_ushort_array(ushort_arr* arr);
+   int stdev_int_array(int_arr* arr);
+   unsigned int stdev_uint_array(uint_arr* arr);
+   long int stdev_long_array(long_arr* arr);
+   unsigned long int stdev_ulong_array(ulong_arr* arr);
+   long long int stdev_llong_array(llong_arr* arr);
+   unsigned long long int stdev_ullong_array(ullong_arr* arr);
+   float stdev_float_array(float_arr* arr);
+   double stdev_double_array(double_arr* arr);
+   long double stdev_ldouble_array(ldouble_arr* arr);
