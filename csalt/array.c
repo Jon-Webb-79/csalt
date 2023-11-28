@@ -1523,6 +1523,371 @@ static void _bubble_sort_bool(bool* vec, size_t len, iter_dir direction) {
     } 
 }
 // ================================================================================
+// SELECTION SORT FUNCTIONS (PRIVATE FUNCTIONS) 
+
+static void _selection_sort_char(char* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_char(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_char(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_uchar(unsigned char* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_uchar(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_uchar(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_short(short int* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_short(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_short(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_ushort(unsigned short int* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_ushort(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_ushort(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_int(int* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_int(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_int(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_uint(unsigned int* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_uint(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_uint(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_long(long int* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_long(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_long(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_ulong(unsigned long* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_ulong(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_ulong(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_llong(long long int* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_llong(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_llong(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_ullong(unsigned long long int* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_ullong(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_ullong(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_float(float* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_float(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_float(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_double(double* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_double(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_double(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_ldouble(long double* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_ldouble(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_ldouble(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_bool(bool* vec, size_t len, iter_dir direction) {
+    size_t i, j, min_idx, max_idx;
+    if (direction == FORWARD) {
+        for (i = 0; i < len - 1; i++) {
+            min_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] < vec[min_idx])
+                    min_idx = j;
+            }
+            if (min_idx != i)
+                swap_bool(&vec[min_idx], &vec[i]);
+        }
+    } else { // REVERSE 
+        for (i = 0; i < len - 1; i++) {
+            max_idx = i;
+            for (j = i + 1; j < len; j++) {
+                if (vec[j] > vec[max_idx])
+                    max_idx = j;
+            }
+            if (max_idx != i)
+                swap_bool(&vec[max_idx], &vec[i]);
+        }
+    }
+}
+// ================================================================================
 // PRIVATE INSERT SORT ALGORITHMS 
 
 static void _insert_sort_char(char* vec, size_t len, iter_dir direction) {
@@ -3458,6 +3823,9 @@ void sort_char_array(char_arr* vec, sort_type stype, iter_dir direction) {
         case BUBBLE: 
             _bubble_sort_char(vec->data, vec->len, direction);
             break;
+        case SELECTION:
+            _selection_sort_char(vec->data, vec->len, direction);
+            break;
         case INSERT:
             _insert_sort_char(vec->data, vec->len, direction);
             break;
@@ -3485,6 +3853,9 @@ void sort_uchar_array(uchar_arr* vec, sort_type stype, iter_dir direction) {
     switch (stype) {
         case BUBBLE: 
             _bubble_sort_uchar(vec->data, vec->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_uchar(vec->data, vec->len, direction);
             break;
         case INSERT:
             _insert_sort_uchar(vec->data, vec->len, direction);
@@ -3514,6 +3885,9 @@ void sort_short_array(short_arr* vec, sort_type stype, iter_dir direction) {
         case BUBBLE: 
             _bubble_sort_short(vec->data, vec->len, direction);
             break;
+        case SELECTION:
+            _selection_sort_short(vec->data, vec->len, direction);
+            break;
         case INSERT:
             _insert_sort_short(vec->data, vec->len, direction);
             break;
@@ -3541,6 +3915,9 @@ void sort_ushort_array(ushort_arr* vec, sort_type stype, iter_dir direction) {
     switch (stype) {
         case BUBBLE: 
             _bubble_sort_ushort(vec->data, vec->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_ushort(vec->data, vec->len, direction);
             break;
         case INSERT:
             _insert_sort_ushort(vec->data, vec->len, direction);
@@ -3570,6 +3947,9 @@ void sort_int_array(int_arr* vec, sort_type stype, iter_dir direction) {
         case BUBBLE: 
             _bubble_sort_int(vec->data, vec->len, direction);
             break;
+        case SELECTION:
+            _selection_sort_int(vec->data, vec->len, direction);
+            break;
         case INSERT:
             _insert_sort_int(vec->data, vec->len, direction);
             break;
@@ -3597,6 +3977,9 @@ void sort_uint_array(uint_arr* vec, sort_type stype, iter_dir direction) {
     switch (stype) {
         case BUBBLE: 
             _bubble_sort_uint(vec->data, vec->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_uint(vec->data, vec->len, direction);
             break;
         case INSERT:
             _insert_sort_uint(vec->data, vec->len, direction);
@@ -3626,6 +4009,9 @@ void sort_long_array(long_arr* vec, sort_type stype, iter_dir direction) {
         case BUBBLE: 
             _bubble_sort_long(vec->data, vec->len, direction);
             break;
+        case SELECTION:
+            _selection_sort_long(vec->data, vec->len, direction);
+            break;
         case INSERT:
             _insert_sort_long(vec->data, vec->len, direction);
             break;
@@ -3653,6 +4039,9 @@ void sort_ulong_array(ulong_arr* vec, sort_type stype, iter_dir direction) {
     switch (stype) {
         case BUBBLE: 
             _bubble_sort_ulong(vec->data, vec->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_ulong(vec->data, vec->len, direction);
             break;
         case INSERT:
             _insert_sort_ulong(vec->data, vec->len, direction);
@@ -3682,6 +4071,9 @@ void sort_llong_array(llong_arr* vec, sort_type stype, iter_dir direction) {
         case BUBBLE: 
             _bubble_sort_llong(vec->data, vec->len, direction);
             break;
+        case SELECTION:
+            _selection_sort_llong(vec->data, vec->len, direction);
+            break;
         case INSERT:
             _insert_sort_llong(vec->data, vec->len, direction);
             break;
@@ -3709,6 +4101,9 @@ void sort_ullong_array(ullong_arr* vec, sort_type stype, iter_dir direction) {
     switch (stype) {
         case BUBBLE: 
             _bubble_sort_ullong(vec->data, vec->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_ullong(vec->data, vec->len, direction);
             break;
         case INSERT:
             _insert_sort_ullong(vec->data, vec->len, direction);
@@ -3738,6 +4133,9 @@ void sort_float_array(float_arr* vec, sort_type stype, iter_dir direction) {
         case BUBBLE: 
             _bubble_sort_float(vec->data, vec->len, direction);
             break;
+        case SELECTION:
+            _selection_sort_float(vec->data, vec->len, direction);
+            break;
         case INSERT:
             _insert_sort_float(vec->data, vec->len, direction);
             break;
@@ -3765,6 +4163,9 @@ void sort_double_array(double_arr* vec, sort_type stype, iter_dir direction) {
     switch (stype) {
         case BUBBLE: 
             _bubble_sort_double(vec->data, vec->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_double(vec->data, vec->len, direction);
             break;
         case INSERT:
             _insert_sort_double(vec->data, vec->len, direction);
@@ -3794,6 +4195,9 @@ void sort_ldouble_array(ldouble_arr* vec, sort_type stype, iter_dir direction) {
         case BUBBLE: 
             _bubble_sort_ldouble(vec->data, vec->len, direction);
             break;
+        case SELECTION:
+            _selection_sort_ldouble(vec->data, vec->len, direction);
+            break;
         case INSERT:
             _insert_sort_ldouble(vec->data, vec->len, direction);
             break;
@@ -3821,6 +4225,9 @@ void sort_bool_array(bool_arr* vec, sort_type stype, iter_dir direction) {
     switch (stype) {
         case BUBBLE: 
             _bubble_sort_bool(vec->data, vec->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_bool(vec->data, vec->len, direction);
             break;
         case INSERT:
             _insert_sort_bool(vec->data, vec->len, direction);
