@@ -4401,6 +4401,548 @@ void test_bubble_sort_string_vector_reverse(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST SELECTION SORT FUNCTIONS
+
+void test_selection_sort_char_vector_forward(void **state) {
+    char_v* vec = init_vector(dChar)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    char a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_char_vector_reverse(void **state) {
+    char_v* vec = init_vector(dChar)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    char a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uchar_vector_forward(void **state) {
+    uchar_v* vec = init_vector(dUChar)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    unsigned char a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uchar_vector_reverse(void **state) {
+    uchar_v* vec = init_vector(dUChar)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    unsigned char a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_short_vector_forward(void **state) {
+    short_v* vec = init_vector(dShort)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    short int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_short_vector_reverse(void **state) {
+    short_v* vec = init_vector(dShort)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    short int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ushort_vector_forward(void **state) {
+    ushort_v* vec = init_vector(dUShort)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    unsigned short int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ushort_vector_reverse(void **state) {
+    ushort_v* vec = init_vector(dUShort)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    unsigned short int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_int_vector_forward(void **state) {
+    int_v* vec = init_vector(dInt)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_int_vector_reverse(void **state) {
+    int_v* vec = init_vector(dInt)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uint_vector_forward(void **state) {
+    uint_v* vec = init_vector(dUInt)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    unsigned int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uint_vector_reverse(void **state) {
+    uint_v* vec = init_vector(dUInt)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    unsigned int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_long_vector_forward(void **state) {
+    long_v* vec = init_vector(dLong)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    long int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_long_vector_reverse(void **state) {
+    long_v* vec = init_vector(dLong)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    long int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ulong_vector_forward(void **state) {
+    ulong_v* vec = init_vector(dULong)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    unsigned long int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ulong_vector_reverse(void **state) {
+    ulong_v* vec = init_vector(dULong)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    unsigned long int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_llong_vector_forward(void **state) {
+    llong_v* vec = init_vector(dLongLong)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    long long int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_llong_vector_reverse(void **state) {
+    llong_v* vec = init_vector(dLongLong)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    long long int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ullong_vector_forward(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    unsigned long long int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ullong_vector_reverse(void **state) {
+    ullong_v* vec = init_vector(dULongLong)(7);
+    push_vector(vec, 3, 0);
+    push_vector(vec, 2, 1);
+    push_vector(vec, 6, 2);
+    push_vector(vec, 5, 3);
+    push_vector(vec, 1, 4);
+    push_vector(vec, 12, 5);
+    push_vector(vec, 10, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    unsigned long long int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_float_vector_forward(void **state) {
+    float_v* vec = init_vector(dFloat)(7);
+    push_vector(vec, 3., 0);
+    push_vector(vec, 2., 1);
+    push_vector(vec, 6., 2);
+    push_vector(vec, 5., 3);
+    push_vector(vec, 1., 4);
+    push_vector(vec, 12., 5);
+    push_vector(vec, 10., 6);
+    float a[7] = {1., 2., 3., 5., 6., 10., 12.};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_float_equal(a[i], vec->data[i], 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_float_vector_reverse(void **state) {
+    float_v* vec = init_vector(dFloat)(7);
+    push_vector(vec, 3., 0);
+    push_vector(vec, 2., 1);
+    push_vector(vec, 6., 2);
+    push_vector(vec, 5., 3);
+    push_vector(vec, 1., 4);
+    push_vector(vec, 12., 5);
+    push_vector(vec, 10., 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    float a[7] = {12., 10., 6., 5., 3., 2., 1.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_float_equal(a[i], vec->data[i], 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_double_vector_forward(void **state) {
+    double_v* vec = init_vector(dDouble)(7);
+    push_vector(vec, 3., 0);
+    push_vector(vec, 2., 1);
+    push_vector(vec, 6., 2);
+    push_vector(vec, 5., 3);
+    push_vector(vec, 1., 4);
+    push_vector(vec, 12., 5);
+    push_vector(vec, 10., 6);
+    double a[7] = {1., 2., 3., 5., 6., 10., 12.};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_double_equal(a[i], vec->data[i], 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_double_vector_reverse(void **state) {
+    double_v* vec = init_vector(dDouble)(7);
+    push_vector(vec, 3., 0);
+    push_vector(vec, 2., 1);
+    push_vector(vec, 6., 2);
+    push_vector(vec, 5., 3);
+    push_vector(vec, 1., 4);
+    push_vector(vec, 12., 5);
+    push_vector(vec, 10., 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    double a[7] = {12., 10., 6., 5., 3., 2., 1.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_double_equal(a[i], vec->data[i], 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ldouble_vector_forward(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(7);
+    push_vector(vec, 3., 0);
+    push_vector(vec, 2., 1);
+    push_vector(vec, 6., 2);
+    push_vector(vec, 5., 3);
+    push_vector(vec, 1., 4);
+    push_vector(vec, 12., 5);
+    push_vector(vec, 10., 6);
+    long double a[7] = {1., 2., 3., 5., 6., 10., 12.};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_double_equal(a[i], vec->data[i], 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ldouble_vector_reverse(void **state) {
+    ldouble_v* vec = init_vector(dLDouble)(7);
+    push_vector(vec, 3., 0);
+    push_vector(vec, 2., 1);
+    push_vector(vec, 6., 2);
+    push_vector(vec, 5., 3);
+    push_vector(vec, 1., 4);
+    push_vector(vec, 12., 5);
+    push_vector(vec, 10., 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    long double a[7] = {12., 10., 6., 5., 3., 2., 1.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_double_equal(a[i], vec->data[i], 1.0e-3);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_bool_vector_forward(void **state) {
+    bool_v* vec = init_vector(dBool)(7);
+    push_vector(vec, true, 0);
+    push_vector(vec, false, 1);
+    push_vector(vec, true, 2);
+    push_vector(vec, false, 3);
+    push_vector(vec, true, 4);
+    push_vector(vec, false, 5);
+    push_vector(vec, true, 6);
+    bool a[7] = {false, false, false, true, true, true, true};
+    sort_vector(vec, SELECTION, FORWARD);
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_bool_vector_reverse(void **state) {
+    bool_v* vec = init_vector(dBool)(7);
+    push_vector(vec, true, 0);
+    push_vector(vec, false, 1);
+    push_vector(vec, true, 2);
+    push_vector(vec, false, 3);
+    push_vector(vec, true, 4);
+    push_vector(vec, false, 5);
+    push_vector(vec, true, 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    bool a[7] = {true, true, true, true, false, false, false};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(a[i], vec->data[i]);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_string_vector_forward(void **state) {
+    string_v* vec = init_vector(dString)(7);
+    push_vector(vec, "One", 0);
+    push_vector(vec, "Two", 1);
+    push_vector(vec, "Three", 2);
+    push_vector(vec, "Four", 3);
+    push_vector(vec, "Five", 4);
+    push_vector(vec, "Six", 5);
+    push_vector(vec, "Seven", 6);
+    sort_vector(vec, SELECTION, FORWARD);
+    char *a[7] = {"Five", "Four", "One", "Seven", "Six", "Three", "Two"};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_string_equal(a[i], vec->data[i].data);
+    }
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_string_vector_reverse(void **state) {
+    string_v* vec = init_vector(dString)(7);
+    push_vector(vec, "One", 0);
+    push_vector(vec, "Two", 1);
+    push_vector(vec, "Three", 2);
+    push_vector(vec, "Four", 3);
+    push_vector(vec, "Five", 4);
+    push_vector(vec, "Six", 5);
+    push_vector(vec, "Seven", 6);
+    sort_vector(vec, SELECTION, REVERSE);
+    char *a[7] = {"Two", "Three", "Six", "Seven", "One", "Four", "Five"};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_string_equal(a[i], vec->data[i].data);
+    }
+    free_vector(vec);
+}
+// ================================================================================
+// ================================================================================
 // TEST INSERT SORT FUNCTIONS 
 
 void test_insert_sort_char_vector_forward(void **state) {

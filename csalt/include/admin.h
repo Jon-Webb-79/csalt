@@ -50,12 +50,14 @@ typedef enum {
  * sorting algorithm to be used for sorting a data structure.
  *
  * @attribute BUBBLE Keyword for Bubble Sorting algorithm 
+ * @attribute SELECTION Keyword for Section Sorting algorithm
  * @attribute INSERT Keyword for Insert Sorting algorithm
  * @attribute MERGE Keyword for Merge Sorting algorithm 
  * @attribute TIM Keyword for Tim Sorting algorithm
  */
 typedef enum {
     BUBBLE, 
+    SELECTION,
     INSERT, 
     MERGE, 
     QUICK, 

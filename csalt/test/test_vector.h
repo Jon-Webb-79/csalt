@@ -368,6 +368,40 @@ void test_bubble_sort_string_vector_forward(void **state);
 void test_bubble_sort_string_vector_reverse(void **state);
 // ================================================================================
 // ================================================================================
+// TEST SELECTION SORT FUNCTIONS
+
+void test_selection_sort_char_vector_forward(void **state);
+void test_selection_sort_char_vector_reverse(void **state);
+void test_selection_sort_uchar_vector_forward(void **state);
+void test_selection_sort_uchar_vector_reverse(void **state);
+void test_selection_sort_short_vector_forward(void **state);
+void test_selection_sort_short_vector_reverse(void **state);
+void test_selection_sort_ushort_vector_forward(void **state);
+void test_selection_sort_ushort_vector_reverse(void **state);
+void test_selection_sort_int_vector_forward(void **state);
+void test_selection_sort_int_vector_reverse(void **state);
+void test_selection_sort_uint_vector_forward(void **state);
+void test_selection_sort_uint_vector_reverse(void **state);
+void test_selection_sort_long_vector_forward(void **state);
+void test_selection_sort_long_vector_reverse(void **state);
+void test_selection_sort_ulong_vector_forward(void **state);
+void test_selection_sort_ulong_vector_reverse(void **state);
+void test_selection_sort_llong_vector_forward(void **state);
+void test_selection_sort_llong_vector_reverse(void **state);
+void test_selection_sort_ullong_vector_forward(void **state);
+void test_selection_sort_ullong_vector_reverse(void **state);
+void test_selection_sort_float_vector_forward(void **state);
+void test_selection_sort_float_vector_reverse(void **state);
+void test_selection_sort_double_vector_forward(void **state);
+void test_selection_sort_double_vector_reverse(void **state);
+void test_selection_sort_ldouble_vector_forward(void **state);
+void test_selection_sort_ldouble_vector_reverse(void **state);
+void test_selection_sort_bool_vector_forward(void **state);
+void test_selection_sort_bool_vector_reverse(void **state);
+void test_selection_sort_string_vector_forward(void **state);
+void test_selection_sort_string_vector_reverse(void **state);
+// ================================================================================
+// ================================================================================
 // TEST INSERT SORT FUNCTIONS
 
 void test_insert_sort_char_vector_forward(void **state);
