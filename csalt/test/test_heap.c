@@ -480,4 +480,265 @@ void test_min_enqueue_string_gbc(void **state)
 }
 // ================================================================================
 // ================================================================================
+// TEST DEQUEUE MIN HEAP 
+
+void test_min_dequeue_char(void **state) {
+    (void) state;
+    char a[7] = {5, 1, 2, 3, 6, 4, 7};
+    char_min_hp* heap = init_min_heap(dChar)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    char val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    char b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_uchar(void **state) {
+    (void) state;
+    unsigned char a[7] = {5, 1, 2, 3, 6, 4, 7};
+    uchar_min_hp* heap = init_min_heap(dUChar)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    unsigned char val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    unsigned char b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_short(void **state) {
+    (void) state;
+    short int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    short_min_hp* heap = init_min_heap(dShort)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    short int val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    short int b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_ushort(void **state) {
+    (void) state;
+    unsigned short int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    ushort_min_hp* heap = init_min_heap(dUShort)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    unsigned short int val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    unsigned short int b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_int(void **state) {
+    (void) state;
+    int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    int_min_hp* heap = init_min_heap(dInt)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    int val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    int b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_uint(void **state) {
+    (void) state;
+    unsigned int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    uint_min_hp* heap = init_min_heap(dUInt)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    unsigned int val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    unsigned int b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_long(void **state) {
+    (void) state;
+    long int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    long_min_hp* heap = init_min_heap(dLong)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    long int val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    long int b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_ulong(void **state) {
+    (void) state;
+    unsigned long int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    ulong_min_hp* heap = init_min_heap(dULong)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    unsigned long int val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    unsigned long int b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_llong(void **state) {
+    (void) state;
+    long long int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    llong_min_hp* heap = init_min_heap(dLongLong)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    long long int val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    long long int b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_ullong(void **state) {
+    (void) state;
+    unsigned long long int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    ullong_min_hp* heap = init_min_heap(dULongLong)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    unsigned long long int val = dequeue_min_heap(heap);
+    assert_int_equal(val, 1);
+    unsigned long long int b[6] = {2, 3, 4, 5, 6, 7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_float(void **state) {
+    (void) state;
+    float a[7] = {5.5, 1.1, 2.2, 3.3, 6.6, 4.4, 7.7};
+    float_min_hp* heap = init_min_heap(dFloat)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    float val = dequeue_min_heap(heap);
+    assert_float_equal(val, 1.1, 1.0e-3);
+    float b[6] = {2.2, 3.3, 4.4, 5.5, 6.6, 7.7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_float_equal(heap->data[i], b[i], 1.0e-3);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_double(void **state) {
+    (void) state;
+    double a[7] = {5.5, 1.1, 2.2, 3.3, 6.6, 4.4, 7.7};
+    double_min_hp* heap = init_min_heap(dDouble)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    double val = dequeue_min_heap(heap);
+    assert_double_equal(val, 1.1, 1.0e-3);
+    double b[6] = {2.2, 3.3, 4.4, 5.5, 6.6, 7.7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_double_equal(heap->data[i], b[i], 1.0e-3);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_ldouble(void **state) {
+    (void) state;
+    long double a[7] = {5.5, 1.1, 2.2, 3.3, 6.6, 4.4, 7.7};
+    ldouble_min_hp* heap = init_min_heap(dLDouble)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    long double val = dequeue_min_heap(heap);
+    assert_double_equal(val, 1.1, 1.0e-3);
+    long double b[6] = {2.2, 3.3, 4.4, 5.5, 6.6, 7.7};
+    for (size_t i = 0; i < 6; i++) {
+        assert_double_equal(heap->data[i], b[i], 1.0e-3);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_bool(void **state)
+{
+	(void) state;
+    bool a[7] = {true, false, true, false, true, false, true};
+    bool_min_hp* heap = init_min_heap(dBool)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    bool val = dequeue_min_heap(heap);
+    assert_int_equal(val, false);
+    bool b[6] = {false, true, false, true, true, true};
+    for (size_t i = 0; i < 6; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_dequeue_string(void **state)
+{
+	(void) state;
+    char* a[7] = {"One", "Two", "Three", "Four", "Five", "Six", "Seven"};
+    string_min_hp* heap = init_min_heap(dString)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    str* val = dequeue_min_heap(heap);
+    assert_string_equal(val->data, "Five");
+    print(heap);
+    char* b[6] = {"Four", "One", "Seven", "Two", "Six", "Three"};
+    for (size_t i = 0; i < 6; i++) {
+        assert_string_equal(heap->data[i].data, b[i]);
+    }
+    free_min_heap(heap);
+    free_string(val);
+}
+// ================================================================================
+// ================================================================================
 // eof

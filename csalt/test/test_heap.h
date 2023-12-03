@@ -62,6 +62,26 @@ void test_min_enqueue_double_gbc(void **state);
 void test_min_enqueue_ldouble_gbc(void **state);
 void test_min_enqueue_bool_gbc(void **state);
 void test_min_enqueue_string_gbc(void **state);
+// ================================================================================
+// ================================================================================
+// TEST DEQUEUE MIN HEAP 
+
+void test_min_dequeue_char(void **state);
+void test_min_dequeue_uchar(void **state);
+void test_min_dequeue_short(void **state);
+void test_min_dequeue_ushort(void **state);
+void test_min_dequeue_int(void **state);
+void test_min_dequeue_uint(void **state);
+void test_min_dequeue_long(void **state);
+void test_min_dequeue_ulong(void **state);
+void test_min_dequeue_llong(void **state);
+void test_min_dequeue_ullong(void **state);
+void test_min_dequeue_float(void **state);
+void test_min_dequeue_double(void **state);
+void test_min_dequeue_ldouble(void **state);
+void test_min_dequeue_bool(void **state);
+void test_min_dequeue_string(void **state);
+
 #endif /* test_heap_H */
 // ================================================================================
 // ================================================================================

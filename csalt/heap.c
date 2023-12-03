@@ -963,425 +963,432 @@ static void _sift_min_heap_up_string(string_min_hp* heap, size_t index) {
 // ================================================================================
 // SIFT DOWN MIN HEAP
 
-// static void _sift_min_heap_down_char(char_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_char(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_char(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_uchar(uchar_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_uchar(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_uchar(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_short(short_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_short(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_short(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_ushort(ushort_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_ushort(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_ushort(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_int(int_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_int(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_int(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_uint(uint_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_uint(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_uint(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_long(long_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_long(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_long(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_ulong(ulong_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_ulong(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_ulong(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_llong(llong_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_llong(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_llong(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_ullong(ullong_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_ullong(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_ullong(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_float(float_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_float(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_float(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_double(double_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_double(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_double(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_ldouble(ldouble_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_ldouble(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_ldouble(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_bool(bool_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_bool(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_bool(heap, smallest);
-//     }
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void _sift_min_heap_down_string(string_min_hp* heap, size_t index) {
-//     if (heap == NULL || heap->data == NULL || index >= heap->len) {
-//         errno = EINVAL;
-//         return; // Invalid heap or data pointer, or index out of bounds
-//     }
-//
-//     size_t left_child = 2 * index + 1;
-//     size_t right_child = 2 * index + 2;
-//     size_t smallest = index;
-//
-//     int val = compare_strings_str(&heap->data[left_child], &heap->data[smallest]);
-//     if (left_child < heap->len && val < 0) {
-//         smallest = left_child;
-//     }
-//
-//     if (right_child < heap->len && val > 0) {
-//         smallest = right_child;
-//     }
-//
-//     if (smallest != index) {
-//         // Swap the element with the smallest child
-//         swap_string(&heap->data[index], &heap->data[smallest]);
-//
-//         // Recursively heapify down
-//         _sift_min_heap_down_string(heap, smallest);
-//     }
-// }
+static void _sift_min_heap_down_char(char_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_char(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_char(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_uchar(uchar_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_uchar(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_uchar(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_short(short_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_short(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_short(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_ushort(ushort_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_ushort(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_ushort(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_int(int_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_int(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_int(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_uint(uint_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_uint(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_uint(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_long(long_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_long(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_long(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_ulong(ulong_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_ulong(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_ulong(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_llong(llong_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_llong(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_llong(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_ullong(ullong_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_ullong(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_ullong(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_float(float_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_float(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_float(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_double(double_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_double(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_double(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_ldouble(ldouble_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_ldouble(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_ldouble(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_bool(bool_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    if (left_child < heap->len && heap->data[left_child] < heap->data[smallest]) {
+        smallest = left_child;
+    }
+
+    if (right_child < heap->len && heap->data[right_child] < heap->data[smallest]) {
+        smallest = right_child;
+    }
+
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_bool(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_bool(heap, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _sift_min_heap_down_string(string_min_hp* heap, size_t index) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t smallest = index;
+
+    // Check if left child exists and is not NULL
+    if (left_child < heap->len && heap->data[left_child].data != NULL) {
+        int val = compare_strings_str(&heap->data[left_child], &heap->data[smallest]);
+        if (val < 0) {
+            smallest = left_child;
+        }
+    }
+
+    // Check if right child exists and is not NULL
+    if (right_child < heap->len && heap->data[right_child].data != NULL) {
+        int val = compare_strings_str(&heap->data[right_child], &heap->data[smallest]);
+        if (val < 0) {
+            smallest = right_child;
+        }
+    }
+    
+    if (smallest != index) {
+        // Swap the element with the smallest child
+        swap_string(&heap->data[index], &heap->data[smallest]);
+
+        // Recursively heapify down
+        _sift_min_heap_down_string(heap, smallest);
+    }
+}
 // ================================================================================
 // ================================================================================
 // ENQUEUE MIN HEAP
@@ -1900,6 +1907,355 @@ bool enqueue_min_heap_string(string_min_hp* heap, char* element) {
     _sift_min_heap_up_string(heap, heap->len - 1);
 
     return true; // Element added successfully 
+}
+// ================================================================================
+// ================================================================================
+// DEQUEUE MIN HEAP 
+
+char dequeue_min_heap_char(char_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    char smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_char(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char dequeue_min_heap_uchar(uchar_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    unsigned char smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_uchar(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+short int dequeue_min_heap_short(short_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    short int smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_short(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int dequeue_min_heap_ushort(ushort_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    unsigned short int smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_ushort(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+int dequeue_min_heap_int(int_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    int smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_int(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int dequeue_min_heap_uint(uint_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    unsigned int smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_uint(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+long int dequeue_min_heap_long(long_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    long int smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_long(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int dequeue_min_heap_ulong(ulong_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    unsigned long int smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_ulong(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+long long int dequeue_min_heap_llong(llong_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    long long int smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_llong(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int dequeue_min_heap_ullong(ullong_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    unsigned long long int smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_ullong(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+float dequeue_min_heap_float(float_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    float smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_float(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+double dequeue_min_heap_double(double_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    double smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_double(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+long double dequeue_min_heap_ldouble(ldouble_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return 0; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    long double smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_ldouble(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+bool dequeue_min_heap_bool(bool_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return false; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    bool smallest = heap->data[0];
+
+    // Replace the root with the last element in the heap.
+    heap->data[0] = heap->data[heap->len - 1];
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_bool(heap, 0);
+
+    return smallest;
+}
+// --------------------------------------------------------------------------------
+
+str* dequeue_min_heap_string(string_min_hp* heap) {
+    if (heap == NULL || heap->data == NULL || heap->len == 0) {
+        // Handle the error condition (e.g., return a sentinel value or set an error flag)
+        // You may want to modify the error handling based on your requirements.
+        errno = EINVAL;
+        return NULL; // Returning 0 as a placeholder for error handling.
+    }
+
+    // The smallest element is always at the root (index 0).
+    str* smallest = init_string_nol(heap->data[0].data);
+
+    // Replace the root with the last element in the heap.
+    if (heap->data[0].alloc < heap->data[heap->len - 1].len + 1) {
+        char* ptr = realloc(heap->data[0].data, heap->data[heap->len - 1].len + 1);
+        if (!ptr) {
+            errno = ENOMEM;
+            return NULL; // Returning NULL for memory allocation failure.
+        }
+        heap->data[0].data = ptr;
+    }
+
+    // Copy the data from the last element to the root.
+    strcpy(heap->data[0].data, heap->data[heap->len - 1].data);
+
+    // Update length and allocation for the root element.
+    heap->data[0].len = heap->data[heap->len - 1].len;
+    heap->data[0].alloc = heap->data[heap->len - 1].len + 1;
+
+    // Free memory for the last element's data.
+    free(heap->data[heap->len - 1].data); 
+    heap->len--;
+
+    // Perform heapify down to maintain the min-heap property.
+    _sift_min_heap_down_string(heap, 0);
+
+    return smallest;
 }
 // ================================================================================
 // ================================================================================

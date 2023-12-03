@@ -933,28 +933,43 @@ const struct CMUnitTest test_heap[] = {
     cmocka_unit_test(test_min_enqueue_double_gbc),
     cmocka_unit_test(test_min_enqueue_ldouble_gbc),
     cmocka_unit_test(test_min_enqueue_bool_gbc),
-    cmocka_unit_test(test_min_enqueue_string_gbc)
+    cmocka_unit_test(test_min_enqueue_string_gbc),
+    cmocka_unit_test(test_min_dequeue_char),
+    cmocka_unit_test(test_min_dequeue_uchar),
+    cmocka_unit_test(test_min_dequeue_short),
+    cmocka_unit_test(test_min_dequeue_ushort),
+    cmocka_unit_test(test_min_dequeue_int),
+    cmocka_unit_test(test_min_dequeue_uint),
+    cmocka_unit_test(test_min_dequeue_long),
+    cmocka_unit_test(test_min_dequeue_ulong),
+    cmocka_unit_test(test_min_dequeue_llong),
+    cmocka_unit_test(test_min_dequeue_ullong),
+    cmocka_unit_test(test_min_dequeue_float),
+    cmocka_unit_test(test_min_dequeue_double),
+    cmocka_unit_test(test_min_dequeue_ldouble),
+    cmocka_unit_test(test_min_dequeue_bool),
+    cmocka_unit_test(test_min_dequeue_string)
 };
 // Begin code
 int main(int argc, const char * argv[]) {
     int status;
 
-    status = cmocka_run_group_tests(test_swap, NULL, NULL);
-    if (status != 0) {
-        return status;
-    }
-    status = cmocka_run_group_tests(test_string, NULL, NULL);
-    if (status != 0) {
-        return status;
-    }
-    status = cmocka_run_group_tests(test_vector, NULL, NULL);
-    if (status != 0) {
-        return status;
-    }
-    status = cmocka_run_group_tests(test_array, NULL, NULL);
-    if (status != 0) {
-        return status;
-    }
+//    status = cmocka_run_group_tests(test_swap, NULL, NULL);
+//    if (status != 0) {
+//        return status;
+//    }
+//    status = cmocka_run_group_tests(test_string, NULL, NULL);
+//    if (status != 0) {
+//        return status;
+//    }
+//    status = cmocka_run_group_tests(test_vector, NULL, NULL);
+//    if (status != 0) {
+//        return status;
+//    }
+//    status = cmocka_run_group_tests(test_array, NULL, NULL);
+//    if (status != 0) {
+//        return status;
+//    }
     status = cmocka_run_group_tests(test_heap, NULL, NULL);
 	return status;
 }

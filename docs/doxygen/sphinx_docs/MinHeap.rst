@@ -370,3 +370,98 @@ specific behavior is required.
    bool enqueue_min_heap_ldouble(ldouble_min_hp* heap, long double element);
    bool enqueue_min_heap_bool(bool_min_hp* heap, bool element);
    bool enqueue_min_heap_string(string_min_hp* heap, char* element);
+
+Dequeue Min Heap 
+================
+The ``dequeue_min_heap`` macro can be used to dequeue an object from a Min 
+Heap data structure and return that object to the user.  When an object is 
+dequeued from a Min Heap data structure, the data within the structure 
+is re-organized to maintain the Min Heap properties where all lower level 
+nodes are smaller than the parent node.  The ``dequeue_min_heap`` macro 
+utilyzes the ``_Generic`` keyword to select the appropriate function 
+that maintains type safety.
+
+.. code-block:: c
+
+   #define define_min_heap(heap)  ( /* Expression to dequeue an object */ ) 
+   
+Parameters
+----------
+
+- :c:`heap`: A heap data structure of the :ref:`Min Heap Derived Type <heap_dat_type>`  type.
+
+Returns 
+-------
+
+- Returns the minimum object in the Min Heap data structure.
+
+.. note:: The ``dequeue_min_heap`` macro will return a value of 0 if an error is encountered, unless the data type is ``bool_min_hp`` or ``string_min_hp`` in which the function will return ``false`` or NULL respectively.
+
+Error Handling
+--------------
+
+The ``dequeue_min_heap`` macro selects the appropriate iterator based on the 
+vector's data type. If an error occurs, such as an invalid vector type or 
+memory allocation failure, the underlying functions set ``errno`` to indicate 
+the specific error.
+
+Possible error codes:
+
+- ``EINVAL``: Invalid argument was passed to the function.
+- ``ENOMEM``: Memory allocation failure.
+
+Example 
+-------
+An example showing how to dequeue a string object.
+
+.. code-block:: c
+
+   #include "heap.h"
+   #include "print.h"
+
+   int main() {
+       string_min_hp* init_min_heap(dString)(7);
+       char* a[7] = {"One", "Two", "Three", "Four", "Five", "Six", "Seven"};
+       string_min_hp* heap = init_min_heap(dString)(7);
+       print("Original Heap Array: ", heap);
+       for (size_t i = 0; i < 7; i++) {
+           enqueue_min_heap(heap, a[i]);
+       }
+       str* val = dequeue_min_heap(heap);
+       print("Dequeued object: ", val);
+       print("New Heap Array: ", heap);
+       free_min_heap(heap);
+       free_string(val);
+       return 0;
+   }
+
+   .. code-block:: bash 
+
+      >> Original Heap Array: [ Five, Four, Seven, Two, One, Three, Size ] 
+      >> Dequeued object: Five 
+      >> New Heap Array: [ Four, One, Seven, Two, Six, Three ] 
+
+Underlying Functions 
+--------------------
+The ``dequeue_min_heap`` macro is the preferred method to dequeue an object
+from a Min Heap data structure.  However, the user of this library can also 
+select from the underlying functions shown below that are specific to their 
+data types.
+
+.. code-block:: c
+
+   char dequeue_min_heap_char(char_min_hp* heap);
+   unsigned char dequeue_min_heap_uchar(uchar_min_hp* heap);
+   short int dequeue_min_heap_short(short_min_hp* heap);
+   unsigned short int dequeue_min_heap_ushort(ushort_min_hp* heap);
+   int dequeue_min_heap_int(int_min_hp* heap);
+   unsigned int dequeue_min_heap_uint(uint_min_hp* heap);
+   long int dequeue_min_heap_long(long_min_hp* heap);
+   unsigned long int dequeue_min_heap_ulong(ulong_min_hp* heap);
+   long long int dequeue_min_heap_llong(llong_min_hp* heap);
+   unsigned long long int dequeue_min_heap_ullong(ullong_min_hp* heap);
+   float dequeue_min_heap_float(float_min_hp* heap);
+   double dequeue_min_heap_double(double_min_hp* heap);
+   long double dequeue_min_heap_ldouble(ldouble_min_hp* heap);
+   bool dequeue_min_heap_bool(bool_min_hp* heap);
+   str* dequeue_min_heap_string(string_min_hp* heap);

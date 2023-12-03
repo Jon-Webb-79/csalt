@@ -583,6 +583,161 @@ bool enqueue_min_heap_str(string_min_hp* heap, str* element);
     string_min_hp*: enqueue_min_heap_string) (heap, element)
 // ================================================================================
 // ================================================================================
+// DEQUEUE MIN HEAP 
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+char dequeue_min_heap_char(char_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+unsigned char dequeue_min_heap_uchar(uchar_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+short int dequeue_min_heap_short(short_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+unsigned short int dequeue_min_heap_ushort(ushort_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+int dequeue_min_heap_int(int_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+unsigned int dequeue_min_heap_uint(uint_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+long int dequeue_min_heap_long(long_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+unsigned long int dequeue_min_heap_ulong(ulong_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+long long int dequeue_min_heap_llong(llong_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+unsigned long long int dequeue_min_heap_ullong(ullong_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+float dequeue_min_heap_float(float_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+double dequeue_min_heap_double(double_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+long double dequeue_min_heap_ldouble(ldouble_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+bool dequeue_min_heap_bool(bool_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Pops the minimum value from a min heap and returns the value to the user.
+ *
+ * @param heap A heap data structure
+ * @return the minimum value
+ */
+str* dequeue_min_heap_string(string_min_hp* heap);
+// --------------------------------------------------------------------------------
+
+#define dequeue_min_heap(heap) _Generic((heap), \
+    char_min_hp*: dequeue_min_heap_char, \
+    uchar_min_hp*: dequeue_min_heap_uchar, \
+    short_min_hp*: dequeue_min_heap_short, \
+    ushort_min_hp*: dequeue_min_heap_ushort, \
+    int_min_hp*: dequeue_min_heap_int, \
+    uint_min_hp*: dequeue_min_heap_uint, \
+    long_min_hp*: dequeue_min_heap_long, \
+    ulong_min_hp*: dequeue_min_heap_ulong, \
+    llong_min_hp*: dequeue_min_heap_llong, \
+    ullong_min_hp*: dequeue_min_heap_ullong, \
+    float_min_hp*: dequeue_min_heap_float, \
+    double_min_hp*: dequeue_min_heap_double, \
+    ldouble_min_hp*: dequeue_min_heap_ldouble, \
+    bool_min_hp*: dequeue_min_heap_bool, \
+    string_min_hp*: dequeue_min_heap_string) (heap)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
