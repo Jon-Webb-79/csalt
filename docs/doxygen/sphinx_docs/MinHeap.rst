@@ -371,6 +371,180 @@ specific behavior is required.
    bool enqueue_min_heap_bool(bool_min_hp* heap, bool element);
    bool enqueue_min_heap_string(string_min_hp* heap, char* element);
 
+Heap Length 
+===========
+A user can get the length of the heap data structure from the ``len``
+attribute of the struct.  However, this can be dangerous because it 
+allows a user to accidentally overwrite the parameter, which could 
+lead to undefined behavior. In stead, The ``heap_length`` macro will safely 
+return the length of the heap data structure 
+to the user.  The macro uses the ``_Generic`` keyword to select from the 
+appropriate underlying function while maintaining type safety.
+
+.. code-block:: c
+
+   #define heap_length(heap) ( /*Expressions to find heap length*/) 
+
+Parameters 
+----------
+
+- :c:`heap`: A heap data structure of the :ref:`Min Heap Derived Type <heap_dat_type>`  type.
+
+Returns 
+-------
+
+- The length of the heap data structure as a ``size_t`` data type.
+
+Error Handling
+--------------
+
+The ``heap_length`` macro selects the appropriate function based on the 
+vector's data type. If an error occurs, such as an invalid vector type, 
+the underlying functions set ``errno`` to indicate 
+the specific error.
+
+Possible error codes:
+
+- ``EINVAL``: Invalid argument was passed to the function.
+
+Example 
+-------
+An example showing the use of the heap length 
+
+.. code-block:: c
+
+   #include "heap.h"
+   #include "print.h"
+
+   int main() {
+
+       float a[5] = {2.2, 3.3, 6.6, 4.4, 7.7};
+        float_min_hp* heap = init_min_heap(dFloat)(7);
+        for (size_t i = 0; i < 5; i++) {
+            enqueue_min_heap(heap, a[i]);
+        }
+        print(heap_length(heap));
+        free_min_heap(heap);
+        return 0;
+   }
+
+Expected Output:
+
+.. code-block:: bash 
+
+   >> 5
+
+Underlying Functions 
+--------------------
+While it is preferred that a user implement the ``heap_memory`` macro to 
+find the heap memory, a user can also implement one of the type specific 
+functions listed below.
+
+.. code-block:: c
+
+   size_t char_min_heap_memory(char_min_hp* vec);
+   size_t uchar_min_heap_memory(uchar_min_hp* vec);
+   size_t short_min_heap_memory(short_min_hp* vec);
+   size_t ushort_min_heap_memory(ushort_min_hp* vec);
+   size_t int_min_heap_memory(int_min_hp* vec);
+   size_t uint_min_heap_memory(uint_min_hp* vec);
+   size_t long_min_heap_memory(long_min_hp* vec);
+   size_t ulong_min_heap_memory(ulong_min_hp* vec);
+   size_t llong_min_heap_memory(llong_min_hp* vec);
+   size_t ullong_min_heap_memory(ullong_min_hp* vec);
+   size_t float_min_heap_memory(float_min_hp* vec);
+   size_t double_min_heap_memory(double_min_hp* vec);
+   size_t ldouble_min_heap_memory(ldouble_min_hp* vec);
+   size_t bool_min_heap_memory(bool_min_hp* vec);
+   size_t string_min_heap_memory(string_min_hp* vec);
+
+Heap Memory
+===========
+A user can find the memory of the heap data structure from the ``alloc``
+attribute of the struct.  However, this can be dangerous because it 
+allows a user to accidentally overwrite the parameter, which could 
+lead to undefined behavior. In stead, The ``heap_memory`` macro will safely 
+return the memory of the heap data structure 
+to the user.  The macro uses the ``_Generic`` keyword to select from the 
+appropriate underlying function while maintaining type safety.
+
+.. code-block:: c
+
+   #define heap_memory(heap) ( /*Expressions to find heap memory*/) 
+
+Parameters 
+----------
+
+- :c:`heap`: A heap data structure of the :ref:`Min Heap Derived Type <heap_dat_type>`  type.
+
+Returns 
+-------
+
+- The memory of the heap data structure as a ``size_t`` data type.  The memory represents the number of allocated indices.
+
+Error Handling
+--------------
+
+The ``heap_memory`` macro selects the appropriate function based on the 
+vector's data type. If an error occurs, such as an invalid vector type, 
+the underlying functions set ``errno`` to indicate 
+the specific error.
+
+Possible error codes:
+
+- ``EINVAL``: Invalid argument was passed to the function.
+
+Example 
+-------
+An example showing the use of the heap memory 
+
+.. code-block:: c
+
+   #include "heap.h"
+   #include "print.h"
+
+   int main() {
+
+       float a[5] = {2.2, 3.3, 6.6, 4.4, 7.7};
+        float_min_hp* heap = init_min_heap(dFloat)(7);
+        for (size_t i = 0; i < 5; i++) {
+            enqueue_min_heap(heap, a[i]);
+        }
+        print(heap_memory(heap));
+        free_min_heap(heap);
+        return 0;
+   }
+
+Expected Output:
+
+.. code-block:: bash 
+
+   >> 7
+
+Underlying Functions 
+--------------------
+While it is preferred that a user implement the ``heap_memory`` macro to 
+find the heap memory, a user can also implement one of the type specific 
+functions listed below.
+
+.. code-block:: c
+
+   size_t char_min_heap_memory(char_min_hp* vec);
+   size_t uchar_min_heap_memory(uchar_min_hp* vec);
+   size_t short_min_heap_memory(short_min_hp* vec);
+   size_t ushort_min_heap_memory(ushort_min_hp* vec);
+   size_t int_min_heap_memory(int_min_hp* vec);
+   size_t uint_min_heap_memory(uint_min_hp* vec);
+   size_t long_min_heap_memory(long_min_hp* vec);
+   size_t ulong_min_heap_memory(ulong_min_hp* vec);
+   size_t llong_min_heap_memory(llong_min_hp* vec);
+   size_t ullong_min_heap_memory(ullong_min_hp* vec);
+   size_t float_min_heap_memory(float_min_hp* vec);
+   size_t double_min_heap_memory(double_min_hp* vec);
+   size_t ldouble_min_heap_memory(ldouble_min_hp* vec);
+   size_t bool_min_heap_memory(bool_min_hp* vec);
+   size_t string_min_heap_memory(string_min_hp* vec);
+
 Dequeue Min Heap 
 ================
 The ``dequeue_min_heap`` macro can be used to dequeue an object from a Min 

@@ -2259,4 +2259,278 @@ str* dequeue_min_heap_string(string_min_hp* heap) {
 }
 // ================================================================================
 // ================================================================================
+// HEAP LENGTH FUNCTIONS 
+
+size_t char_min_heap_length(char_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t uchar_min_heap_length(uchar_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t short_min_heap_length(short_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ushort_min_heap_length(ushort_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t int_min_heap_length(int_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t uint_min_heap_length(uint_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t long_min_heap_length(long_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ulong_min_heap_length(ulong_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t llong_min_heap_length(llong_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ullong_min_heap_length(ullong_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t float_min_heap_length(float_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t double_min_heap_length(double_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t ldouble_min_heap_length(ldouble_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t bool_min_heap_length(bool_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t string_min_heap_length(string_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->len;
+}
+// ================================================================================
+// ================================================================================
+// GET HEAP MEMORY FUNCTIONS 
+
+size_t char_min_heap_memory(char_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t uchar_min_heap_memory(uchar_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t short_min_heap_memory(short_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ushort_min_heap_memory(ushort_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t int_min_heap_memory(int_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t uint_min_heap_memory(uint_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t long_min_heap_memory(long_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ulong_min_heap_memory(ulong_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t llong_min_heap_memory(llong_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ullong_min_heap_memory(ullong_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t float_min_heap_memory(float_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t double_min_heap_memory(double_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ldouble_min_heap_memory(ldouble_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t bool_min_heap_memory(bool_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t string_min_heap_memory(string_min_hp* heap) {
+    if (!heap) {
+        errno = EINVAL;
+        return 0;
+    }
+    return heap->alloc;
+}
+// ================================================================================
+// ================================================================================
 // eof

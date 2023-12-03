@@ -738,6 +738,85 @@ str* dequeue_min_heap_string(string_min_hp* heap);
     string_min_hp*: dequeue_min_heap_string) (heap)
 // ================================================================================
 // ================================================================================
+// GET MIN HEAP LENGTH 
+
+/**
+ * @brief Returns the length of a min heap data structure
+ */
+size_t char_min_heap_length(char_min_hp* vec);
+size_t uchar_min_heap_length(uchar_min_hp* vec);
+size_t short_min_heap_length(short_min_hp* vec);
+size_t ushort_min_heap_length(ushort_min_hp* vec);
+size_t int_min_heap_length(int_min_hp* vec);
+size_t uint_min_heap_length(uint_min_hp* vec);
+size_t long_min_heap_length(long_min_hp* vec);
+size_t ulong_min_heap_length(ulong_min_hp* vec);
+size_t llong_min_heap_length(llong_min_hp* vec);
+size_t ullong_min_heap_length(ullong_min_hp* vec);
+size_t float_min_heap_length(float_min_hp* vec);
+size_t double_min_heap_length(double_min_hp* vec);
+size_t ldouble_min_heap_length(ldouble_min_hp* vec);
+size_t bool_min_heap_length(bool_min_hp* vec);
+size_t string_min_heap_length(string_min_hp* vec);
+// --------------------------------------------------------------------------------
+
+#define heap_length(heap) _Generic((heap), \
+    char_min_hp*: char_min_heap_length, \
+    uchar_min_hp*: uchar_min_heap_length, \
+    short_min_hp*: short_min_heap_length, \
+    ushort_min_hp*: ushort_min_heap_length, \
+    int_min_hp*: int_min_heap_length, \
+    uint_min_hp*: uint_min_heap_length, \
+    long_min_hp*: long_min_heap_length, \
+    ulong_min_hp*: ulong_min_heap_length, \
+    llong_min_hp*: llong_min_heap_length, \
+    ullong_min_hp*: ullong_min_heap_length, \
+    float_min_hp*: float_min_heap_length, \
+    double_min_hp*: double_min_heap_length, \
+    ldouble_min_hp*: ldouble_min_heap_length, \
+    bool_min_hp*: bool_min_heap_length, \
+    string_min_hp*: string_min_heap_length) (heap)
+// ================================================================================
+// ================================================================================
+// GET ALLOC FUNCTIONS
+/**
+ * @brief Returns the memory allocation of a min heap data structure
+ */
+size_t char_min_heap_memory(char_min_hp* vec);
+size_t uchar_min_heap_memory(uchar_min_hp* vec);
+size_t short_min_heap_memory(short_min_hp* vec);
+size_t ushort_min_heap_memory(ushort_min_hp* vec);
+size_t int_min_heap_memory(int_min_hp* vec);
+size_t uint_min_heap_memory(uint_min_hp* vec);
+size_t long_min_heap_memory(long_min_hp* vec);
+size_t ulong_min_heap_memory(ulong_min_hp* vec);
+size_t llong_min_heap_memory(llong_min_hp* vec);
+size_t ullong_min_heap_memory(ullong_min_hp* vec);
+size_t float_min_heap_memory(float_min_hp* vec);
+size_t double_min_heap_memory(double_min_hp* vec);
+size_t ldouble_min_heap_memory(ldouble_min_hp* vec);
+size_t bool_min_heap_memory(bool_min_hp* vec);
+size_t string_min_heap_memory(string_min_hp* vec);
+// --------------------------------------------------------------------------------
+
+#define heap_memory(heap) _Generic((heap), \
+    char_min_hp*: char_min_heap_memory, \
+    uchar_min_hp*: uchar_min_heap_memory, \
+    short_min_hp*: short_min_heap_memory, \
+    ushort_min_hp*: ushort_min_heap_memory, \
+    int_min_hp*: int_min_heap_memory, \
+    uint_min_hp*: uint_min_heap_memory, \
+    long_min_hp*: long_min_heap_memory, \
+    ulong_min_hp*: ulong_min_heap_memory, \
+    llong_min_hp*: llong_min_heap_memory, \
+    ullong_min_hp*: ullong_min_heap_memory, \
+    float_min_hp*: float_min_heap_memory, \
+    double_min_hp*: double_min_heap_memory, \
+    ldouble_min_hp*: ldouble_min_heap_memory, \
+    bool_min_hp*: bool_min_heap_memory, \
+    string_min_hp*: string_min_heap_memory) (heap)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
