@@ -1,0 +1,9 @@
+digraph G {
+    Five -> Four;
+    Five -> Seven;
+    Four -> Two;
+    Four -> One;
+    Seven -> Three;
+    Seven -> Six;
+}
+

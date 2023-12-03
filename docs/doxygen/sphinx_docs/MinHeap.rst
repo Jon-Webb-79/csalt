@@ -343,7 +343,12 @@ Expected Output:
 
 .. code-block:: bash 
 
-   >> [ 1.1, 3.3, 2.2, 5.5, 4.4, 7.7 ]
+   >> [ 1.1, 3.3, 2.2, 5.5, 6.6, 4.4, 7.7 ]
+
+The array represents the following binary tree 
+
+.. image:: btree_one.png
+   :alt: My Binary Tree Diagram
 
 Underlying Functions 
 --------------------
@@ -586,7 +591,9 @@ Possible error codes:
 
 Example 
 -------
-An example showing how to dequeue a string object.
+An example showing how to dequeue a string object.  In this instance for 
+string values, the order of the binary tree is alphabetical and not the 
+numerical values described by each string.
 
 .. code-block:: c
 
@@ -611,9 +618,19 @@ An example showing how to dequeue a string object.
 
    .. code-block:: bash 
 
-      >> Original Heap Array: [ Five, Four, Seven, Two, One, Three, Size ] 
+      >> Original Heap Array: [ Five, Four, Seven, Two, One, Three, Six ] 
       >> Dequeued object: Five 
       >> New Heap Array: [ Four, One, Seven, Two, Six, Three ] 
+
+The initial array represents the following binary tree 
+
+.. image:: btree_two.png
+   :alt: My Binary Tree Diagram with text
+
+The array following the enqueue operation represents this binary tree.
+
+.. image:: btree_three.png
+   :alt: My Binary Tree Diagram with text after dequeue
 
 Underlying Functions 
 --------------------

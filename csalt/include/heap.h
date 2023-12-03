@@ -738,6 +738,218 @@ str* dequeue_min_heap_string(string_min_hp* heap);
     string_min_hp*: dequeue_min_heap_string) (heap)
 // ================================================================================
 // ================================================================================
+// REPLACE INDEX FUNCTION 
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_char_min_heap_index(char_min_hp* heap, size_t index, char value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_uchar_min_heap_index(uchar_min_hp* heap, size_t index, unsigned char value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_short_min_heap_index(short_min_hp* heap, size_t index, short int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_ushort_min_heap_index(ushort_min_hp* heap, size_t index, unsigned short int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_int_min_heap_index(int_min_hp* heap, size_t index, int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_uint_min_heap_index(uint_min_hp* heap, size_t index, unsigned int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_long_min_heap_index(long_min_hp* heap, size_t index, long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_ulong_min_heap_index(ulong_min_hp* heap, size_t index, unsigned long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_llong_min_heap_index(llong_min_hp* heap, size_t index, long long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_ullong_min_heap_index(ullong_min_hp* heap, size_t index, unsigned long long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_float_min_heap_index(float_min_hp* heap, size_t index, float value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_double_min_heap_index(double_min_hp* heap, size_t index, double value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_ldouble_min_heap_index(ldouble_min_hp* heap, size_t index, long double value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_bool_min_heap_index(bool_min_hp* heap, size_t index, bool value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will replace the value at a min heap index with another.
+ *
+ * This function will replace the value at a min heap index with another value 
+ * and re-order the heap data structure to be consistent with the min heap invariant.
+ *
+ * @param heap A min heap data structure 
+ * @param index The index where data will be replaced 
+ * @param value The value which will replace the original value
+ * @return true if the function executes sucesfully, false otherwise
+ */
+bool replace_string_min_heap_index(string_min_hp* heap, size_t index, char* value);
+// ================================================================================
+// ================================================================================
 // GET MIN HEAP LENGTH 
 
 /**
