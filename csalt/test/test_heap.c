@@ -741,4 +741,261 @@ void test_min_dequeue_string(void **state)
 }
 // ================================================================================
 // ================================================================================
+// TEST REPLACE INDEX 
+
+void test_min_replace_index_char(void **state)
+{
+	(void) state;
+    char a[7] = {5, 1, 2, 3, 6, 4, 7};
+    char_min_hp* heap = init_min_heap(dChar)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    char b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_uchar(void **state)
+{
+	(void) state;
+    unsigned char a[7] = {5, 1, 2, 3, 6, 4, 7};
+    uchar_min_hp* heap = init_min_heap(dUChar)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    unsigned char b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_short(void **state)
+{
+	(void) state;
+    short int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    short_min_hp* heap = init_min_heap(dShort)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    short int b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_ushort(void **state)
+{
+	(void) state;
+    unsigned short int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    ushort_min_hp* heap = init_min_heap(dUShort)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    unsigned short int b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_int(void **state)
+{
+	(void) state;
+    int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    int_min_hp* heap = init_min_heap(dInt)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    int b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_uint(void **state)
+{
+	(void) state;
+    unsigned int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    uint_min_hp* heap = init_min_heap(dUInt)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    unsigned int b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_long(void **state)
+{
+	(void) state;
+    long int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    long_min_hp* heap = init_min_heap(dLong)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    long int b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_ulong(void **state)
+{
+	(void) state;
+    unsigned long int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    ulong_min_hp* heap = init_min_heap(dULong)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    unsigned long int b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_llong(void **state)
+{
+	(void) state;
+    long long int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    llong_min_hp* heap = init_min_heap(dLongLong)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    long long int b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_ullong(void **state)
+{
+	(void) state;
+    unsigned long long int a[7] = {5, 1, 2, 3, 6, 4, 7};
+    ullong_min_hp* heap = init_min_heap(dULongLong)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12);
+    unsigned long long int b[7] = {1, 3, 4, 5, 6, 12, 7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_float(void **state)
+{
+	(void) state;
+    float a[7] = {5.5, 1.1, 2.2, 3.3, 6.6, 4.4, 7.7};
+    float_min_hp* heap = init_min_heap(dFloat)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12.12);
+    float b[7] = {1.1, 3.3, 4.4, 5.5, 6.6, 12.12, 7.7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_float_equal(heap->data[i], b[i], 1.0e-3);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_double(void **state)
+{
+	(void) state;
+    double a[7] = {5.5, 1.1, 2.2, 3.3, 6.6, 4.4, 7.7};
+    double_min_hp* heap = init_min_heap(dDouble)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12.12);
+    double b[7] = {1.1, 3.3, 4.4, 5.5, 6.6, 12.12, 7.7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_double_equal(heap->data[i], b[i], 1.0e-3);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_ldouble(void **state)
+{
+	(void) state;
+    long double a[7] = {5.5, 1.1, 2.2, 3.3, 6.6, 4.4, 7.7};
+    ldouble_min_hp* heap = init_min_heap(dLDouble)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, 12.12);
+    long double b[7] = {1.1, 3.3, 4.4, 5.5, 6.6, 12.12, 7.7};
+    for (size_t i = 0; i < 7; i++) {
+        assert_double_equal(heap->data[i], b[i], 1.0e-3);
+    }
+    free_min_heap(heap);
+} 
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_bool(void **state)
+{
+	(void) state;
+    bool a[7] = {true, false, true, false, true, false, true};
+    bool_min_hp* heap = init_min_heap(dBool)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, true);
+    bool b[7] = {false, false, true, true, true, true, true};
+    for (size_t i = 0; i < 7; i++) {
+        assert_int_equal(heap->data[i], b[i]);
+    }
+    free_min_heap(heap);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_replace_index_string(void **state)
+{
+	(void) state;
+    char* a[7] = {"One", "Two", "Three", "Four", "Five", "Six", "Seven"};
+    string_min_hp* heap = init_min_heap(dString)(7);
+    for (size_t i = 0; i < 7; i++) {
+        enqueue_min_heap(heap, a[i]);
+    }
+    replace_min_heap_index(heap, 2, "Goodbye");
+    char* b[7] = {"Five", "Four", "Goodbye", "Two", "One", "Three", "Six"};
+    for (size_t i = 0; i < 7; i++) {
+        assert_string_equal(heap->data[i].data, b[i]);
+    }
+    free_min_heap(heap);
+}
+// ================================================================================
+// ================================================================================
 // eof

@@ -948,6 +948,24 @@ bool replace_bool_min_heap_index(bool_min_hp* heap, size_t index, bool value);
  * @return true if the function executes sucesfully, false otherwise
  */
 bool replace_string_min_heap_index(string_min_hp* heap, size_t index, char* value);
+// --------------------------------------------------------------------------------
+
+#define replace_min_heap_index(heap, index, value) _Generic((heap), \
+    char_min_hp*: replace_char_min_heap_index, \
+    uchar_min_hp*: replace_uchar_min_heap_index, \
+    short_min_hp*: replace_short_min_heap_index, \
+    ushort_min_hp*: replace_ushort_min_heap_index, \
+    int_min_hp*: replace_int_min_heap_index, \
+    uint_min_hp*: replace_uint_min_heap_index, \
+    long_min_hp*: replace_long_min_heap_index, \
+    ulong_min_hp*: replace_ulong_min_heap_index, \
+    llong_min_hp*: replace_llong_min_heap_index, \
+    ullong_min_hp*: replace_ullong_min_heap_index, \
+    float_min_hp*: replace_float_min_heap_index, \
+    double_min_hp*: replace_double_min_heap_index, \
+    ldouble_min_hp*: replace_ldouble_min_heap_index, \
+    bool_min_hp*: replace_bool_min_heap_index, \
+    string_min_hp*: replace_string_min_heap_index) (heap, index, value)
 // ================================================================================
 // ================================================================================
 // GET MIN HEAP LENGTH 

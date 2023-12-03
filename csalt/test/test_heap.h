@@ -81,7 +81,27 @@ void test_min_dequeue_double(void **state);
 void test_min_dequeue_ldouble(void **state);
 void test_min_dequeue_bool(void **state);
 void test_min_dequeue_string(void **state);
+// ================================================================================
+// ================================================================================
+// TEST REPLACE INDEX 
 
+void test_min_replace_index_char(void **state);
+void test_min_replace_index_uchar(void **state);
+void test_min_replace_index_short(void **state);
+void test_min_replace_index_ushort(void **state);
+void test_min_replace_index_int(void **state);
+void test_min_replace_index_uint(void **state);
+void test_min_replace_index_long(void **state);
+void test_min_replace_index_ulong(void **state);
+void test_min_replace_index_llong(void **state);
+void test_min_replace_index_ullong(void **state);
+void test_min_replace_index_float(void **state);
+void test_min_replace_index_double(void **state);
+void test_min_replace_index_ldouble(void **state);
+void test_min_replace_index_bool(void **state);
+void test_min_replace_index_string(void **state);
+// ================================================================================
+// ================================================================================
 #endif /* test_heap_H */
 // ================================================================================
 // ================================================================================

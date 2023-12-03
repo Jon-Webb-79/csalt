@@ -2533,4 +2533,261 @@ size_t string_min_heap_memory(string_min_hp* heap) {
 }
 // ================================================================================
 // ================================================================================
+// REPLACE INDEX FUNCTIONS
+
+bool replace_char_min_heap_index(char_min_hp* heap, size_t index, char new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_char(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_uchar_min_heap_index(uchar_min_hp* heap, size_t index, unsigned char new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_uchar(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_short_min_heap_index(short_min_hp* heap, size_t index, short int new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_short(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ushort_min_heap_index(ushort_min_hp* heap, size_t index, unsigned short int new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_ushort(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_int_min_heap_index(int_min_hp* heap, size_t index, int new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_int(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_uint_min_heap_index(uint_min_hp* heap, size_t index, unsigned int new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_uint(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_long_min_heap_index(long_min_hp* heap, size_t index, long int new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_long(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ulong_min_heap_index(ulong_min_hp* heap, size_t index, unsigned long int new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_ulong(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_llong_min_heap_index(llong_min_hp* heap, size_t index, long long int new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_llong(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ullong_min_heap_index(ullong_min_hp* heap, size_t index, unsigned long long int new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_ullong(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_float_min_heap_index(float_min_hp* heap, size_t index, float new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_float(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_double_min_heap_index(double_min_hp* heap, size_t index, double new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_double(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_ldouble_min_heap_index(ldouble_min_hp* heap, size_t index, long double new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_ldouble(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_bool_min_heap_index(bool_min_hp* heap, size_t index, bool new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    // Update the value at the specified index
+    heap->data[index] = new_value;
+
+    // Perform heapify down to maintain the Min Heap property
+    _sift_min_heap_down_bool(heap, index);
+
+    return true; // Value replaced successfully
+}
+// --------------------------------------------------------------------------------
+
+bool replace_string_min_heap_index(string_min_hp* heap, size_t index, char* new_value) {
+    if (heap == NULL || heap->data == NULL || index >= heap->len) {
+        errno = EINVAL;
+        return false; // Invalid heap or data pointer, or index out of bounds
+    }
+
+    size_t str_len = strlen(new_value);
+
+    // Check if reallocation is needed
+    if (heap->data[index].alloc < str_len + 1) {
+        char* ptr = realloc(heap->data[index].data, str_len + 1);
+        if (!ptr) {
+            errno = ENOMEM;
+            return false; // Memory allocation failed
+        }
+        heap->data[index].data = ptr;
+        heap->data[index].alloc = str_len + 1;
+    }
+
+    // Copy the new value to the specified index
+    strcpy(heap->data[index].data, new_value);
+    heap->data[index].len = str_len;
+
+    // Perform heapify up and down to maintain the Min Heap property
+    _sift_min_heap_up_string(heap, index);
+    _sift_min_heap_down_string(heap, index);
+
+    return true; // Value replaced successfully
+}
+// ================================================================================
+// ================================================================================
 // eof

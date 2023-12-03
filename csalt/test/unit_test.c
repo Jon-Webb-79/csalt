@@ -948,7 +948,22 @@ const struct CMUnitTest test_heap[] = {
     cmocka_unit_test(test_min_dequeue_double),
     cmocka_unit_test(test_min_dequeue_ldouble),
     cmocka_unit_test(test_min_dequeue_bool),
-    cmocka_unit_test(test_min_dequeue_string)
+    cmocka_unit_test(test_min_dequeue_string),
+    cmocka_unit_test(test_min_replace_index_char),
+    cmocka_unit_test(test_min_replace_index_uchar),
+    cmocka_unit_test(test_min_replace_index_short),
+    cmocka_unit_test(test_min_replace_index_ushort),
+    cmocka_unit_test(test_min_replace_index_int),
+    cmocka_unit_test(test_min_replace_index_uint),
+    cmocka_unit_test(test_min_replace_index_long),
+    cmocka_unit_test(test_min_replace_index_ulong),
+    cmocka_unit_test(test_min_replace_index_llong),
+    cmocka_unit_test(test_min_replace_index_ullong),
+    cmocka_unit_test(test_min_replace_index_float),
+    cmocka_unit_test(test_min_replace_index_double),
+    cmocka_unit_test(test_min_replace_index_ldouble),
+    cmocka_unit_test(test_min_replace_index_bool),
+    cmocka_unit_test(test_min_replace_index_string)
 };
 // Begin code
 int main(int argc, const char * argv[]) {
