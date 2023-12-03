@@ -23,6 +23,7 @@
 #include "test_vector.h"
 #include "test_swap.h"
 #include "test_array.h"
+#include "test_heap.h"
 
 const struct CMUnitTest test_swap[] = {
 	cmocka_unit_test(test_swap_char),
@@ -901,6 +902,39 @@ const struct CMUnitTest test_array[] = {
     cmocka_unit_test(test_iter_ldouble_array),
     cmocka_unit_test(test_iter_bool_array)
 };
+
+const struct CMUnitTest test_heap[] = {
+	cmocka_unit_test(test_min_enqueue_char),
+    cmocka_unit_test(test_min_enqueue_uchar),
+    cmocka_unit_test(test_min_enqueue_short),
+    cmocka_unit_test(test_min_enqueue_ushort),
+    cmocka_unit_test(test_min_enqueue_int),
+    cmocka_unit_test(test_min_enqueue_uint),
+    cmocka_unit_test(test_min_enqueue_long),
+    cmocka_unit_test(test_min_enqueue_ulong),
+    cmocka_unit_test(test_min_enqueue_llong),
+    cmocka_unit_test(test_min_enqueue_ullong),
+    cmocka_unit_test(test_min_enqueue_float),
+    cmocka_unit_test(test_min_enqueue_double),
+    cmocka_unit_test(test_min_enqueue_ldouble),
+    cmocka_unit_test(test_min_enqueue_bool),
+    cmocka_unit_test(test_min_enqueue_string),
+    cmocka_unit_test(test_min_enqueue_char_gbc),
+    cmocka_unit_test(test_min_enqueue_uchar_gbc),
+    cmocka_unit_test(test_min_enqueue_short_gbc),
+    cmocka_unit_test(test_min_enqueue_ushort_gbc),
+    cmocka_unit_test(test_min_enqueue_int_gbc),
+    cmocka_unit_test(test_min_enqueue_uint_gbc),
+    cmocka_unit_test(test_min_enqueue_long_gbc),
+    cmocka_unit_test(test_min_enqueue_ulong_gbc),
+    cmocka_unit_test(test_min_enqueue_llong_gbc),
+    cmocka_unit_test(test_min_enqueue_ullong_gbc),
+    cmocka_unit_test(test_min_enqueue_float_gbc),
+    cmocka_unit_test(test_min_enqueue_double_gbc),
+    cmocka_unit_test(test_min_enqueue_ldouble_gbc),
+    cmocka_unit_test(test_min_enqueue_bool_gbc),
+    cmocka_unit_test(test_min_enqueue_string_gbc)
+};
 // Begin code
 int main(int argc, const char * argv[]) {
     int status;
@@ -918,6 +952,10 @@ int main(int argc, const char * argv[]) {
         return status;
     }
     status = cmocka_run_group_tests(test_array, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
+    status = cmocka_run_group_tests(test_heap, NULL, NULL);
 	return status;
 }
 // ================================================================================

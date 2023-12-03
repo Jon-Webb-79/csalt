@@ -24,6 +24,7 @@
 #include "str.h"
 #include "vector.h"
 #include "array.h"
+#include "heap.h"
 
 extern const size_t PRINT_LENGTH;
 
@@ -77,6 +78,21 @@ extern "C" {
                                          double_arr*: true, \
                                          ldouble_arr*: true, \
                                          bool_arr*: true, \
+                                         char_min_hp*: true, \
+                                         uchar_min_hp*: true, \
+                                         short_min_hp*: true, \
+                                         ushort_min_hp*: true, \
+                                         int_min_hp*: true, \
+                                         uint_min_hp*: true, \
+                                         long_min_hp*: true, \
+                                         ulong_min_hp*: true, \
+                                         llong_min_hp*: true, \
+                                         ullong_min_hp*: true, \
+                                         float_min_hp*: true, \
+                                         double_min_hp*: true, \
+                                         ldouble_min_hp*: true, \
+                                         bool_min_hp*: true, \
+                                         string_min_hp*: true, \
 										 default: false)
 // ================================================================================
 // ================================================================================
@@ -142,6 +158,27 @@ void print_bool_array(bool_arr* arr);
 // ================================================================================
 
 /**
+ * Prototypes for prting of all heap data types.
+ */
+void print_char_min_heap(char_min_hp* vec);
+void print_uchar_min_heap(uchar_min_hp* vec);
+void print_short_min_heap(short_min_hp* vec);
+void print_ushort_min_heap(ushort_min_hp* vec);
+void print_int_min_heap(int_min_hp* vec);
+void print_uint_min_heap(uint_min_hp* vec);
+void print_long_min_heap(long_min_hp* vec);
+void print_ulong_min_heap(ulong_min_hp* vec);
+void print_llong_min_heap(llong_min_hp* vec);
+void print_ullong_min_heap(ullong_min_hp* vec);
+void print_float_min_heap(float_min_hp* vec);
+void print_double_min_heap(double_min_hp* vec);
+void print_ldouble_min_heap(ldouble_min_hp* vec);
+void print_bool_min_heap(bool_min_hp* vec);
+void print_string_min_heap(string_min_hp* vec);
+// ================================================================================
+// ================================================================================
+
+/**
  * Macro using _Generic operator to determine which functions get implemented
  * in a print statement.
  */
@@ -187,7 +224,22 @@ void print_bool_array(bool_arr* arr);
                                        float_arr*: print_float_array, \
                                        double_arr*: print_double_array, \
                                        ldouble_arr*: print_ldouble_array, \
-                                       bool_arr*: print_bool_array)(T)
+                                       bool_arr*: print_bool_array, \
+                                       char_min_hp*: print_char_min_heap, \
+                                       uchar_min_hp*: print_uchar_min_heap, \
+                                       short_min_hp*: print_short_min_heap, \
+                                       ushort_min_hp*: print_ushort_min_heap, \
+                                       int_min_hp*: print_int_min_heap, \
+                                       uint_min_hp*: print_uint_min_heap, \
+                                       long_min_hp*: print_long_min_heap, \
+                                       ulong_min_hp*: print_ulong_min_heap, \
+                                       llong_min_hp*: print_llong_min_heap, \
+                                       ullong_min_hp*: print_ullong_min_heap, \
+                                       float_min_hp*: print_float_min_heap, \
+                                       double_min_hp*: print_double_min_heap, \
+                                       ldouble_min_hp*: print_ldouble_min_heap, \
+                                       bool_min_hp*: print_bool_min_heap, \
+                                       string_min_hp*: print_string_min_heap)(T)
 // ================================================================================
 // ================================================================================
 

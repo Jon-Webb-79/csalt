@@ -26,6 +26,7 @@ lets pour some seasoning on our C-code and get started.
     Strings <Strings>
     Array <Array>
     Vector <Vector>
+    Min Heap <MinHeap>
     Todo <Todo>
 
 Indices and tables
