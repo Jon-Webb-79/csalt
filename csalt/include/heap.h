@@ -64,6 +64,22 @@ HEAP_STRUCT(double, double_min_hp);
 HEAP_STRUCT(long double, ldouble_min_hp);
 HEAP_STRUCT(bool, bool_min_hp);
 HEAP_STRUCT(str, string_min_hp);
+
+HEAP_STRUCT(char, char_max_hp);
+HEAP_STRUCT(unsigned char, uchar_max_hp);
+HEAP_STRUCT(short int, short_max_hp);
+HEAP_STRUCT(unsigned short int, ushort_max_hp);
+HEAP_STRUCT(int, int_max_hp);
+HEAP_STRUCT(unsigned int, uint_max_hp);
+HEAP_STRUCT(long int, long_max_hp);
+HEAP_STRUCT(unsigned long int, ulong_max_hp);
+HEAP_STRUCT(long long int, llong_max_hp);
+HEAP_STRUCT(unsigned long long int, ullong_max_hp);
+HEAP_STRUCT(float, float_max_hp);
+HEAP_STRUCT(double, double_max_hp);
+HEAP_STRUCT(long double, ldouble_max_hp);
+HEAP_STRUCT(bool, bool_max_hp);
+HEAP_STRUCT(str, string_max_hp);
 // ================================================================================
 // ================================================================================
 // Initialization functions 
@@ -215,7 +231,152 @@ bool_min_hp* init_bool_min_heap(size_t buff);
  * @param buff A buffer size where buffer is measured in number of str indices
  * @return A string_min_hp struct 
  */
-string_min_hp* init_string_min_min_heap(size_t buff);
+string_min_hp* init_string_min_heap(size_t buff);
+// ================================================================================
+// ================================================================================
+
+/**
+ * @brief Function that selects the correct heap initialization function based on type 
+ *
+ * @param dat_type An enum of type dtype containing a keyword defining the data type 
+ * @return A vector initialization function for a specific data type.
+ */
+InitHeapFunc init_max_heap(dtype dat_type);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of char indices
+ * @return A char_hp struct 
+ */
+char_max_hp* init_char_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of unsigned char indices
+ * @return A uchar_max_hp struct 
+ */
+uchar_max_hp* init_uchar_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of short int indices
+ * @return A short_max_hp struct 
+ */
+short_max_hp* init_short_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of unsigned short int indices
+ * @return A ushort_max_hp struct 
+ */
+ushort_max_hp* init_ushort_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of int indices
+ * @return A int_max_hp struct 
+ */
+int_max_hp* init_int_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of unsigned int indices
+ * @return A uint_max_hp struct 
+ */
+uint_max_hp* init_uint_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of long int indices
+ * @return A long_max_hp struct 
+ */
+long_max_hp* init_long_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of unsigned long int indices
+ * @return A ulong_max_hp struct 
+ */
+ulong_max_hp* init_ulong_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of long long int indices
+ * @return A llong_max_hp struct 
+ */
+llong_max_hp* init_llong_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of unsigned long long int indices
+ * @return A llong_max_hp struct 
+ */
+ullong_max_hp* init_ullong_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of float indices
+ * @return A float_max_hp struct 
+ */
+float_max_hp* init_float_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of double indices
+ * @return A double_max_hp struct 
+ */
+double_max_hp* init_double_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of long double indices
+ * @return A ldouble_max_hp struct 
+ */
+ldouble_max_hp* init_ldouble_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of bool indices
+ * @return A bool_max_hp struct 
+ */
+bool_max_hp* init_bool_max_heap(size_t buff);
+// --------------------------------------------------------------------------------
+
+/**
+ * @breif Initializes and returns a charv struct for a dynamically allocated array
+ *
+ * @param buff A buffer size where buffer is measured in number of str indices
+ * @return A string_max_hp struct 
+ */
+string_max_hp* init_string_max_heap(size_t buff);
 // ================================================================================
 // ================================================================================
 // FREE FUNCTIONS 

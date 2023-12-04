@@ -27,6 +27,7 @@ lets pour some seasoning on our C-code and get started.
     Array <Array>
     Vector <Vector>
     Min Heap <MinHeap>
+    Max Heap <MaxHeap>
     Todo <Todo>
 
 Indices and tables
