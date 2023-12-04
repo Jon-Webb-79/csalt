@@ -746,3 +746,12 @@ data types.
    bool replace_ldouble_min_heap_index(ldouble_min_hp* heap, size_t index, long double value);
    bool replace_bool_min_heap_index(bool_min_hp* heap, size_t index, bool value);
    bool replace_string_min_heap_index(string_min_hp* heap, size_t index, char* value);
+
+Replace Min Heap by Value 
+=========================
+This library does not contain a method to replace values in a Min Heap data 
+structure, mostly becase their are many different methods for finding the 
+current value to be changed.  The preferred method may vary greatly depending 
+on user needs.  INstead, this library leaves it up to the user to develop their 
+own method for finding the perferred index to be changed and then they can 
+use the ``replace_min_heap_index`` method to change the value.
