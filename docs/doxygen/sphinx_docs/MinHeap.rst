@@ -656,3 +656,93 @@ data types.
    long double dequeue_min_heap_ldouble(ldouble_min_hp* heap);
    bool dequeue_min_heap_bool(bool_min_hp* heap);
    str* dequeue_min_heap_string(string_min_hp* heap);
+
+Replace Min Heap Index 
+======================
+Once data is populated in a Min Heap data structure, a user can replace 
+data at a specified index with the ``replace_min_heap_index`` macro. Once the 
+data has been replaced at the user defined index, the function will re-order 
+the array to maintain the min heap invariate. The  macro uses the ``_Generic`` 
+keyword to select from the appropriate underlying function while retaining type 
+safety.
+
+.. code-block:: c 
+
+   #define replace_min_heap_index(heap, index, value) (/* Expression to replace data*/) 
+
+Parameters 
+----------
+
+- :c:`heap`: A heap data structure of the :ref:`Min Heap Derived Type <heap_dat_type>`  type.
+- :c:`index`: The index where data will be replaced as a ``size_t`` variable.
+- :c:`value`: The value that will be used to replace the data at ``index``.  The data type of this variable must be consistent with the data type of ``heap``.
+
+Returns 
+-------
+
+- Returns ``true`` if the function executes succesfully, ``false`` otherwise.
+
+Error Handling
+--------------
+
+The ``replace_min_heap_index`` macro selects the appropriate function based on the 
+vector's data type. If an error occurs, such as an invalid vector type or 
+memory allocation failure, the underlying functions set ``errno`` to indicate 
+the specific error.
+
+Possible error codes:
+
+- ``EINVAL``: Invalid argument was passed to the function.
+- ``ENOMEM``: Memory allocation failure.
+
+Example 
+-------
+This example demonstrates the process of changing the value of an index.
+
+.. code-block:: c 
+
+   #include "print.h"
+   #include "heap.h"
+
+   int main() {
+       double a[7] = {5.5, 1.1, 2.2, 3.3, 6.6, 4.4, 7.7};
+       double_min_hp* heap = init_min_heap(dDouble)(7);
+       for (size_t i = 0; i < 7; i++) {
+           enqueue_min_heap(heap, a[i]);
+       }
+       print("Heap Before: ", heap);
+       replace_min_heap_index(heap, 2, 12.12);
+       print("Heap After: ", heap);
+       free_min_heap(heap);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Heap Before: [ 1.1, 3.3, 2.2, 5.5, 6.6, 4.4, 7.7 ] 
+   >> Heap After: [ 1.1, 3.3, 4.4, 5.5, 6.6, 12.2, 7.7 ]
+
+Underlying Functions 
+--------------------
+The ``replace_min_heap_index`` macro is the preferred method to dequeue an object
+from a Min Heap data structure.  However, the user of this library can also 
+select from the underlying functions shown below that are specific to their 
+data types.
+
+.. code-block:: c
+
+   bool replace_char_min_heap_index(char_min_hp* heap, size_t index, char value);
+   bool replace_uchar_min_heap_index(uchar_min_hp* heap, size_t index, unsigned char value);
+   bool replace_short_min_heap_index(short_min_hp* heap, size_t index, short int value);
+   bool replace_ushort_min_heap_index(ushort_min_hp* heap, size_t index, unsigned short int value);
+   bool replace_int_min_heap_index(int_min_hp* heap, size_t index, int value);
+   bool replace_uint_min_heap_index(uint_min_hp* heap, size_t index, unsigned int value);
+   bool replace_long_min_heap_index(long_min_hp* heap, size_t index, long int value);
+   bool replace_ulong_min_heap_index(ulong_min_hp* heap, size_t index, unsigned long int value);
+   bool replace_llong_min_heap_index(llong_min_hp* heap, size_t index, long long int value);
+   bool replace_ullong_min_heap_index(ullong_min_hp* heap, size_t index, unsigned long long int value);
+   bool replace_float_min_heap_index(float_min_hp* heap, size_t index, float value);
+   bool replace_double_min_heap_index(double_min_hp* heap, size_t index, double value);
+   bool replace_ldouble_min_heap_index(ldouble_min_hp* heap, size_t index, long double value);
+   bool replace_bool_min_heap_index(bool_min_hp* heap, size_t index, bool value);
+   bool replace_string_min_heap_index(string_min_hp* heap, size_t index, char* value);
