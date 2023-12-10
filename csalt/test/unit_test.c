@@ -1025,22 +1025,22 @@ const struct CMUnitTest test_heap[] = {
 int main(int argc, const char * argv[]) {
     int status;
 
-//    status = cmocka_run_group_tests(test_swap, NULL, NULL);
-//    if (status != 0) {
-//        return status;
-//    }
-//    status = cmocka_run_group_tests(test_string, NULL, NULL);
-//    if (status != 0) {
-//        return status;
-//    }
-//    status = cmocka_run_group_tests(test_vector, NULL, NULL);
-//    if (status != 0) {
-//        return status;
-//    }
-//    status = cmocka_run_group_tests(test_array, NULL, NULL);
-//    if (status != 0) {
-//        return status;
-//    }
+    status = cmocka_run_group_tests(test_swap, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
+    status = cmocka_run_group_tests(test_string, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
+    status = cmocka_run_group_tests(test_vector, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
+    status = cmocka_run_group_tests(test_array, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
     status = cmocka_run_group_tests(test_heap, NULL, NULL);
 	return status;
 }

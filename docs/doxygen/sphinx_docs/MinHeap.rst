@@ -166,7 +166,7 @@ allocated vector of type ``float_min_hp`` with an initial capacity of 5 indices.
 
    int main() {
        float_min_hp* vec = init_min_hp(dFloat)(5);
-       if (vec == NUL) {
+       if (vec == NULL) {
            fprintf(stderr, "Error: Memory allocation failure\n");
            return EXIT_FAILURE;
        }
@@ -176,7 +176,7 @@ allocated vector of type ``float_min_hp`` with an initial capacity of 5 indices.
        return EXIT_SUCCESS;
    }
 
-.. note:: The ``init_vector`` function abstracts the complexity of vector initialization, providing a straightforward way to instantiate vectors. It is crucial to manage the memory of these vectors properly, which includes freeing them after use.
+.. note:: The ``init_min_heap`` function abstracts the complexity of vector initialization, providing a straightforward way to instantiate heap structures. It is crucial to manage the memory of these vectors properly, which includes freeing them after use.
 
 Underlying Functions 
 --------------------
@@ -616,7 +616,7 @@ numerical values described by each string.
        return 0;
    }
 
-   .. code-block:: bash 
+.. code-block:: bash 
 
       >> Original Heap Array: [ Five, Four, Seven, Two, One, Three, Six ] 
       >> Dequeued object: Five 
@@ -625,12 +625,12 @@ numerical values described by each string.
 The initial array represents the following binary tree 
 
 .. image:: btree_two.png
-   :alt: My Binary Tree Diagram with text
+   :alt: Min Binary Tree Diagram with text
 
 The array following the enqueue operation represents this binary tree.
 
 .. image:: btree_three.png
-   :alt: My Binary Tree Diagram with text after dequeue
+   :alt: Min Binary Tree Diagram with text after dequeue
 
 Underlying Functions 
 --------------------
@@ -752,6 +752,6 @@ Replace Min Heap by Value
 This library does not contain a method to replace values in a Min Heap data 
 structure, mostly becase their are many different methods for finding the 
 current value to be changed.  The preferred method may vary greatly depending 
-on user needs.  INstead, this library leaves it up to the user to develop their 
+on user needs.  Instead, this library leaves it up to the user to develop their 
 own method for finding the perferred index to be changed and then they can 
 use the ``replace_min_heap_index`` method to change the value.
