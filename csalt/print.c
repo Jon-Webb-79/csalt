@@ -1018,4 +1018,336 @@ void print_string_min_heap(string_min_hp* vec) {
 }
 // ================================================================================
 // ================================================================================
+// PRINT MIN HEAP 
+
+void print_char_max_heap(char_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_char(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_char(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_uchar_max_heap(uchar_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_uchar(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_uchar(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_short_max_heap(short_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_short(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_short(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_ushort_max_heap(ushort_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_ushort(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_ushort(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_int_max_heap(int_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_int(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_int(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_uint_max_heap(uint_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_uint(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_uint(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_long_max_heap(long_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_long(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_long(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_ulong_max_heap(ulong_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_ulong(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_ulong(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_llong_max_heap(llong_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_llong(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_llong(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_ullong_max_heap(ullong_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_ullong(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_ullong(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_float_max_heap(float_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_float(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_float(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_double_max_heap(double_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_double(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_double(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_ldouble_max_heap(ldouble_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_longdouble(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_longdouble(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_bool_max_heap(bool_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_bool(vec->data[i]);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_bool(vec->data[vec->len - 1]);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+void print_string_max_heap(string_max_hp* vec) {
+    if (vec->len == 0) {
+        printf("[ NULL ]");
+        return;
+    }
+    printf("[ ");
+    size_t j = 0;
+    for (size_t i = 0; i < vec->len - 1; i++) {
+        print_string(vec->data[i].data);
+        printf(", ");
+        j++;
+        if (j == PRINT_LENGTH) {
+            printf("\n");
+            printf(" ");
+            j = 0;
+        }
+    }
+    print_string(vec->data[vec->len - 1].data);
+    printf(" ]");
+}
+// ================================================================================
+// ================================================================================
 // eof

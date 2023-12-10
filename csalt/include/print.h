@@ -93,6 +93,21 @@ extern "C" {
                                          ldouble_min_hp*: true, \
                                          bool_min_hp*: true, \
                                          string_min_hp*: true, \
+                                         char_max_hp*: true, \
+                                         uchar_max_hp*: true, \
+                                         short_max_hp*: true, \
+                                         ushort_max_hp*: true, \
+                                         int_max_hp*: true, \
+                                         uint_max_hp*: true, \
+                                         long_max_hp*: true, \
+                                         ulong_max_hp*: true, \
+                                         llong_max_hp*: true, \
+                                         ullong_max_hp*: true, \
+                                         float_max_hp*: true, \
+                                         double_max_hp*: true, \
+                                         ldouble_max_hp*: true, \
+                                         bool_max_hp*: true, \
+                                         string_max_hp*: true, \
 										 default: false)
 // ================================================================================
 // ================================================================================
@@ -179,6 +194,27 @@ void print_string_min_heap(string_min_hp* vec);
 // ================================================================================
 
 /**
+ * Prototypes for prting of all heap data types.
+ */
+void print_char_max_heap(char_max_hp* vec);
+void print_uchar_max_heap(uchar_max_hp* vec);
+void print_short_max_heap(short_max_hp* vec);
+void print_ushort_max_heap(ushort_max_hp* vec);
+void print_int_max_heap(int_max_hp* vec);
+void print_uint_max_heap(uint_max_hp* vec);
+void print_long_max_heap(long_max_hp* vec);
+void print_ulong_max_heap(ulong_max_hp* vec);
+void print_llong_max_heap(llong_max_hp* vec);
+void print_ullong_max_heap(ullong_max_hp* vec);
+void print_float_max_heap(float_max_hp* vec);
+void print_double_max_heap(double_max_hp* vec);
+void print_ldouble_max_heap(ldouble_max_hp* vec);
+void print_bool_max_heap(bool_max_hp* vec);
+void print_string_max_heap(string_max_hp* vec);
+// ================================================================================
+// ================================================================================
+
+/**
  * Macro using _Generic operator to determine which functions get implemented
  * in a print statement.
  */
@@ -239,7 +275,22 @@ void print_string_min_heap(string_min_hp* vec);
                                        double_min_hp*: print_double_min_heap, \
                                        ldouble_min_hp*: print_ldouble_min_heap, \
                                        bool_min_hp*: print_bool_min_heap, \
-                                       string_min_hp*: print_string_min_heap)(T)
+                                       string_min_hp*: print_string_min_heap, \
+                                       char_max_hp*: print_char_max_heap, \
+                                       uchar_max_hp*: print_uchar_max_heap, \
+                                       short_max_hp*: print_short_max_heap, \
+                                       ushort_max_hp*: print_ushort_max_heap, \
+                                       int_max_hp*: print_int_max_heap, \
+                                       uint_max_hp*: print_uint_max_heap, \
+                                       long_max_hp*: print_long_max_heap, \
+                                       ulong_max_hp*: print_ulong_max_heap, \
+                                       llong_max_hp*: print_llong_max_heap, \
+                                       ullong_max_hp*: print_ullong_max_heap, \
+                                       float_max_hp*: print_float_max_heap, \
+                                       double_max_hp*: print_double_max_heap, \
+                                       ldouble_max_hp*: print_ldouble_max_heap, \
+                                       bool_max_hp*: print_bool_max_heap, \
+                                       string_max_hp*: print_string_max_heap)(T)
 // ================================================================================
 // ================================================================================
 
