@@ -3785,7 +3785,7 @@ char dequeue_min_heap_char(char_min_hp* heap) {
     char smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_char(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -3807,7 +3807,7 @@ unsigned char dequeue_min_heap_uchar(uchar_min_hp* heap) {
     unsigned char smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_uchar(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -3829,7 +3829,7 @@ short int dequeue_min_heap_short(short_min_hp* heap) {
     short int smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_short(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -3851,7 +3851,7 @@ unsigned short int dequeue_min_heap_ushort(ushort_min_hp* heap) {
     unsigned short int smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_ushort(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -3873,7 +3873,7 @@ int dequeue_min_heap_int(int_min_hp* heap) {
     int smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_int(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -3895,7 +3895,7 @@ unsigned int dequeue_min_heap_uint(uint_min_hp* heap) {
     unsigned int smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_uint(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -3917,7 +3917,7 @@ long int dequeue_min_heap_long(long_min_hp* heap) {
     long int smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_long(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -3939,7 +3939,7 @@ unsigned long int dequeue_min_heap_ulong(ulong_min_hp* heap) {
     unsigned long int smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_ulong(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -3961,7 +3961,7 @@ long long int dequeue_min_heap_llong(llong_min_hp* heap) {
     long long int smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_llong(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -3983,7 +3983,7 @@ unsigned long long int dequeue_min_heap_ullong(ullong_min_hp* heap) {
     unsigned long long int smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_ullong(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -4005,7 +4005,7 @@ float dequeue_min_heap_float(float_min_hp* heap) {
     float smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_float(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -4027,7 +4027,7 @@ double dequeue_min_heap_double(double_min_hp* heap) {
     double smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_double(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -4049,7 +4049,7 @@ long double dequeue_min_heap_ldouble(ldouble_min_hp* heap) {
     long double smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_ldouble(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -4071,7 +4071,7 @@ bool dequeue_min_heap_bool(bool_min_hp* heap) {
     bool smallest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_bool(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the min-heap property.
@@ -4133,7 +4133,7 @@ char dequeue_max_heap_char(char_max_hp* heap) {
     char largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_char(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4155,7 +4155,7 @@ unsigned char dequeue_max_heap_uchar(uchar_max_hp* heap) {
     unsigned char largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_uchar(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4177,7 +4177,7 @@ short int dequeue_max_heap_short(short_max_hp* heap) {
     short int largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_short(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4199,7 +4199,7 @@ unsigned short int dequeue_max_heap_ushort(ushort_max_hp* heap) {
     unsigned short int largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_ushort(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4221,7 +4221,7 @@ int dequeue_max_heap_int(int_max_hp* heap) {
     int largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_int(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4243,7 +4243,7 @@ unsigned int dequeue_max_heap_uint(uint_max_hp* heap) {
     unsigned int largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_uint(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4265,7 +4265,7 @@ long int dequeue_max_heap_long(long_max_hp* heap) {
     long int largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_long(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4287,7 +4287,7 @@ unsigned long int dequeue_max_heap_ulong(ulong_max_hp* heap) {
     unsigned long largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_ulong(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4309,7 +4309,7 @@ long long int dequeue_max_heap_llong(llong_max_hp* heap) {
     long long int largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_llong(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4331,7 +4331,7 @@ unsigned long long int dequeue_max_heap_ullong(ullong_max_hp* heap) {
     unsigned long long int largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_ullong(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4353,7 +4353,7 @@ float dequeue_max_heap_float(float_max_hp* heap) {
     float largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_float(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4375,7 +4375,7 @@ double dequeue_max_heap_double(double_max_hp* heap) {
     double largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_double(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4397,7 +4397,7 @@ long double dequeue_max_heap_ldouble(ldouble_max_hp* heap) {
     long double largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_ldouble(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
@@ -4419,7 +4419,7 @@ bool dequeue_max_heap_bool(bool_max_hp* heap) {
     bool largest = heap->data[0];
 
     // Replace the root with the last element in the heap.
-    heap->data[0] = heap->data[heap->len - 1];
+    swap_bool(&heap->data[0], &heap->data[heap->len - 1]);
     heap->len--;
 
     // Perform heapify down to maintain the max-heap property.
