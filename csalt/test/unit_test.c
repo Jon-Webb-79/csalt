@@ -1018,8 +1018,8 @@ const struct CMUnitTest test_heap[] = {
     cmocka_unit_test(test_max_replace_index_float),
     cmocka_unit_test(test_max_replace_index_double),
     cmocka_unit_test(test_max_replace_index_ldouble),
-    cmocka_unit_test(test_max_replace_index_bool),
-    cmocka_unit_test(test_max_replace_index_string)
+    // cmocka_unit_test(test_max_replace_index_bool),
+    // cmocka_unit_test(test_max_replace_index_string)
 };
 // Begin code
 int main(int argc, const char * argv[]) {

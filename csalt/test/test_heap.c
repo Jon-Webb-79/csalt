@@ -1760,7 +1760,7 @@ void test_max_replace_index_char(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    char b[7] = {7, 5, 2, 1, 3, 12, 4};
+    char b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1777,7 +1777,7 @@ void test_max_replace_index_uchar(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    unsigned char b[7] = {7, 5, 2, 1, 3, 12, 4};
+    unsigned char b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1794,7 +1794,7 @@ void test_max_replace_index_short(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    short int b[7] = {7, 5, 2, 1, 3, 12, 4};
+    short int b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1811,7 +1811,7 @@ void test_max_replace_index_ushort(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    unsigned short int b[7] = {7, 5, 2, 1, 3, 12, 4};
+    short int b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1828,7 +1828,7 @@ void test_max_replace_index_int(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    int b[7] = {7, 5, 2, 1, 3, 12, 4};
+    int b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1845,7 +1845,7 @@ void test_max_replace_index_uint(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    unsigned int b[7] = {7, 5, 2, 1, 3, 12, 4};
+    unsigned int b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1862,7 +1862,7 @@ void test_max_replace_index_long(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    long int b[7] = {7, 5, 2, 1, 3, 12, 4};
+    long int b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1879,7 +1879,7 @@ void test_max_replace_index_ulong(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    unsigned long int b[7] = {7, 5, 2, 1, 3, 12, 4};
+    unsigned long int b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1896,7 +1896,7 @@ void test_max_replace_index_llong(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    long long int b[7] = {7, 5, 2, 1, 3, 12, 4};
+    long long int b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1913,7 +1913,7 @@ void test_max_replace_index_ullong(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    long long int b[7] = {7, 5, 2, 1, 3, 12, 4};
+    unsigned long long int b[7] = {12, 5, 7, 1, 3, 2, 4};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);
     }
@@ -1930,7 +1930,7 @@ void test_max_replace_index_float(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    float b[7] = {7., 5., 2., 1., 3., 12., 4.};
+    float b[7] = {12., 5., 7., 1., 3., 2., 4.};
     for (size_t i = 0; i < 7; i++) {
         assert_float_equal(heap->data[i], b[i], 1.0e-3);
     }
@@ -1947,7 +1947,7 @@ void test_max_replace_index_double(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    double b[7] = {7., 5., 2., 1., 3., 12., 4.};
+    double b[7] = {12., 5., 7., 1., 3., 2., 4.};
     for (size_t i = 0; i < 7; i++) {
         assert_double_equal(heap->data[i], b[i], 1.0e-3);
     }
@@ -1964,7 +1964,7 @@ void test_max_replace_index_ldouble(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     replace_max_heap_index(heap, 2, 12);
-    long double b[7] = {7., 5., 2., 1., 3., 12., 4.};
+    long double b[7] = {12., 5., 7., 1., 3., 2., 4.};
     for (size_t i = 0; i < 7; i++) {
         assert_double_equal(heap->data[i], b[i], 1.0e-3);
     }

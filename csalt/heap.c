@@ -5266,7 +5266,6 @@ bool replace_string_min_heap_index(string_min_hp* heap, size_t index, char* new_
     heap->data[index].len = str_len;
 
     // Perform heapify up and down to maintain the Min Heap property
- //   _sift_min_heap_up_string(heap, index);
     _sift_min_heap_down_string(heap, index);
 
     return true; // Value replaced successfully
@@ -5284,7 +5283,7 @@ bool replace_char_max_heap_index(char_max_hp* heap, size_t index, char new_value
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_char(heap, index);
+    _sift_max_heap_up_char(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5300,7 +5299,7 @@ bool replace_uchar_max_heap_index(uchar_max_hp* heap, size_t index, unsigned cha
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_uchar(heap, index);
+    _sift_max_heap_up_uchar(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5316,12 +5315,12 @@ bool replace_short_max_heap_index(short_max_hp* heap, size_t index, short int ne
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_short(heap, index);
+    _sift_max_heap_up_short(heap, index);
 
     return true; // Value replaced successfully
 }
 // --------------------------------------------------------------------------------
-
+    
 bool replace_ushort_max_heap_index(ushort_max_hp* heap, size_t index, unsigned short int new_value) {
     if (heap == NULL || heap->data == NULL || index >= heap->len) {
         errno = EINVAL;
@@ -5332,7 +5331,7 @@ bool replace_ushort_max_heap_index(ushort_max_hp* heap, size_t index, unsigned s
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_ushort(heap, index);
+    _sift_max_heap_up_ushort(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5348,7 +5347,7 @@ bool replace_int_max_heap_index(int_max_hp* heap, size_t index, int new_value) {
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_int(heap, index);
+    _sift_max_heap_up_int(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5364,7 +5363,7 @@ bool replace_uint_max_heap_index(uint_max_hp* heap, size_t index, unsigned int n
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_uint(heap, index);
+    _sift_max_heap_up_uint(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5380,7 +5379,7 @@ bool replace_long_max_heap_index(long_max_hp* heap, size_t index, long int new_v
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_long(heap, index);
+    _sift_max_heap_up_long(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5396,7 +5395,7 @@ bool replace_ulong_max_heap_index(ulong_max_hp* heap, size_t index, unsigned lon
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_ulong(heap, index);
+    _sift_max_heap_up_ulong(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5428,7 +5427,7 @@ bool replace_ullong_max_heap_index(ullong_max_hp* heap, size_t index, unsigned l
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_ullong(heap, index);
+    _sift_max_heap_up_ullong(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5444,7 +5443,7 @@ bool replace_float_max_heap_index(float_max_hp* heap, size_t index, float new_va
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_float(heap, index);
+    _sift_max_heap_up_float(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5460,7 +5459,7 @@ bool replace_double_max_heap_index(double_max_hp* heap, size_t index, double new
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_double(heap, index);
+    _sift_max_heap_up_double(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5476,7 +5475,7 @@ bool replace_ldouble_max_heap_index(ldouble_max_hp* heap, size_t index, long dou
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_ldouble(heap, index);
+    _sift_max_heap_up_ldouble(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5492,7 +5491,7 @@ bool replace_bool_max_heap_index(bool_max_hp* heap, size_t index, bool new_value
     heap->data[index] = new_value;
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_bool(heap, index);
+    _sift_max_heap_up_bool(heap, index);
 
     return true; // Value replaced successfully
 }
@@ -5523,7 +5522,7 @@ bool replace_string_max_heap_index(string_max_hp* heap, size_t index, char* new_
     // Update the value at the specified index
 
     // Perform heapify down to maintain the Max Heap property
-    _sift_max_heap_down_string(heap, index);
+    _sift_max_heap_up_string(heap, index);
 
     return true; // Value replaced successfully
 }

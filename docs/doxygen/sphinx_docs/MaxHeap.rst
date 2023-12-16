@@ -716,8 +716,8 @@ This example demonstrates the process of changing the value of an index.
 
 .. code-block:: bash
 
-   >> Heap Before: [ 7.7, 5.5, 6.6, 1.1, 3.3, 2.2, 4.4 ] 
-   >> Heap After: [ 7.7, 5.5, 2.2, 1.1, 3.3, 12.2, 4.4 ]
+   >> Heap Before: [ 7.7, 5.5, 6.6, 1.1, 3.3, 2.2, 4.4 ]
+   >> Heap After: [ 12.2, 5.5, 7.7, 1.1, 3.3, 2.2, 4.4 ]
 
 Underlying Functions 
 --------------------
