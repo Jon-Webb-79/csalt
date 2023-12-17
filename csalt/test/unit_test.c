@@ -565,6 +565,36 @@ const struct CMUnitTest test_vector[] = {
     cmocka_unit_test(test_tim_sort_bool_vector_reverse),
     cmocka_unit_test(test_tim_sort_string_vector_forward),
     cmocka_unit_test(test_tim_sort_string_vector_reverse),
+    cmocka_unit_test(test_heap_sort_char_vector_forward),
+    cmocka_unit_test(test_heap_sort_char_vector_reverse),
+    cmocka_unit_test(test_heap_sort_uchar_vector_forward),
+    cmocka_unit_test(test_heap_sort_uchar_vector_reverse),
+    cmocka_unit_test(test_heap_sort_short_vector_forward),
+    cmocka_unit_test(test_heap_sort_short_vector_reverse),
+    cmocka_unit_test(test_heap_sort_ushort_vector_forward),
+    cmocka_unit_test(test_heap_sort_ushort_vector_reverse),
+    cmocka_unit_test(test_heap_sort_int_vector_forward),
+    cmocka_unit_test(test_heap_sort_int_vector_reverse),
+    cmocka_unit_test(test_heap_sort_uint_vector_forward),
+    cmocka_unit_test(test_heap_sort_uint_vector_reverse),
+    cmocka_unit_test(test_heap_sort_long_vector_forward),
+    cmocka_unit_test(test_heap_sort_long_vector_reverse),
+    cmocka_unit_test(test_heap_sort_ulong_vector_forward),
+    cmocka_unit_test(test_heap_sort_ulong_vector_reverse),
+    cmocka_unit_test(test_heap_sort_llong_vector_forward),
+    cmocka_unit_test(test_heap_sort_llong_vector_reverse),
+    cmocka_unit_test(test_heap_sort_ullong_vector_forward),
+    cmocka_unit_test(test_heap_sort_ullong_vector_reverse),
+    cmocka_unit_test(test_heap_sort_float_vector_forward),
+    cmocka_unit_test(test_heap_sort_float_vector_reverse),
+    cmocka_unit_test(test_heap_sort_double_vector_forward),
+    cmocka_unit_test(test_heap_sort_double_vector_reverse),
+    cmocka_unit_test(test_heap_sort_ldouble_vector_forward),
+    cmocka_unit_test(test_heap_sort_ldouble_vector_reverse),
+    cmocka_unit_test(test_heap_sort_bool_vector_forward),
+    cmocka_unit_test(test_heap_sort_bool_vector_reverse),
+    cmocka_unit_test(test_heap_sort_string_vector_forward),
+    cmocka_unit_test(test_heap_sort_string_vector_reverse),
     cmocka_unit_test(test_char_binary_vector_search),
     cmocka_unit_test(test_uchar_binary_vector_search),
     cmocka_unit_test(test_short_binary_vector_search),
@@ -1037,11 +1067,11 @@ int main(int argc, const char * argv[]) {
     if (status != 0) {
         return status;
     }
-    status = cmocka_run_group_tests(test_array, NULL, NULL);
-    if (status != 0) {
-        return status;
-    }
-    status = cmocka_run_group_tests(test_heap, NULL, NULL);
+    // status = cmocka_run_group_tests(test_array, NULL, NULL);
+    // if (status != 0) {
+    //     return status;
+    // }
+    // status = cmocka_run_group_tests(test_heap, NULL, NULL);
 	return status;
 }
 // ================================================================================

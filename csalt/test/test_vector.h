@@ -25,6 +25,7 @@
 #include <fcntl.h>
 
 #include "../include/vector.h"
+#include "../include/print.h"
 // ================================================================================
 // ================================================================================
 // TEST INIT, PUSH, and FREE FUNCTIONS
@@ -536,6 +537,40 @@ void test_tim_sort_bool_vector_forward(void **state);
 void test_tim_sort_bool_vector_reverse(void **state);
 void test_tim_sort_string_vector_forward(void **state);
 void test_tim_sort_string_vector_reverse(void **state);
+// ================================================================================
+// ================================================================================
+// TEST HEAP SORT
+
+void test_heap_sort_char_vector_forward(void **state);
+void test_heap_sort_char_vector_reverse(void **state);
+void test_heap_sort_uchar_vector_forward(void **state);
+void test_heap_sort_uchar_vector_reverse(void **state);
+void test_heap_sort_short_vector_forward(void **state);
+void test_heap_sort_short_vector_reverse(void **state);
+void test_heap_sort_ushort_vector_forward(void **state);
+void test_heap_sort_ushort_vector_reverse(void **state);
+void test_heap_sort_int_vector_forward(void **state);
+void test_heap_sort_int_vector_reverse(void **state);
+void test_heap_sort_uint_vector_forward(void **state);
+void test_heap_sort_uint_vector_reverse(void **state);
+void test_heap_sort_long_vector_forward(void **state);
+void test_heap_sort_long_vector_reverse(void **state);
+void test_heap_sort_ulong_vector_forward(void **state);
+void test_heap_sort_ulong_vector_reverse(void **state);
+void test_heap_sort_llong_vector_forward(void **state);
+void test_heap_sort_llong_vector_reverse(void **state);
+void test_heap_sort_ullong_vector_forward(void **state);
+void test_heap_sort_ullong_vector_reverse(void **state);
+void test_heap_sort_float_vector_forward(void **state);
+void test_heap_sort_float_vector_reverse(void **state);
+void test_heap_sort_double_vector_forward(void **state);
+void test_heap_sort_double_vector_reverse(void **state);
+void test_heap_sort_ldouble_vector_forward(void **state);
+void test_heap_sort_ldouble_vector_reverse(void **state);
+void test_heap_sort_bool_vector_forward(void **state);
+void test_heap_sort_bool_vector_reverse(void **state);
+void test_heap_sort_string_vector_forward(void **state);
+void test_heap_sort_string_vector_reverse(void **state);
 // ================================================================================
 // ================================================================================
 // TEST BINARY SEARCH FUNCTIONS 

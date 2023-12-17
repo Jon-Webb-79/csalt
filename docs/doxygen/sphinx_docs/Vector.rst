@@ -1047,7 +1047,7 @@ Parameters
 ----------
 
 - :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
-- :c:`stype`: An ``enum`` of type ``sort_type`` including ``BUBBLE``, ``SELECTION``, ``INSERT``, ``MERGE``, ``QUICK``, and ``TIM``, representing various sorting algorithms.
+- :c:`stype`: An ``enum`` of type ``sort_type`` including ``BUBBLE``, ``SELECTION``, ``INSERT``, ``HEAP``, ``MERGE``, ``QUICK``, and ``TIM``, representing various sorting algorithms.
 - :c:`direction`: An ``enum`` of type ``iter_dir`` with possible values ``FORWARD`` or ``REVERSE``, representing the sorting direction.
 
 The following table describes the parameters of the various sorting algorithms.
@@ -1068,6 +1068,10 @@ The following table describes the parameters of the various sorting algorithms.
      - O(n^2) / O(n^2)
      - O(1)
      - Stable
+   * - Heap Sort
+     - O(n log n) / O(n log n)
+     - O(1)
+     - Not Stable
    * - Merge Sort
      - O(n log n) / O(n log n)
      - O(n)
