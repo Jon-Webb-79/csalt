@@ -3811,6 +3811,511 @@ void test_tim_sort_bool_array_reverse(void **state) {
 // ================================================================================
 // ================================================================================
 
+void test_heap_sort_char_array_forward(void **state) {
+    char b[7];
+    char_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    char a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_char_array_reverse(void **state) {
+    char b[7];
+    char_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    char a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_uchar_array_forward(void **state) {
+    unsigned char b[7];
+    uchar_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    unsigned char a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_uchar_array_reverse(void **state) {
+    unsigned char b[7];
+    uchar_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    unsigned char a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_short_array_forward(void **state) {
+    short int b[7];
+    short_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    short int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_short_array_reverse(void **state) {
+    short int b[7];
+    short_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    short int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_ushort_array_forward(void **state) {
+    unsigned short int b[7];
+    ushort_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    unsigned short int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_ushort_array_reverse(void **state) {
+    unsigned short int b[7];
+    ushort_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    unsigned short int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_int_array_forward(void **state) {
+    int b[7];
+    int_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_int_array_reverse(void **state) {
+    int b[7];
+    int_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_uint_array_forward(void **state) {
+    unsigned int b[7];
+    uint_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    unsigned int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_uint_array_reverse(void **state) {
+    unsigned int b[7];
+    uint_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    unsigned int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_long_array_forward(void **state) {
+    long int b[7];
+    long_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    long int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_long_array_reverse(void **state) {
+    long int b[7];
+    long_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    long int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_ulong_array_forward(void **state) {
+    unsigned long int b[7];
+    ulong_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    unsigned long int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_ulong_array_reverse(void **state) {
+    unsigned long int b[7];
+    ulong_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    unsigned long int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_llong_array_forward(void **state) {
+    long long int b[7];
+    llong_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    long long int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_llong_array_reverse(void **state) {
+    long long int b[7];
+    llong_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    long long int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_ullong_array_forward(void **state) {
+    unsigned long long int b[7];
+    ullong_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    unsigned long long int a[7] = {1, 2, 3, 5, 6, 10, 12};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_ullong_array_reverse(void **state) {
+    unsigned long long int b[7];
+    ullong_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3, 0);
+    push_array(arr, 2, 1);
+    push_array(arr, 6, 2);
+    push_array(arr, 5, 3);
+    push_array(arr, 1, 4);
+    push_array(arr, 12, 5);
+    push_array(arr, 10, 6);
+    sort_array(arr, HEAP, REVERSE);
+    unsigned long long int a[7] = {12, 10, 6, 5, 3, 2, 1};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_float_array_forward(void **state) {
+    float b[7];
+    float_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3., 0);
+    push_array(arr, 2., 1);
+    push_array(arr, 6., 2);
+    push_array(arr, 5., 3);
+    push_array(arr, 1., 4);
+    push_array(arr, 12., 5);
+    push_array(arr, 10., 6);
+    float a[7] = {1., 2., 3., 5., 6., 10., 12.};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_float_equal(a[i], arr.data[i], 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_float_array_reverse(void **state) {
+    float b[7];
+    float_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3., 0);
+    push_array(arr, 2., 1);
+    push_array(arr, 6., 2);
+    push_array(arr, 5., 3);
+    push_array(arr, 1., 4);
+    push_array(arr, 12., 5);
+    push_array(arr, 10., 6);
+    sort_array(arr, HEAP, REVERSE);
+    float a[7] = {12., 10., 6., 5., 3., 2., 1.};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_float_equal(a[i], arr.data[i], 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_double_array_forward(void **state) {
+    double b[7];
+    double_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3., 0);
+    push_array(arr, 2., 1);
+    push_array(arr, 6., 2);
+    push_array(arr, 5., 3);
+    push_array(arr, 1., 4);
+    push_array(arr, 12., 5);
+    push_array(arr, 10., 6);
+    double a[7] = {1., 2., 3., 5., 6., 10., 12.};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_double_equal(a[i], arr.data[i], 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_double_array_reverse(void **state) {
+    double b[7];
+    double_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3., 0);
+    push_array(arr, 2., 1);
+    push_array(arr, 6., 2);
+    push_array(arr, 5., 3);
+    push_array(arr, 1., 4);
+    push_array(arr, 12., 5);
+    push_array(arr, 10., 6);
+    sort_array(arr, HEAP, REVERSE);
+    double a[7] = {12., 10., 6., 5., 3., 2., 1.};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_double_equal(a[i], arr.data[i], 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_ldouble_array_forward(void **state) {
+    long double b[7];
+    ldouble_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3., 0);
+    push_array(arr, 2., 1);
+    push_array(arr, 6., 2);
+    push_array(arr, 5., 3);
+    push_array(arr, 1., 4);
+    push_array(arr, 12., 5);
+    push_array(arr, 10., 6);
+    long double a[7] = {1., 2., 3., 5., 6., 10., 12.};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_double_equal(a[i], arr.data[i], 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_ldouble_array_reverse(void **state) {
+    long double b[7];
+    ldouble_arr arr = init_array(b, 7, 0);
+    push_array(arr, 3., 0);
+    push_array(arr, 2., 1);
+    push_array(arr, 6., 2);
+    push_array(arr, 5., 3);
+    push_array(arr, 1., 4);
+    push_array(arr, 12., 5);
+    push_array(arr, 10., 6);
+    sort_array(arr, HEAP, REVERSE);
+    long double a[7] = {12., 10., 6., 5., 3., 2., 1.};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_double_equal(a[i], arr.data[i], 1.0e-3);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_bool_array_forward(void **state) {
+    bool b[7];
+    bool_arr arr = init_array(b, 7, 0);
+    push_array(arr, true, 0);
+    push_array(arr, false, 1);
+    push_array(arr, true, 2);
+    push_array(arr, false, 3);
+    push_array(arr, true, 4);
+    push_array(arr, false, 5);
+    push_array(arr, true, 6);
+    bool a[7] = {true, true, true, true, false, false, false};
+    sort_array(arr, HEAP, FORWARD);
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void test_heap_sort_bool_array_reverse(void **state) {
+    bool b[7];
+    bool_arr arr = init_array(b, 7, 0);
+    push_array(arr, true, 0);
+    push_array(arr, false, 1);
+    push_array(arr, true, 2);
+    push_array(arr, false, 3);
+    push_array(arr, true, 4);
+    push_array(arr, false, 5);
+    push_array(arr, true, 6);
+    sort_array(arr, HEAP, REVERSE);
+    bool a[7] = {false, false, false, true, true, true, true};
+    for (size_t i = 0; i < arr.len; i++) {
+        assert_int_equal(a[i], arr.data[i]);
+    }
+}
+// ================================================================================
+// ================================================================================
+
 void test_max_char_array(void **state) {
     char b[5];
     char_arr arr = init_array(b, 5, 0);

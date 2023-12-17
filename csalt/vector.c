@@ -8662,7 +8662,6 @@ static void _heap_sort_string(str* arr, size_t len, iter_dir direction) {
         }
     }
 }
-
 // ================================================================================
 // Actual interfaces for sort algoorithms 
 

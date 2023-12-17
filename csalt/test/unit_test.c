@@ -824,6 +824,36 @@ const struct CMUnitTest test_array[] = {
     cmocka_unit_test(test_tim_sort_ldouble_array_reverse),
     cmocka_unit_test(test_tim_sort_bool_array_forward),
     cmocka_unit_test(test_tim_sort_bool_array_reverse),
+
+    cmocka_unit_test(test_tim_sort_char_array_forward),
+    cmocka_unit_test(test_tim_sort_char_array_reverse),
+    cmocka_unit_test(test_tim_sort_uchar_array_forward),
+    cmocka_unit_test(test_tim_sort_uchar_array_reverse),
+    cmocka_unit_test(test_tim_sort_short_array_forward),
+    cmocka_unit_test(test_tim_sort_short_array_reverse),
+    cmocka_unit_test(test_tim_sort_ushort_array_forward),
+    cmocka_unit_test(test_tim_sort_ushort_array_reverse),
+    cmocka_unit_test(test_tim_sort_int_array_forward),
+    cmocka_unit_test(test_tim_sort_int_array_reverse),
+    cmocka_unit_test(test_tim_sort_uint_array_forward),
+    cmocka_unit_test(test_tim_sort_uint_array_reverse),
+    cmocka_unit_test(test_tim_sort_long_array_forward),
+    cmocka_unit_test(test_tim_sort_long_array_reverse),
+    cmocka_unit_test(test_tim_sort_ulong_array_forward),
+    cmocka_unit_test(test_tim_sort_ulong_array_reverse),
+    cmocka_unit_test(test_tim_sort_llong_array_forward),
+    cmocka_unit_test(test_tim_sort_llong_array_reverse),
+    cmocka_unit_test(test_tim_sort_ullong_array_forward),
+    cmocka_unit_test(test_tim_sort_ullong_array_reverse),
+    cmocka_unit_test(test_tim_sort_float_array_forward),
+    cmocka_unit_test(test_tim_sort_float_array_reverse),
+    cmocka_unit_test(test_tim_sort_double_array_forward),
+    cmocka_unit_test(test_tim_sort_double_array_reverse),
+    cmocka_unit_test(test_tim_sort_ldouble_array_forward),
+    cmocka_unit_test(test_tim_sort_ldouble_array_reverse),
+    cmocka_unit_test(test_tim_sort_bool_array_forward),
+    cmocka_unit_test(test_tim_sort_bool_array_reverse),
+
     cmocka_unit_test(test_max_char_array),
     cmocka_unit_test(test_max_uchar_array),
     cmocka_unit_test(test_max_short_array),
@@ -1067,11 +1097,11 @@ int main(int argc, const char * argv[]) {
     if (status != 0) {
         return status;
     }
-    // status = cmocka_run_group_tests(test_array, NULL, NULL);
-    // if (status != 0) {
-    //     return status;
-    // }
-    // status = cmocka_run_group_tests(test_heap, NULL, NULL);
+    status = cmocka_run_group_tests(test_array, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
+    status = cmocka_run_group_tests(test_heap, NULL, NULL);
 	return status;
 }
 // ================================================================================

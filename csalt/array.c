@@ -3812,6 +3812,945 @@ static void _timsort_bool(bool* vec, int n, iter_dir direction) {
     }
 }
 // ================================================================================
+// HEAP SORT (PRIVATE FUNCTIONS)
+
+static void _heapify_forward_char(char* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_char(&arr[index], &arr[largest]);
+        _heapify_forward_char(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_char(char* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_char(&arr[index], &arr[smallest]);
+        _heapify_reverse_char(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_char(char* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_char(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_char(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_char(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_char(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_char(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_uchar(unsigned char* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_uchar(&arr[index], &arr[largest]);
+        _heapify_forward_uchar(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_uchar(unsigned char* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_uchar(&arr[index], &arr[smallest]);
+        _heapify_reverse_uchar(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_uchar(unsigned char* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_uchar(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_uchar(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_uchar(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_uchar(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_uchar(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_short(short int* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_short(&arr[index], &arr[largest]);
+        _heapify_forward_short(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_short(short int* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_short(&arr[index], &arr[smallest]);
+        _heapify_reverse_short(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_short(short int* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_short(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_short(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_short(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_short(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_short(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_ushort(unsigned short int* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_ushort(&arr[index], &arr[largest]);
+        _heapify_forward_ushort(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_ushort(unsigned short int* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_ushort(&arr[index], &arr[smallest]);
+        _heapify_reverse_ushort(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_ushort(unsigned short int* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_ushort(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_ushort(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_ushort(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_ushort(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_ushort(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_int(int* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_int(&arr[index], &arr[largest]);
+        _heapify_forward_int(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_int(int* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_int(&arr[index], &arr[smallest]);
+        _heapify_reverse_int(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_int(int* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_int(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_int(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_int(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_int(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_int(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_uint(unsigned int* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_uint(&arr[index], &arr[largest]);
+        _heapify_forward_uint(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_uint(unsigned int* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_uint(&arr[index], &arr[smallest]);
+        _heapify_reverse_uint(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_uint(unsigned int* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_uint(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_uint(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_uint(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_uint(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_uint(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_long(long int* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_long(&arr[index], &arr[largest]);
+        _heapify_forward_long(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_long(long int* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_long(&arr[index], &arr[smallest]);
+        _heapify_reverse_long(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_long(long* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_long(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_long(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_long(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_long(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_long(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_ulong(unsigned long int* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_ulong(&arr[index], &arr[largest]);
+        _heapify_forward_ulong(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_ulong(unsigned long int* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_ulong(&arr[index], &arr[smallest]);
+        _heapify_reverse_ulong(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_ulong(unsigned long* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_ulong(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_ulong(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_ulong(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_ulong(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_ulong(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_llong(long long int* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_llong(&arr[index], &arr[largest]);
+        _heapify_forward_llong(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_llong(long long int* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_llong(&arr[index], &arr[smallest]);
+        _heapify_reverse_llong(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_llong(long long* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_llong(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_llong(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_llong(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_llong(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_llong(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_ullong(unsigned long long int* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_ullong(&arr[index], &arr[largest]);
+        _heapify_forward_ullong(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_ullong(unsigned long long int* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_ullong(&arr[index], &arr[smallest]);
+        _heapify_reverse_ullong(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_ullong(unsigned long long* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_ullong(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_ullong(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_ullong(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_ullong(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_ullong(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_float(float* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_float(&arr[index], &arr[largest]);
+        _heapify_forward_float(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_float(float* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_float(&arr[index], &arr[smallest]);
+        _heapify_reverse_float(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_float(float* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_float(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_float(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_float(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_float(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_float(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_double(double* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_double(&arr[index], &arr[largest]);
+        _heapify_forward_double(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_double(double* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_double(&arr[index], &arr[smallest]);
+        _heapify_reverse_double(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_double(double* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_double(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_double(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_double(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_double(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_double(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_ldouble(long double* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] > arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_ldouble(&arr[index], &arr[largest]);
+        _heapify_forward_ldouble(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_ldouble(long double* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] < arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_ldouble(&arr[index], &arr[smallest]);
+        _heapify_reverse_ldouble(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_ldouble(long double* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_ldouble(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_ldouble(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_ldouble(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_ldouble(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_ldouble(arr, i, 0);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_forward_bool(bool* arr, size_t len, size_t index) {
+    size_t largest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] < arr[largest]) {
+        largest = left;
+    }
+
+    if (right < len && arr[right] < arr[largest]) {
+        largest = right;
+    }
+
+    if (largest != index) {
+        swap_bool(&arr[index], &arr[largest]);
+        _heapify_forward_bool(arr, len, largest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heapify_reverse_bool(bool* arr, size_t len, size_t index) {
+    size_t smallest = index;
+    size_t left = 2 * index + 1;
+    size_t right = 2 * index + 2;
+
+    if (left < len && arr[left] > arr[smallest]) {
+        smallest = left;
+    }
+
+    if (right < len && arr[right] > arr[smallest]) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap_bool(&arr[index], &arr[smallest]);
+        _heapify_reverse_bool(arr, len, smallest);
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _heap_sort_bool(bool* arr, size_t len, iter_dir direction) {
+    if (direction == FORWARD) {
+        // Build the Max Heap from the array using the forward _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_forward_bool(arr, len, i);
+        }
+    } else if (direction == REVERSE) {
+        // Build the Min Heap from the array using the reverse _heapify function
+        for (int i = len / 2 - 1; i >= 0; i--) {
+            _heapify_reverse_bool(arr, len, i);
+        }
+    }
+
+    // Extract elements from the heap one by one
+    for (int i = len - 1; i > 0; i--) {
+        swap_bool(&arr[0], &arr[i]);
+        
+        // Use the appropriate _heapify function based on the direction
+        if (direction == FORWARD) {
+            _heapify_forward_bool(arr, i, 0);
+        } else if (direction == REVERSE) {
+            _heapify_reverse_bool(arr, i, 0);
+        }
+    }
+}
+// ================================================================================
 // Actual interfaces for sort algoorithms 
 
 void sort_char_array(char_arr* vec, sort_type stype, iter_dir direction) {
@@ -3828,6 +4767,9 @@ void sort_char_array(char_arr* vec, sort_type stype, iter_dir direction) {
             break;
         case INSERT:
             _insert_sort_char(vec->data, vec->len, direction);
+            break;
+        case HEAP:
+            _heap_sort_char(vec->data, vec->len, direction);
             break;
         case MERGE:
             _merge_sort_char(vec->data, 0, vec->len - 1, direction);
@@ -3860,6 +4802,9 @@ void sort_uchar_array(uchar_arr* vec, sort_type stype, iter_dir direction) {
         case INSERT:
             _insert_sort_uchar(vec->data, vec->len, direction);
             break;
+        case HEAP:
+            _heap_sort_uchar(vec->data, vec->len, direction);
+            break;
         case MERGE:
             _merge_sort_uchar(vec->data, 0, vec->len - 1, direction);
             break;
@@ -3890,6 +4835,9 @@ void sort_short_array(short_arr* vec, sort_type stype, iter_dir direction) {
             break;
         case INSERT:
             _insert_sort_short(vec->data, vec->len, direction);
+            break;
+        case HEAP:
+            _heap_sort_short(vec->data, vec->len, direction);
             break;
         case MERGE:
             _merge_sort_short(vec->data, 0, vec->len - 1, direction);
@@ -3922,6 +4870,9 @@ void sort_ushort_array(ushort_arr* vec, sort_type stype, iter_dir direction) {
         case INSERT:
             _insert_sort_ushort(vec->data, vec->len, direction);
             break;
+        case HEAP:
+            _heap_sort_ushort(vec->data, vec->len, direction);
+            break;
         case MERGE:
             _merge_sort_ushort(vec->data, 0, vec->len - 1, direction);
             break;
@@ -3952,6 +4903,9 @@ void sort_int_array(int_arr* vec, sort_type stype, iter_dir direction) {
             break;
         case INSERT:
             _insert_sort_int(vec->data, vec->len, direction);
+            break;
+        case HEAP:
+            _heap_sort_int(vec->data, vec->len, direction);
             break;
         case MERGE:
             _merge_sort_int(vec->data, 0, vec->len - 1, direction);
@@ -3984,6 +4938,9 @@ void sort_uint_array(uint_arr* vec, sort_type stype, iter_dir direction) {
         case INSERT:
             _insert_sort_uint(vec->data, vec->len, direction);
             break;
+        case HEAP:
+            _heap_sort_uint(vec->data, vec->len, direction);
+            break;
         case MERGE:
             _merge_sort_uint(vec->data, 0, vec->len - 1, direction);
             break;
@@ -4014,6 +4971,9 @@ void sort_long_array(long_arr* vec, sort_type stype, iter_dir direction) {
             break;
         case INSERT:
             _insert_sort_long(vec->data, vec->len, direction);
+            break;
+        case HEAP:
+            _heap_sort_long(vec->data, vec->len, direction);
             break;
         case MERGE:
             _merge_sort_long(vec->data, 0, vec->len - 1, direction);
@@ -4046,6 +5006,9 @@ void sort_ulong_array(ulong_arr* vec, sort_type stype, iter_dir direction) {
         case INSERT:
             _insert_sort_ulong(vec->data, vec->len, direction);
             break;
+        case HEAP:
+            _heap_sort_ulong(vec->data, vec->len, direction);
+            break;
         case MERGE:
             _merge_sort_ulong(vec->data, 0, vec->len - 1, direction);
             break;
@@ -4076,6 +5039,9 @@ void sort_llong_array(llong_arr* vec, sort_type stype, iter_dir direction) {
             break;
         case INSERT:
             _insert_sort_llong(vec->data, vec->len, direction);
+            break;
+        case HEAP:
+            _heap_sort_llong(vec->data, vec->len, direction);
             break;
         case MERGE:
             _merge_sort_llong(vec->data, 0, vec->len - 1, direction);
@@ -4108,6 +5074,9 @@ void sort_ullong_array(ullong_arr* vec, sort_type stype, iter_dir direction) {
         case INSERT:
             _insert_sort_ullong(vec->data, vec->len, direction);
             break;
+        case HEAP:
+            _heap_sort_ullong(vec->data, vec->len, direction);
+            break;
         case MERGE:
             _merge_sort_ullong(vec->data, 0, vec->len - 1, direction);
             break;
@@ -4138,6 +5107,9 @@ void sort_float_array(float_arr* vec, sort_type stype, iter_dir direction) {
             break;
         case INSERT:
             _insert_sort_float(vec->data, vec->len, direction);
+            break;
+        case HEAP:
+            _heap_sort_float(vec->data, vec->len, direction);
             break;
         case MERGE:
             _merge_sort_float(vec->data, 0, vec->len - 1, direction);
@@ -4170,6 +5142,9 @@ void sort_double_array(double_arr* vec, sort_type stype, iter_dir direction) {
         case INSERT:
             _insert_sort_double(vec->data, vec->len, direction);
             break;
+        case HEAP:
+            _heap_sort_double(vec->data, vec->len, direction);
+            break;
         case MERGE:
             _merge_sort_double(vec->data, 0, vec->len - 1, direction);
             break;
@@ -4201,6 +5176,9 @@ void sort_ldouble_array(ldouble_arr* vec, sort_type stype, iter_dir direction) {
         case INSERT:
             _insert_sort_ldouble(vec->data, vec->len, direction);
             break;
+        case HEAP:
+            _heap_sort_ldouble(vec->data, vec->len, direction);
+            break;
         case MERGE:
             _merge_sort_ldouble(vec->data, 0, vec->len - 1, direction);
             break;
@@ -4231,6 +5209,9 @@ void sort_bool_array(bool_arr* vec, sort_type stype, iter_dir direction) {
             break;
         case INSERT:
             _insert_sort_bool(vec->data, vec->len, direction);
+            break;
+        case HEAP:
+            _heap_sort_bool(vec->data, vec->len, direction);
             break;
         case MERGE:
             _merge_sort_bool(vec->data, 0, vec->len - 1, direction);

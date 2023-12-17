@@ -277,6 +277,37 @@ void test_tim_sort_bool_array_reverse(void **state);
 // ================================================================================
 // ================================================================================
 
+void test_heap_sort_char_array_forward(void **state);
+void test_heap_sort_char_array_reverse(void **state);
+void test_heap_sort_uchar_array_forward(void **state);
+void test_heap_sort_uchar_array_reverse(void **state);
+void test_heap_sort_short_array_forward(void **state);
+void test_heap_sort_short_array_reverse(void **state);
+void test_heap_sort_ushort_array_forward(void **state);
+void test_heap_sort_ushort_array_reverse(void **state);
+void test_heap_sort_int_array_forward(void **state);
+void test_heap_sort_int_array_reverse(void **state);
+void test_heap_sort_uint_array_forward(void **state);
+void test_heap_sort_uint_array_reverse(void **state);
+void test_heap_sort_long_array_forward(void **state);
+void test_heap_sort_long_array_reverse(void **state);
+void test_heap_sort_ulong_array_forward(void **state);
+void test_heap_sort_ulong_array_reverse(void **state);
+void test_heap_sort_llong_array_forward(void **state);
+void test_heap_sort_llong_array_reverse(void **state);
+void test_heap_sort_ullong_array_forward(void **state);
+void test_heap_sort_ullong_array_reverse(void **state);
+void test_heap_sort_float_array_forward(void **state);
+void test_heap_sort_float_array_reverse(void **state);
+void test_heap_sort_double_array_forward(void **state);
+void test_heap_sort_double_array_reverse(void **state);
+void test_heap_sort_ldouble_array_forward(void **state);
+void test_heap_sort_ldouble_array_reverse(void **state);
+void test_heap_sort_bool_array_forward(void **state);
+void test_heap_sort_bool_array_reverse(void **state);
+// ================================================================================
+// ================================================================================
+
 void test_max_char_array(void **state);
 void test_max_uchar_array(void **state);
 void test_max_short_array(void **state);
