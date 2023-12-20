@@ -753,14 +753,8 @@ bool push_string_sllist(string_sl* sllist, char* data, size_t index) {
         errno = ENOMEM;
         return false;
     }
-    str* ptr = malloc(sizeof(str));
-    if ( !ptr ) {
-        errno = ENOMEM;
-        free(newNode);
-        return false;
-    }
+    str* ptr = init_string(data);
     newNode->data = ptr;
-    strcpy(newNode->data->data, data);
 
     // Insert at the head (works for empty and non-empty list)
     if (index == 0) {

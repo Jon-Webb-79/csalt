@@ -1082,7 +1082,21 @@ const struct CMUnitTest test_heap[] = {
 };
 
 const struct CMUnitTest test_sllist[] = {
-	cmocka_unit_test(test_push_char_sllist)
+	cmocka_unit_test(test_push_char_sllist),
+    cmocka_unit_test(test_push_uchar_sllist),
+    cmocka_unit_test(test_push_short_sllist),
+    cmocka_unit_test(test_push_ushort_sllist),
+    cmocka_unit_test(test_push_int_sllist),
+    cmocka_unit_test(test_push_uint_sllist),
+    cmocka_unit_test(test_push_long_sllist),
+    cmocka_unit_test(test_push_ulong_sllist),
+    cmocka_unit_test(test_push_llong_sllist),
+    cmocka_unit_test(test_push_ullong_sllist),
+    cmocka_unit_test(test_push_float_sllist),
+    cmocka_unit_test(test_push_double_sllist),
+    cmocka_unit_test(test_push_ldouble_sllist),
+    cmocka_unit_test(test_push_bool_sllist),
+    cmocka_unit_test(test_push_string_sllist)
 };
 // Begin code
 int main(int argc, const char * argv[]) {

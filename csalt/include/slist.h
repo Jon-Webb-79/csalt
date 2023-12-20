@@ -927,7 +927,7 @@ str* get_string_sllist(string_sl* list, size_t index);
     ullong_sl*: get_ullong_sllist, \
     float_sl*: get_float_sllist, \
     double_sl*: get_double_sllist, \
-    ldouble_sl*: get_double_sllist, \
+    ldouble_sl*: get_ldouble_sllist, \
     bool_sl*: get_bool_sllist, \
     string_sl*: get_string_sllist) (sllist, index)
 // ================================================================================
