@@ -24,6 +24,7 @@
 #include "test_swap.h"
 #include "test_array.h"
 #include "test_heap.h"
+#include "test_sllist.h"
 
 const struct CMUnitTest test_swap[] = {
 	cmocka_unit_test(test_swap_char),
@@ -1077,9 +1078,11 @@ const struct CMUnitTest test_heap[] = {
     cmocka_unit_test(test_max_replace_index_ulong),
     cmocka_unit_test(test_max_replace_index_float),
     cmocka_unit_test(test_max_replace_index_double),
-    cmocka_unit_test(test_max_replace_index_ldouble),
-    // cmocka_unit_test(test_max_replace_index_bool),
-    // cmocka_unit_test(test_max_replace_index_string)
+    cmocka_unit_test(test_max_replace_index_ldouble)
+};
+
+const struct CMUnitTest test_sllist[] = {
+	cmocka_unit_test(test_push_char_sllist)
 };
 // Begin code
 int main(int argc, const char * argv[]) {
@@ -1102,6 +1105,10 @@ int main(int argc, const char * argv[]) {
         return status;
     }
     status = cmocka_run_group_tests(test_heap, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
+    status = cmocka_run_group_tests(test_sllist, NULL, NULL);
 	return status;
 }
 // ================================================================================

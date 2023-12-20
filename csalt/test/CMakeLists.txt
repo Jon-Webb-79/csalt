@@ -18,7 +18,8 @@ add_executable(unit_tests
     test_vector.c
     test_array.c
     test_swap.c
-    test_heap.c)
+    test_heap.c
+    test_sllist.c)
 
 # Link the test executable against the Hello library and cmocka
 target_link_libraries(unit_tests csalt cmocka)

@@ -25,6 +25,7 @@
 #include "vector.h"
 #include "array.h"
 #include "heap.h"
+#include "slist.h"
 
 extern const size_t PRINT_LENGTH;
 
@@ -108,6 +109,21 @@ extern "C" {
                                          ldouble_max_hp*: true, \
                                          bool_max_hp*: true, \
                                          string_max_hp*: true, \
+                                         char_sl*: true, \
+                                         uchar_sl*: true, \
+                                         short_sl*: true, \
+                                         ushort_sl*: true, \
+                                         int_sl*: true, \
+                                         uint_sl*: true, \
+                                         long_sl*: true, \
+                                         ulong_sl*: true, \
+                                         llong_sl*: true, \
+                                         ullong_sl*: true, \
+                                         float_sl*: true, \
+                                         double_sl*: true, \
+                                         ldouble_sl*: true, \
+                                         bool_sl*: true, \
+                                         string_sl*: true, \
 										 default: false)
 // ================================================================================
 // ================================================================================
@@ -214,6 +230,24 @@ void print_string_max_heap(string_max_hp* vec);
 // ================================================================================
 // ================================================================================
 
+void print_char_sllist(char_sl* list);
+void print_uchar_sllist(uchar_sl* list);
+void print_short_sllist(short_sl* list);
+void print_ushort_sllist(ushort_sl* list);
+void print_int_sllist(int_sl* list);
+void print_uint_sllist(uint_sl* list);
+void print_long_sllist(long_sl* list);
+void print_ulong_sllist(ulong_sl* list);
+void print_llong_sllist(llong_sl* list);
+void print_ullong_sllist(ullong_sl* list);
+void print_float_sllist(float_sl* list);
+void print_double_sllist(double_sl* list);
+void print_ldouble_sllist(ldouble_sl* list);
+void print_bool_sllist(bool_sl* list);
+void print_string_sllist(string_sl* list);
+// ================================================================================
+// ================================================================================
+
 /**
  * Macro using _Generic operator to determine which functions get implemented
  * in a print statement.
@@ -290,7 +324,22 @@ void print_string_max_heap(string_max_hp* vec);
                                        double_max_hp*: print_double_max_heap, \
                                        ldouble_max_hp*: print_ldouble_max_heap, \
                                        bool_max_hp*: print_bool_max_heap, \
-                                       string_max_hp*: print_string_max_heap)(T)
+                                       string_max_hp*: print_string_max_heap, \
+                                       char_sl*: print_char_sllist, \
+                                       uchar_sl*: print_uchar_sllist, \
+                                       short_sl*: print_short_sllist, \
+                                       ushort_sl*: print_ushort_sllist, \
+                                       int_sl*: print_int_sllist, \
+                                       uint_sl*: print_uint_sllist, \
+                                       long_sl*: print_long_sllist, \
+                                       ulong_sl*: print_ulong_sllist, \
+                                       llong_sl*: print_llong_sllist, \
+                                       ullong_sl*: print_ullong_sllist, \
+                                       float_sl*: print_float_sllist, \
+                                       double_sl*: print_double_sllist, \
+                                       ldouble_sl*: print_ldouble_sllist, \
+                                       bool_sl*: print_bool_sllist, \
+                                       string_sl*: print_string_sllist)(T)
 // ================================================================================
 // ================================================================================
 
