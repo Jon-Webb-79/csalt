@@ -8,15 +8,9 @@ to the Csalt library.
    dot products, cross products, matrix transpose, multi-equation solvers and 
    partial differential equation solvers.
 
-#. **Single Linke List:** A library that enables singly linked lists.  This
-   section will mimic the behavior of a vector as applied to a singly linked 
-   list with no reverse iteration capability.
-
 #. **Double Linked List:** A library that enables double linked lists.  This 
    section will mimic the behavior of a vector as applied to a double linked 
    list.
-
-#. **Priority Queue:** A library that enable priority queue's.
 
 #. **Binary Tree:** A library that enable an AVL Binary Tree with search
    algorithms.

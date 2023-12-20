@@ -28,6 +28,7 @@ lets pour some seasoning on our C-code and get started.
     Vector <Vector>
     Min Heap <MinHeap>
     Max Heap <MaxHeap>
+    Singly Linked List <SList>
     Todo <Todo>
 
 Indices and tables

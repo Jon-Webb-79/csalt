@@ -152,7 +152,7 @@ allocated vector of type ``float_v`` with an initial capacity of 5 indices.
 
    int main() {
        float_v* vec = init_vector(dFloat)(5);
-       if (vec == NUL) {
+       if (vec == NULL) {
            fprintf(stderr, "Error: Memory allocation failure\n");
            return EXIT_FAILURE;
        }
