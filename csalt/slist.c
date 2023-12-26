@@ -1698,6 +1698,457 @@ str* get_string_sllist(string_sl* list, size_t index) {
         return NULL; // or some other error indicator
     }
 }
+// ================================================================================ 
+// ================================================================================
+// POP SINGLY LINKED LIST DATA 
+
+char pop_char_sllist(char_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return (char)255;
+    }
+
+    char_slnode* to_delete;
+    char dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        char_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char pop_uchar_sllist(uchar_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return (char)127;
+    }
+
+    uchar_slnode* to_delete;
+    unsigned char dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        uchar_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+short int pop_short_sllist(short_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return SHRT_MAX;
+    }
+
+    short_slnode* to_delete;
+    short int dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        short_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int pop_ushort_sllist(ushort_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return USHRT_MAX;
+    }
+
+    ushort_slnode* to_delete;
+    unsigned short int dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        ushort_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+int pop_int_sllist(int_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return INT_MAX;
+    }
+
+    int_slnode* to_delete;
+    int dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        int_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int pop_uint_sllist(uint_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return UINT_MAX;
+    }
+
+    uint_slnode* to_delete;
+    unsigned int dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        uint_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+long int pop_long_sllist(long_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return LONG_MAX;
+    }
+
+    long_slnode* to_delete;
+    long int dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        long_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int pop_ulong_sllist(ulong_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return ULONG_MAX;
+    }
+
+    ulong_slnode* to_delete;
+    unsigned long int dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        ulong_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+long long int pop_llong_sllist(llong_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return LLONG_MAX;
+    }
+
+    llong_slnode* to_delete;
+    long long int dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        llong_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int pop_ullong_sllist(ullong_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return ULLONG_MAX;
+    }
+
+    ullong_slnode* to_delete;
+    unsigned long long int dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        ullong_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+float pop_float_sllist(float_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return FLT_MAX;
+    }
+
+    float_slnode* to_delete;
+    float dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        float_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+double pop_double_sllist(double_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return DBLE_MAX;
+    }
+
+    double_slnode* to_delete;
+    double dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        double_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+long double pop_ldouble_sllist(ldouble_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return LDBLE_MAX;
+    }
+
+    ldouble_slnode* to_delete;
+    long double dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        ldouble_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+bool pop_bool_sllist(bool_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return SHRT_MAX;
+    }
+
+    bool_slnode* to_delete;
+    bool dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        bool_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    free(to_delete);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+str* pop_string_sllist(string_sl* list, size_t index) {
+    if (list == NULL || list->head == NULL || index >= list->len) {
+        errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
+        return NULL;
+    }
+
+    string_slnode* to_delete;
+    str* dat;
+
+    if (index == 0) {
+        // Removing the head node
+        to_delete = list->head;
+        list->head = list->head->next;
+        dat = to_delete->data;
+    } else {
+        string_slnode* current = list->head;
+        for (size_t i = 0; i < index - 1; ++i) {
+            current = current->next;
+        }
+        to_delete = current->next;
+        current->next = current->next->next;
+        dat = to_delete->data;
+    }
+
+    list->len--;
+    return dat;
+}
 // ================================================================================
 // ================================================================================
 // eof

@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #include "str.h"
 #include "admin.h"
@@ -932,6 +933,172 @@ str* get_string_sllist(string_sl* list, size_t index);
     string_sl*: get_string_sllist) (sllist, index)
 // ================================================================================
 // ================================================================================
+// POP SINGELY LINKED LIST DATA 
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return a char variable
+ */
+char pop_char_sllist(char_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return an unsigned char variable
+ */
+unsigned char pop_uchar_sllist(uchar_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return a short integer variable
+ */
+short int pop_short_sllist(short_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return an unsigned short int variable
+ */
+unsigned short int pop_ushort_sllist(ushort_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return an integer variable
+ */
+int pop_int_sllist(int_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return an unsigned integer variable
+ */
+unsigned int pop_uint_sllist(uint_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return a long int variable
+ */
+long int pop_long_sllist(long_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return an unsigned long integer variable
+ */
+unsigned long int pop_ulong_sllist(ulong_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return a long long integer variable
+ */
+long long int pop_llong_sllist(llong_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return an unsigned long long integer variable
+ */
+unsigned long long int pop_ullong_sllist(ullong_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return a float variable
+ */
+float pop_float_sllist(float_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return a double variable
+ */
+double pop_double_sllist(double_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return a long double variable
+ */
+long double pop_ldouble_sllist(ldouble_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return a bool variable
+ */
+bool pop_bool_sllist(bool_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Removes a node from a singly linked list and returns the data to a user 
+ *
+ * @param list A linked list data structure 
+ * @param index The index to be removed
+ * @return a str variable
+ */
+str* pop_string_sllist(string_sl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+#define pop_sllist(list, index) _Generic((list), \
+    char_sl*: pop_char_sllist, \
+    uchar_sl*: pop_uchar_sllist, \
+    short_sl*: pop_short_sllist, \
+    ushort_sl*: pop_ushort_sllist, \
+    int_sl*: pop_int_sllist, \
+    uint_sl*: pop_uint_sllist, \
+    float_sl*: pop_float_sllist, \
+    double_sl*: pop_double_sllist, \
+    ldouble_sl*: pop_ldouble_sllist, \
+    bool_sl*: pop_bool_sllist, \
+    string_sl*: pop_string_sllist) (list, index)
+// ================================================================================ 
+// ================================================================================ 
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
