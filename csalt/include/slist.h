@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <float.h>
 
 #include "str.h"
 #include "admin.h"
@@ -1092,6 +1093,10 @@ str* pop_string_sllist(string_sl* list, size_t index);
     ushort_sl*: pop_ushort_sllist, \
     int_sl*: pop_int_sllist, \
     uint_sl*: pop_uint_sllist, \
+    long_sl*: pop_long_sllist, \
+    ulong_sl*: pop_ulong_sllist, \
+    llong_sl*: pop_llong_sllist, \
+    ullong_sl*: pop_ullong_sllist, \
     float_sl*: pop_float_sllist, \
     double_sl*: pop_double_sllist, \
     ldouble_sl*: pop_ldouble_sllist, \

@@ -42,7 +42,25 @@ void test_push_double_sllist(void **state);
 void test_push_ldouble_sllist(void **state);
 void test_push_bool_sllist(void **state);
 void test_push_string_sllist(void **state);
+// ================================================================================
+// ================================================================================ 
+// TEST POP SLLIST FUNCTIONS
 
+void test_pop_char_sllist(void **state);
+void test_pop_uchar_sllist(void **state);
+void test_pop_short_sllist(void **state);
+void test_pop_ushort_sllist(void **state);
+void test_pop_int_sllist(void **state);
+void test_pop_uint_sllist(void **state);
+void test_pop_long_sllist(void **state);
+void test_pop_ulong_sllist(void **state);
+void test_pop_llong_sllist(void **state);
+void test_pop_ullong_sllist(void **state);
+void test_pop_float_sllist(void **state);
+void test_pop_double_sllist(void **state);
+void test_pop_ldouble_sllist(void **state);
+void test_pop_bool_sllist(void **state);
+void test_pop_string_sllist(void **state);
 // ================================================================================
 // ================================================================================ 
 #endif /* test_sllist_H */

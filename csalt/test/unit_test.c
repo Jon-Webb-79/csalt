@@ -1096,7 +1096,22 @@ const struct CMUnitTest test_sllist[] = {
     cmocka_unit_test(test_push_double_sllist),
     cmocka_unit_test(test_push_ldouble_sllist),
     cmocka_unit_test(test_push_bool_sllist),
-    cmocka_unit_test(test_push_string_sllist)
+    cmocka_unit_test(test_push_string_sllist),
+    cmocka_unit_test(test_pop_char_sllist),
+    cmocka_unit_test(test_pop_uchar_sllist),
+    cmocka_unit_test(test_pop_short_sllist),
+    cmocka_unit_test(test_pop_ushort_sllist), 
+    cmocka_unit_test(test_pop_int_sllist),
+    cmocka_unit_test(test_pop_uint_sllist),
+    cmocka_unit_test(test_pop_long_sllist),
+    cmocka_unit_test(test_pop_ulong_sllist),
+    cmocka_unit_test(test_pop_llong_sllist),
+    cmocka_unit_test(test_pop_ullong_sllist),
+    cmocka_unit_test(test_pop_float_sllist),
+    cmocka_unit_test(test_pop_double_sllist),
+    cmocka_unit_test(test_pop_ldouble_sllist),
+    cmocka_unit_test(test_pop_bool_sllist),
+    cmocka_unit_test(test_pop_string_sllist),
 };
 // Begin code
 int main(int argc, const char * argv[]) {

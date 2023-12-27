@@ -2035,7 +2035,7 @@ float pop_float_sllist(float_sl* list, size_t index) {
 double pop_double_sllist(double_sl* list, size_t index) {
     if (list == NULL || list->head == NULL || index >= list->len) {
         errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
-        return DBLE_MAX;
+        return DBL_MAX;
     }
 
     double_slnode* to_delete;
@@ -2065,7 +2065,7 @@ double pop_double_sllist(double_sl* list, size_t index) {
 long double pop_ldouble_sllist(ldouble_sl* list, size_t index) {
     if (list == NULL || list->head == NULL || index >= list->len) {
         errno = (list == NULL || list->head == NULL) ? EINVAL : ERANGE;
-        return LDBLE_MAX;
+        return LDBL_MAX;
     }
 
     ldouble_slnode* to_delete;
@@ -2130,7 +2130,6 @@ str* pop_string_sllist(string_sl* list, size_t index) {
 
     string_slnode* to_delete;
     str* dat;
-
     if (index == 0) {
         // Removing the head node
         to_delete = list->head;
@@ -2145,6 +2144,7 @@ str* pop_string_sllist(string_sl* list, size_t index) {
         current->next = current->next->next;
         dat = to_delete->data;
     }
+    free(to_delete);
 
     list->len--;
     return dat;
