@@ -459,3 +459,96 @@ can also use the underling functions shown below for specific data types.
    bool push_bool_sllist(bool_sl* list, bool var, size_t index);
    bool push_string_sllist(string_sl* list, const char* var, size_t index);
    bool push_str_sllist(string_sl* list, str* var, size_t index);
+
+Pop Singly Linked List 
+======================
+The ``pop_sllist`` macro included in the ``slist.h`` header file provides a 
+type safe method to pop data from a singly linked list, which removes the user 
+defined node from the list and returns the data encoded within the deleted node 
+to the calling program.  The form of the ``pop_sllist`` macro along with the 
+macro parameters and returned variables are shown below.
+
+.. note:: The data returned from ``pop_sllist`` when popping data from a ``string_sl`` data type is in the form of a dynamically allocated ``str`` struct and must be manually freed with the ``free_string`` macro.
+
+.. code-block:: c 
+
+   #define pop_sllist(list, index)
+
+Parameters 
+----------
+
+- :c:`list`: A singly linked list data structure.
+- :c:`index`: The pseudo-index from where the user wishes to remove data.
+
+Returns 
+-------
+
+- The data contained in the deleted index.  The data type must be consistent with the type of the node.
+
+Error Handling 
+--------------
+The implementation of the ``pop_sllist`` macro can lead to two possible error 
+codes.  If the user passes a faulty pointer for the value of ``list``, the function 
+will set the value of ``errno`` to ``EINVAL``, and if the index is out of range, 
+the function will set the value of ``errnor`` to ``ERANGE``.
+
+Possible Error Codes 
+
+- ``EINVAL``: Indicates an inproperly formatted struct in place of ``list``.
+- ``ERANGE``: Indicates an index that is out of range.
+
+Example 
+-------
+The following is an example for the proper use of the ``pop_sllist`` macro.
+
+.. code-block:: c 
+
+   int main() {
+       string_sl* list = init_sllist(dString)();
+       push_sllist(list, "Zero", list->len);
+       push_sllist(list, "One", list->len);
+       push_sllist(list, "Two", list->len);
+       push_sllist(list, "Three", list->len);
+       push_sllist(list, "Four", list->len);
+       push_sllist(list, "Five", list->len);
+       str* one = pop_sllist(list, 0);
+       str* two = pop_sllist(list, 2);
+       print("First Popped Value: " one->data);
+       print("Secon Popped Value: ", two->data)
+       print("Remaining List: ", list);
+       free_string(one);
+       free_string(two);
+       free_sllist(list);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> First Popped Value: Zero 
+   >> Second Popped Valie: Three 
+   >> Remaining List: { One, Two, Four, Five }
+
+Underlying Functions 
+--------------------
+The ``pop_sllist`` macro provides a robust, but generic method for a developer 
+to removed data from a singly linked list.  However, a user can also interact 
+directly with type specific functions that the ``pop_sllist`` macro wraps around.
+The type specific functions are provided below.
+
+.. code-block:: c
+
+   bool pop_char_sllist(char_sl* list, size_t index);
+   bool pop_uchar_sllist(uchar_sl* list, size_t index);
+   bool pop_short_sllist(short_sl* list, size_t index);
+   bool pop_ushort_sllist(ushort_sl* list, size_t index);
+   bool pop_int_sllist(int_sl* list, size_t index);
+   bool pop_uint_sllist(uint_sl* list, size_t index);
+   bool pop_long_sllist(long_sl* list, size_t index);
+   bool pop_ulong_sllist(ulong_sl* list, size_t index);
+   bool pop_llong_sllist(llong_sl* list, size_t index);
+   bool pop_ullong_sllist(ullong_sl* list, size_t index);
+   bool pop_float_sllist(float_sl* list, size_t index);
+   bool pop_double_sllist(double_sl* list, size_t index);
+   bool pop_ldouble_sllist(ldouble_sl* list, size_t index);
+   bool pop_bool_sllist(bool_sl* list, size_t index);
+   bool pop_string_sllist(string_sl* list, size_t index);
