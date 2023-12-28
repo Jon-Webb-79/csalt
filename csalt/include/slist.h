@@ -1102,6 +1102,146 @@ str* pop_string_sllist(string_sl* list, size_t index);
     ldouble_sl*: pop_ldouble_sllist, \
     bool_sl*: pop_bool_sllist, \
     string_sl*: pop_string_sllist) (list, index)
+// ================================================================================
+// ================================================================================
+// REVERSE SINGLY LINKED LIST
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_char_sllist(char_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_uchar_sllist(uchar_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_short_sllist(short_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_ushort_sllist(ushort_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_int_sllist(int_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_uint_sllist(uint_sl* list);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_long_sllist(long_sl* list);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_ulong_sllist(ulong_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_llong_sllist(llong_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_ullong_sllist(ullong_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_float_sllist(float_sl* list);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_double_sllist(double_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_ldouble_sllist(ldouble_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_bool_sllist(char_sl* list);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reverses the order of values in a singly linked list.
+ *
+ * @param list a singly linked list data structure 
+ */
+void reverse_string_sllist(string_sl* list);
+// --------------------------------------------------------------------------------
+
+#define reverse_sllist(list) _Generic((list), \
+    char_sl*: reverse_char_sllist, \
+    uchar_sl*: reverse_uchar_sllist, \
+    short_sl*: reverse_short_sllist, \
+    ushort_sl*: reverse_ushort_sllist, \
+    int_sl*: reverse_int_sllist, \
+    uint_sl*: reverse_uint_sllist, \
+    long_sl*: reverse_long_sllist, \
+    ulong_sl*: reverse_ulong_sllist, \
+    llong_sl*: reverse_llong_sllist, \
+    ullong_sl*: reverse_ullong_sllist, \
+    float_sl*: reverse_float_sllist, \
+    double_sl*: reverse_double_sllist, \
+    ldouble_sl*: reverse_ldouble_sllist, \
+    bool_sl*: reverse_bool_sllist, \
+    string_sl*: reverse_string_sllist) (list)
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
