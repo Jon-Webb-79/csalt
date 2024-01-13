@@ -62,6 +62,26 @@ void test_pop_ldouble_sllist(void **state);
 void test_pop_bool_sllist(void **state);
 void test_pop_string_sllist(void **state);
 // ================================================================================
+// ================================================================================
+// TEST REVERSE LIST
+
+
+void test_reverse_char_sllist(void **state);
+void test_reverse_uchar_sllist(void **state);
+void test_reverse_short_sllist(void **state);
+void test_reverse_ushort_sllist(void **state);
+void test_reverse_int_sllist(void **state);
+void test_reverse_uint_sllist(void **state);
+void test_reverse_long_sllist(void **state);
+void test_reverse_ulong_sllist(void **state);
+void test_reverse_llong_sllist(void **state);
+void test_reverse_ullong_sllist(void **state);
+void test_reverse_float_sllist(void **state);
+void test_reverse_double_sllist(void **state);
+void test_reverse_ldouble_sllist(void **state);
+void test_reverse_bool_sllist(void **state);
+void test_reverse_string_sllist(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_sllist_H */
 // ================================================================================
