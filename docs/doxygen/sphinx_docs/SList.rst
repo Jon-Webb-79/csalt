@@ -552,3 +552,79 @@ The type specific functions are provided below.
    bool pop_ldouble_sllist(ldouble_sl* list, size_t index);
    bool pop_bool_sllist(bool_sl* list, size_t index);
    bool pop_string_sllist(string_sl* list, size_t index);
+
+Reverse Singly List 
+===================
+The ``reverse_sllist`` macro leverages the ``_Generic`` keyword to select from several
+functions in order to reverse the order of data in a singly linked list.  The form 
+and parameters of the ``reverse_sllist`` macro are shown below.
+
+.. code-block:: c
+
+   #define reverse_sllist(list) ( /* Expression to reverse list */)
+     
+Parameters 
+----------
+
+- :c:`list`: A singly linked list data structure 
+
+Error Handling 
+--------------
+The implementation of the ``reverse_sllist`` macro can lead to one possible error 
+code.  If the user passes a faulty pointer for the value of ``list``, the function 
+will set the value of ``errno`` to ``EINVAL``.
+
+Possible Error Codes 
+
+- ``EINVAL``: Indicates an inproperly formatted struct in place of ``list``.
+
+Example 
+-------
+The following is an example for the proper use of the ``reverse_sllist`` macro.
+
+.. code-block:: c 
+
+   int main() {
+       string_sl* list = init_sllist(dString)();
+       push_sllist(list, "Zero", list->len);
+       push_sllist(list, "One", list->len);
+       push_sllist(list, "Two", list->len);
+       push_sllist(list, "Three", list->len);
+       push_sllist(list, "Four", list->len);
+       push_sllist(list, "Five", list->len);
+       print("Initial Linked List ", list)
+       reverse_sllist(list);
+       print("Reversed Linked List: ", list);
+       free_sllist(list);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Initial Linked List: [ Zero, One, Two, Three, Four, Five ]
+   >> Reversed Linked List: [ Five, Four, Three, Two, One, Zero ]
+
+Underlying Functions 
+--------------------
+The ``reverse_sllist`` macro provides a robust, but generic method for a developer 
+to removed data from a singly linked list.  However, a user can also interact 
+directly with type specific functions that the ``reverse_sllist`` macro wraps around.
+The type specific functions are provided below.
+
+.. code-block:: c
+
+   bool reverse_char_sllist(char_sl* list);
+   bool reverse_uchar_sllist(uchar_sl* list);
+   bool reverse_short_sllist(short_sl* list);
+   bool reverse_ushort_sllist(ushort_sl* list);
+   bool reverse_int_sllist(int_sl* list);
+   bool reverse_uint_sllist(uint_sl* list);
+   bool reverse_long_sllist(long_sl* list);
+   bool reverse_ulong_sllist(ulong_sl* list);
+   bool reverse_llong_sllist(llong_sl* list);
+   bool reverse_ullong_sllist(ullong_sl* list);
+   bool reverse_float_sllist(float_sl* list);
+   bool reverse_double_sllist(double_sl* list);
+   bool reverse_ldouble_sllist(ldouble_sl* list);
+   bool reverse_bool_sllist(bool_sl* list);
+   bool reverse_string_sllist(string_sl* list);

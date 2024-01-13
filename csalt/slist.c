@@ -2154,6 +2154,10 @@ str* pop_string_sllist(string_sl* list, size_t index) {
 // REVERSE SINGLY LINKED LIST 
 
 void reverse_char_sllist(char_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     char_slnode* prev = NULL;
     char_slnode* current = list->head;
     char_slnode* next = NULL;
@@ -2166,10 +2170,13 @@ void reverse_char_sllist(char_sl* list) {
     }
     list->head = prev;
 }
-// ================================================================================ 
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 void reverse_uchar_sllist(uchar_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     uchar_slnode* prev = NULL;
     uchar_slnode* current = list->head;
     uchar_slnode* next = NULL;
@@ -2182,10 +2189,13 @@ void reverse_uchar_sllist(uchar_sl* list) {
     }
     list->head = prev;
 }
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 void reverse_short_sllist(short_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     short_slnode* prev = NULL;
     short_slnode* current = list->head;
     short_slnode* next = NULL;
@@ -2198,10 +2208,13 @@ void reverse_short_sllist(short_sl* list) {
     }
     list->head = prev;
 }
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 void reverse_ushort_sllist(ushort_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     ushort_slnode* prev = NULL;
     ushort_slnode* current = list->head;
     ushort_slnode* next = NULL;
@@ -2214,10 +2227,13 @@ void reverse_ushort_sllist(ushort_sl* list) {
     }
     list->head = prev;
 }
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 void reverse_int_sllist(int_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     int_slnode* prev = NULL;
     int_slnode* current = list->head;
     int_slnode* next = NULL;
@@ -2230,10 +2246,13 @@ void reverse_int_sllist(int_sl* list) {
     }
     list->head = prev;
 }
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 void reverse_uint_sllist(uint_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     uint_slnode* prev = NULL;
     uint_slnode* current = list->head;
     uint_slnode* next = NULL;
@@ -2246,10 +2265,13 @@ void reverse_uint_sllist(uint_sl* list) {
     }
     list->head = prev;
 }
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 void reverse_long_sllist(long_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     long_slnode* prev = NULL;
     long_slnode* current = list->head;
     long_slnode* next = NULL;
@@ -2262,10 +2284,13 @@ void reverse_long_sllist(long_sl* list) {
     }
     list->head = prev;
 }
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 void reverse_ulong_sllist(ulong_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     ulong_slnode* prev = NULL;
     ulong_slnode* current = list->head;
     ulong_slnode* next = NULL;
@@ -2278,10 +2303,13 @@ void reverse_ulong_sllist(ulong_sl* list) {
     }
     list->head = prev;
 }
-// ================================================================================
-// ================================================================================
+// --------------------------------------------------------------------------------
 
 void reverse_llong_sllist(llong_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     llong_slnode* prev = NULL;
     llong_slnode* current = list->head;
     llong_slnode* next = NULL;
@@ -2297,6 +2325,10 @@ void reverse_llong_sllist(llong_sl* list) {
 // --------------------------------------------------------------------------------
 
 void reverse_ullong_sllist(ullong_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     ullong_slnode* prev = NULL;
     ullong_slnode* current = list->head;
     ullong_slnode* next = NULL;
@@ -2312,6 +2344,10 @@ void reverse_ullong_sllist(ullong_sl* list) {
 // -------------------------------------------------------------------------------
 
 void reverse_float_sllist(float_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     float_slnode* prev = NULL;
     float_slnode* current = list->head;
     float_slnode* next = NULL;
@@ -2327,6 +2363,10 @@ void reverse_float_sllist(float_sl* list) {
 // --------------------------------------------------------------------------------
 
 void reverse_double_sllist(double_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     double_slnode* prev = NULL;
     double_slnode* current = list->head;
     double_slnode* next = NULL;
@@ -2342,6 +2382,10 @@ void reverse_double_sllist(double_sl* list) {
 // --------------------------------------------------------------------------------
 
 void reverse_ldouble_sllist(ldouble_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     ldouble_slnode* prev = NULL;
     ldouble_slnode* current = list->head;
     ldouble_slnode* next = NULL;
@@ -2357,6 +2401,10 @@ void reverse_ldouble_sllist(ldouble_sl* list) {
 // --------------------------------------------------------------------------------
 
 void reverse_bool_sllist(bool_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     bool_slnode* prev = NULL;
     bool_slnode* current = list->head;
     bool_slnode* next = NULL;
@@ -2372,6 +2420,10 @@ void reverse_bool_sllist(bool_sl* list) {
 // --------------------------------------------------------------------------------
 
 void reverse_string_sllist(string_sl* list) {
+    if (list == NULL || list->head == NULL) {
+        errno = EINVAL;
+        return;
+    }
     string_slnode* prev = NULL;
     string_slnode* current = list->head;
     string_slnode* next = NULL;
