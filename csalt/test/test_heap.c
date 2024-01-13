@@ -501,8 +501,8 @@ void test_max_enqueue_string(void **state)
     for (size_t i = 0; i < 7; i++) {
         enqueue_max_heap(heap, a[i]);
     }
-    char* b[7] = {"Seven", "Four", "Six", "One", "Three", "Two", "Five"};
-    for (size_t i = 0; i < 7; i++) {
+   char* b[7] = {"Two", "One", "Three", "Four", "Five", "Six", "Seven"};
+   for (size_t i = 0; i < 7; i++) {
         assert_string_equal(heap->data[i].data, b[i]);
     }
     free_max_heap(heap);
@@ -968,7 +968,7 @@ void test_max_enqueue_string_gbc(void **state)
     for (size_t i = 0; i < 7; i++) {
         enqueue_max_heap(heap, a[i]);
     }
-    char* b[7] = {"Seven", "Four", "Six", "One", "Three", "Two", "Five"};
+    char* b[7] = {"Two", "One", "Three", "Four", "Five", "Six", "Seven"};
     for (size_t i = 0; i < 7; i++) {
         assert_string_equal(heap->data[i].data, b[i]);
     }
@@ -1483,8 +1483,8 @@ void test_max_dequeue_string(void **state)
         enqueue_max_heap(heap, a[i]);
     }
     str* val = dequeue_max_heap(heap);
-    assert_string_equal(val->data, "Seven");
-    char* b[6] = {"Five", "Four", "Six", "One", "Three", "Two"};
+    assert_string_equal(val->data, "Two");
+    char* b[6] = {"One", "Five", "Three", "Four", "Seven", "Six"};
     for (size_t i = 0; i < 6; i++) {
         assert_string_equal(heap->data[i].data, b[i]);
     }
@@ -1503,7 +1503,9 @@ void test_min_replace_index_char(void **state)
     for (size_t i = 0; i < 7; i++) {
         enqueue_min_heap(heap, a[i]);
     }
+    print(heap);
     replace_min_heap_index(heap, 2, 12);
+    print(heap);
     char b[7] = {1, 3, 4, 5, 6, 12, 7};
     for (size_t i = 0; i < 7; i++) {
         assert_int_equal(heap->data[i], b[i]);

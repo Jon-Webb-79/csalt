@@ -1215,7 +1215,7 @@ void reverse_ldouble_sllist(ldouble_sl* list);
  *
  * @param list a singly linked list data structure 
  */
-void reverse_bool_sllist(char_sl* list);
+void reverse_bool_sllist(bool_sl* list);
 // --------------------------------------------------------------------------------
 
 /**
