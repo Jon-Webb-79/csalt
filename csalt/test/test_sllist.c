@@ -985,4 +985,2652 @@ void test_reverse_string_sllist(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// TEST BUBBLE SORT 
+
+void test_bubble_sort_char_sllist_forward(void **state) {
+    char_sl* list = init_sllist(dChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    char_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_uchar_sllist_forward(void **state) {
+    uchar_sl* list = init_sllist(dUChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    unsigned char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uchar_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_short_sllist_forward(void **state) {
+    short_sl* list = init_sllist(dShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    short int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    short_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ushort_sllist_forward(void **state) {
+    ushort_sl* list = init_sllist(dUShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    unsigned short int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ushort_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_int_sllist_forward(void **state) {
+    int_sl* list = init_sllist(dInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    int_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_uint_sllist_forward(void **state) {
+    uint_sl* list = init_sllist(dUInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    unsigned int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uint_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_long_sllist_forward(void **state) {
+    long_sl* list = init_sllist(dLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    long_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ulong_sllist_forward(void **state) {
+    ulong_sl* list = init_sllist(dULong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    unsigned long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ulong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_llong_sllist_forward(void **state) {
+    llong_sl* list = init_sllist(dLongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    llong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ullong_sllist_forward(void **state) {
+    ullong_sl* list = init_sllist(dULongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    unsigned long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ullong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_float_sllist_forward(void **state) {
+    float_sl* list = init_sllist(dFloat)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    float a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    float_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_double_sllist_forward(void **state) {
+    double_sl* list = init_sllist(dDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    double_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ldouble_sllist_forward(void **state) {
+    ldouble_sl* list = init_sllist(dLDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    long double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    ldouble_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_bool_sllist_forward(void **state) {
+    bool_sl* list = init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    bool a[7] = {false, false, false, true, true, true, true};
+    bool_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_string_sllist_forward(void **state) {
+    string_sl* list = init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 0);
+    push_sllist(list, "Three", 0);
+    push_sllist(list, "Four", 0);
+    push_sllist(list, "Five", 0);
+    push_sllist(list, "Six", 0);
+    push_sllist(list, "Seven", 0);
+    sort_sllist(list, BUBBLE, FORWARD);
+    char *a[7] = {"Five", "Four", "One", "Seven", "Six", "Three", "Two"};
+    string_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_char_sllist_reverse(void **state) {
+    char_sl* list = init_sllist(dChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    char_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_uchar_sllist_reverse(void **state) {
+    uchar_sl* list = init_sllist(dUChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    unsigned char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uchar_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_short_sllist_reverse(void **state) {
+    short_sl* list = init_sllist(dShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    short int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    short_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ushort_sllist_reverse(void **state) {
+    ushort_sl* list = init_sllist(dUShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    unsigned short int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ushort_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_int_sllist_reverse(void **state) {
+    int_sl* list = init_sllist(dInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    int_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_uint_sllist_reverse(void **state) {
+    uint_sl* list = init_sllist(dUInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    unsigned int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uint_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_long_sllist_reverse(void **state) {
+    long_sl* list = init_sllist(dLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    long_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ulong_sllist_reverse(void **state) {
+    ulong_sl* list = init_sllist(dULong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    unsigned long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ulong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_llong_sllist_reverse(void **state) {
+    llong_sl* list = init_sllist(dLongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    llong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ullong_sllist_reverse(void **state) {
+    ullong_sl* list = init_sllist(dULongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    unsigned long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ullong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_float_sllist_reverse(void **state) {
+    float_sl* list = init_sllist(dFloat)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    float a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    float_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_double_sllist_reverse(void **state) {
+    double_sl* list = init_sllist(dDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    double_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ldouble_sllist_reverse(void **state) {
+    ldouble_sl* list = init_sllist(dLDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    long double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    ldouble_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_bool_sllist_reverse(void **state) {
+    bool_sl* list = init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    bool a[7] = {true, true, true, true, false, false, false};
+    bool_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_string_sllist_reverse(void **state) {
+    string_sl* list = init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 0);
+    push_sllist(list, "Three", 0);
+    push_sllist(list, "Four", 0);
+    push_sllist(list, "Five", 0);
+    push_sllist(list, "Six", 0);
+    push_sllist(list, "Seven", 0);
+    sort_sllist(list, BUBBLE, REVERSE);
+    char *a[7] = {"Two", "Three", "Six", "Seven", "One", "Four", "Five"};
+    string_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// ================================================================================
+// ================================================================================
+// TEST SELLECTION SORT 
+
+void test_selection_sort_char_sllist_forward(void **state) {
+    char_sl* list = init_sllist(dChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    char_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uchar_sllist_forward(void **state) {
+    uchar_sl* list = init_sllist(dUChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    unsigned char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uchar_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_short_sllist_forward(void **state) {
+    short_sl* list = init_sllist(dShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    short int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    short_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ushort_sllist_forward(void **state) {
+    ushort_sl* list = init_sllist(dUShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    unsigned short int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ushort_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_int_sllist_forward(void **state) {
+    int_sl* list = init_sllist(dInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    int_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uint_sllist_forward(void **state) {
+    uint_sl* list = init_sllist(dUInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    unsigned int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uint_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_long_sllist_forward(void **state) {
+    long_sl* list = init_sllist(dLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    long_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ulong_sllist_forward(void **state) {
+    ulong_sl* list = init_sllist(dULong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    unsigned long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ulong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_llong_sllist_forward(void **state) {
+    llong_sl* list = init_sllist(dLongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    llong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ullong_sllist_forward(void **state) {
+    ullong_sl* list = init_sllist(dULongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    unsigned long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ullong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_float_sllist_forward(void **state) {
+    float_sl* list = init_sllist(dFloat)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    float a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    float_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_double_sllist_forward(void **state) {
+    double_sl* list = init_sllist(dDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    double_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ldouble_sllist_forward(void **state) {
+    ldouble_sl* list = init_sllist(dLDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    long double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    ldouble_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_bool_sllist_forward(void **state) {
+    bool_sl* list = init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    bool a[7] = {false, false, false, true, true, true, true};
+    bool_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_string_sllist_forward(void **state) {
+    string_sl* list = init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 0);
+    push_sllist(list, "Three", 0);
+    push_sllist(list, "Four", 0);
+    push_sllist(list, "Five", 0);
+    push_sllist(list, "Six", 0);
+    push_sllist(list, "Seven", 0);
+    sort_sllist(list, SELECTION, FORWARD);
+    char *a[7] = {"Five", "Four", "One", "Seven", "Six", "Three", "Two"};
+    string_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_char_sllist_reverse(void **state) {
+    char_sl* list = init_sllist(dChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    char_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uchar_sllist_reverse(void **state) {
+    uchar_sl* list = init_sllist(dUChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    unsigned char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uchar_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_short_sllist_reverse(void **state) {
+    short_sl* list = init_sllist(dShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    short int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    short_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ushort_sllist_reverse(void **state) {
+    ushort_sl* list = init_sllist(dUShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    unsigned short int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ushort_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_int_sllist_reverse(void **state) {
+    int_sl* list = init_sllist(dInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    int_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uint_sllist_reverse(void **state) {
+    uint_sl* list = init_sllist(dUInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    unsigned int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uint_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_long_sllist_reverse(void **state) {
+    long_sl* list = init_sllist(dLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    long_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ulong_sllist_reverse(void **state) {
+    ulong_sl* list = init_sllist(dULong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    unsigned long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ulong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_llong_sllist_reverse(void **state) {
+    llong_sl* list = init_sllist(dLongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    llong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ullong_sllist_reverse(void **state) {
+    ullong_sl* list = init_sllist(dULongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    unsigned long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ullong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_float_sllist_reverse(void **state) {
+    float_sl* list = init_sllist(dFloat)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    float a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    float_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_double_sllist_reverse(void **state) {
+    double_sl* list = init_sllist(dDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    double_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ldouble_sllist_reverse(void **state) {
+    ldouble_sl* list = init_sllist(dLDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    long double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    ldouble_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_bool_sllist_reverse(void **state) {
+    bool_sl* list = init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    bool a[7] = {true, true, true, true, false, false, false};
+    bool_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_string_sllist_reverse(void **state) {
+    string_sl* list = init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 0);
+    push_sllist(list, "Three", 0);
+    push_sllist(list, "Four", 0);
+    push_sllist(list, "Five", 0);
+    push_sllist(list, "Six", 0);
+    push_sllist(list, "Seven", 0);
+    sort_sllist(list, SELECTION, REVERSE);
+    char *a[7] = {"Two", "Three", "Six", "Seven", "One", "Four", "Five"};
+    string_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// ================================================================================
+// ================================================================================
+// TEST INSERT SORT 
+
+void test_insert_sort_char_sllist_forward(void **state) {
+    char_sl* list = init_sllist(dChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    char_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_uchar_sllist_forward(void **state) {
+    uchar_sl* list = init_sllist(dUChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    unsigned char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uchar_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_short_sllist_forward(void **state) {
+    short_sl* list = init_sllist(dShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    short int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    short_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_ushort_sllist_forward(void **state) {
+    ushort_sl* list = init_sllist(dUShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    unsigned short int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ushort_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_int_sllist_forward(void **state) {
+    int_sl* list = init_sllist(dInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    int_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_uint_sllist_forward(void **state) {
+    uint_sl* list = init_sllist(dUInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    unsigned int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uint_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_long_sllist_forward(void **state) {
+    long_sl* list = init_sllist(dLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    long_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_ulong_sllist_forward(void **state) {
+    ulong_sl* list = init_sllist(dULong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    unsigned long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ulong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_llong_sllist_forward(void **state) {
+    llong_sl* list = init_sllist(dLongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    llong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_ullong_sllist_forward(void **state) {
+    ullong_sl* list = init_sllist(dULongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    unsigned long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ullong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_float_sllist_forward(void **state) {
+    float_sl* list = init_sllist(dFloat)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, INSERT, FORWARD);
+    float a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    float_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_double_sllist_forward(void **state) {
+    double_sl* list = init_sllist(dDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, INSERT, FORWARD);
+    double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    double_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_ldouble_sllist_forward(void **state) {
+    ldouble_sl* list = init_sllist(dLDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, INSERT, FORWARD);
+    long double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    ldouble_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_bool_sllist_forward(void **state) {
+    bool_sl* list = init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    sort_sllist(list, INSERT, FORWARD);
+    bool a[7] = {false, false, false, true, true, true, true};
+    bool_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_string_sllist_forward(void **state) {
+    string_sl* list = init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 0);
+    push_sllist(list, "Three", 0);
+    push_sllist(list, "Four", 0);
+    push_sllist(list, "Five", 0);
+    push_sllist(list, "Six", 0);
+    push_sllist(list, "Seven", 0);
+    sort_sllist(list, INSERT, FORWARD);
+    char *a[7] = {"Five", "Four", "One", "Seven", "Six", "Three", "Two"};
+    string_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_char_sllist_reverse(void **state) {
+    char_sl* list = init_sllist(dChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    char_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_uchar_sllist_reverse(void **state) {
+    uchar_sl* list = init_sllist(dUChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    unsigned char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uchar_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_short_sllist_reverse(void **state) {
+    short_sl* list = init_sllist(dShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    short int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    short_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_ushort_sllist_reverse(void **state) {
+    ushort_sl* list = init_sllist(dUShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    unsigned short int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ushort_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_int_sllist_reverse(void **state) {
+    int_sl* list = init_sllist(dInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    int_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_uint_sllist_reverse(void **state) {
+    uint_sl* list = init_sllist(dUInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    unsigned int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uint_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_long_sllist_reverse(void **state) {
+    long_sl* list = init_sllist(dLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    long_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_ulong_sllist_reverse(void **state) {
+    ulong_sl* list = init_sllist(dULong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    unsigned long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ulong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_llong_sllist_reverse(void **state) {
+    llong_sl* list = init_sllist(dLongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    llong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_ullong_sllist_reverse(void **state) {
+    ullong_sl* list = init_sllist(dULongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    unsigned long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ullong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_float_sllist_reverse(void **state) {
+    float_sl* list = init_sllist(dFloat)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, INSERT, REVERSE);
+    float a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    float_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_double_sllist_reverse(void **state) {
+    double_sl* list = init_sllist(dDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, INSERT, REVERSE);
+    double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    double_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_ldouble_sllist_reverse(void **state) {
+    ldouble_sl* list = init_sllist(dLDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, INSERT, REVERSE);
+    long double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    ldouble_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_bool_sllist_reverse(void **state) {
+    bool_sl* list = init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    sort_sllist(list, INSERT, REVERSE);
+    bool a[7] = {true, true, true, true, false, false, false};
+    bool_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insert_sort_string_sllist_reverse(void **state) {
+    string_sl* list = init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 0);
+    push_sllist(list, "Three", 0);
+    push_sllist(list, "Four", 0);
+    push_sllist(list, "Five", 0);
+    push_sllist(list, "Six", 0);
+    push_sllist(list, "Seven", 0);
+    sort_sllist(list, INSERT, REVERSE);
+    char *a[7] = {"Two", "Three", "Six", "Seven", "One", "Four", "Five"};
+    string_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// ================================================================================
+// ================================================================================
+// TEST MERGE SORT 
+
+void test_merge_sort_char_sllist_forward(void **state) {
+    char_sl* list = init_sllist(dChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    char_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_uchar_sllist_forward(void **state) {
+    uchar_sl* list = init_sllist(dUChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    unsigned char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uchar_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_short_sllist_forward(void **state) {
+    short_sl* list = init_sllist(dShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    short int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    short_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ushort_sllist_forward(void **state) {
+    ushort_sl* list = init_sllist(dUShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    unsigned short int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ushort_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_int_sllist_forward(void **state) {
+    int_sl* list = init_sllist(dInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    int_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_uint_sllist_forward(void **state) {
+    uint_sl* list = init_sllist(dUInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    unsigned int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uint_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_long_sllist_forward(void **state) {
+    long_sl* list = init_sllist(dLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    long_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ulong_sllist_forward(void **state) {
+    ulong_sl* list = init_sllist(dULong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    unsigned long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ulong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_llong_sllist_forward(void **state) {
+    llong_sl* list = init_sllist(dLongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    llong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ullong_sllist_forward(void **state) {
+    ullong_sl* list = init_sllist(dULongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    unsigned long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ullong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_float_sllist_forward(void **state) {
+    float_sl* list = init_sllist(dFloat)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, MERGE, FORWARD);
+    float a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    float_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_double_sllist_forward(void **state) {
+    double_sl* list = init_sllist(dDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, MERGE, FORWARD);
+    double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    double_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ldouble_sllist_forward(void **state) {
+    ldouble_sl* list = init_sllist(dLDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, MERGE, FORWARD);
+    long double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    ldouble_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_bool_sllist_forward(void **state) {
+    bool_sl* list = init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    sort_sllist(list, MERGE, FORWARD);
+    bool a[7] = {false, false, false, true, true, true, true};
+    bool_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_string_sllist_forward(void **state) {
+    string_sl* list = init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 0);
+    push_sllist(list, "Three", 0);
+    push_sllist(list, "Four", 0);
+    push_sllist(list, "Five", 0);
+    push_sllist(list, "Six", 0);
+    push_sllist(list, "Seven", 0);
+    sort_sllist(list, MERGE, FORWARD);
+    char *a[7] = {"Five", "Four", "One", "Seven", "Six", "Three", "Two"};
+    string_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_char_sllist_reverse(void **state) {
+    char_sl* list = init_sllist(dChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    char_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_uchar_sllist_reverse(void **state) {
+    uchar_sl* list = init_sllist(dUChar)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    unsigned char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uchar_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_short_sllist_reverse(void **state) {
+    short_sl* list = init_sllist(dShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    short int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    short_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ushort_sllist_reverse(void **state) {
+    ushort_sl* list = init_sllist(dUShort)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    unsigned short int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ushort_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_int_sllist_reverse(void **state) {
+    int_sl* list = init_sllist(dInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    int_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_uint_sllist_reverse(void **state) {
+    uint_sl* list = init_sllist(dUInt)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    unsigned int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uint_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_long_sllist_reverse(void **state) {
+    long_sl* list = init_sllist(dLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    long_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ulong_sllist_reverse(void **state) {
+    ulong_sl* list = init_sllist(dULong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    unsigned long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ulong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_llong_sllist_reverse(void **state) {
+    llong_sl* list = init_sllist(dLongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    llong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ullong_sllist_reverse(void **state) {
+    ullong_sl* list = init_sllist(dULongLong)();
+    push_sllist(list, 5, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 6, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 4, 0);
+    push_sllist(list, 7, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    unsigned long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ullong_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_float_sllist_reverse(void **state) {
+    float_sl* list = init_sllist(dFloat)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, MERGE, REVERSE);
+    float a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    float_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_double_sllist_reverse(void **state) {
+    double_sl* list = init_sllist(dDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, MERGE, REVERSE);
+    double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    double_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ldouble_sllist_reverse(void **state) {
+    ldouble_sl* list = init_sllist(dLDouble)();
+    push_sllist(list, 5., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 6., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 4., 0);
+    push_sllist(list, 7., 0);
+    sort_sllist(list, MERGE, REVERSE);
+    long double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    ldouble_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_bool_sllist_reverse(void **state) {
+    bool_sl* list = init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    sort_sllist(list, MERGE, REVERSE);
+    bool a[7] = {true, true, true, true, false, false, false};
+    bool_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_string_sllist_reverse(void **state) {
+    string_sl* list = init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 0);
+    push_sllist(list, "Three", 0);
+    push_sllist(list, "Four", 0);
+    push_sllist(list, "Five", 0);
+    push_sllist(list, "Six", 0);
+    push_sllist(list, "Seven", 0);
+    sort_sllist(list, MERGE, REVERSE);
+    char *a[7] = {"Two", "Three", "Six", "Seven", "One", "Four", "Five"};
+    string_slnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    } 
+    free_sllist(list);
+}
+// ================================================================================
+// ================================================================================
 // eof

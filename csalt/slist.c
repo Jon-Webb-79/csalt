@@ -2438,4 +2438,2719 @@ void reverse_string_sllist(string_sl* list) {
 }
 // ================================================================================
 // ================================================================================
+// BUBBLE SORT (PRIVATE FUNCTIONS) 
+
+static void _bubble_sort_char(char_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    char_slnode *current;
+    char_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                char temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_uchar(uchar_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    uchar_slnode *current;
+    uchar_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                unsigned char temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_short(short_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    short_slnode *current;
+    short_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                short int temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_ushort(ushort_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    ushort_slnode *current;
+    ushort_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                unsigned short int temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_int(int_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    int_slnode *current;
+    int_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                int temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_uint(uint_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    uint_slnode *current;
+    uint_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                unsigned int temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_long(long_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    long_slnode *current;
+    long_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                long int temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_ulong(ulong_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    ulong_slnode *current;
+    ulong_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                unsigned long int temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_llong(llong_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    llong_slnode *current;
+    llong_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                long long int temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_ullong(ullong_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    ullong_slnode *current;
+    ullong_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                unsigned long long int temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_float(float_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    float_slnode *current;
+    float_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                float temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_double(double_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    double_slnode *current;
+    double_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                double temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_ldouble(ldouble_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    ldouble_slnode *current;
+    ldouble_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                long double temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_bool(bool_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    bool_slnode *current;
+    bool_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            if ((direction == FORWARD && current->data > current->next->data) ||
+                (direction == REVERSE && current->data < current->next->data)) {
+                // Swap data
+                bool temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// --------------------------------------------------------------------------------
+
+static void _bubble_sort_string(string_sl* list, size_t len, iter_dir direction) {
+    if (!list || !list->head || len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool swapped;
+    string_slnode *current;
+    string_slnode *last = NULL;
+
+    do {
+        swapped = false;
+        current = list->head;
+
+        while (current->next != last) {
+            int cmp = compare_strings_str(current->data, current->next->data);
+            if ((direction == FORWARD && cmp > 0) ||
+                (direction == REVERSE && cmp < 0)) {
+                // Swap data
+                struct str *temp = current->data;
+                current->data = current->next->data;
+                current->next->data = temp;
+
+                swapped = true;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
+}
+// ================================================================================
+// ================================================================================
+// SELECTION SORT (PRIVATE FUNCTIONS)
+
+static void _selection_sort_char(char_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    char_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_char(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_uchar(uchar_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    uchar_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_uchar(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_short(short_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    short_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_short(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_ushort(ushort_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    ushort_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_ushort(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_int(int_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    int_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_int(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_uint(uint_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    uint_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_uint(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_long(long_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    long_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_long(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_ulong(ulong_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    ulong_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_ulong(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_llong(llong_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    llong_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_llong(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_ullong(ullong_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    ullong_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_ullong(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_float(float_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    float_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_float(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_double(double_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    double_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_double(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_ldouble(ldouble_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    ldouble_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_ldouble(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_bool(bool_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            if ((direction == FORWARD && min->data > next->data) ||
+                (direction == REVERSE && min->data < next->data)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            swap_bool(&current->data, &min->data);
+        }
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _selection_sort_string(string_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    string_slnode *current, *next, *min;
+
+    for (current = list->head; current && current->next; current = current->next) {
+        min = current;
+        for (next = current->next; next; next = next->next) {
+            int cmp = compare_strings_str(min->data, next->data);
+            if ((direction == FORWARD && cmp > 0) ||
+                (direction == REVERSE && cmp < 0)) {
+                min = next;
+            }
+        }
+        if (min != current) {
+            struct str *temp = current->data;
+            current->data = min->data;
+            min->data = temp;
+        }
+    }
+}
+// ================================================================================
+// ================================================================================
+// INSERTION SORT (PRIVATE FUNCTION)
+
+static void _insert_sort_char(char_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    char_slnode *sorted_last = list->head;
+    char_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        char_slnode *prev = NULL;
+        char_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_uchar(uchar_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    uchar_slnode *sorted_last = list->head;
+    uchar_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        uchar_slnode *prev = NULL;
+        uchar_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_short(short_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    short_slnode *sorted_last = list->head;
+    short_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        short_slnode *prev = NULL;
+        short_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_ushort(ushort_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    ushort_slnode *sorted_last = list->head;
+    ushort_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        ushort_slnode *prev = NULL;
+        ushort_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_int(int_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    int_slnode *sorted_last = list->head;
+    int_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        int_slnode *prev = NULL;
+        int_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_uint(uint_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    uint_slnode *sorted_last = list->head;
+    uint_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        uint_slnode *prev = NULL;
+        uint_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_long(long_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    long_slnode *sorted_last = list->head;
+    long_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        long_slnode *prev = NULL;
+        long_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_ulong(ulong_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    ulong_slnode *sorted_last = list->head;
+    ulong_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        ulong_slnode *prev = NULL;
+        ulong_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_llong(llong_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    llong_slnode *sorted_last = list->head;
+    llong_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        llong_slnode *prev = NULL;
+        llong_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_ullong(ullong_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    ullong_slnode *sorted_last = list->head;
+    ullong_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        ullong_slnode *prev = NULL;
+        ullong_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_float(float_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    float_slnode *sorted_last = list->head;
+    float_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        float_slnode *prev = NULL;
+        float_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_double(double_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    double_slnode *sorted_last = list->head;
+    double_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        double_slnode *prev = NULL;
+        double_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_ldouble(ldouble_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    ldouble_slnode *sorted_last = list->head;
+    ldouble_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        ldouble_slnode *prev = NULL;
+        ldouble_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_bool(bool_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    bool_slnode *sorted_last = list->head;
+    bool_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        bool_slnode *prev = NULL;
+        bool_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current && 
+               ((direction == FORWARD && search->data < current->data) ||
+                (direction == REVERSE && search->data > current->data))) {
+            prev = search;
+            search = search->next;
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// --------------------------------------------------------------------------------
+
+static void _insert_sort_string(string_sl* list, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        return; // No need to sort if the list is empty or has only one element
+    }
+
+    string_slnode *sorted_last = list->head;
+    string_slnode *current = list->head->next;
+
+    while (current != NULL) {
+        string_slnode *prev = NULL;
+        string_slnode *search = list->head;
+
+        // Find the correct position to insert
+        while (search != current) {
+            int cmp = compare_strings_str(search->data, current->data);
+            if ((direction == FORWARD && cmp < 0) || (direction == REVERSE && cmp > 0)) {
+                prev = search;
+                search = search->next;
+            } else {
+                break;
+            }
+        }
+
+        if (search != current) {
+            // Insert the node at the found position
+            if (prev != NULL) {
+                prev->next = current;
+            } else {
+                list->head = current;
+            }
+            sorted_last->next = current->next;
+            current->next = search;
+
+            // If we inserted before the last sorted element, adjust sorted_last
+            if (sorted_last == current) {
+                sorted_last = sorted_last->next;
+            }
+        } else {
+            // The node is already in the correct position
+            sorted_last = current;
+        }
+
+        // Move to the next node
+        current = sorted_last->next;
+    }
+}
+// ================================================================================
+// ================================================================================
+// MERGE SORT (PRIVATE FUNCTIONS)
+
+static void _split_char_list(char_slnode* source, char_slnode** frontRef, char_slnode** backRef) {
+    char_slnode* fast;
+    char_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static char_slnode* _sorted_char_merge(char_slnode* a, char_slnode* b, iter_dir direction) {
+    char_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_char_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_char_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_char(char_slnode** headRef, iter_dir direction) {
+    char_slnode* head = *headRef;
+    char_slnode* a;
+    char_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_char_list(head, &a, &b);
+    _merge_sort_char(&a, direction);
+    _merge_sort_char(&b, direction);
+    *headRef = _sorted_char_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_uchar_list(uchar_slnode* source, uchar_slnode** frontRef, uchar_slnode** backRef) {
+    uchar_slnode* fast;
+    uchar_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static uchar_slnode* _sorted_uchar_merge(uchar_slnode* a, uchar_slnode* b, iter_dir direction) {
+    uchar_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_uchar_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_uchar_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_uchar(uchar_slnode** headRef, iter_dir direction) {
+    uchar_slnode* head = *headRef;
+    uchar_slnode* a;
+    uchar_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_uchar_list(head, &a, &b);
+    _merge_sort_uchar(&a, direction);
+    _merge_sort_uchar(&b, direction);
+    *headRef = _sorted_uchar_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_short_list(short_slnode* source, short_slnode** frontRef, short_slnode** backRef) {
+    short_slnode* fast;
+    short_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static short_slnode* _sorted_short_merge(short_slnode* a, short_slnode* b, iter_dir direction) {
+    short_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_short_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_short_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_short(short_slnode** headRef, iter_dir direction) {
+    short_slnode* head = *headRef;
+    short_slnode* a;
+    short_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_short_list(head, &a, &b);
+    _merge_sort_short(&a, direction);
+    _merge_sort_short(&b, direction);
+    *headRef = _sorted_short_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_ushort_list(ushort_slnode* source, ushort_slnode** frontRef, ushort_slnode** backRef) {
+    ushort_slnode* fast;
+    ushort_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static ushort_slnode* _sorted_ushort_merge(ushort_slnode* a, ushort_slnode* b, iter_dir direction) {
+    ushort_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_ushort_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_ushort_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_ushort(ushort_slnode** headRef, iter_dir direction) {
+    ushort_slnode* head = *headRef;
+    ushort_slnode* a;
+    ushort_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_ushort_list(head, &a, &b);
+    _merge_sort_ushort(&a, direction);
+    _merge_sort_ushort(&b, direction);
+    *headRef = _sorted_ushort_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_int_list(int_slnode* source, int_slnode** frontRef, int_slnode** backRef) {
+    int_slnode* fast;
+    int_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static int_slnode* _sorted_int_merge(int_slnode* a, int_slnode* b, iter_dir direction) {
+    int_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_int_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_int_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_int(int_slnode** headRef, iter_dir direction) {
+    int_slnode* head = *headRef;
+    int_slnode* a;
+    int_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_int_list(head, &a, &b);
+    _merge_sort_int(&a, direction);
+    _merge_sort_int(&b, direction);
+    *headRef = _sorted_int_merge(a, b, direction);
+}
+// -------------------------------------------------------------------------------- 
+
+static void _split_uint_list(uint_slnode* source, uint_slnode** frontRef, uint_slnode** backRef) {
+    uint_slnode* fast;
+    uint_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static uint_slnode* _sorted_uint_merge(uint_slnode* a, uint_slnode* b, iter_dir direction) {
+    uint_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_uint_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_uint_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_uint(uint_slnode** headRef, iter_dir direction) {
+    uint_slnode* head = *headRef;
+    uint_slnode* a;
+    uint_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_uint_list(head, &a, &b);
+    _merge_sort_uint(&a, direction);
+    _merge_sort_uint(&b, direction);
+    *headRef = _sorted_uint_merge(a, b, direction);
+}
+
+// --------------------------------------------------------------------------------
+
+static void _split_long_list(long_slnode* source, long_slnode** frontRef, long_slnode** backRef) {
+    long_slnode* fast;
+    long_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static long_slnode* _sorted_long_merge(long_slnode* a, long_slnode* b, iter_dir direction) {
+    long_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_long_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_long_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_long(long_slnode** headRef, iter_dir direction) {
+    long_slnode* head = *headRef;
+    long_slnode* a;
+    long_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_long_list(head, &a, &b);
+    _merge_sort_long(&a, direction);
+    _merge_sort_long(&b, direction);
+    *headRef = _sorted_long_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_ulong_list(ulong_slnode* source, ulong_slnode** frontRef, ulong_slnode** backRef) {
+    ulong_slnode* fast;
+    ulong_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static ulong_slnode* _sorted_ulong_merge(ulong_slnode* a, ulong_slnode* b, iter_dir direction) {
+    ulong_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_ulong_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_ulong_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_ulong(ulong_slnode** headRef, iter_dir direction) {
+    ulong_slnode* head = *headRef;
+    ulong_slnode* a;
+    ulong_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_ulong_list(head, &a, &b);
+    _merge_sort_ulong(&a, direction);
+    _merge_sort_ulong(&b, direction);
+    *headRef = _sorted_ulong_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_llong_list(llong_slnode* source, llong_slnode** frontRef, llong_slnode** backRef) {
+    llong_slnode* fast;
+    llong_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static llong_slnode* _sorted_llong_merge(llong_slnode* a, llong_slnode* b, iter_dir direction) {
+    llong_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_llong_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_llong_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_llong(llong_slnode** headRef, iter_dir direction) {
+    llong_slnode* head = *headRef;
+    llong_slnode* a;
+    llong_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_llong_list(head, &a, &b);
+    _merge_sort_llong(&a, direction);
+    _merge_sort_llong(&b, direction);
+    *headRef = _sorted_llong_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_ullong_list(ullong_slnode* source, ullong_slnode** frontRef, ullong_slnode** backRef) {
+    ullong_slnode* fast;
+    ullong_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static ullong_slnode* _sorted_ullong_merge(ullong_slnode* a, ullong_slnode* b, iter_dir direction) {
+    ullong_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_ullong_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_ullong_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_ullong(ullong_slnode** headRef, iter_dir direction) {
+    ullong_slnode* head = *headRef;
+    ullong_slnode* a;
+    ullong_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_ullong_list(head, &a, &b);
+    _merge_sort_ullong(&a, direction);
+    _merge_sort_ullong(&b, direction);
+    *headRef = _sorted_ullong_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_float_list(float_slnode* source, float_slnode** frontRef, float_slnode** backRef) {
+    float_slnode* fast;
+    float_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static float_slnode* _sorted_float_merge(float_slnode* a, float_slnode* b, iter_dir direction) {
+    float_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_float_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_float_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_float(float_slnode** headRef, iter_dir direction) {
+    float_slnode* head = *headRef;
+    float_slnode* a;
+    float_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_float_list(head, &a, &b);
+    _merge_sort_float(&a, direction);
+    _merge_sort_float(&b, direction);
+    *headRef = _sorted_float_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_double_list(double_slnode* source, double_slnode** frontRef, double_slnode** backRef) {
+    double_slnode* fast;
+    double_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static double_slnode* _sorted_double_merge(double_slnode* a, double_slnode* b, iter_dir direction) {
+    double_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_double_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_double_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_double(double_slnode** headRef, iter_dir direction) {
+    double_slnode* head = *headRef;
+    double_slnode* a;
+    double_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_double_list(head, &a, &b);
+    _merge_sort_double(&a, direction);
+    _merge_sort_double(&b, direction);
+    *headRef = _sorted_double_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_ldouble_list(ldouble_slnode* source, ldouble_slnode** frontRef, ldouble_slnode** backRef) {
+    ldouble_slnode* fast;
+    ldouble_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static ldouble_slnode* _sorted_ldouble_merge(ldouble_slnode* a, ldouble_slnode* b, iter_dir direction) {
+    ldouble_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_ldouble_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_ldouble_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_ldouble(ldouble_slnode** headRef, iter_dir direction) {
+    ldouble_slnode* head = *headRef;
+    ldouble_slnode* a;
+    ldouble_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_ldouble_list(head, &a, &b);
+    _merge_sort_ldouble(&a, direction);
+    _merge_sort_ldouble(&b, direction);
+    *headRef = _sorted_ldouble_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_bool_list(bool_slnode* source, bool_slnode** frontRef, bool_slnode** backRef) {
+    bool_slnode* fast;
+    bool_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    // 'fast' advances two nodes, and 'slow' one node
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    // 'slow' is before the midpoint in the list, so split it in two at that point
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static bool_slnode* _sorted_bool_merge(bool_slnode* a, bool_slnode* b, iter_dir direction) {
+    bool_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+
+    if ((direction == FORWARD && a->data <= b->data) || (direction == REVERSE && a->data > b->data)) {
+        result = a;
+        result->next = _sorted_bool_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_bool_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_bool(bool_slnode** headRef, iter_dir direction) {
+    bool_slnode* head = *headRef;
+    bool_slnode* a;
+    bool_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_bool_list(head, &a, &b);
+    _merge_sort_bool(&a, direction);
+    _merge_sort_bool(&b, direction);
+    *headRef = _sorted_bool_merge(a, b, direction);
+}
+// --------------------------------------------------------------------------------
+
+static void _split_string_list(string_slnode* source, string_slnode** frontRef, string_slnode** backRef) {
+    string_slnode* fast;
+    string_slnode* slow;
+    slow = source;
+    fast = source->next;
+
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
+// --------------------------------------------------------------------------------
+
+static string_slnode* _sorted_string_merge(string_slnode* a, string_slnode* b, iter_dir direction) {
+    string_slnode* result = NULL;
+
+    if (a == NULL)
+        return b;
+    else if (b == NULL)
+        return a;
+    int cmp = compare_strings_str(a->data, b->data);
+    if ((direction == FORWARD && cmp <= 0) || (direction == REVERSE && cmp > 0)) {
+        result = a;
+        result->next = _sorted_string_merge(a->next, b, direction);
+    } else {
+        result = b;
+        result->next = _sorted_string_merge(a, b->next, direction);
+    }
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+static void _merge_sort_string(string_slnode** headRef, iter_dir direction) {
+    string_slnode* head = *headRef;
+    string_slnode* a;
+    string_slnode* b;
+
+    if ((head == NULL) || (head->next == NULL)) {
+        return;
+    }
+
+    _split_string_list(head, &a, &b);
+    _merge_sort_string(&a, direction);
+    _merge_sort_string(&b, direction);
+    *headRef = _sorted_string_merge(a, b, direction);
+}
+// ================================================================================
+// ================================================================================
+
+void sort_char_sllist(char_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_char(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_char(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_char(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_char(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_uchar_sllist(uchar_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_uchar(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_uchar(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_uchar(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_uchar(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_short_sllist(short_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_short(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_short(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_short(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_short(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_ushort_sllist(ushort_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_ushort(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_ushort(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_ushort(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_ushort(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_int_sllist(int_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_int(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_int(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_int(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_int(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_uint_sllist(uint_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_uint(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_uint(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_uint(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_uint(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_long_sllist(long_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_long(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_long(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_long(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_long(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_ulong_sllist(ulong_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_ulong(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_ulong(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_ulong(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_ulong(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_llong_sllist(llong_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_llong(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_llong(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_llong(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_llong(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_ullong_sllist(ullong_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_ullong(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_ullong(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_ullong(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_ullong(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_float_sllist(float_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_float(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_float(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_float(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_float(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_double_sllist(double_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_double(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_double(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_double(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_double(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_ldouble_sllist(ldouble_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_ldouble(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_ldouble(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_ldouble(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_ldouble(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_bool_sllist(bool_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_bool(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_bool(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_bool(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_bool(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// --------------------------------------------------------------------------------
+
+void sort_string_sllist(string_sl* list, sort_type stype, iter_dir direction) {
+    if (!list || !list->head || list->len < 2) {
+        errno = EINVAL;
+        return; // No need to sort if the list is empty or has only one element
+    }
+    switch(stype) {
+        case BUBBLE:
+            _bubble_sort_string(list, list->len, direction);
+            break;
+        case SELECTION:
+            _selection_sort_string(list, direction);
+            break;
+        case INSERT:
+            _insert_sort_string(list, direction);
+            break;
+        case MERGE:
+            _merge_sort_string(&list->head, direction);
+        default:
+            errno = EINVAL;
+            return;
+    }
+}
+// ================================================================================
+// ================================================================================
 // eof

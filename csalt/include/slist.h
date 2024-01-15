@@ -28,6 +28,7 @@
 
 #include "str.h"
 #include "admin.h"
+#include "swap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1242,6 +1243,198 @@ void reverse_string_sllist(string_sl* list);
     ldouble_sl*: reverse_ldouble_sllist, \
     bool_sl*: reverse_bool_sllist, \
     string_sl*: reverse_string_sllist) (list)
+// ================================================================================ 
+// ================================================================================
+
+/**
+ * @brief Sort a singly linked list of type char_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_char_sllist(char_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type uchar_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_uchar_sllist(uchar_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type short_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_short_sllist(short_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type ushort_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_ushort_sllist(ushort_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type int_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE 
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_int_sllist(int_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type uint_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_uint_sllist(uint_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type long_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_long_sllist(long_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type ulong_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_ulong_sllist(ulong_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type llong_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_llong_sllist(llong_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type ullong_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_ullong_sllist(ullong_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type float_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_float_sllist(float_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type double_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_double_sllist(double_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type ldouble_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_ldouble_sllist(ldouble_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type bool_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_bool_sllist(bool_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list of type string_sl in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE 
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+void sort_string_sllist(string_sl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Sort a singly linked list in a user defined order with a user
+ *        defined sorting type.
+ *
+ * @param list: A singly linked list data structure
+ * @param stype: An enum of type sort_type with options for BUBBLE, SELECTION, INSERTION, and MERGE 
+ * @param direction An enum of type iter_dir with options for FORWARD and REVERSE 
+ */
+#define sort_sllist(list, stype, direction) _Generic((list), \
+    char_sl*: sort_char_sllist, \
+    uchar_sl*: sort_uchar_sllist, \
+    short_sl*: sort_short_sllist, \
+    ushort_sl*: sort_ushort_sllist, \
+    int_sl*: sort_int_sllist, \
+    uint_sl*: sort_uint_sllist, \
+    long_sl*: sort_long_sllist, \
+    ulong_sl*: sort_ulong_sllist, \
+    llong_sl*: sort_llong_sllist, \
+    ullong_sl*: sort_ullong_sllist, \
+    float_sl*: sort_float_sllist, \
+    double_sl*: sort_double_sllist, \
+    ldouble_sl*: sort_ldouble_sllist, \
+    bool_sl*: sort_bool_sllist, \
+    string_sl*: sort_string_sllist) (list, stype, direction)
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
