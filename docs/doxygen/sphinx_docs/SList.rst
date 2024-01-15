@@ -628,3 +628,103 @@ The type specific functions are provided below.
    bool reverse_ldouble_sllist(ldouble_sl* list);
    bool reverse_bool_sllist(bool_sl* list);
    bool reverse_string_sllist(string_sl* list);
+
+Sort Singly Linked List 
+=======================
+The ``sort_sllist`` macro is a versatile tool for sorting vector data structures 
+in either ``FORWARD`` or ``REVERSE`` direction. It intelligently selects the 
+appropriate sorting function based on the vector type and the specified sorting 
+algorithm, ensuring type safety through the use of the ``_Generic`` keyword.
+
+.. code-block:: c 
+
+   #define sort_sllist(vec, stype, direction) ( /* Expressions to sort vector */)   
+
+Parameters 
+----------
+
+- :c:`vec`: A vector data structure defined in :ref:`Vector Data Types <vector_dat_type>`.
+- :c:`stype`: An ``enum`` of type ``sort_type`` including ``BUBBLE``, ``SELECTION``, ``INSERT``, and ``MERGE``, representing various sorting algorithms.
+- :c:`direction`: An ``enum`` of type ``iter_dir`` with possible values ``FORWARD`` or ``REVERSE``, representing the sorting direction.
+
+The following table describes the parameters of the various sorting algorithms.
+
+.. list-table:: Sorting Algorithms Complexity and Stability
+   :widths: 25 25 25 25
+   :header-rows: 1
+
+   * - Algorithm
+     - Time Complexity (Average/Worst)
+     - Space Complexity
+     - Stability
+   * - Bubble Sort
+     - O(n^2) / O(n^2)
+     - O(1)
+     - Stable
+   * - Insertion Sort
+     - O(n^2) / O(n^2)
+     - O(1)
+     - Stable
+   * - Merge Sort
+     - O(n log n) / O(n log n)
+     - O(n)
+     - Stable
+
+Error Handling
+--------------
+The macro sets the ``errno`` global variable to indicate errors, such as:
+
+- ``EINVAL``: Passed if ``vec`` is NULL or if an unsupported ``stype`` is provided.
+
+Example 
+-------
+An example for sorting a vector using the quick sort algorithm in the ``FORWARD`` direction.
+
+.. code-block:: c
+
+   #include "vector.h"
+   #include "print.h"
+
+   int main() {
+       int_sl* list = init_sllist(dInt)();
+       push_sllist(list, 5, list->len);
+       push_sllist(list, 1, list->len);
+       push_sllist(list, 4, list->len);
+       push_sllist(list, 2, list->len);
+       push_sllist(list, 3, list->len);
+       push_sllist(list, 6, list->len);
+       print("Initial Linked List ", list)
+       sort_sllist(list, MERGE, FORWARD)
+       reverse_sllist(list);
+       print("Reversed Linked List: ", list);
+       free_sllist(list);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Before sorting operation: [ 5, 1, 4, 2, 3, 6 ]
+   >> After sorting operation: [ 1, 2, 3, 4, 5, 6 ]
+
+Underlying Functions 
+--------------------
+While the ``sort_sllist`` macro is recommended for its ease of use and type safety, 
+developers may also directly call the specific sorting functions:
+
+.. code-block:: c 
+
+   void sort_char_sllist(char_sl* vec, sort_type stype, iter_dir direction);
+   void sort_uchar_sllist(uchar_sl* vec, sort_type stype, iter_dir direction);
+   void sort_short_sllist(short_sl* vec, sort_type stype, iter_dir direction);
+   void sort_ushort_sllist(ushort_sl* vec, sort_type stype, iter_dir direction);
+   void sort_int_sllist(int_sl* vec, sort_type stype, iter_dir direction);
+   void sort_uint_sllist(uint_sl* vec, sort_type stype, iter_dir direction);
+   void sort_long_sllist(long_sl* vec, sort_type stype, iter_dir direction);
+   void sort_ulong_sllist(ulong_sl* vec, sort_type stype, iter_dir direction);
+   void sort_llong_sllist(llong_sl* vec, sort_type stype, iter_dir direction);
+   void sort_ullong_sllist(ullong_sl* vec, sort_type stype, iter_dir direction);
+   void sort_float_sllist(float_sl* vec, sort_type stype, iter_dir direction);
+   void sort_double_sllist(double_sl* vec, sort_type stype, iter_dir direction);
+   void sort_ldouble_sllist(ldouble_sl* vec, sort_type stype, iter_dir direction);
+   void sort_bool_sllist(bool_sl* vec, sort_type stype, iter_dir direction);
+   void sort_string_sllist(string_sl* vec, sort_type stype, iter_dir direction);
