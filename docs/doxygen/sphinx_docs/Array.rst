@@ -852,6 +852,10 @@ The following table describes the parameters of the various sorting algorithms.
      - O(n^2) / O(n^2)
      - O(1)
      - Stable
+   * - Selection Sort 
+     - O(n^2) / O(n^2)
+     - O(n^2)
+     - Not Stable
    * - Heap Sort
      - O(n log n) / O(n log n)
      - O(1)
