@@ -686,7 +686,7 @@ An example for sorting a vector using the quick sort algorithm in the ``FORWARD`
 
 .. code-block:: c
 
-   #include "vector.h"
+   #include "slist.h"
    #include "print.h"
 
    int main() {
@@ -732,3 +732,117 @@ developers may also directly call the specific sorting functions:
    void sort_ldouble_sllist(ldouble_sl* vec, sort_type stype, iter_dir direction);
    void sort_bool_sllist(bool_sl* vec, sort_type stype, iter_dir direction);
    void sort_string_sllist(string_sl* vec, sort_type stype, iter_dir direction);
+
+.. _sllist_iterator:
+
+Singly Linked List Iterator Structures
+======================================
+Unlike vectors and arrays, Singly Linked Lists are not stored in contiguous memory and therefore 
+can not be accessed by an index.  Iterators exist to provide a standardized and relatively easy
+method to access data in linked lists.  This library offers a generic iterator mechanism.
+
+The core of this mechanism is a struct of function pointers, each corresponding to 
+a typical iterator operation.  These function pointers allow for traversing and accessing
+elements within the data structure.  The general form of this iterator struct is 
+defined below.
+
+.. code-block:: c 
+
+   typedef struct {
+       type_slnode* (*begin) (type_sl *s);
+       type_slnode* (*end) (type_sl *s);
+       void (*next) (type_slnode** current);
+       type (*get) type_slnode *current);
+   } type_sl_iterator;
+
+In the above struct, ``type`` could be any of the data types applicable to
+singly linked lists in this library.
+
+Singly Linked List Iterator 
+===========================
+To provide a uniform method for traversing different data structures, this library offers 
+a generic iterator mechanism. The `sllist_iterator` macro allows easy access 
+to the appropriate iterator for a given vector type.
+
+.. code-block:: c 
+
+   #define sllist_iterator(list) ( /* Expression to select iterator */) 
+   
+Parameters 
+----------
+
+- :c:`list`: A singly linked list data structure defined in :ref:`Singly Linked List Data Types <sllist_dat_type>`.
+
+Return 
+------
+
+- A struct of types described in :ref:`Singly Linked List Iterator <sllist_iterator>` that contains function pointers to applicable iterator functions.
+
+.. note:: Passing the value of ``list`` to the ``sllist_iterator`` macro does **NOT** associate the data of the linked list with the iterator, and instead this only informs the macro of the data type to use.
+
+Error Handling
+--------------
+The `sllist_iterator` macro selects the appropriate iterator based on the 
+vector's data type. If an error occurs, such as an invalid vector type or 
+memory allocation failure, the underlying functions set `errno` to indicate 
+the specific error.
+
+Possible error codes:
+
+- ``EINVAL``: Invalid argument was passed to the function.
+
+Example 1 
+---------
+An example using a ``string_sl_iterator``.
+
+.. code-block:: c
+
+   #include "print.h"
+   #include "slist.h"
+
+   int main() {
+       string_sl* list = init_sllist(dString)(4;
+       push_sllist(list, "One", 0);
+       push_sllist(list, "Two", 1);
+       push_sllist(list, "Three", 2);
+       push_sllist(list, "Four", 3));
+       string_sl_iterator it = sllist_iterator(list);
+       str* begin = it.begin(list);
+       str* end = it.end(list);
+       for (str* i = begin; i != end; it.next(&i)) {
+           print(it.get(i));
+       }
+       free_sllist(list);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> One 
+   >> Two 
+   >> Three 
+   >> Four
+
+Underlying Functions 
+--------------------
+The ``sllist_iterator`` macro uses ``_Generic`` to select the right function 
+based on the vector's data type. For specific control, these underlying 
+functions can be used directly:
+
+.. code-block:: c 
+
+   char_sl_iterator init_char_sllist_iterator();
+   uchar_sl_iterator init_uchar_sllist_iterator();
+   short_sl_iterator init_short_sllist_iterator();
+   ushort_sl_iterator init_ushort_sllist_iterator();
+   int_sl_iterator init_int_sllist_iterator();
+   uint_sl_iterator init_uint_sllist_iterator();
+   long_sl_iterator init_long_sllist_iterator();
+   ulong_sl_iterator init_ulong_sllist_iterator();
+   llong_sl_iterator init_llong_sllist_iterator();
+   ullong_sl_iterator init_ullong_sllist_iterator();
+   float_sl_iterator init_float_sllist_iterator();
+   double_sl_iterator init_double_sllist_iterator();
+   ldouble_sl_iterator init_ldouble_sllist_iterator();
+   bool_sl_iterator init_bool_sllist_iterator();
+   string_sl_iterator init_string_sllist_iterator();

@@ -2084,7 +2084,7 @@ An example using a ``string_v_iterator``.
        push_vector(vec, "Two", vector_length(vec));
        push_vector(vec, "Three", vector_length(vec));
        push_vector(vec, "Four", vector_length(vec));
-       string_v_iterator it = init_vector(vec);
+       string_v_iterator it = sllist_iterator(vec);
        str* begin = it.begin(vec);
        str* end = it.end(vec);
        for (str* i = begin; i != end; it.next(&i)) {
