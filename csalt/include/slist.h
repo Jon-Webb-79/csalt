@@ -1435,6 +1435,249 @@ void sort_string_sllist(string_sl* list, sort_type stype, iter_dir direction);
     ldouble_sl*: sort_ldouble_sllist, \
     bool_sl*: sort_bool_sllist, \
     string_sl*: sort_string_sllist) (list, stype, direction)
+// ================================================================================
+// ================================================================================
+// ITERATOR
+
+/**
+ * @brief Macro to create singly linked list iterator structs for each data type.
+ *
+ * This macro creates a struct with pointers to a function that returns 
+ * a pointer to the first variable in a data structure (begin), a pointer 
+ * to the last variable in a data structure (en), a pointer to the next 
+ * variable in a data structure (next), a pointer to the previous variable 
+ * in a data structure (prev), and one that returns tha data at a position 
+ * in the data structure (get)
+ *
+ * @param type_one The data type contained in a vector data structure.
+ * @param type_two The derived data type for the vector data structure.
+ */
+typedef struct {
+    char_slnode* (*begin) (char_sl *s);
+    char_slnode* (*end) (char_sl* s);
+    void (*next) (char_slnode** current);
+    char (*get) (char_slnode* current);
+} char_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    uchar_slnode* (*begin) (uchar_sl *s);
+    uchar_slnode* (*end) (uchar_sl* s);
+    void (*next) (uchar_slnode** current);
+    unsigned char (*get) (uchar_slnode* current);
+} uchar_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    short_slnode* (*begin) (short_sl *s);
+    short_slnode* (*end) (short_sl* s);
+    void (*next) (short_slnode** current);
+    short int (*get) (short_slnode* current);
+} short_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    ushort_slnode* (*begin) (ushort_sl *s);
+    ushort_slnode* (*end) (ushort_sl* s);
+    void (*next) (ushort_slnode** current);
+    unsigned short int (*get) (ushort_slnode* current);
+} ushort_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    int_slnode* (*begin) (int_sl *s);
+    int_slnode* (*end) (int_sl* s);
+    void (*next) (int_slnode** current);
+    int (*get) (int_slnode* current);
+} int_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    uint_slnode* (*begin) (uint_sl *s);
+    uint_slnode* (*end) (uint_sl* s);
+    void (*next) (uint_slnode** current);
+    unsigned int (*get) (uint_slnode* current);
+} uint_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    long_slnode* (*begin) (long_sl *s);
+    long_slnode* (*end) (long_sl* s);
+    void (*next) (long_slnode** current);
+    long int (*get) (long_slnode* current);
+} long_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    ulong_slnode* (*begin) (ulong_sl *s);
+    ulong_slnode* (*end) (ulong_sl* s);
+    void (*next) (ulong_slnode** current);
+    unsigned long (*get) (ulong_slnode* current);
+} ulong_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    llong_slnode* (*begin) (llong_sl *s);
+    llong_slnode* (*end) (llong_sl* s);
+    void (*next) (llong_slnode** current);
+    long long (*get) (llong_slnode* current);
+} llong_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    ullong_slnode* (*begin) (ullong_sl *s);
+    ullong_slnode* (*end) (ullong_sl* s);
+    void (*next) (ullong_slnode** current);
+    unsigned long long (*get) (ullong_slnode* current);
+} ullong_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    float_slnode* (*begin) (float_sl *s);
+    float_slnode* (*end) (float_sl* s);
+    void (*next) (float_slnode** current);
+    float (*get) (float_slnode* current);
+} float_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    double_slnode* (*begin) (double_sl *s);
+    double_slnode* (*end) (double_sl* s);
+    void (*next) (double_slnode** current);
+    double (*get) (double_slnode* current);
+} double_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    ldouble_slnode* (*begin) (ldouble_sl *s);
+    ldouble_slnode* (*end) (ldouble_sl* s);
+    void (*next) (ldouble_slnode** current);
+    long double (*get) (ldouble_slnode* current);
+} ldouble_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    bool_slnode* (*begin) (bool_sl *s);
+    bool_slnode* (*end) (bool_sl* s);
+    void (*next) (bool_slnode** current);
+    bool (*get) (bool_slnode* current);
+} bool_sl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    string_slnode* (*begin) (string_sl *s);
+    string_slnode* (*end) (string_sl* s);
+    void (*next) (string_slnode** current);
+    str* (*get) (string_slnode* current);
+} string_sl_iterator;
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type char_sl vectors.
+ */
+char_sl_iterator init_char_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type uchar_sl vectors.
+ */
+uchar_sl_iterator init_uchar_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type short_sl vectors.
+ */
+short_sl_iterator init_short_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type ushort_sl vectors.
+ */
+ushort_sl_iterator init_ushort_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type int_sl vectors.
+ */
+int_sl_iterator init_int_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type uint_sl vectors.
+ */
+uint_sl_iterator init_uint_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type long_sl vectors.
+ */
+long_sl_iterator init_long_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type ulong_sl vectors.
+ */
+ulong_sl_iterator init_ulong_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type llong_sl vectors.
+ */
+llong_sl_iterator init_llong_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type ullong_sl vectors.
+ */
+ullong_sl_iterator init_ullong_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type float_sl vectors.
+ */
+float_sl_iterator init_float_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type double_sl vectors.
+ */
+double_sl_iterator init_double_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type ldouble_sl vectors.
+ */
+ldouble_sl_iterator init_ldouble_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type bool_sl vectors.
+ */
+bool_sl_iterator init_bool_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Returns a singly linked list iterator for type string_sl vectors.
+ */
+string_sl_iterator init_string_sllist_iterator();
+// --------------------------------------------------------------------------------
+
+#define sllist_iterator(vec) _Generic((vec), \
+    char_sl*: init_char_sllist_iterator, \
+    uchar_sl*: init_uchar_sllist_iterator, \
+    short_sl*: init_short_sllist_iterator, \
+    ushort_sl*: init_ushort_sllist_iterator, \
+    int_sl*: init_int_sllist_iterator, \
+    uint_sl*: init_uint_sllist_iterator, \
+    long_sl*: init_long_sllist_iterator, \
+    ulong_sl*: init_ulong_sllist_iterator, \
+    llong_sl*: init_llong_sllist_iterator, \
+    ullong_sl*: init_ullong_sllist_iterator, \
+    float_sl*: init_float_sllist_iterator, \
+    double_sl*: init_double_sllist_iterator, \
+    ldouble_sl*: init_ldouble_sllist_iterator, \
+    bool_sl*: init_bool_sllist_iterator, \
+    string_sl*: init_string_sllist_iterator) ()
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

@@ -5153,4 +5153,652 @@ void sort_string_sllist(string_sl* list, sort_type stype, iter_dir direction) {
 }
 // ================================================================================
 // ================================================================================
+// ITERATORS (PRIVATE FUNCTIONS)
+
+static char_slnode* _char_sl_begin(char_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static char_slnode* _char_sl_end(char_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _char_sl_next(char_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static char _char_sl_get(char_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static uchar_slnode* _uchar_sl_begin(uchar_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static uchar_slnode* _uchar_sl_end(uchar_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _uchar_sl_next(uchar_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned char _uchar_sl_get(uchar_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static short_slnode* _short_sl_begin(short_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static short_slnode* _short_sl_end(short_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _short_sl_next(short_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static short int _short_sl_get(short_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static ushort_slnode* _ushort_sl_begin(ushort_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static ushort_slnode* _ushort_sl_end(ushort_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _ushort_sl_next(ushort_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned short _ushort_sl_get(ushort_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static int_slnode* _int_sl_begin(int_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static int_slnode* _int_sl_end(int_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _int_sl_next(int_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static int _int_sl_get(int_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static uint_slnode* _uint_sl_begin(uint_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static uint_slnode* _uint_sl_end(uint_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _uint_sl_next(uint_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned int _uint_sl_get(uint_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static long_slnode* _long_sl_begin(long_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static long_slnode* _long_sl_end(long_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _long_sl_next(long_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static long int _long_sl_get(long_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static ulong_slnode* _ulong_sl_begin(ulong_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static ulong_slnode* _ulong_sl_end(ulong_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _ulong_sl_next(ulong_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long int _ulong_sl_get(ulong_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static llong_slnode* _llong_sl_begin(llong_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static llong_slnode* _llong_sl_end(llong_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _llong_sl_next(llong_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static long long int _llong_sl_get(llong_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static ullong_slnode* _ullong_sl_begin(ullong_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static ullong_slnode* _ullong_sl_end(ullong_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _ullong_sl_next(ullong_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long long _ullong_sl_get(ullong_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static float_slnode* _float_sl_begin(float_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static float_slnode* _float_sl_end(float_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _float_sl_next(float_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static float _float_sl_get(float_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static double_slnode* _double_sl_begin(double_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static double_slnode* _double_sl_end(double_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _double_sl_next(double_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static double _double_sl_get(double_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static ldouble_slnode* _ldouble_sl_begin(ldouble_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static ldouble_slnode* _ldouble_sl_end(ldouble_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _ldouble_sl_next(ldouble_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static long double _ldouble_sl_get(ldouble_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// --------------------------------------------------------------------------------
+
+static bool_slnode* _bool_sl_begin(bool_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static bool_slnode* _bool_sl_end(bool_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _bool_sl_next(bool_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static bool _bool_sl_get(bool_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return '\0';
+    }
+    return current->data;
+}
+// ================================================================================
+
+static string_slnode* _string_sl_begin(string_sl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static string_slnode* _string_sl_end(string_sl* s) {
+    return NULL; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _string_sl_next(string_slnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static str* _string_sl_get(string_slnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return current->data;
+}
+// ================================================================================
+// ================================================================================
+
+char_sl_iterator init_char_sllist_iterator() {
+    char_sl_iterator iter;
+
+    iter.begin = _char_sl_begin;
+    iter.end = _char_sl_end;
+    iter.next = _char_sl_next;
+    iter.get = _char_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+uchar_sl_iterator init_uchar_sllist_iterator() {
+    uchar_sl_iterator iter;
+
+    iter.begin = _uchar_sl_begin;
+    iter.end = _uchar_sl_end;
+    iter.next = _uchar_sl_next;
+    iter.get = _uchar_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+short_sl_iterator init_short_sllist_iterator() {
+    short_sl_iterator iter;
+
+    iter.begin = _short_sl_begin;
+    iter.end = _short_sl_end;
+    iter.next = _short_sl_next;
+    iter.get = _short_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ushort_sl_iterator init_ushort_sllist_iterator() {
+    ushort_sl_iterator iter;
+
+    iter.begin = _ushort_sl_begin;
+    iter.end = _ushort_sl_end;
+    iter.next = _ushort_sl_next;
+    iter.get = _ushort_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+int_sl_iterator init_int_sllist_iterator() {
+    int_sl_iterator iter;
+
+    iter.begin = _int_sl_begin;
+    iter.end = _int_sl_end;
+    iter.next = _int_sl_next;
+    iter.get = _int_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+uint_sl_iterator init_uint_sllist_iterator() {
+    uint_sl_iterator iter;
+
+    iter.begin = _uint_sl_begin;
+    iter.end = _uint_sl_end;
+    iter.next = _uint_sl_next;
+    iter.get = _uint_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+long_sl_iterator init_long_sllist_iterator() {
+    long_sl_iterator iter;
+
+    iter.begin = _long_sl_begin;
+    iter.end = _long_sl_end;
+    iter.next = _long_sl_next;
+    iter.get = _long_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ulong_sl_iterator init_ulong_sllist_iterator() {
+    ulong_sl_iterator iter;
+
+    iter.begin = _ulong_sl_begin;
+    iter.end = _ulong_sl_end;
+    iter.next = _ulong_sl_next;
+    iter.get = _ulong_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+llong_sl_iterator init_llong_sllist_iterator() {
+    llong_sl_iterator iter;
+
+    iter.begin = _llong_sl_begin;
+    iter.end = _llong_sl_end;
+    iter.next = _llong_sl_next;
+    iter.get = _llong_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ullong_sl_iterator init_ullong_sllist_iterator() {
+    ullong_sl_iterator iter;
+
+    iter.begin = _ullong_sl_begin;
+    iter.end = _ullong_sl_end;
+    iter.next = _ullong_sl_next;
+    iter.get = _ullong_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+float_sl_iterator init_float_sllist_iterator() {
+    float_sl_iterator iter;
+
+    iter.begin = _float_sl_begin;
+    iter.end = _float_sl_end;
+    iter.next = _float_sl_next;
+    iter.get = _float_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+double_sl_iterator init_double_sllist_iterator() {
+    double_sl_iterator iter;
+
+    iter.begin = _double_sl_begin;
+    iter.end = _double_sl_end;
+    iter.next = _double_sl_next;
+    iter.get = _double_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+ldouble_sl_iterator init_ldouble_sllist_iterator() {
+    ldouble_sl_iterator iter;
+
+    iter.begin = _ldouble_sl_begin;
+    iter.end = _ldouble_sl_end;
+    iter.next = _ldouble_sl_next;
+    iter.get = _ldouble_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+bool_sl_iterator init_bool_sllist_iterator() {
+    bool_sl_iterator iter;
+
+    iter.begin = _bool_sl_begin;
+    iter.end = _bool_sl_end;
+    iter.next = _bool_sl_next;
+    iter.get = _bool_sl_get;
+    return iter; 
+}
+// --------------------------------------------------------------------------------
+
+string_sl_iterator init_string_sllist_iterator() {
+    string_sl_iterator iter;
+
+    iter.begin = _string_sl_begin;
+    iter.end = _string_sl_end;
+    iter.next = _string_sl_next;
+    iter.get = _string_sl_get;
+    return iter; 
+}
+// ================================================================================
+// ================================================================================
 // eof

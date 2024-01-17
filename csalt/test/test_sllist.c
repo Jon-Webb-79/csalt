@@ -3633,4 +3633,400 @@ void test_merge_sort_string_sllist_reverse(void **state) {
 }
 // ================================================================================
 // ================================================================================
+
+void test_sllist_char_iterator(void **state) {
+    char_sl* list = init_sllist(dChar)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    char_sl_iterator it = sllist_iterator(list);
+    char_slnode* begin = it.begin(list);
+    char_slnode* end = it.end(list);
+    char a;
+    for (char_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    char b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (char_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_uchar_iterator(void **state) {
+    uchar_sl* list = init_sllist(dUChar)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    uchar_sl_iterator it = sllist_iterator(list);
+    uchar_slnode* begin = it.begin(list);
+    uchar_slnode* end = it.end(list);
+    unsigned char a;
+    for (uchar_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    unsigned char b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (uchar_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_short_iterator(void **state) {
+    short_sl* list = init_sllist(dShort)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    short_sl_iterator it = sllist_iterator(list);
+    short_slnode* begin = it.begin(list);
+    short_slnode* end = it.end(list);
+    short a;
+    for (short_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    short b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (short_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_ushort_iterator(void **state) {
+    ushort_sl* list = init_sllist(dUShort)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    ushort_sl_iterator it = sllist_iterator(list);
+    ushort_slnode* begin = it.begin(list);
+    ushort_slnode* end = it.end(list);
+    unsigned short a;
+    for (ushort_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    unsigned short b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (ushort_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_int_iterator(void **state) {
+    int_sl* list = init_sllist(dInt)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    int_sl_iterator it = sllist_iterator(list);
+    int_slnode* begin = it.begin(list);
+    int_slnode* end = it.end(list);
+    int a;
+    for (int_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    int b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (int_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_uint_iterator(void **state) {
+    uint_sl* list = init_sllist(dUInt)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    uint_sl_iterator it = sllist_iterator(list);
+    uint_slnode* begin = it.begin(list);
+    uint_slnode* end = it.end(list);
+    unsigned int a;
+    for (uint_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    unsigned int b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (uint_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_long_iterator(void **state) {
+    long_sl* list = init_sllist(dLong)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    long_sl_iterator it = sllist_iterator(list);
+    long_slnode* begin = it.begin(list);
+    long_slnode* end = it.end(list);
+    long int a;
+    for (long_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    long int b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (long_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_ulong_iterator(void **state) {
+    ulong_sl* list = init_sllist(dULong)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    ulong_sl_iterator it = sllist_iterator(list);
+    ulong_slnode* begin = it.begin(list);
+    ulong_slnode* end = it.end(list);
+    unsigned long a;
+    for (ulong_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    unsigned long b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (ulong_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_llong_iterator(void **state) {
+    llong_sl* list = init_sllist(dLongLong)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    llong_sl_iterator it = sllist_iterator(list);
+    llong_slnode* begin = it.begin(list);
+    llong_slnode* end = it.end(list);
+    long long a;
+    for (llong_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    long long int b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (llong_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_ullong_iterator(void **state) {
+    ullong_sl* list = init_sllist(dULongLong)();
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 1);
+    push_sllist(list, 3, 2);
+    push_sllist(list, 4, 3);
+    push_sllist(list, 5, 4);
+    ullong_sl_iterator it = sllist_iterator(list);
+    ullong_slnode* begin = it.begin(list);
+    ullong_slnode* end = it.end(list);
+    long long a;
+    for (ullong_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    unsigned long long int b[5] = {11, 12, 13, 14, 15};
+
+    size_t j = 0;
+    for (ullong_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_float_iterator(void **state) {
+    float_sl* list = init_sllist(dFloat)();
+    push_sllist(list, 1., 0);
+    push_sllist(list, 2., 1);
+    push_sllist(list, 3., 2);
+    push_sllist(list, 4., 3);
+    push_sllist(list, 5., 4);
+    float_sl_iterator it = sllist_iterator(list);
+    float_slnode* begin = it.begin(list);
+    float_slnode* end = it.end(list);
+    float a;
+    for (float_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    float b[5] = {11., 12., 13., 14., 15.};
+
+    size_t j = 0;
+    for (float_slnode* i = begin; i != end; it.next(&i)) {
+        assert_float_equal(b[j], it.get(i), 1.0e-3);
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_double_iterator(void **state) {
+    double_sl* list = init_sllist(dDouble)();
+    push_sllist(list, 1., 0);
+    push_sllist(list, 2., 1);
+    push_sllist(list, 3., 2);
+    push_sllist(list, 4., 3);
+    push_sllist(list, 5., 4);
+    double_sl_iterator it = sllist_iterator(list);
+    double_slnode* begin = it.begin(list);
+    double_slnode* end = it.end(list);
+    double a;
+    for (double_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    double b[5] = {11., 12., 13., 14., 15.};
+
+    size_t j = 0;
+    for (double_slnode* i = begin; i != end; it.next(&i)) {
+        assert_double_equal(b[j], it.get(i), 1.0e-3);
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_ldouble_iterator(void **state) {
+    ldouble_sl* list = init_sllist(dLDouble)();
+    push_sllist(list, 1., 0);
+    push_sllist(list, 2., 1);
+    push_sllist(list, 3., 2);
+    push_sllist(list, 4., 3);
+    push_sllist(list, 5., 4);
+    ldouble_sl_iterator it = sllist_iterator(list);
+    ldouble_slnode* begin = it.begin(list);
+    ldouble_slnode* end = it.end(list);
+    long long a;
+    for (ldouble_slnode* i = begin; i != end; it.next(&i)) {
+        a = it.get(i);
+        i->data = a + 10;
+    }
+
+    long double b[5] = {11., 12., 13., 14., 15.};
+
+    size_t j = 0;
+    for (ldouble_slnode* i = begin; i != end; it.next(&i)) {
+        assert_double_equal(b[j], it.get(i), 1.0e-3);
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_bool_iterator(void **state) {
+    bool_sl* list = init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, true, 1);
+    push_sllist(list, true, 2);
+    push_sllist(list, false, 3);
+    push_sllist(list, false, 4);
+    bool_sl_iterator it = sllist_iterator(list);
+    bool_slnode* begin = it.begin(list);
+    bool_slnode* end = it.end(list);
+
+    bool b[5] = {true, true, true, false, false};
+
+    size_t j = 0;
+    for (bool_slnode* i = begin; i != end; it.next(&i)) {
+        assert_int_equal(b[j], it.get(i));
+        j++;
+    }
+    free_sllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_string_iterator(void **state) {
+    string_sl* list = init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 1);
+    push_sllist(list, "Three", 2);
+    push_sllist(list, "Four", 3);
+    push_sllist(list, "Five", 4);
+    string_sl_iterator it = sllist_iterator(list);
+    string_slnode* begin = it.begin(list);
+    string_slnode* end = it.end(list);
+
+    char *b[5] = {"One", "Two", "Three", "Four", "Five"};
+
+    size_t j = 0;
+    for (string_slnode* i = begin; i != end; it.next(&i)) {
+        assert_string_equal(b[j], it.get(i)->data);
+        j++;
+    }
+    free_sllist(list);
+}
+// ================================================================================
+// ================================================================================
 // eof

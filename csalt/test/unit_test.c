@@ -1247,6 +1247,21 @@ const struct CMUnitTest test_sllist[] = {
     cmocka_unit_test(test_merge_sort_ldouble_sllist_reverse),
     cmocka_unit_test(test_merge_sort_bool_sllist_reverse),
     cmocka_unit_test(test_merge_sort_string_sllist_reverse),
+    cmocka_unit_test(test_sllist_char_iterator),
+    cmocka_unit_test(test_sllist_uchar_iterator),
+    cmocka_unit_test(test_sllist_short_iterator),
+    cmocka_unit_test(test_sllist_ushort_iterator),
+    cmocka_unit_test(test_sllist_int_iterator),
+    cmocka_unit_test(test_sllist_uint_iterator),
+    cmocka_unit_test(test_sllist_long_iterator),
+    cmocka_unit_test(test_sllist_ulong_iterator),
+    cmocka_unit_test(test_sllist_llong_iterator),
+    cmocka_unit_test(test_sllist_ullong_iterator),
+    cmocka_unit_test(test_sllist_float_iterator),
+    cmocka_unit_test(test_sllist_double_iterator),
+    cmocka_unit_test(test_sllist_ldouble_iterator),
+    cmocka_unit_test(test_sllist_bool_iterator),
+    cmocka_unit_test(test_sllist_string_iterator)
 };
 // Begin code
 int main(int argc, const char * argv[]) {

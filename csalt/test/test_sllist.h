@@ -217,6 +217,24 @@ void test_merge_sort_ldouble_sllist_reverse(void **state);
 void test_merge_sort_bool_sllist_reverse(void **state);
 void test_merge_sort_string_sllist_reverse(void **state);
 // ================================================================================
+// ================================================================================
+
+void test_sllist_char_iterator(void **state);
+void test_sllist_uchar_iterator(void **state);
+void test_sllist_short_iterator(void **state);
+void test_sllist_ushort_iterator(void **state);
+void test_sllist_int_iterator(void **state);
+void test_sllist_uint_iterator(void **state);
+void test_sllist_long_iterator(void **state);
+void test_sllist_ulong_iterator(void **state);
+void test_sllist_llong_iterator(void **state);
+void test_sllist_ullong_iterator(void **state);
+void test_sllist_float_iterator(void **state);
+void test_sllist_double_iterator(void **state);
+void test_sllist_ldouble_iterator(void **state);
+void test_sllist_bool_iterator(void **state);
+void test_sllist_string_iterator(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_sllist_H */
 // ================================================================================
