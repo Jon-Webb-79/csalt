@@ -27,7 +27,6 @@ Systems.  It is developed with ``gcc 13.2.1`` and ``clang 16.0.6`` compilers. In
 addition, this code base requires the use of ``CMake 3.27.7``, ``cmocka``, and 
 ``valgrind``.
 
-
 Installation
 ############
 This project is covered under a basic MIT license which allows anyone to use 
@@ -75,7 +74,7 @@ In order to download this repository from github, follow these instructions
       # If using zsh 
       zsh compile.zsh
 
-#. Navigate to ``csalt/cstal/build`` to run unit tests 
+#. Navigate to ``csalt/csalt/build`` to run unit tests 
 
    .. code-block:: bash 
 
