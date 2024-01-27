@@ -1,6 +1,6 @@
-************
-Project Name
-************
+*****
+CSalt
+*****
 For some time I have been interested in creating a C library that provides users
 with common utility functions that enable a range of data structures, 
 more robust random number generators, and common format file readers.  In
