@@ -66,7 +66,7 @@ SLIST_NODE(bool, bool_slnode);
 SLIST_NODE(str*, string_slnode);
 // ================================================================================
 // ================================================================================
-// Vector data type structs 
+// Singly Linked List data type structs 
 
 /**
  * @brief A macro to create a struct containing information to track the attributes
