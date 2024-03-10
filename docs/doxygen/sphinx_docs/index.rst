@@ -29,6 +29,7 @@ lets pour some seasoning on our C-code and get started.
     Min Heap <MinHeap>
     Max Heap <MaxHeap>
     Singly Linked List <SList>
+    Doubly Linked List <DList>
     Todo <Todo>
 
 Indices and tables
@@ -85,7 +86,7 @@ In order to download this repository from github, follow these instructions
       # If using zsh 
       zsh compile.zsh
 
-#. Navigate to ``csalt/cstal/build`` to run unit tests 
+#. Navigate to ``csalt/csalt/build`` to run unit tests 
 
    .. code-block:: bash 
 
