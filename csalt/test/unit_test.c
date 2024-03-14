@@ -25,6 +25,7 @@
 #include "test_array.h"
 #include "test_heap.h"
 #include "test_sllist.h"
+#include "test_dllist.h"
 
 const struct CMUnitTest test_swap[] = {
 	cmocka_unit_test(test_swap_char),
@@ -1263,6 +1264,11 @@ const struct CMUnitTest test_sllist[] = {
     cmocka_unit_test(test_sllist_bool_iterator),
     cmocka_unit_test(test_sllist_string_iterator)
 };
+
+const struct CMUnitTest test_dllist[] = {
+	cmocka_unit_test(test_push_front_char_dllist)
+};
+
 // Begin code
 int main(int argc, const char * argv[]) {
     int status;
@@ -1288,6 +1294,10 @@ int main(int argc, const char * argv[]) {
         return status;
     }
     status = cmocka_run_group_tests(test_sllist, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
+    status = cmocka_run_group_tests(test_dllist, NULL, NULL);
 	return status;
 }
 // ================================================================================

@@ -20,8 +20,11 @@
 #define dlist_H
 
 #include <stdio.h>
+#include <stdbool.h>
+#include <errno.h>
 
 #include "str.h"
+#include "admin.h" 
 
 #ifdef __cplusplus
 extern "C" {
@@ -226,6 +229,221 @@ bool_dl* init_bool_dllist();
  * @return A string_sl struct 
  */
 string_dl* init_string_dllist();
+// ================================================================================
+// ================================================================================
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type char_dl 
+ * @param dat Data to be pushed to the head of type char
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_char_front_dlist(char_dl* list, char dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type unsigned uchar_dl 
+ * @param dat Data to be pushed to the head of type unsigned char
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_uchar_front_dlist(uchar_dl* list, unsigned char dat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type short_dl
+ * @param dat Data to be pushed to the head of type short int
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_short_front_dlist(short_dl* list, short int dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type ushort_dl 
+ * @param dat Data to be pushed to the head of type unsigned short int
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_ushort_front_dlist(ushort_dl* list, unsigned short int dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type int_dl
+ * @param dat Data to be pushed to the head of type int
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_int_front_dlist(int_dl* list, int dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type uint_dl
+ * @param dat Data to be pushed to the head of type unsigned int
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_uint_front_dlist(uint_dl* list, unsigned int dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type long_dl 
+ * @param dat Data to be pushed to the head of type long int
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_long_front_dlist(long_dl* list, long int dat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type ulong_dl 
+ * @param dat Data to be pushed to the head of type unsigned long
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_ulong_front_dlist(ulong_dl* list, unsigned long int dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type llong_dl 
+ * @param dat Data to be pushed to the head of type long long int
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_llong_front_dlist(llong_dl* list, long long int dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type ullong_dl 
+ * @param dat Data to be pushed to the head of type unsigned long long int
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_ullong_front_dlist(ullong_dl* list, unsigned long long int dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type float _dl
+ * @param dat Data to be pushed to the head of type float
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_float_front_dlist(float_dl* list, float dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type double_dl 
+ * @param dat Data to be pushed to the head of type double
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_double_front_dlist(double_dl* list, double dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type ldouble_dl 
+ * @param dat Data to be pushed to the head of type long double
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_ldouble_front_dlist(ldouble_dl* list, long double dat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type bool_dl
+ * @param dat Data to be pushed to the head of type bool
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_bool_front_dlist(bool_dl* list, bool dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type bool_dl 
+ * @param dat Data to be pushed to the head of type char*
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_string_front_dlist(string_dl* list, char *dat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief pushes data to the head of the doubly lined list 
+ *
+ * @param list A doubly linked list data structure of type string_dl 
+ * @param dat Data to be pushed to the head of type str
+ * @return True if the function executes properly, false otherwise.
+ */
+bool push_str_front_dlist(string_dl* list, str *dat);
+// --------------------------------------------------------------------------------
+
+#define push_front_dllist(list, dat) _Generic((list), \
+    char_dl*: push_char_front_dlist, \
+    uchar_dl*: push_uchar_front_dlist, \
+    short_dl*: push_short_front_dlist, \
+    ushort_dl*: push_ushort_front_dlist, \
+    int_dl*: push_int_front_dlist, \
+    uint_dl*: push_uint_front_dlist, \
+    long_dl*: push_long_front_dlist, \
+    ulong_dl*: push_ulong_front_dlist, \
+    llong_dl*: push_llong_front_dlist, \
+    ullong_dl*: push_ullong_front_dlist, \
+    float_dl*: push_float_front_dlist, \
+    double_dl*: push_double_front_dlist, \
+    ldouble_dl*: push_ldouble_front_dlist, \
+    bool_dl*: push_bool_front_dlist, \
+    string_dl*: push_string_front_dlist) (list, dat);
+// ================================================================================
+// ================================================================================
+
+void free_char_dlist(char_dl* list);
+void free_uchar_dlist(uchar_dl* list);
+void free_short_dlist(short_dl* list);
+void free_ushort_dlist(ushort_dl* list);
+void free_int_dlist(int_dl* list);
+void free_uint_dlist(uint_dl* list);
+void free_long_dlist(long_dl* list);
+void free_ulong_dlist(ulong_dl* list);
+void free_llong_dlist(llong_dl* list);
+void free_ullong_dlist(ullong_dl* list);
+void free_float_dlist(float_dl* list);
+void free_double_dlist(double_dl* list);
+void free_ldouble_dlist(ldouble_dl* list);
+void free_bool_dlist(bool_dl* list);
+void free_string_dlist(string_dl* list);
+// --------------------------------------------------------------------------------
+
+#define free_dllist(list) _Generic((list), \
+    char_dl*: free_char_dlist, \
+    uchar_dl*: free_uchar_dlist, \
+    short_dl*: free_short_dlist, \
+    ushort_dl*: free_ushort_dlist, \
+    int_dl*: free_int_dlist, \
+    uint_dl*: free_uint_dlist, \
+    long_dl*: free_long_dlist, \
+    ulong_dl*: free_ulong_dlist, \
+    llong_dl*: free_llong_dlist, \
+    ullong_dl*: free_ullong_dlist, \
+    float_dl*: free_float_dlist, \
+    double_dl*: free_double_dlist, \
+    ldouble_dl*: free_ldouble_dlist, \
+    bool_dl*: free_bool_dlist, \
+    string_dl*: free_string_dlist)(list)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

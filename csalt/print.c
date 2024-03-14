@@ -1636,4 +1636,290 @@ void print_string_sllist(string_sl* list) {
 }
 // ================================================================================
 // ================================================================================
+
+void print_char_dllist(char_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    char_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_char(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_uchar_dllist(uchar_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    uchar_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_uchar(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_short_dllist(short_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    short_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_short(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_ushort_dllist(ushort_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    ushort_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_ushort(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_int_dllist(int_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    int_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_int(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_uint_dllist(uint_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    uint_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_uint(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_long_dllist(long_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    long_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_long(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_ulong_dllist(ulong_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    ulong_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_ulong(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_llong_dllist(llong_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    llong_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_llong(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_ullong_dllist(ullong_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    ullong_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_ullong(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_float_dllist(float_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    float_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_float(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_double_dllist(double_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    double_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_double(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_ldouble_dllist(ldouble_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    ldouble_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_longdouble(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_bool_dllist(bool_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    bool_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_bool(current->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// --------------------------------------------------------------------------------
+
+void print_string_dllist(string_dl* list) {
+    if ( !list && !list->head) {
+        errno = EINVAL;
+        printf("NULL");
+    }
+    printf("{ ");
+    string_dlnode* current = list->head;
+    size_t i = 0;
+    while (current != NULL) {
+        print_string(current->data->data);
+        if (i < list->len - 1)
+            printf(", ");
+        current = current->next;
+        i++;
+    }
+    printf(" }\n");
+}
+// ================================================================================
+// ================================================================================
 // eof

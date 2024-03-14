@@ -26,6 +26,7 @@
 #include "array.h"
 #include "heap.h"
 #include "slist.h"
+#include "dlist.h"
 
 extern const size_t PRINT_LENGTH;
 
@@ -124,6 +125,21 @@ extern "C" {
                                          ldouble_sl*: true, \
                                          bool_sl*: true, \
                                          string_sl*: true, \
+                                         char_dl*: true, \
+                                         uchar_dl*: true, \
+                                         short_dl*: true, \
+                                         ushort_dl*: true, \
+                                         int_dl*: true, \
+                                         uint_dl*: true, \
+                                         long_dl*: true, \
+                                         ulong_dl*: true, \
+                                         llong_dl*: true, \
+                                         ullong_dl*: true, \
+                                         float_dl*: true, \
+                                         double_dl*: true, \
+                                         ldouble_dl*: true, \
+                                         bool_dl*: true, \
+                                         string_dl*: true, \
 										 default: false)
 // ================================================================================
 // ================================================================================
@@ -248,6 +264,24 @@ void print_string_sllist(string_sl* list);
 // ================================================================================
 // ================================================================================
 
+void print_char_dllist(char_dl* list);
+void print_uchar_dllist(uchar_dl* list);
+void print_short_dllist(short_dl* list);
+void print_ushort_dllist(ushort_dl* list);
+void print_int_dllist(int_dl* list);
+void print_uint_dllist(uint_dl* list);
+void print_long_dllist(long_dl* list);
+void print_ulong_dllist(ulong_dl* list);
+void print_llong_dllist(llong_dl* list);
+void print_ullong_dllist(ullong_dl* list);
+void print_float_dllist(float_dl* list);
+void print_double_dllist(double_dl* list);
+void print_ldouble_dllist(ldouble_dl* list);
+void print_bool_dllist(bool_dl* list);
+void print_string_dllist(string_dl* list);
+// ================================================================================
+// ================================================================================
+
 /**
  * Macro using _Generic operator to determine which functions get implemented
  * in a print statement.
@@ -339,7 +373,22 @@ void print_string_sllist(string_sl* list);
                                        double_sl*: print_double_sllist, \
                                        ldouble_sl*: print_ldouble_sllist, \
                                        bool_sl*: print_bool_sllist, \
-                                       string_sl*: print_string_sllist)(T)
+                                       string_sl*: print_string_sllist, \
+                                       char_dl*: print_char_dllist, \
+                                       uchar_dl*: print_uchar_dllist, \
+                                       short_dl*: print_short_dllist, \
+                                       ushort_dl*: print_ushort_dllist, \
+                                       int_dl*: print_int_dllist, \
+                                       uint_dl*: print_uint_dllist, \
+                                       long_dl*: print_long_dllist, \
+                                       ulong_dl*: print_ulong_dllist, \
+                                       llong_dl*: print_llong_dllist, \
+                                       ullong_dl*: print_ullong_dllist, \
+                                       float_dl*: print_float_dllist, \
+                                       double_dl*: print_double_dllist, \
+                                       ldouble_dl*: print_ldouble_dllist, \
+                                       bool_dl*: print_bool_dllist, \
+                                       string_dl*: print_string_dllist)(T)
 // ================================================================================
 // ================================================================================
 
