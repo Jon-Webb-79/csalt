@@ -118,7 +118,7 @@ void test_pop_string_vector(void **state);
 // ================================================================================
 // ================================================================================
 // TEST GARBAGE COLLECTION MACROS
-
+#ifdef __GNUC__
 void test_char_garbage_vector(void **state);
 void test_uchar_garbage_vector(void **state);
 void test_short_garbage_vector(void **state);
@@ -134,6 +134,7 @@ void test_double_garbage_vector(void **state);
 void test_ldouble_garbage_vector(void **state);
 void test_bool_garbage_vector(void **state);
 void test_string_garbage_vector(void **state);
+#endif /* __GNUC__ */
 // ================================================================================
 // ================================================================================
 // TEST REVERSE VECTOR FUNCTIONS 

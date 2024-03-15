@@ -4029,4 +4029,160 @@ void test_sllist_string_iterator(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// Theses tests should be executed with VALGRIND 
+
+#ifdef __GNUC__
+void test_sllist_char_gbc(void **state) {
+    char_sl* list gbc_char_sl= init_sllist(dChar)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_uchar_gbc(void **state) {
+    uchar_sl* list gbc_uchar_sl= init_sllist(dUChar)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+
+void test_sllist_short_gbc(void **state) {
+    short_sl* list gbc_short_sl= init_sllist(dShort)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+
+void test_sllist_ushort_gbc(void **state) {
+    ushort_sl* list gbc_ushort_sl= init_sllist(dUShort)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_int_gbc(void **state) {
+    int_sl* list gbc_int_sl= init_sllist(dInt)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_uint_gbc(void **state) {
+    uint_sl* list gbc_uint_sl= init_sllist(dUInt)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_long_gbc(void **state) {
+    long_sl* list gbc_long_sl= init_sllist(dLong)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_ulong_gbc(void **state) {
+    ulong_sl* list gbc_ulong_sl= init_sllist(dULong)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_llong_gbc(void **state) {
+    llong_sl* list gbc_llong_sl= init_sllist(dLongLong)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_ullong_gbc(void **state) {
+    ullong_sl* list gbc_ullong_sl= init_sllist(dULongLong)();
+    push_sllist(list, 0, 0);
+    push_sllist(list, 1, 0);
+    push_sllist(list, 2, 0);
+    push_sllist(list, 3, 0);
+    push_sllist(list, 4, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_float_gbc(void **state) {
+    float_sl* list gbc_float_sl= init_sllist(dFloat)();
+    push_sllist(list, 0.f, 0);
+    push_sllist(list, 1.f, 0);
+    push_sllist(list, 2.f, 0);
+    push_sllist(list, 3.f, 0);
+    push_sllist(list, 4.f, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_double_gbc(void **state) {
+    double_sl* list gbc_double_sl= init_sllist(dDouble)();
+    push_sllist(list, 0., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 4., 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_ldouble_gbc(void **state) {
+    ldouble_sl* list gbc_ldouble_sl= init_sllist(dLDouble)();
+    push_sllist(list, 0., 0);
+    push_sllist(list, 1., 0);
+    push_sllist(list, 2., 0);
+    push_sllist(list, 3., 0);
+    push_sllist(list, 4., 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_bool_gbc(void **state) {
+    bool_sl* list gbc_bool_sl= init_sllist(dBool)();
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+    push_sllist(list, false, 0);
+    push_sllist(list, true, 0);
+}
+// --------------------------------------------------------------------------------
+
+void test_sllist_string_gbc(void **state) {
+    string_sl* list gbc_string_sl= init_sllist(dString)();
+    push_sllist(list, "One", 0);
+    push_sllist(list, "Two", 0);
+    push_sllist(list, "Three", 0);
+    push_sllist(list, "Four", 0);
+    push_sllist(list, "Five", 0);
+}
+#endif /* __GNUC__ */
+// ================================================================================
+// ================================================================================
 // eof

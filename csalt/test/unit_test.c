@@ -1262,7 +1262,22 @@ const struct CMUnitTest test_sllist[] = {
     cmocka_unit_test(test_sllist_double_iterator),
     cmocka_unit_test(test_sllist_ldouble_iterator),
     cmocka_unit_test(test_sllist_bool_iterator),
-    cmocka_unit_test(test_sllist_string_iterator)
+    cmocka_unit_test(test_sllist_string_iterator),
+    cmocka_unit_test(test_sllist_char_gbc),
+    cmocka_unit_test(test_sllist_uchar_gbc),
+    cmocka_unit_test(test_sllist_short_gbc),
+    cmocka_unit_test(test_sllist_ushort_gbc),
+    cmocka_unit_test(test_sllist_int_gbc),
+    cmocka_unit_test(test_sllist_uint_gbc),
+    cmocka_unit_test(test_sllist_long_gbc),
+    cmocka_unit_test(test_sllist_ulong_gbc),
+    cmocka_unit_test(test_sllist_llong_gbc),
+    cmocka_unit_test(test_sllist_ullong_gbc),
+    cmocka_unit_test(test_sllist_float_gbc),
+    cmocka_unit_test(test_sllist_double_gbc),
+    cmocka_unit_test(test_sllist_ldouble_gbc),
+    cmocka_unit_test(test_sllist_bool_gbc),
+    cmocka_unit_test(test_sllist_string_gbc)
 };
 
 const struct CMUnitTest test_dllist[] = {

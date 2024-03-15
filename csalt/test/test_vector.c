@@ -1304,7 +1304,7 @@ void test_pop_string_vector(void **state) {
 // ================================================================================
 // ================================================================================
 // TEST GARBAGE COLLECTION MACROS 
-
+#ifdef __GNUC__
 /**
  * Test to ensure no valgrind failures without explicit call to free
  */
@@ -1483,6 +1483,7 @@ void test_string_garbage_vector(void **state) {
     push_vector(vec, "Three", vector_length(vec));
     push_vector(vec, "Four", vector_length(vec));
 }
+#endif /* __GNUC__ */
 // ================================================================================
 // ================================================================================
 // TEST REVERSE VECTOR FUNCTINS 

@@ -179,14 +179,14 @@ of this document.
 
 Initialize Singly Linked List 
 =============================
-The ``slist.h`` header file provides the ``init_llist`` function for initializing 
-a singly linked list.  This function is essentially a function pointer, intelligently 
+The ``slist.h`` header file provides the ``init_dllist`` function for initializing 
+a doubly linked list.  This function is essentially a function pointer, intelligently 
 selecting the appropriate initialization function based on the specified data 
 type.
 
 .. code-block:: c
 
-   type init_llist(dtype dat_type)()
+   type init_sllist(dtype dat_type)()
 
 Parameters 
 ----------
@@ -233,7 +233,7 @@ list data structure of type ``float_sl``.
 Underlying Functions 
 --------------------
 The ``init_sllist`` function selects from one of the functions below to Initialize 
-a dynamically allocated array.  If the user desires, they can directly select 
+a singly linked list.  If the user desires, they can directly select 
 one of these functions instead of using the ``init_sllist`` function.
 
 .. code-block:: c
@@ -254,7 +254,7 @@ one of these functions instead of using the ``init_sllist`` function.
    bool_sl* init_bool_sllist();
    string_sl* init_string_sllist();
 
-Free Singly Linked List 
+Free Doubly Linked List 
 =======================
 A singly linked list is dynamically allocated and therefore must be manually
 freed from memory.  The ``free_sllist`` macro has been provided in the ``slist.h``
@@ -342,7 +342,7 @@ Collection if they use a `GCC` or `CLANG` compiler.  This feautre leverages the
 `cleanup` attribute available in these compilers and is not part of the standard 
 C language.
 
-The macro follows the naming convention ``gbc_<type>``, where ``<type>``
+The macro follows the naming convention ``gbc_<type>_sl``, where ``<type>``
 corresponds to the derived data types mentioned in 
 :ref:`Derived Data Types <sllist_dat_type>`.
 
@@ -351,8 +351,8 @@ corresponds to the derived data types mentioned in
 Example 
 -------
 Below is an example demonstrating the use of garbage collection with a 
-``int_ls`` linked list.  Notice the absence of a manual ``free_sllist``
-call; the ``gbc_float_ls`` macro ensures automatic deallocation when 
+``int_sl`` linked list.  Notice the absence of a manual ``free_sllist``
+call; the ``gbc_int_sl`` macro ensures automatic deallocation when 
 variable goes out of scope.
 
 .. code-block:: c 
@@ -362,7 +362,7 @@ variable goes out of scope.
 
    int main() {
 
-       int_sl* list = init_sllist();
+       int_sl* list gbc_int_sl = init_sllist();
        push_sllist(list, 1, 0);
        push_sllist(list, 2, 0);
        push_sllist(list, 3, 0);

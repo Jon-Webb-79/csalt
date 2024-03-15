@@ -234,6 +234,26 @@ void test_sllist_ldouble_iterator(void **state);
 void test_sllist_bool_iterator(void **state);
 void test_sllist_string_iterator(void **state);
 // ================================================================================
+// ================================================================================
+// TEST FREE_GBC 
+#ifdef __GNUC__ 
+void test_sllist_char_gbc(void **state);
+void test_sllist_uchar_gbc(void **state);
+void test_sllist_short_gbc(void **state);
+void test_sllist_ushort_gbc(void **state);
+void test_sllist_int_gbc(void **state);
+void test_sllist_uint_gbc(void **state);
+void test_sllist_long_gbc(void **state);
+void test_sllist_ulong_gbc(void **state);
+void test_sllist_llong_gbc(void **state);
+void test_sllist_ullong_gbc(void **state);
+void test_sllist_float_gbc(void **state);
+void test_sllist_double_gbc(void **state);
+void test_sllist_ldouble_gbc(void **state);
+void test_sllist_bool_gbc(void **state);
+void test_sllist_string_gbc(void **state);
+#endif /* __GNUC__ */
+// ================================================================================
 // ================================================================================ 
 #endif /* test_sllist_H */
 // ================================================================================
