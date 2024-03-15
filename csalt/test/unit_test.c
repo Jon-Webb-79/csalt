@@ -1263,6 +1263,7 @@ const struct CMUnitTest test_sllist[] = {
     cmocka_unit_test(test_sllist_ldouble_iterator),
     cmocka_unit_test(test_sllist_bool_iterator),
     cmocka_unit_test(test_sllist_string_iterator),
+#ifdef __GNUC__
     cmocka_unit_test(test_sllist_char_gbc),
     cmocka_unit_test(test_sllist_uchar_gbc),
     cmocka_unit_test(test_sllist_short_gbc),
@@ -1278,6 +1279,7 @@ const struct CMUnitTest test_sllist[] = {
     cmocka_unit_test(test_sllist_ldouble_gbc),
     cmocka_unit_test(test_sllist_bool_gbc),
     cmocka_unit_test(test_sllist_string_gbc)
+#endif /* __GNUC__ */
 };
 
 const struct CMUnitTest test_dllist[] = {
@@ -1295,7 +1297,24 @@ const struct CMUnitTest test_dllist[] = {
     cmocka_unit_test(test_push_front_double_dllist),
     cmocka_unit_test(test_push_front_ldouble_dllist),
     cmocka_unit_test(test_push_front_bool_dllist),
-    cmocka_unit_test(test_push_front_string_dllist)
+    cmocka_unit_test(test_push_front_string_dllist),
+#ifdef __GNUC__ 
+    cmocka_unit_test(test_char_dlist_gbc),
+    cmocka_unit_test(test_uchar_dlist_gbc),
+    cmocka_unit_test(test_short_dlist_gbc),
+    cmocka_unit_test(test_ushort_dlist_gbc),
+    cmocka_unit_test(test_int_dlist_gbc),
+    cmocka_unit_test(test_uint_dlist_gbc),
+    cmocka_unit_test(test_long_dlist_gbc),
+    cmocka_unit_test(test_ulong_dlist_gbc),
+    cmocka_unit_test(test_llong_dlist_gbc),
+    cmocka_unit_test(test_ullong_dlist_gbc),
+    cmocka_unit_test(test_float_dlist_gbc),
+    cmocka_unit_test(test_double_dlist_gbc),
+    cmocka_unit_test(test_ldouble_dlist_gbc),
+    cmocka_unit_test(test_bool_dlist_gbc),
+    cmocka_unit_test(test_string_dlist_gbc)
+#endif /* __GNUC__ */
 };
 
 // Begin code

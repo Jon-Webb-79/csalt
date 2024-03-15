@@ -363,4 +363,174 @@ void test_push_front_string_dllist(void **state) {
 }
 // ================================================================================
 // ================================================================================
+// This section of tests should be performed with valgrind 
+
+#ifdef __GNUC__ 
+
+void test_char_dlist_gbc(void **state) {
+	(void) state;
+    char_dl* list gbc_char_dl = init_dllist(dChar)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_uchar_dlist_gbc(void **state) {
+	(void) state;
+    uchar_dl* list gbc_uchar_dl = init_dllist(dUChar)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_short_dlist_gbc(void **state) {
+	(void) state;
+    short_dl* list gbc_short_dl = init_dllist(dShort)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_ushort_dlist_gbc(void **state) {
+	(void) state;
+    ushort_dl* list gbc_ushort_dl = init_dllist(dUShort)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_int_dlist_gbc(void **state) {
+	(void) state;
+    int_dl* list gbc_int_dl = init_dllist(dInt)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_uint_dlist_gbc(void **state) {
+	(void) state;
+    uint_dl* list gbc_uint_dl = init_dllist(dUInt)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_long_dlist_gbc(void **state) {
+	(void) state;
+    long_dl* list gbc_long_dl = init_dllist(dLong)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_ulong_dlist_gbc(void **state) {
+	(void) state;
+    ulong_dl* list gbc_ulong_dl = init_dllist(dULong)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_llong_dlist_gbc(void **state) {
+	(void) state;
+    llong_dl* list gbc_llong_dl = init_dllist(dLongLong)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_ullong_dlist_gbc(void **state) {
+	(void) state;
+    ullong_dl* list gbc_ullong_dl = init_dllist(dULongLong)();
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 5);
+}
+// --------------------------------------------------------------------------------
+
+void test_float_dlist_gbc(void **state) {
+	(void) state;
+    float_dl* list gbc_float_dl = init_dllist(dFloat)();
+    push_front_dllist(list, 1.f);
+    push_front_dllist(list, 2.f);
+    push_front_dllist(list, 3.f);
+    push_front_dllist(list, 4.f);
+    push_front_dllist(list, 5.5);
+}
+// --------------------------------------------------------------------------------
+
+void test_double_dlist_gbc(void **state) {
+	(void) state;
+    double_dl* list gbc_double_dl = init_dllist(dDouble)();
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 5.);
+}
+// --------------------------------------------------------------------------------
+
+void test_ldouble_dlist_gbc(void **state) {
+	(void) state;
+    ldouble_dl* list gbc_ldouble_dl = init_dllist(dLDouble)();
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 5.);
+}
+// --------------------------------------------------------------------------------
+
+void test_bool_dlist_gbc(void **state) {
+	(void) state;
+    bool_dl* list gbc_bool_dl = init_dllist(dBool)();
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+}
+// --------------------------------------------------------------------------------
+
+void test_string_dlist_gbc(void **state) {
+	(void) state;
+    string_dl* list gbc_string_dl = init_dllist(dString)();
+    push_front_dllist(list, "One");
+    push_front_dllist(list, "Two");
+    push_front_dllist(list, "Three");
+    push_front_dllist(list, "Four");
+    push_front_dllist(list, "Five");
+}
+#endif /* __GNUC__ */
+// ================================================================================
+// ================================================================================
 // eof

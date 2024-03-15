@@ -674,7 +674,7 @@ bool push_str_front_dlist(string_dl* list, str *dat) {
 // ================================================================================
 // ================================================================================
 
-void free_char_dlist(char_dl* list) {
+void free_char_dllist(char_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -690,7 +690,7 @@ void free_char_dlist(char_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_uchar_dlist(uchar_dl* list) {
+void free_uchar_dllist(uchar_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -706,7 +706,7 @@ void free_uchar_dlist(uchar_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_short_dlist(short_dl* list) {
+void free_short_dllist(short_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -722,7 +722,7 @@ void free_short_dlist(short_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_ushort_dlist(ushort_dl* list) {
+void free_ushort_dllist(ushort_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -738,7 +738,7 @@ void free_ushort_dlist(ushort_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_int_dlist(int_dl* list) {
+void free_int_dllist(int_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -754,7 +754,7 @@ void free_int_dlist(int_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_uint_dlist(uint_dl* list) {
+void free_uint_dllist(uint_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -770,7 +770,7 @@ void free_uint_dlist(uint_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_long_dlist(long_dl* list) {
+void free_long_dllist(long_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -786,7 +786,7 @@ void free_long_dlist(long_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_ulong_dlist(ulong_dl* list) {
+void free_ulong_dllist(ulong_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -802,7 +802,7 @@ void free_ulong_dlist(ulong_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_llong_dlist(llong_dl* list) {
+void free_llong_dllist(llong_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -818,7 +818,7 @@ void free_llong_dlist(llong_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_ullong_dlist(ullong_dl* list) {
+void free_ullong_dllist(ullong_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -834,7 +834,7 @@ void free_ullong_dlist(ullong_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_float_dlist(float_dl* list) {
+void free_float_dllist(float_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -850,7 +850,7 @@ void free_float_dlist(float_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_double_dlist(double_dl* list) {
+void free_double_dllist(double_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -866,7 +866,7 @@ void free_double_dlist(double_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_ldouble_dlist(ldouble_dl* list) {
+void free_ldouble_dllist(ldouble_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -882,7 +882,7 @@ void free_ldouble_dlist(ldouble_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_bool_dlist(bool_dl* list) {
+void free_bool_dllist(bool_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -898,7 +898,7 @@ void free_bool_dlist(bool_dl* list) {
 }
 // --------------------------------------------------------------------------------
 
-void free_string_dlist(string_dl* list) {
+void free_string_dllist(string_dl* list) {
     if (!list) {
         errno = ENOMEM;
         return;
@@ -1048,6 +1048,113 @@ size_t size_string_dlist(string_dl* list) {
         return SIZE_MAX;
     }
     return list->len;
+}
+// ================================================================================
+// ================================================================================
+// Functions for garbage collection 
+
+void _free_char_dllist(char_dl** vec) {
+    if (vec && *vec) {
+        free_char_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_uchar_dllist(uchar_dl** vec) {
+    if (vec && *vec) {
+        free_uchar_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_short_dllist(short_dl** vec) {
+    if (vec && *vec) {
+        free_short_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_ushort_dllist(ushort_dl** vec) {
+    if (vec && *vec) {
+        free_ushort_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_int_dllist(int_dl** vec) {
+    if (vec && *vec) {
+        free_int_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_uint_dllist(uint_dl** vec) {
+    if (vec && *vec) {
+        free_uint_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_long_dllist(long_dl** vec) {
+    if (vec && *vec) {
+        free_long_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_ulong_dllist(ulong_dl** vec) {
+    if (vec && *vec) {
+        free_ulong_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_llong_dllist(llong_dl** vec) {
+    if (vec && *vec) {
+        free_llong_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_ullong_dllist(ullong_dl** vec) {
+    if (vec && *vec) {
+        free_ullong_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_float_dllist(float_dl** vec) {
+    if (vec && *vec) {
+        free_float_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_double_dllist(double_dl** vec) {
+    if (vec && *vec) {
+        free_double_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_ldouble_dllist(ldouble_dl** vec) {
+    if (vec && *vec) {
+        free_ldouble_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_bool_dllist(bool_dl** vec) {
+    if (vec && *vec) {
+        free_bool_dllist(*vec);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _free_sstring_dllist(string_dl** vec) {
+    if (vec && *vec) {
+        free_string_dllist(*vec);
+    }
 }
 // ================================================================================
 // ================================================================================

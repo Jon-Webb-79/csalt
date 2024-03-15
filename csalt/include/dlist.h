@@ -412,39 +412,39 @@ bool push_str_front_dlist(string_dl* list, str *dat);
 // ================================================================================
 // ================================================================================
 
-void free_char_dlist(char_dl* list);
-void free_uchar_dlist(uchar_dl* list);
-void free_short_dlist(short_dl* list);
-void free_ushort_dlist(ushort_dl* list);
-void free_int_dlist(int_dl* list);
-void free_uint_dlist(uint_dl* list);
-void free_long_dlist(long_dl* list);
-void free_ulong_dlist(ulong_dl* list);
-void free_llong_dlist(llong_dl* list);
-void free_ullong_dlist(ullong_dl* list);
-void free_float_dlist(float_dl* list);
-void free_double_dlist(double_dl* list);
-void free_ldouble_dlist(ldouble_dl* list);
-void free_bool_dlist(bool_dl* list);
-void free_string_dlist(string_dl* list);
+void free_char_dllist(char_dl* list);
+void free_uchar_dllist(uchar_dl* list);
+void free_short_dllist(short_dl* list);
+void free_ushort_dllist(ushort_dl* list);
+void free_int_dllist(int_dl* list);
+void free_uint_dllist(uint_dl* list);
+void free_long_dllist(long_dl* list);
+void free_ulong_dllist(ulong_dl* list);
+void free_llong_dllist(llong_dl* list);
+void free_ullong_dllist(ullong_dl* list);
+void free_float_dllist(float_dl* list);
+void free_double_dllist(double_dl* list);
+void free_ldouble_dllist(ldouble_dl* list);
+void free_bool_dllist(bool_dl* list);
+void free_string_dllist(string_dl* list);
 // --------------------------------------------------------------------------------
 
 #define free_dllist(list) _Generic((list), \
-    char_dl*: free_char_dlist, \
-    uchar_dl*: free_uchar_dlist, \
-    short_dl*: free_short_dlist, \
-    ushort_dl*: free_ushort_dlist, \
-    int_dl*: free_int_dlist, \
-    uint_dl*: free_uint_dlist, \
-    long_dl*: free_long_dlist, \
-    ulong_dl*: free_ulong_dlist, \
-    llong_dl*: free_llong_dlist, \
-    ullong_dl*: free_ullong_dlist, \
-    float_dl*: free_float_dlist, \
-    double_dl*: free_double_dlist, \
-    ldouble_dl*: free_ldouble_dlist, \
-    bool_dl*: free_bool_dlist, \
-    string_dl*: free_string_dlist)(list)
+    char_dl*: free_char_dllist, \
+    uchar_dl*: free_uchar_dllist, \
+    short_dl*: free_short_dllist, \
+    ushort_dl*: free_ushort_dllist, \
+    int_dl*: free_int_dllist, \
+    uint_dl*: free_uint_dllist, \
+    long_dl*: free_long_dllist, \
+    ulong_dl*: free_ulong_dllist, \
+    llong_dl*: free_llong_dllist, \
+    ullong_dl*: free_ullong_dllist, \
+    float_dl*: free_float_dllist, \
+    double_dl*: free_double_dllist, \
+    ldouble_dl*: free_ldouble_dllist, \
+    bool_dl*: free_bool_dllist, \
+    string_dl*: free_string_dllist)(list)
 // ================================================================================
 // ================================================================================
 
@@ -481,6 +481,46 @@ size_t size_string_dlist(string_dl* list);
     ldouble_dl*: size_ldouble_dlist, \
     bool_dl*: size_bool_dlist, \
     string_dl*: size_string_dlist)(list)
+// ================================================================================
+// ================================================================================
+// Cleanup functions for garbage collection
+// - while being public functions, theese are not mean to be accessed directly
+//   by developers, and instead are prototypes for the garbage collection macros.
+
+void _free_char_dllist(char_dl** vec);
+void _free_uchar_dllist(uchar_dl** vec);
+void _free_short_dllist(short_dl** vec);
+void _free_ushort_dllist(ushort_dl** vec);
+void _free_int_dllist(int_dl** vec);
+void _free_uint_dllist(uint_dl** vec);
+void _free_long_dllist(long_dl** vec);
+void _free_ulong_dllist(ulong_dl** vec);
+void _free_llong_dllist(llong_dl** vec);
+void _free_ullong_dllist(ullong_dl** vec);
+void _free_float_dllist(float_dl** vec);
+void _free_double_dllist(double_dl** vec);
+void _free_ldouble_dllist(ldouble_dl** vec);
+void _free_bool_dllist(bool_dl** vec);
+void _free_sstring_dllist(string_dl** vec);
+// --------------------------------------------------------------------------------
+
+#if defined(__GNUC__) || defined(__clang__)
+#define gbc_char_dl __attribute__((cleanup(_free_char_dllist)))
+#define gbc_uchar_dl __attribute__((cleanup(_free_uchar_dllist)))
+#define gbc_short_dl __attribute__((cleanup(_free_short_dllist)))
+#define gbc_ushort_dl __attribute__((cleanup(_free_ushort_dllist)))
+#define gbc_int_dl __attribute__((cleanup(_free_int_dllist)))
+#define gbc_uint_dl __attribute__((cleanup(_free_uint_dllist)))
+#define gbc_long_dl __attribute__((cleanup(_free_long_dllist)))
+#define gbc_ulong_dl __attribute__((cleanup(_free_ulong_dllist)))
+#define gbc_llong_dl __attribute__((cleanup(_free_llong_dllist)))
+#define gbc_ullong_dl __attribute__((cleanup(_free_ullong_dllist)))
+#define gbc_float_dl __attribute__((cleanup(_free_float_dllist)))
+#define gbc_double_dl __attribute__((cleanup(_free_double_dllist)))
+#define gbc_ldouble_dl __attribute__((cleanup(_free_ldouble_dllist)))
+#define gbc_bool_dl __attribute__((cleanup(_free_bool_dllist)))
+#define gbc_string_dl __attribute__((cleanup(_free_sstring_dllist)))
+#endif
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

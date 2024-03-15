@@ -344,6 +344,47 @@ below.
    void free_bool_dllist(bool_dl* dllist);
    void free_string_dllist(string_dl* dllist);
 
+Garbage Collection with Doubly Linked Lists 
+===========================================
+While a user of this library can implement the ``free_dllist`` macro to 
+manually free a singly linked list, they can also implement automated Garbage 
+Collection if they use a `GCC` or `CLANG` compiler.  This feautre leverages the 
+`cleanup` attribute available in these compilers and is not part of the standard 
+C language.
+
+The macro follows the naming convention ``gbc_<type>_dl``, where ``<type>``
+corresponds to the derived data types mentioned in 
+:ref:`Derived Data Types <dllist_dat_type>`.
+
+.. note:: A user should not implement garbage collection and then manually free data with the ``free_dllist`` macro.  However, the ``free_dllist`` macro has logic built into it to return control to the calling program without harm if such an operation is to occur.
+
+Example 
+-------
+Below is an example demonstrating the use of garbage collection with a 
+``int_dl`` linked list.  Notice the absence of a manual ``free_dllist``
+call; the ``gbc_int_dl`` macro ensures automatic deallocation when 
+variable goes out of scope.
+
+.. code-block:: c 
+
+   #include "dlist.h"
+   #include "print.h"
+
+   int main() {
+
+       int_dl* list gbc_int_dl = init_sllist(dInt);
+       push_front_dllist(list, 1);
+       push_front_dllist(list, 2);
+       push_front_dllist(list, 3);
+       push_front_dllist(list, 4);
+       print(list);
+       return 0;
+   }
+
+.. code-block:: c
+
+   >> { 4, 3, 2, 1 }
+
 dlist_size
 ==========
 In C, struct members are publicly accessible, which may lead to unintentional 
