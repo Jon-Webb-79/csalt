@@ -28,6 +28,20 @@
 // ================================================================================
 
 void test_push_front_char_dllist(void **state);
+void test_push_front_uchar_dllist(void **state);
+void test_push_front_short_dllist(void **state);
+void test_push_front_ushort_dllist(void **state);
+void test_push_front_int_dllist(void **state);
+void test_push_front_uint_dllist(void **state);
+void test_push_front_long_dllist(void **state);
+void test_push_front_ulong_dllist(void **state);
+void test_push_front_llong_dllist(void **state);
+void test_push_front_ullong_dllist(void **state);
+void test_push_front_float_dllist(void **state);
+void test_push_front_double_dllist(void **state);
+void test_push_front_ldouble_dllist(void **state);
+void test_push_front_bool_dllist(void **state);
+void test_push_front_string_dllist(void **state);
 
 #endif /* test_H */
 // ================================================================================

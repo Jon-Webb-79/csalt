@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include "str.h"
 #include "admin.h" 
@@ -444,6 +445,42 @@ void free_string_dlist(string_dl* list);
     ldouble_dl*: free_ldouble_dlist, \
     bool_dl*: free_bool_dlist, \
     string_dl*: free_string_dlist)(list)
+// ================================================================================
+// ================================================================================
+
+size_t size_char_dlist(char_dl* list);
+size_t size_uchar_dlist(uchar_dl* list);
+size_t size_short_dlist(short_dl* list);
+size_t size_ushort_dlist(ushort_dl* list);
+size_t size_int_dlist(int_dl* list);
+size_t size_uint_dlist(uint_dl* list);
+size_t size_long_dlist(long_dl* list);
+size_t size_ulong_dlist(ulong_dl* list);
+size_t size_llong_dlist(llong_dl* list);
+size_t size_ullong_dlist(ullong_dl* list);
+size_t size_float_dlist(float_dl* list);
+size_t size_double_dlist(double_dl* list);
+size_t size_ldouble_dlist(ldouble_dl* list);
+size_t size_bool_dlist(bool_dl* list);
+size_t size_string_dlist(string_dl* list);
+// --------------------------------------------------------------------------------
+
+#define dlist_size(list) _Generic((list), \
+    char_dl*: size_char_dlist, \
+    uchar_dl*: size_uchar_dlist, \
+    short_dl*: size_short_dlist, \
+    ushort_dl*: size_ushort_dlist, \
+    int_dl*: size_int_dlist, \
+    uint_dl*: size_uint_dlist, \
+    long_dl*: size_long_dlist, \
+    ulong_dl*: size_ulong_dlist, \
+    llong_dl*: size_llong_dlist, \
+    ullong_dl*: size_ullong_dlist, \
+    float_dl*: size_float_dlist, \
+    double_dl*: size_double_dlist, \
+    ldouble_dl*: size_ldouble_dlist, \
+    bool_dl*: size_bool_dlist, \
+    string_dl*: size_string_dlist)(list)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

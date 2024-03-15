@@ -650,7 +650,13 @@ bool push_str_front_dlist(string_dl* list, str *dat) {
         errno = ENOMEM;
         return false;
     }
-    newNode->data = dat;
+    str* val = init_string_nol(dat->data);
+    if (!val->data) {
+        errno = ENOMEM;
+        free(newNode);
+        return false;
+    }
+    newNode->data = val;
     if (list->len == 0) {
         newNode->prev = NULL;
         newNode->next = NULL;
@@ -739,6 +745,22 @@ void free_int_dlist(int_dl* list) {
     }
     int_dlnode *current = list->head;
     int_dlnode *next = NULL;
+    while (current != NULL) {
+        next = current->next;
+        free(current);
+        current = next;
+    }
+    free(list);
+}
+// --------------------------------------------------------------------------------
+
+void free_uint_dlist(uint_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return;
+    }
+    uint_dlnode *current = list->head;
+    uint_dlnode *next = NULL;
     while (current != NULL) {
         next = current->next;
         free(current);
@@ -890,6 +912,142 @@ void free_string_dlist(string_dl* list) {
         current = next;
     }
     free(list);
+}
+// ================================================================================
+// ================================================================================
+
+size_t size_char_dlist(char_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_uchar_dlist(uchar_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_short_dlist(short_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_ushort_dlist(ushort_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_int_dlist(int_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_uint_dlist(uint_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_long_dlist(long_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_ulong_dlist(ulong_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_llong_dlist(llong_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_ullong_dlist(ullong_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_float_dlist(float_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_double_dlist(double_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_ldouble_dlist(ldouble_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_bool_dlist(bool_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
+}
+// --------------------------------------------------------------------------------
+
+size_t size_string_dlist(string_dl* list) {
+    if (!list) {
+        errno = ENOMEM;
+        return SIZE_MAX;
+    }
+    return list->len;
 }
 // ================================================================================
 // ================================================================================
