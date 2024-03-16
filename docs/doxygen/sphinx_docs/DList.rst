@@ -734,3 +734,103 @@ The documentation details the usage of the ``insert_dllist`` macro for inserting
 data into doubly linked lists, ensuring developers understand the interface for 
 manipulating lists in a type-safe manner.
 
+pop_front_dllist
+================
+
+The ``pop_front_dllist`` macro provides a generic interface for removing and 
+returning the data from the front of various types of doubly linked lists. This 
+approach ensures type-safe operations and minimizes the risk of misuse by 
+encapsulating specific implementation details for each data type.
+
+Macro Definition
+----------------
+
+.. code-block:: c
+
+    #define pop_front_dllist(list) _Generic((list), \
+        char_dl*: pop_char_front_dllist, \
+        uchar_dl*: pop_uchar_front_dllist, \
+        short_dl*: pop_short_front_dllist, \
+        ushort_dl*: pop_ushort_front_dllist, \
+        int_dl*: pop_int_front_dllist, \
+        uint_dl*: pop_uint_front_dllist, \
+        long_dl*: pop_long_front_dllist, \
+        ulong_dl*: pop_ulong_front_dllist, \
+        llong_dl*: pop_llong_front_dllist, \
+        ullong_dl*: pop_ullong_front_dllist, \
+        float_dl*: pop_float_front_dllist, \
+        double_dl*: pop_double_front_dllist, \
+        ldouble_dl*: pop_ldouble_front_dllist, \
+        bool_dl*: pop_bool_front_dllist, \
+        string_dl*: pop_string_front_dllist)(list)
+
+This macro employs the C11 `_Generic` keyword to dispatch the correct function 
+based on the list type. It allows developers to utilize a unified interface for 
+popping elements from the front of a list, enhancing code readability and 
+maintaining type safety.
+
+Parameters
+----------
+
+- ``list``: A pointer to the doubly linked list data structure from which the 
+  data will be popped.
+
+Returns
+-------
+
+- The macro returns the data removed from the front of the list. The return type 
+  varies according to the list's data type. For non-pointer types (e.g., `int`, 
+  `float`, `bool`), the function returns the maximum value for that type if an 
+  error occurs. For pointer types (e.g., `str*`), it returns `NULL` in case of an 
+  error.
+
+Error Handling
+--------------
+
+- Sets ``errno`` to ``EINVAL`` if the ``list`` is `NULL`.
+- Sets ``errno`` to ``ERANGE`` if the list is empty.
+
+.. note:: When using the ``pop_string_front_dllist`` function (accessed through the macro with a `string_dl*` list), the return type is a pointer to a `str` struct. Users must assign the output to a variable to manage the returned memory correctly. Failing to free the returned `str*` after use will result in a memory leak. This is distinct from other data types handled by the macro, which return statically allocated values and do not require memory management.
+
+Example Usage
+-------------
+
+.. code-block:: c
+
+   #include "dlist.h"
+   #include <stdio.h>
+
+   int main() {
+       int_dl* intList = init_dllist(dInt)();
+       push_front_dllist(intList, 10);
+       int value = pop_front_dllist(intList);
+       printf("Popped value: %d\n", value);
+       free_dllist(intList);
+
+       string_dl* stringList = init_dllist(dString)();
+       push_front_dllist(stringList, "Example String");
+       str* poppedString = pop_front_dllist(stringList);
+       if (poppedString) {
+           printf("Popped string: %s\n", poppedString->data);
+           free_string(poppedString);  // Important to avoid memory leaks
+       }
+       free_dllist(stringList);
+
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> Popped value: 10
+   >> Popped string: Example String
+
+In this example, an `int` value is popped from an integer list and printed. Then, 
+a string is popped from a string list. It demonstrates the necessity of freeing 
+the `str*` returned by the string list pop operation to manage memory correctly.
+
+The documentation thoroughly describes how to use the ``pop_front_dllist`` 
+macro for removing and retrieving data from the front of doubly linked lists 
+across various data types. Special attention is given to the handling of string 
+types to prevent memory leaks.
+
+
