@@ -621,3 +621,116 @@ This section provides comprehensive documentation on using the ``push_back_dllis
 macro and its associated functions to append data to doubly linked lists in a 
 generic, type-safe manner.
 
+insert_dllist
+=============
+
+The ``insert_dllist`` macro offers a universal solution for inserting data into 
+any specified position within a doubly linked list. This mechanism supports 
+various data types, enabling type-safe insertions across differing list structures 
+while preventing misuse by hiding specific implementation details.
+
+Macro Definition
+----------------
+
+.. code-block:: c
+
+    #define insert_dllist(list, dat, index) _Generic((list), \
+        char_dl*: insert_char_dllist, \
+        uchar_dl*: insert_uchar_dllist, \
+        short_dl*: insert_short_dllist, \
+        ushort_dl*: insert_ushort_dllist, \
+        int_dl*: insert_int_dllist, \
+        uint_dl*: insert_uint_dllist, \
+        long_dl*: insert_long_dllist, \
+        ulong_dl*: insert_ulong_dllist, \
+        llong_dl*: insert_llong_dllist, \
+        ullong_dl*: insert_ullong_dllist, \
+        float_dl*: insert_float_dllist, \
+        double_dl*: insert_double_dllist, \
+        ldouble_dl*: insert_ldouble_dllist, \
+        bool_dl*: insert_bool_dllist, \
+        string_dl*: insert_string_dllist) (list, dat, index)
+
+Leveraging the C11 `_Generic` keyword, the macro dynamically selects and invokes 
+the correct function based on the list's type, ensuring both type safety and the 
+reduction of runtime errors. This approach facilitates the use of either the 
+macro for generic data type handling or direct calls to type-specific functions 
+for more precise control.
+
+Parameters
+----------
+
+- ``list``: A pointer to the doubly linked list data structure to which data will be inserted.
+- ``dat``: The data to insert into the list, with its type needing to match the list's data type.
+- ``index``: The zero-based position within the list at which the data will be inserted.
+
+Returns
+-------
+
+- Returns a boolean value:
+  
+  - ``true`` if the data was successfully inserted into the list.
+  - ``false`` in case of failure, with ``errno`` set to indicate the error.
+
+Error Handling
+--------------
+
+- Sets ``errno`` to ``EINVAL`` if the ``list`` is `NULL`.
+- Sets ``errno`` to ``ERANGE`` if the ``index`` is out of the valid range for the list's current length.
+- Sets ``errno`` to ``ENOMEM`` if there's a failure in memory allocation for the new node.
+
+Use Cases
+---------
+
+The macro simplifies the insertion of data into a doubly linked list at any given 
+position, accommodating a wide range of data types:
+
+.. code-block:: c
+
+    int_dl* myList = init_dllist(dInt)();
+    insert_dllist(myList, 42, 0); // Inserts the integer '42' at position 0
+
+Direct Use of Underlying Functions
+----------------------------------
+
+For cases requiring stringent type checks or when the generic programming model 
+doesn't fit the use case, developers can directly invoke the specific functions 
+encapsulated by ``insert_dllist``:
+
+.. code-block:: c
+
+    bool insert_string_dllist(string_dl* list, char* dat, size_t index);
+
+.. note:: The ``insert_str_dllist`` function, designed for inserting ``str`` data types into a ``string_dl`` list, is not included in the ``insert_dllist`` macro. This function should be used directly when working with ``str`` data types, following the same parameter format as the macro: 
+
+.. code-block:: c
+
+    bool insert_str_dllist(string_dl* list, str* dat, size_t index);
+
+Example
+-------
+
+This example demonstrates how to initialize a list, insert data at various 
+positions, and then clean up:
+
+.. code-block:: c
+
+   #include "dlist.h"
+
+   int main() {
+       string_dl* list = init_dllist(dString)();
+       insert_dllist(list, "World", 0); // First position
+       insert_dllist(list, "Hello", 0); // Now "Hello" is the first
+       print_dllist(list);
+       free_dllist(list);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> { Hello, World }
+
+The documentation details the usage of the ``insert_dllist`` macro for inserting 
+data into doubly linked lists, ensuring developers understand the interface for 
+manipulating lists in a type-safe manner.
+
