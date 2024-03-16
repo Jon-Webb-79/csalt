@@ -1359,7 +1359,22 @@ const struct CMUnitTest test_dllist[] = {
     cmocka_unit_test(test_pop_double_front_dlist),
     cmocka_unit_test(test_pop_ldouble_front_dlist),
     cmocka_unit_test(test_pop_bool_front_dlist),
-    cmocka_unit_test(test_pop_string_front_dlist)
+    cmocka_unit_test(test_pop_string_front_dlist),
+    cmocka_unit_test(test_pop_char_back_dlist),
+    cmocka_unit_test(test_pop_uchar_back_dlist),
+    cmocka_unit_test(test_pop_short_back_dlist),
+    cmocka_unit_test(test_pop_ushort_back_dlist),
+    cmocka_unit_test(test_pop_int_back_dlist),
+    cmocka_unit_test(test_pop_uint_back_dlist),
+    cmocka_unit_test(test_pop_long_back_dlist),
+    cmocka_unit_test(test_pop_ulong_back_dlist),
+    cmocka_unit_test(test_pop_llong_back_dlist),
+    cmocka_unit_test(test_pop_ullong_back_dlist),
+    cmocka_unit_test(test_pop_float_back_dlist),
+    cmocka_unit_test(test_pop_double_back_dlist),
+    cmocka_unit_test(test_pop_ldouble_back_dlist),
+    cmocka_unit_test(test_pop_bool_back_dlist),
+    cmocka_unit_test(test_pop_string_back_dlist)
 };
 
 // Begin code

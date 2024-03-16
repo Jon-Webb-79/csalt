@@ -635,6 +635,42 @@ str* pop_string_front_dllist(string_dl* list);
     string_dl*: pop_string_front_dllist)(list)
 // ================================================================================
 // ================================================================================
+
+char pop_char_back_dllist(char_dl* list);
+unsigned char pop_uchar_back_dllist(uchar_dl* list);
+short int pop_short_back_dllist(short_dl* list);
+unsigned short int pop_ushort_back_dllist(ushort_dl* list);
+int pop_int_back_dllist(int_dl* list);
+unsigned int pop_uint_back_dllist(uint_dl* list);
+long int pop_long_back_dllist(long_dl* list);
+unsigned long int pop_ulong_back_dllist(ulong_dl* list);
+long long int pop_llong_back_dllist(llong_dl* list);
+unsigned long long int pop_ullong_back_dllist(ullong_dl* list);
+float pop_float_back_dllist(float_dl* list);
+double pop_double_back_dllist(double_dl* list);
+long double pop_ldouble_back_dllist(ldouble_dl* list);
+bool pop_bool_back_dllist(bool_dl* list);
+str* pop_string_back_dllist(string_dl* list);
+// --------------------------------------------------------------------------------
+
+#define pop_back_dllist(list) _Generic((list), \
+    char_dl*: pop_char_back_dllist, \
+    uchar_dl*: pop_uchar_back_dllist, \
+    short_dl*: pop_short_back_dllist, \
+    ushort_dl*: pop_ushort_back_dllist, \
+    int_dl*: pop_int_back_dllist, \
+    uint_dl*: pop_uint_back_dllist, \
+    long_dl*: pop_long_back_dllist, \
+    ulong_dl*: pop_ulong_back_dllist, \
+    llong_dl*: pop_llong_back_dllist, \
+    ullong_dl*: pop_ullong_back_dllist, \
+    float_dl*: pop_float_back_dllist, \
+    double_dl*: pop_double_back_dllist, \
+    ldouble_dl*: pop_ldouble_back_dllist, \
+    bool_dl*: pop_bool_back_dllist, \
+    string_dl*: pop_string_back_dllist)(list)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
