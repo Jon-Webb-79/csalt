@@ -23,6 +23,8 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <stdint.h>
+#include <limits.h>
+#include <float.h>
 
 #include "str.h"
 #include "admin.h" 
@@ -595,6 +597,42 @@ bool insert_str_dllist(string_dl* list, str *dat, size_t index);
     ldouble_dl*: insert_ldouble_dllist, \
     bool_dl*: insert_bool_dllist, \
     string_dl*: insert_string_dllist)(list, dat, index)
+// ================================================================================
+// ================================================================================
+
+char pop_char_front_dllist(char_dl* list);
+unsigned char pop_uchar_front_dllist(uchar_dl* list);
+short int pop_short_front_dllist(short_dl* list);
+unsigned short int pop_ushort_front_dllist(ushort_dl* list);
+int pop_int_front_dllist(int_dl* list);
+unsigned int pop_uint_front_dllist(uint_dl* list);
+long int pop_long_front_dllist(long_dl* list);
+unsigned long int pop_ulong_front_dllist(ulong_dl* list);
+long long int pop_llong_front_dllist(llong_dl* list);
+unsigned long long int pop_ullong_front_dllist(ullong_dl* list);
+float pop_float_front_dllist(float_dl* list);
+double pop_double_front_dllist(double_dl* list);
+long double pop_ldouble_front_dllist(ldouble_dl* list);
+bool pop_bool_front_dllist(bool_dl* list);
+str* pop_string_front_dllist(string_dl* list);
+// --------------------------------------------------------------------------------
+
+#define pop_front_dllist(list) _Generic((list), \
+    char_dl*: pop_char_front_dllist, \
+    uchar_dl*: pop_uchar_front_dllist, \
+    short_dl*: pop_short_front_dllist, \
+    ushort_dl*: pop_ushort_front_dllist, \
+    int_dl*: pop_int_front_dllist, \
+    uint_dl*: pop_uint_front_dllist, \
+    long_dl*: pop_long_front_dllist, \
+    ulong_dl*: pop_ulong_front_dllist, \
+    llong_dl*: pop_llong_front_dllist, \
+    ullong_dl*: pop_ullong_front_dllist, \
+    float_dl*: pop_float_front_dllist, \
+    double_dl*: pop_double_front_dllist, \
+    ldouble_dl*: pop_ldouble_front_dllist, \
+    bool_dl*: pop_bool_front_dllist, \
+    string_dl*: pop_string_front_dllist)(list)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

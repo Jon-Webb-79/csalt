@@ -99,6 +99,24 @@ void test_ldouble_insert_dlist(void **state);
 void test_bool_insert_dlist(void **state);
 void test_string_insert_dlist(void **state);
 // ================================================================================
+// ================================================================================
+
+void test_pop_char_front_dlist(void **state);
+void test_pop_uchar_front_dlist(void **state);
+void test_pop_short_front_dlist(void **state);
+void test_pop_ushort_front_dlist(void **state);
+void test_pop_int_front_dlist(void **state);
+void test_pop_uint_front_dlist(void **state);
+void test_pop_long_front_dlist(void **state);
+void test_pop_ulong_front_dlist(void **state);
+void test_pop_llong_front_dlist(void **state);
+void test_pop_ullong_front_dlist(void **state);
+void test_pop_float_front_dlist(void **state);
+void test_pop_double_front_dlist(void **state);
+void test_pop_ldouble_front_dlist(void **state);
+void test_pop_bool_front_dlist(void **state);
+void test_pop_string_front_dlist(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_H */
 // ================================================================================
