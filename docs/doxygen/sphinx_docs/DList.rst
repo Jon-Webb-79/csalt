@@ -943,3 +943,99 @@ associated functions to remove and return elements from the back of doubly
 linked lists in a generic, type-safe manner. It emphasizes the need for proper 
 memory management when working with dynamically allocated data.
 
+pop_at_dllist
+=============
+
+The ``pop_at_dllist`` macro facilitates the removal and return of an element at 
+a specified index from various types of doubly linked lists. This interface 
+supports type-safe operations across disparate data structures, thereby 
+streamlining the process of dynamically manipulating list contents.
+
+Macro Definition
+----------------
+
+.. code-block:: c
+
+    #define pop_at_dllist(list, index) _Generic((list), \
+        char_dl*: pop_char_at_dllist, \
+        uchar_dl*: pop_uchar_at_dllist, \
+        short_dl*: pop_short_at_dllist, \
+        ushort_dl*: pop_ushort_at_dllist, \
+        int_dl*: pop_int_at_dllist, \
+        uint_dl*: pop_uint_at_dllist, \
+        long_dl*: pop_long_at_dllist, \
+        ulong_dl*: pop_ulong_at_dllist, \
+        llong_dl*: pop_llong_at_dllist, \
+        ullong_dl*: pop_ullong_at_dllist, \
+        float_dl*: pop_float_at_dllist, \
+        double_dl*: pop_double_at_dllist, \
+        ldouble_dl*: pop_ldouble_at_dllist, \
+        bool_dl*: pop_bool_at_dllist, \
+        string_dl*: pop_string_at_dllist)(list, index)
+
+Utilizing the C11 `_Generic` keyword, this macro dynamically selects the correct 
+function to invoke based on the list's type, ensuring compatibility and reducing runtime errors.
+
+Parameters
+----------
+
+- ``list``: A pointer to the doubly linked list from which the element will be removed.
+- ``index``: The position of the element to be removed, based on a zero-based index.
+
+Returns
+-------
+
+- The data removed from the list. The return type varies according to the list's data type.
+
+  - For non-pointer types (e.g., `int`, `char`), the function returns the maximum value for the type upon encountering an error.
+  - For pointer types (e.g., `str*`), the function returns `NULL` on error.
+
+Error Handling
+--------------
+
+- The function sets `errno` to `EINVAL` if the `list` is `NULL`.
+- It sets `errno` to `ERANGE` if the `index` is out of the list's bounds or if the list is empty.
+
+Special Consideration for `str*` Types
+--------------------------------------
+
+- When popping elements of type `str*` from a list, it's essential to assign the returned value to a variable to manage its memory explicitly. Failing to free the returned `str*` value results in a memory leak.
+
+Example Usage: Floating-Point List
+----------------------------------
+
+.. code-block:: c
+
+   #include "dlist.h"
+
+   int main() {
+       float_dl* list = init_dllist(dFloat)();
+       push_back_dllist(list, 1.0f);
+       push_back_dllist(list, 2.0f);
+       push_back_dllist(list, 3.0f);
+       float value = pop_at_dllist(list, 1); // Pops the second element (2.0f)
+       printf("Popped value: %.1f\n", value);
+       free_dllist(list);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Popped value: 2.0
+
+Example Handling `str*` Types
+-----------------------------
+
+.. code-block:: c
+
+   str* value = pop_at_dllist(myStringList, index);
+   if (value) {
+       printf("Popped string: %s\n", value->data);
+       free_string(value); // Prevent memory leak by freeing the str* value
+   }
+
+This documentation elucidates the usage of the ``pop_at_dllist`` macro and its 
+accompanying functions for removing elements at specified indices from doubly 
+linked lists. It underscores the importance of memory management when dealing 
+with dynamically allocated data, such as `str*` types.
+
