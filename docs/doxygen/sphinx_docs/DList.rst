@@ -833,4 +833,113 @@ macro for removing and retrieving data from the front of doubly linked lists
 across various data types. Special attention is given to the handling of string 
 types to prevent memory leaks.
 
+pop_back_dllist
+===============
+
+The ``pop_back_dllist`` macro provides a generic interface for removing and 
+returning the element at the back of various types of doubly linked lists. 
+This functionality enables users to perform removal operations in a type-safe 
+manner across different data structures, thus reducing the potential for 
+misuse by abstracting implementation specifics.
+
+Macro Definition
+----------------
+
+.. code-block:: c
+
+    #define pop_back_dllist(list) _Generic((list), \
+        char_dl*: pop_char_back_dllist, \
+        uchar_dl*: pop_uchar_back_dllist, \
+        short_dl*: pop_short_back_dllist, \
+        ushort_dl*: pop_ushort_back_dllist, \
+        int_dl*: pop_int_back_dllist, \
+        uint_dl*: pop_uint_back_dllist, \
+        long_dl*: pop_long_back_dllist, \
+        ulong_dl*: pop_ulong_back_dllist, \
+        llong_dl*: pop_llong_back_dllist, \
+        ullong_dl*: pop_ullong_back_dllist, \
+        float_dl*: pop_float_back_dllist, \
+        double_dl*: pop_double_back_dllist, \
+        ldouble_dl*: pop_ldouble_back_dllist, \
+        bool_dl*: pop_bool_back_dllist, \
+        string_dl*: pop_string_back_dllist)(list)
+
+This macro leverages the C11 `_Generic` keyword to dynamically select and 
+invoke the appropriate function based on the provided list's type, ensuring 
+type safety and minimizing runtime errors.
+
+Parameters
+----------
+
+- ``list``: A pointer to the doubly linked list from which the last element 
+  will be removed and returned.
+
+Returns
+-------
+
+- The macro returns the data removed from the list. The type of the return 
+  value corresponds to the list's data type.
+
+  - For non-pointer types (e.g., `int`, `char`), the function returns the 
+    maximum value of the respective type on error.
+  - For pointer types (e.g., `str*`), the function returns `NULL` on error.
+
+Error Handling
+--------------
+
+- If `list` is `NULL` or the list is empty, the function sets `errno` to 
+  `EINVAL` or `ERANGE`, respectively, to signal the error condition.
+
+.. note:: For the `string_dl` list type, which deals with `str*` elements, the user must assign the returned value to a variable to manage or free its memory, avoiding memory leaks. This consideration is crucial because unlike primitive data types, dynamically allocated data requires explicit memory management.
+
+Example Usage
+-------------
+
+Appending and then popping an element from the back of an integer list:
+
+.. code-block:: c
+
+   #include "dlist.h"
+
+   int main() {
+       int_dl* list = init_dllist(dInt)();
+       push_back_dllist(list, 10);
+       int value = pop_back_dllist(list);
+       printf("Popped value: %d\n", value);
+       // Further operations...
+       free_dllist(list);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Popped value: 10
+
+For a string list, handling the returned `str*`:
+
+.. code-block:: c
+
+   #include "dlist.h"
+
+   int main() {
+       string_dl* list = init_dllist(dString)();
+       push_back_dllist(list, "Hello, World!");
+       str* value = pop_back_dllist(list);
+       if (value) {
+           printf("Popped string: %s\n", value->data);
+           free_string(value); // Important to avoid memory leaks.
+       }
+       // Further operations...
+       free_dllist(list);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> Popped string: Hello, World!
+
+This documentation outlines how to use the ``pop_back_dllist`` macro and its 
+associated functions to remove and return elements from the back of doubly 
+linked lists in a generic, type-safe manner. It emphasizes the need for proper 
+memory management when working with dynamically allocated data.
 
