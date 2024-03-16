@@ -160,4 +160,70 @@ macro automatically formats the vector output for readability.
 
 .. note:: The `print` macro adapts its output format based on the vector's length, ensuring optimal readability. For longer vectors, the output may span multiple lines to avoid overly long single-line outputs.
 
+Min and Max Heap 
+================
+The print command can also be used with the :ref:`Min Heap <min_heap>` and 
+:ref:`Max Heap <max_heap>` data structures.  When printing Min and Max heap data 
+structures, the data will be printed as if it were an array, with square brackets 
+(i.e. ``[ ]``) encapsulating the data.
 
+Example 
+-------
+This example demonstrates the use of the ``print`` macro to display the contents 
+of a min heap to the screen.  The syntax is identical for a max heap data 
+structure.
+
+.. code-block:: c 
+
+   #include "heap.h"
+   #include "print.h"
+
+   int main() {
+       char_min_hp* heap = init_min_heap(dChar)(7);
+       enqueue_min_heap(heap, 5);
+       enqueue_min_heap(heap, 1);
+       enqueue_min_heap(heap, 2);
+       enqueue_min_heap(heap, 3);
+       enqueue_min_heap(heap, 6);
+       enqueue_min_heap(heap, 4);
+       enqueue_min_heap(heap, 7);
+       print(heap);
+       free_min_heap(heap);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> [ 1, 3, 2, 5, 6, 4, 7 ]
+
+Singly and Doubly Linked Lists
+==============================
+The print command can also be used with the :ref:`Singly Linked Lists <sl_list>` and 
+:ref:`Doubly Linked Lists <dl_list>` data structures.  When printing Singly and 
+Doubly Linked List data structures, the data will be encapsulated by curly brackets 
+(i.e. ``{ }``) encapsulating the data.
+
+Example 
+-------
+This example demonstrates the use of the ``print`` macro to display the contents 
+of a doubly linked list.  The syntax is identical for a singly linked list.
+
+.. code-block:: c
+
+   #include "dlist.h"
+   #include "print.h"
+
+   int main() {
+       int_dl* list = init_dllist(dInt)();
+       push_back_dllist(list, 1);
+       push_back_dllist(list, 2);
+       push_back_dllist(list, 3);
+       push_back_dllist(list, 4);
+       print(list);
+       free_dllist(list);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> { 1, 2, 3, 4 }
