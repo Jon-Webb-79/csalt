@@ -534,4 +534,88 @@ The following example demonstrates pushing an integer to the front of a doubly l
 
 push_back_dllist()
 ==================
-TBD
+
+The ``push_back_dllist`` macro provides a generic interface to append data to 
+the back of various types of doubly linked lists. This abstraction allows 
+users to add elements to the end of a list without needing to directly call 
+type-specific functions, enhancing code readability and maintainability.
+
+Parameters
+----------
+
+- ``list``: A pointer to the doubly linked list data structure. The type of the list determines which specific push function is invoked.
+- ``dat``: The data to be appended to the list. The type of this parameter must match the list's data type.
+
+Returns
+-------
+
+- This macro returns a boolean value:
+  
+  - ``true`` if the data is successfully appended to the list.
+  - ``false`` otherwise. On failure, ``errno`` is set to indicate the error.
+
+Error Handling
+--------------
+
+The macro and its underlying functions use ``errno`` for error reporting:
+
+- If ``list`` is NULL, ``errno`` is set to ``EINVAL`` (Invalid argument).
+- If memory allocation fails during the operation, ``errno`` is set to ``ENOMEM`` (Not enough memory).
+
+Use Cases
+---------
+
+The ``push_back_dllist`` macro simplifies appending data to lists of different 
+types. For instance, adding a string to a doubly linked list of strings:
+
+.. code-block:: c
+
+    string_dl* myList = init_dllist(dString)();
+    push_back_dllist(myList, "Example String");
+
+Direct Use of Underlying Functions
+----------------------------------
+
+While the macro provides a convenient and generic way to append data, direct 
+calls to the underlying type-specific functions are possible and might be 
+preferred in scenarios where type safety is critical, or generic programming is not suitable:
+
+.. code-block:: c
+
+    bool push_string_back_dllist(string_dl* list, char* dat);
+
+This approach bypasses the generic interface, requiring the developer to 
+explicitly select the appropriate function for the data and list type, 
+ensuring type compatibility.
+
+Example
+-------
+
+The following example demonstrates initializing a list of strings and 
+appending multiple strings using both the macro and the direct function call:
+
+.. code-block:: c
+
+   #include "dlist.h"
+   #include "print.h"
+
+   int main() {
+       string_dl* list = init_dllist(dString)();
+       push_back_dllist(list, "Hello");
+       push_back_dllist(list, "World"); 
+       // Direct function call
+       char* newString = "Direct Call";
+       push_string_back_dllist(list, newString);
+       print(list);
+
+       // Cleanup
+       free_dllist(list);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> { Hello, World, Direct Call }
+
+This section provides comprehensive documentation on using the ``push_back_dllist`` macro and its associated functions to append data to doubly linked lists in a generic, type-safe manner.
+
