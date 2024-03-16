@@ -240,7 +240,7 @@ string_dl* init_string_dllist();
  * @param dat Data to be pushed to the head of type char
  * @return True if the function executes properly, false otherwise.
  */
-bool push_char_front_dlist(char_dl* list, char dat);
+bool push_char_front_dllist(char_dl* list, char dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -250,7 +250,7 @@ bool push_char_front_dlist(char_dl* list, char dat);
  * @param dat Data to be pushed to the head of type unsigned char
  * @return True if the function executes properly, false otherwise.
  */
-bool push_uchar_front_dlist(uchar_dl* list, unsigned char dat);
+bool push_uchar_front_dllist(uchar_dl* list, unsigned char dat);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -260,7 +260,7 @@ bool push_uchar_front_dlist(uchar_dl* list, unsigned char dat);
  * @param dat Data to be pushed to the head of type short int
  * @return True if the function executes properly, false otherwise.
  */
-bool push_short_front_dlist(short_dl* list, short int dat);
+bool push_short_front_dllist(short_dl* list, short int dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -270,7 +270,7 @@ bool push_short_front_dlist(short_dl* list, short int dat);
  * @param dat Data to be pushed to the head of type unsigned short int
  * @return True if the function executes properly, false otherwise.
  */
-bool push_ushort_front_dlist(ushort_dl* list, unsigned short int dat);
+bool push_ushort_front_dllist(ushort_dl* list, unsigned short int dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -280,7 +280,7 @@ bool push_ushort_front_dlist(ushort_dl* list, unsigned short int dat);
  * @param dat Data to be pushed to the head of type int
  * @return True if the function executes properly, false otherwise.
  */
-bool push_int_front_dlist(int_dl* list, int dat);
+bool push_int_front_dllist(int_dl* list, int dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -290,7 +290,7 @@ bool push_int_front_dlist(int_dl* list, int dat);
  * @param dat Data to be pushed to the head of type unsigned int
  * @return True if the function executes properly, false otherwise.
  */
-bool push_uint_front_dlist(uint_dl* list, unsigned int dat);
+bool push_uint_front_dllist(uint_dl* list, unsigned int dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -300,7 +300,7 @@ bool push_uint_front_dlist(uint_dl* list, unsigned int dat);
  * @param dat Data to be pushed to the head of type long int
  * @return True if the function executes properly, false otherwise.
  */
-bool push_long_front_dlist(long_dl* list, long int dat);
+bool push_long_front_dllist(long_dl* list, long int dat);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -310,7 +310,7 @@ bool push_long_front_dlist(long_dl* list, long int dat);
  * @param dat Data to be pushed to the head of type unsigned long
  * @return True if the function executes properly, false otherwise.
  */
-bool push_ulong_front_dlist(ulong_dl* list, unsigned long int dat);
+bool push_ulong_front_dllist(ulong_dl* list, unsigned long int dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -320,7 +320,7 @@ bool push_ulong_front_dlist(ulong_dl* list, unsigned long int dat);
  * @param dat Data to be pushed to the head of type long long int
  * @return True if the function executes properly, false otherwise.
  */
-bool push_llong_front_dlist(llong_dl* list, long long int dat);
+bool push_llong_front_dllist(llong_dl* list, long long int dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -330,7 +330,7 @@ bool push_llong_front_dlist(llong_dl* list, long long int dat);
  * @param dat Data to be pushed to the head of type unsigned long long int
  * @return True if the function executes properly, false otherwise.
  */
-bool push_ullong_front_dlist(ullong_dl* list, unsigned long long int dat);
+bool push_ullong_front_dllist(ullong_dl* list, unsigned long long int dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -340,7 +340,7 @@ bool push_ullong_front_dlist(ullong_dl* list, unsigned long long int dat);
  * @param dat Data to be pushed to the head of type float
  * @return True if the function executes properly, false otherwise.
  */
-bool push_float_front_dlist(float_dl* list, float dat);
+bool push_float_front_dllist(float_dl* list, float dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -350,7 +350,7 @@ bool push_float_front_dlist(float_dl* list, float dat);
  * @param dat Data to be pushed to the head of type double
  * @return True if the function executes properly, false otherwise.
  */
-bool push_double_front_dlist(double_dl* list, double dat);
+bool push_double_front_dllist(double_dl* list, double dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -360,7 +360,7 @@ bool push_double_front_dlist(double_dl* list, double dat);
  * @param dat Data to be pushed to the head of type long double
  * @return True if the function executes properly, false otherwise.
  */
-bool push_ldouble_front_dlist(ldouble_dl* list, long double dat);
+bool push_ldouble_front_dllist(ldouble_dl* list, long double dat);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -370,7 +370,7 @@ bool push_ldouble_front_dlist(ldouble_dl* list, long double dat);
  * @param dat Data to be pushed to the head of type bool
  * @return True if the function executes properly, false otherwise.
  */
-bool push_bool_front_dlist(bool_dl* list, bool dat);
+bool push_bool_front_dllist(bool_dl* list, bool dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -380,7 +380,7 @@ bool push_bool_front_dlist(bool_dl* list, bool dat);
  * @param dat Data to be pushed to the head of type char*
  * @return True if the function executes properly, false otherwise.
  */
-bool push_string_front_dlist(string_dl* list, char *dat);
+bool push_string_front_dllist(string_dl* list, char *dat);
 // --------------------------------------------------------------------------------
 
 /**
@@ -390,25 +390,25 @@ bool push_string_front_dlist(string_dl* list, char *dat);
  * @param dat Data to be pushed to the head of type str
  * @return True if the function executes properly, false otherwise.
  */
-bool push_str_front_dlist(string_dl* list, str *dat);
+bool push_str_front_dllist(string_dl* list, str *dat);
 // --------------------------------------------------------------------------------
 
 #define push_front_dllist(list, dat) _Generic((list), \
-    char_dl*: push_char_front_dlist, \
-    uchar_dl*: push_uchar_front_dlist, \
-    short_dl*: push_short_front_dlist, \
-    ushort_dl*: push_ushort_front_dlist, \
-    int_dl*: push_int_front_dlist, \
-    uint_dl*: push_uint_front_dlist, \
-    long_dl*: push_long_front_dlist, \
-    ulong_dl*: push_ulong_front_dlist, \
-    llong_dl*: push_llong_front_dlist, \
-    ullong_dl*: push_ullong_front_dlist, \
-    float_dl*: push_float_front_dlist, \
-    double_dl*: push_double_front_dlist, \
-    ldouble_dl*: push_ldouble_front_dlist, \
-    bool_dl*: push_bool_front_dlist, \
-    string_dl*: push_string_front_dlist) (list, dat);
+    char_dl*: push_char_front_dllist, \
+    uchar_dl*: push_uchar_front_dllist, \
+    short_dl*: push_short_front_dllist, \
+    ushort_dl*: push_ushort_front_dllist, \
+    int_dl*: push_int_front_dllist, \
+    uint_dl*: push_uint_front_dllist, \
+    long_dl*: push_long_front_dllist, \
+    ulong_dl*: push_ulong_front_dllist, \
+    llong_dl*: push_llong_front_dllist, \
+    ullong_dl*: push_ullong_front_dllist, \
+    float_dl*: push_float_front_dllist, \
+    double_dl*: push_double_front_dllist, \
+    ldouble_dl*: push_ldouble_front_dllist, \
+    bool_dl*: push_bool_front_dllist, \
+    string_dl*: push_string_front_dllist) (list, dat);
 // ================================================================================
 // ================================================================================
 
@@ -521,6 +521,43 @@ void _free_sstring_dllist(string_dl** vec);
 #define gbc_bool_dl __attribute__((cleanup(_free_bool_dllist)))
 #define gbc_string_dl __attribute__((cleanup(_free_sstring_dllist)))
 #endif
+// ================================================================================
+// ================================================================================
+
+bool push_char_back_dllist(char_dl* list, char dat);
+bool push_uchar_back_dllist(uchar_dl* list, unsigned char dat);
+bool push_short_back_dllist(short_dl* list, short int dat);
+bool push_ushort_back_dllist(ushort_dl* list, unsigned short int dat);
+bool push_int_back_dllist(int_dl* list, int dat);
+bool push_uint_back_dllist(uint_dl* list, unsigned int dat);
+bool push_long_back_dllist(long_dl* list, long int dat);
+bool push_ulong_back_dllist(ulong_dl* list, unsigned long int dat);
+bool push_llong_back_dllist(llong_dl* list, long long int dat);
+bool push_ullong_back_dllist(ullong_dl* list, unsigned long long int dat);
+bool push_float_back_dllist(float_dl* list, float dat);
+bool push_double_back_dllist(double_dl* list, double dat);
+bool push_ldouble_back_dllist(ldouble_dl* list, long double dat);
+bool push_bool_back_dllist(bool_dl* list, bool dat);
+bool push_string_back_dllist(string_dl* list, char *dat);
+bool push_str_back_dllist(string_dl* list, str *dat);
+// --------------------------------------------------------------------------------
+
+#define push_back_dllist(list, dat) _Generic((list), \
+    char_dl*: push_char_back_dllist, \
+    uchar_dl*: push_uchar_back_dllist, \
+    short_dl*: push_short_back_dllist, \
+    ushort_dl*: push_ushort_back_dllist, \
+    int_dl*: push_int_back_dllist, \
+    uint_dl*: push_uint_back_dllist, \
+    long_dl*: push_long_back_dllist, \
+    ulong_dl*: push_ulong_back_dllist, \
+    llong_dl*: push_llong_back_dllist, \
+    ullong_dl*: push_ullong_back_dllist, \
+    float_dl*: push_float_back_dllist, \
+    double_dl*: push_double_back_dllist, \
+    ldouble_dl*: push_ldouble_back_dllist, \
+    bool_dl*: push_bool_back_dllist, \
+    string_dl*: push_string_back_dllist)(list, dat)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

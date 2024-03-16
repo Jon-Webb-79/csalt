@@ -466,28 +466,30 @@ Macro Definition
 
 .. code-block:: c
 
-    #define push_front_dlist(list, dat) _Generic((list), \
-        char_dl*: push_char_front_dlist, \
-        uchar_dl*: push_uchar_front_dlist, \
-        short_dl*: push_short_front_dlist, \
-        ushort_dl*: push_ushort_front_dlist, \
-        int_dl*: push_int_front_dlist, \
-        uint_dl*: push_uint_front_dlist, \
-        long_dl*: push_long_front_dlist, \
-        ulong_dl*: push_ulong_front_dlist, \
-        llong_dl*: push_llong_front_dlist, \
-        ullong_dl*: push_ullong_front_dlist, \
-        float_dl*: push_float_front_dlist, \
-        double_dl*: push_double_front_dlist, \
-        ldouble_dl*: push_ldouble_front_dlist, \
-        bool_dl*: push_bool_front_dlist, \
-        string_dl*: push_string_front_dlist) (list, dat);
+    #define push_front_dllist(list, dat) _Generic((list), \
+        char_dl*: push_char_front_dllist, \
+        uchar_dl*: push_uchar_front_dllist, \
+        short_dl*: push_short_front_dllist, \
+        ushort_dl*: push_ushort_front_dllist, \
+        int_dl*: push_int_front_dllist, \
+        uint_dl*: push_uint_front_dllist, \
+        long_dl*: push_long_front_dllist, \
+        ulong_dl*: push_ulong_front_dllist, \
+        llong_dl*: push_llong_front_dllist, \
+        ullong_dl*: push_ullong_front_dllist, \
+        float_dl*: push_float_front_dllist, \
+        double_dl*: push_double_front_dllist, \
+        ldouble_dl*: push_ldouble_front_dllist, \
+        bool_dl*: push_bool_front_dllist, \
+        string_dl*: push_string_front_dllist) (list, dat);
 
 The macro utilizes the C11 `_Generic` keyword to dispatch the correct function 
 based on the type of the list provided. This approach ensures type safety and 
 reduces the potential for runtime errors.  A developer may also use the type 
 specific functions that are wrapped by the ``push_front_dlist`` macro 
 shown above.
+
+.. note:: The ``push_string_front_dllist`` function takes a string literal as an input.  If a developer wishes to insert a ``str`` data type they must manually use the ``push_str_front_dllist`` function, which retains the same format for input variables as the macro.
 
 Parameters
 ----------
@@ -530,4 +532,6 @@ The following example demonstrates pushing an integer to the front of a doubly l
    >> 4
    >> { 4, 3, 2, 1 }
 
-
+push_back_dllist()
+==================
+TBD

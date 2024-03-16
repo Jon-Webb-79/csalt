@@ -63,6 +63,24 @@ void test_bool_dlist_gbc(void **state);
 void test_string_dlist_gbc(void **state);
 #endif /* __GNUC__ */
 // ================================================================================
+// ================================================================================
+
+void test_char_dlist_push_back(void **state);
+void test_uchar_dlist_push_back(void **state);
+void test_short_dlist_push_back(void **state);
+void test_ushort_dlist_push_back(void **state);
+void test_int_dlist_push_back(void **state);
+void test_uint_dlist_push_back(void **state);
+void test_long_dlist_push_back(void **state);
+void test_ulong_dlist_push_back(void **state);
+void test_llong_dlist_push_back(void **state);
+void test_ullong_dlist_push_back(void **state);
+void test_float_dlist_push_back(void **state);
+void test_double_dlist_push_back(void **state);
+void test_ldouble_dlist_push_back(void **state);
+void test_bool_dlist_push_back(void **state);
+void test_string_dlist_push_back(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_H */
 // ================================================================================

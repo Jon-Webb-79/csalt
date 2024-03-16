@@ -234,7 +234,7 @@ InitDListFunc init_dllist(dtype dat_type) {
 // ================================================================================
 // ================================================================================
 
-bool push_char_front_dlist(char_dl* list, char dat) {
+bool push_char_front_dllist(char_dl* list, char dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -261,7 +261,7 @@ bool push_char_front_dlist(char_dl* list, char dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_uchar_front_dlist(uchar_dl* list, unsigned char dat) {
+bool push_uchar_front_dllist(uchar_dl* list, unsigned char dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -288,7 +288,7 @@ bool push_uchar_front_dlist(uchar_dl* list, unsigned char dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_short_front_dlist(short_dl* list, short int dat) {
+bool push_short_front_dllist(short_dl* list, short int dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -315,7 +315,7 @@ bool push_short_front_dlist(short_dl* list, short int dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_ushort_front_dlist(ushort_dl* list, unsigned short int dat) {
+bool push_ushort_front_dllist(ushort_dl* list, unsigned short int dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -342,7 +342,7 @@ bool push_ushort_front_dlist(ushort_dl* list, unsigned short int dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_int_front_dlist(int_dl* list, int dat) {
+bool push_int_front_dllist(int_dl* list, int dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -369,7 +369,7 @@ bool push_int_front_dlist(int_dl* list, int dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_uint_front_dlist(uint_dl* list, unsigned int dat) {
+bool push_uint_front_dllist(uint_dl* list, unsigned int dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -396,7 +396,7 @@ bool push_uint_front_dlist(uint_dl* list, unsigned int dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_long_front_dlist(long_dl* list, long int dat) {
+bool push_long_front_dllist(long_dl* list, long int dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -423,7 +423,7 @@ bool push_long_front_dlist(long_dl* list, long int dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_ulong_front_dlist(ulong_dl* list, unsigned long int dat) {
+bool push_ulong_front_dllist(ulong_dl* list, unsigned long int dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -450,7 +450,7 @@ bool push_ulong_front_dlist(ulong_dl* list, unsigned long int dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_llong_front_dlist(llong_dl* list, long long int dat) {
+bool push_llong_front_dllist(llong_dl* list, long long int dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -477,7 +477,7 @@ bool push_llong_front_dlist(llong_dl* list, long long int dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_ullong_front_dlist(ullong_dl* list, unsigned long long int dat) {
+bool push_ullong_front_dllist(ullong_dl* list, unsigned long long int dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -504,7 +504,7 @@ bool push_ullong_front_dlist(ullong_dl* list, unsigned long long int dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_float_front_dlist(float_dl* list, float dat) {
+bool push_float_front_dllist(float_dl* list, float dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -531,7 +531,7 @@ bool push_float_front_dlist(float_dl* list, float dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_double_front_dlist(double_dl* list, double dat) {
+bool push_double_front_dllist(double_dl* list, double dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -558,7 +558,7 @@ bool push_double_front_dlist(double_dl* list, double dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_ldouble_front_dlist(ldouble_dl* list, long double dat) {
+bool push_ldouble_front_dllist(ldouble_dl* list, long double dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -585,7 +585,7 @@ bool push_ldouble_front_dlist(ldouble_dl* list, long double dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_bool_front_dlist(bool_dl* list, bool dat) {
+bool push_bool_front_dllist(bool_dl* list, bool dat) {
     if (!list) {
         errno = EINVAL;
         return false;
@@ -612,8 +612,12 @@ bool push_bool_front_dlist(bool_dl* list, bool dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_string_front_dlist(string_dl* list, char *dat) {
+bool push_string_front_dllist(string_dl* list, char *dat) {
     if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    if (!dat) {
         errno = EINVAL;
         return false;
     }
@@ -640,8 +644,12 @@ bool push_string_front_dlist(string_dl* list, char *dat) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_str_front_dlist(string_dl* list, str *dat) {
+bool push_str_front_dllist(string_dl* list, str *dat) {
     if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    if (!dat || !dat->data) {
         errno = EINVAL;
         return false;
     }
@@ -1155,6 +1163,441 @@ void _free_sstring_dllist(string_dl** vec) {
     if (vec && *vec) {
         free_string_dllist(*vec);
     }
+}
+// ================================================================================
+// ================================================================================
+
+bool push_char_back_dllist(char_dl* list, char dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    char_dlnode* ptr = malloc(sizeof(char_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_uchar_back_dllist(uchar_dl* list, unsigned char dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    uchar_dlnode* ptr = malloc(sizeof(uchar_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_short_back_dllist(short_dl* list, short dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    short_dlnode* ptr = malloc(sizeof(short_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_ushort_back_dllist(ushort_dl* list, unsigned short int dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    ushort_dlnode* ptr = malloc(sizeof(ushort_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_int_back_dllist(int_dl* list, int dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    int_dlnode* ptr = malloc(sizeof(int_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_uint_back_dllist(uint_dl* list, unsigned int dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    uint_dlnode* ptr = malloc(sizeof(uint_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_long_back_dllist(long_dl* list, long int dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    long_dlnode* ptr = malloc(sizeof(long_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_ulong_back_dllist(ulong_dl* list, unsigned long int dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    ulong_dlnode* ptr = malloc(sizeof(ulong_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_llong_back_dllist(llong_dl* list, long long int dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    llong_dlnode* ptr = malloc(sizeof(llong_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_ullong_back_dllist(ullong_dl* list, unsigned long long int dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    ullong_dlnode* ptr = malloc(sizeof(ullong_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_float_back_dllist(float_dl* list, float dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    float_dlnode* ptr = malloc(sizeof(float_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_double_back_dllist(double_dl* list, double dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    double_dlnode* ptr = malloc(sizeof(double_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_ldouble_back_dllist(ldouble_dl* list, long double dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    ldouble_dlnode* ptr = malloc(sizeof(ldouble_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_bool_back_dllist(bool_dl* list, bool dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    bool_dlnode* ptr = malloc(sizeof(bool_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    ptr->data = dat;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_string_back_dllist(string_dl* list, char *dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    string_dlnode* ptr = malloc(sizeof(string_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    str *string = init_string_nol(dat);
+    ptr->data = string;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
+}
+// --------------------------------------------------------------------------------
+
+bool push_str_back_dllist(string_dl* list, str *dat) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    string_dlnode* ptr = malloc(sizeof(string_dlnode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return false;
+    }
+    str *string = init_string_nol(dat->data);
+    ptr->data = string;
+    if (list->len == 0) {
+        ptr->next = NULL;
+        ptr->prev = NULL;
+        list->head = ptr;
+        list->tail = ptr;
+    } else {
+        ptr->next = NULL;
+        ptr->prev = list->tail;
+        list->tail->next = ptr;
+        list->tail = ptr;
+    }
+    list->len++;
+    return true;
 }
 // ================================================================================
 // ================================================================================
