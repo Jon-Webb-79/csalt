@@ -560,6 +560,43 @@ bool push_str_back_dllist(string_dl* list, str *dat);
     string_dl*: push_string_back_dllist)(list, dat)
 // ================================================================================
 // ================================================================================
+
+bool insert_char_dllist(char_dl* list, char dat, size_t index);
+bool insert_uchar_dllist(uchar_dl* list, unsigned char dat, size_t index);
+bool insert_short_dllist(short_dl* list, short int dat, size_t index);
+bool insert_ushort_dllist(ushort_dl* list, unsigned short int dat, size_t index);
+bool insert_int_dllist(int_dl* list, int dat, size_t index);
+bool insert_uint_dllist(uint_dl* list, unsigned int dat, size_t index);
+bool insert_long_dllist(long_dl* list, long int dat, size_t index);
+bool insert_ulong_dllist(ulong_dl* list, unsigned long int dat, size_t index);
+bool insert_llong_dllist(llong_dl* list, long long int dat, size_t index);
+bool insert_ullong_dllist(ullong_dl* list, unsigned long long int dat, size_t index);
+bool insert_float_dllist(float_dl* list, float dat, size_t index);
+bool insert_double_dllist(double_dl* list, double dat, size_t index);
+bool insert_ldouble_dllist(ldouble_dl* list, long double dat, size_t index);
+bool insert_bool_dllist(bool_dl* list, bool dat, size_t index);
+bool insert_string_dllist(string_dl* list, char *dat, size_t index);
+bool insert_str_dllist(string_dl* list, str *dat, size_t index);
+// --------------------------------------------------------------------------------
+
+#define insert_dllist(list, dat, index) _Generic((list), \
+    char_dl*: insert_char_dllist, \
+    uchar_dl*: insert_uchar_dllist, \
+    short_dl*: insert_short_dllist, \
+    ushort_dl*: insert_ushort_dllist, \
+    int_dl*: insert_int_dllist, \
+    uint_dl*: insert_uint_dllist, \
+    long_dl*: insert_long_dllist, \
+    ulong_dl*: insert_ulong_dllist, \
+    llong_dl*: insert_llong_dllist, \
+    ullong_dl*: insert_ullong_dllist, \
+    float_dl*: insert_float_dllist, \
+    double_dl*: insert_double_dllist, \
+    ldouble_dl*: insert_ldouble_dllist, \
+    bool_dl*: insert_bool_dllist, \
+    string_dl*: insert_string_dllist)(list, dat, index)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

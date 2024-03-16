@@ -866,4 +866,337 @@ void test_string_dlist_push_back(void **state) {
 }
 // ================================================================================
 // ================================================================================
+
+void test_char_insert_dlist(void **state) {
+    (void) state;
+    char_dl* list = init_dllist(dChar)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    char a[5] = {3, 4, 5, 5, 2};
+    char_dlnode *current = list->head;
+    char_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_uchar_insert_dlist(void **state) {
+    (void) state;
+    uchar_dl* list = init_dllist(dUChar)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    unsigned char a[5] = {3, 4, 5, 5, 2};
+    uchar_dlnode *current = list->head;
+    uchar_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_short_insert_dlist(void **state) {
+    (void) state;
+    short_dl* list = init_dllist(dShort)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    short int a[5] = {3, 4, 5, 5, 2};
+    short_dlnode *current = list->head;
+    short_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_ushort_insert_dlist(void **state) {
+    (void) state;
+    ushort_dl* list = init_dllist(dUShort)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    unsigned short int a[5] = {3, 4, 5, 5, 2};
+    ushort_dlnode *current = list->head;
+    ushort_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_int_insert_dlist(void **state) {
+    (void) state;
+    int_dl* list = init_dllist(dInt)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    int a[5] = {3, 4, 5, 5, 2};
+    int_dlnode *current = list->head;
+    int_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_uint_insert_dlist(void **state) {
+    (void) state;
+    uint_dl* list = init_dllist(dUInt)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    unsigned int a[5] = {3, 4, 5, 5, 2};
+    uint_dlnode *current = list->head;
+    uint_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_long_insert_dlist(void **state) {
+    (void) state;
+    long_dl* list = init_dllist(dLong)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    long int a[5] = {3, 4, 5, 5, 2};
+    long_dlnode *current = list->head;
+    long_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_ulong_insert_dlist(void **state) {
+    (void) state;
+    ulong_dl* list = init_dllist(dULong)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    unsigned long a[5] = {3, 4, 5, 5, 2};
+    ulong_dlnode *current = list->head;
+    ulong_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_llong_insert_dlist(void **state) {
+    (void) state;
+    llong_dl* list = init_dllist(dLongLong)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    long long int a[5] = {3, 4, 5, 5, 2};
+    llong_dlnode *current = list->head;
+    llong_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_ullong_insert_dlist(void **state) {
+    (void) state;
+    ullong_dl* list = init_dllist(dULongLong)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    unsigned long long int a[5] = {3, 4, 5, 5, 2};
+    ullong_dlnode *current = list->head;
+    ullong_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_float_insert_dlist(void **state) {
+    (void) state;
+    float_dl* list = init_dllist(dFloat)();
+    insert_dllist(list, 5.f, 0);
+    insert_dllist(list, 2.f, 1);
+    insert_dllist(list, 3.f, 0);
+    insert_dllist(list, 4.f, 1);
+    insert_dllist(list, 5.f, 2);
+    float a[5] = {3.f, 4.f, 5.f, 5.f, 2.f};
+    float_dlnode *current = list->head;
+    float_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_float_equal(a[i], current->data, 1.0e-3);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_double_insert_dlist(void **state) {
+    (void) state;
+    double_dl* list = init_dllist(dDouble)();
+    insert_dllist(list, 5., 0);
+    insert_dllist(list, 2., 1);
+    insert_dllist(list, 3., 0);
+    insert_dllist(list, 4., 1);
+    insert_dllist(list, 5., 2);
+    double a[5] = {3., 4., 5., 5., 2.};
+    double_dlnode *current = list->head;
+    double_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_double_equal(a[i], current->data, 1.0e-3);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_ldouble_insert_dlist(void **state) {
+    (void) state;
+    ldouble_dl* list = init_dllist(dLDouble)();
+    insert_dllist(list, 5, 0);
+    insert_dllist(list, 2, 1);
+    insert_dllist(list, 3, 0);
+    insert_dllist(list, 4, 1);
+    insert_dllist(list, 5, 2);
+    long double a[5] = {3., 4., 5., 5., 2.};
+    ldouble_dlnode *current = list->head;
+    ldouble_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_float_equal(a[i], current->data, 1.0e-3);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bool_insert_dlist(void **state) {
+    (void) state;
+    bool_dl* list = init_dllist(dBool)();
+    insert_dllist(list, true, 0);
+    insert_dllist(list, true, 1);
+    insert_dllist(list, false, 0);
+    insert_dllist(list, false, 1);
+    insert_dllist(list, false, 2);
+    bool a[5] = {false, false, false, true, true};
+    bool_dlnode *current = list->head;
+    bool_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_int_equal(a[i], current->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_string_insert_dlist(void **state) {
+    (void) state;
+    string_dl* list = init_dllist(dString)();
+    insert_dllist(list, "Five", 0);
+    insert_dllist(list, "Two", 1);
+    insert_dllist(list, "Three", 0);
+    insert_dllist(list, "Four", 1);
+    str *val = init_string_nol("Five");
+    insert_str_dllist(list, val, 2);
+    char *a[5] = {"Three", "Four", "Five", "Five", "Two"};
+    string_dlnode *current = list->head;
+    string_dlnode *next = NULL;
+    size_t i = 0;
+    while (current != NULL) {
+        next = current->next;
+        assert_string_equal(a[i], current->data->data);
+        i++;
+        current = next;
+    }
+    free_dllist(list);
+    free_string(val);
+}
+// ================================================================================
+// ================================================================================
 // eof

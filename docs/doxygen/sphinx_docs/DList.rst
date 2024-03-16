@@ -532,8 +532,8 @@ The following example demonstrates pushing an integer to the front of a doubly l
    >> 4
    >> { 4, 3, 2, 1 }
 
-push_back_dllist()
-==================
+push_back_dllist
+================
 
 The ``push_back_dllist`` macro provides a generic interface to append data to 
 the back of various types of doubly linked lists. This abstraction allows 
@@ -617,5 +617,7 @@ appending multiple strings using both the macro and the direct function call:
 
    >> { Hello, World, Direct Call }
 
-This section provides comprehensive documentation on using the ``push_back_dllist`` macro and its associated functions to append data to doubly linked lists in a generic, type-safe manner.
+This section provides comprehensive documentation on using the ``push_back_dllist`` 
+macro and its associated functions to append data to doubly linked lists in a 
+generic, type-safe manner.
 
