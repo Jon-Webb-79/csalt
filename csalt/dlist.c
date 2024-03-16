@@ -3032,4 +3032,517 @@ str* pop_string_back_dllist(string_dl* list) {
 }
 // ================================================================================
 // ================================================================================
+
+char pop_char_at_dllist(char_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return SCHAR_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return SCHAR_MAX;
+    }
+    if (index == 0) return pop_char_front_dllist(list);
+    if (index == list->len - 1) {
+        return pop_char_back_dllist(list);
+    }
+    char_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    char dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char pop_uchar_at_dllist(uchar_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return CHAR_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return CHAR_MAX;
+    }
+    if (index == 0) return pop_uchar_front_dllist(list);
+    if (index == list->len - 1) return pop_uchar_back_dllist(list);
+    uchar_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    unsigned char dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+short pop_short_at_dllist(short_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return SHRT_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return SHRT_MAX;
+    }
+    if (index == 0) return pop_short_front_dllist(list);
+    if (index == list->len - 1) return pop_short_back_dllist(list);
+    short_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    short int dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int pop_ushort_at_dllist(ushort_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return USHRT_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return USHRT_MAX;
+    }
+    if (index == 0) return pop_ushort_front_dllist(list);
+    if (index == list->len - 1) return pop_ushort_back_dllist(list);
+    ushort_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    unsigned short int dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+int pop_int_at_dllist(int_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return INT_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return INT_MAX;
+    }
+    if (index == 0) return pop_int_front_dllist(list);
+    if (index == list->len - 1) return pop_int_back_dllist(list);
+    int_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    int dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int pop_uint_at_dllist(uint_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return UINT_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return UINT_MAX;
+    }
+    if (index == 0) return pop_uint_front_dllist(list);
+    if (index == list->len - 1) return pop_uint_back_dllist(list);
+    uint_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    unsigned int dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+long int pop_long_at_dllist(long_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return LONG_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return LONG_MAX;
+    }
+    if (index == 0) return pop_long_front_dllist(list);
+    if (index == list->len - 1) return pop_long_back_dllist(list);
+    long_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    long int dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long pop_ulong_at_dllist(ulong_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return ULONG_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return ULONG_MAX;
+    }
+    if (index == 0) return pop_ulong_front_dllist(list);
+    if (index == list->len - 1) return pop_ulong_back_dllist(list);
+    ulong_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    unsigned long dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+long long int pop_llong_at_dllist(llong_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return LLONG_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return LLONG_MAX;
+    }
+    if (index == 0) return pop_llong_front_dllist(list);
+    if (index == list->len - 1) return pop_llong_back_dllist(list);
+    llong_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    long long int dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int pop_ullong_at_dllist(ullong_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return ULLONG_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return ULLONG_MAX;
+    }
+    if (index == 0) return pop_ullong_front_dllist(list);
+    if (index == list->len - 1) return pop_ullong_back_dllist(list);
+    ullong_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    unsigned long long int dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+float pop_float_at_dllist(float_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+    if (index == 0) return pop_float_front_dllist(list);
+    if (index == list->len - 1) return pop_float_back_dllist(list);
+    float_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    float dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+double pop_double_at_dllist(double_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return DBL_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return DBL_MAX;
+    }
+    if (index == 0) return pop_double_front_dllist(list);
+    if (index == list->len - 1) return pop_double_back_dllist(list);
+    double_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    double dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+long double pop_ldouble_at_dllist(ldouble_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return LDBL_MAX;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return LDBL_MAX;
+    }
+    if (index == 0) return pop_ldouble_front_dllist(list);
+    if (index == list->len - 1) return pop_ldouble_back_dllist(list);
+    ldouble_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    long double dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+bool pop_bool_at_dllist(bool_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return false;
+    }
+    if (index == 0) return pop_bool_front_dllist(list);
+    if (index == list->len - 1) return pop_bool_back_dllist(list);
+    bool_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    bool dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// --------------------------------------------------------------------------------
+
+str* pop_string_at_dllist(string_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (list->len == 0 || index >= list->len) {
+        errno = ERANGE;
+        return NULL;
+    }
+    if (index == 0) return pop_string_front_dllist(list);
+    if (index == list->len - 1) return pop_string_back_dllist(list);
+    string_dlnode *temp = NULL;
+    if (index <= list->len / 2 ) { 
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    str* dat = temp->data;
+    if (temp->prev)
+        temp->prev->next = temp->next;
+    if (temp->next)
+        temp->next->prev = temp->prev;
+    free(temp);
+    list->len--;
+    return dat;
+}
+// ================================================================================
+// ================================================================================
 // eof

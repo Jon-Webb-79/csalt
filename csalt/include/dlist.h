@@ -671,6 +671,43 @@ str* pop_string_back_dllist(string_dl* list);
     string_dl*: pop_string_back_dllist)(list)
 // ================================================================================
 // ================================================================================
+
+char pop_char_at_dllist(char_dl* list, size_t index);
+unsigned char pop_uchar_at_dllist(uchar_dl* list, size_t index);
+short int pop_short_at_dllist(short_dl* list, size_t index);
+unsigned short int pop_ushort_at_dllist(ushort_dl* list, size_t index);
+int pop_int_at_dllist(int_dl* list, size_t index);
+unsigned int pop_uint_at_dllist(uint_dl* list, size_t index);
+long int pop_long_at_dllist(long_dl* list, size_t index);
+unsigned long int pop_ulong_at_dllist(ulong_dl* list, size_t index);
+long long int pop_llong_at_dllist(llong_dl* list, size_t index);
+unsigned long long int pop_ullong_at_dllist(ullong_dl* list, size_t index);
+float pop_float_at_dllist(float_dl* list, size_t index);
+double pop_double_at_dllist(double_dl* list, size_t index);
+long double pop_ldouble_at_dllist(ldouble_dl* list, size_t index);
+bool pop_bool_at_dllist(bool_dl* list, size_t index);
+str* pop_string_at_dllist(string_dl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+#define pop_at_dllist(list, index) _Generic((list), \
+    char_dl*: pop_char_at_dllist, \
+    uchar_dl*: pop_uchar_at_dllist, \
+    short_dl*: pop_short_at_dllist, \
+    ushort_dl*: pop_ushort_at_dllist, \
+    int_dl*: pop_int_at_dllist, \
+    uint_dl*: pop_uint_at_dllist, \
+    long_dl*: pop_long_at_dllist, \
+    ulong_dl*: pop_ulong_at_dllist, \
+    llong_dl*: pop_llong_at_dllist, \
+    ullong_dl*: pop_ullong_at_dllist, \
+    float_dl*: pop_float_at_dllist, \
+    double_dl*: pop_double_at_dllist, \
+    ldouble_dl*: pop_ldouble_at_dllist, \
+    bool_dl*: pop_bool_at_dllist, \
+    string_dl*: pop_string_at_dllist)(list, index)
+
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
