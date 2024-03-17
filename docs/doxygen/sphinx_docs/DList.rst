@@ -1128,3 +1128,86 @@ emphasizes the simplicity and type safety provided by the interface, alongside
 the need for careful memory management when working with dynamically allocated 
 data types like `str*`.
 
+Doubly Linked List Iterator
+===========================
+
+An iterator for a doubly linked list provides a systematic way to traverse, 
+access, and potentially modify the elements within the list. Unlike traditional 
+array-based structures, linked lists require pointers to navigate between elements. 
+The iterator abstracts these details, allowing for simple and readable code 
+when working with linked lists.
+
+Iterator Initialization
+-----------------------
+
+To initialize an iterator, you must specify the type of linked list you're 
+working with. The initialization function returns an iterator specifically 
+tailored for the list type, providing methods for beginning, ending, moving 
+to the next or previous elements, and accessing the current element's value.
+
+**Input Parameters:**
+
+- ``list``: A pointer to the doubly linked list you wish to iterate over. The type of the list determines the specific iterator functions returned.
+
+Iterator Functions
+------------------
+
+Each iterator provides the following functions:
+
+- ``begin(list)``: Returns a pointer to the first element of the list.
+- ``end(list)``: Returns a pointer to the last element of the list, unlike traditional iterators that return one past the last element. This design choice facilitates reverse iteration.
+- ``next(&current)``: Advances the ``current`` pointer to the next element in the list.
+- ``prev(&current)``: Moves the ``current`` pointer to the previous element in the list.
+- ``get(current)``: Returns the value of the element at the ``current`` pointer. For `str` type lists, this returns a dynamically allocated `str` that must be manually freed to avoid memory leaks.
+
+Example: Forward Iteration
+--------------------------
+
+Here is an example of forward iteration over a doubly linked list of integers:
+
+.. code-block:: c
+
+    char_dl_iterator iter = dllist_iterator(myCharList);
+    for (char_dlnode* node = iter.begin(myCharList); node != iter.end(myCharList); iter.next(&node)) {
+        printf("%c\n", iter.get(node));
+    }
+    // Print the last element
+    printf("%c\n", iter.get(iter.end(myCharList)));
+
+Example: Reverse Iteration
+--------------------------
+
+Reverse iteration starts from the end of the list and moves towards the beginning:
+
+.. code-block:: c
+
+    char_dl_iterator iter = dllist_iterator(myCharList);
+    for (char_dlnode* node = iter.end(myCharList); node != NULL; iter.prev(&node)) {
+        printf("%c\n", iter.get(node));
+        if (node == iter.begin(myCharList)) break; // Prevent moving before the first element
+    }
+
+Handling `str` Types
+--------------------
+
+When iterating over a list of `str` types, the `get` function returns a `str*` 
+that you are responsible for freeing:
+
+.. code-block:: c
+
+    string_dl_iterator iter = dllist_iterator(myStringList);
+    for (string_dlnode* node = iter.begin(myStringList); node != iter.end(myStringList); iter.next(&node)) {
+        str* value = iter.get(node);
+        printf("%s\n", value->data);
+        free_str(value);  // Important to free the str* to prevent memory leaks
+    }
+    // Handle the last element
+    str* lastValue = iter.get(iter.end(myStringList));
+    printf("%s\n", lastValue->data);
+    free_str(lastValue);  // Don't forget to free the last element
+
+This documentation outlines the fundamental aspects of using an iterator with 
+doubly linked lists in C, including initialization, traversal, and special 
+considerations for dynamic memory management with `str` types.
+
+
