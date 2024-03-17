@@ -1039,3 +1039,92 @@ accompanying functions for removing elements at specified indices from doubly
 linked lists. It underscores the importance of memory management when dealing 
 with dynamically allocated data, such as `str*` types.
 
+get_dllist
+==========
+
+The ``get_dllist`` macro offers a generic and type-safe method to retrieve data 
+from a specified index within a doubly linked list across various data types. 
+This approach encapsulates the complexity of navigating through the list 
+structure, providing an intuitive interface for accessing list elements.
+
+Macro Definition
+----------------
+
+.. code-block:: c
+
+    #define get_dllist(list, index) _Generic((list), \
+        char_dl*: get_char_dllist, \
+        uchar_dl*: get_uchar_dllist, \
+        short_dl*: get_short_dllist, \
+        ushort_dl*: get_ushort_dllist, \
+        int_dl*: get_int_dllist, \
+        uint_dl*: get_uint_dllist, \
+        long_dl*: get_long_dllist, \
+        ulong_dl*: get_ulong_dllist, \
+        llong_dl*: get_llong_dllist, \
+        ullong_dl*: get_ullong_dllist, \
+        float_dl*: get_float_dllist, \
+        double_dl*: get_double_dllist, \
+        ldouble_dl*: get_ldouble_dllist, \
+        bool_dl*: get_bool_dllist, \
+        string_dl*: get_string_dllist)(list, index)
+
+This macro uses the C11 `_Generic` keyword to dynamically select the appropriate 
+function based on the list's data type, ensuring compatibility and reducing 
+potential errors during runtime.
+
+Parameters
+----------
+
+- ``list``: A pointer to the doubly linked list from which data will be retrieved.
+- ``index``: The zero-based index of the element to retrieve from the list.
+
+Returns
+-------
+
+- The value at the specified index within the list. The type of the return value matches the list's data type.
+
+  - For non-pointer data types (e.g., `int`, `char`), it returns the maximum value for the respective type if an error occurs.
+  - For pointer types (e.g., `str*`), it returns `NULL` on error.
+
+Error Handling
+--------------
+
+- Sets `errno` to `EINVAL` if the `list` is `NULL`.
+- Sets `errno` to `ERANGE` if the `index` is outside the list's bounds.
+
+Example Usage: Floating-Point List
+----------------------------------
+
+.. code-block:: c
+
+   float_dl* list = init_dllist(dFloat)();
+   push_back_dllist(list, 1.5f);
+   push_back_dllist(list, 2.5f);
+   push_back_dllist(list, 3.5f);
+   float value = get_dllist(list, 1); // Retrieves the second element (2.5f)
+   printf("Retrieved value: %.1f\n", value);
+
+Special Consideration for `str*` Types
+--------------------------------------
+
+When retrieving elements of type `str*` from a list, users must handle the 
+returned pointer carefully to avoid memory leaks or dangling pointers, 
+especially if modifications or deletions are performed based on the retrieved data.
+
+.. code-block:: c
+
+   string_dl* list = init_dllist(dString)();
+   // Assume list is populated
+   str* value = get_dllist(list, index);
+   if (value) {
+       printf("Retrieved string: %s\n", value->data);
+       // No need to free `value` here as it's still managed by the list
+   }
+
+This documentation outlines the usage of the ``get_dllist`` macro and its 
+accompanying functions for retrieving data from doubly linked lists. It 
+emphasizes the simplicity and type safety provided by the interface, alongside 
+the need for careful memory management when working with dynamically allocated 
+data types like `str*`.
+
