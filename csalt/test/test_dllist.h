@@ -170,6 +170,24 @@ void test_get_double_dllist(void **state);
 void test_get_ldouble_dllist(void **state);
 void test_get_bool_dllist(void **state);
 void test_get_string_dllist(void **state);
+// ================================================================================ 
+// ================================================================================
+
+void test_char_dllist_iterator(void **state);
+void test_uchar_dllist_iterator(void **state);
+void test_short_dllist_iterator(void **state);
+void test_ushort_dllist_iterator(void **state);
+void test_int_dllist_iterator(void **state);
+void test_uint_dllist_iterator(void **state);
+void test_long_dllist_iterator(void **state);
+void test_ulong_dllist_iterator(void **state);
+void test_llong_dllist_iterator(void **state);
+void test_ullong_dllist_iterator(void **state);
+void test_float_dllist_iterator(void **state);
+void test_double_dllist_iterator(void **state);
+void test_ldouble_dllist_iterator(void **state);
+void test_bool_dllist_iterator(void **state);
+void test_string_dllist_iterator(void **state);
 // ================================================================================
 // ================================================================================ 
 #endif /* test_H */

@@ -1404,7 +1404,22 @@ const struct CMUnitTest test_dllist[] = {
     cmocka_unit_test(test_get_double_dllist),
     cmocka_unit_test(test_get_ldouble_dllist),
     cmocka_unit_test(test_get_bool_dllist),
-    cmocka_unit_test(test_get_string_dllist)
+    cmocka_unit_test(test_get_string_dllist),
+    cmocka_unit_test(test_char_dllist_iterator),
+    cmocka_unit_test(test_uchar_dllist_iterator),
+    cmocka_unit_test(test_short_dllist_iterator),
+    cmocka_unit_test(test_ushort_dllist_iterator),
+    cmocka_unit_test(test_int_dllist_iterator),
+    cmocka_unit_test(test_uint_dllist_iterator),
+    cmocka_unit_test(test_long_dllist_iterator),
+    cmocka_unit_test(test_ulong_dllist_iterator),
+    cmocka_unit_test(test_llong_dllist_iterator),
+    cmocka_unit_test(test_ullong_dllist_iterator),
+    cmocka_unit_test(test_float_dllist_iterator),
+    cmocka_unit_test(test_double_dllist_iterator),
+    cmocka_unit_test(test_ldouble_dllist_iterator),
+    cmocka_unit_test(test_bool_dllist_iterator),
+    cmocka_unit_test(test_string_dllist_iterator)
 };
 
 // Begin code

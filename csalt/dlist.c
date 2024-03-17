@@ -3922,4 +3922,862 @@ str* get_string_dllist(string_dl* list, size_t index) {
 }
 // ================================================================================
 // ================================================================================
+
+static char_dlnode* _char_dl_begin(char_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static char_dlnode* _char_dl_end(char_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _char_dl_next(char_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _char_dl_prev(char_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static char _char_dl_get(char_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static uchar_dlnode* _uchar_dl_begin(uchar_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static uchar_dlnode* _uchar_dl_end(uchar_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _uchar_dl_next(uchar_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _uchar_dl_prev(uchar_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned char _uchar_dl_get(uchar_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static short_dlnode* _short_dl_begin(short_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static short_dlnode* _short_dl_end(short_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _short_dl_next(short_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _short_dl_prev(short_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static short int _short_dl_get(short_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static ushort_dlnode* _ushort_dl_begin(ushort_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static ushort_dlnode* _ushort_dl_end(ushort_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _ushort_dl_next(ushort_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _ushort_dl_prev(ushort_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned short _ushort_dl_get(ushort_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static int_dlnode* _int_dl_begin(int_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static int_dlnode* _int_dl_end(int_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _int_dl_next(int_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _int_dl_prev(int_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static int _int_dl_get(int_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static uint_dlnode* _uint_dl_begin(uint_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static uint_dlnode* _uint_dl_end(uint_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _uint_dl_next(uint_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _uint_dl_prev(uint_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned int _uint_dl_get(uint_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================ 
+
+static long_dlnode* _long_dl_begin(long_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static long_dlnode* _long_dl_end(long_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _long_dl_next(long_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _long_dl_prev(long_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static long int _long_dl_get(long_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static ulong_dlnode* _ulong_dl_begin(ulong_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static ulong_dlnode* _ulong_dl_end(ulong_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _ulong_dl_next(ulong_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _ulong_dl_prev(ulong_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long int _ulong_dl_get(ulong_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static llong_dlnode* _llong_dl_begin(llong_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static llong_dlnode* _llong_dl_end(llong_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _llong_dl_next(llong_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _llong_dl_prev(llong_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static long long int _llong_dl_get(llong_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static ullong_dlnode* _ullong_dl_begin(ullong_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static ullong_dlnode* _ullong_dl_end(ullong_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _ullong_dl_next(ullong_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _ullong_dl_prev(ullong_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long long int _ullong_dl_get(ullong_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static float_dlnode* _float_dl_begin(float_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static float_dlnode* _float_dl_end(float_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _float_dl_next(float_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _float_dl_prev(float_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static float _float_dl_get(float_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static double_dlnode* _double_dl_begin(double_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static double_dlnode* _double_dl_end(double_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _double_dl_next(double_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _double_dl_prev(double_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static double _double_dl_get(double_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================ 
+
+static ldouble_dlnode* _ldouble_dl_begin(ldouble_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static ldouble_dlnode* _ldouble_dl_end(ldouble_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _ldouble_dl_next(ldouble_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _ldouble_dl_prev(ldouble_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static long double _ldouble_dl_get(ldouble_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static bool_dlnode* _bool_dl_begin(bool_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static bool_dlnode* _bool_dl_end(bool_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _bool_dl_next(bool_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _bool_dl_prev(bool_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static bool _bool_dl_get(bool_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    return current->data;
+}
+// ================================================================================
+
+static string_dlnode* _string_dl_begin(string_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->head;
+}
+// --------------------------------------------------------------------------------
+
+static string_dlnode* _string_dl_end(string_dl* s) {
+    if (!s) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return s->tail; // End is represented as NULL in a linked list
+}
+// --------------------------------------------------------------------------------
+
+static void _string_dl_next(string_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->next;
+}
+// --------------------------------------------------------------------------------
+
+static void _string_dl_prev(string_dlnode** current) {
+    if (current == NULL || *current == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    *current = (*current)->prev;
+}
+// --------------------------------------------------------------------------------
+
+static str* _string_dl_get(string_dlnode* current) {
+    if (current == NULL) {
+        errno = EINVAL;
+        return 0;
+    }
+    str* val = init_string_nol(current->data->data);
+    return val;
+}
+// ================================================================================
+// ================================================================================
+
+char_dl_iterator init_char_dllist_iterator() {
+    char_dl_iterator iter;
+
+    iter.begin = _char_dl_begin;
+    iter.end = _char_dl_end;
+    iter.next = _char_dl_next;
+    iter.prev = _char_dl_prev;
+    iter.get = _char_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+uchar_dl_iterator init_uchar_dllist_iterator() {
+    uchar_dl_iterator iter;
+
+    iter.begin = _uchar_dl_begin;
+    iter.end = _uchar_dl_end;
+    iter.next = _uchar_dl_next;
+    iter.prev = _uchar_dl_prev;
+    iter.get = _uchar_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+short_dl_iterator init_short_dllist_iterator() {
+    short_dl_iterator iter;
+
+    iter.begin = _short_dl_begin;
+    iter.end = _short_dl_end;
+    iter.next = _short_dl_next;
+    iter.prev = _short_dl_prev;
+    iter.get = _short_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+ushort_dl_iterator init_ushort_dllist_iterator() {
+    ushort_dl_iterator iter;
+
+    iter.begin = _ushort_dl_begin;
+    iter.end = _ushort_dl_end;
+    iter.next = _ushort_dl_next;
+    iter.prev = _ushort_dl_prev;
+    iter.get = _ushort_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+int_dl_iterator init_int_dllist_iterator() {
+    int_dl_iterator iter;
+
+    iter.begin = _int_dl_begin;
+    iter.end = _int_dl_end;
+    iter.next = _int_dl_next;
+    iter.prev = _int_dl_prev;
+    iter.get = _int_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+uint_dl_iterator init_uint_dllist_iterator() {
+    uint_dl_iterator iter;
+
+    iter.begin = _uint_dl_begin;
+    iter.end = _uint_dl_end;
+    iter.next = _uint_dl_next;
+    iter.prev = _uint_dl_prev;
+    iter.get = _uint_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+long_dl_iterator init_long_dllist_iterator() {
+    long_dl_iterator iter;
+
+    iter.begin = _long_dl_begin;
+    iter.end = _long_dl_end;
+    iter.next = _long_dl_next;
+    iter.prev = _long_dl_prev;
+    iter.get = _long_dl_get;
+    return iter;
+}
+// -------------------------------------------------------------------------------- 
+
+ulong_dl_iterator init_ulong_dllist_iterator() {
+    ulong_dl_iterator iter;
+
+    iter.begin = _ulong_dl_begin;
+    iter.end = _ulong_dl_end;
+    iter.next = _ulong_dl_next;
+    iter.prev = _ulong_dl_prev;
+    iter.get = _ulong_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+llong_dl_iterator init_llong_dllist_iterator() {
+    llong_dl_iterator iter;
+
+    iter.begin = _llong_dl_begin;
+    iter.end = _llong_dl_end;
+    iter.next = _llong_dl_next;
+    iter.prev = _llong_dl_prev;
+    iter.get = _llong_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+ullong_dl_iterator init_ullong_dllist_iterator() {
+    ullong_dl_iterator iter;
+
+    iter.begin = _ullong_dl_begin;
+    iter.end = _ullong_dl_end;
+    iter.next = _ullong_dl_next;
+    iter.prev = _ullong_dl_prev;
+    iter.get = _ullong_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+float_dl_iterator init_float_dllist_iterator() {
+    float_dl_iterator iter;
+
+    iter.begin = _float_dl_begin;
+    iter.end = _float_dl_end;
+    iter.next = _float_dl_next;
+    iter.prev = _float_dl_prev;
+    iter.get = _float_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+double_dl_iterator init_double_dllist_iterator() {
+    double_dl_iterator iter;
+
+    iter.begin = _double_dl_begin;
+    iter.end = _double_dl_end;
+    iter.next = _double_dl_next;
+    iter.prev = _double_dl_prev;
+    iter.get = _double_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+ldouble_dl_iterator init_ldouble_dllist_iterator() {
+    ldouble_dl_iterator iter;
+
+    iter.begin = _ldouble_dl_begin;
+    iter.end = _ldouble_dl_end;
+    iter.next = _ldouble_dl_next;
+    iter.prev = _ldouble_dl_prev;
+    iter.get = _ldouble_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+bool_dl_iterator init_bool_dllist_iterator() {
+    bool_dl_iterator iter;
+
+    iter.begin = _bool_dl_begin;
+    iter.end = _bool_dl_end;
+    iter.next = _bool_dl_next;
+    iter.prev = _bool_dl_prev;
+    iter.get = _bool_dl_get;
+    return iter;
+}
+// --------------------------------------------------------------------------------
+
+string_dl_iterator init_string_dllist_iterator() {
+    string_dl_iterator iter;
+
+    iter.begin = _string_dl_begin;
+    iter.end = _string_dl_end;
+    iter.next = _string_dl_next;
+    iter.prev = _string_dl_prev;
+    iter.get = _string_dl_get;
+    return iter;
+}
+// ================================================================================
+// ================================================================================
 // eof

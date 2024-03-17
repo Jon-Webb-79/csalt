@@ -2505,4 +2505,568 @@ void test_get_string_dllist(void **state) {
 }
 // ================================================================================
 // ================================================================================
+
+void test_char_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    char_dl* list = init_char_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    char_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    char_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// ================================================================================
+
+void test_uchar_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    uchar_dl* list = init_uchar_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    uchar_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    uchar_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_short_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    short_dl* list = init_short_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    short_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    short_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_ushort_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    ushort_dl* list = init_ushort_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    ushort_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    ushort_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_int_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    int_dl* list = init_int_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    int_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    int_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_uint_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    uint_dl* list = init_uint_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    uint_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    uint_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_long_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    long_dl* list = init_long_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    long_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    long_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_ulong_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    ulong_dl* list = init_ulong_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    ulong_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    ulong_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_llong_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    llong_dl* list = init_llong_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    llong_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    llong_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_ullong_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    ullong_dl* list = init_ullong_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+
+    // Initialize the iterator
+    ullong_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    ullong_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 2);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), 1);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), 3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_float_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    float_dl* list = init_float_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1.f);
+    push_back_dllist(list, 2.f);
+    push_back_dllist(list, 3.f);
+
+    // Initialize the iterator
+    float_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    float_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_float_equal(iter.get(node), 1.f, 1.0e-3);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_float_equal(iter.get(node), 2.f, 1.0e-3);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_float_equal(iter.get(node), 1.f, 1.0e-3);
+
+    // Test end function
+    node = iter.end(list);
+    assert_float_equal(iter.get(node), 3.f, 1.0e-3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_double_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    double_dl* list = init_double_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1.);
+    push_back_dllist(list, 2.);
+    push_back_dllist(list, 3.);
+
+    // Initialize the iterator
+    double_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    double_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_double_equal(iter.get(node), 1., 1.0e-3);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_double_equal(iter.get(node), 2., 1.0e-3);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_double_equal(iter.get(node), 1., 1.0e-3);
+
+    // Test end function
+    node = iter.end(list);
+    assert_double_equal(iter.get(node), 3., 1.0e-3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_ldouble_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    ldouble_dl* list = init_ldouble_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, 1.);
+    push_back_dllist(list, 2.);
+    push_back_dllist(list, 3.);
+
+    // Initialize the iterator
+    ldouble_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    ldouble_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_double_equal(iter.get(node), 1., 1.0e-3);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_double_equal(iter.get(node), 2., 1.0e-3);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_double_equal(iter.get(node), 1., 1.0e-3);
+
+    // Test end function
+    node = iter.end(list);
+    assert_double_equal(iter.get(node), 3., 1.0e-3); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bool_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    bool_dl* list = init_bool_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, true);
+    push_back_dllist(list, true);
+    push_back_dllist(list, false);
+
+    // Initialize the iterator
+    bool_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    bool_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), true);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), true);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    assert_int_equal(iter.get(node), true);
+
+    // Test end function
+    node = iter.end(list);
+    assert_int_equal(iter.get(node), false); 
+
+    // Cleanup
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_string_dllist_iterator(void **state) {
+    (void) state; // Unused parameter
+
+    // Initialize the list and populate it
+    string_dl* list = init_string_dllist();
+    assert_non_null(list);
+    push_back_dllist(list, "One");
+    push_back_dllist(list, "Two");
+    push_back_dllist(list, "Three");
+
+    // Initialize the iterator
+    string_dl_iterator iter = dllist_iterator(list);
+    
+    // Test begin function
+    string_dlnode* node = iter.begin(list);
+    assert_non_null(node);
+    str* one = iter.get(node);
+    assert_string_equal(one->data, "One");
+    free_string(one);
+    
+    // Test next function - move to 'b'
+    iter.next(&node);
+    assert_non_null(node);
+    one = iter.get(node);
+    assert_string_equal(one->data, "Two");
+    free_string(one);
+
+    // Test prev function - move back to 'a'
+    iter.prev(&node);
+    assert_non_null(node);
+    one = iter.get(node);
+    assert_string_equal(one->data, "One");
+    free_string(one);
+
+    // Test end function
+    node = iter.end(list);
+    one = iter.get(node);
+    assert_string_equal(one->data, "Three"); 
+    free_string(one);
+
+    // Cleanup
+    free_dllist(list);
+}
+// ================================================================================
+// ================================================================================
 // eof

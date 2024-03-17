@@ -743,6 +743,178 @@ str* get_string_dllist(string_dl* list, size_t index);
     string_dl*: get_string_dllist)(list, index)
 // ================================================================================
 // ================================================================================
+// ITERATOR STRUCTS 
+
+typedef struct {
+    char_dlnode* (*begin) (char_dl *s);
+    char_dlnode* (*end) (char_dl* s);
+    void (*next) (char_dlnode** current);
+    void (*prev) (char_dlnode** current);
+    char (*get) (char_dlnode* current);
+} char_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    uchar_dlnode* (*begin) (uchar_dl *s);
+    uchar_dlnode* (*end) (uchar_dl* s);
+    void (*next) (uchar_dlnode** current);
+    void (*prev) (uchar_dlnode** current);
+    unsigned char (*get) (uchar_dlnode* current);
+} uchar_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    short_dlnode* (*begin) (short_dl *s);
+    short_dlnode* (*end) (short_dl* s);
+    void (*next) (short_dlnode** current);
+    void (*prev) (short_dlnode** current);
+    short (*get) (short_dlnode* current);
+} short_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    ushort_dlnode* (*begin) (ushort_dl *s);
+    ushort_dlnode* (*end) (ushort_dl* s);
+    void (*next) (ushort_dlnode** current);
+    void (*prev) (ushort_dlnode** current);
+    unsigned short (*get) (ushort_dlnode* current);
+} ushort_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    int_dlnode* (*begin) (int_dl *s);
+    int_dlnode* (*end) (int_dl* s);
+    void (*next) (int_dlnode** current);
+    void (*prev) (int_dlnode** current);
+    int (*get) (int_dlnode* current);
+} int_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    uint_dlnode* (*begin) (uint_dl *s);
+    uint_dlnode* (*end) (uint_dl* s);
+    void (*next) (uint_dlnode** current);
+    void (*prev) (uint_dlnode** current);
+    unsigned int (*get) (uint_dlnode* current);
+} uint_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    long_dlnode* (*begin) (long_dl *s);
+    long_dlnode* (*end) (long_dl* s);
+    void (*next) (long_dlnode** current);
+    void (*prev) (long_dlnode** current);
+    long int (*get) (long_dlnode* current);
+} long_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    ulong_dlnode* (*begin) (ulong_dl *s);
+    ulong_dlnode* (*end) (ulong_dl* s);
+    void (*next) (ulong_dlnode** current);
+    void (*prev) (ulong_dlnode** current);
+    unsigned long int (*get) (ulong_dlnode* current);
+} ulong_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    llong_dlnode* (*begin) (llong_dl *s);
+    llong_dlnode* (*end) (llong_dl* s);
+    void (*next) (llong_dlnode** current);
+    void (*prev) (llong_dlnode** current);
+    long long int (*get) (llong_dlnode* current);
+} llong_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    ullong_dlnode* (*begin) (ullong_dl *s);
+    ullong_dlnode* (*end) (ullong_dl* s);
+    void (*next) (ullong_dlnode** current);
+    void (*prev) (ullong_dlnode** current);
+    unsigned long long (*get) (ullong_dlnode* current);
+} ullong_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    float_dlnode* (*begin) (float_dl *s);
+    float_dlnode* (*end) (float_dl* s);
+    void (*next) (float_dlnode** current);
+    void (*prev) (float_dlnode** current);
+    float (*get) (float_dlnode* current);
+} float_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    double_dlnode* (*begin) (double_dl *s);
+    double_dlnode* (*end) (double_dl* s);
+    void (*next) (double_dlnode** current);
+    void (*prev) (double_dlnode** current);
+    double (*get) (double_dlnode* current);
+} double_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    ldouble_dlnode* (*begin) (ldouble_dl *s);
+    ldouble_dlnode* (*end) (ldouble_dl* s);
+    void (*next) (ldouble_dlnode** current);
+    void (*prev) (ldouble_dlnode** current);
+    long double (*get) (ldouble_dlnode* current);
+} ldouble_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    bool_dlnode* (*begin) (bool_dl *s);
+    bool_dlnode* (*end) (bool_dl* s);
+    void (*next) (bool_dlnode** current);
+    void (*prev) (bool_dlnode** current);
+    bool (*get) (bool_dlnode* current);
+} bool_dl_iterator;
+// --------------------------------------------------------------------------------
+
+typedef struct {
+    string_dlnode* (*begin) (string_dl *s);
+    string_dlnode* (*end) (string_dl* s);
+    void (*next) (string_dlnode** current);
+    void (*prev) (string_dlnode** current);
+    str* (*get) (string_dlnode* current);
+} string_dl_iterator;
+// --------------------------------------------------------------------------------
+
+char_dl_iterator init_char_dllist_iterator();
+uchar_dl_iterator init_uchar_dllist_iterator();
+short_dl_iterator init_short_dllist_iterator();
+ushort_dl_iterator init_ushort_dllist_iterator();
+int_dl_iterator init_int_dllist_iterator();
+uint_dl_iterator init_uint_dllist_iterator();
+long_dl_iterator init_long_dllist_iterator();
+ulong_dl_iterator init_ulong_dllist_iterator();
+llong_dl_iterator init_llong_dllist_iterator();
+ullong_dl_iterator init_ullong_dllist_iterator();
+float_dl_iterator init_float_dllist_iterator();
+double_dl_iterator init_double_dllist_iterator();
+ldouble_dl_iterator init_ldouble_dllist_iterator();
+bool_dl_iterator init_bool_dllist_iterator();
+string_dl_iterator init_string_dllist_iterator();
+// --------------------------------------------------------------------------------
+
+#define dllist_iterator(vec) _Generic((vec), \
+    char_dl*: init_char_dllist_iterator, \
+    uchar_dl*: init_uchar_dllist_iterator, \
+    short_dl*: init_short_dllist_iterator, \
+    ushort_dl*: init_ushort_dllist_iterator, \
+    int_dl*: init_int_dllist_iterator, \
+    uint_dl*: init_uint_dllist_iterator, \
+    long_dl*: init_long_dllist_iterator, \
+    ulong_dl*: init_ulong_dllist_iterator, \
+    llong_dl*: init_llong_dllist_iterator, \
+    ullong_dl*: init_ullong_dllist_iterator, \
+    float_dl*: init_float_dllist_iterator, \
+    double_dl*: init_double_dllist_iterator, \
+    ldouble_dl*: init_ldouble_dllist_iterator, \
+    bool_dl*: init_bool_dllist_iterator, \
+    string_dl*: init_string_dllist_iterator) ()
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
