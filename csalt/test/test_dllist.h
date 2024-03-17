@@ -153,6 +153,24 @@ void test_pop_ldouble_at_dlist(void **state);
 void test_pop_bool_at_dlist(void **state);
 void test_pop_string_at_dlist(void **state);
 // ================================================================================
+// ================================================================================
+
+void test_get_char_dllist(void **state);
+void test_get_uchar_dllist(void **state);
+void test_get_short_dllist(void **state);
+void test_get_ushort_dllist(void **state);
+void test_get_int_dllist(void **state);
+void test_get_uint_dllist(void **state);
+void test_get_long_dllist(void **state);
+void test_get_ulong_dllist(void **state);
+void test_get_llong_dllist(void **state);
+void test_get_ullong_dllist(void **state);
+void test_get_float_dllist(void **state);
+void test_get_double_dllist(void **state);
+void test_get_ldouble_dllist(void **state);
+void test_get_bool_dllist(void **state);
+void test_get_string_dllist(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_H */
 // ================================================================================

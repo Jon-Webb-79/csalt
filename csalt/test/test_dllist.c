@@ -2306,6 +2306,203 @@ void test_pop_string_at_dlist(void **state) {
     free_string(two);
     free_string(three);
 }
+// ================================================================================ 
+// ================================================================================
+
+void test_get_char_dllist(void **state) {
+    (void) state;
+    char_dl* list = init_dllist(dChar)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    char val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_uchar_dllist(void **state) {
+    (void) state;
+    uchar_dl* list = init_dllist(dUChar)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    unsigned char val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_short_dllist(void **state) {
+    (void) state;
+    short_dl* list = init_dllist(dShort)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    short val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_ushort_dllist(void **state) {
+    (void) state;
+    ushort_dl* list = init_dllist(dUShort)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    unsigned short val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_int_dllist(void **state) {
+    (void) state;
+    int_dl* list = init_dllist(dInt)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    int val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_uint_dllist(void **state) {
+    (void) state;
+    uint_dl* list = init_dllist(dUInt)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    unsigned int val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_long_dllist(void **state) {
+    (void) state;
+    long_dl* list = init_dllist(dLong)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    long val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_ulong_dllist(void **state) {
+    (void) state;
+    ulong_dl* list = init_dllist(dULong)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    unsigned long val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_llong_dllist(void **state) {
+    (void) state;
+    llong_dl* list = init_dllist(dLongLong)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    long long val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_ullong_dllist(void **state) {
+    (void) state;
+    ullong_dl* list = init_dllist(dULongLong)();
+    push_back_dllist(list, 1);
+    push_back_dllist(list, 2);
+    push_back_dllist(list, 3);
+    push_back_dllist(list, 4);
+    unsigned long long val = get_dllist(list, 1);
+    assert_int_equal(val, 2);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_float_dllist(void **state) {
+    (void) state;
+    float_dl* list = init_dllist(dFloat)();
+    push_back_dllist(list, 1.f);
+    push_back_dllist(list, 2.f);
+    push_back_dllist(list, 3.f);
+    push_back_dllist(list, 4.f);
+    float val = get_dllist(list, 1);
+    assert_float_equal(val, 2.f, 1.0e-3);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_double_dllist(void **state) {
+    (void) state;
+    double_dl* list = init_dllist(dDouble)();
+    push_back_dllist(list, 1.);
+    push_back_dllist(list, 2.);
+    push_back_dllist(list, 3.);
+    push_back_dllist(list, 4.);
+    double val = get_dllist(list, 1);
+    assert_double_equal(val, 2., 1.0e-3);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_ldouble_dllist(void **state) {
+    (void) state;
+    ldouble_dl* list = init_dllist(dLDouble)();
+    push_back_dllist(list, 1.);
+    push_back_dllist(list, 2.);
+    push_back_dllist(list, 3.);
+    push_back_dllist(list, 4.);
+    long double val = get_dllist(list, 1);
+    assert_double_equal(val, 2., 1.0e-3);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_bool_dllist(void **state) {
+    (void) state;
+    bool_dl* list = init_dllist(dBool)();
+    push_back_dllist(list, true);
+    push_back_dllist(list,true);
+    push_back_dllist(list, false);
+    push_back_dllist(list, false);
+    bool val = get_dllist(list, 1);
+    assert_int_equal(val, true);
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_get_string_dllist(void **state) {
+    (void) state;
+    string_dl* list = init_dllist(dDouble)();
+    push_back_dllist(list, "One");
+    push_back_dllist(list, "Two");
+    push_back_dllist(list, "Three");
+    push_back_dllist(list, "Four");
+    str* val = get_dllist(list, 1);
+    assert_string_equal(val->data, "Two");
+    free_dllist(list);
+    free_string(val);
+}
 // ================================================================================
 // ================================================================================
 // eof

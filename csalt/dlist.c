@@ -3543,6 +3543,383 @@ str* pop_string_at_dllist(string_dl* list, size_t index) {
     list->len--;
     return dat;
 }
+// ================================================================================ 
+// ================================================================================
+
+char get_char_dllist(char_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return SCHAR_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return SCHAR_MAX;
+    }
+    char_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+          //  printf("%hhu\n", temp->data);
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char get_uchar_dllist(uchar_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return CHAR_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return CHAR_MAX;
+    }
+    uchar_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+short int get_short_dllist(short_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return SHRT_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return SHRT_MAX;
+    }
+    short_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// -------------------------------------------------------------------------------- 
+
+unsigned short int get_ushort_dllist(ushort_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return USHRT_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return USHRT_MAX;
+    }
+    ushort_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+int get_int_dllist(int_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return INT_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return INT_MAX;
+    }
+    int_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int get_uint_dllist(uint_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return UINT_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return UINT_MAX;
+    }
+    uint_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+long int get_long_dllist(long_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return UINT_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return UINT_MAX;
+    }
+    long_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long get_ulong_dllist(ulong_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return ULONG_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return ULONG_MAX;
+    }
+    ulong_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+long long int get_llong_dllist(llong_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return LLONG_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return LLONG_MAX;
+    }
+    llong_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int get_ullong_dllist(ullong_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return ULLONG_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return ULLONG_MAX;
+    }
+    ullong_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+float get_float_dllist(float_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+    float_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+double get_double_dllist(double_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return DBL_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return DBL_MAX;
+    }
+    double_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+long double get_ldouble_dllist(ldouble_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return LDBL_MAX;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return LDBL_MAX;
+    }
+    ldouble_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+bool get_bool_dllist(bool_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return false;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return false;
+    }
+    bool_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return temp->data;
+}
+// --------------------------------------------------------------------------------
+
+str* get_string_dllist(string_dl* list, size_t index) {
+    if (!list) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (index > list->len - 1) {
+        errno = ERANGE;
+        return NULL;
+    }
+    string_dlnode *temp = NULL;
+    if (index <= list->len / 2) {
+        temp = list->head;
+        for (size_t i = 0; i <= index - 1; i++) {
+            temp = temp->next;
+        }
+    } else {
+        temp = list->tail;
+        for (size_t i = list->len - 1; i > index; i--) {
+            temp = temp->prev;
+        }
+    }
+    return init_string_nol(temp->data->data);
+}
 // ================================================================================
 // ================================================================================
 // eof

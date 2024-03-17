@@ -705,7 +705,42 @@ str* pop_string_at_dllist(string_dl* list, size_t index);
     ldouble_dl*: pop_ldouble_at_dllist, \
     bool_dl*: pop_bool_at_dllist, \
     string_dl*: pop_string_at_dllist)(list, index)
+// ================================================================================ 
+// ================================================================================
 
+char get_char_dllist(char_dl* list, size_t index);
+unsigned char get_uchar_dllist(uchar_dl* list, size_t index);
+short int get_short_dllist(short_dl* list, size_t index);
+unsigned short int get_ushort_dllist(ushort_dl* list, size_t index);
+int get_int_dllist(int_dl* list, size_t index);
+unsigned int get_uint_dllist(uint_dl* list, size_t index);
+long int get_long_dllist(long_dl* list, size_t index);
+unsigned long int get_ulong_dllist(ulong_dl* list, size_t index);
+long long int get_llong_dllist(llong_dl* list, size_t index);
+unsigned long long int get_ullong_dllist(ullong_dl* list, size_t index);
+float get_float_dllist(float_dl* list, size_t index);
+double get_double_dllist(double_dl* list, size_t index);
+long double get_ldouble_dllist(ldouble_dl* list, size_t index);
+bool get_bool_dllist(bool_dl* list, size_t index);
+str* get_string_dllist(string_dl* list, size_t index);
+// --------------------------------------------------------------------------------
+
+#define get_dllist(list, index) _Generic((list), \
+    char_dl*: get_char_dllist, \
+    uchar_dl*: get_uchar_dllist, \
+    short_dl*: get_short_dllist, \
+    ushort_dl*: get_ushort_dllist, \
+    int_dl*: get_int_dllist, \
+    uint_dl*: get_uint_dllist, \
+    long_dl*: get_long_dllist, \
+    ulong_dl*: get_ulong_dllist, \
+    llong_dl*: get_llong_dllist, \
+    ullong_dl*: get_ullong_dllist, \
+    float_dl*: get_float_dllist, \
+    double_dl*: get_double_dllist, \
+    ldouble_dl*: get_ldouble_dllist, \
+    bool_dl*: get_bool_dllist, \
+    string_dl*: get_string_dllist)(list, index)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus
