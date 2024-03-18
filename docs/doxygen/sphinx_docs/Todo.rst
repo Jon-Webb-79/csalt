@@ -4,14 +4,6 @@ TODO
 Over the next few months it is my intention to add the following functionality
 to the Csalt library.
 
-#. **Matrix:** A library to enable 2-D Matrices with basic functionality such as
-   dot products, cross products, matrix transpose, multi-equation solvers and 
-   partial differential equation solvers.
-
-#. **Double Linked List:** A library that enables double linked lists.  This 
-   section will mimic the behavior of a vector as applied to a double linked 
-   list.
-
 #. **Binary Tree:** A library that enable an AVL Binary Tree with search
    algorithms.
 
@@ -32,3 +24,10 @@ to the Csalt library.
 
 #. **Database:** A library to enable reasing from SQLite, MySQL, and PostGreSQL
    databases.
+
+#. **Matrix:** A library to enable 2-D Matrices with basic functionality such as
+   dot products, cross products, matrix transpose, multi-equation solvers and 
+   partial differential equation solvers.
+
+#. **Numerical** A numerical methods library for root solvers, ode solvers, pde 
+   solvers, guass quadriture sets, numerical integration and differentiation.
