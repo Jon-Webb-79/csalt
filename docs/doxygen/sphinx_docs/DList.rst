@@ -1210,4 +1210,90 @@ This documentation outlines the fundamental aspects of using an iterator with
 doubly linked lists in C, including initialization, traversal, and special 
 considerations for dynamic memory management with `str` types.
 
+sort_dllist
+===========
+
+The ``sort_dllist`` macro provides a generic interface for sorting doubly 
+linked lists (DLL) of various data types. It abstracts the sorting process, 
+allowing for selection between different sorting algorithms and directions.
+The macro and its underlying functions are provided below.
+
+.. code-block:: c 
+
+   #define sort_dllist(list, sort_type, iter_dir) _Generic((list), \
+       char_dl*: sort_char_dllist, \
+       uchar_dl*: sort_uchar_dllist, \
+       short_dl*: sort_short_dllist, \
+       ushort_dl*: sort_ushort_dllist, \
+       int_dl*: sort_int_dllist, \
+       uint_dl*: sort_uint_dllist, \
+       long_dl*: sort_long_dllist, \
+       ulong_dl*: sort_ulong_dllist, \
+       llong_dl*: sort_llong_dllist, \
+       ullong_dl*: sort_ullong_dllist, \
+       float_dl*: sort_float_dllist, \
+       double_dl*: sort_double_dllist, \
+       ldouble_dl*: sort_ldouble_dllist, \
+       bool_dl*: sort_bool_dllist, \
+       string_dl*: sort_string_dllist) (list, stype, direction)
+
+Enums
+-----
+
+``sort_type`` defines the sorting algorithm to be used:
+
+- ``BUBBLE``: Bubble Sort
+- ``SELECTION``: Selection Sort
+- ``INSERT``: Insertion Sort
+- ``MERGE``: Merge Sort
+
+``iter_dir`` specifies the sorting direction:
+
+- ``FORWARD``: Ascending Order
+- ``REVERSE``: Descending Order
+
+Each function takes three parameters:
+
+1. ``list``: A pointer to the doubly linked list to be sorted.
+2. ``sort_type``: The sorting algorithm to use (``sort_type``).
+3. ``iter_dir``: The direction to sort the list (``iter_dir``).
+
+Error Handling
+--------------
+
+If the list is ``NULL``, has fewer than two elements, or if an invalid 
+``stype`` is provided, the functions set ``errno`` to ``EINVAL`` and return 
+early without performing any sorting.
+
+Example Usage
+-------------
+
+.. code-block:: c
+
+   #include "dlist.h"  // Include your doubly linked list definitions
+   #include "print.h" 
+
+   int main() {
+       string_dl* mylist = init_string_dllist();
+       push_back_dllist(mylist, create_str("delta"));
+       push_back_dllist(mylist, create_str("alpha"));
+       push_back_dllist(mylist, create_str("epsilon"));
+       push_back_dllist(mylist, create_str("beta"));
+
+       // Sort the list using Merge Sort in FORWARD direction
+       sort_dllist(mylist, MERGE, FORWARD);
+       print(mylist); // Assuming a function to print the list
+
+       // Cleanup
+       free_dllist(mylist); // Assuming a function to free the list
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> { alpha, beta, delta, epsilon } 
+
+This example initializes a doubly linked list of strings, adds several 
+strings to it, sorts the list using Merge Sort in ascending order, and 
+prints the sorted list. Finally, it cleans up by freeing the list.
 
