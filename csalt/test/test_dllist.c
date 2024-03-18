@@ -3069,4 +3069,2652 @@ void test_string_dllist_iterator(void **state) {
 }
 // ================================================================================
 // ================================================================================
+
+void test_bubble_sort_char_dllist_forward(void **state) {
+    char_dl* list = init_dllist(dChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    char_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_uchar_dllist_forward(void **state) {
+    uchar_dl* list = init_dllist(dUChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    unsigned char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uchar_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_short_dllist_forward(void **state) {
+    short_dl* list = init_dllist(dShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    short a[7] = {1, 2, 3, 4, 5, 6, 7};
+    short_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ushort_dllist_forward(void **state) {
+    ushort_dl* list = init_dllist(dUShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    unsigned short a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ushort_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_int_dllist_forward(void **state) {
+    int_dl* list = init_dllist(dInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    int_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_uint_dllist_forward(void **state) {
+    uint_dl* list = init_dllist(dUInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    unsigned int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uint_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_long_dllist_forward(void **state) {
+    long_dl* list = init_dllist(dLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    long_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ulong_dllist_forward(void **state) {
+    ulong_dl* list = init_dllist(dULong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    unsigned long a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ulong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_llong_dllist_forward(void **state) {
+    llong_dl* list = init_dllist(dLongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    llong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ullong_dllist_forward(void **state) {
+    ullong_dl* list = init_dllist(dULongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, FORWARD);
+    unsigned long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ullong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_float_dllist_forward(void **state) {
+    float_dl* list = init_dllist(dFloat)();
+    push_front_dllist(list, 5.f);
+    push_front_dllist(list, 1.f);
+    push_front_dllist(list, 6.f);
+    push_front_dllist(list, 3.f);
+    push_front_dllist(list, 2.f);
+    push_front_dllist(list, 4.f);
+    push_front_dllist(list, 7.f);
+    sort_dllist(list, BUBBLE, FORWARD);
+    float a[7] = {1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f};
+    float_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_double_dllist_forward(void **state) {
+    double_dl* list = init_dllist(dDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, BUBBLE, FORWARD);
+    double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    double_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ldouble_dllist_forward(void **state) {
+    ldouble_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, BUBBLE, FORWARD);
+    long double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    ldouble_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_bool_dllist_forward(void **state) {
+    bool_dl* list = init_dllist(dBool)();
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    sort_dllist(list, BUBBLE, FORWARD);
+    bool a[7] = {false, false, false, true, true, true, true};
+    bool_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_string_dllist_forward(void **state) {
+    string_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, "One");
+    push_front_dllist(list, "Two");
+    push_front_dllist(list, "Three");
+    push_front_dllist(list, "Four");
+    push_front_dllist(list, "Five");
+    push_front_dllist(list, "Six");
+    push_front_dllist(list, "Seven");
+    sort_dllist(list, BUBBLE, FORWARD);
+    char *a[7] = {"Five", "Four", "One", "Seven", "Six", "Three", "Two"};
+    string_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    }
+    free_dllist(list);
+}
+// ================================================================================
+// ================================================================================
+
+void test_selection_sort_char_dllist_forward(void **state) {
+    char_dl* list = init_dllist(dChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    char_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uchar_dllist_forward(void **state) {
+    uchar_dl* list = init_dllist(dUChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    unsigned char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uchar_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_short_dllist_forward(void **state) {
+    short_dl* list = init_dllist(dShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    short a[7] = {1, 2, 3, 4, 5, 6, 7};
+    short_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ushort_dllist_forward(void **state) {
+    ushort_dl* list = init_dllist(dUShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    unsigned short a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ushort_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_int_dllist_forward(void **state) {
+    int_dl* list = init_dllist(dInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    int_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uint_dllist_forward(void **state) {
+    uint_dl* list = init_dllist(dUInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    unsigned int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uint_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_long_dllist_forward(void **state) {
+    long_dl* list = init_dllist(dLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    long_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ulong_dllist_forward(void **state) {
+    ulong_dl* list = init_dllist(dULong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    unsigned long a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ulong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_llong_dllist_forward(void **state) {
+    llong_dl* list = init_dllist(dLongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    llong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ullong_dllist_forward(void **state) {
+    ullong_dl* list = init_dllist(dULongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, FORWARD);
+    unsigned long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ullong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_float_dllist_forward(void **state) {
+    float_dl* list = init_dllist(dFloat)();
+    push_front_dllist(list, 5.f);
+    push_front_dllist(list, 1.f);
+    push_front_dllist(list, 6.f);
+    push_front_dllist(list, 3.f);
+    push_front_dllist(list, 2.f);
+    push_front_dllist(list, 4.f);
+    push_front_dllist(list, 7.f);
+    sort_dllist(list, SELECTION, FORWARD);
+    float a[7] = {1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f};
+    float_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_double_dllist_forward(void **state) {
+    double_dl* list = init_dllist(dDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, SELECTION, FORWARD);
+    double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    double_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ldouble_dllist_forward(void **state) {
+    ldouble_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, SELECTION, FORWARD);
+    long double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    ldouble_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_bool_dllist_forward(void **state) {
+    bool_dl* list = init_dllist(dBool)();
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    sort_dllist(list, SELECTION, FORWARD);
+    bool a[7] = {false, false, false, true, true, true, true};
+    bool_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_string_dllist_forward(void **state) {
+    string_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, "One");
+    push_front_dllist(list, "Two");
+    push_front_dllist(list, "Three");
+    push_front_dllist(list, "Four");
+    push_front_dllist(list, "Five");
+    push_front_dllist(list, "Six");
+    push_front_dllist(list, "Seven");
+    sort_dllist(list, SELECTION, FORWARD);
+    char *a[7] = {"Five", "Four", "One", "Seven", "Six", "Three", "Two"};
+    string_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    }
+    free_dllist(list);
+}
+// ================================================================================
+// ================================================================================
+
+void test_insertion_sort_char_dllist_forward(void **state) {
+    char_dl* list = init_dllist(dChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    char_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_uchar_dllist_forward(void **state) {
+    uchar_dl* list = init_dllist(dUChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    unsigned char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uchar_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_short_dllist_forward(void **state) {
+    short_dl* list = init_dllist(dShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    short a[7] = {1, 2, 3, 4, 5, 6, 7};
+    short_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_ushort_dllist_forward(void **state) {
+    ushort_dl* list = init_dllist(dUShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    unsigned short a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ushort_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_int_dllist_forward(void **state) {
+    int_dl* list = init_dllist(dInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    int_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_uint_dllist_forward(void **state) {
+    uint_dl* list = init_dllist(dUInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    unsigned int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uint_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_long_dllist_forward(void **state) {
+    long_dl* list = init_dllist(dLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    long_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_ulong_dllist_forward(void **state) {
+    ulong_dl* list = init_dllist(dULong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    unsigned long a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ulong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_llong_dllist_forward(void **state) {
+    llong_dl* list = init_dllist(dLongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    llong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_ullong_dllist_forward(void **state) {
+    ullong_dl* list = init_dllist(dULongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, FORWARD);
+    unsigned long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ullong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_float_dllist_forward(void **state) {
+    float_dl* list = init_dllist(dFloat)();
+    push_front_dllist(list, 5.f);
+    push_front_dllist(list, 1.f);
+    push_front_dllist(list, 6.f);
+    push_front_dllist(list, 3.f);
+    push_front_dllist(list, 2.f);
+    push_front_dllist(list, 4.f);
+    push_front_dllist(list, 7.f);
+    sort_dllist(list, INSERT, FORWARD);
+    float a[7] = {1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f};
+    float_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_double_dllist_forward(void **state) {
+    double_dl* list = init_dllist(dDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, INSERT, FORWARD);
+    double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    double_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_ldouble_dllist_forward(void **state) {
+    ldouble_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, INSERT, FORWARD);
+    long double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    ldouble_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_bool_dllist_forward(void **state) {
+    bool_dl* list = init_dllist(dBool)();
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    sort_dllist(list, INSERT, FORWARD);
+    bool a[7] = {false, false, false, true, true, true, true};
+    bool_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_string_dllist_forward(void **state) {
+    string_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, "One");
+    push_front_dllist(list, "Two");
+    push_front_dllist(list, "Three");
+    push_front_dllist(list, "Four");
+    push_front_dllist(list, "Five");
+    push_front_dllist(list, "Six");
+    push_front_dllist(list, "Seven");
+    sort_dllist(list, INSERT, FORWARD);
+    char *a[7] = {"Five", "Four", "One", "Seven", "Six", "Three", "Two"};
+    string_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    }
+    free_dllist(list);
+}
+// ================================================================================
+// ================================================================================
+
+void test_merge_sort_char_dllist_forward(void **state) {
+    char_dl* list = init_dllist(dChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    char_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_uchar_dllist_forward(void **state) {
+    uchar_dl* list = init_dllist(dUChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    unsigned char a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uchar_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_short_dllist_forward(void **state) {
+    short_dl* list = init_dllist(dShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    short a[7] = {1, 2, 3, 4, 5, 6, 7};
+    short_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ushort_dllist_forward(void **state) {
+    ushort_dl* list = init_dllist(dUShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    unsigned short a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ushort_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_int_dllist_forward(void **state) {
+    int_dl* list = init_dllist(dInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    int_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_uint_dllist_forward(void **state) {
+    uint_dl* list = init_dllist(dUInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    unsigned int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    uint_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_long_dllist_forward(void **state) {
+    long_dl* list = init_dllist(dLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    long_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ulong_dllist_forward(void **state) {
+    ulong_dl* list = init_dllist(dULong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    unsigned long a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ulong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_llong_dllist_forward(void **state) {
+    llong_dl* list = init_dllist(dLongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    llong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ullong_dllist_forward(void **state) {
+    ullong_dl* list = init_dllist(dULongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, FORWARD);
+    unsigned long long int a[7] = {1, 2, 3, 4, 5, 6, 7};
+    ullong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_float_dllist_forward(void **state) {
+    float_dl* list = init_dllist(dFloat)();
+    push_front_dllist(list, 5.f);
+    push_front_dllist(list, 1.f);
+    push_front_dllist(list, 6.f);
+    push_front_dllist(list, 3.f);
+    push_front_dllist(list, 2.f);
+    push_front_dllist(list, 4.f);
+    push_front_dllist(list, 7.f);
+    sort_dllist(list, MERGE, FORWARD);
+    float a[7] = {1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f};
+    float_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_double_dllist_forward(void **state) {
+    double_dl* list = init_dllist(dDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, MERGE, FORWARD);
+    double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    double_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ldouble_dllist_forward(void **state) {
+    ldouble_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, MERGE, FORWARD);
+    long double a[7] = {1., 2., 3., 4., 5., 6., 7.};
+    ldouble_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_bool_dllist_forward(void **state) {
+    bool_dl* list = init_dllist(dBool)();
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    sort_dllist(list, MERGE, FORWARD);
+    bool a[7] = {false, false, false, true, true, true, true};
+    bool_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_string_dllist_forward(void **state) {
+    string_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, "One");
+    push_front_dllist(list, "Two");
+    push_front_dllist(list, "Three");
+    push_front_dllist(list, "Four");
+    push_front_dllist(list, "Five");
+    push_front_dllist(list, "Six");
+    push_front_dllist(list, "Seven");
+    sort_dllist(list, MERGE, FORWARD);
+    char *a[7] = {"Five", "Four", "One", "Seven", "Six", "Three", "Two"};
+    string_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    }
+    free_dllist(list);
+}
+// ================================================================================ 
+// ================================================================================
+
+void test_bubble_sort_char_dllist_reverse(void **state) {
+    char_dl* list = init_dllist(dChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    char_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_uchar_dllist_reverse(void **state) {
+    uchar_dl* list = init_dllist(dUChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    unsigned char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uchar_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_short_dllist_reverse(void **state) {
+    short_dl* list = init_dllist(dShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    short a[7] = {7, 6, 5, 4, 3, 2, 1};
+    short_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ushort_dllist_reverse(void **state) {
+    ushort_dl* list = init_dllist(dUShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    unsigned short a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ushort_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_int_dllist_reverse(void **state) {
+    int_dl* list = init_dllist(dInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    int_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_uint_dllist_reverse(void **state) {
+    uint_dl* list = init_dllist(dUInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    unsigned int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uint_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_long_dllist_reverse(void **state) {
+    long_dl* list = init_dllist(dLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    long_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ulong_dllist_reverse(void **state) {
+    ulong_dl* list = init_dllist(dULong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    unsigned long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ulong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_llong_dllist_reverse(void **state) {
+    llong_dl* list = init_dllist(dLongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    llong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ullong_dllist_reverse(void **state) {
+    ullong_dl* list = init_dllist(dULongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, BUBBLE, REVERSE);
+    unsigned long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ullong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_float_dllist_reverse(void **state) {
+    float_dl* list = init_dllist(dFloat)();
+    push_front_dllist(list, 5.f);
+    push_front_dllist(list, 1.f);
+    push_front_dllist(list, 6.f);
+    push_front_dllist(list, 3.f);
+    push_front_dllist(list, 2.f);
+    push_front_dllist(list, 4.f);
+    push_front_dllist(list, 7.f);
+    sort_dllist(list, BUBBLE, REVERSE);
+    float a[7] = {7.f, 6.f, 5.f, 4.f, 3.f, 2.f, 1.f};
+    float_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_double_dllist_reverse(void **state) {
+    double_dl* list = init_dllist(dDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, BUBBLE, REVERSE);
+    double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    double_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_ldouble_dllist_reverse(void **state) {
+    ldouble_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, BUBBLE, REVERSE);
+    long double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    ldouble_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_bool_dllist_reverse(void **state) {
+    bool_dl* list = init_dllist(dBool)();
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    sort_dllist(list, BUBBLE, REVERSE);
+    bool a[7] = {true, true, true, true, false, false, false};
+    bool_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_bubble_sort_string_dllist_reverse(void **state) {
+    string_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, "One");
+    push_front_dllist(list, "Two");
+    push_front_dllist(list, "Three");
+    push_front_dllist(list, "Four");
+    push_front_dllist(list, "Five");
+    push_front_dllist(list, "Six");
+    push_front_dllist(list, "Seven");
+    sort_dllist(list, BUBBLE, REVERSE);
+    char *a[7] = {"Two", "Three", "Six", "Seven", "One", "Four", "Five"};
+    string_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    }
+    free_dllist(list);
+}
+// ================================================================================
+// ================================================================================
+
+void test_selection_sort_char_dllist_reverse(void **state) {
+    char_dl* list = init_dllist(dChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    char_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uchar_dllist_reverse(void **state) {
+    uchar_dl* list = init_dllist(dUChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    unsigned char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uchar_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_short_dllist_reverse(void **state) {
+    short_dl* list = init_dllist(dShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    short a[7] = {7, 6, 5, 4, 3, 2, 1};
+    short_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ushort_dllist_reverse(void **state) {
+    ushort_dl* list = init_dllist(dUShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    unsigned short a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ushort_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_int_dllist_reverse(void **state) {
+    int_dl* list = init_dllist(dInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    int_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_uint_dllist_reverse(void **state) {
+    uint_dl* list = init_dllist(dUInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    unsigned int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uint_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_long_dllist_reverse(void **state) {
+    long_dl* list = init_dllist(dLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    long_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ulong_dllist_reverse(void **state) {
+    ulong_dl* list = init_dllist(dULong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    unsigned long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ulong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_llong_dllist_reverse(void **state) {
+    llong_dl* list = init_dllist(dLongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    llong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ullong_dllist_reverse(void **state) {
+    ullong_dl* list = init_dllist(dULongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, SELECTION, REVERSE);
+    unsigned long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ullong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_float_dllist_reverse(void **state) {
+    float_dl* list = init_dllist(dFloat)();
+    push_front_dllist(list, 5.f);
+    push_front_dllist(list, 1.f);
+    push_front_dllist(list, 6.f);
+    push_front_dllist(list, 3.f);
+    push_front_dllist(list, 2.f);
+    push_front_dllist(list, 4.f);
+    push_front_dllist(list, 7.f);
+    sort_dllist(list, SELECTION, REVERSE);
+    float a[7] = {7.f, 6.f, 5.f, 4.f, 3.f, 2.f, 1.f};
+    float_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_double_dllist_reverse(void **state) {
+    double_dl* list = init_dllist(dDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, SELECTION, REVERSE);
+    double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    double_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_ldouble_dllist_reverse(void **state) {
+    ldouble_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, SELECTION, REVERSE);
+    long double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    ldouble_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_bool_dllist_reverse(void **state) {
+    bool_dl* list = init_dllist(dBool)();
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    sort_dllist(list, SELECTION, REVERSE);
+    bool a[7] = {true, true, true, true, false, false, false};
+    bool_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_selection_sort_string_dllist_reverse(void **state) {
+    string_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, "One");
+    push_front_dllist(list, "Two");
+    push_front_dllist(list, "Three");
+    push_front_dllist(list, "Four");
+    push_front_dllist(list, "Five");
+    push_front_dllist(list, "Six");
+    push_front_dllist(list, "Seven");
+    sort_dllist(list, SELECTION, REVERSE);
+    char *a[7] = {"Two", "Three", "Six", "Seven", "One", "Four", "Five"};
+    string_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    }
+    free_dllist(list);
+}
+// ================================================================================
+// ================================================================================
+
+void test_insertion_sort_char_dllist_reverse(void **state) {
+    char_dl* list = init_dllist(dChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    char_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_uchar_dllist_reverse(void **state) {
+    uchar_dl* list = init_dllist(dUChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    unsigned char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uchar_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_short_dllist_reverse(void **state) {
+    short_dl* list = init_dllist(dShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    short a[7] = {7, 6, 5, 4, 3, 2, 1};
+    short_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_ushort_dllist_reverse(void **state) {
+    ushort_dl* list = init_dllist(dUShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    unsigned short a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ushort_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_int_dllist_reverse(void **state) {
+    int_dl* list = init_dllist(dInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    int_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_uint_dllist_reverse(void **state) {
+    uint_dl* list = init_dllist(dUInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    unsigned int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uint_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_long_dllist_reverse(void **state) {
+    long_dl* list = init_dllist(dLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    long_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_ulong_dllist_reverse(void **state) {
+    ulong_dl* list = init_dllist(dULong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    unsigned long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ulong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_llong_dllist_reverse(void **state) {
+    llong_dl* list = init_dllist(dLongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    llong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_ullong_dllist_reverse(void **state) {
+    ullong_dl* list = init_dllist(dULongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, INSERT, REVERSE);
+    unsigned long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ullong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_float_dllist_reverse(void **state) {
+    float_dl* list = init_dllist(dFloat)();
+    push_front_dllist(list, 5.f);
+    push_front_dllist(list, 1.f);
+    push_front_dllist(list, 6.f);
+    push_front_dllist(list, 3.f);
+    push_front_dllist(list, 2.f);
+    push_front_dllist(list, 4.f);
+    push_front_dllist(list, 7.f);
+    sort_dllist(list, INSERT, REVERSE);
+    float a[7] = {7.f, 6.f, 5.f, 4.f, 3.f, 2.f, 1.f};
+    float_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_double_dllist_reverse(void **state) {
+    double_dl* list = init_dllist(dDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, INSERT, REVERSE);
+    double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    double_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_ldouble_dllist_reverse(void **state) {
+    ldouble_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, INSERT, REVERSE);
+    long double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    ldouble_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_bool_dllist_reverse(void **state) {
+    bool_dl* list = init_dllist(dBool)();
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    sort_dllist(list, INSERT, REVERSE);
+    bool a[7] = {true, true, true, true, false, false, false};
+    bool_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_insertion_sort_string_dllist_reverse(void **state) {
+    string_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, "One");
+    push_front_dllist(list, "Two");
+    push_front_dllist(list, "Three");
+    push_front_dllist(list, "Four");
+    push_front_dllist(list, "Five");
+    push_front_dllist(list, "Six");
+    push_front_dllist(list, "Seven");
+    sort_dllist(list, INSERT, REVERSE);
+    char *a[7] = {"Two", "Three", "Six", "Seven", "One", "Four", "Five"};
+    string_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    }
+    free_dllist(list);
+}
+// ================================================================================
+// ================================================================================
+
+void test_merge_sort_char_dllist_reverse(void **state) {
+    char_dl* list = init_dllist(dChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    char_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_uchar_dllist_reverse(void **state) {
+    uchar_dl* list = init_dllist(dUChar)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    unsigned char a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uchar_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_short_dllist_reverse(void **state) {
+    short_dl* list = init_dllist(dShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    short a[7] = {7, 6, 5, 4, 3, 2, 1};
+    short_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ushort_dllist_reverse(void **state) {
+    ushort_dl* list = init_dllist(dUShort)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    unsigned short a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ushort_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_int_dllist_reverse(void **state) {
+    int_dl* list = init_dllist(dInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    int_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_uint_dllist_reverse(void **state) {
+    uint_dl* list = init_dllist(dUInt)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    unsigned int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    uint_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_long_dllist_reverse(void **state) {
+    long_dl* list = init_dllist(dLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    long_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ulong_dllist_reverse(void **state) {
+    ulong_dl* list = init_dllist(dULong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    unsigned long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ulong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_llong_dllist_reverse(void **state) {
+    llong_dl* list = init_dllist(dLongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    llong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ullong_dllist_reverse(void **state) {
+    ullong_dl* list = init_dllist(dULongLong)();
+    push_front_dllist(list, 5);
+    push_front_dllist(list, 1);
+    push_front_dllist(list, 6);
+    push_front_dllist(list, 3);
+    push_front_dllist(list, 2);
+    push_front_dllist(list, 4);
+    push_front_dllist(list, 7);
+    sort_dllist(list, MERGE, REVERSE);
+    unsigned long long int a[7] = {7, 6, 5, 4, 3, 2, 1};
+    ullong_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_float_dllist_reverse(void **state) {
+    float_dl* list = init_dllist(dFloat)();
+    push_front_dllist(list, 5.f);
+    push_front_dllist(list, 1.f);
+    push_front_dllist(list, 6.f);
+    push_front_dllist(list, 3.f);
+    push_front_dllist(list, 2.f);
+    push_front_dllist(list, 4.f);
+    push_front_dllist(list, 7.f);
+    sort_dllist(list, MERGE, REVERSE);
+    float a[7] = {7.f, 6.f, 5.f, 4.f, 3.f, 2.f, 1.f};
+    float_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_float_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_double_dllist_reverse(void **state) {
+    double_dl* list = init_dllist(dDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, MERGE, REVERSE);
+    double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    double_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_ldouble_dllist_reverse(void **state) {
+    ldouble_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, 5.);
+    push_front_dllist(list, 1.);
+    push_front_dllist(list, 6.);
+    push_front_dllist(list, 3.);
+    push_front_dllist(list, 2.);
+    push_front_dllist(list, 4.);
+    push_front_dllist(list, 7.);
+    sort_dllist(list, MERGE, REVERSE);
+    long double a[7] = {7., 6., 5., 4., 3., 2., 1.};
+    ldouble_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_double_equal(a[i], result->data, 1.0e-3);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_bool_dllist_reverse(void **state) {
+    bool_dl* list = init_dllist(dBool)();
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    push_front_dllist(list, false);
+    push_front_dllist(list, true);
+    sort_dllist(list, MERGE, REVERSE);
+    bool a[7] = {true, true, true, true, false, false, false};
+    bool_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_int_equal(a[i], result->data);
+        result = result->next;
+        i++;
+    } 
+    free_dllist(list);
+}
+// --------------------------------------------------------------------------------
+
+void test_merge_sort_string_dllist_reverse(void **state) {
+    string_dl* list = init_dllist(dLDouble)();
+    push_front_dllist(list, "One");
+    push_front_dllist(list, "Two");
+    push_front_dllist(list, "Three");
+    push_front_dllist(list, "Four");
+    push_front_dllist(list, "Five");
+    push_front_dllist(list, "Six");
+    push_front_dllist(list, "Seven");
+    sort_dllist(list, MERGE, REVERSE);
+    char *a[7] = {"Two", "Three", "Six", "Seven", "One", "Four", "Five"};
+    string_dlnode* result = list->head;
+    size_t i = 0;
+    while (result != NULL) {
+        assert_string_equal(a[i], result->data->data);
+        result = result->next;
+        i++;
+    }
+    free_dllist(list);
+}
+// ================================================================================
+// ================================================================================
 // eof

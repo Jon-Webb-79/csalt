@@ -189,6 +189,150 @@ void test_ldouble_dllist_iterator(void **state);
 void test_bool_dllist_iterator(void **state);
 void test_string_dllist_iterator(void **state);
 // ================================================================================
+// ================================================================================
+
+void test_bubble_sort_char_dllist_forward(void **state);
+void test_bubble_sort_uchar_dllist_forward(void **state);
+void test_bubble_sort_short_dllist_forward(void **state);
+void test_bubble_sort_ushort_dllist_forward(void **state);
+void test_bubble_sort_int_dllist_forward(void **state);
+void test_bubble_sort_uint_dllist_forward(void **state);
+void test_bubble_sort_long_dllist_forward(void **state);
+void test_bubble_sort_ulong_dllist_forward(void **state);
+void test_bubble_sort_llong_dllist_forward(void **state);
+void test_bubble_sort_ullong_dllist_forward(void **state);
+void test_bubble_sort_float_dllist_forward(void **state);
+void test_bubble_sort_double_dllist_forward(void **state);
+void test_bubble_sort_ldouble_dllist_forward(void **state);
+void test_bubble_sort_bool_dllist_forward(void **state);
+void test_bubble_sort_string_dllist_forward(void **state);
+// ================================================================================ 
+// ================================================================================
+
+void test_selection_sort_char_dllist_forward(void **state);
+void test_selection_sort_uchar_dllist_forward(void **state);
+void test_selection_sort_short_dllist_forward(void **state);
+void test_selection_sort_ushort_dllist_forward(void **state);
+void test_selection_sort_int_dllist_forward(void **state);
+void test_selection_sort_uint_dllist_forward(void **state);
+void test_selection_sort_long_dllist_forward(void **state);
+void test_selection_sort_ulong_dllist_forward(void **state);
+void test_selection_sort_llong_dllist_forward(void **state);
+void test_selection_sort_ullong_dllist_forward(void **state);
+void test_selection_sort_float_dllist_forward(void **state);
+void test_selection_sort_double_dllist_forward(void **state);
+void test_selection_sort_ldouble_dllist_forward(void **state);
+void test_selection_sort_bool_dllist_forward(void **state);
+void test_selection_sort_string_dllist_forward(void **state);
+// ================================================================================
+// ================================================================================
+
+void test_insertion_sort_char_dllist_forward(void **state);
+void test_insertion_sort_uchar_dllist_forward(void **state);
+void test_insertion_sort_short_dllist_forward(void **state);
+void test_insertion_sort_ushort_dllist_forward(void **state);
+void test_insertion_sort_int_dllist_forward(void **state);
+void test_insertion_sort_uint_dllist_forward(void **state);
+void test_insertion_sort_long_dllist_forward(void **state);
+void test_insertion_sort_ulong_dllist_forward(void **state);
+void test_insertion_sort_llong_dllist_forward(void **state);
+void test_insertion_sort_ullong_dllist_forward(void **state);
+void test_insertion_sort_float_dllist_forward(void **state);
+void test_insertion_sort_double_dllist_forward(void **state);
+void test_insertion_sort_ldouble_dllist_forward(void **state);
+void test_insertion_sort_bool_dllist_forward(void **state);
+void test_insertion_sort_string_dllist_forward(void **state);
+// ================================================================================
+// ================================================================================
+
+void test_merge_sort_char_dllist_forward(void **state);
+void test_merge_sort_uchar_dllist_forward(void **state);
+void test_merge_sort_short_dllist_forward(void **state);
+void test_merge_sort_ushort_dllist_forward(void **state);
+void test_merge_sort_int_dllist_forward(void **state);
+void test_merge_sort_uint_dllist_forward(void **state);
+void test_merge_sort_long_dllist_forward(void **state);
+void test_merge_sort_ulong_dllist_forward(void **state);
+void test_merge_sort_llong_dllist_forward(void **state);
+void test_merge_sort_ullong_dllist_forward(void **state);
+void test_merge_sort_float_dllist_forward(void **state);
+void test_merge_sort_double_dllist_forward(void **state);
+void test_merge_sort_ldouble_dllist_forward(void **state);
+void test_merge_sort_bool_dllist_forward(void **state);
+void test_merge_sort_string_dllist_forward(void **state);
+// ================================================================================
+// ================================================================================
+
+void test_bubble_sort_char_dllist_reverse(void **state);
+void test_bubble_sort_uchar_dllist_reverse(void **state);
+void test_bubble_sort_short_dllist_reverse(void **state);
+void test_bubble_sort_ushort_dllist_reverse(void **state);
+void test_bubble_sort_int_dllist_reverse(void **state);
+void test_bubble_sort_uint_dllist_reverse(void **state);
+void test_bubble_sort_long_dllist_reverse(void **state);
+void test_bubble_sort_ulong_dllist_reverse(void **state);
+void test_bubble_sort_llong_dllist_reverse(void **state);
+void test_bubble_sort_ullong_dllist_reverse(void **state);
+void test_bubble_sort_float_dllist_reverse(void **state);
+void test_bubble_sort_double_dllist_reverse(void **state);
+void test_bubble_sort_ldouble_dllist_reverse(void **state);
+void test_bubble_sort_bool_dllist_reverse(void **state);
+void test_bubble_sort_string_dllist_reverse(void **state);
+// ================================================================================
+// ================================================================================
+
+void test_selection_sort_char_dllist_reverse(void **state);
+void test_selection_sort_uchar_dllist_reverse(void **state);
+void test_selection_sort_short_dllist_reverse(void **state);
+void test_selection_sort_ushort_dllist_reverse(void **state);
+void test_selection_sort_int_dllist_reverse(void **state);
+void test_selection_sort_uint_dllist_reverse(void **state);
+void test_selection_sort_long_dllist_reverse(void **state);
+void test_selection_sort_ulong_dllist_reverse(void **state);
+void test_selection_sort_llong_dllist_reverse(void **state);
+void test_selection_sort_ullong_dllist_reverse(void **state);
+void test_selection_sort_float_dllist_reverse(void **state);
+void test_selection_sort_double_dllist_reverse(void **state);
+void test_selection_sort_ldouble_dllist_reverse(void **state);
+void test_selection_sort_bool_dllist_reverse(void **state);
+void test_selection_sort_string_dllist_reverse(void **state);
+// ================================================================================
+// ================================================================================
+
+void test_insertion_sort_char_dllist_reverse(void **state);
+void test_insertion_sort_uchar_dllist_reverse(void **state);
+void test_insertion_sort_short_dllist_reverse(void **state);
+void test_insertion_sort_ushort_dllist_reverse(void **state);
+void test_insertion_sort_int_dllist_reverse(void **state);
+void test_insertion_sort_uint_dllist_reverse(void **state);
+void test_insertion_sort_long_dllist_reverse(void **state);
+void test_insertion_sort_ulong_dllist_reverse(void **state);
+void test_insertion_sort_llong_dllist_reverse(void **state);
+void test_insertion_sort_ullong_dllist_reverse(void **state);
+void test_insertion_sort_float_dllist_reverse(void **state);
+void test_insertion_sort_double_dllist_reverse(void **state);
+void test_insertion_sort_ldouble_dllist_reverse(void **state);
+void test_insertion_sort_bool_dllist_reverse(void **state);
+void test_insertion_sort_string_dllist_reverse(void **state);
+// ================================================================================
+// ================================================================================
+
+void test_merge_sort_char_dllist_reverse(void **state);
+void test_merge_sort_uchar_dllist_reverse(void **state);
+void test_merge_sort_short_dllist_reverse(void **state);
+void test_merge_sort_ushort_dllist_reverse(void **state);
+void test_merge_sort_int_dllist_reverse(void **state);
+void test_merge_sort_uint_dllist_reverse(void **state);
+void test_merge_sort_long_dllist_reverse(void **state);
+void test_merge_sort_ulong_dllist_reverse(void **state);
+void test_merge_sort_llong_dllist_reverse(void **state);
+void test_merge_sort_ullong_dllist_reverse(void **state);
+void test_merge_sort_float_dllist_reverse(void **state);
+void test_merge_sort_double_dllist_reverse(void **state);
+void test_merge_sort_ldouble_dllist_reverse(void **state);
+void test_merge_sort_bool_dllist_reverse(void **state);
+void test_merge_sort_string_dllist_reverse(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_H */
 // ================================================================================

@@ -28,6 +28,7 @@
 
 #include "str.h"
 #include "admin.h" 
+#include "swap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -913,6 +914,42 @@ string_dl_iterator init_string_dllist_iterator();
     ldouble_dl*: init_ldouble_dllist_iterator, \
     bool_dl*: init_bool_dllist_iterator, \
     string_dl*: init_string_dllist_iterator) ()
+// ================================================================================
+// ================================================================================
+
+void sort_char_dllist(char_dl* list, sort_type stype, iter_dir direction);
+void sort_uchar_dllist(uchar_dl* list, sort_type stype, iter_dir direction);
+void sort_short_dllist(short_dl* list, sort_type stype, iter_dir direction);
+void sort_ushort_dllist(ushort_dl* list, sort_type stype, iter_dir direction);
+void sort_int_dllist(int_dl* list, sort_type stype, iter_dir direction);
+void sort_uint_dllist(uint_dl* list, sort_type stype, iter_dir direction);
+void sort_long_dllist(long_dl* list, sort_type stype, iter_dir direction);
+void sort_ulong_dllist(ulong_dl* list, sort_type stype, iter_dir direction);
+void sort_llong_dllist(llong_dl* list, sort_type stype, iter_dir direction);
+void sort_ullong_dllist(ullong_dl* list, sort_type stype, iter_dir direction);
+void sort_float_dllist(float_dl* list, sort_type stype, iter_dir direction);
+void sort_double_dllist(double_dl* list, sort_type stype, iter_dir direction);
+void sort_ldouble_dllist(ldouble_dl* list, sort_type stype, iter_dir direction);
+void sort_bool_dllist(bool_dl* list, sort_type stype, iter_dir direction);
+void sort_string_dllist(string_dl* list, sort_type stype, iter_dir direction);
+// --------------------------------------------------------------------------------
+
+#define sort_dllist(list, stype, direction) _Generic((list), \
+    char_dl*: sort_char_dllist, \
+    uchar_dl*: sort_uchar_dllist, \
+    short_dl*: sort_short_dllist, \
+    ushort_dl*: sort_ushort_dllist, \
+    int_dl*: sort_int_dllist, \
+    uint_dl*: sort_uint_dllist, \
+    long_dl*: sort_long_dllist, \
+    ulong_dl*: sort_ulong_dllist, \
+    llong_dl*: sort_llong_dllist, \
+    ullong_dl*: sort_ullong_dllist, \
+    float_dl*: sort_float_dllist, \
+    double_dl*: sort_double_dllist, \
+    ldouble_dl*: sort_ldouble_dllist, \
+    bool_dl*: sort_bool_dllist, \
+    string_dl*: sort_string_dllist) (list, stype, direction)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus
