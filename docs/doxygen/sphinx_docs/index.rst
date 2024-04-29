@@ -30,6 +30,7 @@ lets pour some seasoning on our C-code and get started.
     Max Heap <MaxHeap>
     Singly Linked List <SList>
     Doubly Linked List <DList>
+    AVL Tree <AVL>
     Todo <Todo>
 
 Indices and tables
