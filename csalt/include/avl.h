@@ -24,6 +24,7 @@
 #include <stdlib.h>
 
 #include "str.h"
+#include "admin.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -89,7 +90,7 @@ AVL_NODE(str*, stringAVLNode)
  * @attribute allow_duplicates true if duplicate values are allowed, otherwise false
  */
 #define AVLTREE_STRUCT(dat_type) \
-struct { \
+typedef struct { \
     size_t len; \
     AVLNode* root; \
     bool allow_duplicates; \
@@ -112,8 +113,143 @@ AVLTREE_STRUCT(doubleAVLTree)
 AVLTREE_STRUCT(ldoubleAVLTree)
 AVLTREE_STRUCT(boolAVLTree)
 AVLTREE_STRUCT(stringAVLTree)
+// ================================================================================
+// ================================================================================ 
+// DEFINE FUNCTIONS TO INSTANTIATE AN AVL BINARY TREE
 
+/**
+ * @brief typedef function pointer to support init_dllist functions
+ */
+typedef void* (*InitAVLFunc)();
 
+/**
+ * @brief Function that selects the correct doubly linked list initialization function 
+ *        based on type 
+ *
+ * @return A doubly linked list initialization function for a specific data type.
+ */
+InitAVLFunc init_avltree(dtype dat_type);
+
+/**
+ * @brief instantiates a char binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+charAVLTree* init_char_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates an unsigned char binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+ucharAVLTree* init_uchar_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates a short int binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+shortAVLTree* init_short_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates an unsigned short int binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+ushortAVLTree* init_ushort_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates an int binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+intAVLTree* init_int_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates an unsigned int binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+uintAVLTree* init_uint_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates a long int binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+longAVLTree* init_long_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates an unsigned long int binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+ulongAVLTree* init_ulong_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates a long long int binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+llongAVLTree* init_llong_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates an unsigned long long int binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+ullongAVLTree* init_ullong_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates a float binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+floatAVLTree* init_float_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates a double binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+doubleAVLTree* init_double_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates a long double binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+ldoubleAVLTree* init_ldouble_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates a bool binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+boolAVLTree* init_bool_avltree(bool duplicates);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief instantiates a string binary tree 
+ *
+ * @param duplicates true if duplicate values are allowed, false otherwise
+ */
+stringAVLTree* init_string_avltree(bool duplicates);
+// ================================================================================
+// ================================================================================ 
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
