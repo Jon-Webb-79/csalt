@@ -13,6 +13,99 @@
 // Include modules here
 
 #include "include/avl.h"
+
+// Macro private to this file
+#define MAX_POD(a, b) ((a) > (b) ? (a) : (b)) 
+// ================================================================================
+// ================================================================================
+// PRIVATE GENERIC HELPER FUNCTIONS
+
+
+static int _get_height(AVLNode* node) {
+    if (!node)
+        return 0;
+    return node->height;
+}
+// --------------------------------------------------------------------------------
+
+static int _balance_factor(AVLNode* node) {
+    if (!node)
+        return 0;
+    return _get_height(node->left) - _get_height(node->right);
+}
+// --------------------------------------------------------------------------------
+
+static void _update_height(AVLNode* node) {
+    if (node)
+        node->height = 1 + MAX_POD(_get_height(node->left), 
+                                   _get_height(node->right));
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _rotate_left(AVLNode* node) {
+    AVLNode* x = node->right;
+    AVLNode* T2 = x->left;
+    
+    x->left = node;
+    node->right = T2;
+
+    _update_height(node);
+    _update_height(x);
+
+    return x;
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _rotate_right(AVLNode* node) {
+    AVLNode* x = node->left;
+    AVLNode* T2 = x->right;
+    
+    x->right = node;
+    node->left = T2;
+
+    _update_height(node);
+    _update_height(x);
+
+    return x;
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _balance(AVLNode* node) {
+    _update_height(node);
+    int balance = _balance_factor(node);
+
+    // Left Left Case or Left Right Case
+    if (balance > 1) {
+        if (_balance_factor(node->left) < 0) {
+            node->left = _rotate_left(node->left);
+        }
+        return _rotate_right(node);
+    }
+    // Right Right Case or Right Left Case
+    if (balance < -1) {
+        if (_balance_factor(node->right) > 0) {
+            node->right = _rotate_right(node->right);
+        }
+        return _rotate_left(node);
+    }
+    return node;  // Return the node either unchanged or after rotation
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _find_min_node(AVLNode* node) {
+    AVLNode* current = node;
+    while (current && current->left)
+        current = current->left;
+    return current;
+}
+// --------------------------------------------------------------------------------
+
+void _free_avltree(AVLNode* root) {
+    if (!root) return;
+    _free_avltree(root->right);
+    _free_avltree(root->left);
+    free(root);
+}
 // ================================================================================
 // ================================================================================ 
 
