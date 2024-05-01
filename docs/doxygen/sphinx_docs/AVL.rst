@@ -176,3 +176,110 @@ In addition, the ``AVLTREE_STRUCT`` macro is pre-instantiated with the following
    AVLTREE_STRUCT(ldoubleAVLTree)
    AVLTREE_STRUCT(boolAVLTree)
    AVLTREE_STRUCT(stringAVLTree)
+
+.. _avl_type_enum:
+
+Enum Data Types 
+===============
+This ``avl.h`` header file relies on the ``dtype`` enum stored in ``admin.h``
+to identify the data type of an instantiated listtor.  The possible enum values
+that can be used are shown below and are further described in the upcoming sections 
+of this document.
+
+.. code-block:: c
+
+   typedef enum {
+       dChar,  // Keyword for a char data type as an integer data type 
+       dUChar,  // keyword for unsigned char data type as an integer data type 
+       dShort,  // Keyword for short int data type 
+       dUShort,  // Keyword for unsigned short int data type 
+       dInt,  // Keyword for int data type 
+       dUInt,  // Keyword for unsigned int data type 
+       dLong,  // Keyword for long int data type 
+       dULong,  // Keyword for unsigned long int data type 
+       dLongLong,  // Keyword for long long int data type 
+       dULongLong,  // Keyword for unsigned long long int data type 
+       dFloat,  // Keyword for float data type 
+       dDouble,  // Keyword for double data type 
+       dLDouble,  // Keyword for long double data type 
+       dBool,  // Keyword for bool data type 
+       dString  // Keyword for str data type
+   } dtype;
+
+Initialize an AVL Tree 
+=======================
+The ``avl.h`` header file provides the ``init_avltree`` function for initializing 
+an AVL Binary Tree linked list.  This function is essentially a function pointer, 
+intelligently selecting the appropriate initialization function based on the 
+specified data type.
+
+.. code-block:: c
+
+   type init_avltree(dtype dat_type)()
+
+Parameters 
+----------
+
+- :c:`dat_type`: The data type for the singly linked list, represented by a ``dtype`` as described in :ref:`Enum Data Types <dllist_type_enum>`.
+
+Returns 
+-------
+
+- :c:`type`: A struct that manages the singly linked list of the specified type in the :ref:`Singly Linked List Type <dllist_dat_type>`
+
+Error Handling 
+--------------
+The ``init_avltree`` function has one primary error mechanism, which is a failure 
+to allocate memory.  If this occurs, the underlying functions will return a 
+NULL pointer in place of the data struct, and will also set the value of 
+``errno`` to ``ENOMEM``. The developer can check for any of these two conditions 
+if an error occurred.
+
+Possible error codes:
+
+- ``ENOMEM``: Indicates a filure to allocate memory
+
+Example
+-------
+Below is an example using the ``init_avltree`` function to create an AVL Binary 
+Tree of type ``floatAVLTree``.
+
+.. code-block:: c 
+
+   #include "avl.h"
+
+   int main() {
+       floatAVLTree* list = init_avltree(dFloat)();
+       if (list == NULL) {
+           fprintf(stderr, "Error: Memory allocation failure\n");
+           return EXIT_FAILURE;
+       }
+       // Operations on the listtor...
+       // Remember to free dynamically allocated memory
+       free_avltree(list);
+       return EXIT_SUCCESS;
+   }
+
+Underlying Functions 
+--------------------
+The ``init_avltree`` function selects from one of the functions below to Initialize 
+a binary tree.  If the user desires, they can directly select 
+one of these functions instead of using the ``init_avltree`` function.
+
+.. code-block:: c
+
+   char_dl* init_char_avltree();
+   uchar_dl* init_uchar_avltree();
+   short_dl* init_short_avltree();
+   ushort_dl* init_ushort_avltree();
+   int_dl* init_int_avltree();
+   uint_dl* init_uint_avltree();
+   long_dl* init_long_avltree();
+   ulong_dl* init_ulong_avltree();
+   llong_dl* init_llong_avltree();
+   ullong_dl* init_ullong_avltree();
+   float_dl* init_float_avltree();
+   double_dl* init_double_avltree();
+   ldouble_dl* init_ldouble_avltree();
+   bool_dl* init_bool_avltree();
+   string_dl* init_string_avltree();
