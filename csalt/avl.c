@@ -109,7 +109,7 @@ void _free_avltree(AVLNode* root) {
 // ================================================================================
 // ================================================================================ 
 
-charAVLTree* init_char_tree(bool duplicates) {
+charAVLTree* init_char_avltree(bool duplicates) {
     charAVLTree* ptr = malloc(sizeof(charAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -122,7 +122,7 @@ charAVLTree* init_char_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-ucharAVLTree* init_uchar_tree(bool duplicates) {
+ucharAVLTree* init_uchar_avltree(bool duplicates) {
     ucharAVLTree* ptr = malloc(sizeof(ucharAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -135,7 +135,7 @@ ucharAVLTree* init_uchar_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-shortAVLTree* init_short_tree(bool duplicates) {
+shortAVLTree* init_short_avltree(bool duplicates) {
     shortAVLTree* ptr = malloc(sizeof(shortAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -147,8 +147,21 @@ shortAVLTree* init_short_tree(bool duplicates) {
     return ptr; 
 }
 // --------------------------------------------------------------------------------
+
+ushortAVLTree* init_ushort_avltree(bool duplicates) {
+    ushortAVLTree* ptr = malloc(sizeof(ushortAVLTree));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->len = 0;
+    ptr->root = NULL;
+    ptr->allow_duplicates = duplicates;
+    return ptr; 
+}
+// --------------------------------------------------------------------------------
  
-intAVLTree* init_int_tree(bool duplicates) {
+intAVLTree* init_int_avltree(bool duplicates) {
     intAVLTree* ptr = malloc(sizeof(intAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -161,7 +174,7 @@ intAVLTree* init_int_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-uintAVLTree* init_uint_tree(bool duplicates) {
+uintAVLTree* init_uint_avltree(bool duplicates) {
     uintAVLTree* ptr = malloc(sizeof(uintAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -174,7 +187,7 @@ uintAVLTree* init_uint_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-longAVLTree* init_long_tree(bool duplicates) {
+longAVLTree* init_long_avltree(bool duplicates) {
     longAVLTree* ptr = malloc(sizeof(longAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -187,7 +200,7 @@ longAVLTree* init_long_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-ulongAVLTree* init_ulong_tree(bool duplicates) {
+ulongAVLTree* init_ulong_avltree(bool duplicates) {
     ulongAVLTree* ptr = malloc(sizeof(ulongAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -200,7 +213,7 @@ ulongAVLTree* init_ulong_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-llongAVLTree* init_llong_tree(bool duplicates) {
+llongAVLTree* init_llong_avltree(bool duplicates) {
     llongAVLTree* ptr = malloc(sizeof(llongAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -213,7 +226,7 @@ llongAVLTree* init_llong_tree(bool duplicates) {
 }
 // -------------------------------------------------------------------------------- 
 
-ullongAVLTree* init_ullong_tree(bool duplicates) {
+ullongAVLTree* init_ullong_avltree(bool duplicates) {
     ullongAVLTree* ptr = malloc(sizeof(ullongAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -226,7 +239,7 @@ ullongAVLTree* init_ullong_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-floatAVLTree* init_float_tree(bool duplicates) {
+floatAVLTree* init_float_avltree(bool duplicates) {
     floatAVLTree* ptr = malloc(sizeof(floatAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -239,7 +252,7 @@ floatAVLTree* init_float_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-doubleAVLTree* init_double_tree(bool duplicates) {
+doubleAVLTree* init_double_avltree(bool duplicates) {
     doubleAVLTree* ptr = malloc(sizeof(doubleAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -252,7 +265,7 @@ doubleAVLTree* init_double_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-ldoubleAVLTree* init_ldouble_tree(bool duplicates) {
+ldoubleAVLTree* init_ldouble_avltree(bool duplicates) {
     ldoubleAVLTree* ptr = malloc(sizeof(ldoubleAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -265,7 +278,7 @@ ldoubleAVLTree* init_ldouble_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-boolAVLTree* init_bool_tree(bool duplicates) {
+boolAVLTree* init_bool_avltree(bool duplicates) {
     boolAVLTree* ptr = malloc(sizeof(boolAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -278,7 +291,7 @@ boolAVLTree* init_bool_tree(bool duplicates) {
 }
 // --------------------------------------------------------------------------------
 
-stringAVLTree* init_string_tree(bool duplicates) {
+stringAVLTree* init_string_avltree(bool duplicates) {
     stringAVLTree* ptr = malloc(sizeof(stringAVLTree));
     if (!ptr) {
         errno = ENOMEM;
@@ -1175,7 +1188,7 @@ static AVLNode* _remove_int_node(intAVLTree* tree, AVLNode* node, int data) {
                 return NULL;
             } else {
                 // Copy the contents of the non-empty child
-                *datNode = *(ucharAVLNode*)temp;
+                *datNode = *(intAVLNode*)temp;
                 free(temp);
                 tree->len--;
             }
@@ -1465,7 +1478,7 @@ static AVLNode* _remove_float_node(floatAVLTree* tree, AVLNode* node, float data
             // Node with two children: Get the inorder successor (smallest in the right subtree)
             floatAVLNode* temp = (floatAVLNode*)_find_min_node(datNode->base.right);
             datNode->data = temp->data; // Copy the inorder successor's data
-            datNode->base.right = _remove_uint_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+            datNode->base.right = _remove_float_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
         }
     }
 
@@ -1629,7 +1642,7 @@ static AVLNode* _remove_string_node(stringAVLTree* tree, AVLNode* node, char* da
     stringAVLNode* datNode = (stringAVLNode*) node;  // Cast to intAVLNode to access data
 
     // Recursive calls to find the node with the given data
-    int cmp = strcmp(data, node->data->data);
+    int cmp = strcmp(data, datNode->data->data);
     if (cmp < 0) {
         datNode->base.left = _remove_string_node(tree, datNode->base.left, data);
     } else if (cmp > 0) {
@@ -1672,153 +1685,424 @@ static AVLNode* _remove_string_node(stringAVLTree* tree, AVLNode* node, char* da
 // INSERT FUNCTIONS 
 
 void insert_char_avltree(charAVLTree* tree, char value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_char(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_uchar_avltree(ucharAVLTree* tree, unsigned char value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_uchar(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_short_avltree(shortAVLTree* tree, short int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_short(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_ushort_avltree(ushortAVLTree* tree, unsigned short value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_ushort(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_int_avltree(intAVLTree* tree, int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_int(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_uint_avltree(uintAVLTree* tree, unsigned int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_uint(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_long_avltree(longAVLTree* tree, long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_long(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_ulong_avltree(ulongAVLTree* tree, unsigned long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_ulong(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_llong_avltree(llongAVLTree* tree, long long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_llong(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_ullong_avltree(ullongAVLTree* tree, unsigned long long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_ullong(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_float_avltree(floatAVLTree* tree, float value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_float(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_double_avltree(doubleAVLTree* tree, double value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_double(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_ldouble_avltree(ldoubleAVLTree* tree, long double value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_ldouble(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_bool_avltree(boolAVLTree* tree, bool value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_bool(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void insert_string_avltree(stringAVLTree* tree, char* value) {
+    if (!tree || !value) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _insert_string(tree, tree->root, value);
 }
 // ================================================================================
 // ================================================================================
 
 void remove_char_avltree(charAVLTree* tree, char value) {
-    tree->root = _remove_int_node(tree, tree->root, value);
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    tree->root = _remove_char_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_uchar_avltree(ucharAVLTree* tree, unsigned char value) {
-    tree->root = _remove_int_node(tree, tree->root, value);
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    tree->root = _remove_uchar_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_short_avltree(shortAVLTree* tree, short int value) {
-    tree->root = _remove_int_node(tree, tree->root, value);
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    tree->root = _remove_short_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_ushort_avltree(ushortAVLTree* tree, unsigned short int value) {
-    tree->root = _remove_int_node(tree, tree->root, value);
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    tree->root = _remove_ushort_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_int_avltree(intAVLTree* tree, int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _remove_int_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_uint_avltree(uintAVLTree* tree, unsigned int value) {
-    tree->root = _remove_int_node(tree, tree->root, value);
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    tree->root = _remove_uint_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_long_avltree(longAVLTree* tree, long int value) {
-    tree->root = _remove_int_node(tree, tree->root, value);
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    tree->root = _remove_long_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_ulong_avltree(ulongAVLTree* tree, unsigned long int value) {
-    tree->root = _remove_int_node(tree, tree->root, value);
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    tree->root = _remove_ulong_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_llong_avltree(llongAVLTree* tree, long long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _remove_llong_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
-void remove_ullong_avltree(ullongAVLTree* tree, char value) {
+void remove_ullong_avltree(ullongAVLTree* tree, unsigned long long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _remove_ullong_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_float_avltree(floatAVLTree* tree, float value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _remove_float_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_double_avltree(doubleAVLTree* tree, double value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _remove_double_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_ldouble_avltree(ldoubleAVLTree* tree, long double value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _remove_ldouble_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_bool_avltree(boolAVLTree* tree, bool value) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _remove_bool_node(tree, tree->root, value);
 }
 // --------------------------------------------------------------------------------
 
 void remove_string_avltree(stringAVLTree* tree, char* value) {
+    if (!tree || !value) {
+        errno = EINVAL;
+        return;
+    }
     tree->root = _remove_string_node(tree, tree->root, value);
+}
+// ================================================================================
+// ================================================================================
+
+void free_char_avltree(charAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_uchar_avltree(ucharAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_short_avltree(shortAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_ushort_avltree(ushortAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_int_avltree(intAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_uint_avltree(uintAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// --------------------------------------------------------------------------------
+
+void free_long_avltree(longAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_ulong_avltree(ulongAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_llong_avltree(llongAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// --------------------------------------------------------------------------------
+
+void free_ullong_avltree(ullongAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_float_avltree(floatAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// --------------------------------------------------------------------------------
+
+void free_double_avltree(doubleAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_ldouble_avltree(ldoubleAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_bool_avltree(boolAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_string_avltree(stringAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return;
+    }
+    _free_avltree(tree->root);
+    free(tree);
 }
 // ================================================================================
 // ================================================================================

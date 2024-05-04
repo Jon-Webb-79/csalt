@@ -1,0 +1,49 @@
+// ================================================================================
+// ================================================================================
+// - File:    test_avl.h
+// - Purpose: Describe the file purpose here
+//
+// Source Metadata
+// - Author:  Jonathan A. Webb
+// - Date:    August 31, 2022
+// - Version: 1.0
+// - Copyright: Copyright 2022, Jon Webb Inc.
+// ================================================================================
+// ================================================================================
+// Include modules here
+
+#ifndef test_AVL_H
+#define test_AVL_H
+
+#include <stdio.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <stdint.h>
+#include <cmocka.h>
+
+#include "../include/avl.h"
+// ================================================================================ 
+// ================================================================================ 
+
+void test_init_char_avl(void **state);
+void test_init_uchar_avl(void **state);
+void test_init_short_avl(void **state);
+void test_init_ushort_avl(void **state);
+void test_init_int_avl(void **state);
+void test_init_uint_avl(void **state);
+void test_init_long_avl(void **state);
+void test_init_ulong_avl(void **state);
+void test_init_llong_avl(void **state);
+void test_init_ullong_avl(void **state);
+void test_init_float_avl(void **state);
+void test_init_double_avl(void **state);
+void test_init_ldouble_avl(void **state);
+void test_init_bool_avl(void **state);
+void test_init_string_avl(void **state);
+// ================================================================================
+// ================================================================================ 
+#endif /* test_AVL_H */
+// ================================================================================
+// ================================================================================
+// eof

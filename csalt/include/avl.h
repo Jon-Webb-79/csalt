@@ -123,7 +123,7 @@ AVLTREE_STRUCT(stringAVLTree)
 /**
  * @brief typedef function pointer to support init_dllist functions
  */
-typedef void* (*InitAVLFunc)();
+typedef void* (*InitAVLFunc)(bool);
 
 /**
  * @brief Function that selects the correct doubly linked list initialization function 
@@ -390,7 +390,7 @@ void insert_bool_avltree(boolAVLTree* tree, bool value);
 void insert_string_avltree(stringAVLTree* tree, char* value);
 // --------------------------------------------------------------------------------
 
-#define insert_avltree(tree, value) _Generic(tree), \
+#define insert_avltree(tree, value) _Generic((tree), \
     charAVLTree*: insert_char_avltree, \
     ucharAVLTree*: insert_uchar_avltree, \
     shortAVLTree*: insert_short_avltree, \
@@ -544,7 +544,7 @@ void remove_bool_avltree(boolAVLTree* tree, bool value);
 void remove_string_avltree(stringAVLTree* tree, char* value);
 // --------------------------------------------------------------------------------
 
-#define remove_avltree(tree, value) _Generic(tree), \
+#define remove_avltree(tree, value) _Generic((tree), \
     charAVLTree*: remove_char_avltree, \
     ucharAVLTree*: remove_uchar_avltree, \
     shortAVLTree*: remove_short_avltree, \
@@ -560,6 +560,145 @@ void remove_string_avltree(stringAVLTree* tree, char* value);
     ldoubleAVLTree*: remove_ldouble_avltree, \
     boolAVLTree*: remove_bool_avltree, \
     stringAVLTree*: remove_string_avltree)(tree, value)
+// ================================================================================
+// ================================================================================
+
+/**
+ * @brief This function will free all memory from a charAVLTree 
+ *
+ * @param tree A charAVLTree
+ */
+void free_char_avltree(charAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a ucharAVLTree 
+ *
+ * @param tree A ucharAVLTree
+ */
+void free_uchar_avltree(ucharAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a shortAVLTree 
+ *
+ * @param tree A shortAVLTree
+ */
+void free_short_avltree(shortAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a ushortAVLTree 
+ *
+ * @param tree A ushortAVLTree
+ */
+void free_ushort_avltree(ushortAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a intAVLTree 
+ *
+ * @param tree A intAVLTree
+ */
+void free_int_avltree(intAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a uintAVLTree 
+ *
+ * @param tree A uintAVLTree
+ */
+void free_uint_avltree(uintAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a longAVLTree 
+ *
+ * @param tree A longAVLTree
+ */
+void free_long_avltree(longAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a ulongAVLTree 
+ *
+ * @param tree A ulongAVLTree
+ */
+void free_ulong_avltree(ulongAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a llongAVLTree 
+ *
+ * @param tree A llongAVLTree
+ */
+void free_llong_avltree(llongAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a ullongAVLTree 
+ *
+ * @param tree A ullongAVLTree
+ */
+void free_ullong_avltree(ullongAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a floatAVLTree 
+ *
+ * @param tree A floatAVLTree
+ */
+void free_float_avltree(floatAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a doubleAVLTree 
+ *
+ * @param tree A doubleAVLTree
+ */
+void free_double_avltree(doubleAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a ldoubleAVLTree 
+ *
+ * @param tree A ldoubleAVLTree
+ */
+void free_ldouble_avltree(ldoubleAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will free all memory from a boolAVLTree 
+ *
+ * @param tree A boolAVLTree
+ */
+void free_bool_avltree(boolAVLTree* tree);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief This function will free all memory from a stringAVLTree 
+ *
+ * @param tree A stringAVLTree
+ */
+void free_string_avltree(stringAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+#define free_avltree(tree) _Generic((tree), \
+    charAVLTree*: free_char_avltree, \
+    ucharAVLTree*: free_uchar_avltree, \
+    shortAVLTree*: free_short_avltree, \
+    ushortAVLTree*: free_ushort_avltree, \
+    intAVLTree*: free_int_avltree, \
+    uintAVLTree*: free_uint_avltree, \
+    longAVLTree*: free_long_avltree, \
+    ulongAVLTree*: free_ulong_avltree, \
+    llongAVLTree*: free_llong_avltree, \
+    ullongAVLTree*: free_ullong_avltree, \
+    floatAVLTree*: free_float_avltree, \
+    doubleAVLTree*: free_double_avltree, \
+    ldoubleAVLTree*: free_ldouble_avltree, \
+    boolAVLTree*: free_bool_avltree, \
+    stringAVLTree*: free_string_avltree)(tree)
 // ================================================================================
 // ================================================================================ 
 #ifdef __cplusplus

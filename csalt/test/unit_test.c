@@ -26,6 +26,7 @@
 #include "test_heap.h"
 #include "test_sllist.h"
 #include "test_dllist.h"
+#include "test_avl.h"
 
 const struct CMUnitTest test_swap[] = {
 	cmocka_unit_test(test_swap_char),
@@ -1542,6 +1543,24 @@ const struct CMUnitTest test_dllist[] = {
     cmocka_unit_test(test_merge_sort_string_dllist_reverse)
 };
 
+const struct CMUnitTest test_avl[] = {
+	cmocka_unit_test(test_init_char_avl),
+    cmocka_unit_test(test_init_uchar_avl),
+    cmocka_unit_test(test_init_short_avl),
+    cmocka_unit_test(test_init_ushort_avl),
+    cmocka_unit_test(test_init_int_avl),
+    cmocka_unit_test(test_init_uint_avl),
+    cmocka_unit_test(test_init_long_avl),
+    cmocka_unit_test(test_init_ulong_avl),
+    cmocka_unit_test(test_init_llong_avl),
+    cmocka_unit_test(test_init_ullong_avl),
+    cmocka_unit_test(test_init_float_avl),
+    cmocka_unit_test(test_init_double_avl),
+    cmocka_unit_test(test_init_ldouble_avl),
+    cmocka_unit_test(test_init_bool_avl),
+    cmocka_unit_test(test_init_string_avl)
+};
+
 // Begin code
 int main(int argc, const char * argv[]) {
     int status;
@@ -1570,7 +1589,12 @@ int main(int argc, const char * argv[]) {
     if (status != 0) {
         return status;
     }
+
     status = cmocka_run_group_tests(test_dllist, NULL, NULL);
+    if (status != 0) {
+        return status;
+    }
+    status = cmocka_run_group_tests(test_avl, NULL, NULL);
 	return status;
 }
 // ================================================================================

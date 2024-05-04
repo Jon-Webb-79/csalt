@@ -27,6 +27,7 @@
 #include "heap.h"
 #include "slist.h"
 #include "dlist.h"
+#include "avl.h"
 
 extern const size_t PRINT_LENGTH;
 
@@ -140,6 +141,20 @@ extern "C" {
                                          ldouble_dl*: true, \
                                          bool_dl*: true, \
                                          string_dl*: true, \
+                                         charAVLTree*: true, \
+                                         ucharAVLTree*: true, \
+                                         shortAVLTree*: true, \
+                                         ushortAVLTree*: true, \
+                                         intAVLTree*: true, \
+                                         uintAVLTree*: true, \
+                                         longAVLTree*: true, \
+                                         ulongAVLTree*: true, \
+                                         llongAVLTree*: true, \
+                                         floatAVLTree*: true, \
+                                         doubleAVLTree*: true, \
+                                         ldoubleAVLTree*: true, \
+                                         boolAVLTree*: true, \
+                                         stringAVLTree*: true, \
 										 default: false)
 // ================================================================================
 // ================================================================================
@@ -280,6 +295,24 @@ void print_ldouble_dllist(ldouble_dl* list);
 void print_bool_dllist(bool_dl* list);
 void print_string_dllist(string_dl* list);
 // ================================================================================
+// ================================================================================ 
+
+void print_char_avltree(charAVLTree* list);
+void print_uchar_avltree(ucharAVLTree* list);
+void print_short_avltree(shortAVLTree* list);
+void print_ushort_avltree(ushortAVLTree* list);
+void print_int_avltree(intAVLTree* list);
+void print_uint_avltree(uintAVLTree* list);
+void print_long_avltree(longAVLTree* list);
+void print_ulong_avltree(ulongAVLTree* list);
+void print_llong_avltree(llongAVLTree* list);
+void print_ullong_avltree(ullongAVLTree* list);
+void print_float_avltree(floatAVLTree* list);
+void print_double_avltree(doubleAVLTree* list);
+void print_ldouble_avltree(ldoubleAVLTree* list);
+void print_bool_avltree(boolAVLTree* list);
+void print_string_avltree(stringAVLTree* list);
+// ================================================================================
 // ================================================================================
 
 /**
@@ -388,7 +421,22 @@ void print_string_dllist(string_dl* list);
                                        double_dl*: print_double_dllist, \
                                        ldouble_dl*: print_ldouble_dllist, \
                                        bool_dl*: print_bool_dllist, \
-                                       string_dl*: print_string_dllist)(T)
+                                       string_dl*: print_string_dllist, \
+                                       charAVLTree*: print_char_avltree, \
+                                       ucharAVLTree*: print_uchar_avltree, \
+                                       shortAVLTree*: print_short_avltree, \
+                                       ushortAVLTree*: print_ushort_avltree, \
+                                       intAVLTree*: print_int_avltree, \
+                                       uintAVLTree*: print_uint_avltree, \
+                                       longAVLTree*: print_long_avltree, \
+                                       ulongAVLTree*: print_ulong_avltree, \
+                                       llongAVLTree*: print_llong_avltree, \
+                                       ullongAVLTree*: print_ullong_avltree, \
+                                       floatAVLTree*: print_float_avltree, \
+                                       doubleAVLTree*: print_double_avltree, \
+                                       ldoubleAVLTree*: print_ldouble_avltree, \
+                                       boolAVLTree*: print_bool_avltree, \
+                                       stringAVLTree*: print_string_avltree)(T)
 // ================================================================================
 // ================================================================================
 

@@ -268,18 +268,18 @@ one of these functions instead of using the ``init_avltree`` function.
 
 .. code-block:: c
 
-   char_dl* init_char_avltree();
-   uchar_dl* init_uchar_avltree();
-   short_dl* init_short_avltree();
-   ushort_dl* init_ushort_avltree();
-   int_dl* init_int_avltree();
-   uint_dl* init_uint_avltree();
-   long_dl* init_long_avltree();
-   ulong_dl* init_ulong_avltree();
-   llong_dl* init_llong_avltree();
-   ullong_dl* init_ullong_avltree();
-   float_dl* init_float_avltree();
-   double_dl* init_double_avltree();
-   ldouble_dl* init_ldouble_avltree();
-   bool_dl* init_bool_avltree();
-   string_dl* init_string_avltree();
+   char_dl* init_char_avltree(bool duplicates);
+   uchar_dl* init_uchar_avltree(bool duplicates);
+   short_dl* init_short_avltree(bool duplicates);
+   ushort_dl* init_ushort_avltree(bool duplicates);
+   int_dl* init_int_avltree(bool duplicates);
+   uint_dl* init_uint_avltree(bool duplicates);
+   long_dl* init_long_avltree(bool duplicates);
+   ulong_dl* init_ulong_avltree(bool duplicates);
+   llong_dl* init_llong_avltree(bool duplicates);
+   ullong_dl* init_ullong_avltree(bool duplicates);
+   float_dl* init_float_avltree(bool duplicates);
+   double_dl* init_double_avltree(bool duplicates);
+   ldouble_dl* init_ldouble_avltree(bool duplicates);
+   bool_dl* init_bool_avltree(bool duplicates);
+   string_dl* init_string_avltree(bool duplicates);

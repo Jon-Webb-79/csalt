@@ -48,7 +48,8 @@ add_library(csalt
     heap.c
     swap.c
     slist.c
-    dlist.c)
+    dlist.c
+    avl.c)
 target_include_directories(csalt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 find_library(MATH_LIB m)
@@ -62,7 +63,8 @@ add_executable(unit_tests
     test/test_swap.c
     test/test_heap.c
     test/test_sllist.c
-    test/test_dllist.c)
+    test/test_dllist.c
+    test/test_avl.c)
 target_link_libraries(csalt PRIVATE ${MATH_LIB})
 target_link_libraries(unit_tests csalt cmocka)
 add_test(NAME unit_tests COMMAND unit_test)
