@@ -960,6 +960,713 @@ static AVLNode* _insert_string(stringAVLTree* tree, AVLNode* node, char* value) 
     // Use the generic balance function
     return _balance(node);
 }
+// ================================================================================ 
+// ================================================================================
+
+static AVLNode* _remove_char_node(charAVLTree* tree, AVLNode* node, char data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    charAVLNode* datNode = (charAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_char_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_char_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(charAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            charAVLNode* temp = (charAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_char_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tree using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_uchar_node(ucharAVLTree* tree, AVLNode* node, unsigned char data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    ucharAVLNode* datNode = (ucharAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_uchar_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_uchar_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(ucharAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            ucharAVLNode* temp = (ucharAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_uchar_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_short_node(shortAVLTree* tree, AVLNode* node, short int data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    shortAVLNode* datNode = (shortAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_short_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_short_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(shortAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            shortAVLNode* temp = (shortAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_short_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_ushort_node(ushortAVLTree* tree, AVLNode* node, unsigned short int data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    ushortAVLNode* datNode = (ushortAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_ushort_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_ushort_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(ushortAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            ushortAVLNode* temp = (ushortAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_ushort_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_int_node(intAVLTree* tree, AVLNode* node, int data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    intAVLNode* datNode = (intAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_int_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_int_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(ucharAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            intAVLNode* temp = (intAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_int_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_uint_node(uintAVLTree* tree, AVLNode* node, unsigned int data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    uintAVLNode* datNode = (uintAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_uint_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_uint_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(uintAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            uintAVLNode* temp = (uintAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_uint_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_long_node(longAVLTree* tree, AVLNode* node, long int data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    longAVLNode* datNode = (longAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_long_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_long_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(longAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            longAVLNode* temp = (longAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_long_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_ulong_node(ulongAVLTree* tree, AVLNode* node, unsigned long int data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    ulongAVLNode* datNode = (ulongAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_ulong_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_ulong_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(ulongAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            ulongAVLNode* temp = (ulongAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_ulong_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_llong_node(llongAVLTree* tree, AVLNode* node, long long int data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    llongAVLNode* datNode = (llongAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_llong_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_llong_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(llongAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            llongAVLNode* temp = (llongAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_llong_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_ullong_node(ullongAVLTree* tree, AVLNode* node, unsigned long long int data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    ullongAVLNode* datNode = (ullongAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_ullong_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_ullong_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(ullongAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            ullongAVLNode* temp = (ullongAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_ullong_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_float_node(floatAVLTree* tree, AVLNode* node, float data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    floatAVLNode* datNode = (floatAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_float_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_float_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(floatAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            floatAVLNode* temp = (floatAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_uint_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_double_node(doubleAVLTree* tree, AVLNode* node, double data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    doubleAVLNode* datNode = (doubleAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_double_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_double_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(doubleAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            doubleAVLNode* temp = (doubleAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_double_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_ldouble_node(ldoubleAVLTree* tree, AVLNode* node, long double data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    ldoubleAVLNode* datNode = (ldoubleAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_ldouble_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_ldouble_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(ldoubleAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            ldoubleAVLNode* temp = (ldoubleAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_ldouble_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_bool_node(boolAVLTree* tree, AVLNode* node, bool data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    boolAVLNode* datNode = (boolAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    if (data < datNode->data) {
+        datNode->base.left = _remove_bool_node(tree, datNode->base.left, data);
+    } else if (data > datNode->data) {
+        datNode->base.right = _remove_bool_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(boolAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            boolAVLNode* temp = (boolAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_bool_node(tree, datNode->base.right, temp->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _remove_string_node(stringAVLTree* tree, AVLNode* node, char* data) {
+    if (node == NULL) {
+        return node;  // The key was not found.
+    }
+
+    stringAVLNode* datNode = (stringAVLNode*) node;  // Cast to intAVLNode to access data
+
+    // Recursive calls to find the node with the given data
+    int cmp = strcmp(data, node->data->data);
+    if (cmp < 0) {
+        datNode->base.left = _remove_string_node(tree, datNode->base.left, data);
+    } else if (cmp > 0) {
+        datNode->base.right = _remove_string_node(tree, datNode->base.right, data);
+    } else {
+        // This is the node to be deleted.
+
+        // Node with only one child or no child
+        if (datNode->base.left == NULL || datNode->base.right == NULL) {
+            AVLNode* temp = datNode->base.left ? datNode->base.left : datNode->base.right;
+            if (temp == NULL) {
+                tree->len--;
+                free(datNode);
+                return NULL;
+            } else {
+                // Copy the contents of the non-empty child
+                *datNode = *(stringAVLNode*)temp;
+                free(temp);
+                tree->len--;
+            }
+        } else {
+            // Node with two children: Get the inorder successor (smallest in the right subtree)
+            stringAVLNode* temp = (stringAVLNode*)_find_min_node(datNode->base.right);
+            datNode->data = temp->data; // Copy the inorder successor's data
+            datNode->base.right = _remove_string_node(tree, datNode->base.right, temp->data->data); // Delete the inorder successor
+        }
+    }
+
+    if (datNode->base.left == NULL && datNode->base.right == NULL && tree->len == 1) {
+        tree->len--;
+        free(datNode);
+        return NULL;  // Tree is empty now
+    }
+
+    // Balance the tr`ee using the generic balance function
+    return _balance((AVLNode*)datNode);  // Cast back to AVLNode* for balancing
+}
 // ================================================================================
 // ================================================================================
 // INSERT FUNCTIONS 
@@ -1036,6 +1743,82 @@ void insert_bool_avltree(boolAVLTree* tree, bool value) {
 
 void insert_string_avltree(stringAVLTree* tree, char* value) {
     tree->root = _insert_string(tree, tree->root, value);
+}
+// ================================================================================
+// ================================================================================
+
+void remove_char_avltree(charAVLTree* tree, char value) {
+    tree->root = _remove_int_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_uchar_avltree(ucharAVLTree* tree, unsigned char value) {
+    tree->root = _remove_int_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_short_avltree(shortAVLTree* tree, short int value) {
+    tree->root = _remove_int_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_ushort_avltree(ushortAVLTree* tree, unsigned short int value) {
+    tree->root = _remove_int_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_int_avltree(intAVLTree* tree, int value) {
+    tree->root = _remove_int_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_uint_avltree(uintAVLTree* tree, unsigned int value) {
+    tree->root = _remove_int_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_long_avltree(longAVLTree* tree, long int value) {
+    tree->root = _remove_int_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_ulong_avltree(ulongAVLTree* tree, unsigned long int value) {
+    tree->root = _remove_int_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_llong_avltree(llongAVLTree* tree, long long int value) {
+    tree->root = _remove_llong_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_ullong_avltree(ullongAVLTree* tree, char value) {
+    tree->root = _remove_ullong_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_float_avltree(floatAVLTree* tree, float value) {
+    tree->root = _remove_float_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_double_avltree(doubleAVLTree* tree, double value) {
+    tree->root = _remove_double_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_ldouble_avltree(ldoubleAVLTree* tree, long double value) {
+    tree->root = _remove_ldouble_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_bool_avltree(boolAVLTree* tree, bool value) {
+    tree->root = _remove_bool_node(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void remove_string_avltree(stringAVLTree* tree, char* value) {
+    tree->root = _remove_string_node(tree, tree->root, value);
 }
 // ================================================================================
 // ================================================================================

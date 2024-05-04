@@ -407,6 +407,160 @@ void insert_string_avltree(stringAVLTree* tree, char* value);
     boolAVLTree*: insert_bool_avltree, \
     stringAVLTree*: insert_string_avltree)(tree,value)
 // ================================================================================
+// ================================================================================
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A charAVLTree data structure 
+ * @param value a char value
+ */
+void remove_char_avltree(charAVLTree* tree, char value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A ucharAVLTree data structure 
+ * @param value an unsigned char value
+ */
+void remove_uchar_avltree(ucharAVLTree* tree, unsigned char value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A shortAVLTree data structure 
+ * @param value a short int value
+ */
+void remove_short_avltree(shortAVLTree* tree, short int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A ushortAVLTree data structure 
+ * @param value a short int value
+ */
+void remove_ushort_avltree(ushortAVLTree* tree, unsigned short value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A intAVLTree data structure 
+ * @param value an int value
+ */
+void remove_int_avltree(intAVLTree* tree, int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A uintAVLTree data structure 
+ * @param value an unsigned int value
+ */
+void remove_uint_avltree(uintAVLTree* tree, unsigned int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A longAVLTree data structure 
+ * @param value an long int value
+ */
+void remove_long_avltree(longAVLTree* tree, long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A ulongAVLTree data structure 
+ * @param value an unsigned long int value
+ */
+void remove_ulong_avltree(ulongAVLTree* tree, unsigned long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A llongAVLTree data structure 
+ * @param value an long long int value
+ */
+void remove_llong_avltree(llongAVLTree* tree, long long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A ullongAVLTree data structure 
+ * @param value an unsigned long long int value
+ */
+void remove_ullong_avltree(ullongAVLTree* tree, unsigned long long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A floatAVLTree data structure 
+ * @param value a float int value
+ */
+void remove_float_avltree(floatAVLTree* tree, float value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A doubleAVLTree data structure 
+ * @param value a double int value
+ */
+void remove_double_avltree(doubleAVLTree* tree, double value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A ldoubleAVLTree data structure 
+ * @param value a long double value
+ */
+void remove_ldouble_avltree(ldoubleAVLTree* tree, long double value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A boolAVLTree data structure 
+ * @param value a bool value
+ */
+void remove_bool_avltree(boolAVLTree* tree, bool value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function will remove a node from a tree if it exists.
+ *
+ * @param tree A stringAVLTree data structure 
+ * @param value a char value
+ */
+void remove_string_avltree(stringAVLTree* tree, char* value);
+// --------------------------------------------------------------------------------
+
+#define remove_avltree(tree, value) _Generic(tree), \
+    charAVLTree*: remove_char_avltree, \
+    ucharAVLTree*: remove_uchar_avltree, \
+    shortAVLTree*: remove_short_avltree, \
+    ushortAVLTree*: remove_ushort_avltree, \
+    intAVLTree*: remove_int_avltree, \
+    uintAVLTree*: remove_uint_avltree, \
+    longAVLTree*: remove_long_avltree, \
+    ulongAVLTree*: remove_ulong_avltree, \
+    llongAVLTree*: remove_llong_avltree, \
+    ullongAVLTree*: remove_ullong_avltree, \
+    floatAVLTree*: remove_float_avltree, \
+    doubleAVLTree*: remove_double_avltree, \
+    ldoubleAVLTree*: remove_ldouble_avltree, \
+    boolAVLTree*: remove_bool_avltree, \
+    stringAVLTree*: remove_string_avltree)(tree, value)
+// ================================================================================
 // ================================================================================ 
 #ifdef __cplusplus
 }
