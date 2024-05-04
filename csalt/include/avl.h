@@ -252,6 +252,161 @@ boolAVLTree* init_bool_avltree(bool duplicates);
  */
 stringAVLTree* init_string_avltree(bool duplicates);
 // ================================================================================
+// ================================================================================
+// INSERT FUNCTIONS 
+
+/**
+ * @brief This function inserts char data into a binary tree 
+ *
+ * @param tree an charAVLTree data structure 
+ * @param value An char value
+ */
+void insert_char_avltree(charAVLTree* tree, char value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts unsigned char data into a binary tree 
+ *
+ * @param tree an ucharAVLTree data structure 
+ * @param value An unsigned char value
+ */
+void insert_uchar_avltree(ucharAVLTree* tree, unsigned char value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts short int data into a binary tree 
+ *
+ * @param tree an shortAVLTree data structure 
+ * @param value An short int value
+ */
+void insert_short_avltree(shortAVLTree* tree, short int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts unsigned short int data into a binary tree 
+ *
+ * @param tree an ushortAVLTree data structure 
+ * @param value An unsigned short int value
+ */
+void insert_ushort_avltree(ushortAVLTree* tree, unsigned short int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts int data into a binary tree 
+ *
+ * @param tree an intAVLTree data structure 
+ * @param value An int value
+ */
+void insert_int_avltree(intAVLTree* tree, int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts unsigned int data into a binary tree 
+ *
+ * @param tree an uintAVLTree data structure 
+ * @param value An unsigned int value
+ */
+void insert_uint_avltree(uintAVLTree* tree, unsigned int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts long int data into a binary tree 
+ *
+ * @param tree an longAVLTree data structure 
+ * @param value A long int value
+ */
+void insert_long_avltree(longAVLTree* tree, long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts a long int data into a binary tree 
+ *
+ * @param tree an ulongAVLTree data structure 
+ * @param value A unsigned long int value
+ */
+void insert_ulong_avltree(ulongAVLTree* tree, unsigned long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts long long int data into a binary tree 
+ *
+ * @param tree an llongAVLTree data structure 
+ * @param value A long long int value
+ */
+void insert_llong_avltree(llongAVLTree* tree, long long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts unsigned long long int data into a binary tree 
+ *
+ * @param tree an ullongAVLTree data structure 
+ * @param value An unsigned long long int value
+ */
+void insert_ullong_avltree(ullongAVLTree* tree, unsigned long long int value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts float data into a binary tree 
+ *
+ * @param tree an floatAVLTree data structure 
+ * @param value An float value
+ */
+void insert_float_avltree(floatAVLTree* tree, float value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts double data into a binary tree 
+ *
+ * @param tree and doubleAVLTree data structure 
+ * @param value A double value
+ */
+void insert_double_avltree(doubleAVLTree* tree, double value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts long double data into a binary tree 
+ *
+ * @param tree an ldoubleAVLTree data structure 
+ * @param value A long double value
+ */
+void insert_ldouble_avltree(ldoubleAVLTree* tree, long double value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts bool data into a binary tree 
+ *
+ * @param tree an boolAVLTree data structure 
+ * @param value A bool value
+ */
+void insert_bool_avltree(boolAVLTree* tree, bool value);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief This function inserts str data into a binary tree 
+ *
+ * @param tree an stringAVLTree data structure 
+ * @param value A str value
+ */
+void insert_string_avltree(stringAVLTree* tree, char* value);
+// --------------------------------------------------------------------------------
+
+#define insert_avltree(tree, value) _Generic(tree), \
+    charAVLTree*: insert_char_avltree, \
+    ucharAVLTree*: insert_uchar_avltree, \
+    shortAVLTree*: insert_short_avltree, \
+    ushortAVLTree*: insert_ushort_avltree, \
+    intAVLTree*: insert_int_avltree, \
+    uintAVLTree*: insert_uint_avltree, \
+    longAVLTree*: insert_long_avltree, \
+    ulongAVLTree*: insert_ulong_avltree, \
+    llongAVLTree*: insert_llong_avltree, \
+    ullongAVLTree*: insert_ullong_avltree, \
+    floatAVLTree*: insert_float_avltree, \
+    doubleAVLTree*: insert_double_avltree, \
+    ldoubleAVLTree*: insert_ldouble_avltree, \
+    boolAVLTree*: insert_bool_avltree, \
+    stringAVLTree*: insert_string_avltree)(tree,value)
+// ================================================================================
 // ================================================================================ 
 #ifdef __cplusplus
 }

@@ -312,5 +312,731 @@ InitAVLFunc init_avltree(dtype dat_type) {
     } 
 }
 // ================================================================================
+// ================================================================================ 
+// CREATE NODE 
+
+static charAVLNode* _create_char_node(char value) {
+    charAVLNode* ptr = malloc(sizeof(charAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static ucharAVLNode* _create_uchar_node(unsigned char value) {
+    ucharAVLNode* ptr = malloc(sizeof(ucharAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static shortAVLNode* _create_short_node(short int value) {
+    shortAVLNode* ptr = malloc(sizeof(shortAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static ushortAVLNode* _create_ushort_node(unsigned short int value) {
+    ushortAVLNode* ptr = malloc(sizeof(ushortAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static intAVLNode* _create_int_node(int value) {
+    intAVLNode* ptr = malloc(sizeof(intAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static uintAVLNode* _create_uint_node(unsigned int value) {
+    uintAVLNode* ptr = malloc(sizeof(uintAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static longAVLNode* _create_long_node(long int value) {
+    longAVLNode* ptr = malloc(sizeof(longAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static ulongAVLNode* _create_ulong_node(unsigned long int value) {
+    ulongAVLNode* ptr = malloc(sizeof(ulongAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static llongAVLNode* _create_llong_node(long long int value) {
+    llongAVLNode* ptr = malloc(sizeof(llongAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static ullongAVLNode* _create_ullong_node(unsigned long long int value) {
+    ullongAVLNode* ptr = malloc(sizeof(ullongAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static floatAVLNode* _create_float_node(float value) {
+    floatAVLNode* ptr = malloc(sizeof(floatAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static doubleAVLNode* _create_double_node(double value) {
+    doubleAVLNode* ptr = malloc(sizeof(doubleAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static ldoubleAVLNode* _create_ldouble_node(long double value) {
+    ldoubleAVLNode* ptr = malloc(sizeof(ldoubleAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static boolAVLNode* _create_bool_node(bool value) {
+    boolAVLNode* ptr = malloc(sizeof(boolAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    ptr->data = value;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// --------------------------------------------------------------------------------
+
+static stringAVLNode* _create_string_node(char* value) {
+    stringAVLNode* ptr = malloc(sizeof(stringAVLNode));
+    if (!ptr) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    str* val = init_string_nol(value);
+    ptr->data = val;
+    ptr->base.left = NULL;
+    ptr->base.right = NULL;
+    ptr->base.height = 1;
+    return ptr;
+}
+// ================================================================================
+// ================================================================================
+
+static AVLNode* _insert_char(charAVLTree* tree, AVLNode* node, char value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_char_node(value);  
+    }
+
+    charAVLNode* datNode = (charAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_char(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_char(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_char(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_uchar(ucharAVLTree* tree, AVLNode* node, unsigned char value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_uchar_node(value);  
+    }
+
+    ucharAVLNode* datNode = (ucharAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_uchar(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_uchar(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_uchar(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_short(shortAVLTree* tree, AVLNode* node, short int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_short_node(value);  
+    }
+
+    shortAVLNode* datNode = (shortAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_short(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_short(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_short(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_ushort(ushortAVLTree* tree, AVLNode* node, unsigned short int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_ushort_node(value);  
+    }
+
+    ushortAVLNode* datNode = (ushortAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_ushort(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_ushort(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_ushort(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_int(intAVLTree* tree, AVLNode* node, int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_int_node(value);  
+    }
+
+    intAVLNode* datNode = (intAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_int(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_int(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_int(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_uint(uintAVLTree* tree, AVLNode* node, unsigned int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_uint_node(value);  
+    }
+
+    uintAVLNode* datNode = (uintAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_uint(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_uint(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_uint(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_long(longAVLTree* tree, AVLNode* node, long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_long_node(value);  
+    }
+
+    longAVLNode* datNode = (longAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_long(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_long(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_long(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_ulong(ulongAVLTree* tree, AVLNode* node, unsigned long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_ulong_node(value);  
+    }
+
+    ulongAVLNode* datNode = (ulongAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_ulong(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_ulong(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_ulong(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_llong(llongAVLTree* tree, AVLNode* node, long long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_llong_node(value);  
+    }
+
+    llongAVLNode* datNode = (llongAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_llong(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_llong(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_llong(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_ullong(ullongAVLTree* tree, AVLNode* node, unsigned long long int value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_ullong_node(value);  
+    }
+
+    ullongAVLNode* datNode = (ullongAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_ullong(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_ullong(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_ullong(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_float(floatAVLTree* tree, AVLNode* node, float value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_float_node(value);  
+    }
+
+    floatAVLNode* datNode = (floatAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_float(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_float(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_float(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_double(doubleAVLTree* tree, AVLNode* node, double value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_double_node(value);  
+    }
+
+    doubleAVLNode* datNode = (doubleAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_double(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_double(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_double(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_ldouble(ldoubleAVLTree* tree, AVLNode* node, long double value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_ldouble_node(value);  
+    }
+
+    ldoubleAVLNode* datNode = (ldoubleAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_ldouble(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_ldouble(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_ldouble(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_bool(boolAVLTree* tree, AVLNode* node, bool value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_bool_node(value);  
+    }
+
+    boolAVLNode* datNode = (boolAVLNode*) node;  
+
+    if (value < datNode->data) {
+        datNode->base.left = _insert_bool(tree, datNode->base.left, value);
+    } else if (value > datNode->data) {
+        datNode->base.right = _insert_bool(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_bool(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// --------------------------------------------------------------------------------
+
+static AVLNode* _insert_string(stringAVLTree* tree, AVLNode* node, char* value) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!node) {
+        tree->len++;
+        return (AVLNode*) _create_string_node(value);  
+    }
+
+    stringAVLNode* datNode = (stringAVLNode*) node;  
+    int cmp = strcmp(value, datNode->data->data);
+    if (cmp < 0) {
+        datNode->base.left = _insert_string(tree, datNode->base.left, value);
+    } else if (cmp > 0) {
+        datNode->base.right = _insert_string(tree, datNode->base.right, value);
+    } else {
+        if (tree->allow_duplicates) {
+            // Duplicates allowed 
+            datNode->base.right = _insert_string(tree, datNode->base.right, value);
+        } else {
+            return node;  // No action needed if the value already exists
+        }
+    }
+    // Use the generic balance function
+    return _balance(node);
+}
+// ================================================================================
+// ================================================================================
+// INSERT FUNCTIONS 
+
+void insert_char_avltree(charAVLTree* tree, char value) {
+    tree->root = _insert_char(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_uchar_avltree(ucharAVLTree* tree, unsigned char value) {
+    tree->root = _insert_uchar(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_short_avltree(shortAVLTree* tree, short int value) {
+    tree->root = _insert_short(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_ushort_avltree(ushortAVLTree* tree, unsigned short value) {
+    tree->root = _insert_ushort(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_int_avltree(intAVLTree* tree, int value) {
+    tree->root = _insert_int(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_uint_avltree(uintAVLTree* tree, unsigned int value) {
+    tree->root = _insert_uint(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_long_avltree(longAVLTree* tree, long int value) {
+    tree->root = _insert_long(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_ulong_avltree(ulongAVLTree* tree, unsigned long int value) {
+    tree->root = _insert_ulong(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_llong_avltree(llongAVLTree* tree, long long int value) {
+    tree->root = _insert_llong(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_ullong_avltree(ullongAVLTree* tree, unsigned long long int value) {
+    tree->root = _insert_ullong(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_float_avltree(floatAVLTree* tree, float value) {
+    tree->root = _insert_float(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_double_avltree(doubleAVLTree* tree, double value) {
+    tree->root = _insert_double(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_ldouble_avltree(ldoubleAVLTree* tree, long double value) {
+    tree->root = _insert_ldouble(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_bool_avltree(boolAVLTree* tree, bool value) {
+    tree->root = _insert_bool(tree, tree->root, value);
+}
+// --------------------------------------------------------------------------------
+
+void insert_string_avltree(stringAVLTree* tree, char* value) {
+    tree->root = _insert_string(tree, tree->root, value);
+}
+// ================================================================================
 // ================================================================================
 // eof
