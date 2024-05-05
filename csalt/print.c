@@ -1923,17 +1923,429 @@ void print_string_dllist(string_dl* list) {
 // ================================================================================ 
 // ================================================================================ 
 
-static void _char_order(AVLNode* node) {
+static void _char_order(AVLNode* node, int* isFirst) {
     if (!node)
         return;
-    _char_order(node->left);
-    print_char(((charAVLNode*)node)->data);
-    _char_order(node->right);
+    charAVLNode* datNode = (charAVLNode*) node;
+
+    _char_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%hhd", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %hhd", datNode->data);
+    }
+    _char_order(datNode->base.right, isFirst);
 }
 // --------------------------------------------------------------------------------
+
 void print_char_avltree(charAVLTree* tree) {
-    _char_order(tree->root);
-    print("\n");
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _char_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _uchar_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    ucharAVLNode* datNode = (ucharAVLNode*) node;
+
+    _uchar_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%hhu", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %hhu", datNode->data);
+    }
+    _uchar_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_uchar_avltree(ucharAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _uchar_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _short_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    shortAVLNode* datNode = (shortAVLNode*) node;
+
+    _short_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%hd", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %hd", datNode->data);
+    }
+    _short_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_short_avltree(shortAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _short_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _ushort_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    ushortAVLNode* datNode = (ushortAVLNode*) node;
+
+    _ushort_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%hu", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %hu", datNode->data);
+    }
+    _ushort_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_ushort_avltree(ushortAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _ushort_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _int_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    intAVLNode* datNode = (intAVLNode*) node;
+
+    _int_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%d", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %d", datNode->data);
+    }
+    _int_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_int_avltree(intAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _int_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _uint_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    uintAVLNode* datNode = (uintAVLNode*) node;
+
+    _int_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%u", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %u", datNode->data);
+    }
+    _uint_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_uint_avltree(uintAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _uint_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _long_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    longAVLNode* datNode = (longAVLNode*) node;
+
+    _long_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%ld", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %ld", datNode->data);
+    }
+    _long_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_long_avltree(longAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _long_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _ulong_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    ulongAVLNode* datNode = (ulongAVLNode*) node;
+
+    _ulong_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%lu", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %lu", datNode->data);
+    }
+    _ulong_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_ulong_avltree(ulongAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _ulong_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _llong_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    llongAVLNode* datNode = (llongAVLNode*) node;
+
+    _llong_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%lld", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %lld", datNode->data);
+    }
+    _llong_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_llong_avltree(llongAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _llong_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _ullong_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    ullongAVLNode* datNode = (ullongAVLNode*) node;
+
+    _ullong_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%llu", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %llu", datNode->data);
+    }
+    _ullong_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_ullong_avltree(ullongAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _ullong_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _float_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    floatAVLNode* datNode = (floatAVLNode*) node;
+
+    _float_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%f", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %f", datNode->data);
+    }
+    _float_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_float_avltree(floatAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _float_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _double_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    doubleAVLNode* datNode = (doubleAVLNode*) node;
+
+    _double_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%lf", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %lf", datNode->data);
+    }
+    _double_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_double_avltree(doubleAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _double_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _ldouble_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    ldoubleAVLNode* datNode = (ldoubleAVLNode*) node;
+
+    _ldouble_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%Lf", datNode->data);
+        *isFirst = 0;
+    } else {
+        printf(", %Lf", datNode->data);
+    }
+    _ldouble_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_ldouble_avltree(ldoubleAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _ldouble_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _bool_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    boolAVLNode* datNode = (boolAVLNode*) node;
+
+    _bool_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        if (datNode->data)
+            printf("true");
+        else
+            printf("false");
+        *isFirst = 0;
+    } else {
+        if (datNode->data)
+            printf(", true");
+        else
+            printf(", false");
+    }
+    _bool_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_bool_avltree(boolAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _bool_order(tree->root, &isFirst);
+    printf(" ]");
+}
+// --------------------------------------------------------------------------------
+
+static void _string_order(AVLNode* node, int* isFirst) {
+    if (!node)
+        return;
+    stringAVLNode* datNode = (stringAVLNode*) node;
+
+    _string_order(datNode->base.left, isFirst);
+
+    if (*isFirst) {
+        printf("%s", datNode->data->data);
+        *isFirst = 0;
+    } else {
+        printf(", %s", datNode->data->data);
+    }
+    _string_order(datNode->base.right, isFirst);
+}
+// --------------------------------------------------------------------------------
+
+void print_string_avltree(stringAVLTree* tree) {
+    if (!tree || !tree->root) {
+        printf("[ ]");
+    }
+    printf("[ ");
+    int isFirst = 1;
+    _string_order(tree->root, &isFirst);
+    printf(" ]");
 }
 // ================================================================================
 // ================================================================================

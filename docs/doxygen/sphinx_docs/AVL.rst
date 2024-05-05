@@ -215,12 +215,13 @@ specified data type.
 
 .. code-block:: c
 
-   type init_avltree(dtype dat_type)()
+   type init_avltree(dtype dat_type)(bool duplicates)
 
 Parameters 
 ----------
 
 - :c:`dat_type`: The data type for the singly linked list, represented by a ``dtype`` as described in :ref:`Enum Data Types <dllist_type_enum>`.
+- :c:`duplicates`: ``true`` if duplicate values are allowed, ``false`` otherwise.
 
 Returns 
 -------
@@ -247,9 +248,10 @@ Tree of type ``floatAVLTree``.
 .. code-block:: c 
 
    #include "avl.h"
+   #include "stdbool.h"
 
    int main() {
-       floatAVLTree* list = init_avltree(dFloat)();
+       floatAVLTree* list = init_avltree(dFloat)(true);
        if (list == NULL) {
            fprintf(stderr, "Error: Memory allocation failure\n");
            return EXIT_FAILURE;

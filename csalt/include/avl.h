@@ -700,6 +700,42 @@ void free_string_avltree(stringAVLTree* tree);
     boolAVLTree*: free_bool_avltree, \
     stringAVLTree*: free_string_avltree)(tree)
 // ================================================================================
+// ================================================================================
+
+size_t char_avltree_size(charAVLTree* tree);
+size_t uchar_avltree_size(ucharAVLTree* tree);
+size_t short_avltree_size(shortAVLTree* tree);
+size_t ushort_avltree_size(ushortAVLTree* tree);
+size_t int_avltree_size(intAVLTree* tree);
+size_t uint_avltree_size(uintAVLTree* tree);
+size_t long_avltree_size(longAVLTree* tree);
+size_t ulong_avltree_size(ulongAVLTree* tree);
+size_t llong_avltree_size(llongAVLTree* tree);
+size_t ullong_avltree_size(ullongAVLTree* tree);
+size_t float_avltree_size(floatAVLTree* tree);
+size_t double_avltree_size(doubleAVLTree* tree);
+size_t ldouble_avltree_size(ldoubleAVLTree* tree);
+size_t bool_avltree_size(boolAVLTree* tree);
+size_t string_avltree_size(stringAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+#define avltree_size(tree) _Generic((tree), \
+    charAVLTree*: char_avltree_size, \
+    ucharAVLTree*: uchar_avltree_size, \
+    shortAVLTree*: short_avltree_size, \
+    ushortAVLTree*: ushort_avltree_size, \
+    intAVLTree*: int_avltree_size, \
+    uintAVLTree*: uint_avltree_size, \
+    longAVLTree*: long_avltree_size, \
+    ulongAVLTree*: ulong_avltree_size, \
+    llongAVLTree*: llong_avltree_size, \
+    ullongAVLTree*: ullong_avltree_size, \
+    floatAVLTree*: float_avltree_size, \
+    doubleAVLTree*: double_avltree_size, \
+    ldoubleAVLTree*: ldouble_avltree_size, \
+    boolAVLTree*: bool_avltree_size, \
+    stringAVLTree*: string_avltree_size)(tree)
+// ================================================================================
 // ================================================================================ 
 #ifdef __cplusplus
 }
