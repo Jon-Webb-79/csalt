@@ -227,3 +227,34 @@ of a doubly linked list.  The syntax is identical for a singly linked list.
 .. code-block:: bash 
 
    >> { 1, 2, 3, 4 }
+
+AVL Tree 
+========
+The print command can also be used with the :ref:`AVL Tree <avl_tree>` data 
+structure.  When printing an AVL Binary Tree, the data will be encapsulated by
+square brackets (i.e. ``[ ]``).
+
+Example 
+-------
+This is an example of a scenario where a AVL Binary Tree is printed to the 
+screen.
+
+.. code-block:: c
+
+   #include "avl.h"
+   #include "print.h"
+
+   int main() {
+       intAVLTree* tree = init_avltree(dInt)(false);
+       insert_avltree(tree, 1);
+       insert_avltree(tree, 2);
+       insert_avltree(tree, 3);
+       insert_avltree(tree, 4);
+       print(tree);
+       free_avltree(tree);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> [ 1, 2, 3, 4 ]
