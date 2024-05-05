@@ -2040,76 +2040,136 @@ void free_string_avltree(stringAVLTree* tree) {
 // ================================================================================
 
 size_t char_avltree_size(charAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t uchar_avltree_size(ucharAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t short_avltree_size(shortAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t ushort_avltree_size(ushortAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t int_avltree_size(intAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t uint_avltree_size(uintAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t long_avltree_size(longAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // -------------------------------------------------------------------------------- 
 
 size_t ulong_avltree_size(ulongAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t llong_avltree_size(llongAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t ullong_avltree_size(ullongAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t float_avltree_size(floatAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t double_avltree_size(doubleAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t ldouble_avltree_size(ldoubleAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t bool_avltree_size(boolAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // --------------------------------------------------------------------------------
 
 size_t string_avltree_size(stringAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return 0;
+    }
     return tree->len;
 }
 // ================================================================================

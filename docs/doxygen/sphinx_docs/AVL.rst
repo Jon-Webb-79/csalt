@@ -489,6 +489,7 @@ Example Usage
 .. code-block:: c
 
     #include "avl.h"
+    #include "print.h"
 
     int main() {
         intAVLTree* tree = init_avltree(dInt)(false);
@@ -510,4 +511,73 @@ This example demonstrates initializing an integer AVL tree, inserting four
 integers, and then removing one using the ``remove_avltree`` macro. 
 The macro correctly selects ``remove_int_avltree`` based on the type of the 
 tree pointer passed, effectively removing the specified value.
+
+AVL Tree Size
+=============
+The ``avltree_size`` macro offers a uniform interface to retrieve the size of 
+AVL trees across various data types. Utilizing the C11 ``_Generic`` keyword, 
+it directs the call to the appropriate type-specific function that returns the 
+size of the tree based on its type.
+
+.. code-block:: c
+
+    #define avltree_size(tree) _Generic((tree), \
+        charAVLTree*: char_avltree_size, \
+        ucharAVLTree*: uchar_avltree_size, \
+        shortAVLTree*: short_avltree_size, \
+        ushortAVLTree*: ushort_avltree_size, \
+        intAVLTree*: int_avltree_size, \
+        uintAVLTree*: uint_avltree_size, \
+        longAVLTree*: long_avltree_size, \
+        ulongAVLTree*: ulong_avltree_size, \
+        llongAVLTree*: llong_avltree_size, \
+        ullongAVLTree*: ullong_avltree_size, \
+        floatAVLTree*: float_avltree_size, \
+        doubleAVLTree*: double_avltree_size, \
+        ldoubleAVLTree*: ldouble_avltree_size, \
+        boolAVLTree*: bool_avltree_size, \
+        stringAVLTree*: string_avltree_size)(tree)
+
+The user can also interact directly with the macros underlying functions.
+
+Parameters
+----------
+- :c:`tree`: A pointer to an AVL tree of any supported data type.
+
+.. note:: Each function called by the macro returns the number of nodes (elements) in the AVL tree, allowing easy measurement of the tree's population.
+
+Error Handling
+--------------
+Each function linked through this macro verifies if the provided tree pointer is 
+``NULL`` before attempting to access its properties. If ``NULL``, ``errno`` is 
+set to ``EINVAL`` (Invalid Argument), ensuring the program signals an error 
+condition properly.
+
+.. warning:: This function does not modify the tree but will report an error via ``errno`` if a ``NULL`` tree is mistakenly provided.
+
+Example Usage
+-------------
+
+.. code-block:: c
+
+    #include "avl.h"
+    #include "print.h"
+
+    int main() {
+        intAVLTree* tree = init_avltree(dInt)(false);
+        insert_avltree(tree, 10);
+        insert_avltree(tree, 20);
+        size_t size = avltree_size(tree);
+        print("Size of AVL Tree: ", size);
+        free_avltree(tree);
+        return 0;
+    }
+
+.. code-block:: bash
+
+    >> Size of AVL Tree: 2
+
+This example initializes an integer AVL tree, inserts two integers into it, 
+and then uses the ``avltree_size`` macro to determine how many elements are in 
+the tree before it is freed.
 
