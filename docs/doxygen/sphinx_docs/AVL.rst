@@ -313,6 +313,9 @@ tree passed to it.
         boolAVLTree*: free_bool_avltree, \
         stringAVLTree*: free_string_avltree)(tree)
 
+The above macro highlights the underlying functions which can be called in 
+place of the macro if the user desires.
+
 Parameters 
 ----------
 - :c:`tree`: An avl tree data structure of the type defined in :ref:`Derived Data types <avl_dat_type>`
@@ -332,6 +335,7 @@ Example
 .. code-block:: c
 
    #include "avl.h"
+   #include "print.h"
 
    int main() {
        stringAVLTree* tree = init_avltree(dString)(true);
@@ -345,4 +349,92 @@ Example
 .. code-block:: bash 
 
    >> [ One, Two ]
+
+Insert into AVL Tree
+====================
+The ``insert_avltree`` macro simplifies the process of inserting elements into 
+AVL trees by utilizing the C11 ``_Generic`` keyword for type-based dispatch. 
+This macro selects the appropriate type-specific insertion function based on 
+the type of the AVL tree provided, streamlining code usage across various data types.
+
+.. code-block:: c
+
+    #define insert_avltree(tree, value) _Generic((tree), \
+        charAVLTree*: insert_char_avltree, \
+        ucharAVLTree*: insert_uchar_avltree, \
+        shortAVLTree*: insert_short_avltree, \
+        ushortAVLTree*: insert_ushort_avltree, \
+        intAVLTree*: insert_int_avltree, \
+        uintAVLTree*: insert_uint_avltree, \
+        longAVLTree*: insert_long_avltree, \
+        ulongAVLTree*: insert_ulong_avltree, \
+        llongAVLTree*: insert_llong_avltree, \
+        ullongAVLTree*: insert_ullong_avltree, \
+        floatAVLTree*: insert_float_avltree, \
+        doubleAVLTree*: insert_double_avltree, \
+        ldoubleAVLTree*: insert_ldouble_avltree, \
+        boolAVLTree*: insert_bool_avltree, \
+        stringAVLTree*: insert_string_avltree)(tree, value)
+
+Parameters
+----------
+- :c:`tree`: A pointer to an AVL tree data structure, dynamically typed based on the type of tree.
+- :c:`value`: The data to be inserted into the AVL tree, type-compatible with the tree's data type.
+
+Error Handling
+--------------
+Each insertion function first checks if the tree pointer or value is ``NULL``. 
+If any argument is ``NULL``, ``errno`` is set to ``EINVAL`` to indicate an 
+invalid argument error. This check is critical for ensuring that null pointers 
+do not lead to undefined behavior during memory operations.
+
+.. note:: The function ``insert_string_avltree`` additionally checks the validity of the string pointer to ensure it is not ``NULL`` before attempting to insert, as string operations are particularly susceptible to errors from invalid memory references.
+
+Example Usage with No Duplicates
+--------------------------------
+
+.. code-block:: c
+
+    #include "avl.h"
+    #include "print.h"
+
+    int main() {
+        intAVLTree* tree = init_avltree(dInt)(false);
+        insert_avltree(tree, 42);
+        insert_avltree(tree, 21);
+        insert_avltree(tree, 21);
+        print(tree);  
+        free_avltree(tree);
+        return 0;
+    }
+
+.. code-block:: bash
+
+    >> [ 21, 42 ]
+
+Example Usage with Duplicates 
+-----------------------------
+
+.. code-block:: c
+
+    #include "avl.h"
+    #include "print.h"
+
+    int main() {
+        intAVLTree* tree = init_avltree(dInt)(true);
+        insert_avltree(tree, 42);
+        insert_avltree(tree, 21);
+        insert_avltree(tree, 21);
+        print(tree);  
+        free_avltree(tree);
+        return 0;
+    }
+
+.. code-block:: bash
+
+    >> [ 21, 21, 42 ]
+
+This example initializes an integer AVL tree and inserts two integers using the 
+``insert_avltree`` macro. The macro correctly selects ``insert_int_avltree`` 
+based on the type of the tree pointer passed.
 
