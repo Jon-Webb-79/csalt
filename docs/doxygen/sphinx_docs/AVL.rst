@@ -438,3 +438,76 @@ This example initializes an integer AVL tree and inserts two integers using the
 ``insert_avltree`` macro. The macro correctly selects ``insert_int_avltree`` 
 based on the type of the tree pointer passed.
 
+Remove from AVL Tree
+====================
+The ``remove_avltree`` macro provides a generic interface for removing elements 
+from AVL trees of various data types. Utilizing the C11 ``_Generic`` keyword, 
+this macro enables type-based dispatch to select the appropriate type-specific 
+removal function according to the type of the AVL tree provided.
+
+.. code-block:: c
+
+    #define remove_avltree(tree, value) _Generic((tree), \
+        charAVLTree*: remove_char_avltree, \
+        ucharAVLTree*: remove_uchar_avltree, \
+        shortAVLTree*: remove_short_avltree, \
+        ushortAVLTree*: remove_ushort_avltree, \
+        intAVLTree*: remove_int_avltree, \
+        uintAVLTree*: remove_uint_avltree, \
+        longAVLTree*: remove_long_avltree, \
+        ulongAVLTree*: remove_ulong_avltree, \
+        llongAVLTree*: remove_llong_avltree, \
+        ullongAVLTree*: remove_ullong_avltree, \
+        floatAVLTree*: remove_float_avltree, \
+        doubleAVLTree*: remove_double_avltree, \
+        ldoubleAVLTree*: remove_ldouble_avltree, \
+        boolAVLTree*: remove_bool_avltree, \
+        stringAVLTree*: remove_string_avltree)(tree, value)
+
+The above macro also highlights the underlying functions that the user chan 
+directly invoke if they so choose.
+
+Parameters
+----------
+- :c:`tree`: A pointer to an AVL tree data structure, dynamically typed based on the type of tree.
+- :c:`value`: The data to be removed from the AVL tree, type-compatible with the tree's data type.
+
+.. note:: If the user passes a value that is not contained in the tree, the function will return control to the calling program with no effect to the structure. 
+
+Error Handling
+--------------
+Each removal function first checks if the tree pointer or value is ``NULL``. 
+If any argument is ``NULL``, ``errno`` is set to ``EINVAL`` to indicate an 
+invalid argument error. This ensures that attempting to remove from a ``NULL`` 
+tree pointer or using a ``NULL`` value does not lead to undefined behavior.
+
+.. note:: The function ``remove_string_avltree`` also checks the validity of the string pointer to ensure it is not ``NULL`` before attempting removal, preventing potential crashes from dereferencing null pointers during string comparisons.
+
+Example Usage
+-------------
+
+.. code-block:: c
+
+    #include "avl.h"
+
+    int main() {
+        intAVLTree* tree = init_avltree(dInt)(false);
+        insert_avltree(tree, 42);
+        insert_avltree(tree, 21);
+        insert_avltree(tree, 20);
+        insert_avltree(tree, 8);
+        remove_avltree(tree, 42);
+        print(tree);  
+        free_avltree(tree);
+        return 0;
+    }
+
+.. code-block:: bash
+
+    >> [ 8, 20, 21 ]
+
+This example demonstrates initializing an integer AVL tree, inserting four 
+integers, and then removing one using the ``remove_avltree`` macro. 
+The macro correctly selects ``remove_int_avltree`` based on the type of the 
+tree pointer passed, effectively removing the specified value.
+
