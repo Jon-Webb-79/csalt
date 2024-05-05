@@ -285,3 +285,64 @@ one of these functions instead of using the ``init_avltree`` function.
    ldouble_dl* init_ldouble_avltree(bool duplicates);
    bool_dl* init_bool_avltree(bool duplicates);
    string_dl* init_string_avltree(bool duplicates);
+
+Free AVL Tree 
+=============
+The ``free_avltree`` macro provides a generic interface for freeing memory 
+associated with AVL trees of various data types. This macro utilizes the C11 
+``_Generic`` keyword, which allows for type-based dispatch, enabling it to 
+call the appropriate type-specific free function based on the type of the AVL 
+tree passed to it.
+
+.. code-block:: c
+
+    #define free_avltree(tree) _Generic((tree), \
+        charAVLTree*: free_char_avltree, \
+        ucharAVLTree*: free_uchar_avltree, \
+        shortAVLTree*: free_short_avltree, \
+        ushortAVLTree*: free_ushort_avltree, \
+        intAVLTree*: free_int_avltree, \
+        uintAVLTree*: free_uint_avltree, \
+        longAVLTree*: free_long_avltree, \
+        ulongAVLTree*: free_ulong_avltree, \
+        llongAVLTree*: free_llong_avltree, \
+        ullongAVLTree*: free_ullong_avltree, \
+        floatAVLTree*: free_float_avltree, \
+        doubleAVLTree*: free_double_avltree, \
+        ldoubleAVLTree*: free_ldouble_avltree, \
+        boolAVLTree*: free_bool_avltree, \
+        stringAVLTree*: free_string_avltree)(tree)
+
+Parameters 
+----------
+- :c:`tree`: An avl tree data structure of the type defined in :ref:`Derived Data types <avl_dat_type>`
+
+.. note:: An AVL Tree should not be freed from memory more than once; however, the underyling functions have logic to prevent harm if a user does doubly free a tree data structure.
+
+Error Handling
+--------------
+Each free function checks if the tree pointer is ``NULL`` before proceeding. 
+If ``NULL``, the macro sets ``errno`` to ``EINVAL`` to indicate an invalid 
+argument error. This ensures that attempting to free a ``NULL`` tree pointer 
+does not result in undefined behavior.
+
+Example 
+-------
+
+.. code-block:: c
+
+   #include "avl.h"
+
+   int main() {
+       stringAVLTree* tree = init_avltree(dString)(true);
+       insert_avltree(tree, "One");
+       insert_avltree(tree, "Two);
+       print(tree);
+       free_avltree(tree);
+       return 0;
+   }
+
+.. code-block:: bash 
+
+   >> [ One, Two ]
+
