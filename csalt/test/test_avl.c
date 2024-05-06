@@ -759,6 +759,138 @@ void test_insert_string_avl_duplicates(void **state) {
     assert_int_equal(avltree_size(tree), 1);
     free_avltree(tree);
 }
+// ================================================================================
+// ================================================================================
+
+void test_char_avltree_gbc(void **state) {
+    charAVLTree* tree gbc_char_avltree = init_avltree(dChar)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_uchar_avltree_gbc(void **state) {
+    ucharAVLTree* tree gbc_uchar_avltree = init_avltree(dUChar)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_short_avltree_gbc(void **state) {
+    shortAVLTree* tree gbc_short_avltree = init_avltree(dShort)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_ushort_avltree_gbc(void **state) {
+    ushortAVLTree* tree gbc_ushort_avltree = init_avltree(dUShort)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_int_avltree_gbc(void **state) {
+    intAVLTree* tree gbc_int_avltree = init_avltree(dInt)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_uint_avltree_gbc(void **state) {
+    uintAVLTree* tree gbc_uint_avltree = init_avltree(dUInt)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_long_avltree_gbc(void **state) {
+    longAVLTree* tree gbc_long_avltree = init_avltree(dLong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_ulong_avltree_gbc(void **state) {
+    ulongAVLTree* tree gbc_ulong_avltree = init_avltree(dULong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_llong_avltree_gbc(void **state) {
+    llongAVLTree* tree gbc_llong_avltree = init_avltree(dLongLong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_ullong_avltree_gbc(void **state) {
+    ullongAVLTree* tree gbc_ullong_avltree = init_avltree(dULongLong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+}
+// --------------------------------------------------------------------------------
+
+void test_float_avltree_gbc(void **state) {
+    floatAVLTree* tree gbc_float_avltree = init_avltree(dFloat)(false);
+    insert_avltree(tree, 1.f);
+    insert_avltree(tree, 2.f);
+    insert_avltree(tree, 3.f);
+    insert_avltree(tree, 4.f);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_double_avltree_gbc(void **state) {
+    doubleAVLTree* tree gbc_double_avltree = init_avltree(dDouble)(false);
+    insert_avltree(tree, 1.);
+    insert_avltree(tree, 2.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 4.);
+}
+// --------------------------------------------------------------------------------
+
+void test_ldouble_avltree_gbc(void **state) {
+    ldoubleAVLTree* tree gbc_ldouble_avltree = init_avltree(dLDouble)(false);
+    insert_avltree(tree, 1.);
+    insert_avltree(tree, 2.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 4.);
+}
+// --------------------------------------------------------------------------------
+
+void test_bool_avltree_gbc(void **state) {
+    boolAVLTree* tree gbc_bool_avltree = init_avltree(dBool)(false);
+    insert_avltree(tree, true);
+    insert_avltree(tree, false);
+}
+// --------------------------------------------------------------------------------
+
+void test_string_avltree_gbc(void **state) {
+    stringAVLTree* tree gbc_string_avltree = init_avltree(dString)(false);
+    insert_avltree(tree, "One");
+    insert_avltree(tree, "Two");
+}
 // ================================================================================ 
 // ================================================================================ 
 // eof

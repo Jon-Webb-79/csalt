@@ -76,6 +76,24 @@ void test_insert_bool_avl_duplicates(void **state);
 void test_insert_string_avl_no_duplicates(void **state);
 void test_insert_string_avl_duplicates(void **state);
 // ================================================================================
+// ================================================================================
+
+void test_char_avltree_gbc(void **state);
+void test_uchar_avltree_gbc(void **state);
+void test_short_avltree_gbc(void **state);
+void test_ushort_avltree_gbc(void **state);
+void test_int_avltree_gbc(void **state);
+void test_uint_avltree_gbc(void **state);
+void test_long_avltree_gbc(void **state);
+void test_ulong_avltree_gbc(void **state);
+void test_llong_avltree_gbc(void **state);
+void test_ullong_avltree_gbc(void **state);
+void test_float_avltree_gbc(void **state);
+void test_double_avltree_gbc(void **state);
+void test_ldouble_avltree_gbc(void **state);
+void test_bool_avltree_gbc(void **state);
+void test_string_avltree_gbc(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_AVL_H */
 // ================================================================================

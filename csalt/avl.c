@@ -2036,6 +2036,113 @@ void free_string_avltree(stringAVLTree* tree) {
     _free_string_avltree(tree->root);
     free(tree);
 }
+// ================================================================================
+// ================================================================================
+// ENABLE GARBAGE COLLECTION WITH GCC AND CLANG
+
+void _freeCharAvltree(charAVLTree** root) {
+    if (root && *root) {
+        free_char_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeUCharAvltree(ucharAVLTree** root) {
+    if (root && *root) {
+        free_uchar_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeShortAvltree(shortAVLTree** root) {
+    if (root && *root) {
+        free_short_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeUShortAvltree(ushortAVLTree** root) {
+    if (root && *root) {
+        free_ushort_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeIntAvltree(intAVLTree** root) {
+    if (root && *root) {
+        free_int_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeUIntAvltree(uintAVLTree** root) {
+    if (root && *root) {
+        free_uint_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeLongAvltree(longAVLTree** root) {
+    if (root && *root) {
+        free_long_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeULongAvltree(ulongAVLTree** root) {
+    if (root && *root) {
+        free_ulong_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeLLongAvltree(llongAVLTree** root) {
+    if (root && *root) {
+        free_llong_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeULLongAvltree(ullongAVLTree** root) {
+    if (root && *root) {
+        free_ullong_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeFloatAvltree(floatAVLTree** root) {
+    if (root && *root) {
+        free_float_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeDoubleAvltree(doubleAVLTree** root) {
+    if (root && *root) {
+        free_double_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeLDoubleAvltree(ldoubleAVLTree** root) {
+    if (root && *root) {
+        free_ldouble_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeBoolAvltree(boolAVLTree** root) {
+    if (root && *root) {
+        free_bool_avltree(*root);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeStringAvltree(stringAVLTree** root) {
+    if (root && *root) {
+        free_string_avltree(*root);
+    }
+}
 // ================================================================================ 
 // ================================================================================
 

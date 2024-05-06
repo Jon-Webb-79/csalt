@@ -702,6 +702,43 @@ void free_string_avltree(stringAVLTree* tree);
 // ================================================================================
 // ================================================================================
 
+void _freeCharAvltree(charAVLTree** root);
+void _freeUCharAvltree(ucharAVLTree** root);
+void _freeShortAvltree(shortAVLTree** root);
+void _freeUShortAvltree(ushortAVLTree** root);
+void _freeIntAvltree(intAVLTree** root);
+void _freeUIntAvltree(uintAVLTree** root);
+void _freeLongAvltree(longAVLTree** root);
+void _freeULongAvltree(ulongAVLTree** root);
+void _freeLLongAvltree(llongAVLTree** root);
+void _freeULLongAvltree(ullongAVLTree** root);
+void _freeFloatAvltree(floatAVLTree** root);
+void _freeDoubleAvltree(doubleAVLTree** root);
+void _freeLDoubleAvltree(ldoubleAVLTree** root);
+void _freeBoolAvltree(boolAVLTree** root);
+void _freeStringAvltree(stringAVLTree** root);
+// --------------------------------------------------------------------------------
+
+#if defined(__GNUC__) || defined(__clang__)
+#define gbc_char_avltree __attribute__((cleanup(_freeCharAvltree)))
+#define gbc_uchar_avltree __attribute__((cleanup(_freeUCharAvltree)))
+#define gbc_short_avltree __attribute__((cleanup(_freeShortAvltree)))
+#define gbc_ushort_avltree __attribute__((cleanup(_freeUShortAvltree)))
+#define gbc_int_avltree __attribute__((cleanup(_freeIntAvltree)))
+#define gbc_uint_avltree __attribute__((cleanup(_freeUIntAvltree)))
+#define gbc_long_avltree __attribute__((cleanup(_freeLongAvltree)))
+#define gbc_ulong_avltree __attribute__((cleanup(_freeULongAvltree)))
+#define gbc_llong_avltree __attribute__((cleanup(_freeLLongAvltree)))
+#define gbc_ullong_avltree __attribute__((cleanup(_freeULLongAvltree)))
+#define gbc_float_avltree __attribute__((cleanup(_freeFloatAvltree)))
+#define gbc_double_avltree __attribute__((cleanup(_freeDoubleAvltree)))
+#define gbc_ldouble_avltree __attribute__((cleanup(_freeLDoubleAvltree)))
+#define gbc_bool_avltree __attribute__((cleanup(_freeBoolAvltree)))
+#define gbc_string_avltree __attribute__((cleanup(_freeStringAvltree)))
+#endif
+// ================================================================================
+// ================================================================================
+
 size_t char_avltree_size(charAVLTree* tree);
 size_t uchar_avltree_size(ucharAVLTree* tree);
 size_t short_avltree_size(shortAVLTree* tree);
