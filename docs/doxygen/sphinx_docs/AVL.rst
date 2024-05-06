@@ -206,8 +206,8 @@ of this document.
        dString  // Keyword for str data type
    } dtype;
 
-Initialize an AVL Tree 
-=======================
+init_avltree
+============
 The ``avl.h`` header file provides the ``init_avltree`` function for initializing 
 an AVL Binary Tree linked list.  This function is essentially a function pointer, 
 intelligently selecting the appropriate initialization function based on the 
@@ -286,8 +286,8 @@ one of these functions instead of using the ``init_avltree`` function.
    bool_dl* init_bool_avltree(bool duplicates);
    string_dl* init_string_avltree(bool duplicates);
 
-Free AVL Tree 
-=============
+free_avltree
+============
 The ``free_avltree`` macro provides a generic interface for freeing memory 
 associated with AVL trees of various data types. This macro utilizes the C11 
 ``_Generic`` keyword, which allows for type-based dispatch, enabling it to 
@@ -350,8 +350,49 @@ Example
 
    >> [ One, Two ]
 
-Insert into AVL Tree
-====================
+Garbage Collection with AVL Binary Trees 
+========================================
+While a user of this library can implement the ``free_avltree`` macro to 
+manually free an AVL Tree, they can also implement automated Garbage 
+Collection if they use a `GCC` or `CLANG` compiler.  This feautre leverages the 
+`cleanup` attribute available in these compilers and is not part of the standard 
+C language.
+
+The macro follows the naming convention ``gbc_<type>_avltree``, where ``<type>``
+corresponds to the derived data types mentioned in 
+:ref:`Derived Data Types <avl_dat_type>`.
+
+.. note:: A user should not implement garbage collection and then manually free data with the ``free_avltree`` macro.  However, the ``free_avltree`` macro has logic built into it to return control to the calling program without harm if such an operation is to occur.
+
+Example 
+-------
+Below is an example demonstrating the use of garbage collection with a 
+``intAVLTree`` tree.  Notice the absence of a manual ``free_avltree``
+call; the ``gbc_int_dl`` macro ensures automatic deallocation when 
+variable goes out of scope.
+
+.. code-block:: c 
+
+   #include "avl.h"
+   #include "print.h"
+
+   int main() {
+
+       intAVLTree* tree gbc_int_avltree = init_avltree(dInt)(false);
+       insert_avltree(tree, 1);
+       insert_avltree(tree, 2);
+       insert_avltree(tree, 3);
+       insert_avltree(tree, 4);
+       print(tree);
+       return 0;
+   }
+
+.. code-block:: c
+
+   >> { 1, 2, 3, 4 }
+
+insert_avltree
+==============
 The ``insert_avltree`` macro simplifies the process of inserting elements into 
 AVL trees by utilizing the C11 ``_Generic`` keyword for type-based dispatch. 
 This macro selects the appropriate type-specific insertion function based on 
