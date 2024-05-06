@@ -553,8 +553,8 @@ integers, and then removing one using the ``remove_avltree`` macro.
 The macro correctly selects ``remove_int_avltree`` based on the type of the 
 tree pointer passed, effectively removing the specified value.
 
-AVL Tree Size
-=============
+avltree_size
+============
 The ``avltree_size`` macro offers a uniform interface to retrieve the size of 
 AVL trees across various data types. Utilizing the C11 ``_Generic`` keyword, 
 it directs the call to the appropriate type-specific function that returns the 
@@ -621,4 +621,71 @@ Example Usage
 This example initializes an integer AVL tree, inserts two integers into it, 
 and then uses the ``avltree_size`` macro to determine how many elements are in 
 the tree before it is freed.
+
+min_avltree 
+===========
+The ``min_avltree`` macro provides a generic interface for obtaining the 
+minimum value from AVL trees of various data types. Leveraging the C11 
+``_Generic`` keyword, it dispatches the call to the appropriate type-specific 
+function that retrieves the smallest value from the tree based on its type.
+
+.. code-block:: c
+
+    #define min_avltree(tree) _Generic((tree), \
+        charAVLTree*: min_char_avltree, \
+        ucharAVLTree*: min_uchar_avltree, \
+        shortAVLTree*: min_short_avltree, \
+        ushortAVLTree*: min_ushort_avltree, \
+        intAVLTree*: min_int_avltree, \
+        uintAVLTree*: min_uint_avltree, \
+        longAVLTree*: min_long_avltree, \
+        ulongAVLTree*: min_ulong_avltree, \
+        llongAVLTree*: min_llong_avltree, \
+        ullongAVLTree*: min_ullong_avltree, \
+        floatAVLTree*: min_float_avltree, \
+        doubleAVLTree*: min_double_avltree, \
+        ldoubleAVLTree*: min_ldouble_avltree, \
+        boolAVLTree*: min_bool_avltree, \
+        stringAVLTree*: min_string_avltree)(tree)
+
+Parameters
+----------
+- :c:`tree`: A pointer to an AVL tree of any supported data type.
+
+.. note:: Each function called by this macro walks the tree to the leftmost node, which represents the minimum value in the AVL tree.
+
+Error Handling
+--------------
+Each function verifies if the provided tree pointer is ``NULL`` before attempting 
+to access its properties. If ``NULL``, ``errno`` is set to ``EINVAL`` 
+(Invalid Argument), which helps prevent undefined behavior and signals improper usage.
+
+.. warning:: Care must be taken with the returned value from trees containing dynamic data types like strings. Do not free the returned ``str*`` data directly, as it remains managed within the tree structure. Improper handling could lead to memory leaks or double free errors.
+
+Example Usage
+-------------
+
+.. code-block:: c
+
+    #include "avl.h"
+    #include "print.h"
+
+    int main() {
+        stringAVLTree* tree = init_avltree(dString)(false);
+        insert_avltree(tree, "Orange");
+        insert_avltree(tree, "Apple");
+        insert_avltree(tree, "Banana");
+        str* minStr = min_avltree(tree);
+        print("Minimum value: ", minStr->data);
+        free_avltree(tree);
+        return 0;
+    }
+
+.. code-block:: bash
+
+    >> Minimum value: Apple
+
+This example initializes a string AVL tree, inserts several strings, retrieves 
+the smallest string without needing to free the returned value explicitly, and 
+then frees the entire tree safely.
 
