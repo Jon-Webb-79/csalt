@@ -2281,4 +2281,335 @@ size_t string_avltree_size(stringAVLTree* tree) {
 }
 // ================================================================================
 // ================================================================================
+
+static char _char_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return CHAR_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((charAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned char _uchar_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return UCHAR_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((ucharAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static short int _short_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return SHRT_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((shortAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned short int _ushort_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return USHRT_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((ushortAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static int _int_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return INT_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((intAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned int _uint_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return USHRT_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((uintAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static long int _long_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return LONG_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((longAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long int _ulong_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return ULONG_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((ulongAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static long long int _llong_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return LLONG_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((llongAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static unsigned long long int _ullong_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return ULLONG_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((ullongAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static float _float_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((floatAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static double _double_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return DBL_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((doubleAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static long double _ldouble_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return LDBL_MAX;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((ldoubleAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static bool _bool_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return false;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((boolAVLNode*)current)->data;
+}
+// --------------------------------------------------------------------------------
+
+static str* _string_min_val(AVLNode* node) {
+    if (!node) {
+        errno = EINVAL;
+        return NULL;
+    }
+    AVLNode* current = node;
+    while (current->left) {
+        current = current->left;
+    }
+    return ((stringAVLNode*)current)->data;
+}
+// ================================================================================
+
+char min_char_avltree(charAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return CHAR_MAX;
+    }
+    return _char_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+unsigned char min_uchar_avltree(ucharAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return UCHAR_MAX;
+    }
+    return _uchar_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+short int min_short_avltree(shortAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return SHRT_MAX;
+    }
+    return _short_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int min_ushort_avltree(ushortAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return USHRT_MAX;
+    }
+    return _ushort_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+int min_int_avltree(intAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return INT_MAX;
+    }
+    return _int_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+unsigned int min_uint_avltree(uintAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return UINT_MAX;
+    }
+    return _uint_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+long int min_long_avltree(longAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return LONG_MAX;
+    }
+    return _long_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int min_ulong_avltree(ulongAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return ULONG_MAX;
+    }
+    return _ulong_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+long long int min_llong_avltree(llongAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return LLONG_MAX;
+    }
+    return _llong_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int min_ullong_avltree(ullongAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return ULLONG_MAX;
+    }
+    return _ullong_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+float min_float_avltree(floatAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+    return _float_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+double min_double_avltree(doubleAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return DBL_MAX;
+    }
+    return _double_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+long double min_ldouble_avltree(ldoubleAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return LDBL_MAX;
+    }
+    return _ldouble_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+bool min_bool_avltree(boolAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return false;
+    }
+    return _bool_min_val(tree->root);
+}
+// --------------------------------------------------------------------------------
+
+str* min_string_avltree(stringAVLTree* tree) {
+    if (!tree) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return _string_min_val(tree->root);
+}
+// ================================================================================
+// ================================================================================
 // eof

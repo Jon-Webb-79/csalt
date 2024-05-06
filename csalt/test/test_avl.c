@@ -892,5 +892,197 @@ void test_string_avltree_gbc(void **state) {
     insert_avltree(tree, "Two");
 }
 // ================================================================================ 
+// ================================================================================
+
+void test_min_char_avltree(void **state) {
+    charAVLTree* tree = init_avltree(dChar)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    char minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_uchar_avltree(void **state) {
+    ucharAVLTree* tree = init_avltree(dUChar)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned char minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_short_avltree(void **state) {
+    shortAVLTree* tree = init_avltree(dShort)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    short minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_ushort_avltree(void **state) {
+    ushortAVLTree* tree = init_avltree(dUShort)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned short int minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_int_avltree(void **state) {
+    intAVLTree* tree = init_avltree(dInt)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    int minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_uint_avltree(void **state) {
+    uintAVLTree* tree = init_avltree(dUInt)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned int minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_long_avltree(void **state) {
+    longAVLTree* tree = init_avltree(dLong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    long int minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_ulong_avltree(void **state) {
+    ulongAVLTree* tree = init_avltree(dULong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned long int minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_llong_avltree(void **state) {
+    llongAVLTree* tree = init_avltree(dLongLong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    long long int minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_ullong_avltree(void **state) {
+    ullongAVLTree* tree = init_avltree(dULongLong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned long long int minVal = min_avltree(tree);
+    assert_int_equal(minVal, 1);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_float_avltree(void **state) {
+    floatAVLTree* tree = init_avltree(dFloat)(false);
+    insert_avltree(tree, 1.f);
+    insert_avltree(tree, 2.f);
+    insert_avltree(tree, 3.f);
+    insert_avltree(tree, 4.f);
+    insert_avltree(tree, 5.f);
+    float minVal = min_avltree(tree);
+    assert_float_equal(minVal, 1.f, 1.0e-3);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_double_avltree(void **state) {
+    doubleAVLTree* tree = init_avltree(dDouble)(false);
+    insert_avltree(tree, 1.);
+    insert_avltree(tree, 2.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 4.);
+    insert_avltree(tree, 5.);
+    double minVal = min_avltree(tree);
+    assert_double_equal(minVal, 1., 1.0e-3);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_ldouble_avltree(void **state) {
+    ldoubleAVLTree* tree = init_avltree(dLDouble)(false);
+    insert_avltree(tree, 1.);
+    insert_avltree(tree, 2.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 4.);
+    insert_avltree(tree, 5.);
+    long double minVal = min_avltree(tree);
+    assert_double_equal(minVal, 1., 1.0e-3);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_bool_avltree(void **state) {
+    boolAVLTree* tree = init_avltree(dBool)(false);
+    insert_avltree(tree, true);
+    insert_avltree(tree, false);
+    bool minVal = min_avltree(tree);
+    assert_int_equal(minVal, false);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_min_string_avltree(void **state) {
+    stringAVLTree* tree = init_avltree(dString)(false);
+    insert_avltree(tree, "One");
+    insert_avltree(tree, "Two");
+    insert_avltree(tree, "Three");
+    insert_avltree(tree, "Five");
+    str* minVal = min_avltree(tree);
+    assert_string_equal("Five", minVal->data);
+    free_avltree(tree);
+}
+// ================================================================================ 
 // ================================================================================ 
 // eof

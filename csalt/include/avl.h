@@ -773,6 +773,42 @@ size_t string_avltree_size(stringAVLTree* tree);
     boolAVLTree*: bool_avltree_size, \
     stringAVLTree*: string_avltree_size)(tree)
 // ================================================================================
+// ================================================================================
+
+char min_char_avltree(charAVLTree* tree);
+unsigned char min_uchar_avltree(ucharAVLTree* tree);
+short int min_short_avltree(shortAVLTree* tree);
+unsigned short int min_ushort_avltree(ushortAVLTree* tree);
+int min_int_avltree(intAVLTree* tree);
+unsigned int min_uint_avltree(uintAVLTree* tree);
+long int min_long_avltree(longAVLTree* tree);
+unsigned long int min_ulong_avltree(ulongAVLTree* tree);
+long long int min_llong_avltree(llongAVLTree* tree);
+unsigned long long int min_ullong_avltree(ullongAVLTree* tree);
+float min_float_avltree(floatAVLTree* tree);
+double min_double_avltree(doubleAVLTree* tree);
+long double min_ldouble_avltree(ldoubleAVLTree* tree);
+bool min_bool_avltree(boolAVLTree* tree);
+str* min_string_avltree(stringAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+#define min_avltree(tree) _Generic((tree), \
+    charAVLTree*: min_char_avltree, \
+    ucharAVLTree*: min_uchar_avltree, \
+    shortAVLTree*: min_short_avltree, \
+    ushortAVLTree*: min_ushort_avltree, \
+    intAVLTree*: min_int_avltree, \
+    uintAVLTree*: min_uint_avltree, \
+    longAVLTree*: min_long_avltree, \
+    ulongAVLTree*: min_ulong_avltree, \
+    llongAVLTree*: min_llong_avltree, \
+    ullongAVLTree*: min_ullong_avltree, \
+    floatAVLTree*: min_float_avltree, \
+    doubleAVLTree*: min_double_avltree, \
+    ldoubleAVLTree*: min_ldouble_avltree, \
+    boolAVLTree*: min_bool_avltree, \
+    stringAVLTree*: min_string_avltree)(tree)
+// ================================================================================
 // ================================================================================ 
 #ifdef __cplusplus
 }
