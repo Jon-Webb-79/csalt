@@ -1084,5 +1084,197 @@ void test_min_string_avltree(void **state) {
     free_avltree(tree);
 }
 // ================================================================================ 
+// ================================================================================
+
+void test_max_char_avltree(void **state) {
+    charAVLTree* tree = init_avltree(dChar)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    char maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_uchar_avltree(void **state) {
+    ucharAVLTree* tree = init_avltree(dUChar)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned char maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_short_avltree(void **state) {
+    shortAVLTree* tree = init_avltree(dShort)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    short maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_ushort_avltree(void **state) {
+    ushortAVLTree* tree = init_avltree(dUShort)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned short int maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_int_avltree(void **state) {
+    intAVLTree* tree = init_avltree(dInt)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    int maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_uint_avltree(void **state) {
+    uintAVLTree* tree = init_avltree(dUInt)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned int maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_long_avltree(void **state) {
+    longAVLTree* tree = init_avltree(dLong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    long int maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_ulong_avltree(void **state) {
+    ulongAVLTree* tree = init_avltree(dULong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned long int maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_llong_avltree(void **state) {
+    llongAVLTree* tree = init_avltree(dLongLong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    long long int maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_ullong_avltree(void **state) {
+    ullongAVLTree* tree = init_avltree(dULongLong)(false);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    unsigned long long int maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, 5);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_float_avltree(void **state) {
+    floatAVLTree* tree = init_avltree(dFloat)(false);
+    insert_avltree(tree, 1.f);
+    insert_avltree(tree, 2.f);
+    insert_avltree(tree, 3.f);
+    insert_avltree(tree, 4.f);
+    insert_avltree(tree, 5.f);
+    float maxVal = max_avltree(tree);
+    assert_float_equal(maxVal, 5.f, 1.0e-3);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_double_avltree(void **state) {
+    doubleAVLTree* tree = init_avltree(dDouble)(false);
+    insert_avltree(tree, 1.);
+    insert_avltree(tree, 2.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 4.);
+    insert_avltree(tree, 5.);
+    double maxVal = max_avltree(tree);
+    assert_double_equal(maxVal, 5., 1.0e-3);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_ldouble_avltree(void **state) {
+    ldoubleAVLTree* tree = init_avltree(dLDouble)(false);
+    insert_avltree(tree, 1.);
+    insert_avltree(tree, 2.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 4.);
+    insert_avltree(tree, 5.);
+    long double maxVal = max_avltree(tree);
+    assert_double_equal(maxVal, 5., 1.0e-3);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_bool_avltree(void **state) {
+    boolAVLTree* tree = init_avltree(dBool)(false);
+    insert_avltree(tree, true);
+    insert_avltree(tree, false);
+    bool maxVal = max_avltree(tree);
+    assert_int_equal(maxVal, true);
+    free_avltree(tree);
+}
+// --------------------------------------------------------------------------------
+
+void test_max_string_avltree(void **state) {
+    stringAVLTree* tree = init_avltree(dString)(false);
+    insert_avltree(tree, "One");
+    insert_avltree(tree, "Two");
+    insert_avltree(tree, "Three");
+    insert_avltree(tree, "Five");
+    str* maxVal = max_avltree(tree);
+    assert_string_equal("Two", maxVal->data);
+    free_avltree(tree);
+}
+// ================================================================================ 
 // ================================================================================ 
 // eof

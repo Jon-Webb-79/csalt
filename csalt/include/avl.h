@@ -809,6 +809,42 @@ str* min_string_avltree(stringAVLTree* tree);
     boolAVLTree*: min_bool_avltree, \
     stringAVLTree*: min_string_avltree)(tree)
 // ================================================================================
+// ================================================================================
+
+char max_char_avltree(charAVLTree* tree);
+unsigned char max_uchar_avltree(ucharAVLTree* tree);
+short int max_short_avltree(shortAVLTree* tree);
+unsigned short int max_ushort_avltree(ushortAVLTree* tree);
+int max_int_avltree(intAVLTree* tree);
+unsigned int max_uint_avltree(uintAVLTree* tree);
+long int max_long_avltree(longAVLTree* tree);
+unsigned long int max_ulong_avltree(ulongAVLTree* tree);
+long long int max_llong_avltree(llongAVLTree* tree);
+unsigned long long int max_ullong_avltree(ullongAVLTree* tree);
+float max_float_avltree(floatAVLTree* tree);
+double max_double_avltree(doubleAVLTree* tree);
+long double max_ldouble_avltree(ldoubleAVLTree* tree);
+bool max_bool_avltree(boolAVLTree* tree);
+str* max_string_avltree(stringAVLTree* tree);
+// --------------------------------------------------------------------------------
+
+#define max_avltree(tree) _Generic((tree), \
+    charAVLTree*: max_char_avltree, \
+    ucharAVLTree*: max_uchar_avltree, \
+    shortAVLTree*: max_short_avltree, \
+    ushortAVLTree*: max_ushort_avltree, \
+    intAVLTree*: max_int_avltree, \
+    uintAVLTree*: max_uint_avltree, \
+    longAVLTree*: max_long_avltree, \
+    ulongAVLTree*: max_ulong_avltree, \
+    llongAVLTree*: max_llong_avltree, \
+    ullongAVLTree*: max_ullong_avltree, \
+    floatAVLTree*: max_float_avltree, \
+    doubleAVLTree*: max_double_avltree, \
+    ldoubleAVLTree*: max_ldouble_avltree, \
+    boolAVLTree*: max_bool_avltree, \
+    stringAVLTree*: max_string_avltree)(tree)
+// ================================================================================
 // ================================================================================ 
 #ifdef __cplusplus
 }
