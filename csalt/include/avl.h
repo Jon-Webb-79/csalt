@@ -28,6 +28,7 @@
 
 #include "str.h"
 #include "admin.h"
+#include "vector.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -844,6 +845,42 @@ str* max_string_avltree(stringAVLTree* tree);
     ldoubleAVLTree*: max_ldouble_avltree, \
     boolAVLTree*: max_bool_avltree, \
     stringAVLTree*: max_string_avltree)(tree)
+// ================================================================================
+// ================================================================================
+
+char_v* avltree_char_values(charAVLTree* tree, char value, Boolean comp);
+uchar_v* avltree_uchar_values(ucharAVLTree* tree, unsigned char value, Boolean comp);
+short_v* avltree_short_values(shortAVLTree* tree, short int value, Boolean comp);
+ushort_v* avltree_ushort_values(ushortAVLTree* tree, unsigned short int value, Boolean comp);
+int_v* avltree_int_values(intAVLTree* tree, int value, Boolean comp);
+uint_v* avltree_uint_values(uintAVLTree* tree, unsigned int value, Boolean comp);
+long_v* avltree_long_values(longAVLTree* tree, long int value, Boolean comp);
+ulong_v* avltree_ulong_values(ulongAVLTree* tree, unsigned long int value, Boolean comp);
+llong_v* avltree_llong_values(llongAVLTree* tree, long long int value, Boolean comp);
+ullong_v* avltree_ullong_values(ullongAVLTree* tree, unsigned long long int value, Boolean comp);
+float_v* avltree_float_values(floatAVLTree* tree, float value, Boolean comp);
+double_v* avltree_double_values(doubleAVLTree* tree, double value, Boolean comp);
+ldouble_v* avltree_ldouble_values(ldoubleAVLTree* tree, long double value, Boolean comp);
+bool_v* avltree_bool_values(boolAVLTree* tree, bool value, Boolean comp);
+string_v* avltree_string_values(stringAVLTree* treee, char* value, Boolean comp);
+// ================================================================================
+
+#define avltree_values(tree, value, comp) _Generic((tree), \
+    charAVLTree*: avltree_char_values, \
+    ucharAVLTree*: avltree_uchar_values, \
+    shortAVLTree*: avltree_short_values, \
+    ushortAVLTree*: avltree_ushort_values, \
+    intAVLTree*: avltree_int_values, \
+    uintAVLTree*: avltree_uint_values, \
+    longAVLTree*: avltree_long_values, \
+    ulongAVLTree*: avltree_ulong_values, \
+    llongAVLTree*: avltree_llong_values, \
+    ullongAVLTree*: avltree_ullong_values, \
+    floatAVLTree*: avltree_float_values, \
+    doubleAVLTree*: avltree_double_values, \
+    ldoubleAVLTree*: avltree_ldouble_values, \
+    boolAVLTree*: avltree_bool_values, \
+    stringAVLTree*: avltree_string_values)(tree, value, comp)
 // ================================================================================
 // ================================================================================ 
 #ifdef __cplusplus

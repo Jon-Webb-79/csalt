@@ -130,6 +130,24 @@ void test_max_ldouble_avltree(void **state);
 void test_max_bool_avltree(void **state);
 void test_max_string_avltree(void **state);
 // ================================================================================
+// ================================================================================
+
+void test_all_char_avltree(void **state);
+void test_all_uchar_avltree(void **state);
+void test_all_short_avltree(void **state);
+void test_all_ushort_avltree(void **state);
+void test_all_int_avltree(void **state);
+void test_all_uint_avltree(void **state);
+void test_all_long_avltree(void **state);
+void test_all_ulong_avltree(void **state);
+void test_all_llong_avltree(void **state);
+void test_all_ullong_avltree(void **state);
+void test_all_float_avltree(void **state);
+void test_all_double_avltree(void **state);
+void test_all_ldouble_avltree(void **state);
+void test_all_bool_avltree(void **state);
+void test_all_string_avltree(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_AVL_H */
 // ================================================================================
