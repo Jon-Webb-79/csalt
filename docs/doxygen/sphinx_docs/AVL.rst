@@ -689,3 +689,69 @@ This example initializes a string AVL tree, inserts several strings, retrieves
 the smallest string without needing to free the returned value explicitly, and 
 then frees the entire tree safely.
 
+max_avltree 
+===========
+The ``max_avltree`` macro provides a generic interface for obtaining the 
+maximum value from AVL trees of various data types. Leveraging the C11 
+``_Generic`` keyword, it dispatches the call to the appropriate type-specific 
+function that retrieves the smallest value from the tree based on its type.
+
+.. code-block:: c
+
+    #define max_avltree(tree) _Generic((tree), \
+        charAVLTree*: max_char_avltree, \
+        ucharAVLTree*: max_uchar_avltree, \
+        shortAVLTree*: max_short_avltree, \
+        ushortAVLTree*: max_ushort_avltree, \
+        intAVLTree*: max_int_avltree, \
+        uintAVLTree*: max_uint_avltree, \
+        longAVLTree*: max_long_avltree, \
+        ulongAVLTree*: max_ulong_avltree, \
+        llongAVLTree*: max_llong_avltree, \
+        ullongAVLTree*: max_ullong_avltree, \
+        floatAVLTree*: max_float_avltree, \
+        doubleAVLTree*: max_double_avltree, \
+        ldoubleAVLTree*: max_ldouble_avltree, \
+        boolAVLTree*: max_bool_avltree, \
+        stringAVLTree*: max_string_avltree)(tree)
+
+Parameters
+----------
+- :c:`tree`: A pointer to an AVL tree of any supported data type.
+
+.. note:: Each function called by this macro walks the tree to the rightmost node, which represents the maximum value in the AVL tree.
+
+Error Handling
+--------------
+Each function verifies if the provided tree pointer is ``NULL`` before attempting 
+to access its properties. If ``NULL``, ``errno`` is set to ``EINVAL`` 
+(Invalid Argument), which helps prevent undefined behavior and signals improper usage.
+
+.. warning:: Care must be taken with the returned value from trees containing dynamic data types like strings. Do not free the returned ``str*`` data directly, as it remains managed within the tree structure. Improper handling could lead to memory leaks or double free errors.
+
+Example Usage
+-------------
+
+.. code-block:: c
+
+    #include "avl.h"
+    #include "print.h"
+
+    int main() {
+        stringAVLTree* tree = init_avltree(dString)(false);
+        insert_avltree(tree, "Orange");
+        insert_avltree(tree, "Apple");
+        insert_avltree(tree, "Banana");
+        str* maxStr = max_avltree(tree);
+        print("Maximum value: ", minStr->data);
+        free_avltree(tree);
+        return 0;
+    }
+
+.. code-block:: bash
+
+    >> Maximum value: Orange
+
+This example initializes a string AVL tree, inserts several strings, retrieves 
+the greatest string without needing to free the returned value explicitly, and 
+then frees the entire tree safely.
