@@ -2949,35 +2949,36 @@ static void traverse_char_and_add(char_v* vec, AVLNode* node, Boolean comp, char
     // Recursively traverse the left subtree
     traverse_char_and_add(vec, node->left, comp, value);
 
+    char nodeValue = ((charAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((charAVLNode*)node)->data > value) {
-                push_char_vector(vec, ((charAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_char_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((charAVLNode*)node)->data < value) {
-                push_char_vector(vec, ((charAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_char_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((charAVLNode*)node)->data >= value) {
-                push_char_vector(vec, ((charAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_char_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((charAVLNode*)node)->data <= value) {
-                push_char_vector(vec, ((charAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_char_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((charAVLNode*)node)->data == value) {
-                push_char_vector(vec, ((charAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_char_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_char_vector(vec, ((charAVLNode*)node)->data, vec->len);
+            push_char_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -2989,38 +2990,39 @@ static void traverse_char_and_add(char_v* vec, AVLNode* node, Boolean comp, char
 static void traverse_uchar_and_add(uchar_v* vec, AVLNode* node, Boolean comp, unsigned char value) {
     if (node == NULL) return;
 
+    unsigned char nodeValue = ((ucharAVLNode*)node)->data;
     // Recursively traverse the left subtree
     traverse_uchar_and_add(vec, node->left, comp, value);
 
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((ucharAVLNode*)node)->data > value) {
-                push_uchar_vector(vec, ((ucharAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_uchar_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((ucharAVLNode*)node)->data < value) {
-                push_uchar_vector(vec, ((ucharAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_uchar_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((ucharAVLNode*)node)->data >= value) {
-                push_uchar_vector(vec, ((ucharAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_uchar_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((ucharAVLNode*)node)->data <= value) {
-                push_uchar_vector(vec, ((ucharAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_uchar_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((ucharAVLNode*)node)->data == value) {
-                push_uchar_vector(vec, ((ucharAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_uchar_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_uchar_vector(vec, ((ucharAVLNode*)node)->data, vec->len);
+            push_uchar_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3034,36 +3036,36 @@ static void traverse_short_and_add(short_v* vec, AVLNode* node, Boolean comp, sh
 
     // Recursively traverse the left subtree
     traverse_short_and_add(vec, node->left, comp, value);
-
+    short int nodeValue = ((shortAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((shortAVLNode*)node)->data > value) {
-                push_short_vector(vec, ((shortAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_short_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((shortAVLNode*)node)->data < value) {
-                push_short_vector(vec, ((shortAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_short_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((shortAVLNode*)node)->data >= value) {
-                push_short_vector(vec, ((shortAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_short_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((shortAVLNode*)node)->data <= value) {
-                push_short_vector(vec, ((shortAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_short_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((shortAVLNode*)node)->data == value) {
-                push_short_vector(vec, ((shortAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_short_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_short_vector(vec, ((shortAVLNode*)node)->data, vec->len);
+            push_short_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3078,35 +3080,36 @@ static void traverse_ushort_and_add(ushort_v* vec, AVLNode* node, Boolean comp, 
     // Recursively traverse the left subtree
     traverse_ushort_and_add(vec, node->left, comp, value);
 
+    unsigned short int nodeValue = ((ushortAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((ushortAVLNode*)node)->data > value) {
-                push_ushort_vector(vec, ((ushortAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_ushort_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((ushortAVLNode*)node)->data < value) {
-                push_ushort_vector(vec, ((ushortAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_ushort_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((ushortAVLNode*)node)->data >= value) {
-                push_ushort_vector(vec, ((ushortAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_ushort_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((ushortAVLNode*)node)->data <= value) {
-                push_ushort_vector(vec, ((ushortAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_ushort_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((ushortAVLNode*)node)->data == value) {
-                push_ushort_vector(vec, ((ushortAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_ushort_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_ushort_vector(vec, ((ushortAVLNode*)node)->data, vec->len);
+            push_ushort_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3121,35 +3124,37 @@ static void traverse_int_and_add(int_v* vec, AVLNode* node, Boolean comp, int va
     // Recursively traverse the left subtree
     traverse_int_and_add(vec, node->left, comp, value);
 
+    int nodeValue = ((intAVLNode*)node)->data;
+
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((intAVLNode*)node)->data > value) {
-                push_int_vector(vec, ((intAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_int_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((intAVLNode*)node)->data < value) {
-                push_int_vector(vec, ((intAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_int_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((intAVLNode*)node)->data >= value) {
-                push_int_vector(vec, ((intAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_int_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((intAVLNode*)node)->data <= value) {
-                push_int_vector(vec, ((intAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_int_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((intAVLNode*)node)->data == value) {
-                push_int_vector(vec, ((intAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_int_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_int_vector(vec, ((intAVLNode*)node)->data, vec->len);
+            push_int_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3164,35 +3169,36 @@ static void traverse_uint_and_add(uint_v* vec, AVLNode* node, Boolean comp, unsi
     // Recursively traverse the left subtree
     traverse_uint_and_add(vec, node->left, comp, value);
 
+    unsigned int nodeValue = ((uintAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((uintAVLNode*)node)->data > value) {
-                push_uint_vector(vec, ((uintAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_uint_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((uintAVLNode*)node)->data < value) {
-                push_uint_vector(vec, ((uintAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_uint_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((uintAVLNode*)node)->data >= value) {
-                push_uint_vector(vec, ((uintAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_uint_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((uintAVLNode*)node)->data <= value) {
-                push_uint_vector(vec, ((uintAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_uint_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((uintAVLNode*)node)->data == value) {
-                push_uint_vector(vec, ((uintAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_uint_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_uint_vector(vec, ((uintAVLNode*)node)->data, vec->len);
+            push_uint_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3207,35 +3213,36 @@ static void traverse_long_and_add(long_v* vec, AVLNode* node, Boolean comp, long
     // Recursively traverse the left subtree
     traverse_long_and_add(vec, node->left, comp, value);
 
+    long int nodeValue = ((longAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((longAVLNode*)node)->data > value) {
-                push_long_vector(vec, ((longAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_long_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((longAVLNode*)node)->data < value) {
-                push_long_vector(vec, ((longAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_long_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((longAVLNode*)node)->data >= value) {
-                push_long_vector(vec, ((longAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_long_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((longAVLNode*)node)->data <= value) {
-                push_long_vector(vec, ((longAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_long_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((longAVLNode*)node)->data == value) {
-                push_long_vector(vec, ((longAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_long_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_long_vector(vec, ((longAVLNode*)node)->data, vec->len);
+            push_long_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3250,35 +3257,37 @@ static void traverse_ulong_and_add(ulong_v* vec, AVLNode* node, Boolean comp, un
     // Recursively traverse the left subtree
     traverse_ulong_and_add(vec, node->left, comp, value);
 
+    unsigned long int nodeValue = ((ulongAVLNode*)node)->data;
+
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((ulongAVLNode*)node)->data > value) {
-                push_ulong_vector(vec, ((ulongAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_ulong_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((ulongAVLNode*)node)->data < value) {
-                push_ulong_vector(vec, ((ulongAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_ulong_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((ulongAVLNode*)node)->data >= value) {
-                push_ulong_vector(vec, ((ulongAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_ulong_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((ulongAVLNode*)node)->data <= value) {
-                push_ulong_vector(vec, ((ulongAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_ulong_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((ulongAVLNode*)node)->data == value) {
-                push_ulong_vector(vec, ((ulongAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_ulong_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_ulong_vector(vec, ((ulongAVLNode*)node)->data, vec->len);
+            push_ulong_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3293,35 +3302,36 @@ static void traverse_llong_and_add(llong_v* vec, AVLNode* node, Boolean comp, lo
     // Recursively traverse the left subtree
     traverse_llong_and_add(vec, node->left, comp, value);
 
+    long long int nodeValue = ((llongAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((llongAVLNode*)node)->data > value) {
-                push_llong_vector(vec, ((llongAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_llong_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((llongAVLNode*)node)->data < value) {
-                push_llong_vector(vec, ((llongAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_llong_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((llongAVLNode*)node)->data >= value) {
-                push_llong_vector(vec, ((llongAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_llong_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((llongAVLNode*)node)->data <= value) {
-                push_llong_vector(vec, ((llongAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_llong_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((llongAVLNode*)node)->data == value) {
-                push_llong_vector(vec, ((llongAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_llong_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_llong_vector(vec, ((llongAVLNode*)node)->data, vec->len);
+            push_llong_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3336,35 +3346,36 @@ static void traverse_ullong_and_add(ullong_v* vec, AVLNode* node, Boolean comp, 
     // Recursively traverse the left subtree
     traverse_ullong_and_add(vec, node->left, comp, value);
 
+    unsigned long long int nodeValue = ((ullongAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((ullongAVLNode*)node)->data > value) {
-                push_ullong_vector(vec, ((ullongAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_ullong_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((ullongAVLNode*)node)->data < value) {
-                push_ullong_vector(vec, ((ullongAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_ullong_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((ullongAVLNode*)node)->data >= value) {
-                push_ullong_vector(vec, ((ullongAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_ullong_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((ullongAVLNode*)node)->data <= value) {
-                push_ullong_vector(vec, ((ullongAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_ullong_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((ullongAVLNode*)node)->data == value) {
-                push_ullong_vector(vec, ((ullongAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_ullong_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_ullong_vector(vec, ((ullongAVLNode*)node)->data, vec->len);
+            push_ullong_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3375,39 +3386,39 @@ static void traverse_ullong_and_add(ullong_v* vec, AVLNode* node, Boolean comp, 
 
 static void traverse_float_and_add(float_v* vec, AVLNode* node, Boolean comp, float value) {
     if (node == NULL) return;
-
+    // float epsilon = 0.000001;
     // Recursively traverse the left subtree
     traverse_float_and_add(vec, node->left, comp, value);
-
+    float nodeValue = ((floatAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((floatAVLNode*)node)->data > value) {
-                push_float_vector(vec, ((floatAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_float_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((floatAVLNode*)node)->data < value) {
-                push_float_vector(vec, ((floatAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_float_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((floatAVLNode*)node)->data >= value) {
-                push_float_vector(vec, ((floatAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_float_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((floatAVLNode*)node)->data <= value) {
-                push_float_vector(vec, ((floatAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_float_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((floatAVLNode*)node)->data == value) {
-                push_float_vector(vec, ((floatAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_float_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_float_vector(vec, ((floatAVLNode*)node)->data, vec->len);
+            push_float_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3421,36 +3432,36 @@ static void traverse_double_and_add(double_v* vec, AVLNode* node, Boolean comp, 
 
     // Recursively traverse the left subtree
     traverse_double_and_add(vec, node->left, comp, value);
-
+    double nodeValue = ((doubleAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((doubleAVLNode*)node)->data > value) {
-                push_double_vector(vec, ((doubleAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_double_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((doubleAVLNode*)node)->data < value) {
-                push_double_vector(vec, ((doubleAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_double_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((doubleAVLNode*)node)->data >= value) {
-                push_double_vector(vec, ((doubleAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_double_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((doubleAVLNode*)node)->data <= value) {
-                push_double_vector(vec, ((doubleAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_double_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((doubleAVLNode*)node)->data == value) {
-                push_double_vector(vec, ((doubleAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_double_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_double_vector(vec, ((doubleAVLNode*)node)->data, vec->len);
+            push_double_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3464,36 +3475,36 @@ static void traverse_ldouble_and_add(ldouble_v* vec, AVLNode* node, Boolean comp
 
     // Recursively traverse the left subtree
     traverse_ldouble_and_add(vec, node->left, comp, value);
-
+    long double nodeValue = ((ldoubleAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((ldoubleAVLNode*)node)->data > value) {
-                push_ldouble_vector(vec, ((ldoubleAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_ldouble_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((ldoubleAVLNode*)node)->data < value) {
-                push_ldouble_vector(vec, ((ldoubleAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_ldouble_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((ldoubleAVLNode*)node)->data >= value) {
-                push_ldouble_vector(vec, ((ldoubleAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_ldouble_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((ldoubleAVLNode*)node)->data <= value) {
-                push_ldouble_vector(vec, ((ldoubleAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_ldouble_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((ldoubleAVLNode*)node)->data == value) {
-                push_ldouble_vector(vec, ((ldoubleAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_ldouble_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_ldouble_vector(vec, ((ldoubleAVLNode*)node)->data, vec->len);
+            push_ldouble_vector(vec, nodeValue, vec->len);
             break;
     }
 
@@ -3507,36 +3518,36 @@ static void traverse_bool_and_add(bool_v* vec, AVLNode* node, Boolean comp, bool
 
     // Recursively traverse the left subtree
     traverse_bool_and_add(vec, node->left, comp, value);
-
+    bool nodeValue = ((boolAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
-            if (((boolAVLNode*)node)->data > value) {
-                push_bool_vector(vec, ((boolAVLNode*)node)->data, vec->len);
+            if (nodeValue > value) {
+                push_bool_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
-            if (((boolAVLNode*)node)->data < value) {
-                push_bool_vector(vec, ((boolAVLNode*)node)->data, vec->len);
+            if (nodeValue < value) {
+                push_bool_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
-            if (((boolAVLNode*)node)->data >= value) {
-                push_bool_vector(vec, ((boolAVLNode*)node)->data, vec->len);
+            if (nodeValue >= value) {
+                push_bool_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (((boolAVLNode*)node)->data <= value) {
-                push_bool_vector(vec, ((boolAVLNode*)node)->data, vec->len);
+            if (nodeValue <= value) {
+                push_bool_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (((boolAVLNode*)node)->data == value) {
-                push_bool_vector(vec, ((boolAVLNode*)node)->data, vec->len);
+            if (nodeValue == value) {
+                push_bool_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_bool_vector(vec, ((boolAVLNode*)node)->data, vec->len);
+            push_bool_vector(vec, nodeValue, vec->len);
             break;
     }
 
