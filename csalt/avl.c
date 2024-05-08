@@ -3386,7 +3386,7 @@ static void traverse_ullong_and_add(ullong_v* vec, AVLNode* node, Boolean comp, 
 
 static void traverse_float_and_add(float_v* vec, AVLNode* node, Boolean comp, float value) {
     if (node == NULL) return;
-    // float epsilon = 0.000001;
+    float epsilon = 0.000001;
     // Recursively traverse the left subtree
     traverse_float_and_add(vec, node->left, comp, value);
     float nodeValue = ((floatAVLNode*)node)->data;
@@ -3403,17 +3403,17 @@ static void traverse_float_and_add(float_v* vec, AVLNode* node, Boolean comp, fl
             }
             break;
         case GTE:
-            if (nodeValue >= value) {
+            if (nodeValue > value || fabs(nodeValue - value) < epsilon) {
                 push_float_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (nodeValue <= value) {
+            if (nodeValue < value || fabs(nodeValue - value) < epsilon) {
                 push_float_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (nodeValue == value) {
+            if (fabs(nodeValue - value) < epsilon) {
                 push_float_vector(vec, nodeValue, vec->len);
             }
             break;
@@ -3562,37 +3562,37 @@ static void traverse_string_and_add(string_v* vec, AVLNode* node, Boolean comp, 
 
     // Recursively traverse the left subtree
     traverse_string_and_add(vec, node->left, comp, value);
-
-    int cmp = strcmp(value, ((stringAVLNode*)node)->data->data);
+    char* nodeValue = ((stringAVLNode*)node)->data->data;
+    int cmp = strcmp(value, nodeValue);
     // Perform comparison and add value to the result vector if the condition is met
     switch (comp) {
         case GT:
             if (cmp < 0) {
-                push_string_vector(vec, ((stringAVLNode*)node)->data->data, vec->len);
+                push_string_vector(vec, nodeValue, vec->len);
             }
             break;
         case LT:
             if (cmp > 0) {
-                push_string_vector(vec, ((stringAVLNode*)node)->data->data, vec->len);
+                push_string_vector(vec, nodeValue, vec->len);
             }
             break;
         case GTE:
             if (cmp >= 0) {
-                push_string_vector(vec, ((stringAVLNode*)node)->data->data, vec->len);
+                push_string_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
             if (cmp <= 0) {
-                push_string_vector(vec, ((stringAVLNode*)node)->data->data, vec->len);
+                push_string_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
             if (cmp == 0) {
-                push_string_vector(vec, ((stringAVLNode*)node)->data->data, vec->len);
+                push_string_vector(vec, nodeValue, vec->len);
             }
             break;
         case ALL:
-            push_string_vector(vec, ((stringAVLNode*)node)->data->data, vec->len);
+            push_string_vector(vec, nodeValue, vec->len);
             break;
     }
 
