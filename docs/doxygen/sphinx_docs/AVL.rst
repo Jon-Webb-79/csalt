@@ -755,3 +755,77 @@ Example Usage
 This example initializes a string AVL tree, inserts several strings, retrieves 
 the greatest string without needing to free the returned value explicitly, and 
 then frees the entire tree safely.
+
+avltree_values 
+==============
+
+The ``avltree_values`` macro provides a generic interface for retrieving values 
+from an AVL tree based on a comparison criterion. It utilizes the C11 ``_Generic`` 
+keyword for type-based dispatch to appropriate type-specific functions, which 
+handle the retrieval of values based on user-defined conditions such as greater 
+than, less than, or equal to a specified value.
+
+.. code-block:: c
+
+    #define avltree_values(tree, value, comp) _Generic((tree), \
+        charAVLTree*: avltree_char_values, \
+        ucharAVLTree*: avltree_uchar_values, \
+        shortAVLTree*: avltree_short_values, \
+        ushortAVLTree*: avltree_ushort_values, \
+        intAVLTree*: avltree_int_values, \
+        uintAVLTree*: avltree_uint_values, \
+        longAVLTree*: avltree_long_values, \
+        ulongAVLTree*: avltree_ulong_values, \
+        llongAVLTree*: avltree_llong_values, \
+        ullongAVLTree*: avltree_ullong_values, \
+        floatAVLTree*: avltree_float_values, \
+        doubleAVLTree*: avltree_double_values, \
+        ldoubleAVLTree*: avltree_ldouble_values, \
+        boolAVLTree*: avltree_bool_values, \
+        stringAVLTree*: avltree_string_values)(tree, value, comp)
+
+Parameters
+----------
+- ``tree`` : An AVL tree data structure of a specific type defined in your AVL tree module.
+- ``value`` : The comparison value of the same type as the tree's data type.
+- ``comp`` : An enumeration type indicating the comparison condition. Possible values include ``GT`` (greater than), ``LT`` (less than), ``GTE`` (greater than or equal), ``LTE`` (less than or equal), ``EQ`` (equal), and ``ALL`` (all values).
+
+The function will return a dynamically allocated vector containing the values that 
+meet the specified condition. If ``comp`` is set to ``ALL``, the comparison 
+value is ignored, and all values from the tree are retrieved.
+
+Error Handling
+--------------
+Each specific function checks if the tree pointer is ``NULL`` before proceeding. 
+If ``NULL``, the function sets ``errno`` to ``EINVAL`` to indicate an invalid 
+argument error, ensuring safe error handling.
+
+Example
+-------
+
+.. code-block:: c
+
+   #include "avl.h"
+   #include "vector.h"
+   #include "print.h"
+
+   int main() {
+       intAVLTree* tree = init_avltree(dInt)(true);
+       insert_avltree(tree, 10);
+       insert_avltree(tree, 20);
+       insert_avltree(tree, 5);
+       int_v* greater_than_ten = avltree_values(tree, 10, GT);
+       print(greater_than_ten);
+       free_vector(greater_than_ten);
+       free_avltree(tree);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> [ 20 ]
+
+This code initializes an integer AVL tree, inserts three values, retrieves all 
+values greater than 10, and prints them. Finally, it frees the memory allocated 
+for the vector and the tree.
+
