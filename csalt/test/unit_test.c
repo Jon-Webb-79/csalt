@@ -1641,6 +1641,21 @@ const struct CMUnitTest test_avl[] = {
     cmocka_unit_test(test_all_float_avltree),
     cmocka_unit_test(test_all_bool_avltree),
     cmocka_unit_test(test_all_string_avltree),
+    cmocka_unit_test(test_gte_char_avltree),
+    cmocka_unit_test(test_gte_uchar_avltree),
+    cmocka_unit_test(test_gte_short_avltree),
+    cmocka_unit_test(test_gte_ushort_avltree),
+    cmocka_unit_test(test_gte_int_avltree),
+    cmocka_unit_test(test_gte_uint_avltree),
+    cmocka_unit_test(test_gte_long_avltree),
+    cmocka_unit_test(test_gte_ulong_avltree),
+    cmocka_unit_test(test_gte_llong_avltree),
+    cmocka_unit_test(test_gte_ullong_avltree),
+    cmocka_unit_test(test_gte_float_avltree),
+    cmocka_unit_test(test_gte_double_avltree),
+    cmocka_unit_test(test_gte_ldouble_avltree),
+    cmocka_unit_test(test_gte_bool_avltree),
+    cmocka_unit_test(test_gte_string_avltree),
 };
 
 // Begin code

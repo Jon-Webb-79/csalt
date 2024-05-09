@@ -148,6 +148,24 @@ void test_all_ldouble_avltree(void **state);
 void test_all_bool_avltree(void **state);
 void test_all_string_avltree(void **state);
 // ================================================================================
+// ================================================================================
+
+void test_gte_char_avltree(void **state);
+void test_gte_uchar_avltree(void **state);
+void test_gte_short_avltree(void **state);
+void test_gte_ushort_avltree(void **state);
+void test_gte_int_avltree(void **state);
+void test_gte_uint_avltree(void **state);
+void test_gte_long_avltree(void **state);
+void test_gte_ulong_avltree(void **state);
+void test_gte_llong_avltree(void **state);
+void test_gte_ullong_avltree(void **state);
+void test_gte_float_avltree(void **state);
+void test_gte_double_avltree(void **state);
+void test_gte_ldouble_avltree(void **state);
+void test_gte_bool_avltree(void **state);
+void test_gte_string_avltree(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_AVL_H */
 // ================================================================================

@@ -3429,7 +3429,7 @@ static void traverse_float_and_add(float_v* vec, AVLNode* node, Boolean comp, fl
 
 static void traverse_double_and_add(double_v* vec, AVLNode* node, Boolean comp, double value) {
     if (node == NULL) return;
-
+    double epsilon = 0.000001;
     // Recursively traverse the left subtree
     traverse_double_and_add(vec, node->left, comp, value);
     double nodeValue = ((doubleAVLNode*)node)->data;
@@ -3446,17 +3446,17 @@ static void traverse_double_and_add(double_v* vec, AVLNode* node, Boolean comp, 
             }
             break;
         case GTE:
-            if (nodeValue >= value) {
+            if (nodeValue > value || fabs(nodeValue - value) < epsilon) {
                 push_double_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (nodeValue <= value) {
+            if (nodeValue < value || fabs(nodeValue - value) < epsilon) {
                 push_double_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (nodeValue == value) {
+            if (fabs(nodeValue - value) < epsilon) { 
                 push_double_vector(vec, nodeValue, vec->len);
             }
             break;
@@ -3472,7 +3472,7 @@ static void traverse_double_and_add(double_v* vec, AVLNode* node, Boolean comp, 
 
 static void traverse_ldouble_and_add(ldouble_v* vec, AVLNode* node, Boolean comp, long double value) {
     if (node == NULL) return;
-
+    long double epsilon = 0.000001;
     // Recursively traverse the left subtree
     traverse_ldouble_and_add(vec, node->left, comp, value);
     long double nodeValue = ((ldoubleAVLNode*)node)->data;
@@ -3489,17 +3489,17 @@ static void traverse_ldouble_and_add(ldouble_v* vec, AVLNode* node, Boolean comp
             }
             break;
         case GTE:
-            if (nodeValue >= value) {
+            if (nodeValue > value || fabsl(nodeValue - value) < epsilon) {
                 push_ldouble_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (nodeValue <= value) {
+            if (nodeValue < value || fabsl(nodeValue - value) < epsilon) {
                 push_ldouble_vector(vec, nodeValue, vec->len);
             }
             break;
         case EQ:
-            if (nodeValue == value) {
+            if (fabsl(nodeValue - value) < epsilon) {
                 push_ldouble_vector(vec, nodeValue, vec->len);
             }
             break;
@@ -3577,12 +3577,12 @@ static void traverse_string_and_add(string_v* vec, AVLNode* node, Boolean comp, 
             }
             break;
         case GTE:
-            if (cmp >= 0) {
+            if (cmp <= 0) {
                 push_string_vector(vec, nodeValue, vec->len);
             }
             break;
         case LTE:
-            if (cmp <= 0) {
+            if (cmp >= 0) {
                 push_string_vector(vec, nodeValue, vec->len);
             }
             break;
