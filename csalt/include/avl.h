@@ -883,6 +883,42 @@ string_v* avltree_string_values(stringAVLTree* treee, char* value, Boolean comp)
     stringAVLTree*: avltree_string_values)(tree, value, comp)
 // ================================================================================
 // ================================================================================ 
+
+char_v* avltree_char_and_or(charAVLTree* tree, char a, char b, AndOrBoolean comp);
+uchar_v* avltree_uchar_and_or(ucharAVLTree* tree, unsigned char a, unsigned char b, AndOrBoolean comp);
+short_v* avltree_short_and_or(shortAVLTree* tree, short int a,, short int b, AndOrBoolean comp);
+ushort_v* avltree_ushort_and_or(ushortAVLTree* tree, unsigned short int a, unsigned short int b, AndOrBoolean comp);
+int_v* avltree_int_and_or(intAVLTree* tree, int a, int b,, AndOrBoolean comp);
+uint_v* avltree_uint_and_or(uintAVLTree* tree, unsigned int a, unsigned int b, AndOrBoolean comp);
+long_v* avltree_long_and_or(longAVLTree* tree, long int a, long int b,, AndOrBoolean comp);
+ulong_v* avltree_ulong_and_or(ulongAVLTree* tree, unsigned long int a, unsigned long int b, AndOrBoolean comp);
+llong_v* avltree_llong_and_or(llongAVLTree* tree, long long int a, long long int b, AndOrBoolean comp);
+ullong_v* avltree_ullong_and_or(ullongAVLTree* tree, unsigned long long int a, unsigned long long int b, AndOrBoolean comp);
+float_v* avltree_float_and_or(floatAVLTree* tree, float a, float b, AndOrBoolean comp);
+double_v* avltree_double_and_or(doubleAVLTree* tree, double a, double b, AndOrBoolean comp);
+ldouble_v* avltree_ldouble_and_or(ldoubleAVLTree* tree, long double a, long double b, AndOrBoolean comp);
+bool_v* avltree_bool_and_or(boolAVLTree* tree, bool a, bool b, AndOrBoolean comp);
+string_v* avltree_string_and_or(stringAVLTree* treee, char* a, char* b, AndOrBoolean comp);
+// ================================================================================
+
+#define avltree_and_or(tree, a, b, comp) _Generic((tree), \
+    charAVLTree*: avltree_char_and_or, \
+    ucharAVLTree*: avltree_uchar_and_or, \
+    shortAVLTree*: avltree_short_and_or, \
+    ushortAVLTree*: avltree_ushort_and_or, \
+    intAVLTree*: avltree_int_and_or, \
+    uintAVLTree*: avltree_uint_and_or, \
+    longAVLTree*: avltree_long_and_or, \
+    ulongAVLTree*: avltree_ulong_and_or, \
+    llongAVLTree*: avltree_llong_and_or, \
+    ullongAVLTree*: avltree_ullong_and_or, \
+    floatAVLTree*: avltree_float_and_or, \
+    doubleAVLTree*: avltree_double_and_or, \
+    ldoubleAVLTree*: avltree_ldouble_and_or, \
+    boolAVLTree*: avltree_bool_and_or, \
+    stringAVLTree*: avltree_string_and_or)(tree, a, b, comp)
+// ================================================================================
+// ================================================================================ 
 #ifdef __cplusplus
 }
 #endif /* cplusplus */

@@ -3781,4 +3781,750 @@ string_v* avltree_string_values(stringAVLTree* tree, char* value, Boolean comp) 
 }
 // ================================================================================
 // ================================================================================
+
+static void traverse_char_and_or_add(char_v* vec, AVLNode* node, AndOrBoolean comp, char a, char b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_char_and_or_add(vec, node->left, comp, a, b);
+
+    char nodeValue = ((charAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_char_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_char_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_char_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_char_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_char_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_char_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_char_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_char_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_char_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_uchar_and_or_add(uchar_v* vec, AVLNode* node, AndOrBoolean comp, unsigned char a, unsigned char b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_uchar_and_or_add(vec, node->left, comp, a, b);
+
+    unsigned char nodeValue = ((ucharAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_uchar_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_uchar_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_uchar_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_uchar_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_uchar_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_uchar_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_uchar_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_uchar_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_uchar_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_short_and_or_add(short_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                      short int a, short int b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_short_and_or_add(vec, node->left, comp, a, b);
+
+    short int nodeValue = ((shortAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_short_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_short_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_short_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_short_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_short_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_short_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_short_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_short_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_short_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_ushort_and_or_add(ushort_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                      unsigned short int a, unsigned short int b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_ushort_and_or_add(vec, node->left, comp, a, b);
+
+    unsigned short int nodeValue = ((ushortAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_ushort_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_ushort_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_ushort_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_ushort_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_ushort_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_ushort_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_ushort_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_ushort_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_ushort_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_int_and_or_add(int_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                    int a, int b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_int_and_or_add(vec, node->left, comp, a, b);
+
+    int nodeValue = ((intAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_int_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_int_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_int_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_int_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_int_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_int_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_int_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_int_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_int_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_uint_and_or_add(uint_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                    unsigned int a, unsigned int b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_iunt_and_or_add(vec, node->left, comp, a, b);
+
+    unsigned int nodeValue = ((uintAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_uint_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_uint_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_uint_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_uint_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_uint_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_uint_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_uint_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_uint_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_uint_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_long_and_or_add(long_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                     long int a, long int b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_long_and_or_add(vec, node->left, comp, a, b);
+
+    long int nodeValue = ((longAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_long_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_long_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_long_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_long_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_long_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_long_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_long_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_long_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_long_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_ulong_and_or_add(ulong_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                      unsigned long int a, unsigned long int b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_ulong_and_or_add(vec, node->left, comp, a, b);
+
+    unsigned long int nodeValue = ((ulongAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_ulong_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_ulong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_ulong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_ulong_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_ulong_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_ulong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_ulong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_ulong_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_ulong_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_llong_and_or_add(llong_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                      long long int a, long long int b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_llong_and_or_add(vec, node->left, comp, a, b);
+
+    long long int nodeValue = ((llongAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_llong_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_llong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_llong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_llong_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_llong_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_llong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_llong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_llong_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_llong_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_ullong_and_or_add(ullong_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                       unsigned long long int a, unsigned long long int b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_ullong_and_or_add(vec, node->left, comp, a, b);
+
+    unsigned long long int nodeValue = ((ullongAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_ullong_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_ullong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_ullong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_ullong_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_ullong_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_ullong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_ullong_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_ullong_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_ullong_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_float_and_or_add(float_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                      float a, float b) {
+    if (node == NULL) return;
+    float epsilon = 0.000001;
+    // Recursively traverse the left subtree
+    traverse_float_and_or_add(vec, node->left, comp, a, b);
+
+    float nodeValue = ((floatAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_float_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue < b || fabs(nodeValue - b) < epsilon)
+                push_float_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue > a || fabs(nodeValue - a) < epsilon || nodeValue < b)
+                push_float_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue > a || fabs(nodeValue - a) < epsilon || nodeValue < b || fabs(nodeValue - b) < epsilon)
+                push_float_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_float_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && (nodeValue < b || fabs(nodeValue - b) < epsilon))
+                push_float_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if ((nodeValue > a || fabs(nodeValue - a) < epsilon) && nodeValue < b)
+                push_float_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if ((nodeValue > a || fabs(nodeValue - a) < epsilon) && (nodeValue < b || fabs(nodeValue - b) < epsilon))
+                push_float_vector(vec, nodeValue, vec->len);
+            break;
+    } 
+
+    // Recursively traverse the right subtree
+    traverse_float_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_double_and_or_add(double_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                       double a, double b) {
+    if (node == NULL) return;
+    double epsilon = 0.000001;
+    // Recursively traverse the left subtree
+    traverse_double_and_or_add(vec, node->left, comp, a, b);
+
+    double nodeValue = ((doubleAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_double_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue < b || fabs(nodeValue - b) < epsilon)
+                push_double_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue > a || fabs(nodeValue - a) < epsilon || nodeValue < b)
+                push_double_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue > a || fabs(nodeValue - a) < epsilon || nodeValue < b || fabs(nodeValue - b) < epsilon)
+                push_double_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_double_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && (nodeValue < b || fabs(nodeValue - b) < epsilon))
+                push_double_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if ((nodeValue > a || fabs(nodeValue - a) < epsilon) && nodeValue < b)
+                push_double_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if ((nodeValue > a || fabs(nodeValue - a) < epsilon) && (nodeValue < b || fabs(nodeValue - b) < epsilon))
+                push_double_vector(vec, nodeValue, vec->len);
+            break;
+    } 
+
+    // Recursively traverse the right subtree
+    traverse_double_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_ldouble_and_or_add(ldouble_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                       long double a, long double b) {
+    if (node == NULL) return;
+    long double epsilon = 0.000001;
+    // Recursively traverse the left subtree
+    traverse_ldouble_and_or_add(vec, node->left, comp, a, b);
+
+    long double nodeValue = ((ldoubleAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_ldouble_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue < b || fabsl(nodeValue - b) < epsilon)
+                push_ldouble_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue > a || fabsl(nodeValue - a) < epsilon || nodeValue < b)
+                push_ldouble_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue > a || fabsl(nodeValue - a) < epsilon || nodeValue < b || fabsl(nodeValue - b) < epsilon)
+                push_ldouble_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_ldouble_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && (nodeValue < b || fabsl(nodeValue - b) < epsilon))
+                push_ldouble_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if ((nodeValue > a || fabsl(nodeValue - a) < epsilon) && nodeValue < b)
+                push_ldouble_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if ((nodeValue > a || fabsl(nodeValue - a) < epsilon) && (nodeValue < b || fabsl(nodeValue - b) < epsilon))
+                push_ldouble_vector(vec, nodeValue, vec->len);
+            break;
+    } 
+
+    // Recursively traverse the right subtree
+    traverse_ldouble_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_bool_and_or_add(bool_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                     bool a, bool b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_bool_and_or_add(vec, node->left, comp, a, b);
+
+    bool nodeValue = ((boolAVLNode*)node)->data;
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (nodeValue > a || nodeValue < b)
+                push_bool_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (nodeValue > a || nodeValue <= b)
+                push_bool_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (nodeValue >= a || nodeValue < b)
+                push_bool_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (nodeValue >= a || nodeValue <= b)
+                push_bool_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LT:
+            if (nodeValue > a && nodeValue < b)
+                push_bool_vector(vec, nodeValue, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (nodeValue > a && nodeValue <= b)
+                push_bool_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (nodeValue >= a && nodeValue < b)
+                push_bool_vector(vec, nodeValue, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (nodeValue >= a && nodeValue <= b)
+                push_bool_vector(vec, nodeValue, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_bool_and_or_add(vec, node->right, comp, a, b);
+}
+// --------------------------------------------------------------------------------
+
+static void traverse_string_and_or_add(string_v* vec, AVLNode* node, AndOrBoolean comp, 
+                                       char* a, char* b) {
+    if (node == NULL) return;
+
+    // Recursively traverse the left subtree
+    traverse_string_and_or_add(vec, node->left, comp, a, b);
+
+    str* nodeValue = ((stringAVLNode*)node)->data;
+    int compa = compare_strings_lit(nodeValue, a);
+    int compb = compare_strings_lit(nodeValue, b);
+    // Perform comparison and add value to the result vector if the condition is met
+    switch (comp) {
+        case GT_OR_LT:
+            if (compa > 0 || compb < 0)
+                push_string_vector(vec, nodeValue->data, vec->len);
+            break;
+        case GT_OR_LTE:
+            if (compa > 0 || compb <= 0)
+                push_string_vector(vec, nodeValue->data, vec->len);
+            break;
+        case GTE_OR_LT:
+            if (compa >= 0 || compb < 0)
+                push_string_vector(vec, nodeValue->data, vec->len);
+            break;
+        case GTE_OR_LTE:
+            if (compa >= 0 || compb <= 0)
+                push_string_vector(vec, nodeValue->data, vec->len);
+            break;
+        case GT_AND_LT:
+            if (compa > 0 && compb < 0)
+                push_string_vector(vec, nodeValue->data, vec->len);
+            break;
+        case GT_AND_LTE:
+            if (compa > 0 && compb <= 0)
+                push_string_vector(vec, nodeValue->data, vec->len);
+            break;
+        case GTE_AND_LT:
+            if (compa >= 0 && compb < 0)
+                push_string_vector(vec, nodeValue->data, vec->len);
+            break;
+        case GTE_AND_LTE:
+            if (compa >= 0 && compb <= 0)
+                push_string_vector(vec, nodeValue->data, vec->len);
+            break;
+    }
+
+    // Recursively traverse the right subtree
+    traverse_string_and_or_add(vec, node->right, comp, a, b);
+}
+// ================================================================================
+// ================================================================================ 
+
+char_v* avltree_char_and_or(charAVLTree* tree, char a, char b, AndOrBoolean comp) {
+    char_v* result = init_char_vector(10);
+
+    if (tree && tree->root)
+        traverse_char_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// ================================================================================
+// ================================================================================
 // eof
