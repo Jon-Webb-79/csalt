@@ -4030,7 +4030,7 @@ static void traverse_uint_and_or_add(uint_v* vec, AVLNode* node, AndOrBoolean co
     if (node == NULL) return;
 
     // Recursively traverse the left subtree
-    traverse_iunt_and_or_add(vec, node->left, comp, a, b);
+    traverse_uint_and_or_add(vec, node->left, comp, a, b);
 
     unsigned int nodeValue = ((uintAVLNode*)node)->data;
     // Perform comparison and add value to the result vector if the condition is met
@@ -4523,6 +4523,132 @@ char_v* avltree_char_and_or(charAVLTree* tree, char a, char b, AndOrBoolean comp
 
     if (tree && tree->root)
         traverse_char_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+uchar_v* avltree_uchar_and_or(ucharAVLTree* tree, unsigned char a, unsigned char b, AndOrBoolean comp) {
+    uchar_v* result = init_uchar_vector(10);
+
+    if (tree && tree->root)
+        traverse_uchar_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+short_v* avltree_short_and_or(shortAVLTree* tree, short int a, short int b, AndOrBoolean comp) {
+    short_v* result = init_short_vector(10);
+
+    if (tree && tree->root)
+        traverse_short_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+ushort_v* avltree_ushort_and_or(ushortAVLTree* tree, unsigned short int a, unsigned short int b, AndOrBoolean comp) {
+    ushort_v* result = init_ushort_vector(10);
+
+    if (tree && tree->root)
+        traverse_ushort_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+int_v* avltree_int_and_or(intAVLTree* tree, int a, int b, AndOrBoolean comp) {
+    int_v* result = init_int_vector(10);
+
+    if (tree && tree->root)
+        traverse_int_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+uint_v* avltree_uint_and_or(uintAVLTree* tree, unsigned int a, unsigned int b, AndOrBoolean comp) {
+    uint_v* result = init_uint_vector(10);
+
+    if (tree && tree->root)
+        traverse_uint_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+long_v* avltree_long_and_or(longAVLTree* tree, long int a, long int b, AndOrBoolean comp) {
+    long_v* result = init_long_vector(10);
+
+    if (tree && tree->root)
+        traverse_long_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+ulong_v* avltree_ulong_and_or(ulongAVLTree* tree, unsigned long int a, unsigned long int b, AndOrBoolean comp) {
+    ulong_v* result = init_ulong_vector(10);
+
+    if (tree && tree->root)
+        traverse_ulong_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+llong_v* avltree_llong_and_or(llongAVLTree* tree, long long int a, long long int b, AndOrBoolean comp) {
+    llong_v* result = init_llong_vector(10);
+
+    if (tree && tree->root)
+        traverse_llong_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// -------------------------------------------------------------------------------- 
+
+ullong_v* avltree_ullong_and_or(ullongAVLTree* tree, unsigned long long int a, unsigned long long int b, AndOrBoolean comp) {
+    ullong_v* result = init_ullong_vector(10);
+
+    if (tree && tree->root)
+        traverse_ullong_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+float_v* avltree_float_and_or(floatAVLTree* tree, float a, float b, AndOrBoolean comp) {
+    float_v* result = init_float_vector(10);
+
+    if (tree && tree->root)
+        traverse_float_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+double_v* avltree_double_and_or(doubleAVLTree* tree, double a, double b, AndOrBoolean comp) {
+    double_v* result = init_double_vector(10);
+
+    if (tree && tree->root)
+        traverse_double_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+ldouble_v* avltree_ldouble_and_or(ldoubleAVLTree* tree, long double a, long double b, AndOrBoolean comp) {
+    ldouble_v* result = init_ldouble_vector(10);
+
+    if (tree && tree->root)
+        traverse_ldouble_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+bool_v* avltree_bool_and_or(boolAVLTree* tree, bool a, bool b, AndOrBoolean comp) {
+    bool_v* result = init_bool_vector(10);
+
+    if (tree && tree->root)
+        traverse_bool_and_or_add(result, tree->root, comp, a, b);
+    return result;
+}
+// --------------------------------------------------------------------------------
+
+string_v* avltree_string_and_or(stringAVLTree* tree, char* a, char* b, AndOrBoolean comp) {
+    string_v* result = init_string_vector(10);
+
+    if (tree && tree->root)
+        traverse_string_and_or_add(result, tree->root, comp, a, b);
     return result;
 }
 // ================================================================================

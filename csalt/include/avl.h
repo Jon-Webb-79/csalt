@@ -886,11 +886,11 @@ string_v* avltree_string_values(stringAVLTree* treee, char* value, Boolean comp)
 
 char_v* avltree_char_and_or(charAVLTree* tree, char a, char b, AndOrBoolean comp);
 uchar_v* avltree_uchar_and_or(ucharAVLTree* tree, unsigned char a, unsigned char b, AndOrBoolean comp);
-short_v* avltree_short_and_or(shortAVLTree* tree, short int a,, short int b, AndOrBoolean comp);
+short_v* avltree_short_and_or(shortAVLTree* tree, short int a, short int b, AndOrBoolean comp);
 ushort_v* avltree_ushort_and_or(ushortAVLTree* tree, unsigned short int a, unsigned short int b, AndOrBoolean comp);
-int_v* avltree_int_and_or(intAVLTree* tree, int a, int b,, AndOrBoolean comp);
+int_v* avltree_int_and_or(intAVLTree* tree, int a, int b, AndOrBoolean comp);
 uint_v* avltree_uint_and_or(uintAVLTree* tree, unsigned int a, unsigned int b, AndOrBoolean comp);
-long_v* avltree_long_and_or(longAVLTree* tree, long int a, long int b,, AndOrBoolean comp);
+long_v* avltree_long_and_or(longAVLTree* tree, long int a, long int b, AndOrBoolean comp);
 ulong_v* avltree_ulong_and_or(ulongAVLTree* tree, unsigned long int a, unsigned long int b, AndOrBoolean comp);
 llong_v* avltree_llong_and_or(llongAVLTree* tree, long long int a, long long int b, AndOrBoolean comp);
 ullong_v* avltree_ullong_and_or(ullongAVLTree* tree, unsigned long long int a, unsigned long long int b, AndOrBoolean comp);

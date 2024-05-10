@@ -1894,4 +1894,300 @@ void test_gte_string_avltree(void **state) {
 }
 // ================================================================================ 
 // ================================================================================ 
+
+void test_and_char_avltree(void **state) {
+    charAVLTree* tree = init_avltree(dChar)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    char_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    char b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    print(vec);
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_uchar_avltree(void **state) {
+    ucharAVLTree* tree = init_avltree(dUChar)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    uchar_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    unsigned char b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_short_avltree(void **state) {
+    shortAVLTree* tree = init_avltree(dShort)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    short_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    short int b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_ushort_avltree(void **state) {
+    ushortAVLTree* tree = init_avltree(dUShort)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    ushort_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    unsigned short int b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_int_avltree(void **state) {
+    intAVLTree* tree = init_avltree(dInt)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    int_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    int b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_uint_avltree(void **state) {
+    uintAVLTree* tree = init_avltree(dUInt)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    uint_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    unsigned int b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_long_avltree(void **state) {
+    longAVLTree* tree = init_avltree(dLong)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    long_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    long int b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_ulong_avltree(void **state) {
+    ulongAVLTree* tree = init_avltree(dULong)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    ulong_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    unsigned long int b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_llong_avltree(void **state) {
+    llongAVLTree* tree = init_avltree(dLongLong)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    llong_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    long long int b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_ullong_avltree(void **state) {
+    ullongAVLTree* tree = init_avltree(dULongLong)(true);
+    insert_avltree(tree, 1);
+    insert_avltree(tree, 2);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 3);
+    insert_avltree(tree, 4);
+    insert_avltree(tree, 5);
+    insert_avltree(tree, 6);
+    insert_avltree(tree, 7);
+    insert_avltree(tree, 7);
+    ullong_v* vec = avltree_and_or(tree, 3, 7, GTE_AND_LT);
+    unsigned long long int b[5] = {3, 3, 4, 5, 6};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_int_equal(b[i], vec->data[i]);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_float_avltree(void **state) {
+    floatAVLTree* tree = init_avltree(dFloat)(true);
+    insert_avltree(tree, 1.f);
+    insert_avltree(tree, 2.f);
+    insert_avltree(tree, 3.f);
+    insert_avltree(tree, 3.f);
+    insert_avltree(tree, 4.f);
+    insert_avltree(tree, 5.f);
+    insert_avltree(tree, 6.f);
+    insert_avltree(tree, 7.f);
+    insert_avltree(tree, 7.f);
+    float_v* vec = avltree_and_or(tree, 3.f, 7.f, GTE_AND_LT);
+    float b[5] = {3., 3., 4., 5., 6.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_float_equal(b[i], vec->data[i], 1.0e-3);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_double_avltree(void **state) {
+    doubleAVLTree* tree = init_avltree(dDouble)(true);
+    insert_avltree(tree, 1.);
+    insert_avltree(tree, 2.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 4.);
+    insert_avltree(tree, 5.);
+    insert_avltree(tree, 6.);
+    insert_avltree(tree, 7.);
+    insert_avltree(tree, 7.);
+    double_v* vec = avltree_and_or(tree, 3., 7., GTE_AND_LT);
+    double b[5] = {3., 3., 4., 5., 6.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_double_equal(b[i], vec->data[i], 1.0e-3);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_ldouble_avltree(void **state) {
+    ldoubleAVLTree* tree = init_avltree(dLDouble)(true);
+    insert_avltree(tree, 1.);
+    insert_avltree(tree, 2.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 3.);
+    insert_avltree(tree, 4.);
+    insert_avltree(tree, 5.);
+    insert_avltree(tree, 6.);
+    insert_avltree(tree, 7.);
+    insert_avltree(tree, 7.);
+    ldouble_v* vec = avltree_and_or(tree, 3., 7., GTE_AND_LT);
+    long double b[5] = {3., 3., 4., 5., 6.};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_float_equal(b[i], vec->data[i], 1.0e-3);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// --------------------------------------------------------------------------------
+
+void test_and_string_avltree(void **state) {
+    stringAVLTree* tree = init_avltree(dString)(true);
+    insert_avltree(tree, "Alpha");
+    insert_avltree(tree, "Bravo");
+    insert_avltree(tree, "Charlie");
+    insert_avltree(tree, "Charlie");
+    insert_avltree(tree, "Delta");
+    insert_avltree(tree, "Echo");
+    insert_avltree(tree, "Foxtrot");
+    insert_avltree(tree, "Golf");
+    insert_avltree(tree, "Golf");
+    string_v* vec = avltree_and_or(tree, "Charlie", "Golf", GTE_AND_LT);
+    char *b[6] = {"Charlie", "Charlie", "Delta", "Echo", "Foxtrot"};
+    for (size_t i = 0; i < vec->len; i++) {
+        assert_string_equal(b[i], vec->data[i].data);
+    }
+    free_avltree(tree);
+    free_vector(vec);
+}
+// ================================================================================ 
+// ================================================================================ 
 // eof
