@@ -829,3 +829,80 @@ This code initializes an integer AVL tree, inserts three values, retrieves all
 values greater than 10, and prints them. Finally, it frees the memory allocated 
 for the vector and the tree.
 
+avltree_and_or 
+==============
+
+The ``avltree_and_or`` macro provides a generic interface for retrieving values 
+from an AVL tree based on combined logical AND/OR conditions between two boundary 
+values. It employs the C11 ``_Generic`` keyword to enable type-based dispatch 
+to the appropriate tree-specific function that matches the data type of the AVL tree.
+
+.. code-block:: c
+
+    #define avltree_and_or(tree, a, b, comp) _Generic((tree), \
+        charAVLTree*: avltree_char_and_or, \
+        ucharAVLTree*: avltree_uchar_and_or, \
+        shortAVLTree*: avltree_short_and_or, \
+        ushortAVLTree*: avltree_ushort_and_or, \
+        intAVLTree*: avltree_int_and_or, \
+        uintAVLTree*: avltree_uint_and_or, \
+        longAVLTree*: avltree_long_and_or, \
+        ulongAVLTree*: avltree_ulong_and_or, \
+        llongAVLTree*: avltree_llong_and_or, \
+        ullongAVLTree*: avltree_ullong_and_or, \
+        floatAVLTree*: avltree_float_and_or, \
+        doubleAVLTree*: avltree_double_and_or, \
+        ldoubleAVLTree*: avltree_ldouble_and_or, \
+        boolAVLTree*: avltree_bool_and_or, \
+        stringAVLTree*: avltree_string_and_or)(tree, a, b, comp)
+
+Parameters
+----------
+- ``tree`` : An AVL tree data structure of a specified type.
+- ``a``, ``b`` : The boundary values used for comparison. The types of ``a`` and ``b`` must match the data type of the tree's contents.
+- ``comp`` : An ``AndOrBoolean`` enumeration specifying the logical relationship between the conditions (e.g., GT_OR_LT, GT_AND_LTE). This dictates whether node values should be compared using AND or OR logic across the boundaries ``a`` and ``b``.
+
+This function returns a dynamically allocated vector containing the values that 
+satisfy the specified compound condition. The contents of this vector depend on 
+the combination of the boundaries and the logical condition applied.
+
+Error Handling
+--------------
+Each tree-specific function within this macro verifies if the tree pointer is 
+``NULL`` prior to executing. If found ``NULL``, it sets ``errno`` to ``EINVAL``, 
+signaling an invalid argument error. This ensures robust error management and 
+prevention of undefined behaviors.
+
+Example
+-------
+
+.. code-block:: c
+
+   #include "avl.h"
+   #include "vector.h"
+   #include "print.h"
+
+   int main() {
+       floatAVLTree* tree = init_avltree(dFloat)(true);
+       insert_avltree(tree, 0.5);
+       insert_avltree(tree, 1.5);
+       insert_avltree(tree, -0.5);
+       insert_avltree(tree, 2.5);
+
+       // Retrieve float values either greater than 1.0 or less than 0.0
+       float_v* results = avltree_and_or(tree, 1.0, 0.0, GT_OR_LT);
+       print(results);
+       free_vector(results);
+       free_avltree(tree);
+       return 0;
+   }
+
+.. code-block:: bash
+
+   >> [ -0.5, 1.5, 2.5 ]
+
+In this example, a floating-point AVL tree is initialized and populated 
+with several values. The ``avltree_and_or`` macro retrieves values 
+greater than 1.0 or less than 0.0, prints them, and finally cleans up 
+the allocated resources.
+

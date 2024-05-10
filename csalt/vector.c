@@ -18,11 +18,11 @@
 // ================================================================================
 // Constants for memory management
 
-const size_t VEC_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
-const size_t VEC_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
+static const size_t VEC_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
+static const size_t VEC_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
 
 // Constants to manage Tim sort algorithm
-const size_t RUN = 32;
+static const size_t RUN = 32;
 // ================================================================================
 // ================================================================================
 // INIT FUNCTIONS
