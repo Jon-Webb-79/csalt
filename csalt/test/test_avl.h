@@ -183,6 +183,23 @@ void test_and_double_avltree(void **state);
 void test_and_ldouble_avltree(void **state);
 void test_and_string_avltree(void **state);
 // ================================================================================
+// ================================================================================
+
+void test_or_char_avltree(void **state);
+void test_or_uchar_avltree(void **state);
+void test_or_short_avltree(void **state);
+void test_or_ushort_avltree(void **state);
+void test_or_int_avltree(void **state);
+void test_or_uint_avltree(void **state);
+void test_or_long_avltree(void **state);
+void test_or_ulong_avltree(void **state);
+void test_or_llong_avltree(void **state);
+void test_or_ullong_avltree(void **state);
+void test_or_float_avltree(void **state);
+void test_or_double_avltree(void **state);
+void test_or_ldouble_avltree(void **state);
+void test_or_string_avltree(void **state);
+// ================================================================================
 // ================================================================================ 
 #endif /* test_AVL_H */
 // ================================================================================
