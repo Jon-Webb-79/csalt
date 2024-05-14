@@ -4,9 +4,6 @@ TODO
 Over the next few months it is my intention to add the following functionality
 to the Csalt library.
 
-#. **Binary Tree:** A library that enable an AVL Binary Tree with search
-   algorithms.
-
 #. **Hash Table:** A library that enables has tables with string keys and 
    all types of data.
 

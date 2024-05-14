@@ -31,6 +31,7 @@ lets pour some seasoning on our C-code and get started.
     Singly Linked List <SList>
     Doubly Linked List <DList>
     AVL Tree <AVL>
+    Unordered Hash Map <Hash>
     Todo <Todo>
 
 Indices and tables
