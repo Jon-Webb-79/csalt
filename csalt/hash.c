@@ -600,7 +600,7 @@ static void resize_double_hash(doubleHashTable* table, size_t new_size) {
 }
 // --------------------------------------------------------------------------------
 
-static void resize_ldoule_hash(ldoubleHashTable* table, size_t new_size) {
+static void resize_ldouble_hash(ldoubleHashTable* table, size_t new_size) {
     // Allocate a new larger array
     ldoubleNode* new_table = malloc(new_size * sizeof(ldoubleNode));
     if (!new_table) {
@@ -2873,7 +2873,8 @@ void free_string_hash_map(stringHashTable* table) {
         stringNode* next = NULL;
         while (current) {      
             next = current->next;
-            free_string(current->value);
+            if (current->value)
+                free_string(current->value);
             free(current->key);
             free(current);
             current = next;
@@ -2881,6 +2882,294 @@ void free_string_hash_map(stringHashTable* table) {
     }
     free(table->keyValues); 
     free(table); 
+}
+// ================================================================================
+// ================================================================================ 
+
+void update_char_hash_map(charHashTable* table, char* key, char value) {
+    size_t index = hash_function(key) % table->alloc;
+    charNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_uchar_hash_map(ucharHashTable* table, char* key, unsigned char value) {
+    size_t index = hash_function(key) % table->alloc;
+    ucharNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_short_hash_map(shortHashTable* table, char* key, short int value) {
+    size_t index = hash_function(key) % table->alloc;
+    shortNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_ushort_hash_map(ushortHashTable* table, char* key, unsigned short int value) {
+    size_t index = hash_function(key) % table->alloc;
+    ushortNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_int_hash_map(intHashTable* table, char* key, int value) {
+    size_t index = hash_function(key) % table->alloc;
+    intNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_uint_hash_map(uintHashTable* table, char* key, unsigned int value) {
+    size_t index = hash_function(key) % table->alloc;
+    uintNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_long_hash_map(longHashTable* table, char* key, long int value) {
+    size_t index = hash_function(key) % table->alloc;
+    longNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_ulong_hash_map(ulongHashTable* table, char* key, unsigned long int value) {
+    size_t index = hash_function(key) % table->alloc;
+    ulongNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_llong_hash_map(llongHashTable* table, char* key, long long int value) {
+    size_t index = hash_function(key) % table->alloc;
+    llongNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_ullong_hash_map(ullongHashTable* table, char* key, unsigned long long int value) {
+    size_t index = hash_function(key) % table->alloc;
+    ullongNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_float_hash_map(floatHashTable* table, char* key, float value) {
+    size_t index = hash_function(key) % table->alloc;
+    floatNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_double_hash_map(doubleHashTable* table, char* key, double value) {
+    size_t index = hash_function(key) % table->alloc;
+    doubleNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_ldouble_hash_map(ldoubleHashTable* table, char* key, long double value) {
+    size_t index = hash_function(key) % table->alloc;
+    ldoubleNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_bool_hash_map(boolHashTable* table, char* key, bool value) {
+    size_t index = hash_function(key) % table->alloc;
+    boolNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// --------------------------------------------------------------------------------
+
+void update_string_hash_map(stringHashTable* table, char* key, char* value) {
+    size_t index = hash_function(key) % table->alloc;
+    stringNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            free_string(current->value);
+            current->value = init_string_nol(value);
+            return;
+        }
+        current = current->next;
+    }
+    // If key is not found, no action is taken
+}
+// ================================================================================
+// ================================================================================
+
+size_t char_hash_map_size(charHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t uchar_hash_map_size(ucharHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t short_hash_map_size(shortHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ushort_hash_map_size(ushortHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t int_hash_map_size(intHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t uint_hash_map_size(uintHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t long_hash_map_size(longHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ulong_hash_map_size(ulongHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t llong_hash_map_size(llongHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ullong_hash_map_size(ullongHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t float_hash_map_size(floatHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t double_hash_map_size(doubleHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ldouble_hash_map_size(ldoubleHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t bool_hash_map_size(boolHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t string_hash_map_size(stringHashTable* table) {
+    return table->alloc;
 }
 // ================================================================================
 // ================================================================================

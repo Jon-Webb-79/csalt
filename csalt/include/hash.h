@@ -268,6 +268,78 @@ void free_string_hash_map(stringHashTable* table);
     stringHashTable*: free_string_hash_map) (table, key)
 // ================================================================================
 // ================================================================================
+
+void update_char_hash_map(charHashTable* table, char* key, char value);
+void update_uchar_hash_map(ucharHashTable* table, char* key, unsigned char value);
+void update_short_hash_map(shortHashTable* table, char* key, short int value);
+void update_ushort_hash_map(ushortHashTable* table, char* key, unsigned short int value);
+void update_int_hash_map(intHashTable* table, char* key, int value);
+void update_uint_hash_map(uintHashTable* table, char* key, unsigned int value);
+void update_long_hash_map(longHashTable* table, char* key, long int value);
+void update_ulong_hash_map(ulongHashTable* table, char* key, unsigned long int value);
+void update_llong_hash_map(llongHashTable* table, char* key, long long int value);
+void update_ullong_hash_map(ullongHashTable* table, char* key, unsigned long long int value);
+void update_float_hash_map(floatHashTable* table, char* key, float value);
+void update_double_hash_map(doubleHashTable* table, char* key, double value);
+void update_ldouble_hash_map(ldoubleHashTable* table, char* key, long double value);
+void update_bool_hash_map(boolHashTable* table, char* key, bool value);
+void update_string_hash_map(stringHashTable* table, char* key, char* value);
+// --------------------------------------------------------------------------------
+
+#define update_hash_map(table, key, value) _Generic((table), \
+    charHashTable*: update_char_hash_map, \
+    ucharHashTable*: update_uchar_hash_map, \
+    shortHashTable*: update_short_hash_map, \
+    ushortHashTable*: update_ushort_hash_map, \
+    intHashTable*: update_int_hash_map, \
+    uintHashTable*: update_uint_hash_map, \
+    longHashTable*: update_long_hash_map, \
+    ulongHashTable*: update_ulong_hash_map, \
+    llongHashTable*: update_llong_hash_map, \
+    ullongHashTable*: update_ullong_hash_map, \
+    floatHashTable*: update_float_hash_map, \
+    doubleHashTable*: update_double_hash_map, \
+    ldoubleHashTable*: update_ldouble_hash_map, \
+    boolHashTable*: update_bool_hash_map, \
+    stringHashTable*: update_string_hash_map) (table, key, value)
+// ================================================================================
+// ================================================================================
+
+size_t char_hash_map_size(charHashTable* table);
+size_t uchar_hash_map_size(ucharHashTable* table);
+size_t short_hash_map_size(shortHashTable* table);
+size_t ushort_hash_map_size(ushortHashTable* table);
+size_t int_hash_map_size(intHashTable* table);
+size_t uint_hash_map_size(uintHashTable* table);
+size_t long_hash_map_size(longHashTable* table);
+size_t ulong_hash_map_size(ulongHashTable* table);
+size_t llong_hash_map_size(llongHashTable* table);
+size_t ullong_hash_map_size(ullongHashTable* table);
+size_t float_hash_map_size(floatHashTable* table);
+size_t double_hash_map_size(doubleHashTable* table);
+size_t ldouble_hash_map_size(ldoubleHashTable* table);
+size_t bool_hash_map_size(boolHashTable* table);
+size_t string_hash_map_size(stringHashTable* table);
+// --------------------------------------------------------------------------------
+
+#define hash_map_size(table) _Generic((table), \
+    charHashTable*: char_hash_map_size, \
+    ucharHashTable*: uchar_hash_map_size, \
+    shortHashTable*: short_hash_map_size, \
+    ushortHashTable*: ushort_hash_map_size, \
+    intHashTable*: int_hash_map_size, \
+    uintHashTable*: uint_hash_map_size, \
+    longHashTable*: long_hash_map_size, \
+    ulongHashTable*: ulong_hash_map_size, \
+    llongHashTable*: llong_hash_map_size, \
+    ullongHashTable*: ullong_hash_map_size, \
+    floatHashTable*: float_hash_map_size, \
+    doubleHashTable*: double_hash_map_size, \
+    ldoubleHashTable*: ldouble_hash_map_size, \
+    boolHashTable*: bool_hash_map_size, \
+    stringHashTable*: string_hash_map_size) (table)
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
