@@ -20,6 +20,7 @@
 #define hash_H
 
 #include <stdlib.h>
+#include <float.h>
 
 #include "str.h"
 #include "admin.h"
@@ -157,6 +158,114 @@ void insert_string_hash_map(stringHashTable* table, char* key, char* value);
     ldoubleHashTable*: insert_ldouble_hash_map, \
     boolHashTable*: insert_bool_hash_map, \
     stringHashTable*: insert_string_hash_map)(table, key, value)
+// ================================================================================
+// ================================================================================
+
+char pop_char_hash_map(charHashTable* table, char* key);
+unsigned char pop_uchar_hash_map(ucharHashTable* table, char* key);
+short int pop_short_hash_map(shortHashTable* table, char* key);
+unsigned short int pop_ushort_hash_map(ushortHashTable* table, char* key);
+int pop_int_hash_map(intHashTable* table, char* key);
+unsigned int pop_uint_hash_map(uintHashTable* table, char* key);
+long int pop_long_hash_map(longHashTable* table, char* key);
+unsigned long int pop_ulong_hash_map(ulongHashTable* table, char* key);
+long long int pop_llong_hash_map(llongHashTable* table, char* key);
+unsigned long long int pop_ullong_hash_map(ullongHashTable* table, char* key);
+float pop_float_hash_map(floatHashTable* table, char* key);
+double pop_double_hash_map(doubleHashTable* table, char* key);
+long double pop_ldouble_hash_map(ldoubleHashTable* table, char* key);
+bool pop_bool_hash_map(boolHashTable* table, char* key);
+str* pop_string_hash_map(stringHashTable* table, char* key);
+// --------------------------------------------------------------------------------
+
+#define pop_hash_map(table, key) _Generic((table), \
+    charHashTable*: pop_char_hash_map, \
+    ucharHashTable*: pop_uchar_hash_map, \
+    shortHashTable*: pop_short_hash_map, \
+    ushortHashTable*: pop_ushort_hash_map, \
+    intHashTable*: pop_int_hash_map, \
+    uintHashTable*: pop_uint_hash_map, \
+    longHashTable*: pop_long_hash_map, \
+    ulongHashTable*: pop_ulong_hash_map, \
+    llongHashTable*: pop_llong_hash_map, \
+    ullongHashTable*: pop_ullong_hash_map, \
+    floatHashTable*: pop_float_hash_map, \
+    doubleHashTable*: pop_double_hash_map, \
+    ldoubleHashTable*: pop_ldouble_hash_map, \
+    boolHashTable*: pop_bool_hash_map, \
+    stringHashTable*: pop_string_hash_map) (table, key)
+// ================================================================================
+// ================================================================================
+
+char get_char_hash_value(charHashTable* table, char* key);
+unsigned char get_uchar_hash_value(ucharHashTable* table, char* key);
+short int get_short_hash_value(shortHashTable* table, char* key);
+unsigned short int get_ushort_hash_value(ushortHashTable* table, char* key);
+int get_int_hash_value(intHashTable* table, char* key);
+unsigned int get_uint_hash_value(uintHashTable* table, char* key);
+long get_long_hash_value(longHashTable* table, char* key);
+unsigned long get_ulong_hash_value(ulongHashTable* table, char* key);
+long long int get_llong_hash_value(llongHashTable* table, char* key);
+unsigned long long int get_ullong_hash_value(ullongHashTable* table, char* key);
+float get_float_hash_value(floatHashTable* table, char* key);
+double get_double_hash_value(doubleHashTable* table, char* key);
+long double get_ldouble_hash_value(ldoubleHashTable* table, char* key);
+bool get_bool_hash_value(boolHashTable* table, char* key);
+str* get_string_hash_value(stringHashTable* table, char* key);
+// --------------------------------------------------------------------------------
+
+#define get_hash_value(table, key) _Generic((table), \
+    charHashTable*: get_char_hash_value, \
+    ucharHashTable*: get_uchar_hash_value, \
+    shortHashTable*: get_short_hash_value, \
+    ushortHashTable*: get_ushort_hash_value, \
+    intHashTable*: get_int_hash_value, \
+    uintHashTable*: get_uint_hash_value, \
+    longHashTable*: get_long_hash_value, \
+    ulongHashTable*: get_ulong_hash_value, \
+    llongHashTable*: get_llong_hash_value, \
+    ullongHashTable*: get_ullong_hash_value, \
+    floatHashTable*: get_float_hash_value, \
+    doubleHashTable*: get_double_hash_value, \
+    ldoubleHashTable*: get_ldouble_hash_value, \
+    boolHashTable*: get_bool_hash_value, \
+    stringHashTable*: get_string_hash_value) (table, key)
+// ================================================================================
+// ================================================================================
+
+void free_char_hash_map(charHashTable* table);
+void free_uchar_hash_map(ucharHashTable* table);
+void free_short_hash_map(shortHashTable* table);
+void free_ushort_hash_map(ushortHashTable* table);
+void free_int_hash_map(intHashTable* table);
+void free_uint_hash_map(uintHashTable* table);
+void free_long_hash_map(longHashTable* table);
+void free_ulong_hash_map(ulongHashTable* table);
+void free_llong_hash_map(llongHashTable* table);
+void free_ullong_hash_map(ullongHashTable* table);
+void free_float_hash_map(floatHashTable* table);
+void free_double_hash_map(doubleHashTable* table);
+void free_ldouble_hash_map(ldoubleHashTable* table);
+void free_bool_hash_map(boolHashTable* table);
+void free_string_hash_map(stringHashTable* table);
+// --------------------------------------------------------------------------------
+
+#define get_hash_map(table, key) _Generic((table), \
+    charHashTable*: free_char_hash_map, \
+    ucharHashTable*: free_uchar_hash_map, \
+    shortHashTable*: free_short_hash_map, \
+    ushortHashTable*: free_ushort_hash_map, \
+    intHashTable*: free_int_hash_map, \
+    uintHashTable*: free_uint_hash_map, \
+    longHashTable*: free_long_hash_map, \
+    ulongHashTable*: free_ulong_hash_map, \
+    llongHashTable*: free_llong_hash_map, \
+    ullongHashTable*: free_ullong_hash_map, \
+    floatHashTable*: free_float_hash_map, \
+    doubleHashTable*: free_double_hash_map, \
+    ldoubleHashTable*: free_ldouble_hash_map, \
+    boolHashTable*: free_bool_hash_map, \
+    stringHashTable*: free_string_hash_map) (table, key)
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

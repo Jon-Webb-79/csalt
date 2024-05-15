@@ -1869,6 +1869,1019 @@ void insert_bool_hash_table(boolHashTable* table, char* key, bool value) {
         table->size++;
     }
 }
+// --------------------------------------------------------------------------------
+
+void insert_string_hash_table(stringHashTable* table, char* key, char* value) {
+    // Check if resizing is needed
+    if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
+        size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
+        resize_string_hash(table, new_alloc);
+    } 
+    
+    size_t index = hash_function(key) % table->alloc;
+
+    // Check if the key already exists in the hash table
+    stringNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key already exists, return control to the calling program
+            errno = EINVAL;
+            return;
+        }
+        current = current->next;
+    }
+
+    // Allocate memory for the key
+    char* new_key = malloc((strlen(key) + 1) * sizeof(char));
+    if (!new_key) {
+        errno = ENOMEM;
+        return;
+    }
+    strcpy(new_key, key); // Copy the key to the dynamically allocated memory
+    
+    // Insert the new key-value pair into the hash table
+    stringNode* new_node = malloc(sizeof(stringNode));
+    if (!new_node) {
+        // Handle memory allocation failure
+        free(new_key); // Free the allocated key memory
+        return;
+    }
+    new_node->key = new_key;
+    new_node->value = init_string_nol(value);
+    new_node->next = table->keyValues[index].next;
+    table->keyValues[index].next = new_node;
+    
+    table->hash_size++; // Increment the number of key-value pairs
+    
+    // Update the size if the index was previously empty
+    if (table->keyValues[index].next == new_node) {
+        table->size++;
+    }
+}
+// ================================================================================
+// ================================================================================
+
+char pop_char_hash_map(charHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    charNode* prev = &table->keyValues[index];
+    charNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            char value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return CHAR_MAX;
+}
+// --------------------------------------------------------------------------------
+
+unsigned char pop_uchar_hash_map(ucharHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    ucharNode* prev = &table->keyValues[index];
+    ucharNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            unsigned char value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return UCHAR_MAX;
+}
+// --------------------------------------------------------------------------------
+
+short int pop_short_hash_map(shortHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    shortNode* prev = &table->keyValues[index];
+    shortNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            short int value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return SHRT_MAX;
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int pop_ushort_hash_map(ushortHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    ushortNode* prev = &table->keyValues[index];
+    ushortNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            unsigned short int value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return USHRT_MAX;
+}
+// --------------------------------------------------------------------------------
+
+int pop_int_hash_map(intHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    intNode* prev = &table->keyValues[index];
+    intNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            int value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return INT_MAX;
+}
+// --------------------------------------------------------------------------------
+
+unsigned int pop_uint_hash_map(uintHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    uintNode* prev = &table->keyValues[index];
+    uintNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            unsigned int value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return UINT_MAX;
+}
+// --------------------------------------------------------------------------------
+
+long int pop_long_hash_map(longHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    longNode* prev = &table->keyValues[index];
+    longNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            long int value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return LONG_MAX;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int pop_ulong_hash_map(ulongHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    ulongNode* prev = &table->keyValues[index];
+    ulongNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            unsigned long int value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return ULONG_MAX;
+}
+// --------------------------------------------------------------------------------
+
+long long int pop_llong_hash_map(llongHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    llongNode* prev = &table->keyValues[index];
+    llongNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            long long int value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return LLONG_MAX;
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int pop_ullong_hash_map(ullongHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    ullongNode* prev = &table->keyValues[index];
+    ullongNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            unsigned long long int value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return ULLONG_MAX;
+}
+// --------------------------------------------------------------------------------
+
+float pop_float_hash_map(floatHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    floatNode* prev = &table->keyValues[index];
+    floatNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            float value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return FLT_MAX;
+}
+// --------------------------------------------------------------------------------
+
+double pop_double_hash_map(doubleHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    doubleNode* prev = &table->keyValues[index];
+    doubleNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            double value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return DBL_MAX;
+}
+// --------------------------------------------------------------------------------
+
+long double pop_ldouble_hash_map(ldoubleHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    ldoubleNode* prev = &table->keyValues[index];
+    ldoubleNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            long double value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return LDBL_MAX;
+}
+// --------------------------------------------------------------------------------
+
+bool pop_bool_hash_map(boolHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    boolNode* prev = &table->keyValues[index];
+    boolNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            bool value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return false;
+}
+// --------------------------------------------------------------------------------
+
+str* pop_string_hash_map(stringHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+
+    // Traverse the linked list at the index
+    stringNode* prev = &table->keyValues[index];
+    stringNode* current = prev->next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, unlink the node from the linked list
+            prev->next = current->next;
+            
+            // Retrieve the value associated with the key
+            str* value = current->value;
+
+            // Free the memory allocated for the key and the node
+            free(current->key);
+            free(current);
+
+            // Decrement the number of key-value pairs in the hash table
+            table->hash_size--;
+
+            // Return the value associated with the key
+            return value;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return NULL;
+}
+// ================================================================================
+// ================================================================================
+
+char get_char_hash_value(charHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    charNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return CHAR_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+unsigned char get_uchar_hash_value(ucharHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    ucharNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return UCHAR_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+short int get_short_hash_value(shortHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    shortNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return SHRT_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+unsigned short int get_ushort_hash_value(ushortHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    ushortNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return USHRT_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+int get_int_hash_value(intHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    intNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return INT_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+unsigned int get_uint_hash_value(uintHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    uintNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return UINT_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+long int get_long_hash_value(longHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    longNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return LONG_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+unsigned long int get_ulong_hash_value(ulongHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    ulongNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return ULONG_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+long long int get_llong_hash_value(llongHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    llongNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return LLONG_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+unsigned long long int get_ullong_hash_value(ullongHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    ullongNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return LLONG_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+float get_float_hash_value(floatHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    floatNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return FLT_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+double get_double_hash_value(doubleHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    doubleNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return DBL_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+long double get_ldouble_hash_value(ldoubleHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    ldoubleNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return LDBL_MAX; 
+}
+// --------------------------------------------------------------------------------
+
+bool get_bool_hash_value(boolHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    boolNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return false; 
+}
+// --------------------------------------------------------------------------------
+
+str* get_string_hash_value(stringHashTable* table, char* key) {
+    size_t index = hash_function(key) % table->alloc;
+    // Traverse the linked list at the index
+    stringNode* current = table->keyValues[index].next;
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // Key found, return the corresponding value
+            return current->value;
+        }
+        current = current->next;
+    }
+
+    return NULL; 
+}
+// ================================================================================
+// ================================================================================
+
+void free_char_hash_map(charHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        charNode* current = table->keyValues[i].next; // Start from the head of the list
+        charNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_uchar_hash_map(ucharHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        ucharNode* current = table->keyValues[i].next; // Start from the head of the list
+        ucharNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_short_hash_map(shortHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        shortNode* current = table->keyValues[i].next; // Start from the head of the list
+        shortNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_ushort_hash_map(ushortHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        ushortNode* current = table->keyValues[i].next; // Start from the head of the list
+        ushortNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_int_hash_map(intHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        intNode* current = table->keyValues[i].next; // Start from the head of the list
+        intNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_uint_hash_map(uintHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        uintNode* current = table->keyValues[i].next; // Start from the head of the list
+        uintNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_long_hash_map(longHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        longNode* current = table->keyValues[i].next; // Start from the head of the list
+        longNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_ulong_hash_map(ulongHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        ulongNode* current = table->keyValues[i].next; // Start from the head of the list
+        ulongNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_llong_hash_map(llongHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        llongNode* current = table->keyValues[i].next; // Start from the head of the list
+        llongNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// -------------------------------------------------------------------------------- 
+
+void free_ullong_hash_map(ullongHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        ullongNode* current = table->keyValues[i].next; // Start from the head of the list
+        ullongNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_float_hash_map(floatHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        floatNode* current = table->keyValues[i].next; // Start from the head of the list
+        floatNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_double_hash_map(doubleHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        doubleNode* current = table->keyValues[i].next; // Start from the head of the list
+        doubleNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_ldouble_hash_map(ldoubleHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        ldoubleNode* current = table->keyValues[i].next; // Start from the head of the list
+        ldoubleNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_bool_hash_map(boolHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        boolNode* current = table->keyValues[i].next; // Start from the head of the list
+        boolNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
+// --------------------------------------------------------------------------------
+
+void free_string_hash_map(stringHashTable* table) {
+    for (size_t i = 0; i < table->alloc; i++) {
+        stringNode* current = table->keyValues[i].next; // Start from the head of the list
+        stringNode* next = NULL;
+        while (current) {      
+            next = current->next;
+            free_string(current->value);
+            free(current->key);
+            free(current);
+            current = next;
+        }
+    }
+    free(table->keyValues); 
+    free(table); 
+}
 // ================================================================================
 // ================================================================================
 // eof
