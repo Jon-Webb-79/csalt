@@ -27,6 +27,7 @@
 #include "test_sllist.h"
 #include "test_dllist.h"
 #include "test_avl.h"
+#include "test_hash.h"
 
 const struct CMUnitTest test_swap[] = {
 	cmocka_unit_test(test_swap_char),
@@ -1684,6 +1685,36 @@ const struct CMUnitTest test_avl[] = {
     cmocka_unit_test(test_or_double_avltree),
     cmocka_unit_test(test_or_ldouble_avltree),
     cmocka_unit_test(test_or_string_avltree),
+    cmocka_unit_test(test_char_hash_map),
+    cmocka_unit_test(test_uchar_hash_map),
+    cmocka_unit_test(test_short_hash_map),
+    cmocka_unit_test(test_ushort_hash_map),
+    cmocka_unit_test(test_int_hash_map),
+    cmocka_unit_test(test_uint_hash_map),
+    cmocka_unit_test(test_long_hash_map),
+    cmocka_unit_test(test_ulong_hash_map),
+    cmocka_unit_test(test_llong_hash_map),
+    cmocka_unit_test(test_ullong_hash_map),
+    cmocka_unit_test(test_float_hash_map),
+    cmocka_unit_test(test_double_hash_map),
+    cmocka_unit_test(test_ldouble_hash_map),
+    cmocka_unit_test(test_bool_hash_map),
+    cmocka_unit_test(test_string_hash_map),
+    cmocka_unit_test(test_char_hash_map_gbc),
+    cmocka_unit_test(test_uchar_hash_map_gbc),
+    cmocka_unit_test(test_short_hash_map_gbc),
+    cmocka_unit_test(test_ushort_hash_map_gbc),
+    cmocka_unit_test(test_int_hash_map_gbc),
+    cmocka_unit_test(test_uint_hash_map_gbc),
+    cmocka_unit_test(test_long_hash_map_gbc),
+    cmocka_unit_test(test_ulong_hash_map_gbc),
+    cmocka_unit_test(test_llong_hash_map_gbc),
+    cmocka_unit_test(test_ullong_hash_map_gbc),
+    cmocka_unit_test(test_float_hash_map_gbc),
+    cmocka_unit_test(test_double_hash_map_gbc),
+    cmocka_unit_test(test_ldouble_hash_map_gbc),
+    cmocka_unit_test(test_bool_hash_map_gbc),
+    cmocka_unit_test(test_string_hash_map_gbc),
 };
 
 // Begin code

@@ -250,7 +250,7 @@ void free_bool_hash_map(boolHashTable* table);
 void free_string_hash_map(stringHashTable* table);
 // --------------------------------------------------------------------------------
 
-#define get_hash_map(table, key) _Generic((table), \
+#define free_hash_map(table) _Generic((table), \
     charHashTable*: free_char_hash_map, \
     ucharHashTable*: free_uchar_hash_map, \
     shortHashTable*: free_short_hash_map, \
@@ -265,7 +265,7 @@ void free_string_hash_map(stringHashTable* table);
     doubleHashTable*: free_double_hash_map, \
     ldoubleHashTable*: free_ldouble_hash_map, \
     boolHashTable*: free_bool_hash_map, \
-    stringHashTable*: free_string_hash_map) (table, key)
+    stringHashTable*: free_string_hash_map) (table)
 // ================================================================================
 // ================================================================================
 
@@ -305,6 +305,42 @@ void update_string_hash_map(stringHashTable* table, char* key, char* value);
 // ================================================================================
 // ================================================================================
 
+size_t char_hash_map_alloc(charHashTable* table);
+size_t uchar_hash_map_alloc(ucharHashTable* table);
+size_t short_hash_map_alloc(shortHashTable* table);
+size_t ushort_hash_map_alloc(ushortHashTable* table);
+size_t int_hash_map_alloc(intHashTable* table);
+size_t uint_hash_map_alloc(uintHashTable* table);
+size_t long_hash_map_alloc(longHashTable* table);
+size_t ulong_hash_map_alloc(ulongHashTable* table);
+size_t llong_hash_map_alloc(llongHashTable* table);
+size_t ullong_hash_map_alloc(ullongHashTable* table);
+size_t float_hash_map_alloc(floatHashTable* table);
+size_t double_hash_map_alloc(doubleHashTable* table);
+size_t ldouble_hash_map_alloc(ldoubleHashTable* table);
+size_t bool_hash_map_alloc(boolHashTable* table);
+size_t string_hash_map_alloc(stringHashTable* table);
+// --------------------------------------------------------------------------------
+
+#define hash_map_alloc(table) _Generic((table), \
+    charHashTable*: char_hash_map_alloc, \
+    ucharHashTable*: uchar_hash_map_alloc, \
+    shortHashTable*: short_hash_map_alloc, \
+    ushortHashTable*: ushort_hash_map_alloc, \
+    intHashTable*: int_hash_map_alloc, \
+    uintHashTable*: uint_hash_map_alloc, \
+    longHashTable*: long_hash_map_alloc, \
+    ulongHashTable*: ulong_hash_map_alloc, \
+    llongHashTable*: llong_hash_map_alloc, \
+    ullongHashTable*: ullong_hash_map_alloc, \
+    floatHashTable*: float_hash_map_alloc, \
+    doubleHashTable*: double_hash_map_alloc, \
+    ldoubleHashTable*: ldouble_hash_map_alloc, \
+    boolHashTable*: bool_hash_map_alloc, \
+    stringHashTable*: string_hash_map_alloc) (table)
+// ================================================================================
+// ================================================================================
+
 size_t char_hash_map_size(charHashTable* table);
 size_t uchar_hash_map_size(ucharHashTable* table);
 size_t short_hash_map_size(shortHashTable* table);
@@ -338,6 +374,80 @@ size_t string_hash_map_size(stringHashTable* table);
     ldoubleHashTable*: ldouble_hash_map_size, \
     boolHashTable*: bool_hash_map_size, \
     stringHashTable*: string_hash_map_size) (table)
+// ================================================================================
+// ================================================================================
+
+size_t char_hash_map_hashSize(charHashTable* table);
+size_t uchar_hash_map_hashSize(ucharHashTable* table);
+size_t short_hash_map_hashSize(shortHashTable* table);
+size_t ushort_hash_map_hashSize(ushortHashTable* table);
+size_t int_hash_map_hashSize(intHashTable* table);
+size_t uint_hash_map_hashSize(uintHashTable* table);
+size_t long_hash_map_hashSize(longHashTable* table);
+size_t ulong_hash_map_hashSize(ulongHashTable* table);
+size_t llong_hash_map_hashSize(llongHashTable* table);
+size_t ullong_hash_map_hashSize(ullongHashTable* table);
+size_t float_hash_map_hashSize(floatHashTable* table);
+size_t double_hash_map_hashSize(doubleHashTable* table);
+size_t ldouble_hash_map_hashSize(ldoubleHashTable* table);
+size_t bool_hash_map_hashSize(boolHashTable* table);
+size_t string_hash_map_hashSize(stringHashTable* table);
+// --------------------------------------------------------------------------------
+
+#define hash_map_hashSize(table) _Generic((table), \
+    charHashTable*: char_hash_map_hashSize, \
+    ucharHashTable*: uchar_hash_map_hashSize, \
+    shortHashTable*: short_hash_map_hashSize, \
+    ushortHashTable*: ushort_hash_map_hashSize, \
+    intHashTable*: int_hash_map_hashSize, \
+    uintHashTable*: uint_hash_map_hashSize, \
+    longHashTable*: long_hash_map_hashSize, \
+    ulongHashTable*: ulong_hash_map_hashSize, \
+    llongHashTable*: llong_hash_map_hashSize, \
+    ullongHashTable*: ullong_hash_map_hashSize, \
+    floatHashTable*: float_hash_map_hashSize, \
+    doubleHashTable*: double_hash_map_hashSize, \
+    ldoubleHashTable*: ldouble_hash_map_hashSize, \
+    boolHashTable*: bool_hash_map_hashSize, \
+    stringHashTable*: string_hash_map_hashSize) (table)
+// ================================================================================
+// ================================================================================
+
+void _freeCharHashTable(charHashTable** table);
+void _freeUCharHashTable(ucharHashTable** table);
+void _freeShortHashTable(shortHashTable** table);
+void _freeUShortHashTable(ushortHashTable** table);
+void _freeIntHashTable(intHashTable** table);
+void _freeUIntHashTable(uintHashTable** table);
+void _freeLongHashTable(longHashTable** table);
+void _freeULongHashTable(ulongHashTable** table);
+void _freeLLongHashTable(llongHashTable** table);
+void _freeULLongHashTable(ullongHashTable** table);
+void _freeFloatHashTable(floatHashTable** table);
+void _freeDoubleHashTable(doubleHashTable** table);
+void _freeLDoubleHashTable(ldoubleHashTable** table);
+void _freeBoolHashTable(boolHashTable** table);
+void _freeStringHashTable(stringHashTable** table);
+// --------------------------------------------------------------------------------
+
+#if defined(__GNUC__) || defined(__clang__)
+#define gbc_char_map __attribute__((cleanup(_freeCharHashTable)))
+#define gbc_uchar_map __attribute__((cleanup(_freeUCharHashTable)))
+#define gbc_short_map __attribute__((cleanup(_freeShortHashTable)))
+#define gbc_ushort_map __attribute__((cleanup(_freeUShortHashTable)))
+#define gbc_int_map __attribute__((cleanup(_freeIntHashTable)))
+#define gbc_uint_map __attribute__((cleanup(_freeUIntHashTable)))
+#define gbc_long_map __attribute__((cleanup(_freeLongHashTable)))
+#define gbc_ulong_map __attribute__((cleanup(_freeULongHashTable)))
+#define gbc_llong_map __attribute__((cleanup(_freeLLongHashTable)))
+#define gbc_ullong_map __attribute__((cleanup(_freeULLongHashTable)))
+#define gbc_float_map __attribute__((cleanup(_freeFloatHashTable)))
+#define gbc_double_map __attribute__((cleanup(_freeDoubleHashTable)))
+#define gbc_ldouble_map __attribute__((cleanup(_freeLDoubleHashTable)))
+#define gbc_bool_map __attribute__((cleanup(_freeBoolHashTable)))
+#define gbc_string_map __attribute__((cleanup(_freeStringHashTable)))
+#endif
+
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

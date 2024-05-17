@@ -1185,7 +1185,7 @@ InitHashFunc init_hash_map(dtype dat_type) {
 // ================================================================================
 // ================================================================================
 
-void insert_char_hash_table(charHashTable* table, char* key, char value) {
+void insert_char_hash_map(charHashTable* table, char* key, char value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1234,7 +1234,7 @@ void insert_char_hash_table(charHashTable* table, char* key, char value) {
 }
 // --------------------------------------------------------------------------------
 
-void insert_uchar_hash_table(ucharHashTable* table, char* key, unsigned char value) {
+void insert_uchar_hash_map(ucharHashTable* table, char* key, unsigned char value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1283,7 +1283,7 @@ void insert_uchar_hash_table(ucharHashTable* table, char* key, unsigned char val
 }
 // --------------------------------------------------------------------------------
 
-void insert_short_hash_table(shortHashTable* table, char* key, short int value) {
+void insert_short_hash_map(shortHashTable* table, char* key, short int value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1332,7 +1332,7 @@ void insert_short_hash_table(shortHashTable* table, char* key, short int value) 
 }
 // --------------------------------------------------------------------------------
 
-void insert_ushort_hash_table(ushortHashTable* table, char* key, unsigned short int value) {
+void insert_ushort_hash_map(ushortHashTable* table, char* key, unsigned short int value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1381,7 +1381,7 @@ void insert_ushort_hash_table(ushortHashTable* table, char* key, unsigned short 
 }
 // --------------------------------------------------------------------------------
 
-void insert_int_hash_table(intHashTable* table, char* key, int value) {
+void insert_int_hash_map(intHashTable* table, char* key, int value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1430,7 +1430,7 @@ void insert_int_hash_table(intHashTable* table, char* key, int value) {
 }
 // --------------------------------------------------------------------------------
 
-void insert_uint_hash_table(uintHashTable* table, char* key, unsigned int value) {
+void insert_uint_hash_map(uintHashTable* table, char* key, unsigned int value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1479,7 +1479,7 @@ void insert_uint_hash_table(uintHashTable* table, char* key, unsigned int value)
 }
 // --------------------------------------------------------------------------------
 
-void insert_long_hash_table(longHashTable* table, char* key, long int value) {
+void insert_long_hash_map(longHashTable* table, char* key, long int value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1528,7 +1528,7 @@ void insert_long_hash_table(longHashTable* table, char* key, long int value) {
 }
 // --------------------------------------------------------------------------------
 
-void insert_ulong_hash_table(ulongHashTable* table, char* key, unsigned long int value) {
+void insert_ulong_hash_map(ulongHashTable* table, char* key, unsigned long int value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1577,7 +1577,7 @@ void insert_ulong_hash_table(ulongHashTable* table, char* key, unsigned long int
 }
 // --------------------------------------------------------------------------------
 
-void insert_llong_hash_table(llongHashTable* table, char* key, unsigned long int value) {
+void insert_llong_hash_map(llongHashTable* table, char* key, long long int value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1626,7 +1626,7 @@ void insert_llong_hash_table(llongHashTable* table, char* key, unsigned long int
 }
 // --------------------------------------------------------------------------------
 
-void insert_ullong_hash_table(ullongHashTable* table, char* key, unsigned long long int value) {
+void insert_ullong_hash_map(ullongHashTable* table, char* key, unsigned long long int value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1675,7 +1675,7 @@ void insert_ullong_hash_table(ullongHashTable* table, char* key, unsigned long l
 }
 // --------------------------------------------------------------------------------
 
-void insert_float_hash_table(floatHashTable* table, char* key, float value) {
+void insert_float_hash_map(floatHashTable* table, char* key, float value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1724,7 +1724,7 @@ void insert_float_hash_table(floatHashTable* table, char* key, float value) {
 }
 // --------------------------------------------------------------------------------
 
-void insert_double_hash_table(doubleHashTable* table, char* key, double value) {
+void insert_double_hash_map(doubleHashTable* table, char* key, double value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1773,7 +1773,7 @@ void insert_double_hash_table(doubleHashTable* table, char* key, double value) {
 }
 // --------------------------------------------------------------------------------
 
-void insert_ldouble_hash_table(ldoubleHashTable* table, char* key, long double value) {
+void insert_ldouble_hash_map(ldoubleHashTable* table, char* key, long double value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1822,7 +1822,7 @@ void insert_ldouble_hash_table(ldoubleHashTable* table, char* key, long double v
 }
 // --------------------------------------------------------------------------------
 
-void insert_bool_hash_table(boolHashTable* table, char* key, bool value) {
+void insert_bool_hash_map(boolHashTable* table, char* key, bool value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -1871,7 +1871,7 @@ void insert_bool_hash_table(boolHashTable* table, char* key, bool value) {
 }
 // --------------------------------------------------------------------------------
 
-void insert_string_hash_table(stringHashTable* table, char* key, char* value) {
+void insert_string_hash_map(stringHashTable* table, char* key, char* value) {
     // Check if resizing is needed
     if (table->hash_size >= table->alloc * LOAD_FACTOR_THRESHOLD) {
         size_t new_alloc = table->alloc < HASH_THRESHOLD ? table->alloc * 2 : table->alloc + HASH_FIXED_AMOUNT;
@@ -3098,78 +3098,336 @@ void update_string_hash_map(stringHashTable* table, char* key, char* value) {
 // ================================================================================
 // ================================================================================
 
-size_t char_hash_map_size(charHashTable* table) {
+size_t char_hash_map_alloc(charHashTable* table) {
     return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t uchar_hash_map_alloc(ucharHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t short_hash_map_alloc(shortHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ushort_hash_map_alloc(ushortHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t int_hash_map_alloc(intHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t uint_hash_map_alloc(uintHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t long_hash_map_alloc(longHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ulong_hash_map_alloc(ulongHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t llong_hash_map_alloc(llongHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ullong_hash_map_alloc(ullongHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t float_hash_map_alloc(floatHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t double_hash_map_alloc(doubleHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t ldouble_hash_map_alloc(ldoubleHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t bool_hash_map_alloc(boolHashTable* table) {
+    return table->alloc;
+}
+// --------------------------------------------------------------------------------
+
+size_t string_hash_map_alloc(stringHashTable* table) {
+    return table->alloc;
+}
+// ================================================================================
+// ================================================================================
+
+size_t char_hash_map_size(charHashTable* table) {
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t uchar_hash_map_size(ucharHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t short_hash_map_size(shortHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t ushort_hash_map_size(ushortHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t int_hash_map_size(intHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t uint_hash_map_size(uintHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t long_hash_map_size(longHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t ulong_hash_map_size(ulongHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t llong_hash_map_size(llongHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t ullong_hash_map_size(ullongHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t float_hash_map_size(floatHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t double_hash_map_size(doubleHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t ldouble_hash_map_size(ldoubleHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t bool_hash_map_size(boolHashTable* table) {
-    return table->alloc;
+    return table->size;
 }
 // --------------------------------------------------------------------------------
 
 size_t string_hash_map_size(stringHashTable* table) {
-    return table->alloc;
+    return table->size;
+}
+// ================================================================================
+// ================================================================================
+
+size_t char_hash_map_hashSize(charHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t uchar_hash_map_hashSize(ucharHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t short_hash_map_hashSize(shortHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t ushort_hash_map_hashSize(ushortHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t int_hash_map_hashSize(intHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t uint_hash_map_hashSize(uintHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t long_hash_map_hashSize(longHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t ulong_hash_map_hashSize(ulongHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t llong_hash_map_hashSize(llongHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t ullong_hash_map_hashSize(ullongHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t float_hash_map_hashSize(floatHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t double_hash_map_hashSize(doubleHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t ldouble_hash_map_hashSize(ldoubleHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t bool_hash_map_hashSize(boolHashTable* table) {
+    return table->hash_size;
+}
+// --------------------------------------------------------------------------------
+
+size_t string_hash_map_hashSize(stringHashTable* table) {
+    return table->hash_size;
+}
+// ================================================================================
+// ================================================================================
+
+void _freeCharHashTable(charHashTable **table) {
+    if (table && *table) {
+        free_char_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeUCharHashTable(ucharHashTable **table) {
+    if (table && *table) {
+        free_uchar_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeShortHashTable(shortHashTable **table) {
+    if (table && *table) {
+        free_short_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeUShortHashTable(ushortHashTable **table) {
+    if (table && *table) {
+        free_ushort_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeIntHashTable(intHashTable **table) {
+    if (table && *table) {
+        free_int_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeUIntHashTable(uintHashTable **table) {
+    if (table && *table) {
+        free_uint_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeLongHashTable(longHashTable **table) {
+    if (table && *table) {
+        free_long_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeULongHashTable(ulongHashTable **table) {
+    if (table && *table) {
+        free_ulong_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeLLongHashTable(llongHashTable **table) {
+    if (table && *table) {
+        free_llong_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeULLongHashTable(ullongHashTable **table) {
+    if (table && *table) {
+        free_ullong_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeFloatHashTable(floatHashTable **table) {
+    if (table && *table) {
+        free_float_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeDoubleHashTable(doubleHashTable **table) {
+    if (table && *table) {
+        free_double_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeLDoubleHashTable(ldoubleHashTable **table) {
+    if (table && *table) {
+        free_ldouble_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeBoolHashTable(boolHashTable **table) {
+    if (table && *table) {
+        free_bool_hash_map(*table);
+    }
+}
+// --------------------------------------------------------------------------------
+
+void _freeStringHashTable(stringHashTable **table) {
+    if (table && *table) {
+        free_string_hash_map(*table);
+    }
 }
 // ================================================================================
 // ================================================================================
