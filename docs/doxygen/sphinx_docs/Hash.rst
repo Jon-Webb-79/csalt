@@ -127,3 +127,151 @@ by ensuring that operations are carried out with maximum efficiency, regardless
 of the sequence of insertions and deletions, thus providing a robust tool for 
 developers to manage key-value pairs effectively.
 
+init_hash_map Function
+======================
+
+The ``init_hash_map`` function provides a generic way to initialize hash maps 
+for various data types where the key is a string literal. This function leverages 
+function pointers to return the appropriate initialization function for 
+the specified data type, simplifying the creation of type-specific hash maps.
+
+Description
+-----------
+
+The ``init_hash_map`` function accepts an enumeration value representing the 
+desired data type and returns a function pointer to the corresponding hash map 
+initialization function. Each initialization function allocates memory for the 
+hash map, initializes its fields, and returns a pointer to the newly created hash map.
+
+Function Signature
+------------------
+
+.. code-block:: c
+
+    typedef void* (*InitHashFunc)(bool);
+    InitHashFunc init_hash_map(dtype dat_type);
+
+Parameters
+----------
+
+- :c:`dat_type`: An enumeration value representing the data type of the hash map's values. The available data types are:
+
+  - :c:`dChar`: char
+  - :c:`dUChar`: unsigned char
+  - :c:`dShort`: short int
+  - :c:`dUShort`: unsigned short int
+  - :c:`dInt`: int
+  - :c:`dUInt`: unsigned int
+  - :c:`dLong`: long int
+  - :c:`dULong`: unsigned long int
+  - :c:`dLongLong`: long long int
+  - :c:`dULongLong`: unsigned long long int
+  - :c:`dFloat`: float
+  - :c:`dDouble`: double
+  - :c:`dLDouble`: long double
+  - :c:`dBool`: bool
+  - :c:`dString`: char*
+
+Return Value
+------------
+
+The function returns a pointer to the appropriate hash map initialization function 
+based on the specified data type. If the data type is not recognized, the function 
+returns :c:`NULL`.
+
+Default Values for Initialization
+---------------------------------
+
+Each initialization function sets the following default values for the hash map:
+
+- :c:`keyValues`: An array of nodes, each initialized with a :c:`NULL` key and next pointer.
+- :c:`hash_size`: 0
+- :c:`size`: 0
+- :c:`alloc`: The size of the allocated array, defaulted to 3.
+
+Code Example
+------------
+
+Here's an example of how to use the ``init_hash_map`` function to initialize a hash map for integers:
+
+.. code-block:: c
+
+    #include "hash.h"
+
+    int main() {
+        InitHashFunc init_func = init_hash_map(dInt);
+        if (init_func) {
+            intHashTable* table = (intHashTable*)init_func(false);
+            if (table) {
+                // Use the hash table
+                free_hash(table);
+            } else {
+                // Handle memory allocation failure
+                fprintf(stderr, "Failed to initialize hash table\n");
+            }
+        } else {
+            // Handle invalid data type
+            fprintf(stderr, "Invalid data type\n");
+        }
+        return 0;
+    }
+
+Error Handling
+--------------
+
+- If memory allocation fails during the initialization of a hash map, the function sets :c:`errno` to :c:`ENOMEM` and returns :c:`NULL`.
+- If an invalid data type is specified, the function returns :c:`NULL`.
+
+Underlying Functions
+--------------------
+
+The following functions are called by the :c:`init_hash_map` function based on the specified data type:
+
+- :c:`init_char_hash_map`
+- :c:`init_uchar_hash_map`
+- :c:`init_short_hash_map`
+- :c:`init_ushort_hash_map`
+- :c:`init_int_hash_map`
+- :c:`init_uint_hash_map`
+- :c:`init_long_hash_map`
+- :c:`init_ulong_hash_map`
+- :c:`init_llong_hash_map`
+- :c:`init_ullong_hash_map`
+- :c:`init_float_hash_map`
+- :c:`init_double_hash_map`
+- :c:`init_ldouble_hash_map`
+- :c:`init_bool_hash_map`
+- :c:`init_string_hash_map`
+
+Each of these functions follows the same pattern of allocating memory, initializing 
+fields, and returning a pointer to the newly created hash map.
+
+.. code-block:: c
+
+    charHashTable* init_char_hash_map() {
+        charHashTable* hashPtr = malloc(sizeof(*hashPtr));
+        if (!hashPtr) {
+            errno = ENOMEM;
+            return NULL;
+        }
+        charNode* arrPtr = malloc(size * sizeof(charNode));
+        if (!arrPtr) {
+            errno = ENOMEM;
+            free(hashPtr);
+            return NULL;
+        }
+
+        // Initialize each index in the keyValues array with a designated head node
+        for (size_t i = 0; i < size; i++) {
+            arrPtr[i].key = NULL; // Set the head node's key pointer to NULL
+            arrPtr[i].next = NULL; // Set the head node's next pointer to NULL
+            arrPtr[i].value = 0; // Initialize value
+        }
+
+        hashPtr->keyValues = arrPtr;
+        hashPtr->hash_size = 0;
+        hashPtr->size = 0;
+        hashPtr->alloc = size;
+        return hashPtr;
+    }
+
