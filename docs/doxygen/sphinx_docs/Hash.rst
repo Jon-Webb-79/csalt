@@ -514,3 +514,156 @@ memory
     str* value gbc_str = pop_hash_map(table, "Bob");
     // The user no longer needs to manually free value
 
+get_hash_value Macro
+====================
+
+The ``get_hash_value`` macro provides a type-safe way to retrieve values from 
+hash maps of various data types based on a given key. By leveraging the C11 
+`_Generic` keyword, this macro automatically selects the appropriate type-specific 
+retrieval function based on the type of the hash map provided.
+
+Description
+-----------
+
+The ``get_hash_value`` macro simplifies the process of retrieving values from 
+hash maps by automatically dispatching to the correct type-specific retrieval 
+function. This ensures type safety and reduces the need for manual function selection.
+
+Function Signature
+------------------
+
+.. code-block:: c
+
+    #define get_hash_value(table, key) _Generic((table), \
+        charHashTable*: get_char_hash_value, \
+        ucharHashTable*: get_uchar_hash_value, \
+        shortHashTable*: get_short_hash_value, \
+        ushortHashTable*: get_ushort_hash_value, \
+        intHashTable*: get_int_hash_value, \
+        uintHashTable*: get_uint_hash_value, \
+        longHashTable*: get_long_hash_value, \
+        ulongHashTable*: get_ulong_hash_value, \
+        llongHashTable*: get_llong_hash_value, \
+        ullongHashTable*: get_ullong_hash_value, \
+        floatHashTable*: get_float_hash_value, \
+        doubleHashTable*: get_double_hash_value, \
+        ldoubleHashTable*: get_ldouble_hash_value, \
+        boolHashTable*: get_bool_hash_value, \
+        stringHashTable*: get_string_hash_value) (table, key)
+
+Parameters
+----------
+
+- :c:`table`: A pointer to the hash table from which the value will be retrieved. The type of the table determines which retrieval function is called.
+- :c:`key`: The key as a string literal to retrieve the value from the hash map.
+
+Error Handling
+--------------
+
+The following error handling mechanisms are implemented within the type-specific 
+retrieval functions:
+
+- **Key Not Found**: If the key does not exist in the hash table, the function returns a type-specific default value. For numerical types, this is typically a sentinel value (e.g., :c:`SHRT_MAX` for short integers).
+
+Code Example
+------------
+
+Here's an example of how to use the ``get_hash_value`` macro to retrieve values 
+from an integer hash map. The example also demonstrates how to use the 
+``free_hash_map`` macro to free all allocated memory.
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for integers
+        intHashTable* table = init_hash_map(dInt);
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", 20);
+        insert_hash_map(table, "Alice", 30);
+        insert_hash_map(table, "Eve", 25);
+
+        // Retrieve and print values
+        int value = get_hash_value(table, "Bob");
+        if (value != INT_MAX) {
+            printf("Bob's value: %d\n", value);
+        } else {
+            printf("Bob not found in the hash map\n");
+        }
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+Expected Output
+---------------
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Bob's value: 20
+
+Special Considerations for Strings
+----------------------------------
+
+For hash maps where the values are strings (i.e., :c:`stringHashTable`), the 
+returned string is a shallow copy. This means that the string pointer returned 
+by the :c:`get_string_hash_value` function points to the original string stored 
+in the hash map. The user should take care not to free this string, as it is 
+managed by the hash map itself. However, other string operations defined in 
+the :c:`str.h` file can be safely performed on it.
+
+
+Here's an example of how to retrieve and use a string value from a string hash map:
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for strings
+        stringHashTable* table = init_hash_map(dString);
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", "Hello");
+        insert_hash_map(table, "Alice", "World");
+
+        // Retrieve and print values
+        str* value = get_hash_value(table, "Bob");
+        if (value) {
+            printf("Bob's value: %s\n", value->data);
+        } else {
+            printf("Bob not found in the hash map\n");
+        }
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+Expected Output for Strings
+---------------------------
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Bob's value: Hello
+
+
