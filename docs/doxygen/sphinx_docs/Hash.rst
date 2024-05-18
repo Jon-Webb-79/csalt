@@ -1005,3 +1005,96 @@ When the above code is run, it should produce the following output:
 
     Alice's updated value: Everyone
 
+hash_map_alloc Macro
+====================
+
+The ``hash_map_alloc`` macro provides a type-safe way to retrieve the allocated 
+size of hash maps of various data types. By leveraging the C11 `_Generic` keyword, 
+this macro automatically selects the appropriate type-specific allocation retrieval 
+function based on the type of the hash map provided.
+
+Description
+-----------
+
+The ``hash_map_alloc`` macro simplifies the process of retrieving the allocated 
+size of hash maps by automatically dispatching to the correct type-specific function. 
+This ensures type safety and reduces the need for manual function selection.
+
+Function Signature
+------------------
+
+.. code-block:: c
+
+    #define hash_map_alloc(table) _Generic((table), \
+        charHashTable*: char_hash_map_alloc, \
+        ucharHashTable*: uchar_hash_map_alloc, \
+        shortHashTable*: short_hash_map_alloc, \
+        ushortHashTable*: ushort_hash_map_alloc, \
+        intHashTable*: int_hash_map_alloc, \
+        uintHashTable*: uint_hash_map_alloc, \
+        longHashTable*: long_hash_map_alloc, \
+        ulongHashTable*: ulong_hash_map_alloc, \
+        llongHashTable*: llong_hash_map_alloc, \
+        ullongHashTable*: ullong_hash_map_alloc, \
+        floatHashTable*: float_hash_map_alloc, \
+        doubleHashTable*: double_hash_map_alloc, \
+        ldoubleHashTable*: ldouble_hash_map_alloc, \
+        boolHashTable*: bool_hash_map_alloc, \
+        stringHashTable*: string_hash_map_alloc) (table)
+
+Parameters
+----------
+
+- :c:`table`: A pointer to the hash table for which the allocated size will be retrieved. The type of the table determines which allocation retrieval function is called.
+
+Return Value
+------------
+
+The macro returns the allocated size of the hash map, which represents the number 
+of buckets allocated for storing key-value pairs.
+
+Code Example
+------------
+
+Here's an example of how to use the ``hash_map_alloc`` macro to retrieve the 
+allocated size of an integer hash map. The example also demonstrates how to use 
+the ``free_hash_map`` macro to free all allocated memory.
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for integers
+        intHashTable* table = init_hash_map(dInt);
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", 20);
+        insert_hash_map(table, "Alice", 30);
+        insert_hash_map(table, "Eve", 25);
+
+        // Retrieve and print the allocated size of the hash map
+        size_t alloc_size = hash_map_alloc(table);
+        printf("Allocated size of the hash map: %zu\n", alloc_size);
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+Expected Output
+---------------
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Allocated size of the hash map: 3
+
+
