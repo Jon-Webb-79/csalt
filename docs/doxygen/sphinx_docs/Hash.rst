@@ -1189,4 +1189,95 @@ When the above code is run, it should produce the following output:
 
     Number of populated indices in the hash map: 3
 
+hash_map_hashSize Macro
+=======================
+
+The ``hash_map_hashSize`` macro provides a type-safe way to retrieve the total 
+number of key-value pairs in hash maps of various data types. By leveraging the 
+C11 `_Generic` keyword, this macro automatically selects the appropriate 
+type-specific hash size retrieval function based on the type of the hash map provided.
+
+Description
+-----------
+
+The ``hash_map_hashSize`` macro simplifies the process of retrieving the total 
+number of key-value pairs in hash maps by automatically dispatching to the 
+correct type-specific function. This ensures type safety and reduces the need for manual function selection.
+
+Function Signature
+------------------
+
+.. code-block:: c
+
+    #define hash_map_hashSize(table) _Generic((table), \
+        charHashTable*: char_hash_map_hashSize, \
+        ucharHashTable*: uchar_hash_map_hashSize, \
+        shortHashTable*: short_hash_map_hashSize, \
+        ushortHashTable*: ushort_hash_map_hashSize, \
+        intHashTable*: int_hash_map_hashSize, \
+        uintHashTable*: uint_hash_map_hashSize, \
+        longHashTable*: long_hash_map_hashSize, \
+        ulongHashTable*: ulong_hash_map_hashSize, \
+        llongHashTable*: llong_hash_map_hashSize, \
+        ullongHashTable*: ullong_hash_map_hashSize, \
+        floatHashTable*: float_hash_map_hashSize, \
+        doubleHashTable*: double_hash_map_hashSize, \
+        ldoubleHashTable*: ldouble_hash_map_hashSize, \
+        boolHashTable*: bool_hash_map_hashSize, \
+        stringHashTable*: string_hash_map_hashSize) (table)
+
+Parameters
+----------
+
+- :c:`table`: A pointer to the hash table for which the total number of key-value pairs will be retrieved. The type of the table determines which hash size retrieval function is called.
+
+Return Value
+------------
+
+The macro returns the total number of key-value pairs in the hash map.
+
+Code Example
+------------
+
+Here's an example of how to use the ``hash_map_hashSize`` macro to retrieve 
+the total number of key-value pairs in an integer hash map. The example also 
+demonstrates how to use the ``free_hash_map`` macro to free all allocated memory.
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for integers
+        intHashTable* table = init_hash_map(dInt);
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", 20);
+        insert_hash_map(table, "Alice", 30);
+        insert_hash_map(table, "Eve", 25);
+
+        // Retrieve and print the total number of key-value pairs in the hash map
+        size_t hashSize = hash_map_hashSize(table);
+        printf("Total number of key-value pairs in the hash map: %zu\n", hashSize);
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+Expected Output
+---------------
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Total number of key-value pairs in the hash map: 3
+
 
