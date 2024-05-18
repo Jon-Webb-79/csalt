@@ -4,9 +4,6 @@ TODO
 Over the next few months it is my intention to add the following functionality
 to the Csalt library.
 
-#. **Hash Table:** A library that enables has tables with string keys and 
-   all types of data.
-
 #. **Graph Structure:** A library that enables a graph data structure with basic 
    functionality.
 
