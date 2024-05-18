@@ -1097,4 +1097,96 @@ When the above code is run, it should produce the following output:
 
     Allocated size of the hash map: 3
 
+hash_map_size Macro
+===================
+
+The ``hash_map_size`` macro provides a type-safe way to retrieve the number of 
+populated indices in hash maps of various data types. By leveraging the C11 
+`_Generic` keyword, this macro automatically selects the appropriate type-specific 
+size retrieval function based on the type of the hash map provided.
+
+Description
+-----------
+
+The ``hash_map_size`` macro simplifies the process of retrieving the number of 
+populated indices in hash maps by automatically dispatching to the correct 
+type-specific function. This ensures type safety and reduces the need for 
+manual function selection.
+
+Function Signature
+------------------
+
+.. code-block:: c
+
+    #define hash_map_size(table) _Generic((table), \
+        charHashTable*: char_hash_map_size, \
+        ucharHashTable*: uchar_hash_map_size, \
+        shortHashTable*: short_hash_map_size, \
+        ushortHashTable*: ushort_hash_map_size, \
+        intHashTable*: int_hash_map_size, \
+        uintHashTable*: uint_hash_map_size, \
+        longHashTable*: long_hash_map_size, \
+        ulongHashTable*: ulong_hash_map_size, \
+        llongHashTable*: llong_hash_map_size, \
+        ullongHashTable*: ullong_hash_map_size, \
+        floatHashTable*: float_hash_map_size, \
+        doubleHashTable*: double_hash_map_size, \
+        ldoubleHashTable*: ldouble_hash_map_size, \
+        boolHashTable*: bool_hash_map_size, \
+        stringHashTable*: string_hash_map_size) (table)
+
+Parameters
+----------
+
+- :c:`table`: A pointer to the hash table for which the number of populated indices will be retrieved. The type of the table determines which size retrieval function is called.
+
+Return Value
+------------
+
+The macro returns the number of populated indices in the hash map
+
+Code Example
+------------
+
+Here's an example of how to use the ``hash_map_size`` macro to retrieve the 
+number of populated indices in an integer hash map. The example also demonstrates 
+how to use the ``free_hash_map`` macro to free all allocated memory.
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for integers
+        intHashTable* table = init_hash_map(dInt);
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", 20);
+        insert_hash_map(table, "Alice", 30);
+        insert_hash_map(table, "Eve", 25);
+
+        // Retrieve and print the number of populated indices in the hash map
+        size_t size = hash_map_size(table);
+        printf("Number of populated indices in the hash map: %zu\n", size);
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+Expected Output
+---------------
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Number of populated indices in the hash map: 3
+
 
