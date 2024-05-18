@@ -343,7 +343,7 @@ pairs into an integer hash map. The example also demonstrates how to use the
 
     int main() {
         // Initialize the hash map for integers
-        intHashTable* table = init_int_hash_map(dInt);
+        intHashTable* table = init_hash_map(dInt);
         if (!table) {
             fprintf(stderr, "Failed to initialize hash table\n");
             return 1;
@@ -377,4 +377,140 @@ When the above code is run, it should produce the following output:
 The corresponding :c:`free_hash_map` macro is used to free all allocated memory 
 for any type-specific hash map, ensuring that the resources are properly 
 released when the hash map is no longer needed.
+
+pop_hash_map Macro
+==================
+
+The ``pop_hash_map`` macro provides a type-safe way to remove key-value pairs 
+from hash maps of various data types. By leveraging the C11 `_Generic` keyword, 
+this macro automatically selects the appropriate type-specific pop function 
+based on the type of the hash map provided.
+
+Description
+-----------
+
+The ``pop_hash_map`` macro simplifies the process of removing key-value pairs 
+from hash maps by automatically dispatching to the correct type-specific pop 
+function. This ensures type safety and reduces the need for manual function 
+selection.
+
+Function Signature
+------------------
+
+.. code-block:: c
+
+    #define pop_hash_map(table, key) _Generic((table), \
+        charHashTable*: pop_char_hash_map, \
+        ucharHashTable*: pop_uchar_hash_map, \
+        shortHashTable*: pop_short_hash_map, \
+        ushortHashTable*: pop_ushort_hash_map, \
+        intHashTable*: pop_int_hash_map, \
+        uintHashTable*: pop_uint_hash_map, \
+        longHashTable*: pop_long_hash_map, \
+        ulongHashTable*: pop_ulong_hash_map, \
+        llongHashTable*: pop_llong_hash_map, \
+        ullongHashTable*: pop_ullong_hash_map, \
+        floatHashTable*: pop_float_hash_map, \
+        doubleHashTable*: pop_double_hash_map, \
+        ldoubleHashTable*: pop_ldouble_hash_map, \
+        boolHashTable*: pop_bool_hash_map, \
+        stringHashTable*: pop_string_hash_map) (table, key)
+
+Parameters
+----------
+
+- :c:`table`: A pointer to the hash table from which the key-value pair will be removed. The type of the table determines which pop function is called.
+- :c:`key`: The key as a string literal to be removed from the hash map.
+
+Error Handling
+--------------
+
+The following error handling mechanisms are implemented within the type-specific pop functions:
+
+- **Key Not Found**: If the key does not exist in the hash table, the function returns a type-specific default value. For numerical types, this is typically a sentinel value (e.g., :c:`INT_MAX` for integers).
+
+Code Example
+------------
+
+Here's an example of how to use the ``pop_hash_map`` macro to remove key-value
+pairs from an integer hash map. The example also demonstrates how to use the 
+``free_hash_map`` macro to free all allocated memory.
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for integers
+        intHashTable* table = init_hash_map(dInt);
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", 20);
+        insert_hash_map(table, "Alice", 30);
+        insert_hash_map(table, "Eve", 25);
+
+        // Pop and print values
+        int value = pop_hash_map(table, "Bob");
+        if (value != INT_MAX) {
+            printf("Popped Bob's value: %d\n", value);
+        } else {
+            printf("Bob not found in the hash map\n");
+        }
+
+        value = get_hash_value(table, "Bob");
+        if (value != INT_MAX) {
+            printf("Bob's value: %d\n", value);
+        } else {
+            printf("Bob not found in the hash map\n");
+        }
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+Expected Output
+---------------
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Popped Bob's value: 20
+    Bob not found in the hash map
+
+Special Considerations for Strings
+----------------------------------
+
+For hash maps where the values are strings (i.e., :c:`stringHashTable`), the 
+returned string is dynamically allocated and must be manually freed by the caller 
+to avoid memory leaks. Below is the type-specific pop function for strings:
+
+When using :c:`pop_string_hash_map`, the returned :c:`str*` should be freed by 
+the caller to prevent memory leaks:
+
+.. code-block:: c
+
+    str* value = pop_hash_map(table, "Bob");
+    if (value) {
+        printf("Popped Bob's value: %s\n", value->data);
+        free(value->data);
+        free(value);
+    } else {
+        printf("Bob not found in the hash map\n");
+    }
+
+The developer can also use the ``gbc_str`` macro to automate the freeing of 
+memory 
+
+.. code-block:: c
+
+    str* value gbc_str = pop_hash_map(table, "Bob");
+    // The user no longer needs to manually free value
 
