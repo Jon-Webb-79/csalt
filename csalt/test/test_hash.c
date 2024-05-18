@@ -28,7 +28,7 @@ void test_char_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -49,7 +49,7 @@ void test_uchar_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -70,7 +70,7 @@ void test_short_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -91,7 +91,7 @@ void test_ushort_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -112,7 +112,7 @@ void test_int_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -133,7 +133,7 @@ void test_uint_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -154,7 +154,7 @@ void test_long_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -175,7 +175,7 @@ void test_ulong_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -196,7 +196,7 @@ void test_llong_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -217,7 +217,7 @@ void test_ullong_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -238,7 +238,7 @@ void test_float_hash_map(void **state)
     assert_float_equal(get_hash_value(table, "Three"), 3.f, 1.0e-3);
     assert_float_equal(get_hash_value(table, "Four"), 4.f, 1.0e-3);
     assert_float_equal(get_hash_value(table, "Five"), 5.f, 1.0e-3);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -259,7 +259,7 @@ void test_double_hash_map(void **state)
     assert_double_equal(get_hash_value(table, "Three"), 3, 1.0e-3);
     assert_double_equal(get_hash_value(table, "Four"), 4., 1.0e-3);
     assert_double_equal(get_hash_value(table, "Five"), 5., 1.0e-3);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -280,7 +280,7 @@ void test_ldouble_hash_map(void **state)
     assert_double_equal(get_hash_value(table, "Three"), 3., 1.0e-3);
     assert_double_equal(get_hash_value(table, "Four"), 4., 1.0e-3);
     assert_double_equal(get_hash_value(table, "Five"), 5., 1.0e-3);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -301,7 +301,7 @@ void test_bool_hash_map(void **state)
     assert_int_equal(get_hash_value(table, "Three"), true);
     assert_int_equal(get_hash_value(table, "Four"), false);
     assert_int_equal(get_hash_value(table, "Five"), false);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -322,7 +322,7 @@ void test_string_hash_map(void **state)
     assert_string_equal(get_hash_value(table, "Three")->data, "Three");
     assert_string_equal(get_hash_value(table, "Four")->data, "Four");
     assert_string_equal(get_hash_value(table, "Five")->data, "Five");
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
     free_hash_map(table);
@@ -344,7 +344,7 @@ void test_char_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -364,7 +364,7 @@ void test_uchar_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -384,7 +384,7 @@ void test_short_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -404,7 +404,7 @@ void test_ushort_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -424,7 +424,7 @@ void test_int_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -444,7 +444,7 @@ void test_uint_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -464,7 +464,7 @@ void test_long_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -484,7 +484,7 @@ void test_ulong_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -504,7 +504,7 @@ void test_llong_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -524,7 +524,7 @@ void test_ullong_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), 3);
     assert_int_equal(get_hash_value(table, "Four"), 4);
     assert_int_equal(get_hash_value(table, "Five"), 5);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -544,7 +544,7 @@ void test_float_hash_map_gbc(void **state)
     assert_float_equal(get_hash_value(table, "Three"), 3.f, 1.0e-3);
     assert_float_equal(get_hash_value(table, "Four"), 4.f, 1.0e-3);
     assert_float_equal(get_hash_value(table, "Five"), 5.f, 1.0e-3);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -564,7 +564,7 @@ void test_double_hash_map_gbc(void **state)
     assert_double_equal(get_hash_value(table, "Three"), 3, 1.0e-3);
     assert_double_equal(get_hash_value(table, "Four"), 4., 1.0e-3);
     assert_double_equal(get_hash_value(table, "Five"), 5., 1.0e-3);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -584,7 +584,7 @@ void test_ldouble_hash_map_gbc(void **state)
     assert_double_equal(get_hash_value(table, "Three"), 3., 1.0e-3);
     assert_double_equal(get_hash_value(table, "Four"), 4., 1.0e-3);
     assert_double_equal(get_hash_value(table, "Five"), 5., 1.0e-3);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -604,7 +604,7 @@ void test_bool_hash_map_gbc(void **state)
     assert_int_equal(get_hash_value(table, "Three"), true);
     assert_int_equal(get_hash_value(table, "Four"), false);
     assert_int_equal(get_hash_value(table, "Five"), false);
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }
@@ -624,7 +624,7 @@ void test_string_hash_map_gbc(void **state)
     assert_string_equal(get_hash_value(table, "Three")->data, "Three");
     assert_string_equal(get_hash_value(table, "Four")->data, "Four");
     assert_string_equal(get_hash_value(table, "Five")->data, "Five");
-    assert_int_equal(hash_map_alloc(table), 8);
+    assert_int_equal(hash_map_alloc(table), 6);
     assert_int_equal(hash_map_size(table), 4);
     assert_int_equal(hash_map_hashSize(table), 5);
 }

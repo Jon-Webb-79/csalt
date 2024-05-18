@@ -101,20 +101,20 @@ InitHashFunc init_hash_map(dtype dat_type);
  * @param size A user based estimate for the size of the initial hash map array
  * @return A Hash map data structure of the appropriate type
  */
-charHashTable* init_char_hash_map(size_t size);
-ucharHashTable* init_uchar_hash_map(size_t size);
-shortHashTable* init_short_hash_map(size_t size);
-ushortHashTable* init_ushort_hash_map(size_t size);
-intHashTable* init_int_hash_map(size_t size);
-uintHashTable* init_uint_hash_map(size_t size);
-longHashTable* init_long_hash_map(size_t size);
-ulongHashTable* init_ulong_hash_map(size_t size);
-llongHashTable* init_llong_hash_map(size_t size);
-ullongHashTable* init_ullong_hash_map(size_t size);
-floatHashTable* init_float_hash_map(size_t size);
-doubleHashTable* init_double_hash_map(size_t size);
-ldoubleHashTable* init_ldouble_hash_map(size_t size);
-stringHashTable* init_string_hash_map(size_t size);
+charHashTable* init_char_hash_map();
+ucharHashTable* init_uchar_hash_map();
+shortHashTable* init_short_hash_map();
+ushortHashTable* init_ushort_hash_map();
+intHashTable* init_int_hash_map();
+uintHashTable* init_uint_hash_map();
+longHashTable* init_long_hash_map();
+ulongHashTable* init_ulong_hash_map();
+llongHashTable* init_llong_hash_map();
+ullongHashTable* init_ullong_hash_map();
+floatHashTable* init_float_hash_map();
+doubleHashTable* init_double_hash_map();
+ldoubleHashTable* init_ldouble_hash_map();
+stringHashTable* init_string_hash_map();
 // ================================================================================
 // ================================================================================
 

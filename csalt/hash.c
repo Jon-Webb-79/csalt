@@ -20,6 +20,7 @@
 const float LOAD_FACTOR_THRESHOLD = 0.7;
 static const size_t HASH_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
 static const size_t HASH_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
+static const size_t size = 3;  //  Size fo hash map initi functions
 // ================================================================================
 // ================================================================================
 // Static functions
@@ -742,7 +743,7 @@ static void resize_string_hash(stringHashTable* table, size_t new_size) {
 // ================================================================================
 // ================================================================================
 
-charHashTable* init_char_hash_map(size_t size) {
+charHashTable* init_char_hash_map() {
     charHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -770,7 +771,7 @@ charHashTable* init_char_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-ucharHashTable* init_uchar_hash_map(size_t size) {
+ucharHashTable* init_uchar_hash_map() {
     ucharHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -798,7 +799,7 @@ ucharHashTable* init_uchar_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-shortHashTable* init_short_hash_map(size_t size) {
+shortHashTable* init_short_hash_map() {
     shortHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -826,7 +827,7 @@ shortHashTable* init_short_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-ushortHashTable* init_ushort_hash_map(size_t size) {
+ushortHashTable* init_ushort_hash_map() {
     ushortHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -854,7 +855,7 @@ ushortHashTable* init_ushort_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-intHashTable* init_int_hash_map(size_t size) {
+intHashTable* init_int_hash_map() {
     intHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -882,7 +883,7 @@ intHashTable* init_int_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-uintHashTable* init_uint_hash_map(size_t size) {
+uintHashTable* init_uint_hash_map() {
     uintHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -910,7 +911,7 @@ uintHashTable* init_uint_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-longHashTable* init_long_hash_map(size_t size) {
+longHashTable* init_long_hash_map() {
     longHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -938,7 +939,7 @@ longHashTable* init_long_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-ulongHashTable* init_ulong_hash_map(size_t size) {
+ulongHashTable* init_ulong_hash_map() {
     ulongHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -966,7 +967,7 @@ ulongHashTable* init_ulong_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-llongHashTable* init_llong_hash_map(size_t size) {
+llongHashTable* init_llong_hash_map() {
     llongHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -994,7 +995,7 @@ llongHashTable* init_llong_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-ullongHashTable* init_ullong_hash_map(size_t size) {
+ullongHashTable* init_ullong_hash_map() {
     ullongHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -1022,7 +1023,7 @@ ullongHashTable* init_ullong_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-floatHashTable* init_float_hash_map(size_t size) {
+floatHashTable* init_float_hash_map() {
     floatHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -1050,7 +1051,7 @@ floatHashTable* init_float_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-doubleHashTable* init_double_hash_map(size_t size) {
+doubleHashTable* init_double_hash_map() {
     doubleHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -1078,7 +1079,7 @@ doubleHashTable* init_double_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-ldoubleHashTable* init_ldouble_hash_map(size_t size) {
+ldoubleHashTable* init_ldouble_hash_map() {
     ldoubleHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -1106,7 +1107,7 @@ ldoubleHashTable* init_ldouble_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-boolHashTable* init_bool_hash_map(size_t size) {
+boolHashTable* init_bool_hash_map() {
     boolHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
@@ -1134,7 +1135,7 @@ boolHashTable* init_bool_hash_map(size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-stringHashTable* init_string_hash_map(size_t size) {
+stringHashTable* init_string_hash_map() {
     stringHashTable* hashPtr = malloc(sizeof(*hashPtr));
     if (!hashPtr) {
         errno = ENOMEM;
