@@ -666,4 +666,192 @@ When the above code is run, it should produce the following output:
 
     Bob's value: Hello
 
+free_hash_map Macro
+===================
+
+The ``free_hash_map`` macro provides a type-safe way to free memory allocated 
+for hash maps of various data types. By leveraging the C11 `_Generic` keyword, 
+this macro automatically selects the appropriate type-specific free function 
+based on the type of the hash map provided.
+
+Description
+-----------
+
+The ``free_hash_map`` macro simplifies the process of freeing memory allocated 
+for hash maps by automatically dispatching to the correct type-specific free 
+function. This ensures type safety and reduces the need for manual function selection.
+
+Function Signature
+------------------
+
+.. code-block:: c
+
+    #define free_hash_map(table) _Generic((table), \
+        charHashTable*: free_char_hash_map, \
+        ucharHashTable*: free_uchar_hash_map, \
+        shortHashTable*: free_short_hash_map, \
+        ushortHashTable*: free_ushort_hash_map, \
+        intHashTable*: free_int_hash_map, \
+        uintHashTable*: free_uint_hash_map, \
+        longHashTable*: free_long_hash_map, \
+        ulongHashTable*: free_ulong_hash_map, \
+        llongHashTable*: free_llong_hash_map, \
+        ullongHashTable*: free_ullong_hash_map, \
+        floatHashTable*: free_float_hash_map, \
+        doubleHashTable*: free_double_hash_map, \
+        ldoubleHashTable*: free_ldouble_hash_map, \
+        boolHashTable*: free_bool_hash_map, \
+        stringHashTable*: free_string_hash_map) (table)
+
+Parameters
+----------
+
+- :c:`table`: A pointer to the hash table that will be freed. The type of the table determines which free function is called.
+
+Error Handling
+--------------
+
+- **NULL Pointer Check**: Each type-specific free function should check if the 
+  provided table pointer is :c:`NULL` before attempting to free its contents.
+
+Code Example
+------------
+
+Here's an example of how to use the ``free_hash_map`` macro to free all 
+allocated memory for an integer hash map.
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for integers
+        intHashTable* table = init_int_hash_map();
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", 20);
+        insert_hash_map(table, "Alice", 30);
+        insert_hash_map(table, "Eve", 25);
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+Automatic Garbage Collection
+============================
+
+The automatic garbage collection macros provide a convenient way to automatically 
+free memory allocated for hash maps of various data types when they go out of scope. 
+These macros leverage the `__attribute__((cleanup(...)))` feature available in 
+GCC and Clang to ensure that the appropriate cleanup function is called when 
+the variable goes out of scope.
+
+Description
+-----------
+
+The automatic garbage collection macros simplify memory management by ensuring 
+that hash maps are automatically freed when they go out of scope. This helps 
+prevent memory leaks and reduces the need for manual memory management.
+
+Function Signatures
+-------------------
+
+.. code-block:: c
+
+    void _freeCharHashTable(charHashTable** table);
+    void _freeUCharHashTable(ucharHashTable** table);
+    void _freeShortHashTable(shortHashTable** table);
+    void _freeUShortHashTable(ushortHashTable** table);
+    void _freeIntHashTable(intHashTable** table);
+    void _freeUIntHashTable(uintHashTable** table);
+    void _freeLongHashTable(longHashTable** table);
+    void _freeULongHashTable(ulongHashTable** table);
+    void _freeLLongHashTable(llongHashTable** table);
+    void _freeULLongHashTable(ullongHashTable** table);
+    void _freeFloatHashTable(floatHashTable** table);
+    void _freeDoubleHashTable(doubleHashTable** table);
+    void _freeLDoubleHashTable(ldoubleHashTable** table);
+    void _freeBoolHashTable(boolHashTable** table);
+    void _freeStringHashTable(stringHashTable** table);
+
+Each of these functions accepts a double pointer to a hash table and calls the 
+corresponding `free_type_hash_map` function to free the memory allocated for the hash table.
+
+Automatic Garbage Collection Macros
+-----------------------------------
+
+.. code-block:: c
+
+    #if defined(__GNUC__) || defined(__clang__)
+    #define gbc_char_map __attribute__((cleanup(_freeCharHashTable)))
+    #define gbc_uchar_map __attribute__((cleanup(_freeUCharHashTable)))
+    #define gbc_short_map __attribute__((cleanup(_freeShortHashTable)))
+    #define gbc_ushort_map __attribute__((cleanup(_freeUShortHashTable)))
+    #define gbc_int_map __attribute__((cleanup(_freeIntHashTable)))
+    #define gbc_uint_map __attribute__((cleanup(_freeUIntHashTable)))
+    #define gbc_long_map __attribute__((cleanup(_freeLongHashTable)))
+    #define gbc_ulong_map __attribute__((cleanup(_freeULongHashTable)))
+    #define gbc_llong_map __attribute__((cleanup(_freeLLongHashTable)))
+    #define gbc_ullong_map __attribute__((cleanup(_freeULLongHashTable)))
+    #define gbc_float_map __attribute__((cleanup(_freeFloatHashTable)))
+    #define gbc_double_map __attribute__((cleanup(_freeDoubleHashTable)))
+    #define gbc_ldouble_map __attribute__((cleanup(_freeLDoubleHashTable)))
+    #define gbc_bool_map __attribute__((cleanup(_freeBoolHashTable)))
+    #define gbc_string_map __attribute__((cleanup(_freeStringHashTable)))
+    #endif
+
+These macros apply the `__attribute__((cleanup(...)))` attribute to variables, 
+ensuring that the specified cleanup function is called when the variable goes out of scope.
+
+Usage
+-----
+
+To use the automatic garbage collection macros, simply declare your hash map 
+variable using the appropriate macro. For example:
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Declare hash maps with automatic garbage collection
+        gbc_int_map intHashTable* table = init_int_hash_map();
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", 20);
+        insert_hash_map(table, "Alice", 30);
+        insert_hash_map(table, "Eve", 25);
+
+        // Retrieve and print values
+        int value = get_hash_value(table, "Bob");
+        if (value != INT_MAX) {
+            printf("Bob's value: %d\n", value);
+        } else {
+            printf("Bob not found in the hash map\n");
+        }
+
+        // The hash map is automatically freed when it goes out of scope
+        return 0;
+    }
+
+Expected Output
+---------------
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Bob's value: 20
 
