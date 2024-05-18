@@ -855,3 +855,153 @@ When the above code is run, it should produce the following output:
 
     Bob's value: 20
 
+update_hash_map Macro
+=====================
+
+The ``update_hash_map`` macro provides a type-safe way to update values in 
+hash maps of various data types based on a given key. By leveraging the C11 
+`_Generic` keyword, this macro automatically selects the appropriate 
+type-specific update function based on the type of the hash map provided.
+
+Description
+-----------
+
+The ``update_hash_map`` macro simplifies the process of updating values in 
+hash maps by automatically dispatching to the correct type-specific update 
+function. This ensures type safety and reduces the need for manual function selection.
+
+Function Signature
+------------------
+
+.. code-block:: c
+
+    #define update_hash_map(table, key, value) _Generic((table), \
+        charHashTable*: update_char_hash_map, \
+        ucharHashTable*: update_uchar_hash_map, \
+        shortHashTable*: update_short_hash_map, \
+        ushortHashTable*: update_ushort_hash_map, \
+        intHashTable*: update_int_hash_map, \
+        uintHashTable*: update_uint_hash_map, \
+        longHashTable*: update_long_hash_map, \
+        ulongHashTable*: update_ulong_hash_map, \
+        llongHashTable*: update_llong_hash_map, \
+        ullongHashTable*: update_ullong_hash_map, \
+        floatHashTable*: update_float_hash_map, \
+        doubleHashTable*: update_double_hash_map, \
+        ldoubleHashTable*: update_ldouble_hash_map, \
+        boolHashTable*: update_bool_hash_map, \
+        stringHashTable*: update_string_hash_map) (table, key, value)
+
+Parameters
+----------
+
+- :c:`table`: A pointer to the hash table in which the value will be updated. The type of the table determines which update function is called.
+- :c:`key`: The key as a string literal to update the value in the hash map.
+- :c:`value`: The new value to be associated with the key. The type of this parameter depends on the type of the hash map.
+
+Error Handling
+--------------
+
+- **Key Not Found**: If the key does not exist in the hash map, the function 
+  takes no action. The existing entries in the hash map remain unchanged.
+
+Code Example
+------------
+
+Here's an example of how to use the ``update_hash_map`` macro to update values in an 
+integer hash map. The example also demonstrates how to use the ``free_hash_map``
+macro to free all allocated memory.
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for integers
+        intHashTable* table = init_hash_map(dInt);
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", 20);
+        insert_hash_map(table, "Alice", 30);
+        insert_hash_map(table, "Eve", 25);
+
+        // Update a value in the hash map
+        update_hash_map(table, "Alice", 35);
+
+        // Retrieve and print values
+        int value = get_hash_value(table, "Alice");
+        if (value != INT_MAX) {
+            printf("Alice's updated value: %d\n", value);
+        } else {
+            printf("Alice not found in the hash map\n");
+        }
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+Expected Output
+---------------
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Alice's updated value: 35
+
+
+Expected Output for Strings
+---------------------------
+
+When the following code is run, it should produce the expected output.
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for strings
+        stringHashTable* table = init_hash_map(dString);
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", "Hello");
+        insert_hash_map(table, "Alice", "World");
+
+        // Update a value in the hash map
+        update_hash_map(table, "Alice", "Everyone");
+
+        // Retrieve and print values
+        str* value = get_hash_value(table, "Alice");
+        if (value) {
+            printf("Alice's updated value: %s\n", value->data);
+        } else {
+            printf("Alice not found in the hash map\n");
+        }
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+Expected Output for Strings
+---------------------------
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Alice's updated value: Everyone
+
