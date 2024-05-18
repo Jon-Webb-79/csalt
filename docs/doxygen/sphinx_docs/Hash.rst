@@ -248,7 +248,7 @@ fields, and returning a pointer to the newly created hash map.
 
 .. code-block:: c
 
-    charHashTable* init_char_hash_map() {
+    charHashTable* init_char_hash_map(dChar) {
         charHashTable* hashPtr = malloc(sizeof(*hashPtr));
         if (!hashPtr) {
             errno = ENOMEM;
@@ -274,4 +274,107 @@ fields, and returning a pointer to the newly created hash map.
         hashPtr->alloc = size;
         return hashPtr;
     }
+
+insert_hash_map Macro
+=====================
+
+The ``insert_hash_map`` macro provides a type-safe way to insert key-value 
+pairs into hash maps of various data types. By leveraging the C11 `_Generic` 
+keyword, this macro automatically selects the appropriate type-specific insertion 
+function based on the type of the hash map provided.
+
+Description
+------------
+
+The ``insert_hash_map`` macro simplifies the process of inserting key-value 
+pairs into hash maps by automatically dispatching to the correct type-specific 
+insertion function. This ensures type safety and reduces the need for manual 
+function selection.
+
+Function Signature
+------------------
+
+.. code-block:: c
+
+    #define insert_hash_map(table, key, value) _Generic((table), \
+        charHashTable*: insert_char_hash_map, \
+        ucharHashTable*: insert_uchar_hash_map, \
+        shortHashTable*: insert_short_hash_map, \
+        ushortHashTable*: insert_ushort_hash_map, \
+        intHashTable*: insert_int_hash_map, \
+        uintHashTable*: insert_uint_hash_map, \
+        longHashTable*: insert_long_hash_map, \
+        ulongHashTable*: insert_ulong_hash_map, \
+        llongHashTable*: insert_llong_hash_map, \
+        ullongHashTable*: insert_ullong_hash_map, \
+        floatHashTable*: insert_float_hash_map, \
+        doubleHashTable*: insert_double_hash_map, \
+        ldoubleHashTable*: insert_ldouble_hash_map, \
+        boolHashTable*: insert_bool_hash_map, \
+        stringHashTable*: insert_string_hash_map)(table, key, value)
+
+Parameters
+----------
+
+- :c:`table`: A pointer to the hash table into which the key-value pair will be inserted. The type of the table determines which insertion function is called.
+- :c:`key`: The key as a string literal to be inserted into the hash map.
+- :c:`value`: The value associated with the key. The type of this parameter depends on the type of the hash map.
+
+Error Handling
+--------------
+
+The following error handling mechanisms are implemented within the type-specific 
+insertion functions:
+
+- **Memory Allocation Failure**: If memory allocation for the new key or the new node fails, the function sets :c:`errno` to :c:`ENOMEM` and returns without modifying the hash table.
+- **Duplicate Key**: If the key already exists in the hash table, the function sets :c:`errno` to :c:`EINVAL` and returns without modifying the hash table.
+
+Code Example
+------------
+
+Here's an example of how to use the ``insert_hash_map`` macro to insert key-value 
+pairs into an integer hash map. The example also demonstrates how to use the 
+``free_hash_map`` macro to free all allocated memory.
+
+.. code-block:: c
+
+    #include "hash.h"
+    #include <stdio.h>
+
+    int main() {
+        // Initialize the hash map for integers
+        intHashTable* table = init_int_hash_map(dInt);
+        if (!table) {
+            fprintf(stderr, "Failed to initialize hash table\n");
+            return 1;
+        }
+
+        // Insert key-value pairs into the hash map
+        insert_hash_map(table, "Bob", 20);
+        insert_hash_map(table, "Alice", 30);
+        insert_hash_map(table, "Eve", 25);
+
+        // Retrieve and print values
+        int value = get_hash_value(table, "Bob");
+        if (value != INT_MAX) {
+            printf("Bob's value: %d\n", value);
+        } else {
+            printf("Bob not found in the hash map\n");
+        }
+
+        // Free the hash map
+        free_hash_map(table);
+
+        return 0;
+    }
+
+When the above code is run, it should produce the following output:
+
+.. code-block:: console
+
+    Bob's value: 20
+
+The corresponding :c:`free_hash_map` macro is used to free all allocated memory 
+for any type-specific hash map, ensuring that the resources are properly 
+released when the hash map is no longer needed.
 
