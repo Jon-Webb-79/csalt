@@ -1,14 +1,70 @@
 *****
 CSalt
 *****
-For some time I have been interested in creating a C library that provides users
-with common utility functions that enable a range of data structures, 
-more robust random number generators, and common format file readers.  In
-addition to the best extent sensible for C, I am also interested in creating 
-interfaces that are more common to objects.  When describing my interface 
-idea to someone who was very seasoned in the C language, he described the concept
-as being so alien to the C language, that it was like puring salt into the wounds
-of old C programmers.  Hen the name C Salt (i.e.csalt).
+Working with real and integer values in C presents several challenges in modern software development:
+
+* Manual memory management for arrays can lead to memory leaks and buffer overflows
+* Static arrays require compile-time size decisions that may not suit runtime needs
+* No built-in support for dynamic resizing of collections
+* Lack of associative containers for values requires complex custom implementations
+* Error handling for operations often requires boilerplate code
+
+The ``csalt`` library addresses these challenges by providing four primary containers 
+for all basic c data types:
+
+* A dynamically allocated vector that automatically manages memory and resizing
+* A safe wrapper for static arrays with bounds checking
+* A dictionary implementation for mapping strings to primitive data types 
+* A dictionary implementation for mapping strings to arrays of primitive data types
+
+When to Use This Library
+########################
+
+All of the functionality in this library can be accessed from the ``c_float.h``,
+``c_double.h``, ``c_ldouble.h``, ``c_short.h``, ``c_ushort.h``, ``c_int.h``, 
+``c_uint.h``, ``c_long.h``, ``c_ulong.h``, ``c_llong.h``, ``c_ullong.h``, 
+``c_string.h``, ``c_bool.h``, and ``c_binary.h`` files.
+
+This library is particularly useful when:
+
+* Working with arrays of unknown or varying size
+* Requiring safe bounds-checked access to arrays
+* Managing collections of named values
+* Performing numerical computations with dynamic data sets
+* Implementing algorithms that require flexible storage
+
+The library's encapsulated design prevents common array manipulation 
+errors while maintaining the performance characteristics expected in C programs.
+
+This project encapsulates its functionality, which is wrapped in the header 
+guard ``#ifdef __cplusplus`` to allow compilation with both C and C++. 
+
+Implementation Details
+######################
+
+The library provides three main container types:
+
+Dynamic Float Vector
+--------------------
+* Automatically manages memory allocation and resizing
+* Maintains size and capacity information
+* Provides safe element access with bounds checking
+* Supports efficient append and insert operations
+
+Static Float Array Wrapper
+--------------------------
+* Provides bounds-checked access to fixed-size arrays
+* Prevents buffer overflows through runtime checks
+* Maintains actual element count for partially filled arrays
+* Offers safe iteration and access methods
+
+Float Dictionary
+----------------
+* Maps string keys to values
+* Handles memory management for both keys and values
+* Provides efficient key lookup
+* Supports dynamic addition and removal of entries
+* a dictionary for management of data primitives and a dictionary for arrays of primitives
 
 Contributing
 ############
@@ -23,67 +79,143 @@ This software is developed under a simple MIT license.
 Requirements
 ############
 This library is developed and tested on Macintosh and Arch Linux Operating
-Systems.  It is developed with ``gcc 13.2.1`` and ``clang 16.0.6`` compilers. In
-addition, this code base requires the use of ``CMake 3.27.7``, ``cmocka``, and 
-``valgrind``.
+Systems.  It is developed with ``gcc 14.2.1`` and ``clang 16.0.6`` compilers. In
+addition, this code base requires the use of ``CMake 3.31.3``, ``cmocka``, and 
+``valgrind``. This code is compiled and written with the C17 standard; however, this 
+should work with any compiler using C11 or later versions.
 
-Installation
-############
-This project is covered under a basic MIT license which allows anyone to use 
-this code base or to contribute to it with the express permsission of the 
-git project owner.
+Installation and Build Guide
+############################
 
-Use Code Base 
--------------
-In order to download this repository from github, follow these instructions
+Requirements
+------------
+- Git
+- CMake (version 3.31.3 or later)
+- C compiler (GCC, Clang, or MSVC)
 
-#. Ensure you have ``.git`` installed on your computer
+For unit testing:
+- Linux: valgrind (optional, for memory leak checking)
+- All platforms: cmocka testing framework
 
-#. Ensure you have ``cmake`` installed on your computer.  This code-base requires 
-   cmake version 3.27.7 or later versions.
+Getting the Code
+----------------
+Clone the repository:
 
-#. Download this repository to your preferred directory with the following command;
+.. code-block:: bash
 
-   .. code-block:: bash 
+  git clone https://github.com/Jon-Webb-79/csalt.git
+  cd c_float
 
-      git clone https://github.com/Jon-Webb-79/csalt.git csalt 
+Debug Build (with tests)
+------------------------
 
-#. Navigate to either the bash or zshell scripts directory depending on your 
-   environment with one of the following commands.
+Use the appropriate script for your platform:
 
-   .. code-block:: bash 
+**Linux/macOS (bash)**:
 
-      cd csalt/scripts/bash 
-      cd csalt/scripts/zsh 
+.. code-block:: bash
 
-#. Build the code base with the following command.
+  cd scripts/bash
+  ./debug.sh
 
-   .. code-block:: bash 
+**Linux/macOS (zsh)**:
 
-      # If using bash
-      bash build.sh  
-      # If using zsh 
-      zsh build.zsh
+.. code-block:: bash
 
-#. Compile the code base with the following command.
+  cd scripts/zsh
+  ./debug.zsh
 
-   .. code-block:: bash 
+**Windows**:
 
-      # If using bash 
-      bash compile.sh 
-      # If using zsh 
-      zsh compile.zsh
+.. code-block:: batch
 
-#. Navigate to ``csalt/csalt/build`` to run unit tests 
+  cd scripts\Windows
+  debug.bat
 
-   .. code-block:: bash 
+Run tests:
 
-      valgrind ./unit_tests 
-      
-#. If all unit tests do not pass with no memory leaks, you may need to contact 
-   the administrator of this git repository.  If they do pass, then you are set 
-   to transform this code-base into a static or dynamic library, or just 
-   copy the ``.c`` and ``.h`` files to your project.
+**Linux (with valgrind)**:
+
+.. code-block:: bash
+
+  cd build/debug
+  valgrind ./unit_tests
+
+**macOS/Windows**:
+
+.. code-block:: bash
+
+  cd build/debug
+  ./unit_tests
+
+Static Library Build
+--------------------
+Creates a static library without tests:
+
+**Linux/macOS (bash)**:
+
+.. code-block:: bash
+
+  cd scripts/bash
+  ./static.sh
+
+**Linux/macOS (zsh)**:
+
+.. code-block:: bash
+
+  cd scripts/zsh
+  ./static.zsh
+
+**Windows**:
+
+.. code-block:: batch
+
+  cd scripts\Windows
+  static.bat
+
+System Installation
+-------------------
+Installs library files to system directories for use in other projects:
+
+**Linux/macOS (requires sudo)**:
+
+.. code-block:: bash
+
+  cd scripts/bash  # or scripts/zsh
+  sudo ./install.sh  # or sudo ./install.zsh
+
+**Windows (requires Administrator)**:
+
+1. Right-click ``scripts\Windows\install.bat``
+2. Select "Run as Administrator"
+
+Usage in Projects
+-----------------
+After installation, you can use the library in three ways:
+
+1. **As System Library**:
+
+  After installation, include in your C files:
+
+  .. code-block:: c
+
+     #include <c_float.h> // Or whichever header file you wish to use
+
+2. **As Static Library**:
+
+  Link against the static library created in the build/static directory.
+
+3. **Direct Integration**:
+
+  Copy any files you wish to your project and compile directly.  Ensure that you have the ``.h`` and ``.c`` files.  Each file requires that the ``c_string.h`` and ``c_string.c`` file also be present.
+
+  Copy ``c_float.c`` and ``c_float.h`` directly into your project along with ``c_string.c`` and ``c_string.h``.
+
+Troubleshooting
+---------------
+- If tests fail, ensure all dependencies are properly installed
+- For Windows builds, ensure you're using an appropriate Visual Studio version
+- For installation issues, verify you have appropriate system permissions
 
 Contribute to Code Base 
 -----------------------
@@ -128,6 +260,7 @@ Contribute to Code Base
 
 #. At this point you can build the files in the same way described in the 
    previous section and contribute to documentation.
+
 
 Documentation 
 =============
