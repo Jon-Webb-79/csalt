@@ -1,5 +1,9 @@
-String Functions
-================
+********
+c_string
+********
+
+C String Overview
+=================
 
 The c_string library provides a dynamic string type and associated functions 
 for safe string manipulation in C.  All of the functions described in this 

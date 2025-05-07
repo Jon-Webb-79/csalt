@@ -72,9 +72,10 @@ Float Dictionary
 
 .. toctree::
    :maxdepth: 1
-   :caption: Contents:
+   :caption: Modules:
 
     c_string <Strings>
+    c_float <Float>
     
 Indices and tables
 ==================
