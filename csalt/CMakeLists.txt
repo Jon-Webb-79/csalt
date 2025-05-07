@@ -48,6 +48,8 @@ add_library(csalt ${LIB_TYPE}
     include/c_string.h
     c_float.c 
     include/c_float.h
+    c_double.c 
+    include/c_double.h
 )
 
 target_include_directories(csalt
