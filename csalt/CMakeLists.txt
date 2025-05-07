@@ -5,74 +5,157 @@
 #
 # Source Metadata
 # - Author:  Jonathan A. Webb
-# - Date:    October 20, 2023
+# - Date:    December 30, 2024
 # - Version: 1.0
-# - Copyright: Copyright 2023, Jonathan A. Webb Inc.
+# - Copyright: Copyright 2024, Jonathan A. Webb Inc.
 # ================================================================================
 # ================================================================================
-cmake_minimum_required(VERSION 3.27.7)
+
+cmake_minimum_required(VERSION 3.31.3)
 project(csalt)
-
-# Set the compiler (Optional)
-# set(CMAKE_C_COMPILER "/usr/bin/gcc")
-
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-enable_testing()
+# Option for static build
+option(BUILD_STATIC "Build static library" OFF)
 
 # Set compiler flags
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic")
+if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic -O3 -march=native")
+elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /WX")
+    add_definitions(/wd4996 /D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-if(APPLE)
-    # Check for M1 architecture
-    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
-        include_directories(/opt/homebrew/include)
-        link_directories(/opt/homebrew/lib)
-    else()
-        # for Intel Macs or older versions of macOS, adjust as needed
-        include_directories(/usr/local/include)
-        link_directories(/usr/local/lib)
-    endif()
+# Platform-specific defines
+if(UNIX AND NOT APPLE)
+    add_definitions(-D_GNU_SOURCE)
+elseif(APPLE)
+    add_definitions(-D_DARWIN_C_SOURCE)
+elseif(WIN32)
+    add_definitions(-D_WIN32_WINNT=0x0601 -DWIN32_LEAN_AND_MEAN)
 endif()
 
+# Determine library type
+set(LIB_TYPE STATIC)
+if(NOT BUILD_STATIC)
+    set(LIB_TYPE)
+endif()
 
-# Define the library
-add_library(csalt
-	str.c
-    vector.c
-    array.c
-    print.c
-    heap.c
-    swap.c
-    slist.c
-    dlist.c
-    avl.c
-    hash.c
+# Create library
+add_library(csalt ${LIB_TYPE}
+    c_string.c
+    include/c_string.h
 )
-target_include_directories(csalt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-find_library(MATH_LIB m)
-
-# Define the tests
-add_executable(unit_tests
-	test/unit_test.c
-	test/test_string.c
-    test/test_vector.c
-    test/test_array.c
-    test/test_swap.c
-    test/test_heap.c
-    test/test_sllist.c
-    test/test_dllist.c
-    test/test_avl.c
-    test/test_hash.c
+target_include_directories(csalt
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_link_libraries(csalt PRIVATE ${MATH_LIB})
-target_link_libraries(unit_tests csalt cmocka)
-add_test(NAME unit_tests COMMAND unit_test)
 
+target_link_libraries(csalt PUBLIC m)
+
+# Set output directories
+if(BUILD_STATIC)
+    set_target_properties(csalt PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    )
+elseif(WIN32)
+    set_target_properties(csalt PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
+        LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
+    )
+endif()
+
+# Add tests if not building static
+if(NOT BUILD_STATIC)
+    enable_testing()
+    add_subdirectory(test)
+endif()
+
+# cmake_minimum_required(VERSION 3.31.3)
+# project(csalt)
+# set(CMAKE_C_STANDARD 17)
+# set(CMAKE_C_STANDARD_REQUIRED ON)
+#
+# # Option for static build
+# option(BUILD_STATIC "Build static library" OFF)
+#
+# # Set compiler flags based on compiler type
+# if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic -O3 -march=native")
+# # if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+# #     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic -O3, -march=native")
+# elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
+#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /WX")
+#     add_definitions(
+#         /wd4996
+#         /D_CRT_SECURE_NO_WARNINGS
+#     )
+# endif()
+#
+# # Platform-specific configurations
+# if(UNIX AND NOT APPLE)
+#     add_definitions(-D_GNU_SOURCE)
+# elseif(APPLE)
+#     add_definitions(-D_DARWIN_C_SOURCE)
+# elseif(WIN32)
+#     add_definitions(-D_WIN32_WINNT=0x0601)
+#     add_definitions(-DWIN32_LEAN_AND_MEAN)
+# endif()
+#
+# # Add the library
+# if(BUILD_STATIC)
+#     add_library(csalt STATIC
+#         c_string.c
+#     )
+#     
+#     target_include_directories(csalt 
+#         PUBLIC 
+#         ${CMAKE_CURRENT_SOURCE_DIR}/csalt/include
+#     )
+#     
+#     # Link with math library
+#     target_link_libraries(csalt PUBLIC m)
+#     
+#     # Set output directory for static library
+#     if(WIN32)
+#         set_target_properties(csalt
+#             PROPERTIES
+#             ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+#         )
+#     else()
+#         set_target_properties(csalt
+#             PROPERTIES
+#             ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+#         )
+#     endif()
+# else()
+#     # Debug build with tests
+#     enable_testing()
+#     add_library(csalt
+#         c_string.c
+#     )
+#     
+#     target_include_directories(csalt
+#         PUBLIC 
+#         ${CMAKE_CURRENT_SOURCE_DIR}/csalt/include
+#     )
+#
+#     # Link with math library
+#     target_link_libraries(csalt PUBLIC m)
+#     
+#     if(WIN32)
+#         set_target_properties(csalt
+#             PROPERTIES
+#             RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
+#             LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
+#         )
+#     endif()
+#     
+#     # Add the test directory only for debug build
+#     add_subdirectory(test)
+# endif()
 # ================================================================================
 # ================================================================================
 # eof
