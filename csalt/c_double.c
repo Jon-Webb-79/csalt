@@ -1472,7 +1472,7 @@ dict_d* merge_double_dict(const dict_d* dict1, const dict_d* dict2, bool overwri
 }
 // --------------------------------------------------------------------------------
 
-bool foreach_double_dict(const dict_d* dict, dict_iterator iter, void* user_data) {
+bool foreach_double_dict(const dict_d* dict, ddict_iterator iter, void* user_data) {
     if (!dict || !iter) {
         errno = EINVAL;
         return false;

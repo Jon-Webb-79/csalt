@@ -616,7 +616,7 @@ dict_d* merge_double_dict(const dict_d* dict1, const dict_d* dict2, bool overwri
 /**
  * @brief Iterator function type for dictionary traversal
  */
-typedef void (*dict_iterator)(const char* key, double value, void* user_data);
+typedef void (*ddict_iterator)(const char* key, double value, void* user_data);
 
 /**
  * @brief Iterates over all dictionary entries in insertion order
@@ -625,7 +625,7 @@ typedef void (*dict_iterator)(const char* key, double value, void* user_data);
  * @param iter Iterator function to call for each entry
  * @param user_data Optional user data passed to iterator function
  */
-bool foreach_double_dict(const dict_d* dict, dict_iterator iter, void* user_data);
+bool foreach_double_dict(const dict_d* dict, ddict_iterator iter, void* user_data);
 // ================================================================================ 
 // ================================================================================ 
 // VECTOR DICTIONARY PROTOTYPES 

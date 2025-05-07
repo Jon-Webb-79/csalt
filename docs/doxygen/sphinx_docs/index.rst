@@ -75,6 +75,7 @@ Float Dictionary
    :caption: Modules:
 
     c_string <Strings>
+    c_double <Double>
     c_float <Float>
     
 Indices and tables
