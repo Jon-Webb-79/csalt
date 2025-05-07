@@ -1,19 +1,18 @@
-#!/usr/bin/zsh
+#!/usr/bin/sh
 # ================================================================================
 # ================================================================================
-# - File:    build.zsh
-# - Purpose: This file contains a script that will build c and c++ software
-#            using CMake
+# - File:    static.sh
+# - Purpose: This file creates a static library version of c_string
 #
 # Source Metadata
 # - Author:  Jonathan A. Webb
-# - Date:    February 26, 2022
+# - Date:    January 11, 2025
 # - Version: 1.0
-# - Copyright: Copyright 2022, Jon Webb Inc.
+# - Copyright: Copyright 2025, Jon Webb Inc.
 # ================================================================================
 # ================================================================================
-
-cmake -S ../../csalt/ -B ../../csalt/build/
+cmake -S ../../csalt/ -B ../../csalt/build/static/ -DBUILD_STATIC=ON
+cmake --build ../../csalt/build/static/
 # ================================================================================
 # ================================================================================
 # eof

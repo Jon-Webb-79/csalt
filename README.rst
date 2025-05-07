@@ -104,7 +104,7 @@ Clone the repository:
 .. code-block:: bash
 
   git clone https://github.com/Jon-Webb-79/csalt.git
-  cd c_float
+  cd csalt
 
 Debug Build (with tests)
 ------------------------
@@ -208,8 +208,6 @@ After installation, you can use the library in three ways:
 3. **Direct Integration**:
 
   Copy any files you wish to your project and compile directly.  Ensure that you have the ``.h`` and ``.c`` files.  Each file requires that the ``c_string.h`` and ``c_string.c`` file also be present.
-
-  Copy ``c_float.c`` and ``c_float.h`` directly into your project along with ``c_string.c`` and ``c_string.h``.
 
 Troubleshooting
 ---------------

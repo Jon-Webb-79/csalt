@@ -1,8 +1,8 @@
-#!/usr/bin/zsh
+#!/usr/bin/sh
 # ================================================================================
 # ================================================================================
-# - File:    compile.zsh
-# - Purpose: This file contains a script that will compile C and C++ code
+# - File:    debug.sh
+# - Purpose: This file contains a script that will build c and c++ software
 #            using CMake
 #
 # Source Metadata
@@ -13,7 +13,8 @@
 # ================================================================================
 # ================================================================================
 
-cmake --build ../../csalt/build/
+cmake -S ../../csalt/ -B ../../csalt/build/debug/ -DCMAKE_BUILD_TYPE=Debug
+cmake --build ../../csalt/build/debug/
 # ================================================================================
 # ================================================================================
 # eof
