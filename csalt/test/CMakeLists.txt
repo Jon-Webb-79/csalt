@@ -17,6 +17,7 @@ add_executable(unit_tests
 	test_string.c
     test_float.c
     test_double.c
+    test_ldouble.c
 )
 
 # Link the test executable against the Hello library and cmocka
