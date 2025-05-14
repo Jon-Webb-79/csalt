@@ -25,9 +25,9 @@ When to Use This Library
 ########################
 
 All of the functionality in this library can be accessed from the ``c_float.h``,
-``c_double.h``, ``c_ldouble.h``, ``c_short.h``, ``c_ushort.h``, ``c_int.h``, 
-``c_uint.h``, ``c_long.h``, ``c_ulong.h``, ``c_llong.h``, ``c_ullong.h``, 
-``c_string.h``, ``c_bool.h``, and ``c_binary.h`` files.
+``c_double.h``, ``c_ldouble.h``, ``c_int.h``, ``c_string.h``, ``c_bool.h``,
+and ``c_binary.h`` files.  Other data types will be included to this library 
+at a later date.
 
 This library is particularly useful when:
 
@@ -78,6 +78,7 @@ Float Dictionary
     c_ldouble <LDouble>
     c_double <Double>
     c_float <Float>
+    c_int <Int>
     
 Indices and tables
 ==================

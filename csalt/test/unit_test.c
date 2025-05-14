@@ -24,6 +24,7 @@
 #include "test_float.h"
 #include "test_double.h"
 #include "test_ldouble.h"
+#include "test_int.h"
 // ================================================================================ 
 // ================================================================================
 // Begin code
@@ -333,8 +334,9 @@ const struct CMUnitTest test_float_vector[] = {
 // -------------------------------------------------------------------------------- 
 
 const struct CMUnitTest test_float_dict[] = {
+    cmocka_unit_test(test_init_float_dict),
     #if defined (__GNUC__) || defined (__clang__)
-        cmocka_unit_test(test_dictionary_double_gbc),
+        cmocka_unit_test(test_dictionary_float_gbc),
     #endif
     cmocka_unit_test_setup_teardown(test_insert_float_dict_basic, setup, teardown),
     cmocka_unit_test_setup_teardown(test_insert_float_dict_duplicate, setup, teardown),
@@ -636,6 +638,127 @@ const struct CMUnitTest test_ldouble_dict[] = {
 };
 // ================================================================================ 
 // ================================================================================ 
+
+const struct CMUnitTest test_int_vector[] = {
+	cmocka_unit_test(test_init_int_vector_success),
+    cmocka_unit_test(test_init_int_vector_zero_size),
+    cmocka_unit_test(test_init_int_array_success),
+    cmocka_unit_test(test_free_int_vector_null),
+    cmocka_unit_test(test_free_int_vector_static),
+    #if defined(__GNUC__) || defined(__clang__)
+        cmocka_unit_test(test_int_vector_gbc),
+    #endif
+    cmocka_unit_test(test_push_back_int_basic),
+    cmocka_unit_test(test_push_back_int_growth),
+    cmocka_unit_test(test_push_back_int_static),
+    cmocka_unit_test(test_generic_int_macros),
+    cmocka_unit_test(test_int_vector_index),
+    cmocka_unit_test(test_int_static_array_bounds),
+    cmocka_unit_test(test_int_static_array_index_bounds),
+    cmocka_unit_test(test_int_static_array_initialization),
+    cmocka_unit_test(test_int_static_array_free),
+    cmocka_unit_test(test_push_int_front_basic),
+    cmocka_unit_test(test_push_int_front_growth),
+    cmocka_unit_test(test_push_int_front_static),
+    cmocka_unit_test(test_push_int_front_error_cases),
+    cmocka_unit_test(test_insert_int_vector_basic),
+    cmocka_unit_test(test_insert_int_vector_growth),
+    cmocka_unit_test(test_insert_int_array_basic),
+    cmocka_unit_test(test_insert_int_array_bounds),
+    cmocka_unit_test(test_insert_int_error_cases),
+    cmocka_unit_test(test_pop_back_int_basic),
+    cmocka_unit_test(test_pop_back_int_empty),
+    cmocka_unit_test(test_pop_back_int_errors),
+    cmocka_unit_test(test_pop_back_int_static),
+    cmocka_unit_test(test_pop_front_int_basic),
+    cmocka_unit_test(test_pop_front_int_empty),
+    cmocka_unit_test(test_pop_front_int_errors),
+    cmocka_unit_test(test_pop_front_int_static),
+    cmocka_unit_test(test_pop_any_int_basic),
+    cmocka_unit_test(test_pop_any_int_errors),
+    cmocka_unit_test(test_pop_any_int_static),
+    cmocka_unit_test(test_reverse_int_basic),
+    cmocka_unit_test(test_reverse_int_errors),
+    cmocka_unit_test(test_reverse_int_static),
+    cmocka_unit_test(test_sort_int_basic),
+    cmocka_unit_test(test_sort_int_edge_cases),
+    cmocka_unit_test(test_sort_int_duplicates),
+    cmocka_unit_test(test_sort_static_int_array),
+    cmocka_unit_test(test_sort_int_errors),
+    cmocka_unit_test(test_trim_int_basic),
+    cmocka_unit_test(test_trim_empty_int_vector),
+    cmocka_unit_test(test_trim_static_int_array),
+    cmocka_unit_test(test_trim_already_int_optimal),
+    cmocka_unit_test(test_trim_int_errors),
+    cmocka_unit_test(test_binary_search_int_basic),
+    cmocka_unit_test(test_binary_search_int_with_sort),
+    cmocka_unit_test(test_binary_search_int_errors),
+    cmocka_unit_test(test_binary_search_int_static),
+    cmocka_unit_test(test_update_int_vector_nominal),
+    cmocka_unit_test(test_update_int_vector_bad_index),
+    cmocka_unit_test(test_update_int_vector_null),
+    cmocka_unit_test(test_min_int_basic),
+    cmocka_unit_test(test_max_int_basic),
+    cmocka_unit_test(test_min_max_static_int_array),
+    cmocka_unit_test(test_min_max_int_errors),
+    cmocka_unit_test(test_sum_int_basic),
+    cmocka_unit_test(test_average_int_basic),
+    cmocka_unit_test(test_sum_average_int_negative),
+    cmocka_unit_test(test_sum_average_int_static),
+    cmocka_unit_test(test_stdev_int_basic),
+    cmocka_unit_test(test_stdev_single_int_value),
+    cmocka_unit_test(test_stdev_same_int_values),
+    cmocka_unit_test(test_cum_sum_int_basic),
+    cmocka_unit_test(test_stdev_cum_sum_int_errors)
+};
+// -------------------------------------------------------------------------------- 
+
+const struct CMUnitTest test_int_dict[] = {
+    cmocka_unit_test(test_init_int_dict),
+    #if defined (__GNUC__) || defined (__clang__)
+        cmocka_unit_test(test_dictionary_int_gbc),
+    #endif
+    cmocka_unit_test_setup_teardown(test_insert_int_dict_basic, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_insert_int_dict_duplicate, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_insert_int_dict_null, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_get_int_dict_value_basic, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_get_int_dict_value_missing, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_update_int_dict_basic, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_update_int_dict_missing, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_pop_int_dict_basic, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_pop_int_dict_missing, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_resize_int_behavior, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_get_keys_int_dict, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_get_values_int_dict, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_foreach_int_dict_basic, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_foreach_int_dict_empty, setup_int, teardown_int),
+    cmocka_unit_test_setup_teardown(test_foreach_int_dict_null, setup_int, teardown_int),
+    cmocka_unit_test(test_int_vector_dictionary),
+    cmocka_unit_test(test_int_vector_dictionary_resize),
+    cmocka_unit_test(test_int_vector_dictionary_gbc),
+    cmocka_unit_test(test_pop_int_vector_dictionary),
+    cmocka_unit_test(test_insert_intv_dict_basic),
+    cmocka_unit_test(test_intv_size_macros),
+    cmocka_unit_test(test_copy_intv_dict_success),
+    cmocka_unit_test(test_copy_intv_dict_null_input),
+    cmocka_unit_test(test_copy_intv_dict_static_vector),
+    cmocka_unit_test(test_copy_intv_dict_multiple_entries),
+    cmocka_unit_test(test_copy_intv_dict_independence),
+    cmocka_unit_test(test_merge_intv_dict_unique_keys),
+    cmocka_unit_test(test_merge_intv_dict_no_overwrite),
+    cmocka_unit_test(test_merge_intv_dict_overwrite),
+    cmocka_unit_test(test_merge_intv_dict_reject_static),
+    cmocka_unit_test(test_merge_intv_dict_null_inputs),
+    cmocka_unit_test(test_clear_intv_dict_basic),
+    cmocka_unit_test(test_clear_intv_dict_empty),
+    cmocka_unit_test(test_clear_intv_dict_reuse_after_clear),
+    cmocka_unit_test(test_foreach_intv_dict_counts_keys),
+    cmocka_unit_test(test_foreach_intv_dict_with_null_dict),
+    cmocka_unit_test(test_foreach_intv_dict_with_null_callback),
+    cmocka_unit_test(test_foreach_intv_dict_accumulates_sum),
+};
+// ================================================================================ 
+// ================================================================================ 
 int main(int argc, const char * argv[]) {
     int status;
     status = cmocka_run_group_tests(test_string, NULL, NULL);
@@ -660,6 +783,12 @@ int main(int argc, const char * argv[]) {
     if (status != 0) 
         return status;
     status = cmocka_run_group_tests(test_ldouble_dict, NULL, NULL);
+    if (status != 0) 
+        return status;
+    status = cmocka_run_group_tests(test_int_vector, NULL, NULL);
+    if (status != 0) 
+        return status;
+    status = cmocka_run_group_tests(test_int_dict, NULL, NULL);
 	return status;
 }
 // ================================================================================

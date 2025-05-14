@@ -1,27 +1,26 @@
 // ================================================================================
 // ================================================================================
-// - File:    c_float.c
-// - Purpose: This file contains the implementation for all functions used in 
-//            the c_float library
+// - File:    c_int.c
+// - Purpose: Describe the file purpose here
 //
 // Source Metadata
 // - Author:  Jonathan A. Webb
-// - Date:    January 12, 2025
-// - Version: 0.1
+// - Date:    May 12, 2025
+// - Version: 1.0
 // - Copyright: Copyright 2025, Jon Webb Inc.
 // ================================================================================
 // ================================================================================
 // Include modules here
 
 #include <immintrin.h>  // AVX/SSE
-#include "c_float.h"
+#include "c_int.h"
 #include <errno.h>
 #include <string.h>
-#include <float.h>
 #include <limits.h>
 #include <stdint.h>
 #include <math.h>
 #include <stdio.h>
+#include <float.h>
 
 static const float LOAD_FACTOR_THRESHOLD = 0.7;
 static const size_t VEC_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
@@ -31,18 +30,18 @@ static const uint32_t HASH_SEED = 0x45d9f3b;
 // ================================================================================
 // ================================================================================ 
 
-float_v* init_float_vector(size_t buff) {
+int_v* init_int_vector(size_t buff) {
     if (buff == 0) {
         errno = EINVAL;
         return NULL;
     }
-    float_v* struct_ptr = malloc(sizeof(float_v));
+    int_v* struct_ptr = malloc(sizeof(int_v));
     if (struct_ptr == NULL) {
         errno = ENOMEM;
         return NULL;
     }
    
-    float* data_ptr = malloc(buff * sizeof(float));
+    int* data_ptr = malloc(buff * sizeof(int));
     if (data_ptr == NULL) {
         free(struct_ptr);
         errno = ENOMEM;
@@ -50,7 +49,7 @@ float_v* init_float_vector(size_t buff) {
     }
    
     // Initialize all elements
-    memset(data_ptr, 0, buff * sizeof(float));
+    memset(data_ptr, 0, buff * sizeof(int));
    
     struct_ptr->data = data_ptr;
     struct_ptr->len = 0;
@@ -60,7 +59,7 @@ float_v* init_float_vector(size_t buff) {
 }
 // -------------------------------------------------------------------------------- 
 
-float* c_float_ptr(float_v* vec) {
+int* c_int_ptr(int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return NULL;
@@ -69,7 +68,7 @@ float* c_float_ptr(float_v* vec) {
 }
 // --------------------------------------------------------------------------------
 
-void free_float_vector(float_v* vec) {
+void free_int_vector(int_v* vec) {
    if (!vec || !vec->alloc_type || vec->alloc_type == STATIC) {
        errno = EINVAL;
        return;
@@ -79,15 +78,15 @@ void free_float_vector(float_v* vec) {
 }
 // --------------------------------------------------------------------------------
 
-void _free_float_vector(float_v** vec) {
+void _free_int_vector(int_v** vec) {
     if (vec && *vec) {
-        free_float_vector(*vec);
+        free_int_vector(*vec);
         *vec = NULL;
     }
 }
 // -------------------------------------------------------------------------------- 
 
-bool push_back_float_vector(float_v* vec, const float value) {
+bool push_back_int_vector(int_v* vec, const int value) {
     if (vec == NULL|| vec->data == NULL) {
         errno = EINVAL;
         return false;
@@ -107,14 +106,14 @@ bool push_back_float_vector(float_v* vec, const float value) {
         }
        
         // Allocate more space for the array of str structs
-        float* new_data = realloc(vec->data, new_alloc * sizeof(float));
+        int* new_data = realloc(vec->data, new_alloc * sizeof(int));
         if (!new_data) {
             errno = ENOMEM;
             return false;
         }
        
         // Initialize new elements
-        memset(new_data + vec->alloc, 0, (new_alloc - vec->alloc) * sizeof(float));
+        memset(new_data + vec->alloc, 0, (new_alloc - vec->alloc) * sizeof(int));
        
         vec->data = new_data;
         vec->alloc = new_alloc;
@@ -126,7 +125,7 @@ bool push_back_float_vector(float_v* vec, const float value) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_front_float_vector(float_v* vec, const float value) {
+bool push_front_int_vector(int_v* vec, const int value) {
     if (vec == NULL || vec->data == NULL) {
         errno = EINVAL;
         return false;
@@ -147,18 +146,18 @@ bool push_front_float_vector(float_v* vec, const float value) {
         }
         
         // Check for size_t overflow
-        if (new_alloc > SIZE_MAX / sizeof(float)) {
+        if (new_alloc > SIZE_MAX / sizeof(int)) {
             errno = ERANGE;
             return false;
         }
        
-        float* new_data = realloc(vec->data, new_alloc * sizeof(float));
+        int* new_data = realloc(vec->data, new_alloc * sizeof(int));
         if (!new_data) {
             errno = ENOMEM;
             return false;
         }
        
-        memset(new_data + vec->alloc, 0, (new_alloc - vec->alloc) * sizeof(float));
+        memset(new_data + vec->alloc, 0, (new_alloc - vec->alloc) * sizeof(int));
        
         vec->data = new_data;
         vec->alloc = new_alloc;
@@ -172,7 +171,7 @@ bool push_front_float_vector(float_v* vec, const float value) {
     
     // Move existing elements right if there are any
     if (vec->len > 0) {
-        memmove(vec->data + 1, vec->data, vec->len * sizeof(float));
+        memmove(vec->data + 1, vec->data, vec->len * sizeof(int));
     }
     
     vec->data[0] = value;    
@@ -181,7 +180,7 @@ bool push_front_float_vector(float_v* vec, const float value) {
 }
 // --------------------------------------------------------------------------------
 
-bool insert_float_vector(float_v* vec, float value, size_t index) {
+bool insert_int_vector(int_v* vec, int value, size_t index) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return false;
@@ -209,18 +208,18 @@ bool insert_float_vector(float_v* vec, float value, size_t index) {
         }
         
         // Check allocation size overflow
-        if (new_alloc > SIZE_MAX / sizeof(float)) {
+        if (new_alloc > SIZE_MAX / sizeof(int)) {
             errno = ERANGE;
             return false;
         }
        
-        float* new_data = realloc(vec->data, new_alloc * sizeof(float));
+        int* new_data = realloc(vec->data, new_alloc * sizeof(int));
         if (!new_data) {
             errno = ENOMEM;
             return false;
         }
        
-        memset(new_data + vec->alloc, 0, (new_alloc - vec->alloc) * sizeof(float));
+        memset(new_data + vec->alloc, 0, (new_alloc - vec->alloc) * sizeof(int));
        
         vec->data = new_data;
         vec->alloc = new_alloc;
@@ -234,7 +233,7 @@ bool insert_float_vector(float_v* vec, float value, size_t index) {
             return false;
         }
         memmove(vec->data + index + 1, vec->data + index, 
-                (vec->len - index) * sizeof(float));
+                (vec->len - index) * sizeof(int));
     }
     
     vec->data[index] = value;
@@ -244,109 +243,109 @@ bool insert_float_vector(float_v* vec, float value, size_t index) {
 // -------------------------------------------------------------------------------- 
 
 
-float pop_back_float_vector(float_v* vec) {
+int pop_back_int_vector(int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
-        return FLT_MAX;
+        return INT_MAX;
     }
     
     if (vec->len == 0) {
         errno = ENODATA;
-        return FLT_MAX;
+        return INT_MAX;
     }
     
     // Create copy of last element
-    float temp = vec->data[vec->len - 1];
+    int temp = vec->data[vec->len - 1];
     // Clear the last element (which was moved)
-    memset(&vec->data[vec->len - 1], 0, sizeof(float));
+    memset(&vec->data[vec->len - 1], 0, sizeof(int));
     vec->len--;
     return temp;
 }
 // --------------------------------------------------------------------------------
 
-float pop_front_float_vector(float_v* vec) {  // Fixed function name
+int pop_front_int_vector(int_v* vec) {  // Fixed function name
     if (!vec || !vec->data) {
         errno = EINVAL;
-        return FLT_MAX;
+        return INT_MAX;
     }
    
     if (vec->len == 0) {
         errno = ENODATA;
-        return FLT_MAX;
+        return INT_MAX;
     }
    
     // Check for overflow in memmove size calculation
-    if (vec->len > SIZE_MAX / sizeof(float)) {
+    if (vec->len > SIZE_MAX / sizeof(int)) {
         errno = ERANGE;
-        return FLT_MAX;
+        return INT_MAX;
     }
    
     // Create copy of first element
-    float temp = vec->data[0];
+    int temp = vec->data[0];
     // Shift remaining elements left
-    memmove(vec->data, vec->data + 1, (vec->len - 1) * sizeof(float));
+    memmove(vec->data, vec->data + 1, (vec->len - 1) * sizeof(int));
    
     // Clear the last element (which was moved)
-    memset(&vec->data[vec->len - 1], 0, sizeof(float));
+    memset(&vec->data[vec->len - 1], 0, sizeof(int));
    
     vec->len--;
     return temp;
 }
 // --------------------------------------------------------------------------------
 
-float pop_any_float_vector(float_v* vec, size_t index) {
+int pop_any_int_vector(int_v* vec, size_t index) {
     if (!vec || !vec->data) {
         errno = EINVAL;
-        return FLT_MAX;
+        return INT_MAX;
     }
    
     if (vec->len == 0) {
         errno = ENODATA;
-        return FLT_MAX;
+        return INT_MAX;
     }
     
     if (index >= vec->len) {
         errno = ERANGE;
-        return FLT_MAX;
+        return INT_MAX;
     }
     
     // Create copy of element to pop
-    float temp = vec->data[index];
+    int temp = vec->data[index];
     
     // If not the last element, shift remaining elements left
     if (index < vec->len - 1) {
         // Check for overflow in memmove size calculation
-        if ((vec->len - index - 1) > SIZE_MAX / sizeof(float)) {
+        if ((vec->len - index - 1) > SIZE_MAX / sizeof(int)) {
             errno = ERANGE;
-            return FLT_MAX;
+            return INT_MAX;
         }
         
         memmove(&vec->data[index], &vec->data[index + 1], 
-                (vec->len - index - 1) * sizeof(float));
+                (vec->len - index - 1) * sizeof(int));
     }
    
     // Clear the last element
-    memset(&vec->data[vec->len - 1], 0, sizeof(float));
+    memset(&vec->data[vec->len - 1], 0, sizeof(int));
     
     vec->len--;
     return temp;
 }
 // --------------------------------------------------------------------------------
 
-const float float_vector_index(const float_v* vec, size_t index) {
+const int int_vector_index(const int_v* vec, size_t index) {
     if (!vec || !vec->data) {
         errno = EINVAL;
-        return FLT_MAX;
+        return INT_MAX;
     }
     if (index > vec->len - 1) {
         errno = ERANGE;
-        return FLT_MAX;
+        return INT_MAX;
     }
     return vec->data[index];
 }
 // --------------------------------------------------------------------------------
 
-const size_t float_vector_size(const float_v* vec) {
+const size_t int_vector_size(const int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return LONG_MAX;
@@ -355,16 +354,16 @@ const size_t float_vector_size(const float_v* vec) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t float_vector_alloc(const float_v* vec) {
+const size_t int_vector_alloc(const int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
-        return LONG_MAX;
+        return SIZE_MAX;
     }
     return vec->alloc;
 }
 // --------------------------------------------------------------------------------
 
-void reverse_float_vector(float_v* vec) {
+void reverse_int_vector(int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return;
@@ -378,7 +377,7 @@ void reverse_float_vector(float_v* vec) {
     size_t i = 0;
     size_t j = vec->len - 1;
     while (i < j) {
-       swap_float(&vec->data[i], &vec->data[j]);
+       swap_int(&vec->data[i], &vec->data[j]);
        i++;
        j--;
     }
@@ -387,18 +386,18 @@ void reverse_float_vector(float_v* vec) {
 // ================================================================================ 
 // QUICKSORT
 
-void swap_float(float* a, float* b) {
+void swap_int(int* a, int* b) {
     if (!a || !b) {
         errno = EINVAL;
         return;
     }
-    float temp = *a;
+    int temp = *a;
     *a = *b;
     *b = temp;
 }
 // -------------------------------------------------------------------------------- 
 
-static float* _median_of_three(float* a, float* b, float* c, iter_dir direction) {
+static int* _median_of_three(int* a, int* b, int* c, iter_dir direction) {
     if ((direction == FORWARD && *a < *b) ||
         (direction == REVERSE && *a > *b)) {
         if ((direction == FORWARD && *b < *c) ||
@@ -419,9 +418,9 @@ static float* _median_of_three(float* a, float* b, float* c, iter_dir direction)
 }
 // -------------------------------------------------------------------------------- 
 
-static void _insertion_sort(float* vec, int low, int high, iter_dir direction) {
+static void _insertion_sort(int* vec, int low, int high, iter_dir direction) {
     for (int i = low + 1; i <= high; i++) {
-        float key = vec[i];
+        int key = vec[i];
         int j = i - 1;
         while (j >= low && ((direction == FORWARD && vec[j] > key) ||
                            (direction == REVERSE && vec[j] < key))) {
@@ -433,60 +432,60 @@ static void _insertion_sort(float* vec, int low, int high, iter_dir direction) {
 }
 // --------------------------------------------------------------------------------
 
-static int _partition_float(float* vec, int low, int high, iter_dir direction) {
+static int _partition_int(int* vec, int low, int high, iter_dir direction) {
     int mid = low + (high - low) / 2;
-    float* pivot_ptr = _median_of_three(&vec[low], &vec[mid], &vec[high], direction);
+    int* pivot_ptr = _median_of_three(&vec[low], &vec[mid], &vec[high], direction);
     
     if (pivot_ptr != &vec[high])
-        swap_float(pivot_ptr, &vec[high]);
+        swap_int(pivot_ptr, &vec[high]);
     
-    float pivot = vec[high];
+    int pivot = vec[high];
     int i = (low - 1);
     
     for (int j = low; j <= high - 1; j++) {
         if ((direction == FORWARD && vec[j] < pivot) ||
             (direction == REVERSE && vec[j] > pivot)) {
             i++;
-            swap_float(&vec[i], &vec[j]);
+            swap_int(&vec[i], &vec[j]);
         }
     }
-    swap_float(&vec[i + 1], &vec[high]);
+    swap_int(&vec[i + 1], &vec[high]);
     return (i + 1);
 }
 // -------------------------------------------------------------------------------- 
 
-static void _quicksort_float(float* vec, int low, int high, iter_dir direction) {
+static void _quicksort_int(int* vec, int low, int high, iter_dir direction) {
     while (low < high) {
         if (high - low < 10) {
             _insertion_sort(vec, low, high, direction);
             break;
         }
         
-        int pi = _partition_float(vec, low, high, direction);
+        int pi = _partition_int(vec, low, high, direction);
         
         if (pi - low < high - pi) {
-            _quicksort_float(vec, low, pi - 1, direction);
+            _quicksort_int(vec, low, pi - 1, direction);
             low = pi + 1;
         } else {
-            _quicksort_float(vec, pi + 1, high, direction);
+            _quicksort_int(vec, pi + 1, high, direction);
             high = pi - 1;
         }
     }
 }
 // -------------------------------------------------------------------------------- 
 
-void sort_float_vector(float_v* vec, iter_dir direction) {
+void sort_int_vector(int_v* vec, iter_dir direction) {
     if (!vec) {
         errno = EINVAL;
         return;
     }
     if (vec->len < 2) return;
     
-    _quicksort_float(vec->data, 0, vec->len - 1, direction);
+    _quicksort_int(vec->data, 0, vec->len - 1, direction);
 }
 // -------------------------------------------------------------------------------- 
 
-void trim_float_vector(float_v* vec) {
+void trim_int_vector(int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return;
@@ -502,12 +501,12 @@ void trim_float_vector(float_v* vec) {
     }
 
     // Check for overflow
-    if (vec->len > SIZE_MAX / sizeof(float)) {
+    if (vec->len > SIZE_MAX / sizeof(int)) {
         errno = ERANGE;
         return;
     }
     
-    float* ptr = realloc(vec->data, sizeof(float) * vec->len);
+    int* ptr = realloc(vec->data, sizeof(int) * vec->len);
     if (ptr == NULL) {
         errno = ENOMEM;
         return;
@@ -518,60 +517,43 @@ void trim_float_vector(float_v* vec) {
 }
 // --------------------------------------------------------------------------------
 
-size_t binary_search_float_vector(float_v* vec, float value, float tolerance, bool sort_first) {
+size_t binary_search_int_vector(int_v* vec, int value, bool sort_first) {
     if (!vec || !vec->data) {
         errno = EINVAL;
-        return LONG_MAX;
+        return SIZE_MAX;
     }
-    
+
     if (vec->len == 0) {
         errno = ENODATA;
-        return LONG_MAX;
+        return SIZE_MAX;
     }
 
-    if (tolerance < 0) {
-        errno = EINVAL;
-        return LONG_MAX;
-    }
-
-    if (isnan(value) || isnan(tolerance)) {
-        errno = EINVAL;
-        return LONG_MAX;
-    }
-    
-    // Sort if requested and vector has more than 1 element
     if (sort_first && vec->len > 1) {
-        sort_float_vector(vec, FORWARD);
+        sort_int_vector(vec, FORWARD);
     }
-    
+
     size_t left = 0;
     size_t right = vec->len - 1;
-    
+
     while (left <= right) {
         size_t mid = left + (right - left) / 2;
-        float diff = vec->data[mid] - value;
-        
-        // Check if we found a match within tolerance
-        if (fabs(diff) <= tolerance) {
+        int mid_val = vec->data[mid];
+
+        if (mid_val == value) {
             return mid;
-        }
-        
-        if (diff < 0) {
+        } else if (mid_val < value) {
             left = mid + 1;
         } else {
-            // Handle case where mid is 0 to prevent underflow
-            if (mid == 0) {
-                break;
-            }
+            if (mid == 0) break;  // prevent underflow
             right = mid - 1;
         }
     }
-    // The value does not exist in the array 
-    return LONG_MAX;
+
+    return SIZE_MAX;  // Not found
 }
 // -------------------------------------------------------------------------------- 
 
-void update_float_vector(float_v* vec, size_t index, float replacement_value) {
+void update_int_vector(int_v* vec, size_t index, int replacement_value) {
     if (!vec || !vec->data || vec->len == 0) {
         errno = EINVAL;
         return;
@@ -584,46 +566,46 @@ void update_float_vector(float_v* vec, size_t index, float replacement_value) {
 }
 // -------------------------------------------------------------------------------- 
 
-float min_float_vector(float_v* vec) {
+int min_int_vector(int_v* vec) {
     if (!vec || !vec->data || vec->len == 0) {
         errno = EINVAL;
-        return FLT_MAX;
+        return INT_MAX;
     }
 
-    float min_val = FLT_MAX;
+    int min_val = INT_MAX;
 
-#if defined(__AVX__)
-    __m256 vmin = _mm256_set1_ps(min_val);
+#if defined(__AVX2__)
+    __m256i vmin = _mm256_set1_epi32(min_val);
     size_t i = 0;
 
-    for (; i + 7 < vec->len; i += 8) {
-        __m256 v = _mm256_loadu_ps(&vec->data[i]);
-        vmin = _mm256_min_ps(vmin, v);
+    for (; i + 8 <= vec->len; i += 8) {
+        __m256i v = _mm256_loadu_si256((__m256i*)&vec->data[i]);
+        vmin = _mm256_min_epi32(vmin, v);
     }
 
-    __m128 low = _mm256_castps256_ps128(vmin);
-    __m128 high = _mm256_extractf128_ps(vmin, 1);
-    __m128 min128 = _mm_min_ps(low, high);
-    min128 = _mm_min_ps(min128, _mm_movehl_ps(min128, min128));
-    min128 = _mm_min_ps(min128, _mm_shuffle_ps(min128, min128, 0x1));
-    min_val = _mm_cvtss_f32(min128);
+    __m128i low = _mm256_castsi256_si128(vmin);
+    __m128i high = _mm256_extracti128_si256(vmin, 1);
+    __m128i min128 = _mm_min_epi32(low, high);
+    min128 = _mm_min_epi32(min128, _mm_shuffle_epi32(min128, _MM_SHUFFLE(2, 3, 0, 1)));
+    min128 = _mm_min_epi32(min128, _mm_shuffle_epi32(min128, _MM_SHUFFLE(1, 0, 3, 2)));
+    min_val = _mm_cvtsi128_si32(min128);
 
     for (; i < vec->len; ++i)
         if (vec->data[i] < min_val)
             min_val = vec->data[i];
 
-#elif defined(__SSE__)
-    __m128 vmin = _mm_set1_ps(min_val);
+#elif defined(__SSE4_1__)
+    __m128i vmin = _mm_set1_epi32(min_val);
     size_t i = 0;
 
-    for (; i + 3 < vec->len; i += 4) {
-        __m128 v = _mm_loadu_ps(&vec->data[i]);
-        vmin = _mm_min_ps(vmin, v);
+    for (; i + 4 <= vec->len; i += 4) {
+        __m128i v = _mm_loadu_si128((__m128i*)&vec->data[i]);
+        vmin = _mm_min_epi32(vmin, v);
     }
 
-    vmin = _mm_min_ps(vmin, _mm_movehl_ps(vmin, vmin));
-    vmin = _mm_min_ps(vmin, _mm_shuffle_ps(vmin, vmin, 0x1));
-    min_val = _mm_cvtss_f32(vmin);
+    vmin = _mm_min_epi32(vmin, _mm_shuffle_epi32(vmin, _MM_SHUFFLE(2, 3, 0, 1)));
+    vmin = _mm_min_epi32(vmin, _mm_shuffle_epi32(vmin, _MM_SHUFFLE(1, 0, 3, 2)));
+    min_val = _mm_cvtsi128_si32(vmin);
 
     for (; i < vec->len; ++i)
         if (vec->data[i] < min_val)
@@ -637,49 +619,48 @@ float min_float_vector(float_v* vec) {
 
     return min_val;
 }
-
 // -------------------------------------------------------------------------------- 
 
-float max_float_vector(float_v* vec) {
+int max_int_vector(int_v* vec) {
     if (!vec || !vec->data || vec->len == 0) {
         errno = EINVAL;
-        return FLT_MAX;
+        return INT_MAX;
     }
 
-    float max_val = -FLT_MAX;
+    int max_val = -INT_MAX;
 
-#if defined(__AVX__)
-    __m256 vmax = _mm256_set1_ps(max_val);
+#if defined(__AVX2__)
+    __m256i vmax = _mm256_set1_epi32(max_val);
     size_t i = 0;
 
-    for (; i + 7 < vec->len; i += 8) {
-        __m256 v = _mm256_loadu_ps(&vec->data[i]);
-        vmax = _mm256_max_ps(vmax, v);
+    for (; i + 8 <= vec->len; i += 8) {
+        __m256i v = _mm256_loadu_si256((__m256i*)&vec->data[i]);
+        vmax = _mm256_max_epi32(vmax, v);
     }
 
-    __m128 low = _mm256_castps256_ps128(vmax);
-    __m128 high = _mm256_extractf128_ps(vmax, 1);
-    __m128 max128 = _mm_max_ps(low, high);
-    max128 = _mm_max_ps(max128, _mm_movehl_ps(max128, max128));
-    max128 = _mm_max_ps(max128, _mm_shuffle_ps(max128, max128, 0x1));
-    max_val = _mm_cvtss_f32(max128);
+    __m128i low = _mm256_castsi256_si128(vmax);
+    __m128i high = _mm256_extracti128_si256(vmax, 1);
+    __m128i max128 = _mm_max_epi32(low, high);
+    max128 = _mm_max_epi32(max128, _mm_shuffle_epi32(max128, _MM_SHUFFLE(2, 3, 0, 1)));
+    max128 = _mm_max_epi32(max128, _mm_shuffle_epi32(max128, _MM_SHUFFLE(1, 0, 3, 2)));
+    max_val = _mm_cvtsi128_si32(max128);
 
     for (; i < vec->len; ++i)
         if (vec->data[i] > max_val)
             max_val = vec->data[i];
 
-#elif defined(__SSE__)
-    __m128 vmax = _mm_set1_ps(max_val);
+#elif defined(__SSE4_1__)
+    __m128i vmax = _mm_set1_epi32(max_val);
     size_t i = 0;
 
-    for (; i + 3 < vec->len; i += 4) {
-        __m128 v = _mm_loadu_ps(&vec->data[i]);
-        vmax = _mm_max_ps(vmax, v);
+    for (; i + 4 <= vec->len; i += 4) {
+        __m128i v = _mm_loadu_si128((__m128i*)&vec->data[i]);
+        vmax = _mm_max_epi32(vmax, v);
     }
 
-    vmax = _mm_max_ps(vmax, _mm_movehl_ps(vmax, vmax));
-    vmax = _mm_max_ps(vmax, _mm_shuffle_ps(vmax, vmax, 0x1));
-    max_val = _mm_cvtss_f32(vmax);
+    vmax = _mm_max_epi32(vmax, _mm_shuffle_epi32(vmax, _MM_SHUFFLE(2, 3, 0, 1)));
+    vmax = _mm_max_epi32(vmax, _mm_shuffle_epi32(vmax, _MM_SHUFFLE(1, 0, 3, 2)));
+    max_val = _mm_cvtsi128_si32(vmax);
 
     for (; i < vec->len; ++i)
         if (vec->data[i] > max_val)
@@ -693,210 +674,168 @@ float max_float_vector(float_v* vec) {
 
     return max_val;
 }
-
 // -------------------------------------------------------------------------------- 
 
-float sum_float_vector(float_v* vec) {
+int sum_int_vector(int_v* vec) {
     if (!vec || !vec->data || vec->len == 0) {
         errno = EINVAL;
-        return FLT_MAX;
+        return INT_MAX;
     }
 
     const size_t len = vec->len;
-    const float* data = vec->data;
+    const int* data = vec->data;
 
-    float sum = 0.0f;
+    int sum = 0;
 
-#if defined(__AVX__)
-    __m256 vsum = _mm256_setzero_ps();
+#if defined(__AVX2__)
+    __m256i vsum = _mm256_setzero_si256();
     size_t i = 0;
 
-    for (; i + 7 < len; i += 8) {
-        __m256 chunk = _mm256_loadu_ps(&data[i]);
-        vsum = _mm256_add_ps(vsum, chunk);
+    for (; i + 8 <= len; i += 8) {
+        __m256i chunk = _mm256_loadu_si256((__m256i*)&data[i]);
+        vsum = _mm256_add_epi32(vsum, chunk);
     }
 
-    // Horizontal sum of vsum
-    __m128 low  = _mm256_castps256_ps128(vsum);         // lower 128
-    __m128 high = _mm256_extractf128_ps(vsum, 1);       // upper 128
-    __m128 sum128 = _mm_add_ps(low, high);              // add lower + upper
+    // Reduce 8 lanes to 1 int
+    __m128i low = _mm256_castsi256_si128(vsum);
+    __m128i high = _mm256_extracti128_si256(vsum, 1);
+    __m128i sum128 = _mm_add_epi32(low, high);
+    sum128 = _mm_add_epi32(sum128, _mm_shuffle_epi32(sum128, _MM_SHUFFLE(2, 3, 0, 1)));
+    sum128 = _mm_add_epi32(sum128, _mm_shuffle_epi32(sum128, _MM_SHUFFLE(1, 0, 3, 2)));
+    sum += _mm_cvtsi128_si32(sum128);
 
-    // Shuffle and reduce
-    sum128 = _mm_hadd_ps(sum128, sum128);
-    sum128 = _mm_hadd_ps(sum128, sum128);
-    sum += _mm_cvtss_f32(sum128);
-
-    // Handle remaining elements
-    for (; i < len; ++i) {
+    for (; i < len; ++i)
         sum += data[i];
-    }
 
-#elif defined(__SSE__)
-    __m128 vsum = _mm_setzero_ps();
+#elif defined(__SSE2__)
+    __m128i vsum = _mm_setzero_si128();
     size_t i = 0;
 
-    for (; i + 3 < len; i += 4) {
-        __m128 chunk = _mm_loadu_ps(&data[i]);
-        vsum = _mm_add_ps(vsum, chunk);
+    for (; i + 4 <= len; i += 4) {
+        __m128i chunk = _mm_loadu_si128((__m128i*)&data[i]);
+        vsum = _mm_add_epi32(vsum, chunk);
     }
 
-    vsum = _mm_hadd_ps(vsum, vsum);
-    vsum = _mm_hadd_ps(vsum, vsum);
-    sum += _mm_cvtss_f32(vsum);
+    vsum = _mm_add_epi32(vsum, _mm_shuffle_epi32(vsum, _MM_SHUFFLE(2, 3, 0, 1)));
+    vsum = _mm_add_epi32(vsum, _mm_shuffle_epi32(vsum, _MM_SHUFFLE(1, 0, 3, 2)));
+    sum += _mm_cvtsi128_si32(vsum);
 
-    for (; i < len; ++i) {
+    for (; i < len; ++i)
         sum += data[i];
-    }
 
 #else
-    // Fallback to scalar
-    for (size_t i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i)
         sum += data[i];
-    }
 #endif
 
     return sum;
 }
-
 // -------------------------------------------------------------------------------- 
 
-float average_float_vector(float_v* vec) {
+float average_int_vector(int_v* vec) {
     if (!vec || !vec->data || vec->len == 0) {
         errno = EINVAL;
         return FLT_MAX;
     }
 
-    float sum = sum_float_vector(vec);
+    int sum = sum_int_vector(vec);
     if (errno != 0) return FLT_MAX;
-    return sum / vec->len;
+    return (float)sum / (float)vec->len;
 }
 
 // -------------------------------------------------------------------------------- 
 
-float stdev_float_vector(float_v* vec) {
-    if (!vec || !vec->data) {
+float stdev_int_vector(int_v* vec) {
+    if (!vec || !vec->data || vec->len < 2) {
         errno = ENODATA;
         return FLT_MAX;
     }
 
-    if (vec->len == 0) {
-        errno = ENODATA;
-        return FLT_MAX;
-    }
+    const int len = vec->len;
+    const int* data = vec->data;
 
-    if (vec->len == 1) {
-        errno = ENODATA;
-        return FLT_MAX;
-    }
-
-    float mean = average_float_vector(vec);
+    int mean = average_int_vector(vec);
     if (errno != 0) return FLT_MAX;
 
-    float sum_sq_diff = 0.0f;
+    double sum_sq_diff = 0.0;
 
-#if defined(__AVX__)
-    __m256 vmean = _mm256_set1_ps(mean);
-    __m256 vsum = _mm256_setzero_ps();
+#if defined(__AVX2__)
+    __m256i vmean = _mm256_set1_epi32(mean);
+    __m256i vsum = _mm256_setzero_si256();
     size_t i = 0;
 
-    for (; i + 7 < vec->len; i += 8) {
-        __m256 v = _mm256_loadu_ps(&vec->data[i]);
-        __m256 diff = _mm256_sub_ps(v, vmean);
-        __m256 sq = _mm256_mul_ps(diff, diff);
-        if (!_mm256_testz_ps(sq, sq)) { // Skip all-zero check — we need isinf
-            for (int j = 0; j < 8; ++j) {
-                float x = vec->data[i + j];
-                if (isinf(x)) return INFINITY;
-            }
-        }
-        vsum = _mm256_add_ps(vsum, sq);
+    for (; i + 8 <= len; i += 8) {
+        __m256i v = _mm256_loadu_si256((__m256i*)&data[i]);
+        __m256i diff = _mm256_sub_epi32(v, vmean);
+        __m256i sq = _mm256_mullo_epi32(diff, diff);
+        vsum = _mm256_add_epi32(vsum, sq);
     }
 
-    __m128 low = _mm256_castps256_ps128(vsum);
-    __m128 high = _mm256_extractf128_ps(vsum, 1);
-    __m128 sum128 = _mm_add_ps(low, high);
-    sum128 = _mm_hadd_ps(sum128, sum128);
-    sum128 = _mm_hadd_ps(sum128, sum128);
-    sum_sq_diff += _mm_cvtss_f32(sum128);
+    // Horizontal reduction of vsum
+    __m128i low = _mm256_castsi256_si128(vsum);
+    __m128i high = _mm256_extracti128_si256(vsum, 1);
+    __m128i sum128 = _mm_add_epi32(low, high);
+    sum128 = _mm_add_epi32(sum128, _mm_shuffle_epi32(sum128, _MM_SHUFFLE(2, 3, 0, 1)));
+    sum128 = _mm_add_epi32(sum128, _mm_shuffle_epi32(sum128, _MM_SHUFFLE(1, 0, 3, 2)));
+    sum_sq_diff += _mm_cvtsi128_si32(sum128);
 
-    for (; i < vec->len; ++i) {
-        float diff = vec->data[i] - mean;
-        float sq = diff * diff;
-        if (isinf(vec->data[i])) return INFINITY;
-        sum_sq_diff += sq;
+    for (; i < len; ++i) {
+        int diff = data[i] - mean;
+        sum_sq_diff += (double)(diff * diff);
     }
 
-#elif defined(__SSE__)
-    __m128 vmean = _mm_set1_ps(mean);
-    __m128 vsum = _mm_setzero_ps();
+#elif defined(__SSE2__)
+    __m128i vmean = _mm_set1_epi32(mean);
+    __m128i vsum = _mm_setzero_si128();
     size_t i = 0;
 
-    for (; i + 3 < vec->len; i += 4) {
-        __m128 v = _mm_loadu_ps(&vec->data[i]);
-        __m128 diff = _mm_sub_ps(v, vmean);
-        __m128 sq = _mm_mul_ps(diff, diff);
-        for (int j = 0; j < 4; ++j) {
-            if (isinf(vec->data[i + j])) return INFINITY;
-        }
-        vsum = _mm_add_ps(vsum, sq);
+    for (; i + 4 <= len; i += 4) {
+        __m128i v = _mm_loadu_si128((__m128i*)&data[i]);
+        __m128i diff = _mm_sub_epi32(v, vmean);
+        __m128i sq = _mm_mullo_epi32(diff, diff);
+        vsum = _mm_add_epi32(vsum, sq);
     }
 
-    vsum = _mm_hadd_ps(vsum, vsum);
-    vsum = _mm_hadd_ps(vsum, vsum);
-    sum_sq_diff += _mm_cvtss_f32(vsum);
+    vsum = _mm_add_epi32(vsum, _mm_shuffle_epi32(vsum, _MM_SHUFFLE(2, 3, 0, 1)));
+    vsum = _mm_add_epi32(vsum, _mm_shuffle_epi32(vsum, _MM_SHUFFLE(1, 0, 3, 2)));
+    sum_sq_diff += _mm_cvtsi128_si32(vsum);
 
-    for (; i < vec->len; ++i) {
-        if (isinf(vec->data[i])) return INFINITY;
-        float diff = vec->data[i] - mean;
-        sum_sq_diff += diff * diff;
+    for (; i < len; ++i) {
+        int diff = data[i] - mean;
+        sum_sq_diff += (double)(diff * diff);
     }
 
 #else
-    for (size_t i = 0; i < vec->len; ++i) {
-        if (isinf(vec->data[i])) return INFINITY;
-        float diff = vec->data[i] - mean;
-        sum_sq_diff += diff * diff;
+    for (size_t i = 0; i < len; ++i) {
+        int diff = data[i] - mean;
+        sum_sq_diff += (double)(diff * diff);
     }
 #endif
 
-    return sqrtf(sum_sq_diff / vec->len);
+    return (float)sqrt(sum_sq_diff / len);
 }
-
 // -------------------------------------------------------------------------------- 
 
-float_v* cum_sum_float_vector(float_v* vec) {
+int_v* cum_sum_int_vector(int_v* vec) {
     if (!vec || !vec->data || vec->len == 0) {
         errno = EINVAL;
         return NULL;
     }
 
-    float_v* new_vec = init_float_vector(vec->len);
+    int_v* new_vec = init_int_vector(vec->len);
     if (!new_vec) {
         errno = ENOMEM;
         return NULL;
     }
 
-    float sum = 0.0f;
+    int sum = 0;
     for (size_t i = 0; i < vec->len; ++i) {
-        float val = vec->data[i];
-        if (isnan(val)) {
-            errno = EINVAL;
-            free_float_vector(new_vec);
-            return NULL;
-        }
-
+        int val = vec->data[i];
         sum += val;
 
-        if (isinf(sum)) {
-            // Fill rest with infinity
-            for (; i < vec->len; ++i) {
-                push_back_float_vector(new_vec, INFINITY);
-            }
-            return new_vec;
-        }
 
-        if (!push_back_float_vector(new_vec, sum)) {
-            free_float_vector(new_vec);
+        if (!push_back_int_vector(new_vec, sum)) {
+            free_int_vector(new_vec);
             return NULL;
         }
     }
@@ -905,39 +844,39 @@ float_v* cum_sum_float_vector(float_v* vec) {
 }
 // -------------------------------------------------------------------------------- 
 
-float_v* copy_float_vector(const float_v* original) {
+int_v* copy_int_vector(const int_v* original) {
     if (!original) {
         errno = EINVAL;
         return NULL;
     }
 
-    float_v* copy = init_float_vector(original->alloc);
+    int_v* copy = init_int_vector(original->alloc);
     if (!copy) {
         return NULL;
     }
 
     for (size_t i = 0; i < original->len; ++i) {
-        if (!push_back_float_vector(copy, original->data[i])) {
-            free_float_vector(copy);
+        if (!push_back_int_vector(copy, original->data[i])) {
+            free_int_vector(copy);
             return NULL;
         }
     }
 
     return copy;
 }
-// ================================================================================
-// ================================================================================
+// ================================================================================ 
+// ================================================================================ 
 // DICTIONARY IMPLEMENTATION
 
-typedef struct fdictNode {
+typedef struct idictNode {
     char* key;
-    float value;
-    struct fdictNode* next;
-} fdictNode;
+    int value;
+    struct idictNode* next;
+} idictNode;
 // --------------------------------------------------------------------------------
 
-struct dict_f {
-    fdictNode* keyValues;
+struct dict_i {
+    idictNode* keyValues;
     size_t hash_size;
     size_t len;
     size_t alloc;
@@ -1018,7 +957,7 @@ static size_t hash_function(const char* key, const uint32_t seed) {
  * @param new_size Desired new size for the hash table
  * @return bool true if resize successful, false otherwise
  */
-static bool resize_dict(dict_f* dict, size_t new_size) {
+static bool resize_dict(dict_i* dict, size_t new_size) {
     // Input validation
     if (!dict || new_size < dict->hash_size || new_size == 0) {
         errno = EINVAL;
@@ -1029,23 +968,23 @@ static bool resize_dict(dict_f* dict, size_t new_size) {
     new_size = (size_t)pow(2, ceil(log2(new_size)));
 
     // Use calloc for automatic zero initialization
-    fdictNode* new_table = calloc(new_size, sizeof(fdictNode));
+    idictNode* new_table = calloc(new_size, sizeof(idictNode));
     if (!new_table) {
         errno = ENOMEM;
         return false;
     }
 
     // Keep track of old table in case we need to recover
-    fdictNode* old_table = dict->keyValues;
+    idictNode* old_table = dict->keyValues;
     const size_t old_size = dict->alloc;
     size_t rehashed_count = 0;
 
     // Rehash existing entries
     for (size_t i = 0; i < old_size; i++) {
-        fdictNode* current = old_table[i].next;
+        idictNode* current = old_table[i].next;
         
         while (current) {
-            fdictNode* next = current->next;  // Save next pointer before modifying node
+            idictNode* next = current->next;  // Save next pointer before modifying node
 
             // Calculate new index using enhanced hash function
             size_t new_index = hash_function(current->key, HASH_SEED) % new_size;
@@ -1063,9 +1002,9 @@ static bool resize_dict(dict_f* dict, size_t new_size) {
     if (rehashed_count != dict->hash_size) {
         // Cleanup and restore old state
         for (size_t i = 0; i < new_size; i++) {
-            fdictNode* current = new_table[i].next;
+            idictNode* current = new_table[i].next;
             while (current) {
-                fdictNode* next = current->next;
+                idictNode* next = current->next;
                 current->next = NULL;
                 current = next;
             }
@@ -1086,9 +1025,9 @@ static bool resize_dict(dict_f* dict, size_t new_size) {
 }
 // --------------------------------------------------------------------------------
 
-dict_f* init_float_dict(void) {
+dict_i* init_int_dict(void) {
     // Allocate the dictionary structure
-    dict_f* dict = calloc(1, sizeof(dict_f));
+    dict_i* dict = calloc(1, sizeof(dict_i));
     if (!dict) {
         errno = ENOMEM;
         fprintf(stderr, "Failed to allocate dictionary structure\n");
@@ -1096,7 +1035,7 @@ dict_f* init_float_dict(void) {
     }
 
     // Allocate initial hash table array
-    dict->keyValues = calloc(hashSize, sizeof(fdictNode));
+    dict->keyValues = calloc(hashSize, sizeof(idictNode));
     if (!dict->keyValues) {
         errno = ENOMEM;
         fprintf(stderr, "Failed to allocate hash table array\n");
@@ -1113,7 +1052,7 @@ dict_f* init_float_dict(void) {
 }
 // --------------------------------------------------------------------------------
 
-bool insert_float_dict(dict_f* dict, const char* key, float value) {
+bool insert_int_dict(dict_i* dict, const char* key, int value) {
     if (!dict || !key) {
         errno = EINVAL;
         return false;
@@ -1136,7 +1075,7 @@ bool insert_float_dict(dict_f* dict, const char* key, float value) {
     const size_t index = hash_function(key, HASH_SEED) % dict->alloc;
     
     // Check for existing key
-    for (fdictNode* current = dict->keyValues[index].next; current; current = current->next) {
+    for (idictNode* current = dict->keyValues[index].next; current; current = current->next) {
         if (strcmp(current->key, key) == 0) {
             errno = EEXIST;
             return false;
@@ -1149,7 +1088,7 @@ bool insert_float_dict(dict_f* dict, const char* key, float value) {
         return false;
     }
 
-    fdictNode* new_node = malloc(sizeof(fdictNode));
+    idictNode* new_node = malloc(sizeof(idictNode));
     if (!new_node) {
         free(new_key);
         errno = ENOMEM;
@@ -1170,21 +1109,21 @@ bool insert_float_dict(dict_f* dict, const char* key, float value) {
 }
 // --------------------------------------------------------------------------------
 
-float pop_float_dict(dict_f* dict, const char* key) {
+int pop_int_dict(dict_i* dict, const char* key) {
     if (!dict || !key) {
         errno = EINVAL;
-        return FLT_MAX;
+        return INT_MAX;
     }
 
     size_t index = hash_function(key, HASH_SEED) % dict->alloc;
     
-    fdictNode* prev = &dict->keyValues[index];
-    fdictNode* current = prev->next;
+    idictNode* prev = &dict->keyValues[index];
+    idictNode* current = prev->next;
     
     while (current) {
         if (strcmp(current->key, key) == 0) {
             // Save value and unlink node
-            float value = current->value;
+            int value = current->value;
             prev->next = current->next;
             
             // Update dictionary metadata
@@ -1204,39 +1143,39 @@ float pop_float_dict(dict_f* dict, const char* key) {
     }
 
     errno = ENOENT;  // Set errno when key not found
-    return FLT_MAX;
+    return INT_MAX;
 }
 // --------------------------------------------------------------------------------
 
-float get_float_dict_value(const dict_f* dict, const char* key) {
+int get_int_dict_value(const dict_i* dict, const char* key) {
     if (!dict || !key) {
         errno = EINVAL;
-        return FLT_MAX;
+        return INT_MAX;
     }
 
     size_t index = hash_function(key, HASH_SEED) % dict->alloc;
     
-    for (const fdictNode* current = dict->keyValues[index].next; current; current = current->next) {
+    for (const idictNode* current = dict->keyValues[index].next; current; current = current->next) {
         if (strcmp(current->key, key) == 0) {
             return current->value;
         }
     }
 
     errno = ENOENT;  // Set errno when key not found
-    return FLT_MAX;
+    return INT_MAX;
 }
 // --------------------------------------------------------------------------------
 
-void free_float_dict(dict_f* dict) {
+void free_int_dict(dict_i* dict) {
     if (!dict) {
         return;  // Silent return on NULL - common pattern for free functions
     }
 
     // Free all nodes in each bucket
     for (size_t i = 0; i < dict->alloc; i++) {
-        fdictNode* current = dict->keyValues[i].next;
+        idictNode* current = dict->keyValues[i].next;
         while (current) {      
-            fdictNode* next = current->next;  // Save next pointer before freeing
+            idictNode* next = current->next;  // Save next pointer before freeing
             free(current->key);
             free(current);
             current = next;
@@ -1249,15 +1188,15 @@ void free_float_dict(dict_f* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-void _free_float_dict(dict_f** dict_ptr) {
+void _free_int_dict(dict_i** dict_ptr) {
     if (dict_ptr && *dict_ptr) {
-        free_float_dict(*dict_ptr);
+        free_int_dict(*dict_ptr);
         *dict_ptr = NULL;  // Prevent use-after-free
     }
 }
 // --------------------------------------------------------------------------------
 
-bool update_float_dict(dict_f* dict, const char* key, float value) {
+bool update_int_dict(dict_i* dict, const char* key, int value) {
     if (!dict || !key) {
         errno = EINVAL;
         return false;
@@ -1265,7 +1204,7 @@ bool update_float_dict(dict_f* dict, const char* key, float value) {
 
     size_t index = hash_function(key, HASH_SEED) % dict->alloc;
     
-    for (fdictNode* current = dict->keyValues[index].next; current; current = current->next) {
+    for (idictNode* current = dict->keyValues[index].next; current; current = current->next) {
         if (strcmp(current->key, key) == 0) {
             current->value = value;
             return true;
@@ -1277,7 +1216,7 @@ bool update_float_dict(dict_f* dict, const char* key, float value) {
 }
 // --------------------------------------------------------------------------------
 
-size_t float_dict_size(const dict_f* dict) {
+size_t int_dict_size(const dict_i* dict) {
     if (!dict) {
         errno = EINVAL;
         return SIZE_MAX;
@@ -1286,7 +1225,7 @@ size_t float_dict_size(const dict_f* dict) {
 }
 // --------------------------------------------------------------------------------
 
-size_t float_dict_alloc(const dict_f* dict) {
+size_t int_dict_alloc(const dict_i* dict) {
     if (!dict) {
         errno = EINVAL;
         return SIZE_MAX;
@@ -1295,7 +1234,7 @@ size_t float_dict_alloc(const dict_f* dict) {
 }
 // --------------------------------------------------------------------------------
 
-size_t float_dict_hash_size(const dict_f* dict) {
+size_t int_dict_hash_size(const dict_i* dict) {
     if (!dict) {
         errno = EINVAL;
         return SIZE_MAX;
@@ -1304,7 +1243,7 @@ size_t float_dict_hash_size(const dict_f* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-bool has_key_float_dict(const dict_f* dict, const char* key) {
+bool has_key_int_dict(const dict_i* dict, const char* key) {
     if (!dict || !key) {
         errno = EINVAL;
         return false;
@@ -1312,7 +1251,7 @@ bool has_key_float_dict(const dict_f* dict, const char* key) {
 
     size_t index = hash_function(key, HASH_SEED) % dict->alloc;
 
-    for (const fdictNode* current = dict->keyValues[index].next; current; current = current->next) {
+    for (const idictNode* current = dict->keyValues[index].next; current; current = current->next) {
         if (strcmp(current->key, key) == 0) {
             return true;
         }
@@ -1322,20 +1261,20 @@ bool has_key_float_dict(const dict_f* dict, const char* key) {
 }
 // -------------------------------------------------------------------------------- 
 
-dict_f* copy_float_dict(const dict_f* dict) {
+dict_i* copy_int_dict(const dict_i* dict) {
     if (!dict) {
         errno = EINVAL;
         return NULL;
     }
 
     // Create new dictionary with same capacity
-    dict_f* new_dict = malloc(sizeof(dict_f));
+    dict_i* new_dict = malloc(sizeof(dict_i));
     if (!new_dict) {
         errno = ENOMEM;
         return NULL;
     }
 
-    new_dict->keyValues = calloc(dict->alloc, sizeof(fdictNode));
+    new_dict->keyValues = calloc(dict->alloc, sizeof(idictNode));
     if (!new_dict->keyValues) {
         free(new_dict);
         errno = ENOMEM;
@@ -1349,11 +1288,11 @@ dict_f* copy_float_dict(const dict_f* dict) {
 
     // Copy all entries
     for (size_t i = 0; i < dict->alloc; i++) {
-        fdictNode* current = dict->keyValues[i].next;
+        idictNode* current = dict->keyValues[i].next;
         while (current) {
             // Insert will handle incrementing hash_size and len
-            if (!insert_float_dict(new_dict, current->key, current->value)) {
-                free_float_dict(new_dict);  // Clean up on failure
+            if (!insert_int_dict(new_dict, current->key, current->value)) {
+                free_int_dict(new_dict);  // Clean up on failure
                 return NULL;
             }
             current = current->next;
@@ -1364,7 +1303,7 @@ dict_f* copy_float_dict(const dict_f* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-bool clear_float_dict(dict_f* dict) {
+bool clear_int_dict(dict_i* dict) {
     if (!dict) {
         errno = EINVAL;
         return false;
@@ -1372,9 +1311,9 @@ bool clear_float_dict(dict_f* dict) {
 
     // Free all nodes in each bucket
     for (size_t i = 0; i < dict->alloc; i++) {
-        fdictNode* current = dict->keyValues[i].next;
+        idictNode* current = dict->keyValues[i].next;
         while (current) {
-            fdictNode* next = current->next;
+            idictNode* next = current->next;
             free(current->key);
             free(current);
             current = next;
@@ -1390,7 +1329,7 @@ bool clear_float_dict(dict_f* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-string_v* get_keys_float_dict(const dict_f* dict) {
+string_v* get_keys_int_dict(const dict_i* dict) {
     if (!dict) {
         errno = EINVAL;
         return NULL;
@@ -1401,7 +1340,7 @@ string_v* get_keys_float_dict(const dict_f* dict) {
         return NULL;
     }
     for (size_t i = 0; i < dict->alloc; i++) {
-        for (fdictNode* current = dict->keyValues[i].next; current; current = current->next) {
+        for (idictNode* current = dict->keyValues[i].next; current; current = current->next) {
             if (!push_back_str_vector(vec, current->key)) {
                 free_str_vector(vec);
                 errno = ENOMEM;
@@ -1413,21 +1352,21 @@ string_v* get_keys_float_dict(const dict_f* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-float_v* get_values_float_dict(const dict_f* dict) {
+int_v* get_values_int_dict(const dict_i* dict) {
     if (!dict) {
         errno = EINVAL;
         return NULL;
     }
-    float_v* vec = init_float_vector(dict->hash_size);
+    int_v* vec = init_int_vector(dict->hash_size);
     if (!vec) {
         errno = ENOMEM;
         return NULL;
     }
     // Iterate through all buckets
     for (size_t i = 0; i < dict->alloc; i++) {
-        for (fdictNode* current = dict->keyValues[i].next; current; current = current->next) {
-            if (!push_back_float_vector(vec, current->value)) {
-                free_float_vector(vec);
+        for (idictNode* current = dict->keyValues[i].next; current; current = current->next) {
+            if (!push_back_int_vector(vec, current->value)) {
+                free_int_vector(vec);
                 errno = ENOMEM;
                 return NULL;
             }
@@ -1437,7 +1376,7 @@ float_v* get_values_float_dict(const dict_f* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-dict_f* merge_float_dict(const dict_f* dict1, const dict_f* dict2, bool overwrite) {
+dict_i* merge_int_dict(const dict_i* dict1, const dict_i* dict2, bool overwrite) {
     if (!dict1 || !dict2) {
         errno = EINVAL;
         return NULL;
@@ -1445,16 +1384,16 @@ dict_f* merge_float_dict(const dict_f* dict1, const dict_f* dict2, bool overwrit
 
     // Create new dictionary with capacity for all items
     //size_t initial_size = dict1->hash_size + dict2->hash_size;
-    dict_f* merged = init_float_dict();
+    dict_i* merged = init_int_dict();
     if (!merged) {
-        return NULL;  // errno set by init_float_dict
+        return NULL;  // errno set by init_int_dict
     }
 
     // First, copy all entries from dict1
     for (size_t i = 0; i < dict1->alloc; i++) {
-        for (fdictNode* current = dict1->keyValues[i].next; current; current = current->next) {
-            if (!insert_float_dict(merged, current->key, current->value)) {
-                free_float_dict(merged);
+        for (idictNode* current = dict1->keyValues[i].next; current; current = current->next) {
+            if (!insert_int_dict(merged, current->key, current->value)) {
+                free_int_dict(merged);
                 return NULL;
             }
         }
@@ -1462,22 +1401,22 @@ dict_f* merge_float_dict(const dict_f* dict1, const dict_f* dict2, bool overwrit
 
     // Then handle dict2 entries
     for (size_t i = 0; i < dict2->alloc; i++) {
-        for (fdictNode* current = dict2->keyValues[i].next; current; current = current->next) {
-            float existing_value;
+        for (idictNode* current = dict2->keyValues[i].next; current; current = current->next) {
+            int existing_value;
             // Check if key exists in merged dictionary
-            if ((existing_value = get_float_dict_value(merged, current->key)) != FLT_MAX) {
+            if ((existing_value = get_int_dict_value(merged, current->key)) != FLT_MAX) {
                 if (overwrite) {
                     // Update existing value if overwrite is true
-                    if (!update_float_dict(merged, current->key, current->value)) {
-                        free_float_dict(merged);
+                    if (!update_int_dict(merged, current->key, current->value)) {
+                        free_int_dict(merged);
                         return NULL;
                     }
                 }
                 // If overwrite is false, keep original value
             } else {
                 // Key doesn't exist, insert new entry
-                if (!insert_float_dict(merged, current->key, current->value)) {
-                    free_float_dict(merged);
+                if (!insert_int_dict(merged, current->key, current->value)) {
+                    free_int_dict(merged);
                     return NULL;
                 }
             }
@@ -1488,14 +1427,14 @@ dict_f* merge_float_dict(const dict_f* dict1, const dict_f* dict2, bool overwrit
 }
 // --------------------------------------------------------------------------------
 
-bool foreach_float_dict(const dict_f* dict, dict_iterator iter, void* user_data) {
+bool foreach_int_dict(const dict_i* dict, idict_iterator iter, void* user_data) {
     if (!dict || !iter) {
         errno = EINVAL;
         return false;
     }
 
     for (size_t i = 0; i < dict->alloc; i++) {
-        for (fdictNode* current = dict->keyValues[i].next; current; current = current->next) {
+        for (idictNode* current = dict->keyValues[i].next; current; current = current->next) {
             iter(current->key, current->value, user_data);
         }
     }
@@ -1503,26 +1442,26 @@ bool foreach_float_dict(const dict_f* dict, dict_iterator iter, void* user_data)
     return true;
 }
 // ================================================================================ 
-// ================================================================================
+// ================================================================================ 
 
-typedef struct fvdictNode {
+typedef struct ivdictNode {
     char* key;
-    float_v* value;
-    struct fvdictNode* next;
-} fvdictNode;
+    int_v* value;
+    struct ivdictNode* next;
+} ivdictNode;
 // --------------------------------------------------------------------------------
 
-struct dict_fv {
-    fvdictNode* keyValues;
+struct dict_iv {
+    ivdictNode* keyValues;
     size_t hash_size;
     size_t len;
     size_t alloc;
 };
 // --------------------------------------------------------------------------------
 
-dict_fv* init_floatv_dict(void) {
+dict_iv* init_intv_dict(void) {
     // Allocate the dictionary structure
-    dict_fv* dict = calloc(1, sizeof(dict_f));
+    dict_iv* dict = calloc(1, sizeof(dict_iv));
     if (!dict) {
         errno = ENOMEM;
         fprintf(stderr, "Failed to allocate vector dictionary structure\n");
@@ -1530,7 +1469,7 @@ dict_fv* init_floatv_dict(void) {
     }
 
     // Allocate initial hash table array
-    dict->keyValues = calloc(hashSize, sizeof(fvdictNode));
+    dict->keyValues = calloc(hashSize, sizeof(ivdictNode));
     if (!dict->keyValues) {
         errno = ENOMEM;
         fprintf(stderr, "Failed to allocate hash table array\n");
@@ -1547,7 +1486,7 @@ dict_fv* init_floatv_dict(void) {
 }
 // -------------------------------------------------------------------------------- 
 
-static bool resize_dictv(dict_fv* dict, size_t new_size) {
+static bool resize_dictv(dict_iv* dict, size_t new_size) {
     // Input validation
     if (!dict || new_size < dict->hash_size || new_size == 0) {
         errno = EINVAL;
@@ -1558,22 +1497,22 @@ static bool resize_dictv(dict_fv* dict, size_t new_size) {
     new_size = (size_t)pow(2, ceil(log2(new_size)));
 
     // Use calloc for automatic zero initialization
-    fvdictNode* new_table = calloc(new_size, sizeof(fvdictNode));
+    ivdictNode* new_table = calloc(new_size, sizeof(ivdictNode));
     if (!new_table) {
         errno = ENOMEM;
         return false;
     }
 
     // Keep track of old table for cleanup if something fails
-    fvdictNode* old_table = dict->keyValues;
+    ivdictNode* old_table = dict->keyValues;
     const size_t old_size = dict->alloc;
     size_t rehashed_count = 0;
 
     // Rehash all existing entries into the new table
     for (size_t i = 0; i < old_size; ++i) {
-        fvdictNode* current = old_table[i].next;
+        ivdictNode* current = old_table[i].next;
         while (current) {
-            fvdictNode* next = current->next;
+            ivdictNode* next = current->next;
 
             size_t new_index = hash_function(current->key, HASH_SEED) % new_size;
 
@@ -1590,9 +1529,9 @@ static bool resize_dictv(dict_fv* dict, size_t new_size) {
     if (rehashed_count != dict->hash_size) {
         // Rollback: disconnect moved nodes so they aren't double-freed
         for (size_t i = 0; i < new_size; ++i) {
-            fvdictNode* current = new_table[i].next;
+            ivdictNode* current = new_table[i].next;
             while (current) {
-                fvdictNode* next = current->next;
+                ivdictNode* next = current->next;
                 current->next = NULL;
                 current = next;
             }
@@ -1613,7 +1552,7 @@ static bool resize_dictv(dict_fv* dict, size_t new_size) {
 }
 // --------------------------------------------------------------------------------
 
-bool create_floatv_dict(dict_fv* dict, char* key, size_t size) {
+bool create_intv_dict(dict_iv* dict, char* key, size_t size) {
     if (!dict || !key) {
         errno = EINVAL;
         return false;
@@ -1633,7 +1572,7 @@ bool create_floatv_dict(dict_fv* dict, char* key, size_t size) {
     const size_t index = hash_function(key, HASH_SEED) % dict->alloc;
 
     // Check for key collision
-    for (fvdictNode* current = dict->keyValues[index].next; current; current = current->next) {
+    for (ivdictNode* current = dict->keyValues[index].next; current; current = current->next) {
         if (strcmp(current->key, key) == 0) {
             errno = EEXIST;
             return false;
@@ -1646,15 +1585,15 @@ bool create_floatv_dict(dict_fv* dict, char* key, size_t size) {
         return false;
     }
 
-    fvdictNode* new_node = malloc(sizeof(fvdictNode));
+    ivdictNode* new_node = malloc(sizeof(ivdictNode));
     if (!new_node) {
         free(new_key);
         errno = ENOMEM;
         return false;
     }
 
-    float_v* value = NULL;
-    value = init_float_vector(size);
+    int_v* value = NULL;
+    value = init_int_vector(size);
     if (!value) {
         free(new_key);
         free(new_node);
@@ -1676,7 +1615,7 @@ bool create_floatv_dict(dict_fv* dict, char* key, size_t size) {
 }
 // --------------------------------------------------------------------------------
 
-bool pop_floatv_dict(dict_fv* dict, const char* key) {
+bool pop_intv_dict(dict_iv* dict, const char* key) {
     if (!dict || !key) {
         errno = EINVAL;
         return false;
@@ -1684,8 +1623,8 @@ bool pop_floatv_dict(dict_fv* dict, const char* key) {
 
     size_t index = hash_function(key, HASH_SEED) % dict->alloc;
     
-    fvdictNode* prev = &dict->keyValues[index];
-    fvdictNode* current = prev->next;
+    ivdictNode* prev = &dict->keyValues[index];
+    ivdictNode* current = prev->next;
     
     while (current) {
         if (strcmp(current->key, key) == 0) {
@@ -1698,7 +1637,7 @@ bool pop_floatv_dict(dict_fv* dict, const char* key) {
             }
             
             // Clean up node memory
-            free_float_vector(current->value);
+            free_int_vector(current->value);
             free(current->key);
             free(current);
             
@@ -1713,7 +1652,7 @@ bool pop_floatv_dict(dict_fv* dict, const char* key) {
 }
 // -------------------------------------------------------------------------------- 
 
-float_v* return_floatv_pointer(dict_fv* dict, const char* key) {
+int_v* return_intv_pointer(dict_iv* dict, const char* key) {
     if (!dict || !key) {
         errno = EINVAL;
         return NULL;
@@ -1721,7 +1660,7 @@ float_v* return_floatv_pointer(dict_fv* dict, const char* key) {
 
     size_t index = hash_function(key, HASH_SEED) % dict->alloc;
     
-    for (const fvdictNode* current = dict->keyValues[index].next; current; current = current->next) {
+    for (const ivdictNode* current = dict->keyValues[index].next; current; current = current->next) {
         if (strcmp(current->key, key) == 0) {
             return current->value;
         }
@@ -1732,18 +1671,18 @@ float_v* return_floatv_pointer(dict_fv* dict, const char* key) {
 }
 // -------------------------------------------------------------------------------- 
 
-void free_floatv_dict(dict_fv* dict) {
+void free_intv_dict(dict_iv* dict) {
     if (!dict) {
         return;  // Silent return on NULL - common pattern for free functions
     }
 
     // Free all nodes in each bucket
     for (size_t i = 0; i < dict->alloc; i++) {
-        fvdictNode* current = dict->keyValues[i].next;
+        ivdictNode* current = dict->keyValues[i].next;
         while (current) {      
-            fvdictNode* next = current->next;
+            ivdictNode* next = current->next;
 
-            free_float_vector(current->value);
+            free_int_vector(current->value);
             free(current->key);
             free(current);
 
@@ -1757,15 +1696,15 @@ void free_floatv_dict(dict_fv* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-void _free_floatv_dict(dict_fv** dict_ptr) {
+void _free_intv_dict(dict_iv** dict_ptr) {
     if (dict_ptr && *dict_ptr) {
-        free_floatv_dict(*dict_ptr);
+        free_intv_dict(*dict_ptr);
         *dict_ptr = NULL;  // Prevent use-after-free
     }
 }
 // -------------------------------------------------------------------------------- 
 
-bool has_key_floatv_dict(const dict_fv* dict, const char* key) {
+bool has_key_intv_dict(const dict_iv* dict, const char* key) {
     if (!dict || !key) {
         errno = EINVAL;
         return false;
@@ -1773,7 +1712,7 @@ bool has_key_floatv_dict(const dict_fv* dict, const char* key) {
 
     size_t index = hash_function(key, HASH_SEED) % dict->alloc;
 
-    for (const fvdictNode* current = dict->keyValues[index].next; current; current = current->next) {
+    for (const ivdictNode* current = dict->keyValues[index].next; current; current = current->next) {
         if (strcmp(current->key, key) == 0) {
             return true;
         }
@@ -1783,7 +1722,7 @@ bool has_key_floatv_dict(const dict_fv* dict, const char* key) {
 }
 // -------------------------------------------------------------------------------- 
 
-bool insert_floatv_dict(dict_fv* dict, const char* key, float_v* value) {
+bool insert_intv_dict(dict_iv* dict, const char* key, int_v* value) {
     if (!dict || !key || !value) {
         errno = EINVAL;
         return false;
@@ -1809,7 +1748,7 @@ bool insert_floatv_dict(dict_fv* dict, const char* key, float_v* value) {
     size_t index = hash_function(key, HASH_SEED) % dict->alloc;
 
     // Check for existing key
-    for (fvdictNode* current = dict->keyValues[index].next; current; current = current->next) {
+    for (ivdictNode* current = dict->keyValues[index].next; current; current = current->next) {
         if (strcmp(current->key, key) == 0) {
             errno = EEXIST;
             return false;
@@ -1824,7 +1763,7 @@ bool insert_floatv_dict(dict_fv* dict, const char* key, float_v* value) {
     }
 
     // Allocate node
-    fvdictNode* new_node = malloc(sizeof(fvdictNode));
+    ivdictNode* new_node = malloc(sizeof(ivdictNode));
     if (!new_node) {
         free(new_key);
         errno = ENOMEM;
@@ -1845,7 +1784,7 @@ bool insert_floatv_dict(dict_fv* dict, const char* key, float_v* value) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t float_dictv_size(const dict_fv* dict) {
+size_t int_dictv_size(const dict_iv* dict) {
     if (!dict) {
         errno = EINVAL;
         return SIZE_MAX;
@@ -1854,7 +1793,7 @@ size_t float_dictv_size(const dict_fv* dict) {
 }
 // --------------------------------------------------------------------------------
 
-size_t float_dictv_alloc(const dict_fv* dict) {
+size_t int_dictv_alloc(const dict_iv* dict) {
     if (!dict) {
         errno = EINVAL;
         return SIZE_MAX;
@@ -1863,7 +1802,7 @@ size_t float_dictv_alloc(const dict_fv* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t float_dictv_hash_size(const dict_fv* dict) {
+size_t int_dictv_hash_size(const dict_iv* dict) {
     if (!dict) {
         errno = EINVAL;
         return SIZE_MAX;
@@ -1872,35 +1811,35 @@ size_t float_dictv_hash_size(const dict_fv* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-dict_fv* copy_floatv_dict(const dict_fv* original) {
+dict_iv* copy_intv_dict(const dict_iv* original) {
     if (!original) {
         errno = EINVAL;
         return NULL;
     }
 
-    dict_fv* copy = init_floatv_dict();
+    dict_iv* copy = init_intv_dict();
     if (!copy) {
         return NULL;  // errno already set
     }
 
     for (size_t i = 0; i < original->alloc; ++i) {
-        fvdictNode* current = original->keyValues[i].next;
+        ivdictNode* current = original->keyValues[i].next;
         while (current) {
             // if (current->value->alloc_type != DYNAMIC) {
-            //     free_floatv_dict(copy);
+            //     free_intv_dict(copy);
             //     errno = EPERM;
             //     return NULL;
             // }
 
-            float_v* vec_copy = copy_float_vector(current->value);
+            int_v* vec_copy = copy_int_vector(current->value);
             if (!vec_copy) {
-                free_floatv_dict(copy);
+                free_intv_dict(copy);
                 return NULL;
             }
 
-            if (!insert_floatv_dict(copy, current->key, vec_copy)) {
-                free_float_vector(vec_copy);
-                free_floatv_dict(copy);
+            if (!insert_intv_dict(copy, current->key, vec_copy)) {
+                free_int_vector(vec_copy);
+                free_intv_dict(copy);
                 return NULL;
             }
 
@@ -1912,47 +1851,47 @@ dict_fv* copy_floatv_dict(const dict_fv* original) {
 }
 // -------------------------------------------------------------------------------- 
 
-dict_fv* merge_floatv_dict(const dict_fv* dict1, const dict_fv* dict2, bool overwrite) {
+dict_iv* merge_intv_dict(const dict_iv* dict1, const dict_iv* dict2, bool overwrite) {
     if (!dict1 || !dict2) {
         errno = EINVAL;
         return NULL;
     }
 
     // Start by deep copying dict1
-    dict_fv* merged = copy_floatv_dict(dict1);
+    dict_iv* merged = copy_intv_dict(dict1);
     if (!merged) {
         return NULL;
     }
 
     // Now process dict2 entries
     for (size_t i = 0; i < dict2->alloc; ++i) {
-        fvdictNode* current = dict2->keyValues[i].next;
+        ivdictNode* current = dict2->keyValues[i].next;
         while (current) {
             if (!current->key || !current->value || current->value->alloc_type != DYNAMIC) {
-                free_floatv_dict(merged);
+                free_intv_dict(merged);
                 errno = EPERM;
                 return NULL;
             }
 
-            bool exists = has_key_floatv_dict(merged, current->key);
+            bool exists = has_key_intv_dict(merged, current->key);
             if (exists && !overwrite) {
                 current = current->next;
                 continue;
             }
 
-            float_v* vec_copy = copy_float_vector(current->value);
+            int_v* vec_copy = copy_int_vector(current->value);
             if (!vec_copy) {
-                free_floatv_dict(merged);
-                return NULL; // errno set by copy_float_vector
+                free_intv_dict(merged);
+                return NULL; // errno set by copy_int_vector
             }
 
             if (exists) {
-                pop_floatv_dict(merged, current->key);
+                pop_intv_dict(merged, current->key);
             }
 
-            if (!insert_floatv_dict(merged, current->key, vec_copy)) {
-                free_float_vector(vec_copy);
-                free_floatv_dict(merged);
+            if (!insert_intv_dict(merged, current->key, vec_copy)) {
+                free_int_vector(vec_copy);
+                free_intv_dict(merged);
                 return NULL;
             }
 
@@ -1964,24 +1903,24 @@ dict_fv* merge_floatv_dict(const dict_fv* dict1, const dict_fv* dict2, bool over
 }
 // -------------------------------------------------------------------------------- 
 
-void clear_floatv_dict(dict_fv* dict) {
+void clear_intv_dict(dict_iv* dict) {
     if (!dict) {
         errno = EINVAL;
         return;
     }
 
     for (size_t i = 0; i < dict->alloc; ++i) {
-        fvdictNode* current = dict->keyValues[i].next;
+        ivdictNode* current = dict->keyValues[i].next;
         dict->keyValues[i].next = NULL;
 
         while (current) {
-            fvdictNode* next = current->next;
+            ivdictNode* next = current->next;
 
             if (current->value) {
                 if (current->value->alloc_type == STATIC) {
                     free(current->value);
                 } else {
-                    free_float_vector(current->value);
+                    free_int_vector(current->value);
                 }
             }
 
@@ -1996,14 +1935,14 @@ void clear_floatv_dict(dict_fv* dict) {
 }
 // -------------------------------------------------------------------------------- 
 
-bool foreach_floatv_dict(const dict_fv* dict, dict_fv_iterator iter, void* user_data) {
+bool foreach_intv_dict(const dict_iv* dict, dict_iv_iterator iter, void* user_data) {
     if (!dict || !iter) {
         errno = EINVAL;
         return false;
     }
 
     for (size_t i = 0; i < dict->alloc; ++i) {
-        fvdictNode* current = dict->keyValues[i].next;
+        ivdictNode* current = dict->keyValues[i].next;
         while (current) {
             iter(current->key, current->value, user_data);
             current = current->next;
@@ -2014,7 +1953,7 @@ bool foreach_floatv_dict(const dict_fv* dict, dict_fv_iterator iter, void* user_
 }
 // -------------------------------------------------------------------------------- 
 
-string_v* get_keys_floatv_dict(const dict_fv* dict) {
+string_v* get_keys_intv_dict(const dict_iv* dict) {
     if (!dict) {
         errno = EINVAL;
         return NULL;
@@ -2027,7 +1966,7 @@ string_v* get_keys_floatv_dict(const dict_fv* dict) {
     }
 
     for (size_t i = 0; i < dict->alloc; ++i) {
-        for (fvdictNode* current = dict->keyValues[i].next; current; current = current->next) {
+        for (ivdictNode* current = dict->keyValues[i].next; current; current = current->next) {
             if (!push_back_str_vector(vec, current->key)) {
                 free_str_vector(vec);
                 errno = ENOMEM;
@@ -2038,6 +1977,6 @@ string_v* get_keys_floatv_dict(const dict_fv* dict) {
 
     return vec;
 }
-// ================================================================================ 
-// ================================================================================ 
+// ================================================================================
+// ================================================================================
 // eof
