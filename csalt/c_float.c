@@ -42,15 +42,12 @@ float_v* init_float_vector(size_t buff) {
         return NULL;
     }
    
-    float* data_ptr = malloc(buff * sizeof(float));
+    float* data_ptr = calloc(buff,  sizeof(float));
     if (data_ptr == NULL) {
         free(struct_ptr);
         errno = ENOMEM;
         return NULL; 
     }
-   
-    // Initialize all elements
-    memset(data_ptr, 0, buff * sizeof(float));
    
     struct_ptr->data = data_ptr;
     struct_ptr->len = 0;

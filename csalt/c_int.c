@@ -41,15 +41,12 @@ int_v* init_int_vector(size_t buff) {
         return NULL;
     }
    
-    int* data_ptr = malloc(buff * sizeof(int));
+    int* data_ptr = calloc(buff, sizeof(int));
     if (data_ptr == NULL) {
         free(struct_ptr);
         errno = ENOMEM;
         return NULL; 
     }
-   
-    // Initialize all elements
-    memset(data_ptr, 0, buff * sizeof(int));
    
     struct_ptr->data = data_ptr;
     struct_ptr->len = 0;

@@ -41,15 +41,12 @@ double_v* init_double_vector(size_t buff) {
         return NULL;
     }
    
-    double* data_ptr = malloc(buff * sizeof(double));
+    double* data_ptr = calloc(buff, sizeof(double));
     if (data_ptr == NULL) {
         free(struct_ptr);
         errno = ENOMEM;
         return NULL; 
     }
-   
-    // Initialize all elements
-    memset(data_ptr, 0, buff * sizeof(double));
    
     struct_ptr->data = data_ptr;
     struct_ptr->len = 0;
