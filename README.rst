@@ -90,7 +90,6 @@ Key features:
 Typical use cases include large engineering calculations (e.g., PDEs, FEM solvers) where the 
 storage and access pattern of matrices must adapt to the structure of the data.
 
-
 Contributing
 ############
 Pull requests are welcome.  For major changes, please open an issue first to discuss

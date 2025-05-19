@@ -48,27 +48,52 @@ Implementation Details
 
 The library provides three main container types:
 
-Dynamic Float Vector
---------------------
+Dynamic Vector
+--------------
 * Automatically manages memory allocation and resizing
 * Maintains size and capacity information
 * Provides safe element access with bounds checking
 * Supports efficient append and insert operations
 
-Static Float Array Wrapper
---------------------------
+Static Array Wrapper
+--------------------
 * Provides bounds-checked access to fixed-size arrays
 * Prevents buffer overflows through runtime checks
 * Maintains actual element count for partially filled arrays
 * Offers safe iteration and access methods
 
-Float Dictionary
-----------------
+Dictionary
+----------
 * Maps string keys to values
 * Handles memory management for both keys and values
 * Provides efficient key lookup
 * Supports dynamic addition and removal of entries
 * a dictionary for management of data primitives and a dictionary for arrays of primitives
+
+Matrix
+------
+The matrix module provides adaptive storage for two-dimensional floating-point matrices, with
+automatic conversion between dense and sparse formats based on size and sparsity characteristics.
+
+Supported formats:
+
+* **Dense Matrix** — row-major, with optional initialization tracking for missing values
+* **Coordinate List (COO)** — stores only non-zero entries with explicit row and column indices
+* **Compressed Sparse Row (CSR)** — optimized for fast row-based access and memory efficiency
+
+Key features:
+
+* Seamless format conversion:
+  - Dense → COO when sparsity exceeds a threshold
+  - COO → CSR when matrix size and sparsity justify compression
+  - CSR → COO or COO → Dense when sparsity decreases
+* Support for dynamic insertions, deletions (`pop`), and element retrieval
+* Format-agnostic API for `get`, `insert`, `pop`, and metadata access
+* Automatic bounds checking and error signaling via `errno`
+* Full compatibility with CMocka for unit testing and regression validation
+
+Typical use cases include large engineering calculations (e.g., PDEs, FEM solvers) where the 
+storage and access pattern of matrices must adapt to the structure of the data.
 
 .. toctree::
    :maxdepth: 1
