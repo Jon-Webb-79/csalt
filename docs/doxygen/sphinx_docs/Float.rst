@@ -1994,6 +1994,283 @@ Copy Vector
       Original values: 1.0 2.0 3.0 4.0
       New values: 1.0 2.0 3.0 4.0
 
+Float Matrix Overview 
+=====================
+The ``matrix_f`` type provides a flexible and extensible representation of 2D matrices
+containing ``float`` values. It supports automatic format selection and dynamic 
+conversion between internal formats including:
+
+* Dense (row-major)
+* COO (coordinate list)
+* CSR (compressed sparse row)
+
+All format-specific behavior is encapsulated. Users should access data through
+the generic API functions documented here.
+
+Matrix objects must be created and managed using the generic functions declared in 
+the ``c_float.h`` header file.
+
+.. code-block:: c
+
+   typedef struct matrix_f matrix_f;
+
+Matrix Initialization and Cleanup
+---------------------------------
+
+create_float_matrix
+~~~~~~~~~~~~~~~~~~~
+.. c:function:: matrix_f* create_float_matrix(size_t rows, size_t cols, size_t estimated_zeros)
+
+   Initializes a new matrix object with the specified number of rows and columns.
+   Internally selects an appropriate format based on dimensions.
+
+   :param rows: Number of matrix rows
+   :param cols: Number of matrix columns
+   :param estimated_zeros: The estimated number of empty elements in the matrix. Used to determine the optimum matrix format.
+   :returns: Pointer to new ``matrix_f`` object, or ``NULL`` on failure
+   :raises: Sets ``errno`` to ``EINVAL`` for zero dimensions, ``ENOMEM`` on allocation failure
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_f* mat FLTMAT_GBC = create_float_matrix(5, 5, 0);
+      if (!mat) {
+          perror("Failed to create matrix");
+      }
+
+free_float_matrix
+~~~~~~~~~~~~~~~~~
+.. c:function:: void free_float_matrix(matrix_f* mat)
+
+   Frees all memory associated with a matrix object. Only required if not using
+   the :ref:`FLTMAT_GBC <matrix_auto_gc>` macro.
+
+   :param mat: Matrix to free
+   :raises: Sets ``errno`` to ``EINVAL`` if input is NULL
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_f* mat = create_float_matrix(10, 10, 0);
+      // Use matrix...
+      free_float_matrix(mat);
+
+.. _matrix_auto_gc:
+
+FLTMAT_GBC
+~~~~~~~~~~
+.. c:macro:: FLTMAT_GBC
+
+   Enables automatic cleanup of ``matrix_f`` objects at end of scope.
+   Only available with GCC or Clang compilers that support the ``cleanup`` attribute.
+
+   Example:
+
+   .. code-block:: c
+
+      void compute(void) {
+          matrix_f* FLTMAT_GBC mat = create_float_matrix(4, 4, 0);
+          // Matrix is freed automatically when function returns
+      }
+
+Matrix Element Access
+---------------------
+
+insert_float_matrix
+~~~~~~~~~~~~~~~~~~~
+.. c:function:: bool insert_float_matrix(matrix_f** mat, size_t row, size_t col, float value, bool convert_to_csr)
+
+   Inserts or updates a float value at the specified (row, col) position. Typically a user 
+   would not want to trigger a conversion to a CSR matrix until the matrix is fully populated to 
+   its maximum extent.  However, sometimes for storage reasons an insert operation may trigger this 
+   transformation, which is why the ``convert_to_csr`` flag exists in this function.
+
+   :param mat: Target matrix
+   :param row: Row index
+   :param col: Column index
+   :param value: Float value to insert
+   :param convert_to_csr: true if an insert should be allowed to trigger a csr matrix conversion, false otherwise
+   :returns: ``true`` if successful, ``false`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input or unsupported format,
+            ``ERANGE`` for out-of-bounds access,
+            ``ENOMEM`` if internal resize fails (COO only)
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_f* mat FLTMAT_GBC = create_float_matrix(10, 15, 5);
+      insert_float_matrix(&mat, 2, 3, 5.5f, false);
+
+pop_float_matrix
+~~~~~~~~~~~~~~~~
+.. c:function:: float pop_float_matrix(matrix_f** mat, size_t row, size_t col)
+
+   Removes and returns the value at the specified (row, col) position.
+   Returns ``FLT_MAX`` if the entry is not present.
+
+   :param mat: Target matrix
+   :param row: Row index
+   :param col: Column index
+   :returns: Value at the specified position, or ``FLT_MAX`` if not found
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input or unsupported format,
+            ``ERANGE`` for out-of-bounds indices,
+            ``ENODATA`` if the position is unoccupied
+
+   Example:
+
+   .. code-block:: c
+
+      float value = pop_float_matrix(&mat, 2, 3);
+      if (errno == 0) {
+          printf("Removed value: %.2f\n", value);
+      }
+
+get_float_matrix
+~~~~~~~~~~~~~~~~
+.. c:function:: float get_float_matrix(matrix_f* mat, size_t row, size_t col)
+
+   Returns the value at a specific matrix position, or ``FLT_MAX`` on error or
+   if no value exists (in sparse formats).
+
+   :param mat: Target matrix
+   :param row: Row index
+   :param col: Column index
+   :returns: Value at position, or ``FLT_MAX`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input, ``ERANGE`` for out-of-bounds
+
+   Example:
+
+   .. code-block:: c
+
+      float value = get_float_matrix(mat, 1, 1);
+      if (errno == 0) {
+          printf("Value at (1,1): %.2f\n", value);
+      }
+
+Matrix Utility Functions
+------------------------
+
+float_matrix_rows
+~~~~~~~~~~~~~~~~~
+.. c:function:: size_t float_matrix_rows(const matrix_f* mat)
+
+   Returns the number of rows in the matrix.
+
+   :param mat: Matrix to query
+   :returns: Number of rows, or ``SIZE_MAX`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input
+
+float_matrix_cols
+~~~~~~~~~~~~~~~~~
+.. c:function:: size_t float_matrix_cols(const matrix_f* mat)
+
+   Returns the number of columns in the matrix.
+
+   :param mat: Matrix to query
+   :returns: Number of columns, or ``SIZE_MAX`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input
+
+float_matrix_type
+~~~~~~~~~~~~~~~~~
+.. c:function:: matrix_type float_matrix_type(const matrix_f* mat)
+
+   Returns the internal storage format of the matrix (e.g., DENSE_MATRIX, SPARSE_COO_MATRIX, etc.).
+
+   :param mat: Matrix to query
+   :returns: Enum representing the matrix format
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input
+
+.. note::
+
+   Use the ``float_matrix_type()`` function for logging or debugging purposes. 
+   Most operations should rely on the generic interface regardless of internal format.
+
+Matrix Format Conversion and Optimization
+-----------------------------------------
+
+finalize_float_matrix
+~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: bool finalize_float_matrix(matrix_f** mat_ptr)
+
+   Finalizes a matrix by converting it to a more efficient internal representation.
+   If the matrix is large and sparse, this function may convert it to COO or CSR.
+
+   :param mat_ptr: Pointer to a ``matrix_f*`` to finalize
+   :returns: ``true`` on success, ``false`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` if input is NULL
+
+   .. note::
+      This function may replace the pointer value if a new matrix structure is allocated.
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_f* mat FLTMAT_GBC = create_float_matrix(1000, 1000);
+      // Populate matrix...
+      finalize_float_matrix(&mat);  // May convert to CSR
+
+maybe_convert_float_matrix
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: void maybe_convert_float_matrix(matrix_f** mat_ptr, bool convert_to_csr)
+
+   Heuristically evaluates whether a matrix should be converted to a more efficient
+   internal format. Dense matrices may be converted to COO, and COO matrices to CSR.
+
+   :param mat_ptr: Pointer to a ``matrix_f*`` to evaluate
+   :param convert_to_csr: If true, allows conversion from COO to CSR format
+   :returns: None
+   :raises: No errno set; only converts on success
+
+   .. warning::
+      The matrix pointer may be replaced if a new structure is allocated.
+
+compact_float_csr_matrix
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: void compact_float_csr_matrix(matrix_f* mat)
+
+   Compacts a CSR matrix by removing logically deleted entries (tombstones)
+   and reallocating storage to fit only the active elements.
+
+   :param mat: CSR matrix to compact
+   :returns: None
+   :raises: Sets ``errno`` to ``ENOMEM`` if reallocation fails,
+            or ``EINVAL`` if the matrix is not in CSR format
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_f* mat FLTMAT_GBC = create_float_matrix(100, 100);
+      // Populate, delete entries...
+      compact_float_csr_matrix(mat);  // Shrinks internal arrays
+
+convert_float_coo_to_csr
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: matrix_f* convert_float_coo_to_csr(const matrix_f* coo_mat)
+
+   Converts a matrix from COO (coordinate list) format to CSR (compressed sparse row) format.
+   The original matrix remains unchanged. Returns a newly allocated matrix in CSR format.
+
+   :param coo_mat: COO matrix to convert
+   :returns: New ``matrix_f*`` in CSR format, or ``NULL`` on failure
+   :raises: Sets ``errno`` to ``EINVAL`` if input is invalid,
+            or ``ENOMEM`` on allocation failure
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_f* coo = create_float_matrix(200, 200);
+      // Populate with insert_float_matrix...
+      matrix_f* csr = convert_float_coo_to_csr(coo);
+      if (!csr) perror("Conversion failed");
+
+
+
 Float Dictionary Overview
 ==========================
 
