@@ -826,6 +826,515 @@ bool foreach_floatv_dict(const dict_fv* dict, dict_fv_iterator iter, void* user_
 string_v* get_keys_floatv_dict(const dict_fv* dict);
 // ================================================================================ 
 // ================================================================================ 
+
+/**
+ * @enum MatrixStorageType
+ * @brief Enum representing the storage format of a matrix.
+ *
+ * Used to determine how the matrix data is stored and which union member to access.
+ */
+typedef enum {
+    DENSE_MATRIX,
+    SPARSE_COO_MATRIX,  // Coordinate list format
+    SPARSE_CSR_MATRIX   // Compressed sparse row format
+} MatrixStorageType;
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @struct matrix_t
+ * @brief Adaptive 2D matrix supporting dense and sparse storage formats.
+ *
+ * This structure allows storage of a matrix using different internal representations
+ * depending on size and sparsity. It supports:
+ * - Dense storage using a float array and optional initialization flags.
+ * - Coordinate list (COO) sparse storage with dynamic allocation.
+ * - Compressed sparse row (CSR) storage for fast row-based access.
+ *
+ * The actual format is selected using the `type` field and stored in a union.
+ */
+typedef struct {
+    union {
+        struct { // Dense storage
+            float* data;
+            uint8_t* init;
+        } dense;
+        
+        struct { // Coordinate list format
+            size_t* rows;
+            size_t* cols;
+            float* values;
+            size_t capacity;
+        } coo;
+        
+        struct { // Compressed sparse row format
+            size_t* row_ptrs;
+            size_t* col_indices;
+            float* values;
+        } csr;
+    } storage;
+    
+    MatrixStorageType type;
+    size_t rows;
+    size_t cols;
+    size_t count;  // Non-zero count
+} matrix_f;
+// ================================================================================ 
+// ================================================================================ 
+
+/**
+ * @brief Creates an dense matrix of a float data type
+ *
+ * @param rows Number of matrix rows.
+ * @param cols Number of matrix columns.
+ *
+ * @returns Pointer to a dynamically allocated `matrix_f` structure,
+ *          or NULL on allocation failure (errno is set to ENOMEM).
+ */
+matrix_f* create_float_dense_matrix(size_t rows, size_t cols);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Creates a sparse coordinate list matrix of a float data type
+ *
+ * @param rows Number of matrix rows.
+ * @param cols Number of matrix columns.
+ *
+ * @returns Pointer to a dynamically allocated `matrix_f` structure,
+ *          or NULL on allocation failure (errno is set to ENOMEM).
+ */
+matrix_f* create_float_coo_matrix(size_t rows, size_t cols);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Creates a compressed sparse row matrix of a float data type
+ *
+ * @param rows Number of matrix rows.
+ * @param cols Number of matrix columns.
+ * @param estimated_zeros Estimated number of zero values (used to infer sparsity).
+ *                        For example, use `rows * cols` to force dense allocation,
+ *                        or `rows` for a diagonal matrix. 
+ *
+ * @returns Pointer to a dynamically allocated `matrix_f` structure,
+ *          or NULL on allocation failure (errno is set to ENOMEM).
+ */
+matrix_f* create_float_csr_matrix(size_t rows, size_t cols, size_t nnz); 
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Creates an adaptive matrix based on estimated sparsity of a float data type
+ *
+ * This function selects the most efficient internal format (dense or sparse COO)
+ * depending on the matrix dimensions and the estimated number of non-zero values.
+ * For very sparse or large matrices, coordinate list (COO) format is used.
+ * For small or dense matrices, standard dense format is selected.
+ *
+ * @param rows Number of matrix rows.
+ * @param cols Number of matrix columns.
+ * @param estimated_zeros Estimated number of zero values (used to infer sparsity).
+ *                        For example, use `rows * cols` to force dense allocation,
+ *                        or `rows` for a diagonal matrix.
+ *
+ * @returns Pointer to a dynamically allocated `matrix_f` structure,
+ *          or NULL on allocation failure (errno is set to ENOMEM).
+ */
+matrix_f* create_float_matrix(size_t rows, size_t cols, size_t estimated_zeros);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Frees all memory associated with a matrix.
+ *
+ * Deallocates all internal arrays associated with the matrix's current storage format
+ * and then frees the matrix structure itself. Safely handles NULL pointers and avoids
+ * double-free issues.
+ *
+ * @param mat Pointer to the matrix to be deallocated. If NULL, the function does nothing.
+ */
+void free_float_matrix(matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * \internal
+ * @brief Frees all memory associated with a matrix.
+ *
+ * Deallocates all internal arrays associated with the matrix's current storage format
+ * and then frees the matrix structure itself. Safely handles NULL pointers and avoids
+ * double-free issues.  This function is specific to dense matrices.
+ * Not recommended for average users, implement free_matrix instead
+ *
+ * @param mat Pointer to the matrix to be deallocated. If NULL, the function does nothing.
+ */
+void free_float_dense_matrix(matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Frees all memory associated with a matrix.
+ *
+ * Deallocates all internal arrays associated with the matrix's current storage format
+ * and then frees the matrix structure itself. Safely handles NULL pointers and avoids
+ * double-free issues.  This function is specific to sparse csr matrices.
+ * Not recommended for average users, implement free_matrix instead
+ *
+ * @param mat Pointer to the matrix to be deallocated. If NULL, the function does nothing.
+ */
+void free_float_csr_matrix(matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Frees all memory associated with a matrix.
+ *
+ * Deallocates all internal arrays associated with the matrix's current storage format
+ * and then frees the matrix structure itself. Safely handles NULL pointers and avoids
+ * double-free issues. This function is specific to sparse coo matrices
+ * Not recommended for average users, implement free_matrix instead
+ *
+ * @param mat Pointer to the matrix to be deallocated. If NULL, the function does nothing.
+ */
+void free_float_coo_matrix(matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+* @function _free_matrix
+* @brief Helper function for garbage collection of float vectors
+*
+* Used with FLTVMAT_GBC macro for automatic cleanup.
+*
+* @param mat Double pointer to float matrix to free
+* @return void
+*/
+void _free_float_matrix(matrix_f** mat);
+// --------------------------------------------------------------------------------
+
+#if defined(__GNUC__) || defined (__clang__)
+    /**
+     * @macro FLTMAT_GBC
+     * @brief A macro for enabling automatic cleanup of float matrix objects.
+     *
+     * This macro uses the cleanup attribute to automatically call `_free_matrix`
+     * when the scope ends, ensuring proper memory management.
+     */
+    #define FLTMAT_GBC __attribute__((cleanup(_free_float_matrix)))
+#endif
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Inserts a new value into a matrix at the specified row and column.
+ *
+ * This function acts as a format-agnostic wrapper for inserting values into a matrix.
+ * It supports dense, COO, and CSR formats. If the matrix becomes large or sparse, it
+ * may be automatically converted to a more optimal format (e.g., dense → COO, COO → CSR).
+ *
+ * @param[in,out] pmat Pointer to the matrix pointer. May be reallocated and updated 
+ *                     internally if format conversion occurs.
+ * @param row Zero-based row index.
+ * @param col Zero-based column index.
+ * @param value Value to insert.
+ * @param convert_to_csr true if an insert should trigger a conversion to csr, false otherwise
+ * @return true if the insertion was successful, false otherwise.
+ *
+ * @retval false if:
+ *         - The entry already exists (errno = EEXIST).
+ *         - The matrix pointer is NULL (errno = EINVAL).
+ *         - Indices are out of bounds (errno = ERANGE).
+ *         - Memory allocation failed (errno = ENOMEM).
+ *
+ * @note If the matrix format is converted during insertion, the pointer referenced by
+ *       `*pmat` is updated to the new matrix object.
+ */
+bool insert_float_matrix(matrix_f** mat, size_t row, size_t col, float value, bool convert_to_csr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Inserts a value into a dense matrix.
+ *
+ * Fails if the element has already been initialized.
+ *
+ * @see insert_matrix for the generic wrapper.
+ */
+bool insert_float_dense_matrix(matrix_f* mat, size_t row, size_t col, float value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Attempts to insert a value into a CSR matrix. Not supported for new entries.
+ *
+ * @note This function will fail with errno = EEXIST even if the element does not exist,
+ *       because dynamic insertion into CSR format is not implemented.
+ *       Use COO format for inserts, then convert to CSR with convert_float_coo_to_csr().
+ */
+bool insert_float_csr_matrix(matrix_f* mat, size_t row, size_t col, float value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Inserts a value into a COO-format sparse matrix.
+ *
+ * Automatically grows internal storage if capacity is exceeded.
+ * Fails if the (row, col) entry already exists.
+ */
+bool insert_float_coo_matrix(matrix_f* mat, size_t row, size_t col, float value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Updates an existing value in the matrix at the specified row and column.
+ *
+ * This function modifies the value of an already-initialized matrix element.
+ * No format conversion is performed; the matrix's structure remains unchanged.
+ *
+ * @param mat Pointer to the matrix.
+ * @param row Zero-based row index.
+ * @param col Zero-based column index.
+ * @param value New value to assign to the existing entry.
+ * @return true if the update was successful, false otherwise.
+ *
+ * @retval false if:
+ *         - The matrix pointer is NULL (errno = EINVAL)
+ *         - The row or column is out of bounds (errno = ERANGE)
+ *         - The entry is uninitialized (errno = ENOENT or EINVAL)
+ */
+bool update_float_matrix(matrix_f* mat, size_t row, size_t col, float value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Updates an element in a dense matrix.
+ *
+ * Overwrites the existing value at the given row and column.
+ */
+bool update_float_dense_matrix(matrix_f* mat, size_t row, size_t col, float value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Updates an element in a CSR matrix.
+ *
+ * Replaces the value associated with the given (row, col) pair.
+ * Fails if the entry is not found.
+ */
+bool update_float_csr_matrix(matrix_f* mat, size_t row, size_t col, float value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Updates an element in a COO matrix.
+ *
+ * Fails if the target (row, col) entry does not exist.
+ */
+bool update_float_coo_matrix(matrix_f* mat, size_t row, size_t col, float value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Checks whether a matrix element is initialized or present.
+ *
+ * This function returns true if the specified entry has been explicitly set,
+ * and false if it is uninitialized (i.e., absent from sparse formats or
+ * not marked as initialized in dense storage).
+ *
+ * @param mat Pointer to the matrix.
+ * @param row Row index.
+ * @param col Column index.
+ * @returns true if element is initialized, false otherwise.
+ * @retval false if out of bounds or invalid input (errno set to ERANGE or EINVAL).
+ */
+bool is_float_element_initialized(const matrix_f* mat, size_t row, size_t col);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @breif Converts a dense float matrix to a sparse coordinate list format 
+ *
+ * @param dense_mat A dense float matrix 
+ * @return a matrix_f data type in a COO format
+ */
+matrix_f* convert_float_dense_to_coo(const matrix_f* dense_mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @breif Converts a sparse coordinate list float matrix to a sparse compressed storage format 
+ *
+ * @param dense_mat A dense float matrix 
+ * @return a matrix_f data type in a CSR format
+ */
+matrix_f* convert_float_coo_to_csr(const matrix_f* coo_mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Retrieves a float value from a matrix at the given row and column.
+ *
+ * This function accesses the value stored at (row, col) in a matrix.
+ * If the element has not been initialized, or the indices are out of bounds,
+ * it returns FLT_MAX and sets errno.
+ *
+ * @param mat Pointer to the matrix.
+ * @param row Zero-based row index.
+ * @param col Zero-based column index.
+ * @returns The value at (row, col), or FLT_MAX on error.
+ * @retval FLT_MAX if the input is invalid, out of bounds, or uninitialized.
+ */
+float get_float_matrix(const matrix_f* mat, size_t row, size_t col);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Retrieves a float value from a dense matrix at the given row and column.
+ *
+ * This function accesses the value stored at (row, col) in a dense matrix.
+ * If the element has not been initialized, or the indices are out of bounds,
+ * it returns FLT_MAX and sets errno.
+ *
+ * @param mat Pointer to the dense matrix.
+ * @param row Zero-based row index.
+ * @param col Zero-based column index.
+ * @returns The value at (row, col), or FLT_MAX on error.
+ * @retval FLT_MAX if the input is invalid, out of bounds, or uninitialized.
+ */
+float get_float_dense_matrix(const matrix_f* mat, size_t row, size_t col);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Retrieves a value from a COO-format sparse matrix.
+ *
+ * @param mat Pointer to the COO matrix.
+ * @param row Zero-based row index.
+ * @param col Zero-based column index.
+ * @return The value at the given position, or FLT_MAX if not found or on error.
+ */
+float get_float_coo_matrix(const matrix_f* mat, size_t row, size_t col);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Retrieves a value from a CSR-format sparse matrix.
+ *
+ * @param mat Pointer to the CSR matrix.
+ * @param row Zero-based row index.
+ * @param col Zero-based column index.
+ * @return The value at the given position, or FLT_MAX if not found or on error.
+ */
+float get_float_csr_matrix(const matrix_f* mat, size_t row, size_t col);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Removes and returns a value from a dense matrix.
+ *
+ * @param mat Pointer to the dense matrix.
+ * @param row Row index.
+ * @param col Column index.
+ * @return The removed value, or FLT_MAX on error.
+ */
+float pop_float_dense_matrix(matrix_f* mat, size_t row, size_t col);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Removes and returns a value from a COO-format sparse matrix.
+ *
+ * @param mat Pointer to the COO matrix.
+ * @param row Row index.
+ * @param col Column index.
+ * @return The removed value, or FLT_MAX on error.
+ */
+float pop_float_coo_matrix(matrix_f* mat, size_t row, size_t col);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Removes and returns a value from a CSR-format sparse matrix.
+ *
+ * Consider optimizing for large arrays in the future with a lazy delete process
+ *
+ * @param mat Pointer to the CSR matrix.
+ * @param row Row index.
+ * @param col Column index.
+ * @return The removed value, or FLT_MAX on error.
+ */
+float pop_float_csr_matrix(matrix_f* mat, size_t row, size_t col);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Removes and returns a value from the matrix at the specified row and column.
+ *
+ * This function dispatches to the appropriate pop routine based on the matrix's
+ * internal storage format (dense, COO, or CSR). The value is removed from the matrix,
+ * and the internal count of non-zero or initialized values is updated accordingly.
+ *
+ * In CSR format, this function performs a lazy deletion using a tombstone marker,
+ * and may automatically trigger compaction if the number of deleted entries exceeds
+ * a configurable threshold.
+ *
+ * @param mat Pointer to the matrix from which the value should be removed.
+ * @param row Zero-based row index of the element.
+ * @param col Zero-based column index of the element.
+ * @return The value that was removed, or FLT_MAX on error.
+ *
+ * @retval FLT_MAX if:
+ *         - The matrix is NULL or uninitialized (errno = EINVAL)
+ *         - Indices are out of bounds (errno = ERANGE)
+ *         - The element does not exist (errno = ENOENT)
+ *
+ * @note For CSR matrices, this function uses a tombstone deletion strategy. Actual
+ *       memory cleanup may be deferred until compaction is triggered.
+ */
+float pop_float_matrix(matrix_f** mat, size_t row, size_t col);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compacts a CSR-format matrix by removing tombstone entries.
+ *
+ * This function rebuilds the CSR matrix by scanning for and removing any entries
+ * marked as deleted (i.e., entries where `col_indices[i] == SIZE_MAX`). It rewrites
+ * the internal `row_ptrs`, `col_indices`, and `values` arrays to remove gaps and
+ * reduce memory waste, while preserving the row ordering of valid elements.
+ *
+ * This function is typically called automatically after deletions if the number
+ * of tombstones exceeds a threshold, but it can also be invoked manually to force
+ * compaction at any time.
+ *
+ * @param mat Pointer to the CSR matrix to be compacted. Must not be NULL.
+ *
+ * @note This function has no effect on matrices that are not in CSR format.
+ * @note The `mat->count` field is updated to reflect the new number of valid entries.
+ */
+void compact_float_csr_matrix(matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief A function to be called one a matrix has been populated to its peak value for conversion to optimum type.
+ *
+ * @param mat A double pointer to a matrix_f data type.
+ * @param true if conversion was successful, false otherwise
+ */
+bool finalize_float_matrix(matrix_f** mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief returns the type of matrix 
+ *
+ * @param mat A matrix_f data type 
+ * @return DENSE_MATRIX, SPARSE_COO_MATRIX or SPARSE_CSR_MATRIX 
+ */
+MatrixStorageType get_float_matrix_type(matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief returns the number of allocated rws in a matrix_f structure 
+ *
+ * @param mat a matrix_f data type 
+ * @return The number of allocated rows 
+ */
+size_t get_float_matrix_rows(matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief returns the number of allocated columns in a matrix_f structure 
+ *
+ * @param mat a matrix_f data type
+ * @return The number of allocated columns
+ */
+size_t get_float_matrix_cols(matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Returns the number of populated elements in a matrix_f structure 
+ *
+ * @param mat a matrix_f data type 
+ * @return The number of populated elements
+ */
+size_t get_float_matrix_element_count(matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+void maybe_convert_float_matrix(matrix_f** pmat, bool convert_to_csr);
+// ================================================================================ 
+// ================================================================================ 
 // GENERIC MACROS
 
 /**

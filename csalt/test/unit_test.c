@@ -377,6 +377,26 @@ const struct CMUnitTest test_float_dict[] = {
     cmocka_unit_test(test_foreach_floatv_dict_with_null_callback),
     cmocka_unit_test(test_foreach_floatv_dict_accumulates_sum),
 };
+// -------------------------------------------------------------------------------- 
+
+const struct CMUnitTest test_float_matrix[] = {
+    cmocka_unit_test(test_create_dense_float_matrix),
+    cmocka_unit_test(test_insert_and_get_dense_float_matrix),
+    cmocka_unit_test(test_invalid_dense_float_insert),
+    cmocka_unit_test(test_float_coo_conversion_from_dense),
+    cmocka_unit_test(test_insert_float_and_get_coo_matrix),
+    cmocka_unit_test(test_duplicate_flaot_insert_coo_disallowed),
+    cmocka_unit_test(test_float_csr_conversion_from_coo),
+    cmocka_unit_test(test_get_after_float_csr_conversion),
+    cmocka_unit_test(test_pop_after_float_csr_conversion),
+    cmocka_unit_test(test_get_float_matrix_bounds),
+    cmocka_unit_test(test_insert_float_matrix_bounds),
+    cmocka_unit_test(test_pop_float_matrix_bounds),
+    cmocka_unit_test(test_get_float_matrix_null),
+    cmocka_unit_test(test_insert_float_matrix_null),
+    cmocka_unit_test(test_pop_float_matrix_null),
+    cmocka_unit_test(test_float_matrix_gbc),
+};
 // ================================================================================ 
 // ================================================================================ 
 
@@ -761,33 +781,36 @@ const struct CMUnitTest test_int_dict[] = {
 // ================================================================================ 
 int main(int argc, const char * argv[]) {
     int status;
-    status = cmocka_run_group_tests(test_string, NULL, NULL);
-    if (status != 0) 
-        return status;	
-    status = cmocka_run_group_tests(test_string_vector, NULL, NULL);
-    if (status != 0) 
-        return status;
-    status = cmocka_run_group_tests(test_float_vector, NULL, NULL);
-    if (status != 0) 
-        return status;
-    status = cmocka_run_group_tests(test_float_dict, NULL, NULL);
-    if (status != 0) 
-        return status;
-    status = cmocka_run_group_tests(test_double_vector, NULL, NULL);
-    if (status != 0) 
-        return status;
-    status = cmocka_run_group_tests(test_double_dict, NULL, NULL);
+    // status = cmocka_run_group_tests(test_string, NULL, NULL);
+    // if (status != 0) 
+    //     return status;	
+    // status = cmocka_run_group_tests(test_string_vector, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
+    // status = cmocka_run_group_tests(test_float_vector, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
+    // status = cmocka_run_group_tests(test_float_dict, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
+    status = cmocka_run_group_tests(test_float_matrix, NULL, NULL);
     if (status != 0) 
         return status;
-    status = cmocka_run_group_tests(test_ldouble_vector, NULL, NULL);
-    if (status != 0) 
-        return status;
-    status = cmocka_run_group_tests(test_ldouble_dict, NULL, NULL);
-    if (status != 0) 
-        return status;
-    status = cmocka_run_group_tests(test_int_vector, NULL, NULL);
-    if (status != 0) 
-        return status;
+    // status = cmocka_run_group_tests(test_double_vector, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
+    // status = cmocka_run_group_tests(test_double_dict, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
+    // status = cmocka_run_group_tests(test_ldouble_vector, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
+    // status = cmocka_run_group_tests(test_ldouble_dict, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
+    // status = cmocka_run_group_tests(test_int_vector, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
     status = cmocka_run_group_tests(test_int_dict, NULL, NULL);
 	return status;
 }

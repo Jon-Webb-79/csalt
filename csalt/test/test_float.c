@@ -2693,4 +2693,242 @@ void test_foreach_floatv_dict_accumulates_sum(void **state) {
 }
 // ================================================================================ 
 // ================================================================================ 
+
+void test_create_dense_float_matrix(void **state) {
+    matrix_f* mat = create_float_matrix(3, 3, 0);
+    assert_non_null(mat);
+    assert_int_equal(get_float_matrix_rows(mat), 3);
+    assert_int_equal(get_float_matrix_cols(mat), 3);
+    assert_int_equal(get_float_matrix_element_count(mat), 0);
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_insert_and_get_dense_float_matrix(void **state) {
+    matrix_f* mat = create_float_matrix(3, 3, 0);
+    assert_true(insert_float_matrix(&mat, 0, 1, 2.5f, false));
+
+    float value = get_float_matrix(mat, 0, 1);
+    assert_float_equal(value, 2.5f, 0.0001);
+    assert_int_equal(get_float_matrix_element_count(mat), 1);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_invalid_dense_float_insert(void **state) {
+    matrix_f* mat = create_float_matrix(2, 2, 0);
+    // Out-of-bounds
+    assert_false(insert_float_matrix(&mat, 3, 0, 1.0f, false));
+    assert_int_equal(errno, ERANGE);
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_float_coo_conversion_from_dense(void **state) {
+    const size_t rows = 50;
+    const size_t cols = 50;
+    matrix_f* mat = create_float_matrix(rows, cols, 0);  // start as dense
+
+    // Insert just a few values → low density, triggers conversion to COO
+    assert_true(insert_float_matrix(&mat, 0, 1, 1.0f, false));
+    assert_true(insert_float_matrix(&mat, 10, 10, 2.0f, false));
+    assert_true(insert_float_matrix(&mat, 20, 30, 3.0f, false));
+
+    // Ensure values are retrievable after conversion
+    assert_int_equal(get_float_matrix_type(mat), SPARSE_COO_MATRIX);
+    assert_float_equal(get_float_matrix(mat, 10, 10), 2.0f, 0.0001);
+    assert_int_equal(get_float_matrix_element_count(mat), 3);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_insert_float_and_get_coo_matrix(void **state) {
+    const size_t rows = 100;
+    const size_t cols = 100;
+    matrix_f* mat = create_float_matrix(rows, cols, 0);
+
+    // Insert entries to trigger COO and test correctness
+    insert_float_matrix(&mat, 1, 1, 4.4f, false);
+    insert_float_matrix(&mat, 99, 99, 5.5f, false);
+
+    assert_float_equal(get_float_matrix(mat, 1, 1), 4.4f, 0.0001);
+    assert_float_equal(get_float_matrix(mat, 99, 99), 5.5f, 0.0001);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_duplicate_flaot_insert_coo_disallowed(void **state) {
+    matrix_f* mat = create_float_matrix(20, 20, 0);
+
+    insert_float_matrix(&mat, 5, 5, 1.0f, false);
+    assert_false(insert_float_matrix(&mat, 5, 5, 2.0f, false));  // not allowed
+    assert_int_equal(errno, EEXIST);
+
+    float v = get_float_matrix(mat, 5, 5);
+    assert_float_equal(v, 1.0f, 0.0001);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_float_csr_conversion_from_coo(void **state) {
+    matrix_f* mat = create_float_matrix(10, 10, 0);  // smaller matrix
+
+    // Insert fewer elements (e.g., 20)
+    for (size_t i = 0; i < 20; ++i)
+        insert_float_matrix(&mat, i / 5, i % 5, (float)i, false);
+
+    // Force CSR conversion
+    matrix_f* new_mat = convert_float_dense_to_coo(mat);
+    assert_non_null(new_mat);
+    if (new_mat) {
+        free_float_matrix(mat);  // free the COO matrix
+        mat = new_mat;           // use the new CSR matrix
+    }
+    new_mat = convert_float_coo_to_csr(mat);
+    assert_non_null(new_mat);
+    if (new_mat) {
+        free_float_matrix(mat);  // free the COO matrix
+        mat = new_mat;           // use the new CSR matrix
+    }
+
+    assert_int_equal(mat->type, SPARSE_CSR_MATRIX);
+    assert_int_equal(get_float_matrix_element_count(mat), 20);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_get_after_float_csr_conversion(void **state) {
+    matrix_f* mat = create_float_matrix(20, 20, 0);
+    insert_float_matrix(&mat, 3, 4, 7.7f, false);
+    insert_float_matrix(&mat, 10, 15, 9.9f, false);
+
+    // Convert Dense → COO
+    matrix_f* new_mat = convert_float_dense_to_coo(mat);
+    assert_non_null(new_mat);
+    free_float_matrix(mat);
+    mat = new_mat;
+
+    // Convert COO → CSR
+    new_mat = convert_float_coo_to_csr(mat);
+    assert_non_null(new_mat);
+    free_float_matrix(mat);
+    mat = new_mat;
+
+    assert_int_equal(mat->type, SPARSE_CSR_MATRIX);
+    assert_float_equal(get_float_matrix(mat, 3, 4), 7.7f, 0.0001);
+    assert_float_equal(get_float_matrix(mat, 10, 15), 9.9f, 0.0001);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_pop_after_float_csr_conversion(void **state) {
+    matrix_f* mat = create_float_matrix(10, 10, 0);
+    insert_float_matrix(&mat, 2, 2, 3.3f, false);
+    insert_float_matrix(&mat, 5, 5, 5.5f, false);
+
+    // Convert Dense → COO
+    matrix_f* new_mat = convert_float_dense_to_coo(mat);
+    assert_non_null(new_mat);
+    free_float_matrix(mat);
+    mat = new_mat;
+
+    // Convert COO → CSR
+    new_mat = convert_float_coo_to_csr(mat);
+    assert_non_null(new_mat);
+    free_float_matrix(mat);
+    mat = new_mat;
+
+    float val = pop_float_matrix(&mat, 2, 2);
+    assert_float_equal(val, 3.3f, 0.0001);
+    assert_int_equal(get_float_matrix_element_count(mat), 1);
+    //
+    float missing = get_float_matrix(mat, 2, 2);
+    assert_float_equal(missing, FLT_MAX, 0.0001);  // default zero
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_get_float_matrix_bounds(void **state) {
+    matrix_f* mat = create_float_matrix(5, 5, 0);
+    insert_float_matrix(&mat, 1, 1, 4.2f, false);
+
+    float val = get_float_matrix(mat, 10, 1);  // row out-of-bounds
+    assert_float_equal(val, FLT_MAX, 0.0001);
+    assert_int_equal(errno, ERANGE);
+
+    val = get_float_matrix(mat, 1, 10);  // col out-of-bounds
+    assert_float_equal(val, FLT_MAX, 0.0001);
+    assert_int_equal(errno, ERANGE);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_insert_float_matrix_bounds(void **state) {
+    matrix_f* mat = create_float_matrix(4, 4, 0);
+
+    bool result = insert_float_matrix(&mat, 4, 1, 1.1f, false);  // row out-of-bounds
+    assert_false(result);
+    assert_int_equal(errno, ERANGE);
+
+    result = insert_float_matrix(&mat, 1, 4, 1.1f, false);  // col out-of-bounds
+    assert_false(result);
+    assert_int_equal(errno, ERANGE);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_pop_float_matrix_bounds(void **state) {
+    matrix_f* mat = create_float_matrix(3, 3, 0);
+    insert_float_matrix(&mat, 0, 0, 2.2f, false);
+
+    float val = pop_float_matrix(&mat, 3, 0);  // row out-of-bounds
+    assert_float_equal(val, FLT_MAX, 0.0001);
+    assert_int_equal(errno, ERANGE);
+
+    val = pop_float_matrix(&mat, 0, 3);  // col out-of-bounds
+    assert_float_equal(val, FLT_MAX, 0.0001);
+    assert_int_equal(errno, ERANGE);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_get_float_matrix_null(void **state) {
+    float val = get_float_matrix(NULL, 0, 0);
+    assert_float_equal(val, FLT_MAX, 0.0001);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_insert_float_matrix_null(void **state) {
+    bool result = insert_float_matrix(NULL, 0, 0, 1.0f, false);
+    assert_false(result);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_pop_float_matrix_null(void **state) {
+    float val = pop_float_matrix(NULL, 0, 0);
+    assert_float_equal(val, FLT_MAX, 0.0001);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+#if defined(__GNUC__) || defined(__clang__)
+    void test_float_matrix_gbc(void **state) {
+        matrix_f* mat FLTMAT_GBC  = create_float_matrix(4, 4, 0);
+        insert_float_matrix(&mat, 0, 1, 3.0f, false);
+    }
+#endif
+// ================================================================================ 
+// ================================================================================ 
 // eof
