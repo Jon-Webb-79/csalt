@@ -1134,12 +1134,55 @@ bool is_float_element_initialized(const matrix_f* mat, size_t row, size_t col);
 // -------------------------------------------------------------------------------- 
 
 /**
+ * @brief Convert a matrix_f object to dense format in-place.
+ *
+ * This function replaces the matrix pointed to by `*pmat` with a new matrix
+ * in dense format. If the original matrix is in CSR format, it will first
+ * be converted to COO, then to dense. The original matrix is freed.
+ *
+ * @param pmat Pointer to the matrix pointer to convert.
+ *
+ * @note No conversion is performed if the matrix is already in dense format.
+ * @note On error, errno is set to EINVAL (invalid input) or ENOMEM (allocation failure).
+ */
+void convert_floatMat_to_dense(matrix_f** pmat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Convert a matrix_f object to COO (coordinate list) format in-place.
+ *
+ * This function replaces the matrix pointed to by `*pmat` with a new matrix
+ * in COO format. If the original matrix is in CSR format, it will be converted
+ * directly to COO. The original matrix is freed.
+ *
+ * @param pmat Pointer to the matrix pointer to convert.
+ *
+ * @note No conversion is performed if the matrix is already in COO format.
+ * @note On error, errno is set to EINVAL (invalid input) or ENOMEM (allocation failure).
+ */
+void convert_floatmat_to_coo(matrix_f** pmat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Convert a matrix_f object to CSR (compressed sparse row) format in-place.
+ *
+ * This function replaces the matrix pointed to by `*pmat` with a new matrix
+ * in CSR format. If the original matrix is dense, it is first converted to COO,
+ * and then to CSR. The original matrix is freed.
+ *
+ * @param pmat Pointer to the matrix pointer to convert.
+ *
+ * @note No conversion is performed if the matrix is already in CSR format.
+ * @note On error, errno is set to EINVAL (invalid input) or ENOMEM (allocation failure).
+ */
+void convert_floatMat_to_csr(matrix_f** pmat);
+/**
  * @breif Converts a dense float matrix to a sparse coordinate list format 
  *
  * @param dense_mat A dense float matrix 
  * @return a matrix_f data type in a COO format
  */
-matrix_f* convert_float_dense_to_coo(const matrix_f* dense_mat);
+// matrix_f* convert_float_dense_to_coo(const matrix_f* dense_mat);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1148,7 +1191,7 @@ matrix_f* convert_float_dense_to_coo(const matrix_f* dense_mat);
  * @param dense_mat A dense float matrix 
  * @return a matrix_f data type in a CSR format
  */
-matrix_f* convert_float_coo_to_csr(const matrix_f* coo_mat);
+// matrix_f* convert_float_coo_to_csr(const matrix_f* coo_mat);
 // -------------------------------------------------------------------------------- 
 
 /**

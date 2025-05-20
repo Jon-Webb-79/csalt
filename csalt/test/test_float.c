@@ -2782,19 +2782,8 @@ void test_float_csr_conversion_from_coo(void **state) {
         insert_float_matrix(&mat, i / 5, i % 5, (float)i, false);
 
     // Force CSR conversion
-    matrix_f* new_mat = convert_float_dense_to_coo(mat);
-    assert_non_null(new_mat);
-    if (new_mat) {
-        free_float_matrix(mat);  // free the COO matrix
-        mat = new_mat;           // use the new CSR matrix
-    }
-    new_mat = convert_float_coo_to_csr(mat);
-    assert_non_null(new_mat);
-    if (new_mat) {
-        free_float_matrix(mat);  // free the COO matrix
-        mat = new_mat;           // use the new CSR matrix
-    }
-
+    convert_floatMat_to_csr(&mat);
+    
     assert_int_equal(mat->type, SPARSE_CSR_MATRIX);
     assert_int_equal(get_float_matrix_element_count(mat), 20);
 
@@ -2808,17 +2797,8 @@ void test_get_after_float_csr_conversion(void **state) {
     insert_float_matrix(&mat, 10, 15, 9.9f, false);
 
     // Convert Dense → COO
-    matrix_f* new_mat = convert_float_dense_to_coo(mat);
-    assert_non_null(new_mat);
-    free_float_matrix(mat);
-    mat = new_mat;
-
-    // Convert COO → CSR
-    new_mat = convert_float_coo_to_csr(mat);
-    assert_non_null(new_mat);
-    free_float_matrix(mat);
-    mat = new_mat;
-
+    convert_floatMat_to_csr(&mat);
+    
     assert_int_equal(mat->type, SPARSE_CSR_MATRIX);
     assert_float_equal(get_float_matrix(mat, 3, 4), 7.7f, 0.0001);
     assert_float_equal(get_float_matrix(mat, 10, 15), 9.9f, 0.0001);
@@ -2833,17 +2813,8 @@ void test_pop_after_float_csr_conversion(void **state) {
     insert_float_matrix(&mat, 5, 5, 5.5f, false);
 
     // Convert Dense → COO
-    matrix_f* new_mat = convert_float_dense_to_coo(mat);
-    assert_non_null(new_mat);
-    free_float_matrix(mat);
-    mat = new_mat;
-
-    // Convert COO → CSR
-    new_mat = convert_float_coo_to_csr(mat);
-    assert_non_null(new_mat);
-    free_float_matrix(mat);
-    mat = new_mat;
-
+    convert_floatMat_to_csr(&mat);
+    
     float val = pop_float_matrix(&mat, 2, 2);
     assert_float_equal(val, 3.3f, 0.0001);
     assert_int_equal(get_float_matrix_element_count(mat), 1);

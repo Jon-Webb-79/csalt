@@ -34,7 +34,7 @@ static const float DENSE_THRESHOLD = 0.30;   // Convert to dense if > 30% filled
 static const size_t MIN_SPARSE_SIZE = 1000;  // Below this many elements, just use dense
 static const size_t INITIAL_COO_CAPACITY = 16;
 
-static const size_t MAX_DENSE_ELEMENTS = 1000000;
+static const size_t MAX_DENSE_ELEMENTS = 100000;
 static const size_t COO_TO_CSR_TRIGGER = 10000;
 
 static const float CSR_COMPACT_THRESHOLD = 0.25f;
@@ -2517,7 +2517,7 @@ bool update_float_csr_matrix(matrix_f* mat, size_t row, size_t col, float value)
 }
 // -------------------------------------------------------------------------------- 
 
-matrix_f* convert_float_dense_to_coo(const matrix_f* dense_mat) {
+static matrix_f* convert_float_dense_to_coo(const matrix_f* dense_mat) {
     errno = 0;
 
     if (!dense_mat || dense_mat->type != DENSE_MATRIX ||
@@ -2571,7 +2571,6 @@ matrix_f* convert_float_dense_to_coo(const matrix_f* dense_mat) {
 }
 // -------------------------------------------------------------------------------- 
 
-
 static int compare_coo_entries(const void* a, const void* b) {
     const size_t* ia = (const size_t*)a;
     const size_t* ib = (const size_t*)b;
@@ -2581,7 +2580,7 @@ static int compare_coo_entries(const void* a, const void* b) {
 }
 // -------------------------------------------------------------------------------- 
 
-matrix_f* convert_float_coo_to_csr(const matrix_f* coo_mat) {
+static matrix_f* convert_float_coo_to_csr(const matrix_f* coo_mat) {
     errno = 0;
 
     if (!coo_mat || coo_mat->type != SPARSE_COO_MATRIX ||
@@ -2657,7 +2656,6 @@ matrix_f* convert_float_coo_to_csr(const matrix_f* coo_mat) {
     return csr_mat;
 }
 // -------------------------------------------------------------------------------- 
-
 void maybe_convert_float_matrix(matrix_f** pmat, bool convert_to_csr) {
     matrix_f* mat = *pmat;
 
@@ -3088,6 +3086,90 @@ static matrix_f* convert_float_coo_to_dense(const matrix_f* coo_mat) {
 }
 // -------------------------------------------------------------------------------- 
 
+void convert_floatMat_to_dense(matrix_f** pmat) {
+    errno = 0;
+    matrix_f* mat = *pmat;
+    if (!mat) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (mat->type == DENSE_MATRIX) return;
+
+    if (mat->type == SPARSE_COO_MATRIX) {
+        matrix_f* new_mat = convert_float_coo_to_dense(mat);
+        if (!new_mat) return;
+        free_float_matrix(mat);
+        *pmat = new_mat;
+    } else if (mat->type == SPARSE_CSR_MATRIX) {
+        matrix_f* coo_mat = convert_float_csr_to_coo(mat);
+        if (!coo_mat) return;
+        free_float_matrix(mat);
+        matrix_f* dense_mat = convert_float_coo_to_dense(coo_mat);
+        free_float_matrix(coo_mat);
+        if (!dense_mat) return;
+        *pmat = dense_mat;
+    } else {
+        errno = EINVAL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void convert_floatMat_to_coo(matrix_f** pmat) {
+    errno = 0;
+    matrix_f* mat = *pmat;
+    if (!mat) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (mat->type == SPARSE_COO_MATRIX) return;
+
+    if (mat->type == DENSE_MATRIX) {
+        matrix_f* new_mat = convert_float_dense_to_coo(mat);
+        if (!new_mat) return;
+        free_float_matrix(mat);
+        *pmat = new_mat;
+    } else if (mat->type == SPARSE_CSR_MATRIX) {
+        matrix_f* new_mat = convert_float_csr_to_coo(mat);
+        if (!new_mat) return;
+        free_float_matrix(mat);
+        *pmat = new_mat;
+    } else {
+        errno = EINVAL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void convert_floatMat_to_csr(matrix_f** pmat) {
+    errno = 0;
+    matrix_f* mat = *pmat;
+    if (!mat) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (mat->type == SPARSE_CSR_MATRIX) return;
+
+    if (mat->type == SPARSE_COO_MATRIX) {
+        matrix_f* new_mat = convert_float_coo_to_csr(mat);
+        if (!new_mat) return;
+        free_float_matrix(mat);
+        *pmat = new_mat;
+    } else if (mat->type == DENSE_MATRIX) {
+        matrix_f* coo_mat = convert_float_dense_to_coo(mat);
+        if (!coo_mat) return;
+        free_float_matrix(mat);
+        matrix_f* csr_mat = convert_float_coo_to_csr(coo_mat);
+        free_float_matrix(coo_mat);
+        if (!csr_mat) return;
+        *pmat = csr_mat;
+    } else {
+        errno = EINVAL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
 static bool should_downgrade_float_matrix(const matrix_f* mat) {
     if (!mat || mat->type != SPARSE_CSR_MATRIX) return false;
 
@@ -3125,41 +3207,6 @@ static void maybe_downgrade_matrix_format(matrix_f** pmat) {
         }
     }
 }
-//
-// static void maybe_downgrade_matrix_format(matrix_f** mat_ptr) {
-//     if (!mat_ptr || !*mat_ptr) {
-//         errno = EINVAL;
-//         return;
-//     }
-//
-//     matrix_f* mat = *mat_ptr;
-//     size_t rows = mat->rows;
-//     size_t cols = mat->cols;
-//     size_t total_elements = rows * cols;
-//     float density = (float)(mat->count) / total_elements;
-//
-//     // Downgrade CSR to COO
-//     if (mat->type == SPARSE_CSR_MATRIX) {
-//         if (mat->count < COO_TO_CSR_TRIGGER || density < CSR_COMPACT_THRESHOLD) {
-//             matrix_f* coo = convert_float_csr_to_coo(mat);
-//             if (coo) {
-//                 free_float_matrix(mat);  // Your existing cleanup function
-//                 *mat_ptr = coo;
-//             }
-//         }
-//     }
-//
-//     // Downgrade COO to Dense
-//     else if (mat->type == SPARSE_COO_MATRIX) {
-//         if (density > DENSE_THRESHOLD && mat->count < MIN_SPARSE_SIZE) {
-//             matrix_f* dense = convert_float_coo_to_dense(mat);
-//             if (dense) {
-//                 free_float_matrix(mat);  // Your existing cleanup function
-//                 *mat_ptr = dense;
-//             }
-//         }
-//     }
-// }
 // -------------------------------------------------------------------------------- 
 
 float pop_float_matrix(matrix_f** pmat, size_t row, size_t col) {
@@ -3188,35 +3235,6 @@ float pop_float_matrix(matrix_f** pmat, size_t row, size_t col) {
 
     return result;
 }
-//
-// float pop_float_matrix(matrix_f* mat, size_t row, size_t col) {
-//     errno = 0;
-//     if (!mat) {
-//         errno = EINVAL;
-//         return FLT_MAX;
-//     }
-//
-//     float popped;
-//     switch (mat->type) {
-//         case DENSE_MATRIX:
-//             popped = pop_float_dense_matrix(mat, row, col);
-//             break;
-//         case SPARSE_COO_MATRIX:
-//             popped = pop_float_coo_matrix(mat, row, col);
-//             break;
-//         case SPARSE_CSR_MATRIX:
-//             popped = pop_float_csr_matrix(mat, row, col);
-//             break;
-//         default:
-//             errno = EINVAL;
-//             return FLT_MAX;
-//     }
-//
-//     if (errno != 0) return FLT_MAX;
-//
-//     maybe_downgrade_matrix_format(&mat);
-//     return popped;
-// }
 // -------------------------------------------------------------------------------- 
 
 bool finalize_float_matrix(matrix_f** mat_ptr) {

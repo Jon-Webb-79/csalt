@@ -395,7 +395,9 @@ const struct CMUnitTest test_float_matrix[] = {
     cmocka_unit_test(test_get_float_matrix_null),
     cmocka_unit_test(test_insert_float_matrix_null),
     cmocka_unit_test(test_pop_float_matrix_null),
-    cmocka_unit_test(test_float_matrix_gbc),
+    #if defined(__GNUC__) || defined(__clang__)
+        cmocka_unit_test(test_float_matrix_gbc),
+    #endif
 };
 // ================================================================================ 
 // ================================================================================ 
