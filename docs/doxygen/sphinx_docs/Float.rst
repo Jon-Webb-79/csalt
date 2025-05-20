@@ -2191,85 +2191,64 @@ float_matrix_type
 Matrix Format Conversion and Optimization
 -----------------------------------------
 
-finalize_float_matrix
-~~~~~~~~~~~~~~~~~~~~~
-.. c:function:: bool finalize_float_matrix(matrix_f** mat_ptr)
+convert_floatMat_to_dense
+~~~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: void convert_floatMat_to_dense(matrix_f** pmat)
 
-   Finalizes a matrix by converting it to a more efficient internal representation.
-   If the matrix is large and sparse, this function may convert it to COO or CSR.
+   Converts the given matrix to dense format, replacing the original matrix in-place.
 
-   :param mat_ptr: Pointer to a ``matrix_f*`` to finalize
-   :returns: ``true`` on success, ``false`` on error
-   :raises: Sets ``errno`` to ``EINVAL`` if input is NULL
+   If the input matrix is in COO or CSR format, this function will allocate a new
+   dense matrix, copy the values, and free the old matrix. If the matrix is already
+   dense, no action is taken.
 
-   .. note::
-      This function may replace the pointer value if a new matrix structure is allocated.
+   :param pmat: Address of the matrix pointer to convert
+   :raises: Sets ``errno`` to ``EINVAL`` for invalid input or ``ENOMEM`` for allocation failure
 
    Example:
 
    .. code-block:: c
 
-      matrix_f* mat FLTMAT_GBC = create_float_matrix(1000, 1000);
-      // Populate matrix...
-      finalize_float_matrix(&mat);  // May convert to CSR
+      matrix_f* mat = load_sparse_matrix("data.mtx");
+      convert_floatMat_to_dense(&mat);
 
-maybe_convert_float_matrix
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. c:function:: void maybe_convert_float_matrix(matrix_f** mat_ptr, bool convert_to_csr)
-
-   Heuristically evaluates whether a matrix should be converted to a more efficient
-   internal format. Dense matrices may be converted to COO, and COO matrices to CSR.
-
-   :param mat_ptr: Pointer to a ``matrix_f*`` to evaluate
-   :param convert_to_csr: If true, allows conversion from COO to CSR format
-   :returns: None
-   :raises: No errno set; only converts on success
-
-   .. warning::
-      The matrix pointer may be replaced if a new structure is allocated.
-
-compact_float_csr_matrix
+convert_floatMat_to_coo
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. c:function:: void compact_float_csr_matrix(matrix_f* mat)
+.. c:function:: void convert_floatMat_to_coo(matrix_f** pmat)
 
-   Compacts a CSR matrix by removing logically deleted entries (tombstones)
-   and reallocating storage to fit only the active elements.
+   Converts the given matrix to COO (coordinate list) format, replacing the original matrix in-place.
 
-   :param mat: CSR matrix to compact
-   :returns: None
-   :raises: Sets ``errno`` to ``ENOMEM`` if reallocation fails,
-            or ``EINVAL`` if the matrix is not in CSR format
+   This function will allocate a new COO matrix, transfer values from the input matrix,
+   and free the original. If the input is dense or CSR, it will be converted to COO.
+
+   :param pmat: Address of the matrix pointer to convert
+   :raises: Sets ``errno`` to ``EINVAL`` for invalid input or ``ENOMEM`` for allocation failure
 
    Example:
 
    .. code-block:: c
 
-      matrix_f* mat FLTMAT_GBC = create_float_matrix(100, 100);
-      // Populate, delete entries...
-      compact_float_csr_matrix(mat);  // Shrinks internal arrays
+      matrix_f* mat = init_float_matrix(10, 10);
+      convert_floatMat_to_coo(&mat);
 
-convert_float_coo_to_csr
+convert_floatMat_to_csr
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. c:function:: matrix_f* convert_float_coo_to_csr(const matrix_f* coo_mat)
+.. c:function:: void convert_floatMat_to_csr(matrix_f** pmat)
 
-   Converts a matrix from COO (coordinate list) format to CSR (compressed sparse row) format.
-   The original matrix remains unchanged. Returns a newly allocated matrix in CSR format.
+   Converts the given matrix to CSR (compressed sparse row) format, replacing the original matrix in-place.
 
-   :param coo_mat: COO matrix to convert
-   :returns: New ``matrix_f*`` in CSR format, or ``NULL`` on failure
-   :raises: Sets ``errno`` to ``EINVAL`` if input is invalid,
-            or ``ENOMEM`` on allocation failure
+   If the matrix is in dense format, it will first be converted to COO, then to CSR.
+   If already in CSR format, no action is taken.
+
+   :param pmat: Address of the matrix pointer to convert
+   :raises: Sets ``errno`` to ``EINVAL`` for invalid input or ``ENOMEM`` for allocation failure
 
    Example:
 
    .. code-block:: c
 
-      matrix_f* coo = create_float_matrix(200, 200);
-      // Populate with insert_float_matrix...
-      matrix_f* csr = convert_float_coo_to_csr(coo);
-      if (!csr) perror("Conversion failed");
-
-
+      matrix_f* mat = init_float_matrix(100, 100);
+      populate_with_sparse_values(mat); // Assume this function exist to populate matrix
+      convert_floatMat_to_csr(&mat);
 
 Float Dictionary Overview
 ==========================
