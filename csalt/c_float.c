@@ -2472,6 +2472,15 @@ bool update_float_coo_matrix(matrix_f* mat, size_t row, size_t col, float value)
 }
 // -------------------------------------------------------------------------------- 
 
+static int compare_size_t(const void* a, const void* b) {
+    size_t lhs = *(const size_t*)a;
+    size_t rhs = *(const size_t*)b;
+    if (lhs < rhs) return -1;
+    if (lhs > rhs) return 1;
+    return 0;
+}
+// -------------------------------------------------------------------------------- 
+
 static bool set_csr_matrix(matrix_f* mat, size_t row, size_t col, float value, bool allow_updates) {
     errno = 0;
 
@@ -2492,28 +2501,71 @@ static bool set_csr_matrix(matrix_f* mat, size_t row, size_t col, float value, b
 
     size_t start = mat->storage.csr.row_ptrs[row];
     size_t end   = mat->storage.csr.row_ptrs[row + 1];
+    size_t count = end - start;
 
-    for (size_t i = start; i < end; ++i) {
-        if (mat->storage.csr.col_indices[i] == col) {
-            if (!allow_updates) {
-                errno = EEXIST;  // Element already exists, cannot insert
-                return false;
-            }
+    size_t* found = bsearch(&col,
+                            &mat->storage.csr.col_indices[start],
+                            count,
+                            sizeof(size_t),
+                            compare_size_t);
 
-            mat->storage.csr.values[i] = value;
-            return true;
+    if (found) {
+        if (!allow_updates) {
+            errno = EEXIST;
+            return false;
         }
+
+        size_t index = found - mat->storage.csr.col_indices;
+        mat->storage.csr.values[index] = value;
+        return true;
     }
 
-    // Element not found
-    if (allow_updates) {
-        errno = ENOENT;  // Can't update a non-existent element
-    } else {
-        errno = EEXIST;  // Can't insert into CSR
-    }
-
+    errno = allow_updates ? ENOENT : EEXIST;
     return false;
 }
+
+// static bool set_csr_matrix(matrix_f* mat, size_t row, size_t col, float value, bool allow_updates) {
+//     errno = 0;
+//
+//     if (!mat || mat->type != SPARSE_CSR_MATRIX) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     if (!mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     if (row >= mat->rows || col >= mat->cols) {
+//         errno = ERANGE;
+//         return false;
+//     }
+//
+//     size_t start = mat->storage.csr.row_ptrs[row];
+//     size_t end   = mat->storage.csr.row_ptrs[row + 1];
+//
+//     for (size_t i = start; i < end; ++i) {
+//         if (mat->storage.csr.col_indices[i] == col) {
+//             if (!allow_updates) {
+//                 errno = EEXIST;  // Element already exists, cannot insert
+//                 return false;
+//             }
+//
+//             mat->storage.csr.values[i] = value;
+//             return true;
+//         }
+//     }
+//
+//     // Element not found
+//     if (allow_updates) {
+//         errno = ENOENT;  // Can't update a non-existent element
+//     } else {
+//         errno = EEXIST;  // Can't insert into CSR
+//     }
+//
+//     return false;
+// }
 // -------------------------------------------------------------------------------- 
 
 bool insert_float_csr_matrix(matrix_f* mat, size_t row, size_t col, float value) {
@@ -2946,27 +2998,70 @@ float pop_float_csr_matrix(matrix_f* mat, size_t row, size_t col) {
 
     size_t start = mat->storage.csr.row_ptrs[row];
     size_t end   = mat->storage.csr.row_ptrs[row + 1];
-    size_t original_nnz = mat->count;
+    size_t count = end - start;
+    size_t* found = bsearch(&col,
+                            &mat->storage.csr.col_indices[start],
+                            count,
+                            sizeof(size_t),
+                            compare_size_t);
 
-    for (size_t i = start; i < end; ++i) {
-        if (mat->storage.csr.col_indices[i] == col) {
-            float value = mat->storage.csr.values[i];
-
-            // Mark this entry as a tombstone
-            mat->storage.csr.col_indices[i] = CSR_TOMBSTONE_COL;
-            mat->storage.csr.values[i] = 0.0f;
-            mat->count--;
-
-            // Possibly compact the matrix
-            maybe_compact_csr(mat, original_nnz);
-
-            return value;
-        }
+    if (!found) {
+        errno = ENOENT;
+        return FLT_MAX;
     }
 
-    errno = ENOENT;
-    return FLT_MAX;
+    size_t index = found - mat->storage.csr.col_indices;
+    float value = mat->storage.csr.values[index];
+
+    // Mark entry as tombstone
+    mat->storage.csr.col_indices[index] = CSR_TOMBSTONE_COL;
+    mat->storage.csr.values[index] = 0.0f;
+    size_t original_nnz = mat->count;
+    mat->count--;
+
+    maybe_compact_csr(mat, original_nnz);
+
+    return value;
 }
+//
+//
+// float pop_float_csr_matrix(matrix_f* mat, size_t row, size_t col) {
+//     errno = 0;
+//
+//     if (!mat || mat->type != SPARSE_CSR_MATRIX ||
+//         !mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
+//         errno = EINVAL;
+//         return FLT_MAX;
+//     }
+//
+//     if (row >= mat->rows || col >= mat->cols) {
+//         errno = ERANGE;
+//         return FLT_MAX;
+//     }
+//
+//     size_t start = mat->storage.csr.row_ptrs[row];
+//     size_t end   = mat->storage.csr.row_ptrs[row + 1];
+//     size_t original_nnz = mat->count;
+//
+//     for (size_t i = start; i < end; ++i) {
+//         if (mat->storage.csr.col_indices[i] == col) {
+//             float value = mat->storage.csr.values[i];
+//
+//             // Mark this entry as a tombstone
+//             mat->storage.csr.col_indices[i] = CSR_TOMBSTONE_COL;
+//             mat->storage.csr.values[i] = 0.0f;
+//             mat->count--;
+//
+//             // Possibly compact the matrix
+//             maybe_compact_csr(mat, original_nnz);
+//
+//             return value;
+//         }
+//     }
+//
+//     errno = ENOENT;
+//     return FLT_MAX;
+// }
 // -------------------------------------------------------------------------------- 
 
 void compact_float_csr_matrix(matrix_f* mat) {
