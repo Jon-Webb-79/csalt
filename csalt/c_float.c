@@ -2390,63 +2390,72 @@ bool update_float_dense_matrix(matrix_f* mat, size_t row, size_t col, float valu
 }
 // -------------------------------------------------------------------------------- 
 
+static int compare_row_col(size_t r1, size_t c1, size_t r2, size_t c2) {
+    if (r1 < r2) return -1;
+    if (r1 > r2) return 1;
+    if (c1 < c2) return -1;
+    if (c1 > c2) return 1;
+    return 0;
+}
+
 static bool set_coo_matrix(matrix_f* mat, size_t row, size_t col, float value, bool allow_updates) {
     errno = 0;
 
-    if (!mat || mat->type != SPARSE_COO_MATRIX) {
-        errno = EINVAL;
-        return false;
-    }
-    if (!mat->storage.coo.rows || !mat->storage.coo.cols || !mat->storage.coo.values) {
+    if (!mat || mat->type != SPARSE_COO_MATRIX || row >= mat->rows || col >= mat->cols) {
         errno = EINVAL;
         return false;
     }
 
-    if (row >= mat->rows || col >= mat->cols) {
-        errno = ERANGE;
-        return false;
+    // Binary search for insert position
+    size_t left = 0, right = mat->count;
+    while (left < right) {
+        size_t mid = (left + right) / 2;
+        int cmp = compare_row_col(mat->storage.coo.rows[mid], mat->storage.coo.cols[mid], row, col);
+        if (cmp < 0)
+            left = mid + 1;
+        else
+            right = mid;
     }
 
-    // Search for existing entry
-    for (size_t i = 0; i < mat->count; ++i) {
-        if (mat->storage.coo.rows[i] == row && mat->storage.coo.cols[i] == col) {
-            if (!allow_updates) {
-                errno = EEXIST;
-                return false;
-            }
-            mat->storage.coo.values[i] = value;
-            return true;
+    // Check for existing value
+    if (left < mat->count &&
+        mat->storage.coo.rows[left] == row &&
+        mat->storage.coo.cols[left] == col) {
+        if (!allow_updates) {
+            errno = EEXIST;
+            return false;
         }
+        mat->storage.coo.values[left] = value;
+        return true;
     }
+
+    // Reallocate if needed
     if (mat->count >= mat->storage.coo.capacity) {
         size_t new_capacity = mat->storage.coo.capacity == 0 ? 1 : mat->storage.coo.capacity;
-        if (new_capacity < VEC_THRESHOLD) {
-            new_capacity *= 2;
-        } else {
-            new_capacity += VEC_FIXED_AMOUNT;
-        }
+        new_capacity = (new_capacity < VEC_THRESHOLD) ? new_capacity * 2 : new_capacity + VEC_FIXED_AMOUNT;
 
-        // Realloc safely
         size_t* new_rows = realloc(mat->storage.coo.rows, new_capacity * sizeof(size_t));
         size_t* new_cols = realloc(mat->storage.coo.cols, new_capacity * sizeof(size_t));
         float*  new_vals = realloc(mat->storage.coo.values, new_capacity * sizeof(float));
-
-        // Don't overwrite originals until all reallocs succeed
         if (!new_rows || !new_cols || !new_vals) {
             errno = ENOMEM;
-            // Optionally log which one failed
             return false;
         }
-
-        // Safe to commit changes
         mat->storage.coo.rows = new_rows;
         mat->storage.coo.cols = new_cols;
         mat->storage.coo.values = new_vals;
         mat->storage.coo.capacity = new_capacity;
     }
-    mat->storage.coo.rows[mat->count] = row;
-    mat->storage.coo.cols[mat->count] = col;
-    mat->storage.coo.values[mat->count] = value;
+
+    // Shift data to make space
+    memmove(&mat->storage.coo.rows[left + 1], &mat->storage.coo.rows[left], (mat->count - left) * sizeof(size_t));
+    memmove(&mat->storage.coo.cols[left + 1], &mat->storage.coo.cols[left], (mat->count - left) * sizeof(size_t));
+    memmove(&mat->storage.coo.values[left + 1], &mat->storage.coo.values[left], (mat->count - left) * sizeof(float));
+
+    // Insert new entry
+    mat->storage.coo.rows[left] = row;
+    mat->storage.coo.cols[left] = col;
+    mat->storage.coo.values[left] = value;
     mat->count++;
 
     return true;
@@ -2867,22 +2876,42 @@ float pop_float_coo_matrix(matrix_f* mat, size_t row, size_t col) {
         return FLT_MAX;
     }
 
-    for (size_t i = 0; i < mat->count; ++i) {
-        if (mat->storage.coo.rows[i] == row &&
-            mat->storage.coo.cols[i] == col) {
+    size_t left = 0, right = mat->count;
+    while (left < right) {
+        size_t mid = (left + right) / 2;
+        size_t mid_row = mat->storage.coo.rows[mid];
+        size_t mid_col = mat->storage.coo.cols[mid];
 
-            float value = mat->storage.coo.values[i];
-
-            // Shift all later entries left by one
-            for (size_t j = i + 1; j < mat->count; ++j) {
-                mat->storage.coo.rows[j - 1] = mat->storage.coo.rows[j];
-                mat->storage.coo.cols[j - 1] = mat->storage.coo.cols[j];
-                mat->storage.coo.values[j - 1] = mat->storage.coo.values[j];
-            }
-
-            mat->count--;
-            return value;
+        if (mid_row < row || (mid_row == row && mid_col < col)) {
+            left = mid + 1;
+        } else {
+            right = mid;
         }
+    }
+
+    if (left < mat->count &&
+        mat->storage.coo.rows[left] == row &&
+        mat->storage.coo.cols[left] == col) {
+
+        float value = mat->storage.coo.values[left];
+        size_t elements_to_move = mat->count - left - 1;
+
+        if (elements_to_move > 0) {
+            memmove(&mat->storage.coo.rows[left],
+                    &mat->storage.coo.rows[left + 1],
+                    elements_to_move * sizeof(size_t));
+
+            memmove(&mat->storage.coo.cols[left],
+                    &mat->storage.coo.cols[left + 1],
+                    elements_to_move * sizeof(size_t));
+
+            memmove(&mat->storage.coo.values[left],
+                    &mat->storage.coo.values[left + 1],
+                    elements_to_move * sizeof(float));
+        }
+
+        mat->count--;
+        return value;
     }
 
     errno = ENOENT;
