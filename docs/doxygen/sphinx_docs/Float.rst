@@ -2082,20 +2082,27 @@ insert_float_matrix
 ~~~~~~~~~~~~~~~~~~~
 .. c:function:: bool insert_float_matrix(matrix_f** mat, size_t row, size_t col, float value, bool convert_to_csr)
 
-   Inserts or updates a float value at the specified (row, col) position. Typically a user 
+   Inserts or updates a float value at the specified (row, col) position. Typically, a user 
    would not want to trigger a conversion to a CSR matrix until the matrix is fully populated to 
-   its maximum extent.  However, sometimes for storage reasons an insert operation may trigger this 
-   transformation, which is why the ``convert_to_csr`` flag exists in this function.
+   its maximum extent. However, for storage reasons, an insert operation may optionally trigger 
+   this transformation if the ``convert_to_csr`` flag is set to true.
+
+   The time complexity of this operation depends on the underlying matrix format:
+
+   - **Dense Matrix**: :math:`O(1)` direct indexing
+   - **COO Matrix**: :math:`O(n)` linear search for duplicates, :math:`O(1)` amortized append
+   - **CSR Matrix**: :math:`O(\log n)` if inserting into existing nonzero entry (via binary search); new insertions not supported
 
    :param mat: Target matrix
    :param row: Row index
    :param col: Column index
    :param value: Float value to insert
-   :param convert_to_csr: true if an insert should be allowed to trigger a csr matrix conversion, false otherwise
+   :param convert_to_csr: true if an insert should be allowed to trigger a CSR matrix conversion, false otherwise
    :returns: ``true`` if successful, ``false`` on error
    :raises: Sets ``errno`` to ``EINVAL`` for NULL input or unsupported format,
             ``ERANGE`` for out-of-bounds access,
-            ``ENOMEM`` if internal resize fails (COO only)
+            ``ENOMEM`` if internal resize fails (COO only),
+            ``EEXIST`` if duplicate entry in CSR without `allow_updates`
 
    Example:
 
@@ -2108,8 +2115,14 @@ pop_float_matrix
 ~~~~~~~~~~~~~~~~
 .. c:function:: float pop_float_matrix(matrix_f** mat, size_t row, size_t col)
 
-   Removes and returns the value at the specified (row, col) position.
-   Returns ``FLT_MAX`` if the entry is not present.
+   Removes and returns the value at the specified (row, col) position. 
+   Returns ``FLT_MAX`` if the entry is not present or removal fails.
+
+   The time complexity varies by format:
+
+   - **Dense Matrix**: :math:`O(1)` direct indexing
+   - **COO Matrix**: :math:`O(n)` linear search, followed by :math:`O(n)` shift
+   - **CSR Matrix**: :math:`O(\log n)` lookup via binary search; removal is :math:`O(1)` (tombstone)
 
    :param mat: Target matrix
    :param row: Row index
@@ -2117,7 +2130,7 @@ pop_float_matrix
    :returns: Value at the specified position, or ``FLT_MAX`` if not found
    :raises: Sets ``errno`` to ``EINVAL`` for NULL input or unsupported format,
             ``ERANGE`` for out-of-bounds indices,
-            ``ENODATA`` if the position is unoccupied
+            ``ENODATA`` or ``ENOENT`` if the position is unoccupied
 
    Example:
 

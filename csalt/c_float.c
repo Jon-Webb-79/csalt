@@ -2523,49 +2523,6 @@ static bool set_csr_matrix(matrix_f* mat, size_t row, size_t col, float value, b
     errno = allow_updates ? ENOENT : EEXIST;
     return false;
 }
-
-// static bool set_csr_matrix(matrix_f* mat, size_t row, size_t col, float value, bool allow_updates) {
-//     errno = 0;
-//
-//     if (!mat || mat->type != SPARSE_CSR_MATRIX) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     if (!mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     if (row >= mat->rows || col >= mat->cols) {
-//         errno = ERANGE;
-//         return false;
-//     }
-//
-//     size_t start = mat->storage.csr.row_ptrs[row];
-//     size_t end   = mat->storage.csr.row_ptrs[row + 1];
-//
-//     for (size_t i = start; i < end; ++i) {
-//         if (mat->storage.csr.col_indices[i] == col) {
-//             if (!allow_updates) {
-//                 errno = EEXIST;  // Element already exists, cannot insert
-//                 return false;
-//             }
-//
-//             mat->storage.csr.values[i] = value;
-//             return true;
-//         }
-//     }
-//
-//     // Element not found
-//     if (allow_updates) {
-//         errno = ENOENT;  // Can't update a non-existent element
-//     } else {
-//         errno = EEXIST;  // Can't insert into CSR
-//     }
-//
-//     return false;
-// }
 // -------------------------------------------------------------------------------- 
 
 bool insert_float_csr_matrix(matrix_f* mat, size_t row, size_t col, float value) {
