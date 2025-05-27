@@ -2980,45 +2980,6 @@ float pop_float_csr_matrix(matrix_f* mat, size_t row, size_t col) {
 
     return value;
 }
-//
-//
-// float pop_float_csr_matrix(matrix_f* mat, size_t row, size_t col) {
-//     errno = 0;
-//
-//     if (!mat || mat->type != SPARSE_CSR_MATRIX ||
-//         !mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
-//         errno = EINVAL;
-//         return FLT_MAX;
-//     }
-//
-//     if (row >= mat->rows || col >= mat->cols) {
-//         errno = ERANGE;
-//         return FLT_MAX;
-//     }
-//
-//     size_t start = mat->storage.csr.row_ptrs[row];
-//     size_t end   = mat->storage.csr.row_ptrs[row + 1];
-//     size_t original_nnz = mat->count;
-//
-//     for (size_t i = start; i < end; ++i) {
-//         if (mat->storage.csr.col_indices[i] == col) {
-//             float value = mat->storage.csr.values[i];
-//
-//             // Mark this entry as a tombstone
-//             mat->storage.csr.col_indices[i] = CSR_TOMBSTONE_COL;
-//             mat->storage.csr.values[i] = 0.0f;
-//             mat->count--;
-//
-//             // Possibly compact the matrix
-//             maybe_compact_csr(mat, original_nnz);
-//
-//             return value;
-//         }
-//     }
-//
-//     errno = ENOENT;
-//     return FLT_MAX;
-// }
 // -------------------------------------------------------------------------------- 
 
 void compact_float_csr_matrix(matrix_f* mat) {
@@ -3366,6 +3327,91 @@ size_t get_float_matrix_element_count(matrix_f* mat) {
         return (size_t)-1;
     }
     return mat->count;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_f* invert_float_dense_matrix(const matrix_f* mat) {
+    errno = 0;
+    
+    if (!mat || mat->type != DENSE_MATRIX || mat->rows != mat->cols) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t n = mat->rows;
+    matrix_f* inverse = create_float_matrix(n, n, 0);
+    if (!inverse) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    float* a = malloc(n * n * sizeof(float));
+    if (!a) {
+        free_float_matrix(inverse);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Copy original matrix
+    for (size_t i = 0; i < n * n; ++i) {
+        a[i] = mat->storage.dense.data[i];
+        inverse->storage.dense.data[i] = (i / n == i % n) ? 1.0f : 0.0f; // Identity matrix
+    }
+
+    // Gauss-Jordan elimination with partial pivoting
+    for (size_t i = 0; i < n; ++i) {
+        // Find pivot
+        size_t pivot = i;
+        float max = fabsf(a[i * n + i]);
+        for (size_t j = i + 1; j < n; ++j) {
+            float temp = fabsf(a[j * n + i]);
+            if (temp > max) {
+                max = temp;
+                pivot = j;
+            }
+        }
+
+        if (fabsf(a[pivot * n + i]) < 1e-8f) {
+            // Singular matrix
+            free(a);
+            free_float_matrix(inverse);
+            errno = ERANGE;
+            return NULL;
+        }
+
+        // Swap rows in A and inverse
+        if (pivot != i) {
+            for (size_t j = 0; j < n; ++j) {
+                float tmp = a[i * n + j];
+                a[i * n + j] = a[pivot * n + j];
+                a[pivot * n + j] = tmp;
+
+                tmp = inverse->storage.dense.data[i * n + j];
+                inverse->storage.dense.data[i * n + j] = inverse->storage.dense.data[pivot * n + j];
+                inverse->storage.dense.data[pivot * n + j] = tmp;
+            }
+        }
+
+        // Normalize pivot row
+        float pivot_val = a[i * n + i];
+        for (size_t j = 0; j < n; ++j) {
+            a[i * n + j] /= pivot_val;
+            inverse->storage.dense.data[i * n + j] /= pivot_val;
+        }
+
+        // Eliminate other rows
+        for (size_t k = 0; k < n; ++k) {
+            if (k == i) continue;
+            float factor = a[k * n + i];
+            for (size_t j = 0; j < n; ++j) {
+                a[k * n + j] -= factor * a[i * n + j];
+                inverse->storage.dense.data[k * n + j] -= factor * inverse->storage.dense.data[i * n + j];
+            }
+        }
+    }
+
+    free(a);
+    return inverse;
 }
 // ================================================================================ 
 // ================================================================================ 

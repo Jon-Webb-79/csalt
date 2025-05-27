@@ -1378,16 +1378,20 @@ size_t get_float_matrix_element_count(matrix_f* mat);
 void maybe_convert_float_matrix(matrix_f** pmat, bool convert_to_csr);
 // -------------------------------------------------------------------------------- 
 
-void invert_float_dense_matrix(matrix_f* mat);
-// -------------------------------------------------------------------------------- 
-
-void invert_float_coo_matrix(matrix_f* mat);
-// -------------------------------------------------------------------------------- 
-
-void invert_float_csr_matrix(matrix_f* mat);
-// -------------------------------------------------------------------------------- 
-
-void invert_float_matrix(matrix_f* mat);
+/**
+ * @brief Inverts a square dense float matrix in-place using Gauss-Jordan elimination.
+ *
+ * Only applies to matrices of type DENSE_MATRIX. On success, the contents of the matrix
+ * are replaced with its inverse. On failure, the matrix is left unchanged.
+ *
+ * @param mat Pointer to the matrix_f* structure to invert
+ * @return A pointer to a matrix_f object
+ *
+ * @retval EINVAL  if the input is NULL, not square, or not dense
+ * @retval ERANGE  if the matrix is singular and cannot be inverted
+ * @retval ENOMEM  if memory allocation fails
+ */
+matrix_f* invert_float_dense_matrix(const matrix_f* mat);
 // ================================================================================ 
 // ================================================================================ 
 // GENERIC MACROS

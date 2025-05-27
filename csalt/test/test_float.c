@@ -2900,6 +2900,149 @@ void test_pop_float_matrix_null(void **state) {
         insert_float_matrix(&mat, 0, 1, 3.0f, false);
     }
 #endif
+// -------------------------------------------------------------------------------- 
+
+void test_identity_inverse(void **state) {
+    matrix_f *mat = create_float_matrix(3, 3, 1);
+    insert_float_dense_matrix(mat, 0, 0, 1.0f);
+    insert_float_dense_matrix(mat, 1, 1, 1.0f);
+    insert_float_dense_matrix(mat, 2, 2, 1.0f);
+
+    matrix_f *inv = invert_float_dense_matrix(mat);
+    assert_non_null(inv);
+
+    for (size_t i = 0; i < 9; ++i) {
+        float expected = (i % 4 == 0) ? 1.0f : 0.0f;
+        assert_float_equal(inv->storage.dense.data[i], expected, 1e-6);
+    }
+
+    free_float_matrix(mat);
+    free_float_matrix(inv);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_known_inverse(void **state) {
+    matrix_f *mat = create_float_matrix(2, 2, 1);
+    insert_float_dense_matrix(mat, 0, 0, 4.0f);
+    insert_float_dense_matrix(mat, 0, 1, 7.0f);
+    insert_float_dense_matrix(mat, 1, 0, 2.0f);
+    insert_float_dense_matrix(mat, 1, 1, 6.0f);
+
+    matrix_f *inv = invert_float_dense_matrix(mat);
+    assert_non_null(inv);
+
+    float expected[] = {0.6f, -0.7f, -0.2f, 0.4f};
+    for (size_t i = 0; i < 4; ++i) {
+        assert_float_equal(inv->storage.dense.data[i], expected[i], 1e-5);
+    }
+
+    free_float_matrix(mat);
+    free_float_matrix(inv);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_singular_matrix(void **state) {
+    matrix_f *mat = create_float_matrix(2, 2, 0);
+    insert_float_dense_matrix(mat, 0, 0, 1.0f);
+    insert_float_dense_matrix(mat, 0, 1, 2.0f);
+    insert_float_dense_matrix(mat, 1, 0, 2.0f);
+    insert_float_dense_matrix(mat, 1, 1, 4.0f); // Linearly dependent on row 0
+
+    matrix_f *inv = invert_float_dense_matrix(mat);
+    assert_null(inv);
+    assert_int_equal(errno, ERANGE);
+
+    free_float_matrix(mat);
+}
+
+void test_null_input(void **state) {
+    matrix_f *inv = invert_float_dense_matrix(NULL);
+    assert_null(inv);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_non_square_matrix(void **state) {
+    matrix_f *mat = create_float_matrix(2, 3, 1);
+    insert_float_dense_matrix(mat, 0, 0, 1.0f);  // Optional setup
+
+    matrix_f *inv = invert_float_dense_matrix(mat);
+    assert_null(inv);
+    assert_int_equal(errno, EINVAL);
+
+    free_float_matrix(mat);
+}
+// void test_identity_inverse(void **state) {
+//     matrix_f *mat = create_float_matrix(3, 3, 1);
+//     insert_float_dense_matrix(mat, 0, 0, 1.0f);
+//     insert_float_dense_matrix(mat, 1, 0, 1.0f);
+//     insert_float_dense_matrix(mat, 2, 0, 1.0f);
+//     // mat->storage.dense.values[0] = 1.0f;
+//     // mat->storage.dense.values[4] = 1.0f;
+//     // mat->storage.dense.values[8] = 1.0f;
+//
+//     matrix_f *inv = invert_float_dense_matrix(mat);
+//     assert_non_null(inv);
+//
+//     for (size_t i = 0; i < 9; ++i) {
+//         float expected = (i % 4 == 0) ? 1.0f : 0.0f;
+//         assert_float_equal(inv->storage.dense.values[i], expected, 1e-6);
+//     }
+//
+//     free_float_matrix(mat);
+//     free_float_matrix(inv);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// void test_known_inverse(void **state) {
+//     matrix_f *mat = create_float_matrix(2, 2, 1);
+//     mat->storage.dense.values[0] = 4.0f;
+//     mat->storage.dense.values[1] = 7.0f;
+//     mat->storage.dense.values[2] = 2.0f;
+//     mat->storage.dense.values[3] = 6.0f;
+//
+//     matrix_f *inv = invert_float_dense_matrix(mat);
+//     assert_non_null(inv);
+//
+//     float expected[] = {0.6f, -0.7f, -0.2f, 0.4f};
+//     for (size_t i = 0; i < 4; ++i) {
+//         assert_float_equal(inv->storage.dense.values[i], expected[i], 1e-5);
+//     }
+//
+//     free_float_matrix(mat);
+//     free_float_matrix(inv);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// void test_singular_matrix(void **state) {
+//     matrix_f *mat = create_float_matrix(2, 2, 0);
+//     mat->storage.dense.values[0] = 1.0f;
+//     mat->storage.dense.values[1] = 2.0f;
+//     mat->storage.dense.values[2] = 2.0f;
+//     mat->storage.dense.values[3] = 4.0f;
+//
+//     matrix_f *inv = invert_float_dense_matrix(mat);
+//     assert_null(inv);
+//     assert_int_equal(errno, ERANGE);
+//
+//     free_float_matrix(mat);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// void test_null_input(void **state) {
+//     matrix_f *inv = invert_float_dense_matrix(NULL);
+//     assert_null(inv);
+//     assert_int_equal(errno, EINVAL);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// void test_non_square_matrix(void **state) {
+//     matrix_f *mat = create_float_matrix(2, 3, 1);
+//     matrix_f *inv = invert_float_dense_matrix(mat);
+//     assert_null(inv);
+//     assert_int_equal(errno, EINVAL);
+//     free_float_matrix(mat);
+// }
 // ================================================================================ 
 // ================================================================================ 
 // eof
