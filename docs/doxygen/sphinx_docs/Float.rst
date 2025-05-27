@@ -2201,6 +2201,77 @@ float_matrix_type
    Use the ``float_matrix_type()`` function for logging or debugging purposes. 
    Most operations should rely on the generic interface regardless of internal format.
 
+
+invert_float_dense_matrix 
+~~~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: matrix_f* invert_float_dense_matrix(const matrix_f* mat)
+
+   Computes the inverse of a square dense matrix using Gauss-Jordan elimination with partial pivoting.
+   The input matrix must be in dense format and have the same number of rows and columns.
+
+   Internally allocates a new matrix of the same dimensions and constructs the inverse
+   using row operations. This function does **not** modify the input matrix.
+
+   :param mat: Input square matrix in dense format
+   :returns: Newly allocated matrix containing the inverse, or ``NULL`` on error
+   :raises:
+      - ``EINVAL`` if the input is ``NULL``, not square, or not in dense format  
+      - ``ENOMEM`` on allocation failure  
+      - ``ERANGE`` if the matrix is singular (non-invertible)
+
+   .. note::
+
+      If compiled with SIMD extensions (e.g., ``-mavx``), this function will automatically
+      use AVX vector instructions to accelerate row operations. On platforms without
+      SIMD support, it falls back to scalar computation.
+
+   Example:
+
+   .. code-block:: c
+
+      void print_dense_matrix(const matrix_f* mat) {
+          if (!mat || mat->type != DENSE_MATRIX) return;
+
+          for (size_t i = 0; i < mat->rows; ++i) {
+              for (size_t j = 0; j < mat->cols; ++j) {
+                  printf("%8.4f ", mat->storage.dense.data[i * mat->cols + j]);
+              }
+              printf("\n");
+          }
+      }
+
+      matrix_f* mat FLTMAT_GBC = create_float_matrix(3, 3, 0);
+      insert_float_matrix(&mat, 0, 0, 2.0f, false);
+      insert_float_matrix(&mat, 0, 1, 1.0f, false);
+      insert_float_matrix(&mat, 0, 2, 0.0f, false);
+      insert_float_matrix(&mat, 1, 0, 1.0f, false);
+      insert_float_matrix(&mat, 1, 1, 2.0f, false);
+      insert_float_matrix(&mat, 1, 2, 1.0f, false);
+      insert_float_matrix(&mat, 2, 0, 0.0f, false);
+      insert_float_matrix(&mat, 2, 1, 1.0f, false);
+      insert_float_matrix(&mat, 2, 2, 2.0f, false);
+
+      matrix_f* inv = invert_float_dense_matrix(mat);
+      if (!inv) {
+          perror("Matrix inversion failed");
+      } else {
+          printf("Inverse matrix:\n");
+          // A user defined function
+          print_dense_matrix(inv);
+          free_float_matrix(inv);
+      }
+
+Output:
+
+.. code-block:: text
+
+      Inverse matrix:
+         0.7500   -0.5000    0.2500
+        -0.5000    1.0000   -0.5000
+         0.2500   -0.5000    0.7500
+
+---
+
 Matrix Format Conversion and Optimization
 -----------------------------------------
 
