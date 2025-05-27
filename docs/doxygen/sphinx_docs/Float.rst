@@ -2271,7 +2271,71 @@ Output:
         -0.5000    1.0000   -0.5000
          0.2500   -0.5000    0.7500
 
----
+transpose_float_matrix
+~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: bool transpose_float_matrix(matrix_f** pmat)
+
+   Transposes the given matrix in place, replacing it with its transpose. 
+   This function supports all matrix types:
+
+   - **Dense Matrix**: Uses in-place swapping for square matrices, allocates new matrix for rectangular ones.
+   - **COO Matrix**: Swaps row and column coordinate arrays and updates dimensions.
+   - **CSR Matrix**: Constructs a new CSR representation using column-wise grouping.
+
+   This function updates the matrix pointer with the new transposed matrix when needed. 
+   The original matrix is deallocated automatically.
+
+   :param pmat: Address of the pointer to the matrix to transpose
+   :returns: ``true`` if transposition succeeded, ``false`` on failure
+   :raises: Sets ``errno`` to:
+      - ``EINVAL`` for NULL input or unsupported type
+      - ``ENOMEM`` on allocation failure
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_f* mat FLTMAT_GBC = create_float_matrix(2, 3, 0);
+      insert_float_matrix(&mat, 0, 0, 1.0f, false);
+      insert_float_matrix(&mat, 0, 1, 2.0f, false);
+      insert_float_matrix(&mat, 0, 2, 3.0f, false);
+      insert_float_matrix(&mat, 1, 0, 4.0f, false);
+      insert_float_matrix(&mat, 1, 1, 5.0f, false);
+      insert_float_matrix(&mat, 1, 2, 6.0f, false);
+
+      printf("Before transpose:\n");
+      for (size_t i = 0; i < mat->rows; ++i) {
+          for (size_t j = 0; j < mat->cols; ++j) {
+              float v = get_float_matrix(mat, i, j);
+              printf("%5.2f ", v == FLT_MAX ? 0.0f : v);
+          }
+          printf("\n");
+      }
+
+      transpose_float_matrix(&mat);
+
+      printf("After transpose:\n");
+      for (size_t i = 0; i < mat->rows; ++i) {
+          for (size_t j = 0; j < mat->cols; ++j) {
+              float v = get_float_matrix(mat, i, j);
+              printf("%5.2f ", v == FLT_MAX ? 0.0f : v);
+          }
+          printf("\n");
+      }
+
+   Output:
+
+   .. code-block:: text
+
+      Before transpose:
+       1.00  2.00  3.00
+       4.00  5.00  6.00
+
+      After transpose:
+       1.00  4.00
+       2.00  5.00
+       3.00  6.00
+
 
 Matrix Format Conversion and Optimization
 -----------------------------------------
