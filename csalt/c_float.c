@@ -3446,6 +3446,311 @@ matrix_f* invert_float_dense_matrix(const matrix_f* mat) {
     free(a);
     return inverse;
 }
+// -------------------------------------------------------------------------------- 
+
+bool transpose_float_dense_matrix(matrix_f** pmat) {
+    errno = 0;
+    if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_f* mat = *pmat;
+    size_t rows = mat->rows;
+    size_t cols = mat->cols;
+    float* data = mat->storage.dense.data;
+
+    // Case 1: Square matrix — transpose in place
+    if (rows == cols) {
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = i + 1; j < cols; ++j) {
+                size_t idx1 = i * cols + j;
+                size_t idx2 = j * cols + i;
+                float tmp = data[idx1];
+                data[idx1] = data[idx2];
+                data[idx2] = tmp;
+            }
+        }
+        return true;
+    }
+
+    // Case 2: Rectangular matrix — allocate new transposed matrix
+    matrix_f* transposed = create_float_dense_matrix(cols, rows);
+    if (!transposed) {
+        errno = ENOMEM;
+        return false;
+    }
+
+    //float* new_data = transposed->storage.dense.data;
+    for (size_t i = 0; i < get_float_matrix_rows(mat); ++i) {
+        for (size_t j = 0; j < get_float_matrix_cols(mat); ++j) {
+            float value = get_float_dense_matrix(mat, i, j);   // Access original at (i, j)
+            insert_float_dense_matrix(transposed, j, i, value); // Store transposed at (j, i)
+        }
+    }
+
+    free_float_matrix(mat);
+    *pmat = transposed;
+    return true;
+}
+
+// bool transpose_float_dense_matrix(matrix_f** pmat) {
+//     errno = 0;
+//     if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     matrix_f* mat = *pmat;
+//
+//     size_t rows = mat->rows;
+//     size_t cols = mat->cols;
+//     float* data = mat->storage.dense.data;
+//
+//     // Case 1: Square matrix — transpose in place
+//     if (rows == cols) {
+//         for (size_t i = 0; i < rows; ++i) {
+//             for (size_t j = i + 1; j < cols; ++j) {
+//                 float tmp = data[i * cols + j];
+//                 data[i * cols + j] = data[j * cols + i];
+//                 data[j * cols + i] = tmp;
+//             }
+//         }
+//         return true;
+//     }
+//
+//     // Case 2: Rectangular matrix — need to allocate new dense matrix
+//     matrix_f* transposed = create_float_dense_matrix(cols, rows);
+//     if (!transposed) {
+//         errno = ENOMEM;
+//         return false;
+//     }
+//
+//     // Fill in transposed values
+//     for (size_t i = 0; i < rows; ++i) {
+//         for (size_t j = 0; j < cols; ++j) {
+//             transposed->storage.dense.data[j * rows + i] = data[i * cols + j];
+//         }
+//     }
+//
+//     // Free old matrix and replace pointer
+//     free_float_matrix(mat);
+//     *pmat = transposed;
+//     return true;
+// }
+//
+// bool transpose_float_dense_matrix(matrix_f** pmat) {
+//     errno = 0;
+//     if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     matrix_f* mat = *pmat;
+//
+//     size_t rows = mat->rows;
+//     size_t cols = mat->cols;
+//     float* data = mat->storage.dense.data;
+//
+//     // Case 1: Square matrix — transpose in place
+//     if (rows == cols) {
+//         for (size_t i = 0; i < rows; ++i) {
+//             for (size_t j = i + 1; j < cols; ++j) {
+//                 float tmp = data[i * cols + j];
+//                 data[i * cols + j] = data[j * cols + i];
+//                 data[j * cols + i] = tmp;
+//             }
+//         }
+//         return true;
+//     }
+//
+//     // Case 2: Rectangular matrix — need to allocate new matrix
+//     matrix_f* transposed = create_float_matrix(cols, rows, 0);
+//     if (!transposed) {
+//         errno = ENOMEM;
+//         return false;
+//     }
+//
+//     // Fill in transposed values
+//     for (size_t i = 0; i < rows; ++i) {
+//         for (size_t j = 0; j < cols; ++j) {
+//             transposed->storage.dense.data[j * rows + i] = data[i * cols + j];
+//         }
+//     }
+//
+//     // Free old matrix and replace pointer
+//     free_float_matrix(mat);
+//     *pmat = transposed;
+//     return true;
+// }
+//
+// bool transpose_float_dense_matrix(matrix_f** pmat) {
+//     errno = 0;
+//
+//     if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     matrix_f* mat = *pmat;
+//
+//     size_t rows = mat->rows;
+//     size_t cols = mat->cols;
+//     float* data = mat->storage.dense.data;
+//
+//     // Case 1: Square matrix — transpose in place
+//     if (rows == cols) {
+//         for (size_t i = 0; i < rows; ++i) {
+//             for (size_t j = i + 1; j < cols; ++j) {
+//                 float tmp = data[i * cols + j];
+//                 data[i * cols + j] = data[j * cols + i];
+//                 data[j * cols + i] = tmp;
+//             }
+//         }
+//         return true;
+//     }
+//
+//     // Case 2: Rectangular matrix — need to allocate new storage
+//     matrix_f* transposed = create_float_matrix(cols, rows, 0);
+//     if (!transposed) {
+//         errno = ENOMEM;
+//         return false;
+//     }
+//
+//     for (size_t i = 0; i < rows; ++i) {
+//         for (size_t j = 0; j < cols; ++j) {
+//             transposed->storage.dense.data[j * rows + i] = data[i * cols + j];
+//         }
+//     }
+//
+//     free_float_matrix(mat);
+//     *pmat = transposed;
+//     return true;
+// }
+// -------------------------------------------------------------------------------- 
+
+bool transpose_float_coo_matrix(matrix_f** pmat) {
+    errno = 0;
+
+    if (!pmat || !*pmat || (*pmat)->type != SPARSE_COO_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_f* mat = *pmat;
+
+    for (size_t i = 0; i < mat->count; ++i) {
+        size_t tmp = mat->storage.coo.rows[i];
+        mat->storage.coo.rows[i] = mat->storage.coo.cols[i];
+        mat->storage.coo.cols[i] = tmp;
+    }
+
+    // Swap the matrix dimensions
+    size_t tmp_dim = mat->rows;
+    mat->rows = mat->cols;
+    mat->cols = tmp_dim;
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool transpose_float_csr_matrix(matrix_f** pmat) {
+    errno = 0;
+
+    if (!pmat || !*pmat || (*pmat)->type != SPARSE_CSR_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_f* mat = *pmat;
+    size_t rows = mat->rows;
+    size_t cols = mat->cols;
+    size_t nnz = mat->count;
+
+    size_t* row_ptrs_T = calloc(cols + 1, sizeof(size_t));
+    size_t* col_indices_T = malloc(nnz * sizeof(size_t));
+    float* values_T = malloc(nnz * sizeof(float));
+    if (!row_ptrs_T || !col_indices_T || !values_T) {
+        free(row_ptrs_T); free(col_indices_T); free(values_T);
+        errno = ENOMEM;
+        return false;
+    }
+
+    // Step 1: Count non-zeros per column (future row in transpose)
+    for (size_t i = 0; i < nnz; ++i) {
+        size_t col = mat->storage.csr.col_indices[i];
+        row_ptrs_T[col + 1]++;
+    }
+
+    // Step 2: Prefix sum to get row_ptrs
+    for (size_t i = 1; i <= cols; ++i) {
+        row_ptrs_T[i] += row_ptrs_T[i - 1];
+    }
+
+    // Step 3: Fill transposed values
+    size_t* counter = calloc(cols, sizeof(size_t));
+    if (!counter) {
+        free(row_ptrs_T); free(col_indices_T); free(values_T);
+        errno = ENOMEM;
+        return false;
+    }
+
+    for (size_t row = 0; row < rows; ++row) {
+        size_t start = mat->storage.csr.row_ptrs[row];
+        size_t end   = mat->storage.csr.row_ptrs[row + 1];
+
+        for (size_t i = start; i < end; ++i) {
+            size_t col = mat->storage.csr.col_indices[i];
+            float val = mat->storage.csr.values[i];
+
+            size_t dest = row_ptrs_T[col] + counter[col]++;
+            col_indices_T[dest] = row;
+            values_T[dest] = val;
+        }
+    }
+
+    free(counter);
+
+    // Replace contents of original matrix
+    free(mat->storage.csr.row_ptrs);
+    free(mat->storage.csr.col_indices);
+    free(mat->storage.csr.values);
+
+    mat->storage.csr.row_ptrs = row_ptrs_T;
+    mat->storage.csr.col_indices = col_indices_T;
+    mat->storage.csr.values = values_T;
+    mat->rows = cols;
+    mat->cols = rows;
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool transpose_float_matrix(matrix_f** pmat) {
+    errno = 0;
+
+    if (!pmat || !*pmat) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_f* mat = *pmat;
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return transpose_float_dense_matrix(pmat);
+
+        case SPARSE_COO_MATRIX:
+            return transpose_float_coo_matrix(pmat);
+
+        case SPARSE_CSR_MATRIX:
+            return transpose_float_csr_matrix(pmat);
+
+        default:
+            errno = EINVAL;
+            return false;
+    }
+}
 // ================================================================================ 
 // ================================================================================ 
 // eof

@@ -2210,7 +2210,8 @@ invert_float_dense_matrix
    The input matrix must be in dense format and have the same number of rows and columns.
 
    Internally allocates a new matrix of the same dimensions and constructs the inverse
-   using row operations. This function does **not** modify the input matrix.
+   using row operations. This function does **not** modify the input matrix. This function 
+   uses SIMD to accelerate some aspects of Gauss Jordan reduction.
 
    :param mat: Input square matrix in dense format
    :returns: Newly allocated matrix containing the inverse, or ``NULL`` on error

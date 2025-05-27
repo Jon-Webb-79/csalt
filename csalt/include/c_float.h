@@ -1392,6 +1392,88 @@ void maybe_convert_float_matrix(matrix_f** pmat, bool convert_to_csr);
  * @retval ENOMEM  if memory allocation fails
  */
 matrix_f* invert_float_dense_matrix(const matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Transposes a dense matrix in place.
+ *
+ * If the matrix is square, transposition is done in-place with no memory allocation.
+ * If the matrix is rectangular, a new matrix is allocated, filled with transposed values,
+ * and the original matrix is freed.
+ *
+ * @param[in,out] pmat Pointer to a matrix pointer to be transposed
+ * @returns true on success, false on failure
+ * @retval EINVAL if input is NULL or not a dense matrix
+ * @retval ENOMEM if memory allocation fails for rectangular case
+ */
+bool transpose_float_dense_matrix(matrix_f** pmat);
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Transposes a sparse COO matrix in-place.
+ *
+ * This function swaps row and column indices of all nonzero entries in a matrix
+ * stored in COO (coordinate list) format. The matrix dimensions are also updated.
+ *
+ * Unlike CSR transpose, this operation does not require reallocation.
+ *
+ * @param pmat Address of the matrix pointer (must be SPARSE_COO_MATRIX)
+ * @return true if successful, false on error
+ * @retval EINVAL if input is NULL or not a COO matrix
+ *
+ * Example:
+ * @code
+ * matrix_f* mat = create_float_matrix(4, 5, 10);
+ * // Populate mat...
+ * transpose_float_coo_matrix(&mat);
+ * @endcode
+ */
+
+bool transpose_float_coo_matrix(matrix_f** mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Transposes a CSR matrix in place.
+ *
+ * Given a matrix in CSR (compressed sparse row) format, this function replaces it
+ * with its transpose. This operation reallocates internal data structures, but
+ * preserves the original pointer using an in-place update.
+ *
+ * @param pmat Address of matrix pointer (must point to a CSR matrix)
+ * @retval EINVAL if input is NULL or not in CSR format
+ * @retval ENOMEM if memory allocation fails during transpose
+ *
+ * Example:
+ * @code
+ * matrix_f* mat = create_sparse_matrix(...);
+ * transpose_floatMat(&mat);
+ * @endcode
+ */
+
+bool transpose_float_csr_matrix(matrix_f** pmat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Transposes a matrix in-place based on its format.
+ *
+ * This function checks the internal format of the matrix and calls the corresponding
+ * transpose function (e.g., COO or CSR). Dense matrix transpose is currently unsupported.
+ *
+ * @param pmat Address of a pointer to the matrix_f to transpose
+ * @return true if transposition succeeds, false otherwise
+ * @retval EINVAL if input is NULL or unsupported format
+ * @retval ENOMEM if memory allocation fails during CSR transpose
+ * @retval ENOTSUP if transpose for dense matrices is not implemented
+ *
+ * Example:
+ * @code
+ * matrix_f* mat = create_float_matrix(10, 20, 15);
+ * insert_float_matrix(&mat, 1, 2, 3.14f, false);
+ * transpose_float_matrix(&mat);
+ * @endcode
+ */
+
+bool transpose_float_matrix(matrix_f** pmat);
 // ================================================================================ 
 // ================================================================================ 
 // GENERIC MACROS

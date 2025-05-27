@@ -2972,6 +2972,201 @@ void test_non_square_matrix(void **state) {
 
     free_float_matrix(mat);
 }
+// -------------------------------------------------------------------------------- 
+
+void test_transpose_dense_identity(void **state) {
+    matrix_f *mat = create_float_dense_matrix(3, 3);
+
+    insert_float_dense_matrix(mat, 0, 0, 1.0f);
+    insert_float_dense_matrix(mat, 1, 1, 1.0f);
+    insert_float_dense_matrix(mat, 2, 2, 1.0f);
+    //transpose_float_matrix(&mat);
+    bool ok = transpose_float_matrix(&mat);
+    assert_true(ok);
+    assert_non_null(mat);
+    assert_int_equal(mat->rows, 3);
+    assert_int_equal(mat->cols, 3);
+
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            float expected = (i == j) ? 1.0f : FLT_MAX;
+            float actual = get_float_matrix(mat, i, j);
+            assert_float_equal(actual, expected, 1e-6);
+        }
+    }
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_transpose_dense_general(void **state) {
+    matrix_f *mat = create_float_matrix(2, 2, 0);
+
+    insert_float_dense_matrix(mat, 0, 0, 1.0f);
+    insert_float_dense_matrix(mat, 0, 1, 2.0f);
+    insert_float_dense_matrix(mat, 1, 0, 3.0f);
+    insert_float_dense_matrix(mat, 1, 1, 4.0f);
+
+    bool ok = transpose_float_matrix(&mat);
+    assert_true(ok);
+    assert_non_null(mat);
+    assert_int_equal(mat->rows, 2);
+    assert_int_equal(mat->cols, 2);
+
+    assert_float_equal(get_float_matrix(mat, 0, 0), 1.0f, 1e-6);
+    assert_float_equal(get_float_matrix(mat, 0, 1), 3.0f, 1e-6);
+    assert_float_equal(get_float_matrix(mat, 1, 0), 2.0f, 1e-6);
+    assert_float_equal(get_float_matrix(mat, 1, 1), 4.0f, 1e-6);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_transpose_dense_rectangular(void **state) {
+    matrix_f *mat = create_float_dense_matrix(2, 3);
+
+    insert_float_dense_matrix(mat, 0, 0, 1.0f);
+    insert_float_dense_matrix(mat, 0, 1, 2.0f);
+    insert_float_dense_matrix(mat, 0, 2, 3.0f);
+    insert_float_dense_matrix(mat, 1, 0, 4.0f);
+    insert_float_dense_matrix(mat, 1, 1, 5.0f);
+    insert_float_dense_matrix(mat, 1, 2, 6.0f);
+
+    bool ok = transpose_float_matrix(&mat);
+    assert_true(ok);
+    assert_non_null(mat);
+    assert_int_equal(mat->rows, 3);
+    assert_int_equal(mat->cols, 2);
+
+    assert_float_equal(get_float_matrix(mat, 0, 0), 1.0f, 1e-6);
+    assert_float_equal(get_float_matrix(mat, 0, 1), 4.0f, 1e-6);
+    assert_float_equal(get_float_matrix(mat, 1, 0), 2.0f, 1e-6);
+    assert_float_equal(get_float_matrix(mat, 1, 1), 5.0f, 1e-6);
+    assert_float_equal(get_float_matrix(mat, 2, 0), 3.0f, 1e-6);
+    assert_float_equal(get_float_matrix(mat, 2, 1), 6.0f, 1e-6);
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_transpose_coo_identity(void **state) {
+    matrix_f *mat = create_float_matrix(3, 3, 9);  // identity matrix (sparse)
+    insert_float_matrix(&mat, 0, 0, 1.0f, false);
+    insert_float_matrix(&mat, 1, 1, 1.0f, false);
+    insert_float_matrix(&mat, 2, 2, 1.0f, false);
+
+    bool ok = transpose_float_matrix(&mat);
+    assert_true(ok);
+    assert_non_null(mat);
+    assert_int_equal(mat->rows, 3);
+    assert_int_equal(mat->cols, 3);
+
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            float expected = (i == j) ? 1.0f : FLT_MAX;
+            float actual = get_float_matrix(mat, i, j);
+            assert_float_equal(actual, expected, 1e-6);
+        }
+    }
+
+    free_float_matrix(mat);
+}
+
+void test_transpose_coo_rectangular(void **state) {
+    matrix_f *mat = create_float_matrix(2, 3, 6);
+
+    insert_float_matrix(&mat, 0, 0, 1.0f, false);
+    insert_float_matrix(&mat, 0, 1, 2.0f, false);
+    insert_float_matrix(&mat, 0, 2, 3.0f, false);
+    insert_float_matrix(&mat, 1, 0, 4.0f, false);
+    insert_float_matrix(&mat, 1, 1, 5.0f, false);
+    insert_float_matrix(&mat, 1, 2, 6.0f, false);
+
+    bool ok = transpose_float_matrix(&mat);
+    assert_true(ok);
+    assert_non_null(mat);
+    assert_int_equal(mat->rows, 3);
+    assert_int_equal(mat->cols, 2);
+
+    float expected[3][2] = {
+        {1.0f, 4.0f},
+        {2.0f, 5.0f},
+        {3.0f, 6.0f}
+    };
+
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 2; ++j) {
+            float actual = get_float_matrix(mat, i, j);
+            assert_float_equal(actual, expected[i][j], 1e-6);
+        }
+    }
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_transpose_csr_identity(void **state) {
+    matrix_f *mat = create_float_matrix(3, 3, 9);
+    insert_float_matrix(&mat, 0, 0, 1.0f, false);
+    insert_float_matrix(&mat, 1, 1, 1.0f, false);
+    insert_float_matrix(&mat, 2, 2, 1.0f, false);
+
+    convert_floatMat_to_csr(&mat);
+
+    assert_int_equal(get_float_matrix_type(mat), SPARSE_CSR_MATRIX);
+
+    bool ok = transpose_float_matrix(&mat);
+    assert_true(ok);
+    assert_non_null(mat);
+    assert_int_equal(mat->rows, 3);
+    assert_int_equal(mat->cols, 3);
+
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            float expected = (i == j) ? 1.0f : FLT_MAX;
+            float actual = get_float_matrix(mat, i, j);
+            assert_float_equal(actual, expected, 1e-6);
+        }
+    }
+
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_transpose_csr_rectangular(void **state) {
+    matrix_f *mat = create_float_matrix(2, 3, 6);
+    insert_float_matrix(&mat, 0, 0, 1.0f, false);
+    insert_float_matrix(&mat, 0, 1, 2.0f, false);
+    insert_float_matrix(&mat, 0, 2, 3.0f, false);
+    insert_float_matrix(&mat, 1, 0, 4.0f, false);
+    insert_float_matrix(&mat, 1, 1, 5.0f, false);
+    insert_float_matrix(&mat, 1, 2, 6.0f, false);
+
+    convert_floatMat_to_csr(&mat);
+    assert_int_equal(get_float_matrix_type(mat), SPARSE_CSR_MATRIX);
+
+    bool ok = transpose_float_matrix(&mat);
+    assert_true(ok);
+    assert_non_null(mat);
+    assert_int_equal(mat->rows, 3);
+    assert_int_equal(mat->cols, 2);
+
+    float expected[3][2] = {
+        {1.0f, 4.0f},
+        {2.0f, 5.0f},
+        {3.0f, 6.0f}
+    };
+
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 2; ++j) {
+            float actual = get_float_matrix(mat, i, j);
+            assert_float_equal(actual, expected[i][j], 1e-6);
+        }
+    }
+
+    free_float_matrix(mat);
+}
+
 // ================================================================================ 
 // ================================================================================ 
 // eof
