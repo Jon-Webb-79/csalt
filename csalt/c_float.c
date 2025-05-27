@@ -3332,7 +3332,7 @@ size_t get_float_matrix_element_count(matrix_f* mat) {
 
 matrix_f* invert_float_dense_matrix(const matrix_f* mat) {
     errno = 0;
-    
+
     if (!mat || mat->type != DENSE_MATRIX || mat->rows != mat->cols) {
         errno = EINVAL;
         return NULL;
@@ -3352,15 +3352,13 @@ matrix_f* invert_float_dense_matrix(const matrix_f* mat) {
         return NULL;
     }
 
-    // Copy original matrix
+    // Copy matrix and initialize identity
     for (size_t i = 0; i < n * n; ++i) {
         a[i] = mat->storage.dense.data[i];
-        inverse->storage.dense.data[i] = (i / n == i % n) ? 1.0f : 0.0f; // Identity matrix
+        inverse->storage.dense.data[i] = (i / n == i % n) ? 1.0f : 0.0f;
     }
 
-    // Gauss-Jordan elimination with partial pivoting
     for (size_t i = 0; i < n; ++i) {
-        // Find pivot
         size_t pivot = i;
         float max = fabsf(a[i * n + i]);
         for (size_t j = i + 1; j < n; ++j) {
@@ -3372,7 +3370,6 @@ matrix_f* invert_float_dense_matrix(const matrix_f* mat) {
         }
 
         if (fabsf(a[pivot * n + i]) < 1e-8f) {
-            // Singular matrix
             free(a);
             free_float_matrix(inverse);
             errno = ERANGE;
@@ -3392,27 +3389,147 @@ matrix_f* invert_float_dense_matrix(const matrix_f* mat) {
             }
         }
 
-        // Normalize pivot row
         float pivot_val = a[i * n + i];
+
+#if defined(__AVX__)
+        __m256 vpivot = _mm256_set1_ps(pivot_val);
+        size_t j = 0;
+        for (; j + 8 <= n; j += 8) {
+            __m256 va = _mm256_loadu_ps(&a[i * n + j]);
+            __m256 vinv = _mm256_loadu_ps(&inverse->storage.dense.data[i * n + j]);
+            va = _mm256_div_ps(va, vpivot);
+            vinv = _mm256_div_ps(vinv, vpivot);
+            _mm256_storeu_ps(&a[i * n + j], va);
+            _mm256_storeu_ps(&inverse->storage.dense.data[i * n + j], vinv);
+        }
+        for (; j < n; ++j) {
+            a[i * n + j] /= pivot_val;
+            inverse->storage.dense.data[i * n + j] /= pivot_val;
+        }
+#else
         for (size_t j = 0; j < n; ++j) {
             a[i * n + j] /= pivot_val;
             inverse->storage.dense.data[i * n + j] /= pivot_val;
         }
+#endif
 
-        // Eliminate other rows
         for (size_t k = 0; k < n; ++k) {
             if (k == i) continue;
             float factor = a[k * n + i];
+#if defined(__AVX__)
+            j = 0;
+            __m256 vfactor = _mm256_set1_ps(factor);
+            for (; j + 8 <= n; j += 8) {
+                __m256 vk = _mm256_loadu_ps(&a[k * n + j]);
+                __m256 vi = _mm256_loadu_ps(&a[i * n + j]);
+                vk = _mm256_sub_ps(vk, _mm256_mul_ps(vfactor, vi));
+                _mm256_storeu_ps(&a[k * n + j], vk);
+
+                __m256 vinvk = _mm256_loadu_ps(&inverse->storage.dense.data[k * n + j]);
+                __m256 vinvi = _mm256_loadu_ps(&inverse->storage.dense.data[i * n + j]);
+                vinvk = _mm256_sub_ps(vinvk, _mm256_mul_ps(vfactor, vinvi));
+                _mm256_storeu_ps(&inverse->storage.dense.data[k * n + j], vinvk);
+            }
+            for (; j < n; ++j) {
+                a[k * n + j] -= factor * a[i * n + j];
+                inverse->storage.dense.data[k * n + j] -= factor * inverse->storage.dense.data[i * n + j];
+            }
+#else
             for (size_t j = 0; j < n; ++j) {
                 a[k * n + j] -= factor * a[i * n + j];
                 inverse->storage.dense.data[k * n + j] -= factor * inverse->storage.dense.data[i * n + j];
             }
+#endif
         }
     }
 
     free(a);
     return inverse;
 }
+
+// matrix_f* invert_float_dense_matrix(const matrix_f* mat) {
+//     errno = 0;
+//     
+//     if (!mat || mat->type != DENSE_MATRIX || mat->rows != mat->cols) {
+//         errno = EINVAL;
+//         return NULL;
+//     }
+//
+//     size_t n = mat->rows;
+//     matrix_f* inverse = create_float_matrix(n, n, 0);
+//     if (!inverse) {
+//         errno = ENOMEM;
+//         return NULL;
+//     }
+//
+//     float* a = malloc(n * n * sizeof(float));
+//     if (!a) {
+//         free_float_matrix(inverse);
+//         errno = ENOMEM;
+//         return NULL;
+//     }
+//
+//     // Copy original matrix
+//     for (size_t i = 0; i < n * n; ++i) {
+//         a[i] = mat->storage.dense.data[i];
+//         inverse->storage.dense.data[i] = (i / n == i % n) ? 1.0f : 0.0f; // Identity matrix
+//     }
+//
+//     // Gauss-Jordan elimination with partial pivoting
+//     for (size_t i = 0; i < n; ++i) {
+//         // Find pivot
+//         size_t pivot = i;
+//         float max = fabsf(a[i * n + i]);
+//         for (size_t j = i + 1; j < n; ++j) {
+//             float temp = fabsf(a[j * n + i]);
+//             if (temp > max) {
+//                 max = temp;
+//                 pivot = j;
+//             }
+//         }
+//
+//         if (fabsf(a[pivot * n + i]) < 1e-8f) {
+//             // Singular matrix
+//             free(a);
+//             free_float_matrix(inverse);
+//             errno = ERANGE;
+//             return NULL;
+//         }
+//
+//         // Swap rows in A and inverse
+//         if (pivot != i) {
+//             for (size_t j = 0; j < n; ++j) {
+//                 float tmp = a[i * n + j];
+//                 a[i * n + j] = a[pivot * n + j];
+//                 a[pivot * n + j] = tmp;
+//
+//                 tmp = inverse->storage.dense.data[i * n + j];
+//                 inverse->storage.dense.data[i * n + j] = inverse->storage.dense.data[pivot * n + j];
+//                 inverse->storage.dense.data[pivot * n + j] = tmp;
+//             }
+//         }
+//
+//         // Normalize pivot row
+//         float pivot_val = a[i * n + i];
+//         for (size_t j = 0; j < n; ++j) {
+//             a[i * n + j] /= pivot_val;
+//             inverse->storage.dense.data[i * n + j] /= pivot_val;
+//         }
+//
+//         // Eliminate other rows
+//         for (size_t k = 0; k < n; ++k) {
+//             if (k == i) continue;
+//             float factor = a[k * n + i];
+//             for (size_t j = 0; j < n; ++j) {
+//                 a[k * n + j] -= factor * a[i * n + j];
+//                 inverse->storage.dense.data[k * n + j] -= factor * inverse->storage.dense.data[i * n + j];
+//             }
+//         }
+//     }
+//
+//     free(a);
+//     return inverse;
+// }
 // ================================================================================ 
 // ================================================================================ 
 // eof
