@@ -2336,6 +2336,61 @@ transpose_float_matrix
        2.00  5.00
        3.00  6.00
 
+copy_float_matrix
+~~~~~~~~~~~~~~~~~
+.. c:function:: matrix_f* copy_float_matrix(const matrix_f* mat)
+
+   Creates a deep copy of a float matrix, preserving both structure and values.
+
+   This function automatically detects the internal storage type of the input matrix
+   (dense, COO, or CSR) and delegates the operation to the appropriate format-specific
+   copy function. The returned matrix must be freed using ``free_float_matrix`` when
+   no longer needed.
+
+   :param mat: Pointer to the matrix to copy.
+   :type mat: const matrix_f*
+   :returns: A new matrix object containing the same structure and values.
+   :rtype: matrix_f*
+   :raises: 
+      - ``EINVAL`` if the input is NULL or the matrix type is unrecognized.
+      - ``ENOMEM`` if memory allocation fails during copy.
+
+   Example:
+
+   .. code-block:: c
+
+      #include "c_float.h"
+
+      matrix_f* mat = create_float_dense_matrix(2, 2);
+      insert_float_dense_matrix(mat, 0, 0, 1.0f);
+      insert_float_dense_matrix(mat, 0, 1, 2.0f);
+      insert_float_dense_matrix(mat, 1, 0, 3.0f);
+      insert_float_dense_matrix(mat, 1, 1, 4.0f);
+
+      printf("Original matrix:\n");
+      print_float_matrix(mat);
+
+      matrix_f* copy = copy_float_matrix(mat);
+      if (copy) {
+          printf("Copied matrix:\n");
+          print_float_matrix(copy);
+      }
+
+      free_float_matrix(mat);
+      free_float_matrix(copy);
+
+   Output:
+
+   .. code-block:: text
+
+      Original matrix:
+      1.00  2.00
+      3.00  4.00
+
+      Copied matrix:
+      1.00  2.00
+      3.00  4.00
+
 
 Matrix Format Conversion and Optimization
 -----------------------------------------
