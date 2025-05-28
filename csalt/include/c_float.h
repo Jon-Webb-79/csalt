@@ -1474,6 +1474,66 @@ bool transpose_float_csr_matrix(matrix_f** pmat);
  */
 
 bool transpose_float_matrix(matrix_f** pmat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Create a deep copy of a dense float matrix.
+ *
+ * Allocates a new dense matrix and copies all initialized values and
+ * metadata from the source matrix. The new matrix is independent from
+ * the original, and must be freed separately.
+ *
+ * @param mat Pointer to the dense matrix to copy.
+ * @return A pointer to a newly allocated dense matrix with copied contents,
+ *         or NULL on error.
+ * @retval NULL if input is NULL or not a DENSE_MATRIX (sets errno to EINVAL).
+ * @retval NULL if memory allocation fails (sets errno to ENOMEM).
+ */
+matrix_f* copy_float_dense_matrix(const matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Create a deep copy of a sparse COO (Coordinate List) matrix.
+ *
+ * Copies row indices, column indices, and values into a newly allocated COO matrix.
+ * The copy preserves the same sparsity pattern and dimensions as the original.
+ *
+ * @param mat Pointer to the COO matrix to copy.
+ * @return A pointer to a new matrix_f object with duplicated COO data,
+ *         or NULL on error.
+ * @retval NULL if input is NULL or not a SPARSE_COO_MATRIX (sets errno to EINVAL).
+ * @retval NULL if memory allocation fails (sets errno to ENOMEM).
+ */
+matrix_f* copy_float_coo_matrix(const matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Create a deep copy of a sparse CSR (Compressed Sparse Row) matrix.
+ *
+ * Copies row pointers, column indices, and values into a new CSR matrix.
+ * The copy maintains the same structure and numerical values.
+ *
+ * @param mat Pointer to the CSR matrix to copy.
+ * @return A pointer to a new matrix_f object with copied CSR content,
+ *         or NULL on error.
+ * @retval NULL if input is NULL or not a SPARSE_CSR_MATRIX (sets errno to EINVAL).
+ * @retval NULL if memory allocation fails (sets errno to ENOMEM).
+ */
+matrix_f* copy_float_csr_matrix(const matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Create a deep copy of a float matrix, regardless of storage type.
+ *
+ * Dispatches to the appropriate internal copy function depending on whether
+ * the matrix is dense, COO, or CSR. Returns a fully independent matrix copy.
+ *
+ * @param mat Pointer to the matrix to copy.
+ * @return A new matrix_f object with the same contents and type, or NULL on error.
+ * @retval NULL if input is NULL or has an unrecognized type (sets errno to EINVAL).
+ * @retval NULL if memory allocation fails during copying (sets errno to ENOMEM).
+ */
+matrix_f* copy_float_matrix(const matrix_f* mat);
 // ================================================================================ 
 // ================================================================================ 
 // GENERIC MACROS

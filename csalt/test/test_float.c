@@ -3166,7 +3166,96 @@ void test_transpose_csr_rectangular(void **state) {
 
     free_float_matrix(mat);
 }
+// -------------------------------------------------------------------------------- 
 
+void test_copy_dense_matrix(void **state) {
+    matrix_f *original = create_float_dense_matrix(2, 2);
+    insert_float_dense_matrix(original, 0, 0, 1.0f);
+    insert_float_dense_matrix(original, 0, 1, 2.0f);
+    insert_float_dense_matrix(original, 1, 0, 3.0f);
+    insert_float_dense_matrix(original, 1, 1, 4.0f);
+
+    matrix_f *copy = copy_float_matrix(original);
+    assert_non_null(copy);
+    assert_int_equal(copy->rows, 2);
+    assert_int_equal(copy->cols, 2);
+    assert_int_equal(copy->type, DENSE_MATRIX);
+
+    for (size_t i = 0; i < 2; ++i)
+        for (size_t j = 0; j < 2; ++j)
+            assert_float_equal(get_float_matrix(copy, i, j), get_float_matrix(original, i, j), 1e-6);
+
+    assert_ptr_not_equal(original->storage.dense.data, copy->storage.dense.data);
+
+    free_float_matrix(original);
+    free_float_matrix(copy);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_copy_coo_matrix(void **state) {
+    matrix_f *original = create_float_coo_matrix(3, 3);
+    insert_float_coo_matrix(original, 0, 0, 1.0f);
+    insert_float_coo_matrix(original, 1, 2, 2.0f);
+    insert_float_coo_matrix(original, 2, 1, 3.0f);
+
+    matrix_f *copy = copy_float_matrix(original);
+    assert_non_null(copy);
+    assert_int_equal(copy->rows, 3);
+    assert_int_equal(copy->cols, 3);
+    assert_int_equal(copy->count, original->count);
+    assert_int_equal(copy->type, SPARSE_COO_MATRIX);
+
+    for (size_t i = 0; i < original->count; ++i) {
+        assert_int_equal(copy->storage.coo.rows[i], original->storage.coo.rows[i]);
+        assert_int_equal(copy->storage.coo.cols[i], original->storage.coo.cols[i]);
+        assert_float_equal(copy->storage.coo.values[i], original->storage.coo.values[i], 1e-6);
+    }
+
+    assert_ptr_not_equal(copy->storage.coo.values, original->storage.coo.values);
+
+    free_float_matrix(original);
+    free_float_matrix(copy);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_copy_csr_matrix(void **state) {
+    matrix_f *original = create_float_csr_matrix(2, 3, 4);
+    original->storage.csr.row_ptrs[0] = 0;
+    original->storage.csr.row_ptrs[1] = 2;
+    original->storage.csr.row_ptrs[2] = 4;
+
+    original->storage.csr.col_indices[0] = 0;
+    original->storage.csr.col_indices[1] = 2;
+    original->storage.csr.col_indices[2] = 1;
+    original->storage.csr.col_indices[3] = 2;
+
+    original->storage.csr.values[0] = 1.0f;
+    original->storage.csr.values[1] = 2.0f;
+    original->storage.csr.values[2] = 3.0f;
+    original->storage.csr.values[3] = 4.0f;
+
+    original->count = 4;
+
+    matrix_f *copy = copy_float_matrix(original);
+    assert_non_null(copy);
+    assert_int_equal(copy->rows, 2);
+    assert_int_equal(copy->cols, 3);
+    assert_int_equal(copy->count, 4);
+    assert_int_equal(copy->type, SPARSE_CSR_MATRIX);
+
+    for (size_t i = 0; i < 3; ++i)
+        assert_int_equal(copy->storage.csr.row_ptrs[i], original->storage.csr.row_ptrs[i]);
+
+    for (size_t i = 0; i < 4; ++i) {
+        assert_int_equal(copy->storage.csr.col_indices[i], original->storage.csr.col_indices[i]);
+        assert_float_equal(copy->storage.csr.values[i], original->storage.csr.values[i], 1e-6);
+    }
+
+    assert_ptr_not_equal(copy->storage.csr.values, original->storage.csr.values);
+
+    free_float_matrix(original);
+    free_float_matrix(copy);
+}
 // ================================================================================ 
 // ================================================================================ 
 // eof

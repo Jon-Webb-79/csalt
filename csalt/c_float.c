@@ -3751,6 +3751,151 @@ bool transpose_float_matrix(matrix_f** pmat) {
             return false;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+matrix_f* copy_float_dense_matrix(const matrix_f* mat) {
+    errno = 0;
+    if (!mat || mat->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    matrix_f* newMat = create_float_dense_matrix(mat->rows, mat->cols);
+    if (!newMat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    newMat->count = mat->count;
+
+    size_t total_elements = mat->rows * mat->cols;
+    memcpy(newMat->storage.dense.data, mat->storage.dense.data, total_elements * sizeof(float));
+    memcpy(newMat->storage.dense.init, mat->storage.dense.init, total_elements * sizeof(uint8_t));
+
+    return newMat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_f* copy_float_coo_matrix(const matrix_f* mat) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_COO_MATRIX) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    matrix_f* newMat = malloc(sizeof(matrix_f));
+    if (!newMat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t cap = mat->storage.coo.capacity;
+    size_t* row_indices = malloc(cap * sizeof(size_t));
+    size_t* col_indices = malloc(cap * sizeof(size_t));
+    float* values = malloc(cap * sizeof(float));
+
+    if (!row_indices || !col_indices || !values) {
+        free(row_indices);
+        free(col_indices);
+        free(values);
+        free(newMat);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Copy structure metadata
+    newMat->type = SPARSE_COO_MATRIX;
+    newMat->rows = mat->rows;
+    newMat->cols = mat->cols;
+    newMat->count = mat->count;
+    newMat->storage.coo.capacity = cap;
+
+    // Assign allocated arrays
+    newMat->storage.coo.rows = row_indices;
+    newMat->storage.coo.cols = col_indices;
+    newMat->storage.coo.values = values;
+
+    // Copy used data only (up to `count`)
+    memcpy(row_indices, mat->storage.coo.rows, mat->count * sizeof(size_t));
+    memcpy(col_indices, mat->storage.coo.cols, mat->count * sizeof(size_t));
+    memcpy(values, mat->storage.coo.values, mat->count * sizeof(float));
+
+    return newMat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_f* copy_float_csr_matrix(const matrix_f* mat) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t rows = mat->rows;
+    size_t cols = mat->cols;
+    size_t nnz = mat->count;
+
+    matrix_f* newMat = malloc(sizeof(matrix_f));
+    if (!newMat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t* row_ptrs = calloc(rows + 1, sizeof(size_t));
+    size_t* col_indices = malloc(nnz * sizeof(size_t));
+    float* values = malloc(nnz * sizeof(float));
+
+    if (!row_ptrs || !col_indices || !values) {
+        free(row_ptrs);
+        free(col_indices);
+        free(values);
+        free(newMat);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    memcpy(row_ptrs, mat->storage.csr.row_ptrs, (rows + 1) * sizeof(size_t));
+    memcpy(col_indices, mat->storage.csr.col_indices, nnz * sizeof(size_t));
+    memcpy(values, mat->storage.csr.values, nnz * sizeof(float));
+
+    newMat->type = SPARSE_CSR_MATRIX;
+    newMat->rows = rows;
+    newMat->cols = cols;
+    newMat->count = nnz;
+
+    newMat->storage.csr.row_ptrs = row_ptrs;
+    newMat->storage.csr.col_indices = col_indices;
+    newMat->storage.csr.values = values;
+
+    return newMat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_f* copy_float_matrix(const matrix_f* mat) {
+    errno = 0;
+
+    if (!mat) {
+        errno = EINVAL;
+        return false;
+    }
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return copy_float_dense_matrix(mat);
+
+        case SPARSE_COO_MATRIX:
+            return copy_float_coo_matrix(mat);
+
+        case SPARSE_CSR_MATRIX:
+            return copy_float_csr_matrix(mat);
+
+        default:
+            errno = EINVAL;
+            return false;
+    }
+}
 // ================================================================================ 
 // ================================================================================ 
 // eof
