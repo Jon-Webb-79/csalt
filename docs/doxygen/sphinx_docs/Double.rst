@@ -2022,6 +2022,505 @@ Copy Vector
       Original values: 1.0 2.0 3.0 4.0
       New values: 1.0 2.0 3.0 4.0
 
+DOUBLE Matrix Overview 
+======================
+The ``matrix_d`` type provides a flexible and extensible representation of 2D matrices
+containing ``double`` values. It supports automatic format selection and dynamic 
+conversion between internal formats including:
+
+* Dense (row-major)
+* COO (coordinate list)
+* CSR (compressed sparse row)
+
+All format-specific behavior is encapsulated. Users should access data through
+the generic API functions documented here.
+
+Matrix objects must be created and managed using the generic functions declared in 
+the ``c_double.h`` header file.
+
+.. code-block:: c
+
+   typedef struct matrix_d matrix_d;
+
+Matrix Initialization and Cleanup
+---------------------------------
+
+create_double_matrix
+~~~~~~~~~~~~~~~~~~~~
+.. c:function:: matrix_d* create_double_matrix(size_t rows, size_t cols, size_t estimated_zeros)
+
+   Initializes a new matrix object with the specified number of rows and columns.
+   Internally selects an appropriate format based on dimensions.
+
+   :param rows: Number of matrix rows
+   :param cols: Number of matrix columns
+   :param estimated_zeros: The estimated number of empty elements in the matrix. Used to determine the optimum matrix format.
+   :returns: Pointer to new ``matrix_d`` object, or ``NULL`` on failure
+   :raises: Sets ``errno`` to ``EINVAL`` for zero dimensions, ``ENOMEM`` on allocation failure
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_d* mat DBLMAT_GBC = create_double_matrix(5, 5, 0);
+      if (!mat) {
+          perror("Failed to create matrix");
+      }
+
+free_double_matrix
+~~~~~~~~~~~~~~~~~~
+.. c:function:: void free_double_matrix(matrix_d* mat)
+
+   Frees all memory associated with a matrix object. Only required if not using
+   the :ref:`DBLMAT_GBC <matrix_doubleauto_gc>` macro.
+
+   :param mat: Matrix to free
+   :raises: Sets ``errno`` to ``EINVAL`` if input is NULL
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_d* mat = create_double_matrix(10, 10, 0);
+      // Use matrix...
+      free_double_matrix(mat);
+
+.. _matrix_doubleauto_gc:
+
+DBLMAT_GBC
+~~~~~~~~~~
+.. c:macro:: DBLMAT_GBC
+
+   Enables automatic cleanup of ``matrix_d`` objects at end of scope.
+   Only available with GCC or Clang compilers that support the ``cleanup`` attribute.
+
+   Example:
+
+   .. code-block:: c
+
+      void compute(void) {
+          matrix_d* DBLMAT_GBC mat = create_double_matrix(4, 4, 0);
+          // Matrix is freed automatically when function returns
+      }
+
+Matrix Element Access
+---------------------
+
+insert_double_matrix
+~~~~~~~~~~~~~~~~~~~~
+.. c:function:: bool insert_double_matrix(matrix_d** mat, size_t row, size_t col, double value, bool convert_to_csr)
+
+   Inserts or updates a double value at the specified (row, col) position. Typically, a user 
+   would not want to trigger a conversion to a CSR matrix until the matrix is fully populated to 
+   its maximum extent. However, for storage reasons, an insert operation may optionally trigger 
+   this transformation if the ``convert_to_csr`` flag is set to true.
+
+   The time complexity of this operation depends on the underlying matrix format:
+
+   - **Dense Matrix**: :math:`O(1)` direct indexing
+   - **COO Matrix**: :math:`O(n)` linear search for duplicates, :math:`O(1)` amortized append
+   - **CSR Matrix**: :math:`O(\log n)` if inserting into existing nonzero entry (via binary search); new insertions not supported
+
+   :param mat: Target matrix
+   :param row: Row index
+   :param col: Column index
+   :param value: Float value to insert
+   :param convert_to_csr: true if an insert should be allowed to trigger a CSR matrix conversion, false otherwise
+   :returns: ``true`` if successful, ``false`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input or unsupported format,
+            ``ERANGE`` for out-of-bounds access,
+            ``ENOMEM`` if internal resize fails (COO only),
+            ``EEXIST`` if duplicate entry in CSR without `allow_updates`
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_d* mat DBLMAT_GBC = create_double_matrix(10, 15, 5);
+      insert_double_matrix(&mat, 2, 3, 5.5f, false);
+
+pop_double_matrix
+~~~~~~~~~~~~~~~~~
+.. c:function:: double pop_double_matrix(matrix_d** mat, size_t row, size_t col)
+
+   Removes and returns the value at the specified (row, col) position. 
+   Returns ``FLT_MAX`` if the entry is not present or removal fails.
+
+   The time complexity varies by format:
+
+   - **Dense Matrix**: :math:`O(1)` direct indexing
+   - **COO Matrix**: :math:`O(n)` linear search, followed by :math:`O(n)` shift
+   - **CSR Matrix**: :math:`O(\log n)` lookup via binary search; removal is :math:`O(1)` (tombstone)
+
+   :param mat: Target matrix
+   :param row: Row index
+   :param col: Column index
+   :returns: Value at the specified position, or ``FLT_MAX`` if not found
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input or unsupported format,
+            ``ERANGE`` for out-of-bounds indices,
+            ``ENODATA`` or ``ENOENT`` if the position is unoccupied
+
+   Example:
+
+   .. code-block:: c
+
+      double value = pop_double_matrix(&mat, 2, 3);
+      if (errno == 0) {
+          printf("Removed value: %.2f\n", value);
+      }
+
+get_double_matrix
+~~~~~`~~~~~~~~~~~
+.. c:function:: double get_double_matrix(matrix_d* mat, size_t row, size_t col)
+
+   Returns the value at a specific matrix position, or ``FLT_MAX`` on error or
+   if no value exists (in sparse formats).
+
+   :param mat: Target matrix
+   :param row: Row index
+   :param col: Column index
+   :returns: Value at position, or ``FLT_MAX`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input, ``ERANGE`` for out-of-bounds
+
+   Example:
+
+   .. code-block:: c
+
+      double value = get_double_matrix(mat, 1, 1);
+      if (errno == 0) {
+          printf("Value at (1,1): %.2f\n", value);
+      }
+
+Matrix Utility Functions
+------------------------
+
+double_matrix_rows
+~~~~~`~~~~~~~~~~~~
+.. c:function:: size_t double_matrix_rows(const matrix_d* mat)
+
+   Returns the number of rows in the matrix.
+
+   :param mat: Matrix to query
+   :returns: Number of rows, or ``SIZE_MAX`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input
+
+double_matrix_cols
+~~~~~~~~~~~~~~~~~~
+.. c:function:: size_t double_matrix_cols(const matrix_d* mat)
+
+   Returns the number of columns in the matrix.
+
+   :param mat: Matrix to query
+   :returns: Number of columns, or ``SIZE_MAX`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input
+
+double_matrix_type
+~~~~~~~~~~~~~~~~~~
+.. c:function:: matrix_type double_matrix_type(const matrix_d* mat)
+
+   Returns the internal storage format of the matrix (e.g., DENSE_MATRIX, SPARSE_COO_MATRIX, etc.).
+
+   :param mat: Matrix to query
+   :returns: Enum representing the matrix format
+   :raises: Sets ``errno`` to ``EINVAL`` for NULL input
+
+.. note::
+
+   Use the ``double_matrix_type()`` function for logging or debugging purposes. 
+   Most operations should rely on the generic interface regardless of internal format.
+
+
+invert_double_dense_matrix 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: matrix_d* invert_double_dense_matrix(const matrix_d* mat)
+
+   Computes the inverse of a square dense matrix using Gauss-Jordan elimination with partial pivoting.
+   The input matrix must be in dense format and have the same number of rows and columns.
+
+   Internally allocates a new matrix of the same dimensions and constructs the inverse
+   using row operations. This function does **not** modify the input matrix. This function 
+   uses SIMD to accelerate some aspects of Gauss Jordan reduction.
+
+   :param mat: Input square matrix in dense format
+   :returns: Newly allocated matrix containing the inverse, or ``NULL`` on error
+   :raises:
+      - ``EINVAL`` if the input is ``NULL``, not square, or not in dense format  
+      - ``ENOMEM`` on allocation failure  
+      - ``ERANGE`` if the matrix is singular (non-invertible)
+
+   .. note::
+
+      If compiled with SIMD extensions (e.g., ``-mavx``), this function will automatically
+      use AVX vector instructions to accelerate row operations. On platforms without
+      SIMD support, it falls back to scalar computation.
+
+   Example:
+
+   .. code-block:: c
+
+      void print_dense_matrix(const matrix_d* mat) {
+          if (!mat || mat->type != DENSE_MATRIX) return;
+
+          for (size_t i = 0; i < mat->rows; ++i) {
+              for (size_t j = 0; j < mat->cols; ++j) {
+                  printf("%8.4f ", mat->storage.dense.data[i * mat->cols + j]);
+              }
+              printf("\n");
+          }
+      }
+
+      matrix_d* mat DBLMAT_GBC = create_double_matrix(3, 3, 0);
+      insert_double_matrix(&mat, 0, 0, 2.0f, false);
+      insert_double_matrix(&mat, 0, 1, 1.0f, false);
+      insert_double_matrix(&mat, 0, 2, 0.0f, false);
+      insert_double_matrix(&mat, 1, 0, 1.0f, false);
+      insert_double_matrix(&mat, 1, 1, 2.0f, false);
+      insert_double_matrix(&mat, 1, 2, 1.0f, false);
+      insert_double_matrix(&mat, 2, 0, 0.0f, false);
+      insert_double_matrix(&mat, 2, 1, 1.0f, false);
+      insert_double_matrix(&mat, 2, 2, 2.0f, false);
+
+      matrix_d* inv = invert_double_dense_matrix(mat);
+      if (!inv) {
+          perror("Matrix inversion failed");
+      } else {
+          printf("Inverse matrix:\n");
+          // A user defined function
+          print_dense_matrix(inv);
+          free_double_matrix(inv);
+      }
+
+Output:
+
+.. code-block:: text
+
+      Inverse matrix:
+         0.7500   -0.5000    0.2500
+        -0.5000    1.0000   -0.5000
+         0.2500   -0.5000    0.7500
+
+transpose_double_matrix
+~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: bool transpose_double_matrix(matrix_d** pmat)
+
+   Transposes the given matrix in place, replacing it with its transpose. 
+   This function supports all matrix types:
+
+   - **Dense Matrix**: Uses in-place swapping for square matrices, allocates new matrix for rectangular ones.
+   - **COO Matrix**: Swaps row and column coordinate arrays and updates dimensions.
+   - **CSR Matrix**: Constructs a new CSR representation using column-wise grouping.
+
+   This function updates the matrix pointer with the new transposed matrix when needed. 
+   The original matrix is deallocated automatically.
+
+   :param pmat: Address of the pointer to the matrix to transpose
+   :returns: ``true`` if transposition succeeded, ``false`` on failure
+   :raises: Sets ``errno`` to:
+      - ``EINVAL`` for NULL input or unsupported type
+      - ``ENOMEM`` on allocation failure
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_d* mat DBLMAT_GBC = create_double_matrix(2, 3, 0);
+      insert_double_matrix(&mat, 0, 0, 1.0f, false);
+      insert_double_matrix(&mat, 0, 1, 2.0f, false);
+      insert_double_matrix(&mat, 0, 2, 3.0f, false);
+      insert_double_matrix(&mat, 1, 0, 4.0f, false);
+      insert_double_matrix(&mat, 1, 1, 5.0f, false);
+      insert_double_matrix(&mat, 1, 2, 6.0f, false);
+
+      printf("Before transpose:\n");
+      for (size_t i = 0; i < mat->rows; ++i) {
+          for (size_t j = 0; j < mat->cols; ++j) {
+              double v = get_double_matrix(mat, i, j);
+              printf("%5.2f ", v == FLT_MAX ? 0.0f : v);
+          }
+          printf("\n");
+      }
+
+      transpose_double_matrix(&mat);
+
+      printf("After transpose:\n");
+      for (size_t i = 0; i < mat->rows; ++i) {
+          for (size_t j = 0; j < mat->cols; ++j) {
+              double v = get_double_matrix(mat, i, j);
+              printf("%5.2f ", v == FLT_MAX ? 0.0f : v);
+          }
+          printf("\n");
+      }
+
+   Output:
+
+   .. code-block:: text
+
+      Before transpose:
+       1.00  2.00  3.00
+       4.00  5.00  6.00
+
+      After transpose:
+       1.00  4.00
+       2.00  5.00
+       3.00  6.00
+
+copy_double_matrix
+~~~~~~~~~~~~~~~~~~
+.. c:function:: matrix_d* copy_double_matrix(const matrix_d* mat)
+
+   Creates a deep copy of a double matrix, preserving both structure and values.
+
+   This function automatically detects the internal storage type of the input matrix
+   (dense, COO, or CSR) and delegates the operation to the appropriate format-specific
+   copy function. The returned matrix must be freed using ``free_double_matrix`` when
+   no longer needed.
+
+   :param mat: Pointer to the matrix to copy.
+   :type mat: const matrix_d*
+   :returns: A new matrix object containing the same structure and values.
+   :rtype: matrix_d*
+   :raises: 
+      - ``EINVAL`` if the input is NULL or the matrix type is unrecognized.
+      - ``ENOMEM`` if memory allocation fails during copy.
+
+   Example:
+
+   .. code-block:: c
+
+      #include "c_double.h"
+
+      matrix_d* mat = create_double_dense_matrix(2, 2);
+      insert_double_dense_matrix(mat, 0, 0, 1.0f);
+      insert_double_dense_matrix(mat, 0, 1, 2.0f);
+      insert_double_dense_matrix(mat, 1, 0, 3.0f);
+      insert_double_dense_matrix(mat, 1, 1, 4.0f);
+
+      printf("Original matrix:\n");
+      print_double_matrix(mat);
+
+      matrix_d* copy = copy_double_matrix(mat);
+      if (copy) {
+          printf("Copied matrix:\n");
+          print_double_matrix(copy);
+      }
+
+      free_double_matrix(mat);
+      free_double_matrix(copy);
+
+   Output:
+
+   .. code-block:: text
+
+      Original matrix:
+      1.00  2.00
+      3.00  4.00
+
+      Copied matrix:
+      1.00  2.00
+      3.00  4.00
+
+double_dense_matrix_det
+~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: double double_dense_matrix_det(const matrix_d* mat)
+
+   Computes the determinant of a dense matrix using Gaussian elimination with partial pivoting.
+
+   The input matrix must be of type ``DENSE_MATRIX`` and must be square (i.e., number of rows equals number of columns).
+   The function performs a non-destructive transformation to calculate the determinant without modifying the original matrix.
+
+   :param mat: Pointer to a ``matrix_d`` structure representing the dense matrix
+   :returns: Determinant of the matrix as a double. If an error occurs, returns ``0.0f`` and sets ``errno``:
+             - ``EINVAL`` if the input is NULL or not a square dense matrix
+             - ``ERANGE`` if the matrix is singular
+   :raises: Sets ``errno`` on invalid input or on failure to compute determinant
+
+   Example::
+
+      matrix_d* mat = create_double_dense_matrix(3, 3);
+
+      insert_double_dense_matrix(mat, 0, 0, 1.0f);
+      insert_double_dense_matrix(mat, 0, 1, 2.0f);
+      insert_double_dense_matrix(mat, 0, 2, 3.0f);
+      insert_double_dense_matrix(mat, 1, 0, 0.0f);
+      insert_double_dense_matrix(mat, 1, 1, 1.0f);
+      insert_double_dense_matrix(mat, 1, 2, 4.0f);
+      insert_double_dense_matrix(mat, 2, 0, 5.0f);
+      insert_double_dense_matrix(mat, 2, 1, 6.0f);
+      insert_double_dense_matrix(mat, 2, 2, 0.0f);
+
+      double det = double_dense_matrix_det(mat);
+      printf("Determinant = %.2f\n", det);  // Output: Determinant = 1.00
+
+      free_double_matrix(mat);
+
+   Output::
+
+      Determinant = 1.00
+
+
+Matrix Format Conversion and Optimization
+-----------------------------------------
+
+convert_doubleMat_to_dense
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: void convert_doubleMat_to_dense(matrix_d** pmat)
+
+   Converts the given matrix to dense format, replacing the original matrix in-place.
+
+   If the input matrix is in COO or CSR format, this function will allocate a new
+   dense matrix, copy the values, and free the old matrix. If the matrix is already
+   dense, no action is taken.
+
+   :param pmat: Address of the matrix pointer to convert
+   :raises: Sets ``errno`` to ``EINVAL`` for invalid input or ``ENOMEM`` for allocation failure
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_d* mat = load_sparse_matrix("data.mtx");
+      convert_doubleMat_to_dense(&mat);
+
+convert_doubleMat_to_coo
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: void convert_doubleMat_to_coo(matrix_d** pmat)
+
+   Converts the given matrix to COO (coordinate list) format, replacing the original matrix in-place.
+
+   This function will allocate a new COO matrix, transfer values from the input matrix,
+   and free the original. If the input is dense or CSR, it will be converted to COO.
+
+   :param pmat: Address of the matrix pointer to convert
+   :raises: Sets ``errno`` to ``EINVAL`` for invalid input or ``ENOMEM`` for allocation failure
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_d* mat = init_double_matrix(10, 10);
+      convert_doubleMat_to_coo(&mat);
+
+convert_doubleMat_to_csr
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: void convert_doubleMat_to_csr(matrix_d** pmat)
+
+   Converts the given matrix to CSR (compressed sparse row) format, replacing the original matrix in-place.
+
+   If the matrix is in dense format, it will first be converted to COO, then to CSR.
+   If already in CSR format, no action is taken.
+
+   :param pmat: Address of the matrix pointer to convert
+   :raises: Sets ``errno`` to ``EINVAL`` for invalid input or ``ENOMEM`` for allocation failure
+
+   Example:
+
+   .. code-block:: c
+
+      matrix_d* mat = init_double_matrix(100, 100);
+      populate_with_sparse_values(mat); // Assume this function exist to populate matrix
+      convert_doubleMat_to_csr(&mat);
+
+
 Double Dictionary Overview
 ==========================
 
