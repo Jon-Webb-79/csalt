@@ -3256,6 +3256,66 @@ void test_copy_csr_matrix(void **state) {
     free_float_matrix(original);
     free_float_matrix(copy);
 }
+// -------------------------------------------------------------------------------- 
+
+void test_det_identity_3x3(void **state) {
+    (void) state;
+    matrix_f* mat = create_float_dense_matrix(3, 3);
+    insert_float_dense_matrix(mat, 0, 0, 1.0f);
+    insert_float_dense_matrix(mat, 1, 1, 1.0f);
+    insert_float_dense_matrix(mat, 2, 2, 1.0f);
+
+    float det = float_dense_matrix_det(mat);
+    assert_float_equal(det, 1.0f, 1e-6f);
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_det_singular_2x2(void **state) {
+    (void) state;
+    matrix_f* mat = create_float_dense_matrix(2, 2);
+    insert_float_dense_matrix(mat, 0, 0, 2.0f);
+    insert_float_dense_matrix(mat, 0, 1, 4.0f);
+    insert_float_dense_matrix(mat, 1, 0, 1.0f);
+    insert_float_dense_matrix(mat, 1, 1, 2.0f);
+
+    float det = float_dense_matrix_det(mat);
+    assert_float_equal(det, 0.0f, 1e-6f);
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_det_known_2x2(void **state) {
+    (void) state;
+    matrix_f* mat = create_float_dense_matrix(2, 2);
+    insert_float_dense_matrix(mat, 0, 0, 4.0f);
+    insert_float_dense_matrix(mat, 0, 1, 6.0f);
+    insert_float_dense_matrix(mat, 1, 0, 3.0f);
+    insert_float_dense_matrix(mat, 1, 1, 8.0f);
+
+    float det = float_dense_matrix_det(mat);
+    assert_float_equal(det, 14.0f, 1e-6f);
+    free_float_matrix(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_det_known_3x3(void **state) {
+    (void) state;
+    matrix_f* mat = create_float_dense_matrix(3, 3);
+    insert_float_dense_matrix(mat, 0, 0, 6.0f);
+    insert_float_dense_matrix(mat, 0, 1, 1.0f);
+    insert_float_dense_matrix(mat, 0, 2, 1.0f);
+    insert_float_dense_matrix(mat, 1, 0, 4.0f);
+    insert_float_dense_matrix(mat, 1, 1, -2.0f);
+    insert_float_dense_matrix(mat, 1, 2, 5.0f);
+    insert_float_dense_matrix(mat, 2, 0, 2.0f);
+    insert_float_dense_matrix(mat, 2, 1, 8.0f);
+    insert_float_dense_matrix(mat, 2, 2, 7.0f);
+
+    float det = float_dense_matrix_det(mat);
+    assert_float_equal(det, -306.0f, 1e-3f);
+    free_float_matrix(mat);
+}
 // ================================================================================ 
 // ================================================================================ 
 // eof

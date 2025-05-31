@@ -2728,7 +2728,7 @@ bool insert_float_matrix(matrix_f** pmat, size_t row, size_t col, float value,
 }
 // -------------------------------------------------------------------------------- 
 
-bool update_matrix(matrix_f* mat, size_t row, size_t col, float value) {
+bool update_float_matrix(matrix_f* mat, size_t row, size_t col, float value) {
     errno = 0;
     if (!mat) {
         errno = EINVAL;
@@ -3895,6 +3895,85 @@ matrix_f* copy_float_matrix(const matrix_f* mat) {
             errno = EINVAL;
             return false;
     }
+}
+// -------------------------------------------------------------------------------- 
+
+float float_dense_matrix_det(const matrix_f* mat) {
+    errno = 0;
+
+    if (!mat || mat->type != DENSE_MATRIX || mat->rows != mat->cols) {
+        errno = EINVAL;
+        return NAN;
+    }
+
+    size_t n = mat->rows;
+    float* original = mat->storage.dense.data;
+
+    float* temp = malloc(n * n * sizeof(float));
+    if (!temp) {
+        errno = ENOMEM;
+        return NAN;
+    }
+
+    memcpy(temp, original, n * n * sizeof(float));
+    float det = 1.0f;
+
+    for (size_t i = 0; i < n; ++i) {
+        // Pivot selection
+        size_t pivot = i;
+        float max_val = fabsf(temp[i * n + i]);
+        for (size_t j = i + 1; j < n; ++j) {
+            float val = fabsf(temp[j * n + i]);
+            if (val > max_val) {
+                max_val = val;
+                pivot = j;
+            }
+        }
+
+        if (max_val < 1e-8f) {
+            free(temp);
+            return 0.0f; // Singular matrix
+        }
+
+        if (pivot != i) {
+            for (size_t k = 0; k < n; ++k) {
+                float tmp = temp[i * n + k];
+                temp[i * n + k] = temp[pivot * n + k];
+                temp[pivot * n + k] = tmp;
+            }
+            det *= -1.0f;
+        }
+
+        float pivot_val = temp[i * n + i];
+        det *= pivot_val;
+
+        for (size_t j = i + 1; j < n; ++j) {
+            float factor = temp[j * n + i] / pivot_val;
+
+#if defined(__AVX__)
+            size_t k = i;
+            for (; k + 8 <= n; k += 8) {
+                __m256 row_i = _mm256_loadu_ps(&temp[i * n + k]);
+                __m256 row_j = _mm256_loadu_ps(&temp[j * n + k]);
+                __m256 scaled = _mm256_mul_ps(row_i, _mm256_set1_ps(factor));
+                __m256 result = _mm256_sub_ps(row_j, scaled);
+                _mm256_storeu_ps(&temp[j * n + k], result);
+            }
+
+            // Handle tail
+            for (; k < n; ++k) {
+                temp[j * n + k] -= factor * temp[i * n + k];
+            }
+#else
+            for (size_t k = i; k < n; ++k) {
+                temp[j * n + k] -= factor * temp[i * n + k];
+            }
+#endif
+        }
+    }
+
+    free(temp);
+    return det;
 }
 // ================================================================================ 
 // ================================================================================ 

@@ -827,6 +827,7 @@ string_v* get_keys_floatv_dict(const dict_fv* dict);
 // ================================================================================ 
 // ================================================================================ 
 
+#ifndef MATRIX_ENUM
 /**
  * @enum MatrixStorageType
  * @brief Enum representing the storage format of a matrix.
@@ -838,6 +839,7 @@ typedef enum {
     SPARSE_COO_MATRIX,  // Coordinate list format
     SPARSE_CSR_MATRIX   // Compressed sparse row format
 } MatrixStorageType;
+#endif /* MATRIX_ENUM */
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1534,6 +1536,22 @@ matrix_f* copy_float_csr_matrix(const matrix_f* mat);
  * @retval NULL if memory allocation fails during copying (sets errno to ENOMEM).
  */
 matrix_f* copy_float_matrix(const matrix_f* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Computes the determinant of a dense float matrix.
+ *
+ * This function calculates the determinant of a matrix stored in dense format
+ * using Gaussian elimination with partial pivoting. The input matrix must be
+ * square and of type `DENSE_MATRIX`. The original matrix is not modified.
+ *
+ * @param mat Pointer to the dense matrix (`matrix_f`) structure.
+ * @return The determinant as a float. If an error occurs (e.g., invalid input
+ *         or singular matrix), the function returns 0.0f and sets `errno`:
+ *         - EINVAL if the input is NULL or not a square dense matrix
+ *         - ERANGE if the matrix is singular
+ */
+float float_dense_matrix_det(const matrix_f* mat);
 // ================================================================================ 
 // ================================================================================ 
 // GENERIC MACROS

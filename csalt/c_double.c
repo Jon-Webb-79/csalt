@@ -27,6 +27,17 @@ static const size_t VEC_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
 static const size_t VEC_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
 static const size_t hashSize = 16;  //  Size fo hash map init functions
 static const uint32_t HASH_SEED = 0x45d9f3b;
+
+static const float SPARSE_THRESHOLD = 0.15;  // Convert to sparse if < 15% filled
+static const float DENSE_THRESHOLD = 0.30;   // Convert to dense if > 30% filled
+static const size_t MIN_SPARSE_SIZE = 1000;  // Below this many elements, just use dense
+static const size_t INITIAL_COO_CAPACITY = 16;
+
+static const size_t MAX_DENSE_ELEMENTS = 100000;
+static const size_t COO_TO_CSR_TRIGGER = 10000;
+
+static const float CSR_COMPACT_THRESHOLD = 0.25f;
+static const size_t CSR_TOMBSTONE_COL = SIZE_MAX;
 // ================================================================================
 // ================================================================================ 
 
@@ -2018,6 +2029,1855 @@ string_v* get_keys_doublev_dict(const dict_dv* dict) {
     }
 
     return vec;
+}
+// ================================================================================ 
+// ================================================================================ 
+
+matrix_d* create_double_dense_matrix(size_t rows, size_t cols) {
+    errno = 0;
+
+    matrix_d* mat = malloc(sizeof(matrix_d));
+    if (!mat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    double* data_ptr = calloc(rows * cols, sizeof(double));
+    if (!data_ptr) {
+        errno = ENOMEM;
+        free(mat);
+        return NULL;
+    }
+
+    uint8_t* init_ptr = calloc(rows * cols, sizeof(uint8_t));
+    if (!init_ptr) {
+        errno = ENOMEM;
+        free(data_ptr);
+        free(mat);
+        return NULL;
+    }
+
+    mat->type = DENSE_MATRIX;
+    mat->storage.dense.data = data_ptr;
+    mat->storage.dense.init = init_ptr;
+    mat->rows = rows;
+    mat->cols = cols;
+    mat->count = 0;
+
+    return mat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_d* create_double_coo_matrix(size_t rows, size_t cols) {
+    errno = 0;
+
+    matrix_d* mat = malloc(sizeof(matrix_d));
+    if (!mat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t* row_indices = malloc(INITIAL_COO_CAPACITY * sizeof(size_t));
+    size_t* col_indices = malloc(INITIAL_COO_CAPACITY * sizeof(size_t));
+    double* values = malloc(INITIAL_COO_CAPACITY * sizeof(double));
+
+    if (!row_indices || !col_indices || !values) {
+        errno = ENOMEM;
+        free(row_indices);
+        free(col_indices);
+        free(values);
+        free(mat);
+        return NULL;
+    }
+
+    mat->type = SPARSE_COO_MATRIX;
+    mat->storage.coo.rows = row_indices;
+    mat->storage.coo.cols = col_indices;
+    mat->storage.coo.values = values;
+    mat->storage.coo.capacity = INITIAL_COO_CAPACITY;
+
+    mat->rows = rows;
+    mat->cols = cols;
+    mat->count = 0;
+
+    return mat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_d* create_double_csr_matrix(size_t rows, size_t cols, size_t nnz) {
+    errno = 0;
+
+    matrix_d* mat = malloc(sizeof(matrix_d));
+    if (!mat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t* row_ptrs = calloc(rows + 1, sizeof(size_t));
+    size_t* col_indices = malloc(nnz * sizeof(size_t));
+    double* values = malloc(nnz * sizeof(double));
+
+    if (!row_ptrs || !col_indices || !values) {
+        errno = ENOMEM;
+        free(row_ptrs);
+        free(col_indices);
+        free(values);
+        free(mat);
+        return NULL;
+    }
+
+    mat->type = SPARSE_CSR_MATRIX;
+    mat->storage.csr.row_ptrs = row_ptrs;
+    mat->storage.csr.col_indices = col_indices;
+    mat->storage.csr.values = values;
+
+    mat->rows = rows;
+    mat->cols = cols;
+    mat->count = nnz;
+
+    return mat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_d* create_double_matrix(size_t rows, size_t cols, size_t estimated_nnz) {
+    errno = 0;
+
+    size_t total = rows * cols;
+
+    if (total < MIN_SPARSE_SIZE) {
+        return create_double_dense_matrix(rows, cols);
+    }
+
+    double estimated_density = (double)estimated_nnz / total;
+
+    if (estimated_density < DENSE_THRESHOLD) {
+        // Very sparse → Start with COO (can convert to CSR later)
+        return create_double_coo_matrix(rows, cols);
+    } else {
+        // Semi-sparse or dense enough → Start dense
+        return create_double_dense_matrix(rows, cols);
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void free_double_matrix(matrix_d* mat) {
+    if (!mat) return;
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            free_double_dense_matrix(mat);
+            break;
+
+        case SPARSE_CSR_MATRIX:
+            free_double_csr_matrix(mat);
+            break;
+
+        case SPARSE_COO_MATRIX:
+            free_double_coo_matrix(mat);
+            break;
+
+        default:
+            // Unknown or uninitialized type
+            break;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void _free_double_matrix(matrix_d** mat) {
+    if (mat && *mat) {
+        free_double_matrix(*mat);
+        *mat = NULL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void free_double_dense_matrix(matrix_d* mat) {
+    if (!mat || mat->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return;
+    }
+    if (mat->storage.dense.data) free(mat->storage.dense.data);
+    if (mat->storage.dense.init) free(mat->storage.dense.init);
+    mat->type = 0;
+    mat->rows = 0;
+    mat->cols = 0;
+    mat->count = 0;
+    // Finally free the structure itself
+    free(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+void free_double_csr_matrix(matrix_d* mat) {
+    errno = 0;
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) {
+        errno = EINVAL;
+        return;
+    }
+    if (mat->storage.csr.row_ptrs) free(mat->storage.csr.row_ptrs);
+    if (mat->storage.csr.col_indices) free(mat->storage.csr.col_indices);
+    if (mat->storage.csr.values) free(mat->storage.csr.values);
+    mat->type = 0;
+    mat->rows = 0;
+    mat->cols = 0;
+    mat->count = 0;
+    // Finally free the structure itself
+    free(mat);
+}
+// --------------------------------------------------------------------------------
+
+void free_double_coo_matrix(matrix_d* mat) {
+    errno = 0;
+    if (!mat || mat->type != SPARSE_COO_MATRIX) {
+        errno = EINVAL;
+        return;
+    }
+    if (mat->storage.coo.rows)   free(mat->storage.coo.rows);
+    if (mat->storage.coo.cols)   free(mat->storage.coo.cols);
+    if (mat->storage.coo.values) free(mat->storage.coo.values); 
+    mat->type = 0;
+    mat->rows = 0;
+    mat->cols = 0;
+    mat->count = 0;
+    // Finally free the structure itself
+    free(mat);
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_double_element_initialized(const matrix_d* mat, size_t row, size_t col) {
+    if (!mat) {
+        errno = EINVAL;
+        return false;
+    }
+
+    // Bounds checking
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return false;
+    }
+
+    if (mat->count == 0)
+        return false;
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            if (!mat->storage.dense.init) {
+                errno = EINVAL;
+                return false;
+            }
+            return mat->storage.dense.init[row * mat->cols + col] != 0;
+
+        case SPARSE_COO_MATRIX: {
+            for (size_t i = 0; i < mat->count; ++i) {
+                if (mat->storage.coo.rows[i] == row &&
+                    mat->storage.coo.cols[i] == col) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        case SPARSE_CSR_MATRIX: {
+            size_t row_start = mat->storage.csr.row_ptrs[row];
+            size_t row_end = mat->storage.csr.row_ptrs[row + 1];
+            for (size_t i = row_start; i < row_end; ++i) {
+                if (mat->storage.csr.col_indices[i] == col) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        default:
+            errno = EINVAL;
+            return false;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+static void set_element_initialized(matrix_d* mat, size_t row, size_t col, bool initialized) {
+    // Parameter validation
+    if (!mat || !mat->storage.dense.init) {
+        errno = EINVAL;
+        return;
+    }
+    
+    // Bounds checking
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return;
+    }
+    
+    // Get current state
+    bool was_initialized = mat->storage.dense.init[row * mat->cols + col] != 0;
+    
+    // Update initialization status
+    mat->storage.dense.init[row * mat->cols + col] = initialized ? 1 : 0;
+    
+    // Update count if state changed
+    if (initialized && !was_initialized) {
+        mat->count++;
+    } else if (!initialized && was_initialized) {
+        mat->count--;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+static bool set_dense_matrix(matrix_d* mat, size_t row, size_t col, double value, bool allow_updates) {
+    // Reset errno
+    errno = 0;
+    if (!mat || mat->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+    
+    // Parameter validation
+    if (!mat->storage.dense.data || !mat->storage.dense.init) {
+        errno = EINVAL;
+        return false;
+    }
+    
+    // Bounds checking
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return false;
+    }
+    
+    // Check if already initialized
+    bool initialized = is_double_element_initialized(mat, row, col);
+    
+    // Handle initialization rules
+    if (initialized && !allow_updates) {
+        errno = EEXIST;  // Element already exists
+        return false;
+    }
+    
+    // Set the value
+    mat->storage.dense.data[row * mat->cols + col] = value;
+    
+    // Update initialization status if needed
+    if (!initialized) {
+        set_element_initialized(mat, row, col, true);
+    }
+    
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool insert_double_dense_matrix(matrix_d* mat, size_t row, size_t col, double value) {
+    return set_dense_matrix(mat, row, col, value, false);
+}
+// -------------------------------------------------------------------------------- 
+
+bool update_double_dense_matrix(matrix_d* mat, size_t row, size_t col, double value) {
+    return set_dense_matrix(mat, row, col, value, true);
+}
+// -------------------------------------------------------------------------------- 
+
+static int compare_row_col(size_t r1, size_t c1, size_t r2, size_t c2) {
+    if (r1 < r2) return -1;
+    if (r1 > r2) return 1;
+    if (c1 < c2) return -1;
+    if (c1 > c2) return 1;
+    return 0;
+}
+
+static bool set_coo_matrix(matrix_d* mat, size_t row, size_t col, double value, bool allow_updates) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_COO_MATRIX || row >= mat->rows || col >= mat->cols) {
+        errno = EINVAL;
+        return false;
+    }
+
+    // Binary search for insert position
+    size_t left = 0, right = mat->count;
+    while (left < right) {
+        size_t mid = (left + right) / 2;
+        int cmp = compare_row_col(mat->storage.coo.rows[mid], mat->storage.coo.cols[mid], row, col);
+        if (cmp < 0)
+            left = mid + 1;
+        else
+            right = mid;
+    }
+
+    // Check for existing value
+    if (left < mat->count &&
+        mat->storage.coo.rows[left] == row &&
+        mat->storage.coo.cols[left] == col) {
+        if (!allow_updates) {
+            errno = EEXIST;
+            return false;
+        }
+        mat->storage.coo.values[left] = value;
+        return true;
+    }
+
+    // Reallocate if needed
+    if (mat->count >= mat->storage.coo.capacity) {
+        size_t new_capacity = mat->storage.coo.capacity == 0 ? 1 : mat->storage.coo.capacity;
+        new_capacity = (new_capacity < VEC_THRESHOLD) ? new_capacity * 2 : new_capacity + VEC_FIXED_AMOUNT;
+
+        size_t* new_rows = realloc(mat->storage.coo.rows, new_capacity * sizeof(size_t));
+        size_t* new_cols = realloc(mat->storage.coo.cols, new_capacity * sizeof(size_t));
+        double*  new_vals = realloc(mat->storage.coo.values, new_capacity * sizeof(double));
+        if (!new_rows || !new_cols || !new_vals) {
+            errno = ENOMEM;
+            return false;
+        }
+        mat->storage.coo.rows = new_rows;
+        mat->storage.coo.cols = new_cols;
+        mat->storage.coo.values = new_vals;
+        mat->storage.coo.capacity = new_capacity;
+    }
+
+    // Shift data to make space
+    memmove(&mat->storage.coo.rows[left + 1], &mat->storage.coo.rows[left], (mat->count - left) * sizeof(size_t));
+    memmove(&mat->storage.coo.cols[left + 1], &mat->storage.coo.cols[left], (mat->count - left) * sizeof(size_t));
+    memmove(&mat->storage.coo.values[left + 1], &mat->storage.coo.values[left], (mat->count - left) * sizeof(double));
+
+    // Insert new entry
+    mat->storage.coo.rows[left] = row;
+    mat->storage.coo.cols[left] = col;
+    mat->storage.coo.values[left] = value;
+    mat->count++;
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool insert_double_coo_matrix(matrix_d* mat, size_t row, size_t col, double value) {
+    return set_coo_matrix(mat, row, col, value, false);
+}
+// -------------------------------------------------------------------------------- 
+
+bool update_double_coo_matrix(matrix_d* mat, size_t row, size_t col, double value) {
+    return set_coo_matrix(mat, row, col, value, true);
+}
+// -------------------------------------------------------------------------------- 
+
+static int compare_size_t(const void* a, const void* b) {
+    size_t lhs = *(const size_t*)a;
+    size_t rhs = *(const size_t*)b;
+    if (lhs < rhs) return -1;
+    if (lhs > rhs) return 1;
+    return 0;
+}
+// -------------------------------------------------------------------------------- 
+
+static bool set_csr_matrix(matrix_d* mat, size_t row, size_t col, double value, bool allow_updates) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (!mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return false;
+    }
+
+    size_t start = mat->storage.csr.row_ptrs[row];
+    size_t end   = mat->storage.csr.row_ptrs[row + 1];
+    size_t count = end - start;
+
+    size_t* found = bsearch(&col,
+                            &mat->storage.csr.col_indices[start],
+                            count,
+                            sizeof(size_t),
+                            compare_size_t);
+
+    if (found) {
+        if (!allow_updates) {
+            errno = EEXIST;
+            return false;
+        }
+
+        size_t index = found - mat->storage.csr.col_indices;
+        mat->storage.csr.values[index] = value;
+        return true;
+    }
+
+    errno = allow_updates ? ENOENT : EEXIST;
+    return false;
+}
+// -------------------------------------------------------------------------------- 
+
+bool insert_double_csr_matrix(matrix_d* mat, size_t row, size_t col, double value) {
+    return set_csr_matrix(mat, row, col, value, false);
+}
+// -------------------------------------------------------------------------------- 
+
+bool update_double_csr_matrix(matrix_d* mat, size_t row, size_t col, double value) {
+    return set_csr_matrix(mat, row, col, value, true);
+}
+// -------------------------------------------------------------------------------- 
+
+static matrix_d* convert_double_dense_to_coo(const matrix_d* dense_mat) {
+    errno = 0;
+
+    if (!dense_mat || dense_mat->type != DENSE_MATRIX ||
+        !dense_mat->storage.dense.data || !dense_mat->storage.dense.init) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t rows = dense_mat->rows;
+    size_t cols = dense_mat->cols;
+    size_t count = dense_mat->count;
+
+    matrix_d* coo_mat = malloc(sizeof(matrix_d));
+    if (!coo_mat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t* rows_arr = malloc(count * sizeof(size_t));
+    size_t* cols_arr = malloc(count * sizeof(size_t));
+    double* values_arr = malloc(count * sizeof(double));
+    if (!rows_arr || !cols_arr || !values_arr) {
+        free(rows_arr); free(cols_arr); free(values_arr); free(coo_mat);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t k = 0;
+    for (size_t i = 0; i < rows; ++i) {
+        for (size_t j = 0; j < cols; ++j) {
+            size_t idx = i * cols + j;
+            if (dense_mat->storage.dense.init[idx]) {
+                rows_arr[k] = i;
+                cols_arr[k] = j;
+                values_arr[k] = dense_mat->storage.dense.data[idx];
+                ++k;
+            }
+        }
+    }
+
+    coo_mat->type = SPARSE_COO_MATRIX;
+    coo_mat->rows = rows;
+    coo_mat->cols = cols;
+    coo_mat->count = count;
+    coo_mat->storage.coo.rows = rows_arr;
+    coo_mat->storage.coo.cols = cols_arr;
+    coo_mat->storage.coo.values = values_arr;
+    coo_mat->storage.coo.capacity = count;
+
+    return coo_mat;
+}
+// -------------------------------------------------------------------------------- 
+
+static int compare_coo_entries(const void* a, const void* b) {
+    const size_t* ia = (const size_t*)a;
+    const size_t* ib = (const size_t*)b;
+    // First sort by row, then column
+    if (ia[0] != ib[0]) return (ia[0] < ib[0]) ? -1 : 1;
+    return (ia[1] < ib[1]) ? -1 : (ia[1] > ib[1]);
+}
+// -------------------------------------------------------------------------------- 
+
+static matrix_d* convert_double_coo_to_csr(const matrix_d* coo_mat) {
+    errno = 0;
+
+    if (!coo_mat || coo_mat->type != SPARSE_COO_MATRIX ||
+        !coo_mat->storage.coo.rows || !coo_mat->storage.coo.cols || !coo_mat->storage.coo.values) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t nnz = coo_mat->count;
+    size_t rows = coo_mat->rows;
+    size_t cols = coo_mat->cols;
+
+    // Allocate CSR structures
+    size_t* row_ptrs = calloc(rows + 1, sizeof(size_t));
+    size_t* col_indices = malloc(nnz * sizeof(size_t));
+    double* values = malloc(nnz * sizeof(double));
+    if (!row_ptrs || !col_indices || !values) {
+        free(row_ptrs); free(col_indices); free(values);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Create sortable array of (row, col, value)
+    typedef struct {
+        size_t row, col;
+        double value;
+    } entry_t;
+
+    entry_t* entries = malloc(nnz * sizeof(entry_t));
+    if (!entries) {
+        free(row_ptrs); free(col_indices); free(values);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    for (size_t i = 0; i < nnz; ++i) {
+        entries[i].row = coo_mat->storage.coo.rows[i];
+        entries[i].col = coo_mat->storage.coo.cols[i];
+        entries[i].value = coo_mat->storage.coo.values[i];
+    }
+
+    // Sort by row, then col
+    qsort(entries, nnz, sizeof(entry_t), (int (*)(const void*, const void*))compare_coo_entries);
+
+    // Fill CSR
+    for (size_t i = 0; i < nnz; ++i) {
+        row_ptrs[entries[i].row + 1]++;
+        col_indices[i] = entries[i].col;
+        values[i] = entries[i].value;
+    }
+
+    // Convert row counts to prefix sum
+    for (size_t i = 1; i <= rows; ++i) {
+        row_ptrs[i] += row_ptrs[i - 1];
+    }
+
+    matrix_d* csr_mat = malloc(sizeof(matrix_d));
+    if (!csr_mat) {
+        free(row_ptrs); free(col_indices); free(values); free(entries);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    csr_mat->type = SPARSE_CSR_MATRIX;
+    csr_mat->rows = rows;
+    csr_mat->cols = cols;
+    csr_mat->count = nnz;
+    csr_mat->storage.csr.row_ptrs = row_ptrs;
+    csr_mat->storage.csr.col_indices = col_indices;
+    csr_mat->storage.csr.values = values;
+
+    free(entries);
+    return csr_mat;
+}
+// -------------------------------------------------------------------------------- 
+void maybe_convert_double_matrix(matrix_d** pmat, bool convert_to_csr) {
+    matrix_d* mat = *pmat;
+
+    size_t total = mat->rows * mat->cols;
+
+    // If dense and large or sparse → convert to COO
+    if (mat->type == DENSE_MATRIX) {
+        double density = (double)mat->count / total;
+        if (total > MAX_DENSE_ELEMENTS && density < SPARSE_THRESHOLD) {
+            matrix_d* new_mat = convert_double_dense_to_coo(mat);
+            if (new_mat) {
+                free_double_matrix(mat);
+                *pmat = new_mat;
+            }
+        }
+    }
+    // If COO and too large → convert to CSR
+    else if (mat->type == SPARSE_COO_MATRIX && convert_to_csr) {
+        if (mat->count >= COO_TO_CSR_TRIGGER) {
+            matrix_d* new_mat = convert_double_coo_to_csr(mat);
+            if (new_mat) {
+                free_double_matrix(mat);
+                *pmat = new_mat;
+            }
+        }
+    }
+    // CSR doesn't auto-convert
+}
+// -------------------------------------------------------------------------------- 
+
+bool insert_double_matrix(matrix_d** pmat, size_t row, size_t col, double value,
+                         bool convert_to_csr) {
+    if (!pmat || !*pmat) {
+        errno = EINVAL;
+        return false;
+    }
+
+    maybe_convert_double_matrix(pmat, convert_to_csr);  // Can replace *pmat with a new matrix
+    matrix_d* mat = *pmat;
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return insert_double_dense_matrix(mat, row, col, value);
+        case SPARSE_COO_MATRIX:
+            return insert_double_coo_matrix(mat, row, col, value);
+        case SPARSE_CSR_MATRIX:
+            return insert_double_csr_matrix(mat, row, col, value);
+        default:
+            errno = EINVAL;
+            return false;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+bool update_double_matrix(matrix_d* mat, size_t row, size_t col, double value) {
+    errno = 0;
+    if (!mat) {
+        errno = EINVAL;
+        return false;
+    }
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return update_double_dense_matrix(mat, row, col, value);
+        case SPARSE_COO_MATRIX:
+            return update_double_coo_matrix(mat, row, col, value);
+        case SPARSE_CSR_MATRIX:
+            return update_double_csr_matrix(mat, row, col, value);
+        default:
+            errno = EINVAL;
+            return false;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+double get_double_dense_matrix(const matrix_d* mat, size_t row, size_t col) {
+    errno = 0;
+    if (!mat || !mat->storage.dense.data || !mat->storage.dense.init || mat->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    if (!is_double_element_initialized(mat, row, col)) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    return mat->storage.dense.data[row * mat->cols + col];
+}
+// -------------------------------------------------------------------------------- 
+
+double get_double_coo_matrix(const matrix_d* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_COO_MATRIX ||
+        !mat->storage.coo.rows || !mat->storage.coo.cols || !mat->storage.coo.values) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    for (size_t i = 0; i < mat->count; ++i) {
+        if (mat->storage.coo.rows[i] == row &&
+            mat->storage.coo.cols[i] == col) {
+            return mat->storage.coo.values[i];
+        }
+    }
+
+    // Element not found
+    errno = ENOENT;
+    return FLT_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+double get_double_csr_matrix(const matrix_d* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_CSR_MATRIX ||
+        !mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    size_t start = mat->storage.csr.row_ptrs[row];
+    size_t end   = mat->storage.csr.row_ptrs[row + 1];
+
+    for (size_t i = start; i < end; ++i) {
+        if (mat->storage.csr.col_indices[i] == col) {
+            return mat->storage.csr.values[i];
+        }
+    }
+
+    errno = ENOENT;
+    return FLT_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+double get_double_matrix(const matrix_d* mat, size_t row, size_t col) {
+    errno = 0;
+    if (!mat) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+    if (mat->type == DENSE_MATRIX) return get_double_dense_matrix(mat, row, col);
+    else if (mat->type == SPARSE_COO_MATRIX) return get_double_coo_matrix(mat, row, col);
+    else if (mat->type == SPARSE_CSR_MATRIX) return get_double_csr_matrix(mat, row, col);
+    else {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+double pop_double_dense_matrix(matrix_d* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != DENSE_MATRIX ||
+        !mat->storage.dense.data || !mat->storage.dense.init) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    if (!is_double_element_initialized(mat, row, col)) {
+        errno = ENOENT;
+        return FLT_MAX;
+    }
+
+    size_t index = row * mat->cols + col;
+    double value = mat->storage.dense.data[index];
+
+    // Mark as uninitialized
+    set_element_initialized(mat, row, col, false);
+    mat->storage.dense.data[index] = 0.0f;  // Optional
+
+    return value;
+}
+// -------------------------------------------------------------------------------- 
+
+double pop_double_coo_matrix(matrix_d* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_COO_MATRIX ||
+        !mat->storage.coo.rows || !mat->storage.coo.cols || !mat->storage.coo.values) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    size_t left = 0, right = mat->count;
+    while (left < right) {
+        size_t mid = (left + right) / 2;
+        size_t mid_row = mat->storage.coo.rows[mid];
+        size_t mid_col = mat->storage.coo.cols[mid];
+
+        if (mid_row < row || (mid_row == row && mid_col < col)) {
+            left = mid + 1;
+        } else {
+            right = mid;
+        }
+    }
+
+    if (left < mat->count &&
+        mat->storage.coo.rows[left] == row &&
+        mat->storage.coo.cols[left] == col) {
+
+        double value = mat->storage.coo.values[left];
+        size_t elements_to_move = mat->count - left - 1;
+
+        if (elements_to_move > 0) {
+            memmove(&mat->storage.coo.rows[left],
+                    &mat->storage.coo.rows[left + 1],
+                    elements_to_move * sizeof(size_t));
+
+            memmove(&mat->storage.coo.cols[left],
+                    &mat->storage.coo.cols[left + 1],
+                    elements_to_move * sizeof(size_t));
+
+            memmove(&mat->storage.coo.values[left],
+                    &mat->storage.coo.values[left + 1],
+                    elements_to_move * sizeof(double));
+        }
+
+        mat->count--;
+        return value;
+    }
+
+    errno = ENOENT;
+    return FLT_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static void maybe_compact_csr(matrix_d* mat, size_t original_nnz) {
+    if (!mat || mat->type != SPARSE_CSR_MATRIX || original_nnz == 0) return;
+
+    double tombstone_ratio = (double)(original_nnz - mat->count) / original_nnz;
+
+    if (tombstone_ratio > CSR_COMPACT_THRESHOLD) {
+        compact_double_csr_matrix(mat);
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+double pop_double_csr_matrix(matrix_d* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_CSR_MATRIX ||
+        !mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    size_t start = mat->storage.csr.row_ptrs[row];
+    size_t end   = mat->storage.csr.row_ptrs[row + 1];
+    size_t count = end - start;
+    size_t* found = bsearch(&col,
+                            &mat->storage.csr.col_indices[start],
+                            count,
+                            sizeof(size_t),
+                            compare_size_t);
+
+    if (!found) {
+        errno = ENOENT;
+        return FLT_MAX;
+    }
+
+    size_t index = found - mat->storage.csr.col_indices;
+    double value = mat->storage.csr.values[index];
+
+    // Mark entry as tombstone
+    mat->storage.csr.col_indices[index] = CSR_TOMBSTONE_COL;
+    mat->storage.csr.values[index] = 0.0f;
+    size_t original_nnz = mat->count;
+    mat->count--;
+
+    maybe_compact_csr(mat, original_nnz);
+
+    return value;
+}
+// -------------------------------------------------------------------------------- 
+
+void compact_double_csr_matrix(matrix_d* mat) {
+    errno = 0;
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) return;
+
+    size_t nnz = mat->count;
+    // size_t new_capacity = nnz;
+    size_t* new_col_indices = malloc(nnz * sizeof(size_t));
+    double* new_values = malloc(nnz * sizeof(double));
+    size_t* new_row_ptrs = calloc(mat->rows + 1, sizeof(size_t));
+
+    if (!new_col_indices || !new_values || !new_row_ptrs) {
+        free(new_col_indices); free(new_values); free(new_row_ptrs);
+        errno = ENOMEM;
+        return;
+    }
+
+    size_t index = 0;
+    for (size_t row = 0; row < mat->rows; ++row) {
+        size_t start = mat->storage.csr.row_ptrs[row];
+        size_t end   = mat->storage.csr.row_ptrs[row + 1];
+
+        new_row_ptrs[row] = index;
+
+        for (size_t i = start; i < end; ++i) {
+            if (mat->storage.csr.col_indices[i] != CSR_TOMBSTONE_COL) {
+                new_col_indices[index] = mat->storage.csr.col_indices[i];
+                new_values[index] = mat->storage.csr.values[i];
+                ++index;
+            }
+        }
+    }
+
+    new_row_ptrs[mat->rows] = index;
+
+    // Replace old data
+    free(mat->storage.csr.col_indices);
+    free(mat->storage.csr.values);
+    free(mat->storage.csr.row_ptrs);
+    mat->storage.csr.col_indices = new_col_indices;
+    mat->storage.csr.values = new_values;
+    mat->storage.csr.row_ptrs = new_row_ptrs;
+}
+// -------------------------------------------------------------------------------- 
+
+static matrix_d* convert_double_csr_to_coo(const matrix_d* csr_mat) {
+    errno = 0;
+
+    if (!csr_mat || csr_mat->type != SPARSE_CSR_MATRIX ||
+        !csr_mat->storage.csr.row_ptrs || !csr_mat->storage.csr.col_indices || !csr_mat->storage.csr.values) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t rows = csr_mat->rows;
+    size_t cols = csr_mat->cols;
+    size_t nnz  = csr_mat->count;
+
+    size_t* row_arr = malloc(nnz * sizeof(size_t));
+    size_t* col_arr = malloc(nnz * sizeof(size_t));
+    double* values   = malloc(nnz * sizeof(double));
+    if (!row_arr || !col_arr || !values) {
+        free(row_arr); free(col_arr); free(values);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t k = 0;
+    for (size_t i = 0; i < rows; ++i) {
+        size_t start = csr_mat->storage.csr.row_ptrs[i];
+        size_t end   = csr_mat->storage.csr.row_ptrs[i + 1];
+        for (size_t j = start; j < end; ++j) {
+            row_arr[k] = i;
+            col_arr[k] = csr_mat->storage.csr.col_indices[j];
+            values[k]  = csr_mat->storage.csr.values[j];
+            ++k;
+        }
+    }
+
+    matrix_d* coo_mat = malloc(sizeof(matrix_d));
+    if (!coo_mat) {
+        free(row_arr); free(col_arr); free(values);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    coo_mat->type = SPARSE_COO_MATRIX;
+    coo_mat->rows = rows;
+    coo_mat->cols = cols;
+    coo_mat->count = nnz;
+    coo_mat->storage.coo.rows = row_arr;
+    coo_mat->storage.coo.cols = col_arr;
+    coo_mat->storage.coo.values = values;
+    coo_mat->storage.coo.capacity = nnz;
+
+    return coo_mat;
+}
+// -------------------------------------------------------------------------------- 
+
+static matrix_d* convert_double_coo_to_dense(const matrix_d* coo_mat) {
+    errno = 0;
+
+    if (!coo_mat || coo_mat->type != SPARSE_COO_MATRIX ||
+        !coo_mat->storage.coo.rows || !coo_mat->storage.coo.cols || !coo_mat->storage.coo.values) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t rows = coo_mat->rows;
+    size_t cols = coo_mat->cols;
+    size_t nnz  = coo_mat->count;
+
+    double* data = calloc(rows * cols, sizeof(double));
+    uint8_t* init = calloc(rows * cols, sizeof(uint8_t));  // ← fixed type
+    if (!data || !init) {
+        free(data); free(init);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    for (size_t i = 0; i < nnz; ++i) {
+        size_t r = coo_mat->storage.coo.rows[i];
+        size_t c = coo_mat->storage.coo.cols[i];
+        double  v = coo_mat->storage.coo.values[i];
+        size_t idx = r * cols + c;
+        data[idx] = v;
+        init[idx] = 1;  // ← use 1 instead of `true`
+    }
+
+    matrix_d* dense_mat = malloc(sizeof(matrix_d));
+    if (!dense_mat) {
+        free(data); free(init);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    dense_mat->type = DENSE_MATRIX;
+    dense_mat->rows = rows;
+    dense_mat->cols = cols;
+    dense_mat->count = nnz;
+    dense_mat->storage.dense.data = data;
+    dense_mat->storage.dense.init = init;
+
+    return dense_mat;
+}
+// -------------------------------------------------------------------------------- 
+
+void convert_doubleMat_to_dense(matrix_d** pmat) {
+    errno = 0;
+    matrix_d* mat = *pmat;
+    if (!mat) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (mat->type == DENSE_MATRIX) return;
+
+    if (mat->type == SPARSE_COO_MATRIX) {
+        matrix_d* new_mat = convert_double_coo_to_dense(mat);
+        if (!new_mat) return;
+        free_double_matrix(mat);
+        *pmat = new_mat;
+    } else if (mat->type == SPARSE_CSR_MATRIX) {
+        matrix_d* coo_mat = convert_double_csr_to_coo(mat);
+        if (!coo_mat) return;
+        free_double_matrix(mat);
+        matrix_d* dense_mat = convert_double_coo_to_dense(coo_mat);
+        free_double_matrix(coo_mat);
+        if (!dense_mat) return;
+        *pmat = dense_mat;
+    } else {
+        errno = EINVAL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void convert_doubleMat_to_coo(matrix_d** pmat) {
+    errno = 0;
+    matrix_d* mat = *pmat;
+    if (!mat) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (mat->type == SPARSE_COO_MATRIX) return;
+
+    if (mat->type == DENSE_MATRIX) {
+        matrix_d* new_mat = convert_double_dense_to_coo(mat);
+        if (!new_mat) return;
+        free_double_matrix(mat);
+        *pmat = new_mat;
+    } else if (mat->type == SPARSE_CSR_MATRIX) {
+        matrix_d* new_mat = convert_double_csr_to_coo(mat);
+        if (!new_mat) return;
+        free_double_matrix(mat);
+        *pmat = new_mat;
+    } else {
+        errno = EINVAL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void convert_doubleMat_to_csr(matrix_d** pmat) {
+    errno = 0;
+    matrix_d* mat = *pmat;
+    if (!mat) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (mat->type == SPARSE_CSR_MATRIX) return;
+
+    if (mat->type == SPARSE_COO_MATRIX) {
+        matrix_d* new_mat = convert_double_coo_to_csr(mat);
+        if (!new_mat) return;
+        free_double_matrix(mat);
+        *pmat = new_mat;
+    } else if (mat->type == DENSE_MATRIX) {
+        matrix_d* coo_mat = convert_double_dense_to_coo(mat);
+        if (!coo_mat) return;
+        free_double_matrix(mat);
+        matrix_d* csr_mat = convert_double_coo_to_csr(coo_mat);
+        free_double_matrix(coo_mat);
+        if (!csr_mat) return;
+        *pmat = csr_mat;
+    } else {
+        errno = EINVAL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+static bool should_downgrade_double_matrix(const matrix_d* mat) {
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) return false;
+
+    size_t total = mat->rows * mat->cols;
+    if (total == 0) return false;
+
+    double density = (double)mat->count / total;
+    return density < CSR_COMPACT_THRESHOLD;
+}
+// -------------------------------------------------------------------------------- 
+
+static void maybe_downgrade_matrix_dormat(matrix_d** pmat) {
+    if (!pmat || !*pmat) return;
+    matrix_d* mat = *pmat;
+
+    // Step 1: Try CSR → COO downgrade
+    if (mat->type == SPARSE_CSR_MATRIX && should_downgrade_double_matrix(mat)) {
+        matrix_d* coo = convert_double_csr_to_coo(mat);
+        if (coo) {
+            free_double_matrix(mat);
+            mat = coo;
+            *pmat = mat;
+        }
+    }
+
+    // Step 2: Try COO → Dense downgrade
+    if (mat->type == SPARSE_COO_MATRIX) {
+        size_t total = mat->rows * mat->cols;
+        if (total < MIN_SPARSE_SIZE || ((double)mat->count / total) > DENSE_THRESHOLD) {
+            matrix_d* dense = convert_double_coo_to_dense(mat);
+            if (dense) {
+                free_double_matrix(mat);
+                *pmat = dense;
+            }
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+double pop_double_matrix(matrix_d** pmat, size_t row, size_t col) {
+    errno = 0;
+    if (!pmat || !*pmat) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    matrix_d* mat = *pmat;
+    double result = FLT_MAX;
+
+    if (mat->type == DENSE_MATRIX)
+        result = pop_double_dense_matrix(mat, row, col);
+    else if (mat->type == SPARSE_COO_MATRIX)
+        result = pop_double_coo_matrix(mat, row, col);
+    else if (mat->type == SPARSE_CSR_MATRIX)
+        result = pop_double_csr_matrix(mat, row, col);
+    else {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    // Try format downgrade (e.g., CSR → COO → DENSE)
+    maybe_downgrade_matrix_dormat(pmat);
+
+    return result;
+}
+// -------------------------------------------------------------------------------- 
+
+bool finalize_double_matrix(matrix_d** mat_ptr) {
+    errno = 0;
+    if (!mat_ptr || !*mat_ptr) {
+        errno = EINVAL;
+        return false;
+    }
+    maybe_convert_double_matrix(mat_ptr, true);  // allow_csr = true
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+MatrixStorageType get_double_matrix_type(matrix_d* mat) {
+    errno = 0;
+    if (!mat) {
+        errno = 0;
+        return 0;
+    }
+    return mat->type;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t get_double_matrix_rows(matrix_d* mat) {
+    errno = 0;
+    if (!mat) {
+        errno = 0;
+        return (size_t)-1;
+    }
+    return mat->rows;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t get_double_matrix_cols(matrix_d* mat) {
+    errno = 0;
+    if (!mat) {
+        errno = 0;
+        return (size_t)-1;
+    }
+    return mat->cols;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t get_double_matrix_element_count(matrix_d* mat) {
+    errno = 0;
+    if (!mat) {
+        errno = 0;
+        return (size_t)-1;
+    }
+    return mat->count;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_d* invert_double_dense_matrix(const matrix_d* mat) {
+    errno = 0;
+
+    if (!mat || mat->type != DENSE_MATRIX || mat->rows != mat->cols) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t n = mat->rows;
+    matrix_d* inverse = create_double_matrix(n, n, 0);
+    if (!inverse) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    double* a = malloc(n * n * sizeof(double));
+    if (!a) {
+        free_double_matrix(inverse);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Copy matrix and initialize identity
+    for (size_t i = 0; i < n * n; ++i) {
+        a[i] = mat->storage.dense.data[i];
+        inverse->storage.dense.data[i] = (i / n == i % n) ? 1.0f : 0.0f;
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+        size_t pivot = i;
+        double max = fabsf(a[i * n + i]);
+        for (size_t j = i + 1; j < n; ++j) {
+            double temp = fabsf(a[j * n + i]);
+            if (temp > max) {
+                max = temp;
+                pivot = j;
+            }
+        }
+
+        if (fabsf(a[pivot * n + i]) < 1e-8f) {
+            free(a);
+            free_double_matrix(inverse);
+            errno = ERANGE;
+            return NULL;
+        }
+
+        // Swap rows in A and inverse
+        if (pivot != i) {
+            for (size_t j = 0; j < n; ++j) {
+                double tmp = a[i * n + j];
+                a[i * n + j] = a[pivot * n + j];
+                a[pivot * n + j] = tmp;
+
+                tmp = inverse->storage.dense.data[i * n + j];
+                inverse->storage.dense.data[i * n + j] = inverse->storage.dense.data[pivot * n + j];
+                inverse->storage.dense.data[pivot * n + j] = tmp;
+            }
+        }
+
+        double pivot_val = a[i * n + i];
+
+#if defined(__AVX__)
+        __m256 vpivot = _mm256_set1_ps(pivot_val);
+        size_t j = 0;
+        for (; j + 8 <= n; j += 8) {
+            __m256 va = _mm256_loadu_ps(&a[i * n + j]);
+            __m256 vinv = _mm256_loadu_ps(&inverse->storage.dense.data[i * n + j]);
+            va = _mm256_div_ps(va, vpivot);
+            vinv = _mm256_div_ps(vinv, vpivot);
+            _mm256_storeu_ps(&a[i * n + j], va);
+            _mm256_storeu_ps(&inverse->storage.dense.data[i * n + j], vinv);
+        }
+        for (; j < n; ++j) {
+            a[i * n + j] /= pivot_val;
+            inverse->storage.dense.data[i * n + j] /= pivot_val;
+        }
+#else
+        for (size_t j = 0; j < n; ++j) {
+            a[i * n + j] /= pivot_val;
+            inverse->storage.dense.data[i * n + j] /= pivot_val;
+        }
+#endif
+
+        for (size_t k = 0; k < n; ++k) {
+            if (k == i) continue;
+            double factor = a[k * n + i];
+#if defined(__AVX__)
+            j = 0;
+            __m256 vfactor = _mm256_set1_ps(factor);
+            for (; j + 8 <= n; j += 8) {
+                __m256 vk = _mm256_loadu_ps(&a[k * n + j]);
+                __m256 vi = _mm256_loadu_ps(&a[i * n + j]);
+                vk = _mm256_sub_ps(vk, _mm256_mul_ps(vfactor, vi));
+                _mm256_storeu_ps(&a[k * n + j], vk);
+
+                __m256 vinvk = _mm256_loadu_ps(&inverse->storage.dense.data[k * n + j]);
+                __m256 vinvi = _mm256_loadu_ps(&inverse->storage.dense.data[i * n + j]);
+                vinvk = _mm256_sub_ps(vinvk, _mm256_mul_ps(vfactor, vinvi));
+                _mm256_storeu_ps(&inverse->storage.dense.data[k * n + j], vinvk);
+            }
+            for (; j < n; ++j) {
+                a[k * n + j] -= factor * a[i * n + j];
+                inverse->storage.dense.data[k * n + j] -= factor * inverse->storage.dense.data[i * n + j];
+            }
+#else
+            for (size_t j = 0; j < n; ++j) {
+                a[k * n + j] -= factor * a[i * n + j];
+                inverse->storage.dense.data[k * n + j] -= factor * inverse->storage.dense.data[i * n + j];
+            }
+#endif
+        }
+    }
+
+    free(a);
+    return inverse;
+}
+// -------------------------------------------------------------------------------- 
+
+bool transpose_double_dense_matrix(matrix_d** pmat) {
+    errno = 0;
+    if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_d* mat = *pmat;
+    size_t rows = mat->rows;
+    size_t cols = mat->cols;
+    double* data = mat->storage.dense.data;
+
+    // Case 1: Square matrix — transpose in place
+    if (rows == cols) {
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = i + 1; j < cols; ++j) {
+                size_t idx1 = i * cols + j;
+                size_t idx2 = j * cols + i;
+                double tmp = data[idx1];
+                data[idx1] = data[idx2];
+                data[idx2] = tmp;
+            }
+        }
+        return true;
+    }
+
+    // Case 2: Rectangular matrix — allocate new transposed matrix
+    matrix_d* transposed = create_double_dense_matrix(cols, rows);
+    if (!transposed) {
+        errno = ENOMEM;
+        return false;
+    }
+
+    //double* new_data = transposed->storage.dense.data;
+    for (size_t i = 0; i < get_double_matrix_rows(mat); ++i) {
+        for (size_t j = 0; j < get_double_matrix_cols(mat); ++j) {
+            double value = get_double_dense_matrix(mat, i, j);   // Access original at (i, j)
+            insert_double_dense_matrix(transposed, j, i, value); // Store transposed at (j, i)
+        }
+    }
+
+    free_double_matrix(mat);
+    *pmat = transposed;
+    return true;
+}
+
+// bool transpose_double_dense_matrix(matrix_d** pmat) {
+//     errno = 0;
+//     if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     matrix_d* mat = *pmat;
+//
+//     size_t rows = mat->rows;
+//     size_t cols = mat->cols;
+//     double* data = mat->storage.dense.data;
+//
+//     // Case 1: Square matrix — transpose in place
+//     if (rows == cols) {
+//         for (size_t i = 0; i < rows; ++i) {
+//             for (size_t j = i + 1; j < cols; ++j) {
+//                 double tmp = data[i * cols + j];
+//                 data[i * cols + j] = data[j * cols + i];
+//                 data[j * cols + i] = tmp;
+//             }
+//         }
+//         return true;
+//     }
+//
+//     // Case 2: Rectangular matrix — need to allocate new dense matrix
+//     matrix_d* transposed = create_double_dense_matrix(cols, rows);
+//     if (!transposed) {
+//         errno = ENOMEM;
+//         return false;
+//     }
+//
+//     // Fill in transposed values
+//     for (size_t i = 0; i < rows; ++i) {
+//         for (size_t j = 0; j < cols; ++j) {
+//             transposed->storage.dense.data[j * rows + i] = data[i * cols + j];
+//         }
+//     }
+//
+//     // Free old matrix and replace pointer
+//     free_double_matrix(mat);
+//     *pmat = transposed;
+//     return true;
+// }
+//
+// bool transpose_double_dense_matrix(matrix_d** pmat) {
+//     errno = 0;
+//     if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     matrix_d* mat = *pmat;
+//
+//     size_t rows = mat->rows;
+//     size_t cols = mat->cols;
+//     double* data = mat->storage.dense.data;
+//
+//     // Case 1: Square matrix — transpose in place
+//     if (rows == cols) {
+//         for (size_t i = 0; i < rows; ++i) {
+//             for (size_t j = i + 1; j < cols; ++j) {
+//                 double tmp = data[i * cols + j];
+//                 data[i * cols + j] = data[j * cols + i];
+//                 data[j * cols + i] = tmp;
+//             }
+//         }
+//         return true;
+//     }
+//
+//     // Case 2: Rectangular matrix — need to allocate new matrix
+//     matrix_d* transposed = create_double_matrix(cols, rows, 0);
+//     if (!transposed) {
+//         errno = ENOMEM;
+//         return false;
+//     }
+//
+//     // Fill in transposed values
+//     for (size_t i = 0; i < rows; ++i) {
+//         for (size_t j = 0; j < cols; ++j) {
+//             transposed->storage.dense.data[j * rows + i] = data[i * cols + j];
+//         }
+//     }
+//
+//     // Free old matrix and replace pointer
+//     free_double_matrix(mat);
+//     *pmat = transposed;
+//     return true;
+// }
+//
+// bool transpose_double_dense_matrix(matrix_d** pmat) {
+//     errno = 0;
+//
+//     if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     matrix_d* mat = *pmat;
+//
+//     size_t rows = mat->rows;
+//     size_t cols = mat->cols;
+//     double* data = mat->storage.dense.data;
+//
+//     // Case 1: Square matrix — transpose in place
+//     if (rows == cols) {
+//         for (size_t i = 0; i < rows; ++i) {
+//             for (size_t j = i + 1; j < cols; ++j) {
+//                 double tmp = data[i * cols + j];
+//                 data[i * cols + j] = data[j * cols + i];
+//                 data[j * cols + i] = tmp;
+//             }
+//         }
+//         return true;
+//     }
+//
+//     // Case 2: Rectangular matrix — need to allocate new storage
+//     matrix_d* transposed = create_double_matrix(cols, rows, 0);
+//     if (!transposed) {
+//         errno = ENOMEM;
+//         return false;
+//     }
+//
+//     for (size_t i = 0; i < rows; ++i) {
+//         for (size_t j = 0; j < cols; ++j) {
+//             transposed->storage.dense.data[j * rows + i] = data[i * cols + j];
+//         }
+//     }
+//
+//     free_double_matrix(mat);
+//     *pmat = transposed;
+//     return true;
+// }
+// -------------------------------------------------------------------------------- 
+
+bool transpose_double_coo_matrix(matrix_d** pmat) {
+    errno = 0;
+
+    if (!pmat || !*pmat || (*pmat)->type != SPARSE_COO_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_d* mat = *pmat;
+
+    for (size_t i = 0; i < mat->count; ++i) {
+        size_t tmp = mat->storage.coo.rows[i];
+        mat->storage.coo.rows[i] = mat->storage.coo.cols[i];
+        mat->storage.coo.cols[i] = tmp;
+    }
+
+    // Swap the matrix dimensions
+    size_t tmp_dim = mat->rows;
+    mat->rows = mat->cols;
+    mat->cols = tmp_dim;
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool transpose_double_csr_matrix(matrix_d** pmat) {
+    errno = 0;
+
+    if (!pmat || !*pmat || (*pmat)->type != SPARSE_CSR_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_d* mat = *pmat;
+    size_t rows = mat->rows;
+    size_t cols = mat->cols;
+    size_t nnz = mat->count;
+
+    size_t* row_ptrs_T = calloc(cols + 1, sizeof(size_t));
+    size_t* col_indices_T = malloc(nnz * sizeof(size_t));
+    double* values_T = malloc(nnz * sizeof(double));
+    if (!row_ptrs_T || !col_indices_T || !values_T) {
+        free(row_ptrs_T); free(col_indices_T); free(values_T);
+        errno = ENOMEM;
+        return false;
+    }
+
+    // Step 1: Count non-zeros per column (future row in transpose)
+    for (size_t i = 0; i < nnz; ++i) {
+        size_t col = mat->storage.csr.col_indices[i];
+        row_ptrs_T[col + 1]++;
+    }
+
+    // Step 2: Prefix sum to get row_ptrs
+    for (size_t i = 1; i <= cols; ++i) {
+        row_ptrs_T[i] += row_ptrs_T[i - 1];
+    }
+
+    // Step 3: Fill transposed values
+    size_t* counter = calloc(cols, sizeof(size_t));
+    if (!counter) {
+        free(row_ptrs_T); free(col_indices_T); free(values_T);
+        errno = ENOMEM;
+        return false;
+    }
+
+    for (size_t row = 0; row < rows; ++row) {
+        size_t start = mat->storage.csr.row_ptrs[row];
+        size_t end   = mat->storage.csr.row_ptrs[row + 1];
+
+        for (size_t i = start; i < end; ++i) {
+            size_t col = mat->storage.csr.col_indices[i];
+            double val = mat->storage.csr.values[i];
+
+            size_t dest = row_ptrs_T[col] + counter[col]++;
+            col_indices_T[dest] = row;
+            values_T[dest] = val;
+        }
+    }
+
+    free(counter);
+
+    // Replace contents of original matrix
+    free(mat->storage.csr.row_ptrs);
+    free(mat->storage.csr.col_indices);
+    free(mat->storage.csr.values);
+
+    mat->storage.csr.row_ptrs = row_ptrs_T;
+    mat->storage.csr.col_indices = col_indices_T;
+    mat->storage.csr.values = values_T;
+    mat->rows = cols;
+    mat->cols = rows;
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool transpose_double_matrix(matrix_d** pmat) {
+    errno = 0;
+
+    if (!pmat || !*pmat) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_d* mat = *pmat;
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return transpose_double_dense_matrix(pmat);
+
+        case SPARSE_COO_MATRIX:
+            return transpose_double_coo_matrix(pmat);
+
+        case SPARSE_CSR_MATRIX:
+            return transpose_double_csr_matrix(pmat);
+
+        default:
+            errno = EINVAL;
+            return false;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_d* copy_double_dense_matrix(const matrix_d* mat) {
+    errno = 0;
+    if (!mat || mat->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    matrix_d* newMat = create_double_dense_matrix(mat->rows, mat->cols);
+    if (!newMat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    newMat->count = mat->count;
+
+    size_t total_elements = mat->rows * mat->cols;
+    memcpy(newMat->storage.dense.data, mat->storage.dense.data, total_elements * sizeof(double));
+    memcpy(newMat->storage.dense.init, mat->storage.dense.init, total_elements * sizeof(uint8_t));
+
+    return newMat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_d* copy_double_coo_matrix(const matrix_d* mat) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_COO_MATRIX) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    matrix_d* newMat = malloc(sizeof(matrix_d));
+    if (!newMat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t cap = mat->storage.coo.capacity;
+    size_t* row_indices = malloc(cap * sizeof(size_t));
+    size_t* col_indices = malloc(cap * sizeof(size_t));
+    double* values = malloc(cap * sizeof(double));
+
+    if (!row_indices || !col_indices || !values) {
+        free(row_indices);
+        free(col_indices);
+        free(values);
+        free(newMat);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Copy structure metadata
+    newMat->type = SPARSE_COO_MATRIX;
+    newMat->rows = mat->rows;
+    newMat->cols = mat->cols;
+    newMat->count = mat->count;
+    newMat->storage.coo.capacity = cap;
+
+    // Assign allocated arrays
+    newMat->storage.coo.rows = row_indices;
+    newMat->storage.coo.cols = col_indices;
+    newMat->storage.coo.values = values;
+
+    // Copy used data only (up to `count`)
+    memcpy(row_indices, mat->storage.coo.rows, mat->count * sizeof(size_t));
+    memcpy(col_indices, mat->storage.coo.cols, mat->count * sizeof(size_t));
+    memcpy(values, mat->storage.coo.values, mat->count * sizeof(double));
+
+    return newMat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_d* copy_double_csr_matrix(const matrix_d* mat) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t rows = mat->rows;
+    size_t cols = mat->cols;
+    size_t nnz = mat->count;
+
+    matrix_d* newMat = malloc(sizeof(matrix_d));
+    if (!newMat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t* row_ptrs = calloc(rows + 1, sizeof(size_t));
+    size_t* col_indices = malloc(nnz * sizeof(size_t));
+    double* values = malloc(nnz * sizeof(double));
+
+    if (!row_ptrs || !col_indices || !values) {
+        free(row_ptrs);
+        free(col_indices);
+        free(values);
+        free(newMat);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    memcpy(row_ptrs, mat->storage.csr.row_ptrs, (rows + 1) * sizeof(size_t));
+    memcpy(col_indices, mat->storage.csr.col_indices, nnz * sizeof(size_t));
+    memcpy(values, mat->storage.csr.values, nnz * sizeof(double));
+
+    newMat->type = SPARSE_CSR_MATRIX;
+    newMat->rows = rows;
+    newMat->cols = cols;
+    newMat->count = nnz;
+
+    newMat->storage.csr.row_ptrs = row_ptrs;
+    newMat->storage.csr.col_indices = col_indices;
+    newMat->storage.csr.values = values;
+
+    return newMat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_d* copy_double_matrix(const matrix_d* mat) {
+    errno = 0;
+
+    if (!mat) {
+        errno = EINVAL;
+        return false;
+    }
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return copy_double_dense_matrix(mat);
+
+        case SPARSE_COO_MATRIX:
+            return copy_double_coo_matrix(mat);
+
+        case SPARSE_CSR_MATRIX:
+            return copy_double_csr_matrix(mat);
+
+        default:
+            errno = EINVAL;
+            return false;
+    }
 }
 // ================================================================================
 // ================================================================================

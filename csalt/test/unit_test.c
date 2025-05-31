@@ -413,6 +413,10 @@ const struct CMUnitTest test_float_matrix[] = {
     cmocka_unit_test(test_copy_dense_matrix),
     cmocka_unit_test(test_copy_coo_matrix),
     cmocka_unit_test(test_copy_csr_matrix),
+    cmocka_unit_test(test_det_identity_3x3),
+    cmocka_unit_test(test_det_singular_2x2),
+    cmocka_unit_test(test_det_known_2x2),
+    cmocka_unit_test(test_det_known_3x3),
 };
 // ================================================================================ 
 // ================================================================================ 
