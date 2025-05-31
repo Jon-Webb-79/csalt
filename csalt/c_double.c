@@ -3879,6 +3879,84 @@ matrix_d* copy_double_matrix(const matrix_d* mat) {
             return false;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+double double_dense_matrix_det(const matrix_d* mat) {
+    errno = 0;
+
+    if (!mat || mat->type != DENSE_MATRIX || mat->rows != mat->cols) {
+        errno = EINVAL;
+        return NAN;
+    }
+
+    size_t n = mat->rows;
+    const double* original = mat->storage.dense.data;
+
+    double* temp = malloc(n * n * sizeof(double));
+    if (!temp) {
+        errno = ENOMEM;
+        return NAN;
+    }
+
+    memcpy(temp, original, n * n * sizeof(double));
+    double det = 1.0;
+
+    for (size_t i = 0; i < n; ++i) {
+        // Pivot selection
+        size_t pivot = i;
+        double max_val = fabs(temp[i * n + i]);
+        for (size_t j = i + 1; j < n; ++j) {
+            double val = fabs(temp[j * n + i]);
+            if (val > max_val) {
+                max_val = val;
+                pivot = j;
+            }
+        }
+
+        if (max_val < 1e-12) {
+            free(temp);
+            return 0.0; // Singular matrix
+        }
+
+        if (pivot != i) {
+            for (size_t k = 0; k < n; ++k) {
+                double tmp = temp[i * n + k];
+                temp[i * n + k] = temp[pivot * n + k];
+                temp[pivot * n + k] = tmp;
+            }
+            det *= -1.0;
+        }
+
+        double pivot_val = temp[i * n + i];
+        det *= pivot_val;
+
+        for (size_t j = i + 1; j < n; ++j) {
+            double factor = temp[j * n + i] / pivot_val;
+
+#if defined(__AVX__)
+            size_t k = i;
+            for (; k + 4 <= n; k += 4) {
+                __m256d row_i = _mm256_loadu_pd(&temp[i * n + k]);
+                __m256d row_j = _mm256_loadu_pd(&temp[j * n + k]);
+                __m256d scaled = _mm256_mul_pd(row_i, _mm256_set1_pd(factor));
+                __m256d result = _mm256_sub_pd(row_j, scaled);
+                _mm256_storeu_pd(&temp[j * n + k], result);
+            }
+            for (; k < n; ++k) {
+                temp[j * n + k] -= factor * temp[i * n + k];
+            }
+#else
+            for (size_t k = i; k < n; ++k) {
+                temp[j * n + k] -= factor * temp[i * n + k];
+            }
+#endif
+        }
+    }
+
+    free(temp);
+    return det;
+}
+
 // ================================================================================
 // ================================================================================
 // eof

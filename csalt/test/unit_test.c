@@ -798,6 +798,47 @@ const struct CMUnitTest test_int_dict[] = {
     cmocka_unit_test(test_foreach_intv_dict_with_null_callback),
     cmocka_unit_test(test_foreach_intv_dict_accumulates_sum),
 };
+// -------------------------------------------------------------------------------- 
+
+const struct CMUnitTest test_double_matrix[] = {
+    cmocka_unit_test(test_create_dense_double_matrix),
+    cmocka_unit_test(test_insert_and_get_dense_double_matrix),
+    cmocka_unit_test(test_invalid_dense_double_insert),
+    cmocka_unit_test(test_double_coo_conversion_from_dense),
+    cmocka_unit_test(test_insert_double_and_get_coo_matrix),
+    cmocka_unit_test(test_duplicate_flaot_insert_coo_disallowed),
+    cmocka_unit_test(test_double_csr_conversion_from_coo),
+    cmocka_unit_test(test_get_after_double_csr_conversion),
+    cmocka_unit_test(test_pop_after_double_csr_conversion),
+    cmocka_unit_test(test_get_double_matrix_bounds),
+    cmocka_unit_test(test_insert_double_matrix_bounds),
+    cmocka_unit_test(test_pop_double_matrix_bounds),
+    cmocka_unit_test(test_get_double_matrix_null),
+    cmocka_unit_test(test_insert_double_matrix_null),
+    cmocka_unit_test(test_pop_double_matrix_null),
+    #if defined(__GNUC__) || defined(__clang__)
+        cmocka_unit_test(test_double_matrix_gbc),
+    #endif
+    cmocka_unit_test(test_double_identity_inverse),
+    cmocka_unit_test(test_double_known_inverse),
+    cmocka_unit_test(test_double_singular_matrix),
+    cmocka_unit_test(test_double_null_input),
+    cmocka_unit_test(test_double_non_square_matrix),
+    cmocka_unit_test(test_double_transpose_dense_identity),
+    cmocka_unit_test(test_double_transpose_dense_general),
+    cmocka_unit_test(test_double_transpose_dense_rectangular),
+    cmocka_unit_test(test_double_transpose_coo_identity),
+    cmocka_unit_test(test_double_transpose_coo_rectangular),
+    cmocka_unit_test(test_double_transpose_csr_identity),
+    cmocka_unit_test(test_double_transpose_csr_rectangular),
+    cmocka_unit_test(test_copy_double_dense_matrix),
+    cmocka_unit_test(test_copy_double_coo_matrix),
+    cmocka_unit_test(test_copy_double_csr_matrix),
+    cmocka_unit_test(test_det_double_identity_3x3),
+    cmocka_unit_test(test_det_double_singular_2x2),
+    cmocka_unit_test(test_det_double_known_2x2),
+    cmocka_unit_test(test_det_double_known_3x3),
+};
 // ================================================================================ 
 // ================================================================================ 
 int main(int argc, const char * argv[]) {
@@ -833,6 +874,9 @@ int main(int argc, const char * argv[]) {
     if (status != 0) 
         return status;
     status = cmocka_run_group_tests(test_int_dict, NULL, NULL);
+    if (status != 0) 
+        return status;
+    status = cmocka_run_group_tests(test_double_matrix, NULL, NULL);
 	return status;
 }
 // ================================================================================

@@ -1126,6 +1126,22 @@ matrix_d* copy_double_csr_matrix(const matrix_d* mat);
  * @retval NULL if memory allocation fails during copying (sets errno to ENOMEM).
  */
 matrix_d* copy_double_matrix(const matrix_d* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Computes the determinant of a dense double matrix.
+ *
+ * This function calculates the determinant of a matrix stored in dense format
+ * using Gaussian elimination with partial pivoting. The input matrix must be
+ * square and of type `DENSE_MATRIX`. The original matrix is not modified.
+ *
+ * @param mat Pointer to the dense matrix (`matrix_f`) structure.
+ * @return The determinant as a double. If an error occurs (e.g., invalid input
+ *         or singular matrix), the function returns 0.0f and sets `errno`:
+ *         - EINVAL if the input is NULL or not a square dense matrix
+ *         - ERANGE if the matrix is singular
+ */
+double double_dense_matrix_det(const matrix_d* mat);
 // ================================================================================ 
 // ================================================================================ 
 // DICTIONARY PROTOTYPES 
@@ -1535,6 +1551,10 @@ bool foreach_doublev_dict(const dict_dv* dict, dict_dv_iterator iter, void* user
 // -------------------------------------------------------------------------------- 
 
 string_v* get_keys_doublev_dict(const dict_dv* dict);
+// ================================================================================ 
+// ================================================================================ 
+
+
 // ================================================================================ 
 // ================================================================================ 
 // GENERIC MACROS
