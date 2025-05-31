@@ -2391,6 +2391,44 @@ copy_float_matrix
       1.00  2.00
       3.00  4.00
 
+float_dense_matrix_det
+~~~~~~~~~~~~~~~~~~~~~~
+.. c:function:: float float_dense_matrix_det(const matrix_f* mat)
+
+   Computes the determinant of a dense matrix using Gaussian elimination with partial pivoting.
+
+   The input matrix must be of type ``DENSE_MATRIX`` and must be square (i.e., number of rows equals number of columns).
+   The function performs a non-destructive transformation to calculate the determinant without modifying the original matrix.
+
+   :param mat: Pointer to a ``matrix_f`` structure representing the dense matrix
+   :returns: Determinant of the matrix as a float. If an error occurs, returns ``0.0f`` and sets ``errno``:
+             - ``EINVAL`` if the input is NULL or not a square dense matrix
+             - ``ERANGE`` if the matrix is singular
+   :raises: Sets ``errno`` on invalid input or on failure to compute determinant
+
+   Example::
+
+      matrix_f* mat = create_float_dense_matrix(3, 3);
+
+      insert_float_dense_matrix(mat, 0, 0, 1.0f);
+      insert_float_dense_matrix(mat, 0, 1, 2.0f);
+      insert_float_dense_matrix(mat, 0, 2, 3.0f);
+      insert_float_dense_matrix(mat, 1, 0, 0.0f);
+      insert_float_dense_matrix(mat, 1, 1, 1.0f);
+      insert_float_dense_matrix(mat, 1, 2, 4.0f);
+      insert_float_dense_matrix(mat, 2, 0, 5.0f);
+      insert_float_dense_matrix(mat, 2, 1, 6.0f);
+      insert_float_dense_matrix(mat, 2, 2, 0.0f);
+
+      float det = float_dense_matrix_det(mat);
+      printf("Determinant = %.2f\n", det);  // Output: Determinant = 1.00
+
+      free_float_matrix(mat);
+
+   Output::
+
+      Determinant = 1.00
+
 
 Matrix Format Conversion and Optimization
 -----------------------------------------
