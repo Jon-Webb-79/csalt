@@ -1994,6 +1994,76 @@ Copy Vector
       Original values: 1.0 2.0 3.0 4.0
       New values: 1.0 2.0 3.0 4.0
 
+Vector Operations 
+-----------------
+
+dot_float
+~~~~~~~~~
+.. c:function:: float dot_float(const float* a, const float* b, size_t len)
+
+   Computes the dot product of two contiguous blocks of single-precision 
+   floating-point memory. This function is optimized using SIMD instructions 
+   (e.g., AVX or SSE) when available and appropriate.
+
+   :param a: Pointer to the first input float array
+   :param b: Pointer to the second input float array
+   :param len: Number of elements to process
+   :returns: Dot product of the two arrays, or FLT_MAX on error
+   :raises:
+      - ``EINVAL`` if either input pointer is ``NULL``
+      - ``ERANGE`` if ``len`` is zero or too large for safe processing
+
+   Example:
+
+   .. code-block:: c
+
+      float a[] = {1.0f, 2.0f, 3.0f};
+      float b[] = {4.0f, 5.0f, 6.0f};
+      float result = dot_float(a, b, 3);
+      // result == 32.0f
+
+   .. note::
+      If compiled with `-march=native`, `-mavx`, or `-msse`, this function
+      may leverage SIMD acceleration.
+
+dot_float_vector
+~~~~~~~~~~~~~~~~
+.. c:function:: float dot_float_vector(const float_v* vec1, const float_v* vec2)
+
+   Calculates the dot product of two ``float_v`` vectors. Internally calls
+   :c:func:`dot_float` using the internal memory pointers from the input vectors.
+   Uses SIMD acceleration if available.
+
+   :param vec1: Pointer to the first float vector
+   :param vec2: Pointer to the second float vector
+   :returns: Dot product of the two vectors, or FLT_MAX on error
+   :raises:
+      - ``EINVAL`` if either input is ``NULL`` or contains ``NULL`` data
+      - ``ERANGE`` if the vectors are of unequal length
+
+   Example:
+
+   .. code-block:: c
+
+      float_v* v1 = init_float_vector(3);
+      float_v* v2 = init_float_vector(3);
+
+      push_back_float_vector(v1, 1.0f);
+      push_back_float_vector(v1, 2.0f);
+      push_back_float_vector(v1, 3.0f);
+
+      push_back_float_vector(v2, 4.0f);
+      push_back_float_vector(v2, 5.0f);
+      push_back_float_vector(v2, 6.0f);
+
+      float result = dot_float_vector(v1, v2);
+      // result == 32.0f
+
+      free_float_vector(v1);
+      free_float_vector(v2);
+
+   .. seealso:: :c:func:`dot_float`
+
 Float Matrix Overview 
 =====================
 The ``matrix_f`` type provides a flexible and extensible representation of 2D matrices
