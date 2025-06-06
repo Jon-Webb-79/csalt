@@ -468,6 +468,23 @@ float dot_float(const float* a, const float* b, size_t len);
  *    free_float_vector(v2);
  */
 float dot_float_vector(const float_v* vec1, const float_v* vec2);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Computes the cross product of two 3D float vectors.
+ *
+ * This function takes two input arrays of length 3 and computes the cross product,
+ * storing the result in the output array.
+ *
+ * @param a Pointer to first 3-element float array.
+ * @param b Pointer to second 3-element float array.
+ * @param result Pointer to 3-element float array to store the result.
+ * @return true on success, false on error (sets errno).
+ */
+bool cross_float(const float* a, const float* b, float* result);
+// -------------------------------------------------------------------------------- 
+
+float_v* cross_float_vector(const float_v* vec1, const float_v* vec2);
 // ================================================================================ 
 // ================================================================================ 
 // DICTIONARY PROTOTYPES 

@@ -1013,6 +1013,50 @@ float dot_float_vector(const float_v* vec1, const float_v* vec2) {
     }
     return dot_float(vec1->data, vec2->data, vec1->len);
 }
+// -------------------------------------------------------------------------------- 
+
+bool cross_float(const float* a, const float* b, float* result) {
+    errno = 0;
+
+    if (!a || !b || !result) {
+        errno = EINVAL;
+        return false;
+    }
+
+    result[0] = a[1] * b[2] - a[2] * b[1];
+    result[1] = a[2] * b[0] - a[0] * b[2];
+    result[2] = a[0] * b[1] - a[1] * b[0];
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+float_v* cross_float_vector(const float_v* vec1, const float_v* vec2) {
+    errno = 0;
+
+    if (!vec1 || !vec2 || !vec1->data || !vec2->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (vec1->len < 3 || vec2->len < 3) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    float_v* result = init_float_vector(3);
+    if (!result) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    result->data[0] = vec1->data[1] * vec2->data[2] - vec1->data[2] * vec2->data[1];
+    result->data[1] = vec1->data[2] * vec2->data[0] - vec1->data[0] * vec2->data[2];
+    result->data[2] = vec1->data[0] * vec2->data[1] - vec1->data[1] * vec2->data[0];
+
+    result->len = 3;
+    return result;
+}
 // ================================================================================
 // ================================================================================
 // DICTIONARY IMPLEMENTATION

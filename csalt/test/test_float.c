@@ -1969,6 +1969,94 @@ void test_dot_product_zero_length(void **state) {
     free_float_vector(v1);
     free_float_vector(v2);
 }
+// -------------------------------------------------------------------------------- 
+
+void test_cross_float_valid(void **state) {
+    (void) state;
+
+    float a[3] = {1.0f, 0.0f, 0.0f};  // î
+    float b[3] = {0.0f, 1.0f, 0.0f};  // ĵ
+    float result[3] = {0};
+
+    bool ok = cross_float(a, b, result);
+    assert_true(ok);
+
+    assert_float_equal(result[0], 0.0f, 1e-6f);
+    assert_float_equal(result[1], 0.0f, 1e-6f);
+    assert_float_equal(result[2], 1.0f, 1e-6f);  // î × ĵ = k̂
+}
+// --------------------------------------------------------------------------------
+
+void test_cross_float_null_inputs(void **state) {
+    (void) state;
+
+    float a[3] = {1.0f, 0.0f, 0.0f};
+    float result[3] = {0};
+
+    assert_false(cross_float(NULL, a, result));
+    assert_int_equal(errno, EINVAL);
+
+    assert_false(cross_float(a, NULL, result));
+    assert_int_equal(errno, EINVAL);
+
+    assert_false(cross_float(a, a, NULL));
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_cross_float_vector_valid(void **state) {
+    (void) state;
+
+    float_v* vec1 = init_float_vector(3);
+    float_v* vec2 = init_float_vector(3);
+
+    vec1->data[0] = 1.0f; vec1->data[1] = 0.0f; vec1->data[2] = 0.0f;
+    vec2->data[0] = 0.0f; vec2->data[1] = 1.0f; vec2->data[2] = 0.0f;
+    vec1->len = 3;
+    vec2->len = 3;
+
+    float_v* result = cross_float_vector(vec1, vec2);
+    assert_non_null(result);
+    assert_int_equal(result->len, 3);
+    assert_float_equal(result->data[0], 0.0f, 1e-6f);
+    assert_float_equal(result->data[1], 0.0f, 1e-6f);
+    assert_float_equal(result->data[2], 1.0f, 1e-6f);
+
+    free_float_vector(vec1);
+    free_float_vector(vec2);
+    free_float_vector(result);
+}
+// --------------------------------------------------------------------------------
+
+void test_cross_float_vector_invalid_inputs(void **state) {
+    (void) state;
+
+    float_v* bad1 = NULL;
+    float_v* bad2 = init_float_vector(3);
+    float_v* short_vec = init_float_vector(2);
+
+    float_v* result;
+
+    result = cross_float_vector(bad1, bad2);
+    assert_null(result);
+    assert_int_equal(errno, EINVAL);
+
+    result = cross_float_vector(bad2, NULL);
+    assert_null(result);
+    assert_int_equal(errno, EINVAL);
+
+    result = cross_float_vector(short_vec, bad2);
+    assert_null(result);
+    assert_int_equal(errno, ERANGE);
+
+    result = cross_float_vector(bad2, short_vec);
+    assert_null(result);
+    assert_int_equal(errno, ERANGE);
+
+    free_float_vector(bad2);
+    free_float_vector(short_vec);
+}
+
 // ================================================================================ 
 // ================================================================================ 
 /* Setup and teardown functions */
