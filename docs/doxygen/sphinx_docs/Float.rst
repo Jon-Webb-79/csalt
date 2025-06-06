@@ -2632,7 +2632,6 @@ cross_float_vector
 
       Cross product: [0.0, 0.0, 1.0]
 
-
 Float Dictionary Overview
 ==========================
 

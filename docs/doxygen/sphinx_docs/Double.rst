@@ -2590,6 +2590,76 @@ dot_double_vector
 
    .. seealso:: :c:func:`dot_double`
 
+cross_double
+~~~~~~~~~~~~
+.. c:function:: bool cross_double(const double* a, const double* b, double* result)
+
+   Computes the cross product of two 3-dimensional double arrays.
+
+   This function expects `a` and `b` to be contiguous memory arrays of length 3.
+   The result is stored in the `result` array, which must also be preallocated to hold 3 doubles.
+
+   :param a: Pointer to the first 3-element array.
+   :param b: Pointer to the second 3-element array.
+   :param result: Pointer to an array of at least 3 doubles where the result will be stored.
+   :returns: ``true`` on success, ``false`` on error.
+   :raises: Sets ``errno`` to ``EINVAL`` if any input is NULL.
+
+   Example:
+
+   .. code-block:: c
+
+      double a[3] = {1.0f, 0.0f, 0.0f};
+      double b[3] = {0.0f, 1.0f, 0.0f};
+      double result[3];
+
+      cross_double(a, b, result);
+
+      printf("Cross product: [%.1f, %.1f, %.1f]\n", result[0], result[1], result[2]);
+
+   **Output:**
+
+   .. code-block::
+
+      Cross product: [0.0, 0.0, 1.0]
+
+cross_double_vector
+~~~~~~~~~~~~~~~~~~~
+.. c:function:: double_v* cross_double_vector(const double_v* vec1, const double_v* vec2)
+
+   Returns the cross product of two ``double_v`` vectors, storing the result in a newly allocated ``double_v``.
+
+   Both vectors must have a length of at least 3. The result will be a 3-element vector representing the cross product of ``vec1`` and ``vec2``.
+
+   :param vec1: Pointer to the first ``double_v`` vector.
+   :param vec2: Pointer to the second ``double_v`` vector.
+   :returns: A newly allocated ``double_v`` object containing the result, or ``NULL`` on error.
+   :raises: 
+     - ``EINVAL`` if any input pointer is ``NULL``.
+     - ``ERANGE`` if either vector has fewer than 3 elements.
+     - ``ENOMEM`` if memory allocation for the result fails.
+
+   Example:
+
+   .. code-block:: c
+
+      double_v* v1 = init_double_vector(3);
+      double_v* v2 = init_double_vector(3);
+
+      v1->data[0] = 1.0f; v1->data[1] = 0.0f; v1->data[2] = 0.0f;
+      v2->data[0] = 0.0f; v2->data[1] = 1.0f; v2->data[2] = 0.0f;
+      v1->len = v2->len = 3;
+
+      double_v* result = cross_double_vector(v1, v2);
+
+      printf("Cross product: [%.1f, %.1f, %.1f]\n", result->data[0], result->data[1], result->data[2]);
+
+   **Output:**
+
+   .. code-block::
+
+      Cross product: [0.0, 0.0, 1.0]
+
 Double Dictionary Overview
 ==========================
 
