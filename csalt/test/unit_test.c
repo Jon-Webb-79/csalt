@@ -518,6 +518,10 @@ const struct CMUnitTest test_double_vector[] = {
     cmocka_unit_test(test_dot_double_product_mismatched_lengths),
     cmocka_unit_test(test_dot_double_product_null_inputs),
     cmocka_unit_test(test_dot_double_product_zero_length),
+    cmocka_unit_test(test_cross_float_valid),
+    cmocka_unit_test(test_cross_float_null_inputs),
+    cmocka_unit_test(test_cross_float_vector_valid),
+    cmocka_unit_test(test_cross_float_vector_invalid_inputs),
 };
 // -------------------------------------------------------------------------------- 
 

@@ -1195,6 +1195,23 @@ double dot_double(const double* a, const double* b, size_t len);
  *    free_double_vector(v2);
  */
 double dot_double_vector(const double_v* vec1, const double_v* vec2);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Computes the cross product of two 3D double vectors.
+ *
+ * This function takes two input arrays of length 3 and computes the cross product,
+ * storing the result in the output array.
+ *
+ * @param a Pointer to first 3-element double array.
+ * @param b Pointer to second 3-element double array.
+ * @param result Pointer to 3-element double array to store the result.
+ * @return true on success, false on error (sets errno).
+ */
+bool cross_double(const double* a, const double* b, double* result);
+// -------------------------------------------------------------------------------- 
+
+double_v* cross_double_vector(const double_v* vec1, const double_v* vec2);
 // ================================================================================ 
 // ================================================================================ 
 // DICTIONARY PROTOTYPES 

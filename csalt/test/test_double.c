@@ -1968,6 +1968,93 @@ void test_dot_double_product_zero_length(void **state) {
     free_double_vector(v1);
     free_double_vector(v2);
 }
+// -------------------------------------------------------------------------------- 
+
+void test_cross_double_valid(void **state) {
+    (void) state;
+
+    double a[3] = {1.0, 0.0, 0.0};  // î
+    double b[3] = {0.0, 1.0, 0.0};  // ĵ
+    double result[3] = {0};
+
+    bool ok = cross_double(a, b, result);
+    assert_true(ok);
+
+    assert_float_equal(result[0], 0.0, 1e-6f);
+    assert_float_equal(result[1], 0.0, 1e-6f);
+    assert_float_equal(result[2], 1.0f, 1e-6f);  // î × ĵ = k̂
+}
+// --------------------------------------------------------------------------------
+
+void test_cross_double_null_inputs(void **state) {
+    (void) state;
+
+    double a[3] = {1.0, 0.0, 0.0};
+    double result[3] = {0};
+
+    assert_false(cross_double(NULL, a, result));
+    assert_int_equal(errno, EINVAL);
+
+    assert_false(cross_double(a, NULL, result));
+    assert_int_equal(errno, EINVAL);
+
+    assert_false(cross_double(a, a, NULL));
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_cross_double_vector_valid(void **state) {
+    (void) state;
+
+    double_v* vec1 = init_double_vector(3);
+    double_v* vec2 = init_double_vector(3);
+
+    vec1->data[0] = 1.0; vec1->data[1] = 0.0; vec1->data[2] = 0.0;
+    vec2->data[0] = 0.0; vec2->data[1] = 1.0; vec2->data[2] = 0.0;
+    vec1->len = 3;
+    vec2->len = 3;
+
+    double_v* result = cross_double_vector(vec1, vec2);
+    assert_non_null(result);
+    assert_int_equal(result->len, 3);
+    assert_float_equal(result->data[0], 0.0f, 1e-6f);
+    assert_float_equal(result->data[1], 0.0f, 1e-6f);
+    assert_float_equal(result->data[2], 1.0f, 1e-6f);
+
+    free_double_vector(vec1);
+    free_double_vector(vec2);
+    free_double_vector(result);
+}
+// --------------------------------------------------------------------------------
+
+void test_cross_double_vector_invalid_inputs(void **state) {
+    (void) state;
+
+    double_v* bad1 = NULL;
+    double_v* bad2 = init_double_vector(3);
+    double_v* short_vec = init_double_vector(2);
+
+    double_v* result;
+
+    result = cross_double_vector(bad1, bad2);
+    assert_null(result);
+    assert_int_equal(errno, EINVAL);
+
+    result = cross_double_vector(bad2, NULL);
+    assert_null(result);
+    assert_int_equal(errno, EINVAL);
+
+    result = cross_double_vector(short_vec, bad2);
+    assert_null(result);
+    assert_int_equal(errno, ERANGE);
+
+    result = cross_double_vector(bad2, short_vec);
+    assert_null(result);
+    assert_int_equal(errno, ERANGE);
+
+    free_double_vector(bad2);
+    free_double_vector(short_vec);
+}
 // ================================================================================ 
 // ================================================================================ 
 

@@ -2056,7 +2056,6 @@ void test_cross_float_vector_invalid_inputs(void **state) {
     free_float_vector(bad2);
     free_float_vector(short_vec);
 }
-
 // ================================================================================ 
 // ================================================================================ 
 /* Setup and teardown functions */

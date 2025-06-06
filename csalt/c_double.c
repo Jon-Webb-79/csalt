@@ -996,6 +996,50 @@ double dot_double_vector(const double_v* vec1, const double_v* vec2) {
     }
     return dot_double(vec1->data, vec2->data, vec1->len);
 }
+// -------------------------------------------------------------------------------- 
+
+bool cross_double(const double* a, const double* b, double* result) {
+    errno = 0;
+
+    if (!a || !b || !result) {
+        errno = EINVAL;
+        return false;
+    }
+
+    result[0] = a[1] * b[2] - a[2] * b[1];
+    result[1] = a[2] * b[0] - a[0] * b[2];
+    result[2] = a[0] * b[1] - a[1] * b[0];
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+double_v* cross_double_vector(const double_v* vec1, const double_v* vec2) {
+    errno = 0;
+
+    if (!vec1 || !vec2 || !vec1->data || !vec2->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (vec1->len < 3 || vec2->len < 3) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    double_v* result = init_double_vector(3);
+    if (!result) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    result->data[0] = vec1->data[1] * vec2->data[2] - vec1->data[2] * vec2->data[1];
+    result->data[1] = vec1->data[2] * vec2->data[0] - vec1->data[0] * vec2->data[2];
+    result->data[2] = vec1->data[0] * vec2->data[1] - vec1->data[1] * vec2->data[0];
+
+    result->len = 3;
+    return result;
+}
 // ================================================================================ 
 // ================================================================================ 
 
