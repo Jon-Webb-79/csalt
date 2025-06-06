@@ -2562,6 +2562,77 @@ convert_floatMat_to_csr
       populate_with_sparse_values(mat); // Assume this function exist to populate matrix
       convert_floatMat_to_csr(&mat);
 
+cross_float
+~~~~~~~~~~~
+.. c:function:: bool cross_float(const float* a, const float* b, float* result)
+
+   Computes the cross product of two 3-dimensional float arrays.
+
+   This function expects `a` and `b` to be contiguous memory arrays of length 3.
+   The result is stored in the `result` array, which must also be preallocated to hold 3 floats.
+
+   :param a: Pointer to the first 3-element array.
+   :param b: Pointer to the second 3-element array.
+   :param result: Pointer to an array of at least 3 floats where the result will be stored.
+   :returns: ``true`` on success, ``false`` on error.
+   :raises: Sets ``errno`` to ``EINVAL`` if any input is NULL.
+
+   Example:
+
+   .. code-block:: c
+
+      float a[3] = {1.0f, 0.0f, 0.0f};
+      float b[3] = {0.0f, 1.0f, 0.0f};
+      float result[3];
+
+      cross_float(a, b, result);
+
+      printf("Cross product: [%.1f, %.1f, %.1f]\n", result[0], result[1], result[2]);
+
+   **Output:**
+
+   .. code-block::
+
+      Cross product: [0.0, 0.0, 1.0]
+
+cross_float_vector
+~~~~~~~~~~~~~~~~~~
+.. c:function:: float_v* cross_float_vector(const float_v* vec1, const float_v* vec2)
+
+   Returns the cross product of two ``float_v`` vectors, storing the result in a newly allocated ``float_v``.
+
+   Both vectors must have a length of at least 3. The result will be a 3-element vector representing the cross product of ``vec1`` and ``vec2``.
+
+   :param vec1: Pointer to the first ``float_v`` vector.
+   :param vec2: Pointer to the second ``float_v`` vector.
+   :returns: A newly allocated ``float_v`` object containing the result, or ``NULL`` on error.
+   :raises: 
+     - ``EINVAL`` if any input pointer is ``NULL``.
+     - ``ERANGE`` if either vector has fewer than 3 elements.
+     - ``ENOMEM`` if memory allocation for the result fails.
+
+   Example:
+
+   .. code-block:: c
+
+      float_v* v1 = init_float_vector(3);
+      float_v* v2 = init_float_vector(3);
+
+      v1->data[0] = 1.0f; v1->data[1] = 0.0f; v1->data[2] = 0.0f;
+      v2->data[0] = 0.0f; v2->data[1] = 1.0f; v2->data[2] = 0.0f;
+      v1->len = v2->len = 3;
+
+      float_v* result = cross_float_vector(v1, v2);
+
+      printf("Cross product: [%.1f, %.1f, %.1f]\n", result->data[0], result->data[1], result->data[2]);
+
+   **Output:**
+
+   .. code-block::
+
+      Cross product: [0.0, 0.0, 1.0]
+
+
 Float Dictionary Overview
 ==========================
 
