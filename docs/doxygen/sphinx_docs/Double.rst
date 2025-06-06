@@ -2520,6 +2520,75 @@ convert_doubleMat_to_csr
       populate_with_sparse_values(mat); // Assume this function exist to populate matrix
       convert_doubleMat_to_csr(&mat);
 
+Vector Operations 
+-----------------
+
+dot_double
+~~~~~~~~~~
+.. c:function:: double dot_double(const double* a, const double* b, size_t len)
+
+   Computes the dot product of two contiguous blocks of single-precision 
+   doubleing-point memory. This function is optimized using SIMD instructions 
+   (e.g., AVX or SSE) when available and appropriate.
+
+   :param a: Pointer to the first input double array
+   :param b: Pointer to the second input double array
+   :param len: Number of elements to process
+   :returns: Dot product of the two arrays, or DBL_MAX on error
+   :raises:
+      - ``EINVAL`` if either input pointer is ``NULL``
+      - ``ERANGE`` if ``len`` is zero or too large for safe processing
+
+   Example:
+
+   .. code-block:: c
+
+      double a[] = {1.0f, 2.0f, 3.0f};
+      double b[] = {4.0f, 5.0f, 6.0f};
+      double result = dot_double(a, b, 3);
+      // result == 32.0f
+
+   .. note::
+      If compiled with `-march=native`, `-mavx`, or `-msse`, this function
+      may leverage SIMD acceleration.
+
+dot_double_vector
+~~~~~~~~~~~~~~~~~
+.. c:function:: double dot_double_vector(const double_v* vec1, const double_v* vec2)
+
+   Calculates the dot product of two ``double_v`` vectors. Internally calls
+   :c:func:`dot_double` using the internal memory pointers from the input vectors.
+   Uses SIMD acceleration if available.
+
+   :param vec1: Pointer to the first double vector
+   :param vec2: Pointer to the second double vector
+   :returns: Dot product of the two vectors, or DBL_MAX on error
+   :raises:
+      - ``EINVAL`` if either input is ``NULL`` or contains ``NULL`` data
+      - ``ERANGE`` if the vectors are of unequal length
+
+   Example:
+
+   .. code-block:: c
+
+      double_v* v1 = init_double_vector(3);
+      double_v* v2 = init_double_vector(3);
+
+      push_back_double_vector(v1, 1.0f);
+      push_back_double_vector(v1, 2.0f);
+      push_back_double_vector(v1, 3.0f);
+
+      push_back_double_vector(v2, 4.0f);
+      push_back_double_vector(v2, 5.0f);
+      push_back_double_vector(v2, 6.0f);
+
+      double result = dot_double_vector(v1, v2);
+      // result == 32.0f
+
+      free_double_vector(v1);
+      free_double_vector(v2);
+
+   .. seealso:: :c:func:`dot_double`
 
 Double Dictionary Overview
 ==========================
