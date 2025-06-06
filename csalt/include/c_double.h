@@ -1142,6 +1142,59 @@ matrix_d* copy_double_matrix(const matrix_d* mat);
  *         - ERANGE if the matrix is singular
  */
 double double_dense_matrix_det(const matrix_d* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Computes the dot product of two contiguous double arrays.
+ *
+ * This function calculates the dot product of two continuous memory blocks
+ * of double values. If available, it uses SIMD acceleration (AVX or SSE)
+ * for performance optimization.
+ *
+ * :param a: Pointer to the first double array.
+ * :param b: Pointer to the second double array.
+ * :param len: Number of elements in each array.
+ * :returns: Dot product result as a double, or FLT_MAX on error.
+ * :raises: Sets errno to EINVAL for NULL input, or if len is zero.
+ *
+ * Example:
+ * .. code-block:: c
+ *
+ *    double a[] = {1.0f, 2.0f, 3.0f};
+ *    double b[] = {4.0f, 5.0f, 6.0f};
+ *    double result = dot_double(a, b, 3);  // result = 32.0
+ */
+double dot_double(const double* a, const double* b, size_t len);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Computes the dot product of two double vectors.
+ *
+ * This function takes two dynamically allocated double vectors (`double_v`)
+ * and returns their dot product by delegating to the `dot_double` function.
+ *
+ * :param vec1: Pointer to the first double vector.
+ * :param vec2: Pointer to the second double vector.
+ * :returns: Dot product result as a double, or FLT_MAX on error.
+ * :raises: Sets errno to EINVAL if either input is NULL or uninitialized.
+ *          Sets errno to ERANGE if vector lengths do not match.
+ *
+ * Example:
+ * .. code-block:: c
+ *
+ *    double_v* v1 = init_double_vector(3);
+ *    double_v* v2 = init_double_vector(3);
+ *    push_back_double_vector(v1, 1.0f);
+ *    push_back_double_vector(v1, 2.0f);
+ *    push_back_double_vector(v1, 3.0f);
+ *    push_back_double_vector(v2, 4.0f);
+ *    push_back_double_vector(v2, 5.0f);
+ *    push_back_double_vector(v2, 6.0f);
+ *    double result = dot_double_vector(v1, v2);  // result = 32.0
+ *    free_double_vector(v1);
+ *    free_double_vector(v2);
+ */
+double dot_double_vector(const double_v* vec1, const double_v* vec2);
 // ================================================================================ 
 // ================================================================================ 
 // DICTIONARY PROTOTYPES 

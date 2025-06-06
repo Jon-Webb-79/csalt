@@ -1909,6 +1909,65 @@ void test_stdev_cum_sum_double_errors(void **state) {
      
     free_double_vector(vec);
 }
+// -------------------------------------------------------------------------------- 
+
+void test_dot_double_product_basic(void **state) {
+    double_v *v1 = init_double_vector(3);
+    double_v *v2 = init_double_vector(3);
+
+    push_back_double_vector(v1, 1.0);
+    push_back_double_vector(v1, 2.0);
+    push_back_double_vector(v1, 3.0);
+
+    push_back_double_vector(v2, 4.0);
+    push_back_double_vector(v2, 5.0);
+    push_back_double_vector(v2, 6.0);
+
+    double result = dot_double_vector(v1, v2);
+    assert_float_equal(result, 32.0, 1e-6);
+
+    free_double_vector(v1);
+    free_double_vector(v2);
+}
+// ----------------------------------------------------------------------------
+
+void test_dot_double_product_mismatched_lengths(void **state) {
+    double_v *v1 = init_double_vector(2);
+    double_v *v2 = init_double_vector(3);
+
+    push_back_double_vector(v1, 1.0);
+    push_back_double_vector(v1, 2.0);
+
+    push_back_double_vector(v2, 3.0);
+    push_back_double_vector(v2, 4.0);
+    push_back_double_vector(v2, 5.0);
+
+    double result = dot_double_vector(v1, v2);
+    assert_float_equal(result, DBL_MAX, 1e-6);
+    assert_int_equal(errno, ERANGE);
+
+    free_double_vector(v1);
+    free_double_vector(v2);
+}
+// ----------------------------------------------------------------------------
+
+void test_dot_double_product_null_inputs(void **state) {
+    double result = dot_double_vector(NULL, NULL);
+    assert_float_equal(result, DBL_MAX, 1e-6);
+    assert_int_equal(errno, EINVAL);
+}
+// ----------------------------------------------------------------------------
+
+void test_dot_double_product_zero_length(void **state) {
+    double_v *v1 = init_double_vector(0);
+    double_v *v2 = init_double_vector(0);
+
+    double result = dot_double_vector(v1, v2);
+    assert_float_equal(result, DBL_MAX, 1e-6);  // dot of zero-length vectors is 0
+
+    free_double_vector(v1);
+    free_double_vector(v2);
+}
 // ================================================================================ 
 // ================================================================================ 
 

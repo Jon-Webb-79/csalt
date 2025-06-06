@@ -935,15 +935,6 @@ float_v* copy_float_vector(const float_v* original) {
 }
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Computes the dot product of two contiguous float arrays using SIMD acceleration if available.
- *
- * @param a Pointer to the first float array.
- * @param b Pointer to the second float array.
- * @param len Number of elements to process.
- * @return Dot product result as a float, or FLT_MAX on error.
- * @note Sets errno to EINVAL if inputs are NULL or length is zero.
- */
 float dot_float(const float* a, const float* b, size_t len) {
     errno = 0;
 

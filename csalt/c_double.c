@@ -915,6 +915,87 @@ double_v* copy_double_vector(const double_v* original) {
 
     return copy;
 }
+// -------------------------------------------------------------------------------- 
+
+double dot_double(const double* a, const double* b, size_t len) {
+    errno = 0;
+
+    if (!a || !b || len == 0) {
+        errno = EINVAL;
+        return DBL_MAX;
+    }
+
+    double result = 0.0;
+
+#if defined(__AVX__)
+    __m256d sum_vec = _mm256_setzero_pd();
+    size_t i = 0;
+
+    for (; i + 4 <= len; i += 4) {
+        __m256d va = _mm256_loadu_pd(&a[i]);
+        __m256d vb = _mm256_loadu_pd(&b[i]);
+        sum_vec = _mm256_add_pd(sum_vec, _mm256_mul_pd(va, vb));
+    }
+
+    double sum_arr[4];
+    _mm256_storeu_pd(sum_arr, sum_vec);
+    for (int j = 0; j < 4; ++j) {
+        result += sum_arr[j];
+    }
+
+#elif defined(__SSE2__)
+    __m128d sum_vec = _mm_setzero_pd();
+    size_t i = 0;
+
+    for (; i + 2 <= len; i += 2) {
+        __m128d va = _mm_loadu_pd(&a[i]);
+        __m128d vb = _mm_loadu_pd(&b[i]);
+        sum_vec = _mm_add_pd(sum_vec, _mm_mul_pd(va, vb));
+    }
+
+    double sum_arr[2];
+    _mm_storeu_pd(sum_arr, sum_vec);
+    for (int j = 0; j < 2; ++j) {
+        result += sum_arr[j];
+    }
+
+#else
+    size_t i = 0;
+#endif
+
+    // Scalar fallback or tail loop
+#if defined(__AVX__)
+    for (; i < len; ++i)
+        result += a[i] * b[i];
+#elif defined(__SSE2__)
+    for (; i < len; ++i)
+        result += a[i] * b[i];
+#else
+    for (size_t i = 0; i < len; ++i)
+        result += a[i] * b[i];
+#endif
+
+    return result;
+}
+
+// -------------------------------------------------------------------------------- 
+
+double dot_double_vector(const double_v* vec1, const double_v* vec2) {
+    errno = 0;
+    if (!vec1 || !vec2 || !vec1->data || !vec2->data) {
+        errno = EINVAL;
+        return DBL_MAX;
+    }
+    if (vec1->len == 0) {
+        errno = ENODATA;
+        return DBL_MAX;
+    }
+    if (vec1->len != vec2->len) {
+        errno = ERANGE;
+        return DBL_MAX;
+    }
+    return dot_double(vec1->data, vec2->data, vec1->len);
+}
 // ================================================================================ 
 // ================================================================================ 
 
