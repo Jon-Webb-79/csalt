@@ -329,7 +329,11 @@ const struct CMUnitTest test_float_vector[] = {
     cmocka_unit_test(test_cum_sum_basic),
     cmocka_unit_test(test_cum_sum_negative),
     cmocka_unit_test(test_stdev_cum_sum_special_values),
-    cmocka_unit_test(test_stdev_cum_sum_errors)
+    cmocka_unit_test(test_stdev_cum_sum_errors),
+    cmocka_unit_test(test_dot_product_basic),
+    cmocka_unit_test(test_dot_product_mismatched_lengths),
+    cmocka_unit_test(test_dot_product_null_inputs),
+    cmocka_unit_test(test_dot_product_zero_length),
 };
 // -------------------------------------------------------------------------------- 
 

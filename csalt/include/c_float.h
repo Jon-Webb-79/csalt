@@ -415,6 +415,59 @@ float_v* cum_sum_float_vector(float_v* vec);
  * @return A copy of a float vector
  */
 float_v* copy_float_vector(const float_v* original);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Computes the dot product of two contiguous float arrays.
+ *
+ * This function calculates the dot product of two continuous memory blocks
+ * of float values. If available, it uses SIMD acceleration (AVX or SSE)
+ * for performance optimization.
+ *
+ * :param a: Pointer to the first float array.
+ * :param b: Pointer to the second float array.
+ * :param len: Number of elements in each array.
+ * :returns: Dot product result as a float, or FLT_MAX on error.
+ * :raises: Sets errno to EINVAL for NULL input, or if len is zero.
+ *
+ * Example:
+ * .. code-block:: c
+ *
+ *    float a[] = {1.0f, 2.0f, 3.0f};
+ *    float b[] = {4.0f, 5.0f, 6.0f};
+ *    float result = dot_float(a, b, 3);  // result = 32.0
+ */
+float dot_float(const float* a, const float* b, size_t len);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Computes the dot product of two float vectors.
+ *
+ * This function takes two dynamically allocated float vectors (`float_v`)
+ * and returns their dot product by delegating to the `dot_float` function.
+ *
+ * :param vec1: Pointer to the first float vector.
+ * :param vec2: Pointer to the second float vector.
+ * :returns: Dot product result as a float, or FLT_MAX on error.
+ * :raises: Sets errno to EINVAL if either input is NULL or uninitialized.
+ *          Sets errno to ERANGE if vector lengths do not match.
+ *
+ * Example:
+ * .. code-block:: c
+ *
+ *    float_v* v1 = init_float_vector(3);
+ *    float_v* v2 = init_float_vector(3);
+ *    push_back_float_vector(v1, 1.0f);
+ *    push_back_float_vector(v1, 2.0f);
+ *    push_back_float_vector(v1, 3.0f);
+ *    push_back_float_vector(v2, 4.0f);
+ *    push_back_float_vector(v2, 5.0f);
+ *    push_back_float_vector(v2, 6.0f);
+ *    float result = dot_float_vector(v1, v2);  // result = 32.0
+ *    free_float_vector(v1);
+ *    free_float_vector(v2);
+ */
+float dot_float_vector(const float_v* vec1, const float_v* vec2);
 // ================================================================================ 
 // ================================================================================ 
 // DICTIONARY PROTOTYPES 

@@ -933,6 +933,95 @@ float_v* copy_float_vector(const float_v* original) {
 
     return copy;
 }
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Computes the dot product of two contiguous float arrays using SIMD acceleration if available.
+ *
+ * @param a Pointer to the first float array.
+ * @param b Pointer to the second float array.
+ * @param len Number of elements to process.
+ * @return Dot product result as a float, or FLT_MAX on error.
+ * @note Sets errno to EINVAL if inputs are NULL or length is zero.
+ */
+float dot_float(const float* a, const float* b, size_t len) {
+    errno = 0;
+
+    if (!a || !b || len == 0) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    float result = 0.0f;
+
+#if defined(__AVX__)
+    __m256 sum_vec = _mm256_setzero_ps();
+    size_t i = 0;
+
+    for (; i + 8 <= len; i += 8) {
+        __m256 va = _mm256_loadu_ps(&a[i]);
+        __m256 vb = _mm256_loadu_ps(&b[i]);
+        sum_vec = _mm256_add_ps(sum_vec, _mm256_mul_ps(va, vb));
+    }
+
+    float sum_arr[8];
+    _mm256_storeu_ps(sum_arr, sum_vec);
+    for (int j = 0; j < 8; ++j) {
+        result += sum_arr[j];
+    }
+
+#elif defined(__SSE__)
+    __m128 sum_vec = _mm_setzero_ps();
+    size_t i = 0;
+
+    for (; i + 4 <= len; i += 4) {
+        __m128 va = _mm_loadu_ps(&a[i]);
+        __m128 vb = _mm_loadu_ps(&b[i]);
+        sum_vec = _mm_add_ps(sum_vec, _mm_mul_ps(va, vb));
+    }
+
+    float sum_arr[4];
+    _mm_storeu_ps(sum_arr, sum_vec);
+    for (int j = 0; j < 4; ++j) {
+        result += sum_arr[j];
+    }
+
+#else
+    size_t i = 0;
+#endif
+
+    // Scalar tail for AVX, SSE, or full scalar path
+#if defined(__AVX__)
+    for (; i < len; ++i)
+        result += a[i] * b[i];
+#elif defined(__SSE__)
+    for (; i < len; ++i)
+        result += a[i] * b[i];
+#else
+    for (size_t i = 0; i < len; ++i)
+        result += a[i] * b[i];
+#endif
+
+    return result;
+}
+// -------------------------------------------------------------------------------- 
+
+float dot_float_vector(const float_v* vec1, const float_v* vec2) {
+    errno = 0;
+    if (!vec1 || !vec2 || !vec1->data || !vec2->data) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+    if (vec1->len == 0) {
+        errno = ENODATA;
+        return FLT_MAX;
+    }
+    if (vec1->len != vec2->len) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+    return dot_float(vec1->data, vec2->data, vec1->len);
+}
 // ================================================================================
 // ================================================================================
 // DICTIONARY IMPLEMENTATION
@@ -3493,140 +3582,6 @@ bool transpose_float_dense_matrix(matrix_f** pmat) {
     *pmat = transposed;
     return true;
 }
-
-// bool transpose_float_dense_matrix(matrix_f** pmat) {
-//     errno = 0;
-//     if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     matrix_f* mat = *pmat;
-//
-//     size_t rows = mat->rows;
-//     size_t cols = mat->cols;
-//     float* data = mat->storage.dense.data;
-//
-//     // Case 1: Square matrix — transpose in place
-//     if (rows == cols) {
-//         for (size_t i = 0; i < rows; ++i) {
-//             for (size_t j = i + 1; j < cols; ++j) {
-//                 float tmp = data[i * cols + j];
-//                 data[i * cols + j] = data[j * cols + i];
-//                 data[j * cols + i] = tmp;
-//             }
-//         }
-//         return true;
-//     }
-//
-//     // Case 2: Rectangular matrix — need to allocate new dense matrix
-//     matrix_f* transposed = create_float_dense_matrix(cols, rows);
-//     if (!transposed) {
-//         errno = ENOMEM;
-//         return false;
-//     }
-//
-//     // Fill in transposed values
-//     for (size_t i = 0; i < rows; ++i) {
-//         for (size_t j = 0; j < cols; ++j) {
-//             transposed->storage.dense.data[j * rows + i] = data[i * cols + j];
-//         }
-//     }
-//
-//     // Free old matrix and replace pointer
-//     free_float_matrix(mat);
-//     *pmat = transposed;
-//     return true;
-// }
-//
-// bool transpose_float_dense_matrix(matrix_f** pmat) {
-//     errno = 0;
-//     if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     matrix_f* mat = *pmat;
-//
-//     size_t rows = mat->rows;
-//     size_t cols = mat->cols;
-//     float* data = mat->storage.dense.data;
-//
-//     // Case 1: Square matrix — transpose in place
-//     if (rows == cols) {
-//         for (size_t i = 0; i < rows; ++i) {
-//             for (size_t j = i + 1; j < cols; ++j) {
-//                 float tmp = data[i * cols + j];
-//                 data[i * cols + j] = data[j * cols + i];
-//                 data[j * cols + i] = tmp;
-//             }
-//         }
-//         return true;
-//     }
-//
-//     // Case 2: Rectangular matrix — need to allocate new matrix
-//     matrix_f* transposed = create_float_matrix(cols, rows, 0);
-//     if (!transposed) {
-//         errno = ENOMEM;
-//         return false;
-//     }
-//
-//     // Fill in transposed values
-//     for (size_t i = 0; i < rows; ++i) {
-//         for (size_t j = 0; j < cols; ++j) {
-//             transposed->storage.dense.data[j * rows + i] = data[i * cols + j];
-//         }
-//     }
-//
-//     // Free old matrix and replace pointer
-//     free_float_matrix(mat);
-//     *pmat = transposed;
-//     return true;
-// }
-//
-// bool transpose_float_dense_matrix(matrix_f** pmat) {
-//     errno = 0;
-//
-//     if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     matrix_f* mat = *pmat;
-//
-//     size_t rows = mat->rows;
-//     size_t cols = mat->cols;
-//     float* data = mat->storage.dense.data;
-//
-//     // Case 1: Square matrix — transpose in place
-//     if (rows == cols) {
-//         for (size_t i = 0; i < rows; ++i) {
-//             for (size_t j = i + 1; j < cols; ++j) {
-//                 float tmp = data[i * cols + j];
-//                 data[i * cols + j] = data[j * cols + i];
-//                 data[j * cols + i] = tmp;
-//             }
-//         }
-//         return true;
-//     }
-//
-//     // Case 2: Rectangular matrix — need to allocate new storage
-//     matrix_f* transposed = create_float_matrix(cols, rows, 0);
-//     if (!transposed) {
-//         errno = ENOMEM;
-//         return false;
-//     }
-//
-//     for (size_t i = 0; i < rows; ++i) {
-//         for (size_t j = 0; j < cols; ++j) {
-//             transposed->storage.dense.data[j * rows + i] = data[i * cols + j];
-//         }
-//     }
-//
-//     free_float_matrix(mat);
-//     *pmat = transposed;
-//     return true;
-// }
 // -------------------------------------------------------------------------------- 
 
 bool transpose_float_coo_matrix(matrix_f** pmat) {

@@ -1912,6 +1912,65 @@ void test_stdev_cum_sum_errors(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
+void test_dot_product_basic(void **state) {
+    float_v *v1 = init_float_vector(3);
+    float_v *v2 = init_float_vector(3);
+
+    push_back_float_vector(v1, 1.0f);
+    push_back_float_vector(v1, 2.0f);
+    push_back_float_vector(v1, 3.0f);
+
+    push_back_float_vector(v2, 4.0f);
+    push_back_float_vector(v2, 5.0f);
+    push_back_float_vector(v2, 6.0f);
+
+    float result = dot_float_vector(v1, v2);
+    assert_float_equal(result, 32.0f, 1e-6);
+
+    free_float_vector(v1);
+    free_float_vector(v2);
+}
+// ----------------------------------------------------------------------------
+
+void test_dot_product_mismatched_lengths(void **state) {
+    float_v *v1 = init_float_vector(2);
+    float_v *v2 = init_float_vector(3);
+
+    push_back_float_vector(v1, 1.0f);
+    push_back_float_vector(v1, 2.0f);
+
+    push_back_float_vector(v2, 3.0f);
+    push_back_float_vector(v2, 4.0f);
+    push_back_float_vector(v2, 5.0f);
+
+    float result = dot_float_vector(v1, v2);
+    assert_float_equal(result, FLT_MAX, 1e-6);
+    assert_int_equal(errno, ERANGE);
+
+    free_float_vector(v1);
+    free_float_vector(v2);
+}
+// ----------------------------------------------------------------------------
+
+void test_dot_product_null_inputs(void **state) {
+    float result = dot_float_vector(NULL, NULL);
+    assert_float_equal(result, FLT_MAX, 1e-6);
+    assert_int_equal(errno, EINVAL);
+}
+// ----------------------------------------------------------------------------
+
+void test_dot_product_zero_length(void **state) {
+    float_v *v1 = init_float_vector(0);
+    float_v *v2 = init_float_vector(0);
+
+    float result = dot_float_vector(v1, v2);
+    assert_float_equal(result, FLT_MAX, 1e-6);  // dot of zero-length vectors is 0
+
+    free_float_vector(v1);
+    free_float_vector(v2);
+}
+// ================================================================================ 
+// ================================================================================ 
 /* Setup and teardown functions */
 static dict_f* test_dict = NULL;
 
