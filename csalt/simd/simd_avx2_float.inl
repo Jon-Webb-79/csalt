@@ -97,5 +97,32 @@ static inline float simd_mean_f32_avx2(const float* x, size_t n) {
 }
 
 /* Population stdev by default; change denom to (n-1) in your dispatcher if you need sample. */
-static inline float simd_stdev_f32_avx2(co_
+/* Population stdev by default; change denom to (n-1) in your dispatcher if you need sample. */
+static inline float simd_stdev_f32_avx2(const float* x, size_t n) {
+    if (n < 2) return 0.0f;
+
+    const float mean = simd_mean_f32_avx2(x, n);
+    __m256 vmean = _mm256_set1_ps(mean);
+    __m256 vsum  = _mm256_setzero_ps();
+
+    size_t i = 0;
+    for (; i + 8 <= n; i += 8) {
+        __m256 v  = _mm256_loadu_ps(&x[i]);
+        __m256 d  = _mm256_sub_ps(v, vmean);
+        #if defined(__FMA__)
+            vsum = _mm256_fmadd_ps(d, d, vsum);   /* vsum += d*d */
+        #else
+            __m256 sq = _mm256_mul_ps(d, d);
+            vsum = _mm256_add_ps(vsum, sq);
+        #endif
+    }
+
+    float ss = csalt_avx2_hsum256_ps(vsum);
+    for (; i < n; ++i) {
+        float d = x[i] - mean;
+        ss += d * d;
+    }
+
+    return sqrtf(ss / (float)n);  /* population stdev */
+}
 

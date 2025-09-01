@@ -23,13 +23,27 @@
 #include <math.h>
 #include <stdio.h>
 
-#if defined(__AVX2__)
+#if defined(__AVX512F__)
+  #include "simd_avx512_float.inl"
+#elif defined(__AVX2__)
   #include <immintrin.h>
   #include "simd_avx2_float.inl"   /* simd_*_f32_avx2 */
+#elif defined(__SSE4_1__)
+  #include <smmintrin.h>
+  #include "simd_sse41_float.inl"
+#elif defined(__SSE3__)
+  #include <pmmintrin.h>
+  #include "simd_sse3_float.inl"
 #elif defined(__SSE2__)
   #include <xmmintrin.h>
   #include <emmintrin.h>
   #include "simd_sse2_float.inl"   /* simd_*_f32_sse  */
+#elif defined(__ARM_FEATURE_SVE2)
+  #include "simd_sve2_float.inl"
+#elif defined(__ARM_FEATURE_SVE)
+  #include "simd_sve_float.inl"
+#elif defined(__ARM_NEON)
+  #include "simd_neon_float.inl"
 #endif
 
 static const float LOAD_FACTOR_THRESHOLD = 0.7;
@@ -53,10 +67,22 @@ static const size_t CSR_TOMBSTONE_COL = SIZE_MAX;
 // SIMD INSTRUCTION SETS
 
 static inline float simd_sum_f32(const float* x, size_t n) {
-    #if defined(__AVX2__)
+    #if defined(__AVX512F__)
+        return simd_sum_f32_avx512(x, n);
+    #ielf defined(__AVX2__)
         return simd_sum_f32_avx2(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_sum_f32_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_sum_f32_sse3(x, n);
     #elif defined(__SSE2__)
         return simd_sum_f32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_sum_f32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_sum_f32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return simd_sum_f32_neon(x, n);
     #else
         float s = 0.f; for (size_t i=0;i<n;++i) s += x[i]; return s;
     #endif
@@ -64,10 +90,22 @@ static inline float simd_sum_f32(const float* x, size_t n) {
 // -------------------------------------------------------------------------------- 
 
 static inline float simd_min_f32(const float* x, size_t n) {
-    #if defined(__AVX2__)
+    #if defined(__AVX512F__)
+        return simd_min_f32_avx512(x, n);
+    #elif defined(__AVX2__)
         return simd_min_f32_avx2(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_min_f32_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_min_f32_sse3(x, n);
     #elif defined(__SSE2__)
         return simd_min_f32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_min_f32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_min_f32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return simd_min_f32_neon(x, n);
     #else
         float m = x[0]; for (size_t i=1;i<n;++i) if (x[i]<m) m=x[i]; return m;
     #endif
@@ -75,10 +113,22 @@ static inline float simd_min_f32(const float* x, size_t n) {
 // -------------------------------------------------------------------------------- 
 
 static inline float simd_max_f32(const float* x, size_t n) {
-    #if defined(__AVX2__)
+    #if defined(__AVX512F__)
+        return simd_max_f32_avx512(x, n);
+    #elif defined(__AVX2__)
         return simd_max_f32_avx2(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_max_f32_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_max_f32_sse3(x, n);
     #elif defined(__SSE2__)
         return simd_max_f32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_max_f32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_max_f32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return simd_max_f32_neon(x, n);
     #else
         float m = x[0]; for (size_t i=1;i<n;++i) if (x[i]>m) m=x[i]; return m;
     #endif
@@ -86,10 +136,22 @@ static inline float simd_max_f32(const float* x, size_t n) {
 // -------------------------------------------------------------------------------- 
 
 static inline float simd_dot_f32(const float* a, const float* b, size_t n) {
-    #if defined(__AVX2__)
+    #if defined(__AVX512F__)
+        return simd_dot_f32_avx512(x, n);
+    #elif defined(__AVX2__)
         return simd_dot_f32_avx2(a, b, n);
+    #elif defined(__SSE4_1__)
+        return simd_dot_f32_sse41(a, b, n);
+    #elif defined(__SSE3__)
+        return simd_dot_f32_sse3(a, b, n);
     #elif defined(__SSE2__)
         return simd_dot_f32_sse(a, b, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_dot_f32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_dot_f32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return simd_dot_f32_neon(x, n);
     #else
         float s = 0.f;
         for (size_t i = 0; i < n; ++i) s += a[i] * b[i];
@@ -100,10 +162,22 @@ static inline float simd_dot_f32(const float* a, const float* b, size_t n) {
 
 static inline float simd_mean_f32(const float* x, size_t n) {
     if (n == 0) return 0.0f;
-    #if defined(__AVX2__)
+    #if defined(__AVX512F__)
+        return simd_mean_f32_avx512(x, n);
+    #elif defined(__AVX2__)
         return simd_mean_f32_avx2(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_mean_f32_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_mean_f32_sse3(x, n);
     #elif defined(__SSE2__)
         return simd_mean_f32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_mean_f32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_mean_f32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return simd_mean_f32_neon(x, n);
     #else
         float s = 0.f;
         for (size_t i = 0; i < n; ++i) s += x[i];
@@ -114,10 +188,22 @@ static inline float simd_mean_f32(const float* x, size_t n) {
 
 static inline float simd_stdev_f32(const float* x, size_t n) {
     if (n < 2) return 0.0f;
-    #if defined(__AVX2__)
+    #if defined(__AVX512F__)
+        return simd_stdev_f32_avx512(x, n);
+    #elif defined(__AVX2__)
         return simd_stdev_f32_avx2(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_stdev_f32_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_stdev_f32_sse3(x, n);
     #elif defined(__SSE2__)
         return simd_stdev_f32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_stdev_f32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_stdev_f32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return simd_stdev_f32_neon(x, n);
     #else
         float mean = 0.f;
         for (size_t i = 0; i < n; ++i) mean += x[i];
@@ -742,78 +828,7 @@ float stdev_float_vector(float_v* vec) {
         errno = ENODATA;
         return FLT_MAX;
     }
-
-    float mean = average_float_vector(vec);
-    if (errno != 0) return FLT_MAX;
-
-    float sum_sq_diff = 0.0f;
-
-#if defined(__AVX__)
-    __m256 vmean = _mm256_set1_ps(mean);
-    __m256 vsum = _mm256_setzero_ps();
-    size_t i = 0;
-
-    for (; i + 7 < vec->len; i += 8) {
-        __m256 v = _mm256_loadu_ps(&vec->data[i]);
-        __m256 diff = _mm256_sub_ps(v, vmean);
-        __m256 sq = _mm256_mul_ps(diff, diff);
-        if (!_mm256_testz_ps(sq, sq)) { // Skip all-zero check — we need isinf
-            for (int j = 0; j < 8; ++j) {
-                float x = vec->data[i + j];
-                if (isinf(x)) return INFINITY;
-            }
-        }
-        vsum = _mm256_add_ps(vsum, sq);
-    }
-
-    __m128 low = _mm256_castps256_ps128(vsum);
-    __m128 high = _mm256_extractf128_ps(vsum, 1);
-    __m128 sum128 = _mm_add_ps(low, high);
-    sum128 = _mm_hadd_ps(sum128, sum128);
-    sum128 = _mm_hadd_ps(sum128, sum128);
-    sum_sq_diff += _mm_cvtss_f32(sum128);
-
-    for (; i < vec->len; ++i) {
-        float diff = vec->data[i] - mean;
-        float sq = diff * diff;
-        if (isinf(vec->data[i])) return INFINITY;
-        sum_sq_diff += sq;
-    }
-
-#elif defined(__SSE__)
-    __m128 vmean = _mm_set1_ps(mean);
-    __m128 vsum = _mm_setzero_ps();
-    size_t i = 0;
-
-    for (; i + 3 < vec->len; i += 4) {
-        __m128 v = _mm_loadu_ps(&vec->data[i]);
-        __m128 diff = _mm_sub_ps(v, vmean);
-        __m128 sq = _mm_mul_ps(diff, diff);
-        for (int j = 0; j < 4; ++j) {
-            if (isinf(vec->data[i + j])) return INFINITY;
-        }
-        vsum = _mm_add_ps(vsum, sq);
-    }
-
-    vsum = _mm_hadd_ps(vsum, vsum);
-    vsum = _mm_hadd_ps(vsum, vsum);
-    sum_sq_diff += _mm_cvtss_f32(vsum);
-
-    for (; i < vec->len; ++i) {
-        if (isinf(vec->data[i])) return INFINITY;
-        float diff = vec->data[i] - mean;
-        sum_sq_diff += diff * diff;
-    }
-
-#else
-    for (size_t i = 0; i < vec->len; ++i) {
-        if (isinf(vec->data[i])) return INFINITY;
-        float diff = vec->data[i] - mean;
-        sum_sq_diff += diff * diff;
-    }
-#endif
-
-    return sqrtf(sum_sq_diff / vec->len);
+    return simd_stdev_f32(vec->data, vec->len);
 }
 
 // -------------------------------------------------------------------------------- 
