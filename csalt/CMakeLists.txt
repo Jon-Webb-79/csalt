@@ -12,159 +12,79 @@
 # ================================================================================
 
 cmake_minimum_required(VERSION 3.31.3)
-project(csalt)
+project(csalt C)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Default to Debug build if not specified
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 
-# Option for static build
 option(BUILD_STATIC "Build static library" OFF)
 
-# Set compiler flags
+# Create library
+add_library(csalt
+  c_string.c
+  c_float.c
+  c_double.c
+  c_ldouble.c
+  c_int.c
+  # (you can list headers too, but it's optional)
+)
+
+# Make public headers visible to dependents; keep simd private to this target
+target_include_directories(csalt
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/simd
+)
+
+# Compiler/options per target (cleaner than global CMAKE_C_FLAGS)
 if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  # Common warnings
+  target_compile_options(csalt PRIVATE -Wall -Werror -Wpedantic)
 
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        message(STATUS "Configuring Debug build with SIMD disabled (except SSE3)")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic -O0 -g -march=x86-64 -mno-avx -mno-avx2 -mno-fma -msse3 -msse4.1")
-
-        #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic -O0 -g -march=x86-64 -mno-avx -mno-avx2 -mno-fma -msse3")
-    else()
-        message(STATUS "Configuring Release/custom build with SIMD enabled")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic -O3 -march=native")
-    endif()
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Configuring Debug build with AVX/AVX2 disabled; SSE2+ ok")
+    # x86-64 implies SSE2; you also enable SSE3/SSE4.1 explicitly here
+    target_compile_options(csalt PRIVATE
+      -O0 -g -march=x86-64 -mno-avx -mno-avx2 -mno-fma -msse3 -msse4.1
+    )
+  else()
+    message(STATUS "Configuring Release/custom build with SIMD enabled (native)")
+    target_compile_options(csalt PRIVATE -O3 -march=native)
+  endif()
 
 elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /WX")
-    add_definitions(/wd4996 /D_CRT_SECURE_NO_WARNINGS)
+  target_compile_options(csalt PRIVATE /W4 /WX)
+  target_compile_definitions(csalt PRIVATE _CRT_SECURE_NO_WARNINGS)
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # SSE2 is default on x64; explicitly disable AVX2 if you want parity with GCC/Clang debug
+    # MSVC has no /arch:NOAVX2; if you must ensure no AVX2 codegen, build for x86 or avoid AVX2 code paths.
+  else()
+    # Enable AVX2 in Release (x64)
+    target_compile_options(csalt PRIVATE /arch:AVX2)
+  endif()
 endif()
 
-# Platform-specific defines
-if(UNIX AND NOT APPLE)
-    add_definitions(-D_GNU_SOURCE)
-elseif(APPLE)
-    add_definitions(-D_DARWIN_C_SOURCE)
-elseif(WIN32)
-    add_definitions(-D_WIN32_WINNT=0x0601 -DWIN32_LEAN_AND_MEAN)
+# Link libm on Unix (no-op on MSVC)
+if(NOT WIN32)
+  target_link_libraries(csalt PUBLIC m)
 endif()
 
-# Determine library type
-set(LIB_TYPE STATIC)
-if(NOT BUILD_STATIC)
-    set(LIB_TYPE)
-endif()
-
-# Create library
-add_library(csalt ${LIB_TYPE}
-    c_string.c
-    include/c_string.h
-    c_float.c 
-    include/c_float.h
-    c_double.c 
-    include/c_double.h
-    c_ldouble.c 
-    include/c_ldouble.h
-    c_int.c 
-    include/c_int.h
-)
-
-target_include_directories(csalt
-    PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-target_link_libraries(csalt PUBLIC m)
-
-# Set output directories
+# Choose static/shared output style
 if(BUILD_STATIC)
-    set_target_properties(csalt PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    )
-elseif(WIN32)
-    set_target_properties(csalt PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
-        LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
-    )
+  set_target_properties(csalt PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 endif()
 
-# Add tests if not building static
+# Tests
 if(NOT BUILD_STATIC)
-    enable_testing()
-    add_subdirectory(test)
+  enable_testing()
+  add_subdirectory(test)
 endif()
 
-# cmake_minimum_required(VERSION 3.31.3)
-# project(csalt)
-# set(CMAKE_C_STANDARD 17)
-# set(CMAKE_C_STANDARD_REQUIRED ON)
-#
-# # Option for static build
-# option(BUILD_STATIC "Build static library" OFF)
-#
-# # Set compiler flags
-# if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wpedantic -O3 -march=native")
-# elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
-#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /WX")
-#     add_definitions(/wd4996 /D_CRT_SECURE_NO_WARNINGS)
-# endif()
-#
-# # Platform-specific defines
-# if(UNIX AND NOT APPLE)
-#     add_definitions(-D_GNU_SOURCE)
-# elseif(APPLE)
-#     add_definitions(-D_DARWIN_C_SOURCE)
-# elseif(WIN32)
-#     add_definitions(-D_WIN32_WINNT=0x0601 -DWIN32_LEAN_AND_MEAN)
-# endif()
-#
-# # Determine library type
-# set(LIB_TYPE STATIC)
-# if(NOT BUILD_STATIC)
-#     set(LIB_TYPE)
-# endif()
-#
-# # Create library
-# add_library(csalt ${LIB_TYPE}
-#     c_string.c
-#     include/c_string.h
-#     c_float.c 
-#     include/c_float.h
-#     c_double.c 
-#     include/c_double.h
-#     c_ldouble.c 
-#     include/c_ldouble.h
-#     #    c_int.c 
-#     #    include/c_int.h
-# )
-#
-# target_include_directories(csalt
-#     PUBLIC
-#     ${CMAKE_CURRENT_SOURCE_DIR}/include
-# )
-#
-# target_link_libraries(csalt PUBLIC m)
-#
-# # Set output directories
-# if(BUILD_STATIC)
-#     set_target_properties(csalt PROPERTIES
-#         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-#     )
-# elseif(WIN32)
-#     set_target_properties(csalt PROPERTIES
-#         RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
-#         LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
-#     )
-# endif()
-#
-# # Add tests if not building static
-# if(NOT BUILD_STATIC)
-#     enable_testing()
-#     add_subdirectory(test)
-# endif()
 # ================================================================================
 # ================================================================================
 # eof

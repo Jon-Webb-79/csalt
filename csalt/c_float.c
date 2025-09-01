@@ -23,6 +23,15 @@
 #include <math.h>
 #include <stdio.h>
 
+#if defined(__AVX2__)
+  #include <immintrin.h>
+  #include "simd_avx2_float.inl"   /* simd_*_f32_avx2 */
+#elif defined(__SSE2__)
+  #include <xmmintrin.h>
+  #include <emmintrin.h>
+  #include "simd_sse2_float.inl"   /* simd_*_f32_sse  */
+#endif
+
 static const float LOAD_FACTOR_THRESHOLD = 0.7;
 static const size_t VEC_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
 static const size_t VEC_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
@@ -40,6 +49,89 @@ static const size_t COO_TO_CSR_TRIGGER = 10000;
 static const float CSR_COMPACT_THRESHOLD = 0.25f;
 static const size_t CSR_TOMBSTONE_COL = SIZE_MAX;
 // ================================================================================
+// ================================================================================ 
+// SIMD INSTRUCTION SETS
+
+static inline float simd_sum_f32(const float* x, size_t n) {
+    #if defined(__AVX2__)
+        return simd_sum_f32_avx2(x, n);
+    #elif defined(__SSE2__)
+        return simd_sum_f32_sse(x, n);
+    #else
+        float s = 0.f; for (size_t i=0;i<n;++i) s += x[i]; return s;
+    #endif
+}
+// -------------------------------------------------------------------------------- 
+
+static inline float simd_min_f32(const float* x, size_t n) {
+    #if defined(__AVX2__)
+        return simd_min_f32_avx2(x, n);
+    #elif defined(__SSE2__)
+        return simd_min_f32_sse(x, n);
+    #else
+        float m = x[0]; for (size_t i=1;i<n;++i) if (x[i]<m) m=x[i]; return m;
+    #endif
+}
+// -------------------------------------------------------------------------------- 
+
+static inline float simd_max_f32(const float* x, size_t n) {
+    #if defined(__AVX2__)
+        return simd_max_f32_avx2(x, n);
+    #elif defined(__SSE2__)
+        return simd_max_f32_sse(x, n);
+    #else
+        float m = x[0]; for (size_t i=1;i<n;++i) if (x[i]>m) m=x[i]; return m;
+    #endif
+}
+// -------------------------------------------------------------------------------- 
+
+static inline float simd_dot_f32(const float* a, const float* b, size_t n) {
+    #if defined(__AVX2__)
+        return simd_dot_f32_avx2(a, b, n);
+    #elif defined(__SSE2__)
+        return simd_dot_f32_sse(a, b, n);
+    #else
+        float s = 0.f;
+        for (size_t i = 0; i < n; ++i) s += a[i] * b[i];
+        return s;
+    #endif
+}
+// -------------------------------------------------------------------------------- 
+
+static inline float simd_mean_f32(const float* x, size_t n) {
+    if (n == 0) return 0.0f;
+    #if defined(__AVX2__)
+        return simd_mean_f32_avx2(x, n);
+    #elif defined(__SSE2__)
+        return simd_mean_f32_sse(x, n);
+    #else
+        float s = 0.f;
+        for (size_t i = 0; i < n; ++i) s += x[i];
+        return s / (float)n;
+    #endif
+}
+// -------------------------------------------------------------------------------- 
+
+static inline float simd_stdev_f32(const float* x, size_t n) {
+    if (n < 2) return 0.0f;
+    #if defined(__AVX2__)
+        return simd_stdev_f32_avx2(x, n);
+    #elif defined(__SSE2__)
+        return simd_stdev_f32_sse(x, n);
+    #else
+        float mean = 0.f;
+        for (size_t i = 0; i < n; ++i) mean += x[i];
+        mean /= (float)n;
+        float ss = 0.f;
+        for (size_t i = 0; i < n; ++i) {
+            float d = x[i] - mean;
+            ss += d * d;
+        }
+        return sqrtf(ss / (float)n);  // population stdev
+    #endif
+}
+
+// ================================================================================ 
 // ================================================================================ 
 
 float_v* init_float_vector(size_t buff) {
@@ -597,53 +689,7 @@ float min_float_vector(float_v* vec) {
         errno = EINVAL;
         return FLT_MAX;
     }
-
-    float min_val = FLT_MAX;
-
-#if defined(__AVX__)
-    __m256 vmin = _mm256_set1_ps(min_val);
-    size_t i = 0;
-
-    for (; i + 7 < vec->len; i += 8) {
-        __m256 v = _mm256_loadu_ps(&vec->data[i]);
-        vmin = _mm256_min_ps(vmin, v);
-    }
-
-    __m128 low = _mm256_castps256_ps128(vmin);
-    __m128 high = _mm256_extractf128_ps(vmin, 1);
-    __m128 min128 = _mm_min_ps(low, high);
-    min128 = _mm_min_ps(min128, _mm_movehl_ps(min128, min128));
-    min128 = _mm_min_ps(min128, _mm_shuffle_ps(min128, min128, 0x1));
-    min_val = _mm_cvtss_f32(min128);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] < min_val)
-            min_val = vec->data[i];
-
-#elif defined(__SSE__)
-    __m128 vmin = _mm_set1_ps(min_val);
-    size_t i = 0;
-
-    for (; i + 3 < vec->len; i += 4) {
-        __m128 v = _mm_loadu_ps(&vec->data[i]);
-        vmin = _mm_min_ps(vmin, v);
-    }
-
-    vmin = _mm_min_ps(vmin, _mm_movehl_ps(vmin, vmin));
-    vmin = _mm_min_ps(vmin, _mm_shuffle_ps(vmin, vmin, 0x1));
-    min_val = _mm_cvtss_f32(vmin);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] < min_val)
-            min_val = vec->data[i];
-
-#else
-    for (size_t i = 0; i < vec->len; ++i)
-        if (vec->data[i] < min_val)
-            min_val = vec->data[i];
-#endif
-
-    return min_val;
+    return simd_min_f32(vec->data, vec->len);
 }
 
 // -------------------------------------------------------------------------------- 
@@ -653,53 +699,7 @@ float max_float_vector(float_v* vec) {
         errno = EINVAL;
         return FLT_MAX;
     }
-
-    float max_val = -FLT_MAX;
-
-#if defined(__AVX__)
-    __m256 vmax = _mm256_set1_ps(max_val);
-    size_t i = 0;
-
-    for (; i + 7 < vec->len; i += 8) {
-        __m256 v = _mm256_loadu_ps(&vec->data[i]);
-        vmax = _mm256_max_ps(vmax, v);
-    }
-
-    __m128 low = _mm256_castps256_ps128(vmax);
-    __m128 high = _mm256_extractf128_ps(vmax, 1);
-    __m128 max128 = _mm_max_ps(low, high);
-    max128 = _mm_max_ps(max128, _mm_movehl_ps(max128, max128));
-    max128 = _mm_max_ps(max128, _mm_shuffle_ps(max128, max128, 0x1));
-    max_val = _mm_cvtss_f32(max128);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] > max_val)
-            max_val = vec->data[i];
-
-#elif defined(__SSE__)
-    __m128 vmax = _mm_set1_ps(max_val);
-    size_t i = 0;
-
-    for (; i + 3 < vec->len; i += 4) {
-        __m128 v = _mm_loadu_ps(&vec->data[i]);
-        vmax = _mm_max_ps(vmax, v);
-    }
-
-    vmax = _mm_max_ps(vmax, _mm_movehl_ps(vmax, vmax));
-    vmax = _mm_max_ps(vmax, _mm_shuffle_ps(vmax, vmax, 0x1));
-    max_val = _mm_cvtss_f32(vmax);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] > max_val)
-            max_val = vec->data[i];
-
-#else
-    for (size_t i = 0; i < vec->len; ++i)
-        if (vec->data[i] > max_val)
-            max_val = vec->data[i];
-#endif
-
-    return max_val;
+    return simd_max_f32(vec->data, vec->len);
 }
 
 // -------------------------------------------------------------------------------- 
@@ -709,61 +709,7 @@ float sum_float_vector(float_v* vec) {
         errno = EINVAL;
         return FLT_MAX;
     }
-
-    const size_t len = vec->len;
-    const float* data = vec->data;
-
-    float sum = 0.0f;
-
-#if defined(__AVX__)
-    __m256 vsum = _mm256_setzero_ps();
-    size_t i = 0;
-
-    for (; i + 7 < len; i += 8) {
-        __m256 chunk = _mm256_loadu_ps(&data[i]);
-        vsum = _mm256_add_ps(vsum, chunk);
-    }
-
-    // Horizontal sum of vsum
-    __m128 low  = _mm256_castps256_ps128(vsum);         // lower 128
-    __m128 high = _mm256_extractf128_ps(vsum, 1);       // upper 128
-    __m128 sum128 = _mm_add_ps(low, high);              // add lower + upper
-
-    // Shuffle and reduce
-    sum128 = _mm_hadd_ps(sum128, sum128);
-    sum128 = _mm_hadd_ps(sum128, sum128);
-    sum += _mm_cvtss_f32(sum128);
-
-    // Handle remaining elements
-    for (; i < len; ++i) {
-        sum += data[i];
-    }
-
-#elif defined(__SSE__)
-    __m128 vsum = _mm_setzero_ps();
-    size_t i = 0;
-
-    for (; i + 3 < len; i += 4) {
-        __m128 chunk = _mm_loadu_ps(&data[i]);
-        vsum = _mm_add_ps(vsum, chunk);
-    }
-
-    vsum = _mm_hadd_ps(vsum, vsum);
-    vsum = _mm_hadd_ps(vsum, vsum);
-    sum += _mm_cvtss_f32(vsum);
-
-    for (; i < len; ++i) {
-        sum += data[i];
-    }
-
-#else
-    // Fallback to scalar
-    for (size_t i = 0; i < len; ++i) {
-        sum += data[i];
-    }
-#endif
-
-    return sum;
+    return simd_sum_f32(vec->data, vec->len);
 }
 
 // -------------------------------------------------------------------------------- 
@@ -942,58 +888,7 @@ float dot_float(const float* a, const float* b, size_t len) {
         errno = EINVAL;
         return FLT_MAX;
     }
-
-    float result = 0.0f;
-
-#if defined(__AVX__)
-    __m256 sum_vec = _mm256_setzero_ps();
-    size_t i = 0;
-
-    for (; i + 8 <= len; i += 8) {
-        __m256 va = _mm256_loadu_ps(&a[i]);
-        __m256 vb = _mm256_loadu_ps(&b[i]);
-        sum_vec = _mm256_add_ps(sum_vec, _mm256_mul_ps(va, vb));
-    }
-
-    float sum_arr[8];
-    _mm256_storeu_ps(sum_arr, sum_vec);
-    for (int j = 0; j < 8; ++j) {
-        result += sum_arr[j];
-    }
-
-#elif defined(__SSE__)
-    __m128 sum_vec = _mm_setzero_ps();
-    size_t i = 0;
-
-    for (; i + 4 <= len; i += 4) {
-        __m128 va = _mm_loadu_ps(&a[i]);
-        __m128 vb = _mm_loadu_ps(&b[i]);
-        sum_vec = _mm_add_ps(sum_vec, _mm_mul_ps(va, vb));
-    }
-
-    float sum_arr[4];
-    _mm_storeu_ps(sum_arr, sum_vec);
-    for (int j = 0; j < 4; ++j) {
-        result += sum_arr[j];
-    }
-
-#else
-    size_t i = 0;
-#endif
-
-    // Scalar tail for AVX, SSE, or full scalar path
-#if defined(__AVX__)
-    for (; i < len; ++i)
-        result += a[i] * b[i];
-#elif defined(__SSE__)
-    for (; i < len; ++i)
-        result += a[i] * b[i];
-#else
-    for (size_t i = 0; i < len; ++i)
-        result += a[i] * b[i];
-#endif
-
-    return result;
+    return simd_dot_f32(a, b, len);
 }
 // -------------------------------------------------------------------------------- 
 
