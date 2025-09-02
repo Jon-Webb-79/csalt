@@ -22,6 +22,35 @@
 #include <math.h>
 #include <stdio.h>
 
+#if defined(__AVX512F__)
+  #include <immintrin.h>
+  #include "simd_avx512_double.inl"
+#elif defined(__AVX2__)
+  #include <immintrin.h>
+  #include "simd_avx2_double.inl"
+#elif defined(__AVX__)
+  #include <immintrin.h>
+  #include "simd_avx_double.inl"
+#elif defined(__SSE4_1__)
+  #include <smmintrin.h>
+  #include "simd_sse41_double.inl"
+#elif defined(__SSE3__)
+  #include <pmmintrin.h>
+  #include "simd_sse3_double.inl"
+#elif defined(__SSE2__)
+  #include <emmintrin.h>
+  #include "simd_sse2_double.inl"
+#elif defined(__ARM_FEATURE_SVE2)
+  #include <arm_sve.h>
+  #include "simd_sve2_double.inl"
+#elif defined(__ARM_FEATURE_SVE)
+  #include <arm_sve.h>
+  #include "simd_sve_double.inl"
+#elif defined(__aarch64__) && defined(__ARM_NEON)
+  #include <arm_neon.h>
+  #include "simd_neon_double.inl"
+#endif
+
 static const float LOAD_FACTOR_THRESHOLD = 0.7;
 static const size_t VEC_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
 static const size_t VEC_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
@@ -39,6 +68,166 @@ static const size_t COO_TO_CSR_TRIGGER = 10000;
 static const float CSR_COMPACT_THRESHOLD = 0.25f;
 static const size_t CSR_TOMBSTONE_COL = SIZE_MAX;
 // ================================================================================
+// ================================================================================ 
+
+static inline double simd_sum_f64(const double* x, size_t n) {
+    #if defined(__AVX512F__)
+        return simd_sum_f64_avx512(x, n);
+    #elif defined(__AVX2__)
+        return simd_sum_f64_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_sum_f64_avx(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_sum_f64_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_sum_f64_sse3(x, n);
+    #elif defined(__SSE2__)
+        return simd_sum_f64_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_sum_f64_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_sum_f64_sve(x, n);
+    #elif defined(__aarch64__) && defined(__ARM_NEON)
+        return simd_sum_f64_neon(x, n);
+    #else
+        double s = 0.0; for (size_t i=0;i<n;++i) s += x[i]; return s;
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+static inline double simd_min_f64(const double* x, size_t n) {
+    #if defined(__AVX512F__)
+        return simd_min_f64_avx512(x, n);
+    #elif defined(__AVX2__)
+        return simd_min_f64_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_min_f64_avx(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_min_f64_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_min_f64_sse3(x, n);
+    #elif defined(__SSE2__)
+        return simd_min_f64_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_min_f64_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_min_f64_sve(x, n);
+    #elif defined(__aarch64__) && defined(__ARM_NEON)
+        return simd_min_f64_neon(x, n);
+    #else
+        double m = x[0]; for (size_t i=1;i<n;++i) if (x[i]<m) m=x[i]; return m;
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+static inline double simd_max_f64(const double* x, size_t n) {
+    #if defined(__AVX512F__)
+        return simd_max_f64_avx512(x, n);
+    #elif defined(__AVX2__)
+        return simd_max_f64_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_max_f64_avx(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_max_f64_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_max_f64_sse3(x, n);
+    #elif defined(__SSE2__)
+        return simd_max_f64_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_max_f64_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_max_f64_sve(x, n);
+    #elif defined(__aarch64__) && defined(__ARM_NEON)
+        return simd_max_f64_neon(x, n);
+    #else
+        double m = x[0]; for (size_t i=1;i<n;++i) if (x[i]>m) m=x[i]; return m;
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+static inline double simd_dot_f64(const double* a, const double* b, size_t n) {
+    #if defined(__AVX512F__)
+        return simd_dot_f64_avx512(a, b, n);
+    #elif defined(__AVX2__)
+        return simd_dot_f64_avx2(a, b, n);
+    #elif defined(__AVX__)
+        return simd_dot_f64_avx(a, b, n);
+    #elif defined(__SSE4_1__)
+        return simd_dot_f64_sse41(a, b, n);
+    #elif defined(__SSE3__)
+        return simd_dot_f64_sse3(a, b, n);
+    #elif defined(__SSE2__)
+        return simd_dot_f64_sse(a, b, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_dot_f64_sve2(a, b, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_dot_f64_sve(a, b, n);
+    #elif defined(__aarch64__) && defined(__ARM_NEON)
+        return simd_dot_f64_neon(a, b, n);
+    #else
+        double s = 0.0; for (size_t i=0;i<n;++i) s += a[i]*b[i]; return s;
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+static inline double simd_mean_f64(const double* x, size_t n) {
+    if (n == 0) return 0.0;
+    #if defined(__AVX512F__)
+        return simd_mean_f64_avx512(x, n);
+    #elif defined(__AVX2__)
+        return simd_mean_f64_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_mean_f64_avx(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_mean_f64_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_mean_f64_sse3(x, n);
+    #elif defined(__SSE2__)
+        return simd_mean_f64_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_mean_f64_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_mean_f64_sve(x, n);
+    #elif defined(__aarch64__) && defined(__ARM_NEON)
+        return simd_mean_f64_neon(x, n);
+    #else
+        double s = 0.0; for (size_t i=0;i<n;++i) s += x[i]; return s / (double)n;
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+static inline double simd_stdev_f64(const double* x, size_t n) {
+    if (n < 2) return 0.0;
+    #if defined(__AVX512F__)
+        return simd_stdev_f64_avx512(x, n);
+    #elif defined(__AVX2__)
+        return simd_stdev_f64_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_stdev_f64_avx(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_stdev_f64_sse41(x, n);
+    #elif defined(__SSE3__)
+        return simd_stdev_f64_sse3(x, n);
+    #elif defined(__SSE2__)
+        return simd_stdev_f64_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_stdev_f64_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_stdev_f64_sve(x, n);
+    #elif defined(__aarch64__) && defined(__ARM_NEON)
+        return simd_stdev_f64_neon(x, n);
+    #else
+        double mean = 0.0;
+        for (size_t i=0;i<n;++i) mean += x[i];
+        mean /= (double)n;
+        double ss = 0.0;
+        for (size_t i=0;i<n;++i) { double d = x[i] - mean; ss += d*d; }
+        return sqrt(ss / (double)n);  // population stdev
+    #endif
+}
+
+
+// ================================================================================ 
 // ================================================================================ 
 
 double_v* init_double_vector(size_t buff) {
@@ -596,51 +785,7 @@ double min_double_vector(double_v* vec) {
         errno = EINVAL;
         return DBL_MAX;
     }
-
-    double min_val = DBL_MAX;
-
-#if defined(__AVX__)
-    __m256d vmin = _mm256_set1_pd(min_val);
-    size_t i = 0;
-
-    for (; i + 3 < vec->len; i += 4) {
-        __m256d v = _mm256_loadu_pd(&vec->data[i]);
-        vmin = _mm256_min_pd(vmin, v);
-    }
-
-    __m128d low = _mm256_castpd256_pd128(vmin);
-    __m128d high = _mm256_extractf128_pd(vmin, 1);
-    __m128d min128 = _mm_min_pd(low, high);
-    min128 = _mm_min_pd(min128, _mm_unpackhi_pd(min128, min128));
-    min_val = _mm_cvtsd_f64(min128);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] < min_val)
-            min_val = vec->data[i];
-
-#elif defined(__SSE2__)
-    __m128d vmin = _mm_set1_pd(min_val);
-    size_t i = 0;
-
-    for (; i + 1 < vec->len; i += 2) {
-        __m128d v = _mm_loadu_pd(&vec->data[i]);
-        vmin = _mm_min_pd(vmin, v);
-    }
-
-    vmin = _mm_min_pd(vmin, _mm_unpackhi_pd(vmin, vmin));
-    min_val = _mm_cvtsd_f64(vmin);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] < min_val)
-            min_val = vec->data[i];
-
-#else
-    for (size_t i = 0; i < vec->len; ++i)
-        if (vec->data[i] < min_val)
-            min_val = vec->data[i];
-#endif
-
-    return min_val;
+    return simd_min_f64(vec->data, vec->len);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -649,55 +794,7 @@ double max_double_vector(double_v* vec) {
         errno = EINVAL;
         return -DBL_MAX;
     }
-
-    double max_val = -DBL_MAX;
-
-#if defined(__AVX__)
-    __m256d vmax = _mm256_set1_pd(max_val);
-    size_t i = 0;
-
-    for (; i + 3 < vec->len; i += 4) {
-        __m256d v = _mm256_loadu_pd(&vec->data[i]);
-        vmax = _mm256_max_pd(vmax, v);
-    }
-
-    // Reduce 4 values to 1 max
-    __m128d low = _mm256_castpd256_pd128(vmax);
-    __m128d high = _mm256_extractf128_pd(vmax, 1);
-    __m128d max128 = _mm_max_pd(low, high);
-    max128 = _mm_max_pd(max128, _mm_unpackhi_pd(max128, max128));
-    max_val = _mm_cvtsd_f64(max128);
-
-    // Scalar fallback for remainder
-    for (; i < vec->len; ++i)
-        if (vec->data[i] > max_val)
-            max_val = vec->data[i];
-
-#elif defined(__SSE2__)
-    __m128d vmax = _mm_set1_pd(max_val);
-    size_t i = 0;
-
-    for (; i + 1 < vec->len; i += 2) {
-        __m128d v = _mm_loadu_pd(&vec->data[i]);
-        vmax = _mm_max_pd(vmax, v);
-    }
-
-    // Reduce 2 values to 1
-    vmax = _mm_max_pd(vmax, _mm_unpackhi_pd(vmax, vmax));
-    max_val = _mm_cvtsd_f64(vmax);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] > max_val)
-            max_val = vec->data[i];
-
-#else
-    // Pure scalar fallback
-    for (size_t i = 0; i < vec->len; ++i)
-        if (vec->data[i] > max_val)
-            max_val = vec->data[i];
-#endif
-
-    return max_val;
+    return simd_max_f64(vec->data, vec->len);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -706,57 +803,7 @@ double sum_double_vector(double_v* vec) {
         errno = EINVAL;
         return DBL_MAX;
     }
-
-    const size_t len = vec->len;
-    const double* data = vec->data;
-
-    double sum = 0.0;
-
-#if defined(__AVX__)
-    __m256d vsum = _mm256_setzero_pd();
-    size_t i = 0;
-
-    for (; i + 3 < len; i += 4) {
-        __m256d chunk = _mm256_loadu_pd(&data[i]);
-        vsum = _mm256_add_pd(vsum, chunk);
-    }
-
-    // Horizontal sum of 4 doubles
-    __m128d low  = _mm256_castpd256_pd128(vsum);        // lower 2 doubles
-    __m128d high = _mm256_extractf128_pd(vsum, 1);      // upper 2 doubles
-    __m128d sum128 = _mm_add_pd(low, high);             // add pairs
-    sum128 = _mm_add_pd(sum128, _mm_unpackhi_pd(sum128, sum128)); // final sum
-    sum += _mm_cvtsd_f64(sum128);
-
-    // Handle remaining elements
-    for (; i < len; ++i) {
-        sum += data[i];
-    }
-
-#elif defined(__SSE2__)
-    __m128d vsum = _mm_setzero_pd();
-    size_t i = 0;
-
-    for (; i + 1 < len; i += 2) {
-        __m128d chunk = _mm_loadu_pd(&data[i]);
-        vsum = _mm_add_pd(vsum, chunk);
-    }
-
-    vsum = _mm_add_pd(vsum, _mm_unpackhi_pd(vsum, vsum)); // sum 2 doubles
-    sum += _mm_cvtsd_f64(vsum);
-
-    for (; i < len; ++i) {
-        sum += data[i];
-    }
-
-#else
-    // Fallback to scalar sum
-    for (size_t i = 0; i < len; ++i) {
-        sum += data[i];
-    }
-#endif
-
-    return sum;
+    return simd_sum_f64(vec->data, vec->len);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -778,79 +825,7 @@ double stdev_double_vector(double_v* vec) {
         errno = ENODATA;
         return DBL_MAX;
     }
-
-    double mean = average_double_vector(vec);
-    if (errno != 0) return DBL_MAX;
-
-    double sum_sq_diff = 0.0;
-
-#if defined(__AVX__)
-    __m256d vmean = _mm256_set1_pd(mean);
-    __m256d vsum = _mm256_setzero_pd();
-    size_t i = 0;
-
-    for (; i + 3 < vec->len; i += 4) {
-        __m256d v = _mm256_loadu_pd(&vec->data[i]);
-        __m256d diff = _mm256_sub_pd(v, vmean);
-        __m256d sq = _mm256_mul_pd(diff, diff);
-
-        // Check for infinity in any of the 4 values
-        for (int j = 0; j < 4; ++j) {
-            if (isinf(vec->data[i + j])) return INFINITY;
-        }
-
-        vsum = _mm256_add_pd(vsum, sq);
-    }
-
-    // Horizontal sum of vsum
-    __m128d low  = _mm256_castpd256_pd128(vsum);
-    __m128d high = _mm256_extractf128_pd(vsum, 1);
-    __m128d sum128 = _mm_add_pd(low, high);
-    sum128 = _mm_add_pd(sum128, _mm_unpackhi_pd(sum128, sum128));
-    sum_sq_diff += _mm_cvtsd_f64(sum128);
-
-    // Remainder (scalar)
-    for (; i < vec->len; ++i) {
-        if (isinf(vec->data[i])) return INFINITY;
-        double diff = vec->data[i] - mean;
-        sum_sq_diff += diff * diff;
-    }
-
-#elif defined(__SSE2__)
-    __m128d vmean = _mm_set1_pd(mean);
-    __m128d vsum = _mm_setzero_pd();
-    size_t i = 0;
-
-    for (; i + 1 < vec->len; i += 2) {
-        __m128d v = _mm_loadu_pd(&vec->data[i]);
-        __m128d diff = _mm_sub_pd(v, vmean);
-        __m128d sq = _mm_mul_pd(diff, diff);
-
-        for (int j = 0; j < 2; ++j) {
-            if (isinf(vec->data[i + j])) return INFINITY;
-        }
-
-        vsum = _mm_add_pd(vsum, sq);
-    }
-
-    vsum = _mm_add_pd(vsum, _mm_unpackhi_pd(vsum, vsum));
-    sum_sq_diff += _mm_cvtsd_f64(vsum);
-
-    for (; i < vec->len; ++i) {
-        if (isinf(vec->data[i])) return INFINITY;
-        double diff = vec->data[i] - mean;
-        sum_sq_diff += diff * diff;
-    }
-
-#else
-    for (size_t i = 0; i < vec->len; ++i) {
-        if (isinf(vec->data[i])) return INFINITY;
-        double diff = vec->data[i] - mean;
-        sum_sq_diff += diff * diff;
-    }
-#endif
-
-    return sqrt(sum_sq_diff / vec->len);
+    return simd_stdev_f64(vec->data, vec->len);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -924,58 +899,7 @@ double dot_double(const double* a, const double* b, size_t len) {
         errno = EINVAL;
         return DBL_MAX;
     }
-
-    double result = 0.0;
-
-#if defined(__AVX__)
-    __m256d sum_vec = _mm256_setzero_pd();
-    size_t i = 0;
-
-    for (; i + 4 <= len; i += 4) {
-        __m256d va = _mm256_loadu_pd(&a[i]);
-        __m256d vb = _mm256_loadu_pd(&b[i]);
-        sum_vec = _mm256_add_pd(sum_vec, _mm256_mul_pd(va, vb));
-    }
-
-    double sum_arr[4];
-    _mm256_storeu_pd(sum_arr, sum_vec);
-    for (int j = 0; j < 4; ++j) {
-        result += sum_arr[j];
-    }
-
-#elif defined(__SSE2__)
-    __m128d sum_vec = _mm_setzero_pd();
-    size_t i = 0;
-
-    for (; i + 2 <= len; i += 2) {
-        __m128d va = _mm_loadu_pd(&a[i]);
-        __m128d vb = _mm_loadu_pd(&b[i]);
-        sum_vec = _mm_add_pd(sum_vec, _mm_mul_pd(va, vb));
-    }
-
-    double sum_arr[2];
-    _mm_storeu_pd(sum_arr, sum_vec);
-    for (int j = 0; j < 2; ++j) {
-        result += sum_arr[j];
-    }
-
-#else
-    size_t i = 0;
-#endif
-
-    // Scalar fallback or tail loop
-#if defined(__AVX__)
-    for (; i < len; ++i)
-        result += a[i] * b[i];
-#elif defined(__SSE2__)
-    for (; i < len; ++i)
-        result += a[i] * b[i];
-#else
-    for (size_t i = 0; i < len; ++i)
-        result += a[i] * b[i];
-#endif
-
-    return result;
+    return simd_dot_f64(a, b, len);
 }
 
 // -------------------------------------------------------------------------------- 

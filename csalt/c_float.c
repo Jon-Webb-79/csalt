@@ -24,26 +24,29 @@
 #include <stdio.h>
 
 #if defined(__AVX512F__)
-  #include "simd_avx512_float.inl"
+    #include "simd_avx512_float.inl"
 #elif defined(__AVX2__)
-  #include <immintrin.h>
-  #include "simd_avx2_float.inl"   /* simd_*_f32_avx2 */
+    #include <immintrin.h>
+    #include "simd_avx2_float.inl"   /* simd_*_f32_avx2 */
+#elif defined(__AVX__)
+    #include <immintrin.h> 
+    #include "simd_avx_float.inl"
 #elif defined(__SSE4_1__)
-  #include <smmintrin.h>
-  #include "simd_sse41_float.inl"
+    #include <smmintrin.h>
+    #include "simd_sse41_float.inl"
 #elif defined(__SSE3__)
-  #include <pmmintrin.h>
-  #include "simd_sse3_float.inl"
+    #include <pmmintrin.h>
+    #include "simd_sse3_float.inl"
 #elif defined(__SSE2__)
-  #include <xmmintrin.h>
-  #include <emmintrin.h>
-  #include "simd_sse2_float.inl"   /* simd_*_f32_sse  */
+    #include <xmmintrin.h>
+    #include <emmintrin.h>
+    #include "simd_sse2_float.inl"   /* simd_*_f32_sse  */
 #elif defined(__ARM_FEATURE_SVE2)
-  #include "simd_sve2_float.inl"
+    #include "simd_sve2_float.inl"
 #elif defined(__ARM_FEATURE_SVE)
-  #include "simd_sve_float.inl"
+    #include "simd_sve_float.inl"
 #elif defined(__ARM_NEON)
-  #include "simd_neon_float.inl"
+    #include "simd_neon_float.inl"
 #endif
 
 static const float LOAD_FACTOR_THRESHOLD = 0.7;
@@ -69,8 +72,10 @@ static const size_t CSR_TOMBSTONE_COL = SIZE_MAX;
 static inline float simd_sum_f32(const float* x, size_t n) {
     #if defined(__AVX512F__)
         return simd_sum_f32_avx512(x, n);
-    #ielf defined(__AVX2__)
+    #elif defined(__AVX2__)
         return simd_sum_f32_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_sum_f32_avx(x, n);
     #elif defined(__SSE4_1__)
         return simd_sum_f32_sse41(x, n);
     #elif defined(__SSE3__)
@@ -94,6 +99,8 @@ static inline float simd_min_f32(const float* x, size_t n) {
         return simd_min_f32_avx512(x, n);
     #elif defined(__AVX2__)
         return simd_min_f32_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_min_f32_avx(x, n);
     #elif defined(__SSE4_1__)
         return simd_min_f32_sse41(x, n);
     #elif defined(__SSE3__)
@@ -117,6 +124,8 @@ static inline float simd_max_f32(const float* x, size_t n) {
         return simd_max_f32_avx512(x, n);
     #elif defined(__AVX2__)
         return simd_max_f32_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_max_f32_avx(x, n);
     #elif defined(__SSE4_1__)
         return simd_max_f32_sse41(x, n);
     #elif defined(__SSE3__)
@@ -140,6 +149,8 @@ static inline float simd_dot_f32(const float* a, const float* b, size_t n) {
         return simd_dot_f32_avx512(x, n);
     #elif defined(__AVX2__)
         return simd_dot_f32_avx2(a, b, n);
+    #elif defined(__AVX__)
+        return simd_dot_f32_avx(a, b, n);
     #elif defined(__SSE4_1__)
         return simd_dot_f32_sse41(a, b, n);
     #elif defined(__SSE3__)
@@ -166,6 +177,8 @@ static inline float simd_mean_f32(const float* x, size_t n) {
         return simd_mean_f32_avx512(x, n);
     #elif defined(__AVX2__)
         return simd_mean_f32_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_mean_f32_avx(x, n);
     #elif defined(__SSE4_1__)
         return simd_mean_f32_sse41(x, n);
     #elif defined(__SSE3__)
@@ -192,6 +205,8 @@ static inline float simd_stdev_f32(const float* x, size_t n) {
         return simd_stdev_f32_avx512(x, n);
     #elif defined(__AVX2__)
         return simd_stdev_f32_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_stdev_f32_avx(x, n);
     #elif defined(__SSE4_1__)
         return simd_stdev_f32_sse41(x, n);
     #elif defined(__SSE3__)
