@@ -22,12 +22,166 @@
 #include <stdio.h>
 #include <float.h>
 
+#if defined(__AVX2__)
+  #include "simd_avx2_int32.inl"
+#elif defined(__SSE4_1__)
+  #include "simd_sse41_int32.inl"
+#elif defined(__SSE2__)
+  #include "simd_sse2_int32.inl"
+#elif defined(__ARM_FEATURE_SVE2)
+  #include "simd_sve2_int32.inl"
+#elif defined(__ARM_FEATURE_SVE)
+  #include "simd_sve_int32.inl"
+#elif defined(__aarch64__)
+  #include "simd_neon_int32.inl"
+#endif
+
 static const float LOAD_FACTOR_THRESHOLD = 0.7;
 static const size_t VEC_THRESHOLD = 1 * 1024 * 1024;  // 1 MB
 static const size_t VEC_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
 static const size_t hashSize = 16;  //  Size fo hash map init functions
 static const uint32_t HASH_SEED = 0x45d9f3b; 
 // ================================================================================
+// ================================================================================ 
+
+static inline int simd_sum_i32(const int32_t* x, size_t n) {
+    #if defined(__AVX2__)
+        return (int)simd_sum_i32_avx2(x, n);
+    #elif defined(__AVX__)
+        /* AVX has no 256-bit integer arithmetic; use SSE4.1 path */
+        return (int)simd_sum_i32_sse41(x, n);
+    #elif defined(__SSE4_1__)
+        return (int)simd_sum_i32_sse41(x, n);
+    #elif defined(__SSE2__)
+        return (int)simd_sum_i32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return (int)simd_sum_i32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return (int)simd_sum_i32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return (int)simd_sum_i32_neon(x, n);
+    #else
+        long long s = 0; for (size_t i=0;i<n;++i) s += x[i]; return (int)s;
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+/* min: returns int */
+static inline int simd_min_i32(const int32_t* x, size_t n) {
+    #if defined(__AVX2__)
+        return (int)simd_min_i32_avx2(x, n);
+    #elif defined(__AVX__)
+        return (int)simd_min_i32_sse41(x, n);
+    #elif defined(__SSE4_1__)
+        return (int)simd_min_i32_sse41(x, n);
+    #elif defined(__SSE2__)
+        return (int)simd_min_i32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return (int)simd_min_i32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return (int)simd_min_i32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return (int)simd_min_i32_neon(x, n);
+    #else
+        int m = x[0]; for (size_t i=1;i<n;++i) if (x[i] < m) m = x[i]; return m;
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+/* max: returns int */
+static inline int simd_max_i32(const int32_t* x, size_t n) {
+    #if defined(__AVX2__)
+        return (int)simd_max_i32_avx2(x, n);
+    #elif defined(__AVX__)
+        return (int)simd_max_i32_sse41(x, n);
+    #elif defined(__SSE4_1__)
+        return (int)simd_max_i32_sse41(x, n);
+    #elif defined(__SSE2__)
+        return (int)simd_max_i32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return (int)simd_max_i32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return (int)simd_max_i32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return (int)simd_max_i32_neon(x, n);
+    #else
+        int m = x[0]; for (size_t i=1;i<n;++i) if (x[i] > m) m = x[i]; return m;
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+/* dot: returns int (accumulate in i64 inside ISA impl; cast here). Beware potential overflow on cast. */
+static inline int simd_dot_i32(const int32_t* a, const int32_t* b, size_t n) {
+    #if defined(__AVX2__)
+        return (int)simd_dot_i32_avx2(a, b, n);
+    #elif defined(__AVX__)
+        return (int)simd_dot_i32_sse41(a, b, n);
+    #elif defined(__SSE4_1__)
+        return (int)simd_dot_i32_sse41(a, b, n);
+    #elif defined(__SSE2__)
+        return (int)simd_dot_i32_sse(a, b, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return (int)simd_dot_i32_sve2(a, b, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return (int)simd_dot_i32_sve(a, b, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return (int)simd_dot_i32_neon(a, b, n);
+    #else
+        long long s = 0; for (size_t i=0;i<n;++i) s += (long long)a[i] * (long long)b[i]; return (int)s;
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+/* mean: returns float (compute sum in i64 inside ISA impl; divide in FP) */
+static inline float simd_mean_i32(const int32_t* x, size_t n) {
+    if (!n) return 0.0f;
+    #if defined(__AVX2__)
+        return simd_mean_i32_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_mean_i32_sse41(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_mean_i32_sse41(x, n);
+    #elif defined(__SSE2__)
+        return simd_mean_i32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_mean_i32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_mean_i32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return simd_mean_i32_neon(x, n);
+    #else
+        long long s = 0; for (size_t i=0;i<n;++i) s += x[i]; return (float)((double)s / (double)n);
+    #endif
+}
+// --------------------------------------------------------------------------------
+
+/* stdev (population): returns float (two-pass; second pass in float SIMD in ISA impls) */
+static inline float simd_stdev_i32(const int32_t* x, size_t n) {
+    if (n < 2) return 0.0f;
+    #if defined(__AVX2__)
+        return simd_stdev_i32_avx2(x, n);
+    #elif defined(__AVX__)
+        return simd_stdev_i32_sse41(x, n);
+    #elif defined(__SSE4_1__)
+        return simd_stdev_i32_sse41(x, n);
+    #elif defined(__SSE2__)
+        return simd_stdev_i32_sse(x, n);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_stdev_i32_sve2(x, n);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_stdev_i32_sve(x, n);
+    #elif defined(__ARM_FEATURE_NEON)
+        return simd_stdev_i32_neon(x, n);
+    #else
+        /* scalar two-pass */
+        double mu = 0.0; for (size_t i=0;i<n;++i) mu += (double)x[i]; mu /= (double)n;
+        double ss = 0.0; for (size_t i=0;i<n;++i) { double d = (double)x[i] - mu; ss += d*d; }
+        return (float)sqrt(ss / (double)n);
+    #endif
+}
+
+
+// ================================================================================ 
 // ================================================================================ 
 
 int_v* init_int_vector(size_t buff) {
@@ -568,53 +722,7 @@ int min_int_vector(int_v* vec) {
         errno = EINVAL;
         return INT_MAX;
     }
-
-    int min_val = INT_MAX;
-
-#if defined(__AVX2__)
-    __m256i vmin = _mm256_set1_epi32(min_val);
-    size_t i = 0;
-
-    for (; i + 8 <= vec->len; i += 8) {
-        __m256i v = _mm256_loadu_si256((__m256i*)&vec->data[i]);
-        vmin = _mm256_min_epi32(vmin, v);
-    }
-
-    __m128i low = _mm256_castsi256_si128(vmin);
-    __m128i high = _mm256_extracti128_si256(vmin, 1);
-    __m128i min128 = _mm_min_epi32(low, high);
-    min128 = _mm_min_epi32(min128, _mm_shuffle_epi32(min128, _MM_SHUFFLE(2, 3, 0, 1)));
-    min128 = _mm_min_epi32(min128, _mm_shuffle_epi32(min128, _MM_SHUFFLE(1, 0, 3, 2)));
-    min_val = _mm_cvtsi128_si32(min128);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] < min_val)
-            min_val = vec->data[i];
-
-#elif defined(__SSE4_1__)
-    __m128i vmin = _mm_set1_epi32(min_val);
-    size_t i = 0;
-
-    for (; i + 4 <= vec->len; i += 4) {
-        __m128i v = _mm_loadu_si128((__m128i*)&vec->data[i]);
-        vmin = _mm_min_epi32(vmin, v);
-    }
-
-    vmin = _mm_min_epi32(vmin, _mm_shuffle_epi32(vmin, _MM_SHUFFLE(2, 3, 0, 1)));
-    vmin = _mm_min_epi32(vmin, _mm_shuffle_epi32(vmin, _MM_SHUFFLE(1, 0, 3, 2)));
-    min_val = _mm_cvtsi128_si32(vmin);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] < min_val)
-            min_val = vec->data[i];
-
-#else
-    for (size_t i = 0; i < vec->len; ++i)
-        if (vec->data[i] < min_val)
-            min_val = vec->data[i];
-#endif
-
-    return min_val;
+    return simd_min_i32(vec->data, vec->len);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -623,53 +731,7 @@ int max_int_vector(int_v* vec) {
         errno = EINVAL;
         return INT_MAX;
     }
-
-    int max_val = -INT_MAX;
-
-#if defined(__AVX2__)
-    __m256i vmax = _mm256_set1_epi32(max_val);
-    size_t i = 0;
-
-    for (; i + 8 <= vec->len; i += 8) {
-        __m256i v = _mm256_loadu_si256((__m256i*)&vec->data[i]);
-        vmax = _mm256_max_epi32(vmax, v);
-    }
-
-    __m128i low = _mm256_castsi256_si128(vmax);
-    __m128i high = _mm256_extracti128_si256(vmax, 1);
-    __m128i max128 = _mm_max_epi32(low, high);
-    max128 = _mm_max_epi32(max128, _mm_shuffle_epi32(max128, _MM_SHUFFLE(2, 3, 0, 1)));
-    max128 = _mm_max_epi32(max128, _mm_shuffle_epi32(max128, _MM_SHUFFLE(1, 0, 3, 2)));
-    max_val = _mm_cvtsi128_si32(max128);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] > max_val)
-            max_val = vec->data[i];
-
-#elif defined(__SSE4_1__)
-    __m128i vmax = _mm_set1_epi32(max_val);
-    size_t i = 0;
-
-    for (; i + 4 <= vec->len; i += 4) {
-        __m128i v = _mm_loadu_si128((__m128i*)&vec->data[i]);
-        vmax = _mm_max_epi32(vmax, v);
-    }
-
-    vmax = _mm_max_epi32(vmax, _mm_shuffle_epi32(vmax, _MM_SHUFFLE(2, 3, 0, 1)));
-    vmax = _mm_max_epi32(vmax, _mm_shuffle_epi32(vmax, _MM_SHUFFLE(1, 0, 3, 2)));
-    max_val = _mm_cvtsi128_si32(vmax);
-
-    for (; i < vec->len; ++i)
-        if (vec->data[i] > max_val)
-            max_val = vec->data[i];
-
-#else
-    for (size_t i = 0; i < vec->len; ++i)
-        if (vec->data[i] > max_val)
-            max_val = vec->data[i];
-#endif
-
-    return max_val;
+    return simd_max_i32(vec->data, vec->len);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -678,54 +740,7 @@ int sum_int_vector(int_v* vec) {
         errno = EINVAL;
         return INT_MAX;
     }
-
-    const size_t len = vec->len;
-    const int* data = vec->data;
-
-    int sum = 0;
-
-#if defined(__AVX2__)
-    __m256i vsum = _mm256_setzero_si256();
-    size_t i = 0;
-
-    for (; i + 8 <= len; i += 8) {
-        __m256i chunk = _mm256_loadu_si256((__m256i*)&data[i]);
-        vsum = _mm256_add_epi32(vsum, chunk);
-    }
-
-    // Reduce 8 lanes to 1 int
-    __m128i low = _mm256_castsi256_si128(vsum);
-    __m128i high = _mm256_extracti128_si256(vsum, 1);
-    __m128i sum128 = _mm_add_epi32(low, high);
-    sum128 = _mm_add_epi32(sum128, _mm_shuffle_epi32(sum128, _MM_SHUFFLE(2, 3, 0, 1)));
-    sum128 = _mm_add_epi32(sum128, _mm_shuffle_epi32(sum128, _MM_SHUFFLE(1, 0, 3, 2)));
-    sum += _mm_cvtsi128_si32(sum128);
-
-    for (; i < len; ++i)
-        sum += data[i];
-
-#elif defined(__SSE2__)
-    __m128i vsum = _mm_setzero_si128();
-    size_t i = 0;
-
-    for (; i + 4 <= len; i += 4) {
-        __m128i chunk = _mm_loadu_si128((__m128i*)&data[i]);
-        vsum = _mm_add_epi32(vsum, chunk);
-    }
-
-    vsum = _mm_add_epi32(vsum, _mm_shuffle_epi32(vsum, _MM_SHUFFLE(2, 3, 0, 1)));
-    vsum = _mm_add_epi32(vsum, _mm_shuffle_epi32(vsum, _MM_SHUFFLE(1, 0, 3, 2)));
-    sum += _mm_cvtsi128_si32(vsum);
-
-    for (; i < len; ++i)
-        sum += data[i];
-
-#else
-    for (size_t i = 0; i < len; ++i)
-        sum += data[i];
-#endif
-
-    return sum;
+    return simd_sum_i32(vec->data, vec->len);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -747,69 +762,7 @@ float stdev_int_vector(int_v* vec) {
         errno = ENODATA;
         return FLT_MAX;
     }
-
-    const int len = vec->len;
-    const int* data = vec->data;
-
-    int mean = average_int_vector(vec);
-    if (errno != 0) return FLT_MAX;
-
-    double sum_sq_diff = 0.0;
-
-#if defined(__AVX2__)
-    __m256i vmean = _mm256_set1_epi32(mean);
-    __m256i vsum = _mm256_setzero_si256();
-    size_t i = 0;
-
-    for (; i + 8 <= len; i += 8) {
-        __m256i v = _mm256_loadu_si256((__m256i*)&data[i]);
-        __m256i diff = _mm256_sub_epi32(v, vmean);
-        __m256i sq = _mm256_mullo_epi32(diff, diff);
-        vsum = _mm256_add_epi32(vsum, sq);
-    }
-
-    // Horizontal reduction of vsum
-    __m128i low = _mm256_castsi256_si128(vsum);
-    __m128i high = _mm256_extracti128_si256(vsum, 1);
-    __m128i sum128 = _mm_add_epi32(low, high);
-    sum128 = _mm_add_epi32(sum128, _mm_shuffle_epi32(sum128, _MM_SHUFFLE(2, 3, 0, 1)));
-    sum128 = _mm_add_epi32(sum128, _mm_shuffle_epi32(sum128, _MM_SHUFFLE(1, 0, 3, 2)));
-    sum_sq_diff += _mm_cvtsi128_si32(sum128);
-
-    for (; i < len; ++i) {
-        int diff = data[i] - mean;
-        sum_sq_diff += (double)(diff * diff);
-    }
-
-#elif defined(__SSE2__)
-    __m128i vmean = _mm_set1_epi32(mean);
-    __m128i vsum = _mm_setzero_si128();
-    size_t i = 0;
-
-    for (; i + 4 <= len; i += 4) {
-        __m128i v = _mm_loadu_si128((__m128i*)&data[i]);
-        __m128i diff = _mm_sub_epi32(v, vmean);
-        __m128i sq = _mm_mullo_epi32(diff, diff);
-        vsum = _mm_add_epi32(vsum, sq);
-    }
-
-    vsum = _mm_add_epi32(vsum, _mm_shuffle_epi32(vsum, _MM_SHUFFLE(2, 3, 0, 1)));
-    vsum = _mm_add_epi32(vsum, _mm_shuffle_epi32(vsum, _MM_SHUFFLE(1, 0, 3, 2)));
-    sum_sq_diff += _mm_cvtsi128_si32(vsum);
-
-    for (; i < len; ++i) {
-        int diff = data[i] - mean;
-        sum_sq_diff += (double)(diff * diff);
-    }
-
-#else
-    for (size_t i = 0; i < len; ++i) {
-        int diff = data[i] - mean;
-        sum_sq_diff += (double)(diff * diff);
-    }
-#endif
-
-    return (float)sqrt(sum_sq_diff / len);
+    return simd_stdev_i32(vec->data, vec->len);
 }
 // -------------------------------------------------------------------------------- 
 
