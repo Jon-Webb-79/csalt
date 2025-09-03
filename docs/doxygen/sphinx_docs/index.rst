@@ -21,6 +21,25 @@ for all basic c data types:
 * A dictionary implementation for mapping strings to primitive data types 
 * A dictionary implementation for mapping strings to arrays of primitive data types
 
+Performance Acceleration
+------------------------
+
+Dynamically allocated vectors in ``csalt`` are optimized with hardware acceleration
+using SIMD (Single Instruction, Multiple Data) instruction sets where available.
+The library automatically dispatches to the best implementation supported by the
+target platform, including:
+
+* **AVX-512**, **AVX2**, and **AVX** on modern x86 processors
+* **SSE4.1**, **SSE3**, and **SSE2** on legacy x86 processors
+* **SVE2** and **SVE** on ARMv9/ARMv8-A processors
+* **NEON** on ARMv8-A (AArch64) processors
+
+Where applicable, common operations such as ``sum``, ``min``, ``max``, ``dot product``,
+``mean``, and ``standard deviation`` are computed with SIMD-accelerated kernels.
+This provides significant performance improvements compared to scalar-only code,
+while still maintaining a safe scalar fallback path for environments without SIMD
+support.
+
 When to Use This Library
 ########################
 
@@ -72,6 +91,10 @@ Dictionary
 
 Matrix
 ------
+
+**NOTE:** The matrix implementation in this package will recieve a large overhaul
+in the future.
+
 The matrix module provides adaptive storage for two-dimensional floating-point matrices, with
 automatic conversion between dense and sparse formats based on size and sparsity characteristics.
 
