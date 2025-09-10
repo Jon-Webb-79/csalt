@@ -135,7 +135,7 @@ const char* get_string(const string_t* str) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t string_size(const string_t* str) {
+size_t string_size(const string_t* str) {
     if (!str || !str->str) {
         errno = EINVAL;
         return LONG_MAX;
@@ -144,7 +144,7 @@ const size_t string_size(const string_t* str) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t string_alloc(const string_t* str) {
+size_t string_alloc(const string_t* str) {
     if (!str || !str->str) {
         errno = EINVAL;
         return LONG_MAX;
@@ -830,7 +830,7 @@ string_t* pop_string_token(string_t* str_struct, char token) {
     for (int i = str_struct->len - 1; i >= 0; i--) {
         if (str_struct->str[i] == token) {
             // Handle case where token is last character
-            if (i == str_struct->len - 1) {
+            if (i == (int)str_struct->len - 1) {
                 str_struct->str[i] = '\0';
                 str_struct->len = i;
                 return init_string("");
@@ -1440,7 +1440,7 @@ const string_t* str_vector_index(const string_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t str_vector_size(const string_v* vec) {
+size_t str_vector_size(const string_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return LONG_MAX;
@@ -1449,7 +1449,7 @@ const size_t str_vector_size(const string_v* vec) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t str_vector_alloc(const string_v* vec) {
+size_t str_vector_alloc(const string_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return LONG_MAX;

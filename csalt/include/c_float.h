@@ -158,7 +158,7 @@ bool insert_float_vector(float_v* vec, const float value, size_t index);
 * @return Pointer to string_t object, or NULL on error
 *         Sets errno to EINVAL for NULL input or ERANGE if index out of bounds
 */
-const float float_vector_index(const float_v* vec, size_t index);
+float float_vector_index(const float_v* vec, size_t index);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -169,7 +169,7 @@ const float float_vector_index(const float_v* vec, size_t index);
 * @return Number of strings in vector, or LONG_MAX on error
 *         Sets errno to EINVAL for NULL input
 */
-const size_t float_vector_size(const float_v* vec);
+size_t float_vector_size(const float_v* vec);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -180,7 +180,7 @@ const size_t float_vector_size(const float_v* vec);
 * @return Current allocation capacity, or LONG_MAX on error
 *         Sets errno to EINVAL for NULL input
 */
-const size_t float_vector_alloc(const float_v* vec);
+size_t float_vector_alloc(const float_v* vec);
 // --------------------------------------------------------------------------------
 
 /**

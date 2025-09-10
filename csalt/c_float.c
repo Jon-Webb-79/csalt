@@ -534,7 +534,7 @@ float pop_any_float_vector(float_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-const float float_vector_index(const float_v* vec, size_t index) {
+float float_vector_index(const float_v* vec, size_t index) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return FLT_MAX;
@@ -547,7 +547,7 @@ const float float_vector_index(const float_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t float_vector_size(const float_v* vec) {
+size_t float_vector_size(const float_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return LONG_MAX;
@@ -556,7 +556,7 @@ const size_t float_vector_size(const float_v* vec) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t float_vector_alloc(const float_v* vec) {
+size_t float_vector_alloc(const float_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return LONG_MAX;

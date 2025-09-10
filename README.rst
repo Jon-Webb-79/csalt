@@ -1,5 +1,4 @@
-EADME.rst
-
+*****
 CSalt
 *****
 Working with real and integer values in C presents several challenges in modern software development:

@@ -157,7 +157,7 @@ bool insert_double_vector(double_v* vec, const double value, size_t index);
 * @return Pointer to string_t object, or NULL on error
 *         Sets errno to EINVAL for NULL input or ERANGE if index out of bounds
 */
-const double double_vector_index(const double_v* vec, size_t index);
+double double_vector_index(const double_v* vec, size_t index);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -168,7 +168,7 @@ const double double_vector_index(const double_v* vec, size_t index);
 * @return Number of strings in vector, or LONG_MAX on error
 *         Sets errno to EINVAL for NULL input
 */
-const size_t double_vector_size(const double_v* vec);
+size_t double_vector_size(const double_v* vec);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -179,7 +179,7 @@ const size_t double_vector_size(const double_v* vec);
 * @return Current allocation capacity, or LONG_MAX on error
 *         Sets errno to EINVAL for NULL input
 */
-const size_t double_vector_alloc(const double_v* vec);
+size_t double_vector_alloc(const double_v* vec);
 // --------------------------------------------------------------------------------
 
 /**

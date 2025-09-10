@@ -1,90 +1,126 @@
 @echo off
-:: ================================================================================
-:: ================================================================================
-:: - File:    install.bat
-:: - Purpose: Install/Update c_float and c_string library files
-::
-:: Source Metadata
-:: - Author:  Jonathan A. Webb
-:: - Date:    January 11, 2025
-:: - Version: 1.1
-:: - Copyright: Copyright 2025, Jon Webb Inc.
-:: ================================================================================
-:: ================================================================================
+REM ================================================================================
+REM Install shared csalt library (tests OFF)
+REM - Default prefix: %ProgramFiles%\csalt
+REM - Default build type: Release
+REM - Shared lib via BUILD_SHARED_LIBS=ON
+REM - No ldconfig on Windows; ensure prefix is writable
+REM
+REM Usage:
+REM   install.bat
+REM   install.bat --prefix "C:\SDK\csalt"
+REM   install.bat --relwithdebinfo
+REM   install.bat --generator "Visual Studio 17 2022" --arch x64
+REM   install.bat --clean
+REM ================================================================================
 
-:: Check for administrator privileges
-NET SESSION >nul 2>&1
-if %errorLevel% neq 0 (
-   echo Please run as Administrator
-   pause
-   exit /b 1
+setlocal enabledelayedexpansion
+
+REM --------------------- Defaults ---------------------
+set "PREFIX=%ProgramFiles%\csalt"
+set "BUILD_DIR=build\install"
+set "BUILD_TYPE=Release"
+set "GEN="
+set "ARCH="
+set CLEAN=0
+
+REM --------------------- Parse args -------------------
+:parse_args
+if "%~1"=="" goto args_done
+
+if "%~1"=="--prefix" (
+    set "PREFIX=%~2"
+    shift & shift & goto parse_args
+)
+if "%~1"=="--release" (
+    set "BUILD_TYPE=Release"
+    shift & goto parse_args
+)
+if "%~1"=="--relwithdebinfo" (
+    set "BUILD_TYPE=RelWithDebInfo"
+    shift & goto parse_args
+)
+if "%~1"=="--rel" (
+    set "BUILD_TYPE=RelWithDebInfo"
+    shift & goto parse_args
+)
+if "%~1"=="--debug" (
+    set "BUILD_TYPE=Debug"
+    shift & goto parse_args
+)
+if "%~1"=="--generator" (
+    set "GEN=%~2"
+    shift & shift & goto parse_args
+)
+if "%~1"=="--arch" (
+    set "ARCH=%~2"
+    shift & shift & goto parse_args
+)
+if "%~1"=="--clean" (
+    set CLEAN=1
+    shift & goto parse_args
+)
+if "%~1"=="-h"  goto :help
+if "%~1"=="--help" goto :help
+
+echo Unknown arg: %~1
+exit /b 1
+
+:args_done
+
+REM --------------------- Paths ------------------------
+set "SCRIPT_DIR=%~dp0"
+pushd "%SCRIPT_DIR%\..\.."
+set "PROJ_ROOT=%CD%"
+popd
+
+set "SRC_DIR=%PROJ_ROOT%\csalt"
+set "OUT_DIR=%PROJ_ROOT%\%BUILD_DIR%"
+
+REM --------------------- Clean if requested -----------
+if %CLEAN%==1 (
+    echo Cleaning "%OUT_DIR%"
+    rmdir /s /q "%OUT_DIR%" 2>nul
 )
 
-:: Set installation directories
-REM set "FLOAT_INCLUDE_DIR=%ProgramFiles(x86)%\c_float\include"
-REM set "FLOAT_LIB_DIR=%ProgramFiles(x86)%\c_float\lib"
-set "STRING_INCLUDE_DIR=%ProgramFiles(x86)%\c_string\include"
-set "STRING_LIB_DIR=%ProgramFiles(x86)%\c_string\lib"
-set "BACKUP_DIR=%TEMP%\c_libs_backup"
+if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 
-:: Create directories if they don't exist
-if not exist "%FLOAT_INCLUDE_DIR%" mkdir "%FLOAT_INCLUDE_DIR%"
-if not exist "%FLOAT_LIB_DIR%" mkdir "%FLOAT_LIB_DIR%"
-if not exist "%STRING_INCLUDE_DIR%" mkdir "%STRING_INCLUDE_DIR%"
-if not exist "%STRING_LIB_DIR%" mkdir "%STRING_LIB_DIR%"
-if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
+REM --------------------- Configure --------------------
+set CMAKE_ARGS=-S "%SRC_DIR%" -B "%OUT_DIR%" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DCMAKE_INSTALL_PREFIX="%PREFIX%" -DBUILD_SHARED_LIBS=ON -DCSALT_BUILD_TESTS=OFF -DCSALT_BUILD_STATIC=OFF
 
-:: Function to backup and install file
-:install_file
-if exist "%~2" (
-   echo Backing up existing %~3...
-   for /f "tokens=2-4 delims=/ " %%a in ('date /t') do (
-       set "mydate=%%c%%a%%b"
-   )
-   for /f "tokens=1-2 delims=: " %%a in ('time /t') do (
-       set "mytime=%%a%%b"
-   )
-   copy "%~2" "%BACKUP_DIR%\%~4_%mydate%_%mytime%.bak" >nul
-   if errorlevel 1 (
-       echo Error creating backup for %~3
-       pause
-       exit /b 1
-   )
-   echo Backup created successfully
-) else (
-   echo Installing new %~3...
+if not "%GEN%"=="" (
+    set CMAKE_ARGS=%CMAKE_ARGS% -G "%GEN%"
+    if not "%ARCH%"=="" set CMAKE_ARGS=%CMAKE_ARGS% -A %ARCH%
 )
 
-copy /Y "%~1" "%~2"
+echo ==^> Configuring: cmake %CMAKE_ARGS%
+cmake %CMAKE_ARGS%
+if errorlevel 1 exit /b 1
+
+REM --------------------- Build ------------------------
+echo ==^> Building (type: %BUILD_TYPE%)
+cmake --build "%OUT_DIR%" --config %BUILD_TYPE%
+if errorlevel 1 exit /b 1
+
+REM --------------------- Install ----------------------
+echo ==^> Installing to "%PREFIX%"
+cmake --install "%OUT_DIR%" --config %BUILD_TYPE%
 if errorlevel 1 (
-   echo Error installing %~3
-   pause
-   exit /b 1
+    echo.
+    echo ERROR: Install failed. If installing under "Program Files", re-run from an elevated Developer Command Prompt.
+    exit /b 2
 )
-echo %~3 installed/updated successfully
-goto :eof
-
-:: Install c_float files
-REM echo Processing c_float library files...
-REM call :install_file "..\..\csalt\c_float.h" "%FLOAT_INCLUDE_DIR%\c_float.h" "float header" "c_float.h"
-REM call :install_file "..\..\csalt\c_float.c" "%FLOAT_LIB_DIR%\c_float.c" "float source" "c_float.c"
-
-:: Install c_string files
-echo.
-echo Processing c_string library files...
-call :install_file "..\..\csalt\c_string.h" "%STRING_INCLUDE_DIR%\c_string.h" "string header" "c_string.h"
-call :install_file "..\..\csalt\c_string.c" "%STRING_LIB_DIR%\c_string.c" "string source" "c_string.c"
-
-:: Update system environment variables
-echo.
-echo Updating system environment variables...
-setx C_INCLUDE_PATH "%FLOAT_INCLUDE_DIR%;%STRING_INCLUDE_DIR%;%C_INCLUDE_PATH%" /M
-setx LIBRARY_PATH "%FLOAT_LIB_DIR%;%STRING_LIB_DIR%;%LIBRARY_PATH%" /M
 
 echo.
-echo Installation/Update completed successfully
-echo Backups (if any) are stored in: %BACKUP_DIR%
-pause
+echo ==^> Install complete
+echo     Headers: %PREFIX%\include\csalt\*.h
+echo     Library: %PREFIX%\lib\csalt.dll / csalt.lib (generator-dependent)
+exit /b 0
+
+:help
+echo Usage: install.bat [--prefix DIR] [--release^|--relwithdebinfo^|--debug] [--generator "NAME"] [--arch x64] [--clean]
+exit /b 0
+
 :: ================================================================================
 :: ================================================================================
 :: eof

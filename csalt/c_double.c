@@ -529,7 +529,7 @@ double pop_any_double_vector(double_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-const double double_vector_index(const double_v* vec, size_t index) {
+double double_vector_index(const double_v* vec, size_t index) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return DBL_MAX;
@@ -542,7 +542,7 @@ const double double_vector_index(const double_v* vec, size_t index) {
 }
 // // --------------------------------------------------------------------------------
 //
-const size_t double_vector_size(const double_v* vec) {
+size_t double_vector_size(const double_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return LONG_MAX;
@@ -551,7 +551,7 @@ const size_t double_vector_size(const double_v* vec) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t double_vector_alloc(const double_v* vec) {
+size_t double_vector_alloc(const double_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return LONG_MAX;
@@ -3392,16 +3392,16 @@ matrix_d* invert_double_dense_matrix(const matrix_d* mat) {
 
     for (size_t i = 0; i < n; ++i) {
         size_t pivot = i;
-        double max = fabsf(a[i * n + i]);
+        double max = fabs(a[i * n + i]);
         for (size_t j = i + 1; j < n; ++j) {
-            double temp = fabsf(a[j * n + i]);
+            double temp = fabs(a[j * n + i]);
             if (temp > max) {
                 max = temp;
                 pivot = j;
             }
         }
 
-        if (fabsf(a[pivot * n + i]) < 1e-8f) {
+        if (fabs(a[pivot * n + i]) < 1e-8f) {
             free(a);
             free_double_matrix(inverse);
             errno = ERANGE;

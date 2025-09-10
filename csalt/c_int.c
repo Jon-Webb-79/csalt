@@ -483,7 +483,7 @@ int pop_any_int_vector(int_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-const int int_vector_index(const int_v* vec, size_t index) {
+int int_vector_index(const int_v* vec, size_t index) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return INT_MAX;
@@ -496,7 +496,7 @@ const int int_vector_index(const int_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t int_vector_size(const int_v* vec) {
+size_t int_vector_size(const int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return LONG_MAX;
@@ -505,7 +505,7 @@ const size_t int_vector_size(const int_v* vec) {
 }
 // --------------------------------------------------------------------------------
 
-const size_t int_vector_alloc(const int_v* vec) {
+size_t int_vector_alloc(const int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return SIZE_MAX;

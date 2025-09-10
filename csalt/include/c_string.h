@@ -105,7 +105,7 @@ const char* get_string(const string_t* str);
  * @return The length of the string in bytes (excluding the null terminator),
  *         or -1 on error. Sets errno to EINVAL if `str` is NULL.
  */
-const size_t string_size(const string_t* str);
+size_t string_size(const string_t* str);
 // --------------------------------------------------------------------------------
 
 /**
@@ -116,7 +116,7 @@ const size_t string_size(const string_t* str);
  * @return The total allocated capacity in bytes, or -1 on error.
  *         Sets errno to EINVAL if `str` is NULL.
  */
-const size_t string_alloc(const string_t* str);
+size_t string_alloc(const string_t* str);
 // --------------------------------------------------------------------------------
 
 /**
@@ -736,7 +736,7 @@ const string_t* str_vector_index(const string_v* vec, size_t index);
 * @return Number of strings in vector, or LONG_MAX on error
 *         Sets errno to EINVAL for NULL input
 */
-const size_t str_vector_size(const string_v* vec);
+size_t str_vector_size(const string_v* vec);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -747,7 +747,7 @@ const size_t str_vector_size(const string_v* vec);
 * @return Current allocation capacity, or LONG_MAX on error
 *         Sets errno to EINVAL for NULL input
 */
-const size_t str_vector_alloc(const string_v* vec);
+size_t str_vector_alloc(const string_v* vec);
 // --------------------------------------------------------------------------------
 
 /**
