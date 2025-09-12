@@ -704,6 +704,63 @@ size_t binary_search_int_vector(int_v* vec, int value, bool sort_first) {
 }
 // -------------------------------------------------------------------------------- 
 
+bin_dat binary_search_bounds_int_vector(int_v *vec,
+                                        int value,
+                                        bool sort_first) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return (bin_dat){ .lower = SIZE_MAX, .upper = SIZE_MAX };
+    }
+    if (vec->len == 0) {
+        errno = ENODATA;
+        return (bin_dat){ .lower = SIZE_MAX, .upper = SIZE_MAX };
+    }
+
+    if (sort_first && vec->len > 1) {
+        sort_int_vector(vec, FORWARD);  // mutates vec
+    }
+
+    size_t left  = 0;
+    size_t right = vec->len - 1;
+
+    while (left <= right) {
+        size_t mid = left + (right - left) / 2;
+        int diff = vec->data[mid] - value;
+
+        if (diff == 0) {
+            // exact hit: collapse bounds to mid
+            return (bin_dat){ .lower = mid, .upper = mid };
+        }
+        if (diff < 0) {
+            left = mid + 1;
+        } else {
+            if (mid == 0) {
+                // no element less than value
+                right = SIZE_MAX;  // sentinel
+                break;
+            }
+            right = mid - 1;
+        }
+    }
+
+    // Post-conditions:
+    //  right = last index with element < value, or SIZE_MAX if none
+    //  left  = first index with element > value, or vec->len if none
+
+    if (right == SIZE_MAX) {
+        // value < vec->data[0]
+        return (bin_dat){ .lower = SIZE_MAX, .upper = 0 };
+    }
+    if (left >= vec->len) {
+        // value > vec->data[len-1]
+        return (bin_dat){ .lower = vec->len - 1, .upper = SIZE_MAX };
+    }
+
+    // In-range miss: strictly between right and left
+    return (bin_dat){ .lower = right, .upper = left };
+}
+// -------------------------------------------------------------------------------- 
+
 void update_int_vector(int_v* vec, size_t index, int replacement_value) {
     if (!vec || !vec->data || vec->len == 0) {
         errno = EINVAL;

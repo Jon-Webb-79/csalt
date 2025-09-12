@@ -767,6 +767,74 @@ size_t binary_search_double_vector(double_v* vec, double value, double tolerance
 }
 // -------------------------------------------------------------------------------- 
 
+bin_dat binary_search_bounds_double_vector(double_v *vec,
+                                           double value,
+                                           double tolerance,
+                                           bool sort_first)
+{
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return (bin_dat){ .lower = SIZE_MAX, .upper = SIZE_MAX };
+    }
+    if (vec->len == 0) {
+        errno = ENODATA;
+        return (bin_dat){ .lower = SIZE_MAX, .upper = SIZE_MAX };
+    }
+    if (tolerance < 0.0f || isnan(value) || isnan(tolerance)) {
+        errno = EINVAL;
+        return (bin_dat){ .lower = SIZE_MAX, .upper = SIZE_MAX };
+    }
+
+    if (sort_first && vec->len > 1) {
+        sort_double_vector(vec, FORWARD);
+    }
+
+    size_t left = 0;
+    size_t right = vec->len - 1;
+
+    while (left <= right) {
+        size_t mid = left + (right - left) / 2;
+        float diff = vec->data[mid] - value;
+
+        // Within tolerance => treat as exact hit; bounds collapse to mid
+        if (fabs(diff) <= tolerance) {
+            return (bin_dat){ .lower = mid, .upper = mid };
+        }
+
+        if (diff < 0.0f) {
+            left = mid + 1;
+        } else {
+            // Avoid unsigned underflow: only decrement when mid > 0
+            if (mid == 0) {
+                // All remaining elements (index 0) are >= value
+                // No element less than value
+                right = (size_t)-1; // == SIZE_MAX
+                break;
+            }
+            right = mid - 1;
+        }
+    }
+
+    // ---------- compute bounds when no exact match ----------
+    // After the loop, invariants:
+    // right = index of last element < value, or SIZE_MAX if none
+    // left  = index of first element > value, or vec->len if none
+
+    // If value is smaller than the first element:
+    if (right == SIZE_MAX) {
+        return (bin_dat){ .lower = SIZE_MAX, .upper = 0 };
+    }
+
+    // If value is larger than the last element:
+    if (left >= vec->len) {
+        return (bin_dat){ .lower = vec->len - 1, .upper = SIZE_MAX };
+    }
+
+    // Value is strictly between elements right and left
+    return (bin_dat){ .lower = right, .upper = left };
+}
+// -------------------------------------------------------------------------------- 
+
 void update_double_vector(double_v* vec, size_t index, double replacement_value) {
     if (!vec || !vec->data || vec->len == 0) {
         errno = EINVAL;

@@ -2357,6 +2357,73 @@ void test_foreach_intv_dict_accumulates_sum(void **state) {
 
     free_intv_dict(dict);
 }
+// ================================================================================ 
+// ================================================================================ 
+
+static inline int_v make_vec(int *buf, size_t n) {
+    int_v v; v.data = buf; v.len = n; return v;
+}
+
+static inline void assert_bounds(bin_dat bd, size_t lower, size_t upper) {
+    assert_int_equal(bd.lower, lower);
+    assert_int_equal(bd.upper, upper);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_int_bin_bounds_exact_middle(void **state) {
+    (void)state;
+    int a[] = {1, 2, 3, 4};
+    int_v v = make_vec(a, 4);
+    errno = 0;
+    bin_dat bd = binary_search_bounds_int_vector(&v, 3, false);
+    assert_int_equal(errno, 0);
+    assert_bounds(bd, 2, 2);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_int_bin_bounds_exact_first(void **state) {
+    (void)state;
+    int a[] = {1, 2, 3, 4};
+    int_v v = make_vec(a, 4);
+    bin_dat bd = binary_search_bounds_int_vector(&v, 1, false);
+    assert_bounds(bd, 0, 0);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_int_bin_bounds_exact_last(void **state) {
+    (void)state;
+    int a[] = {1, 2, 3, 4};
+    int_v v = make_vec(a, 4);
+    bin_dat bd = binary_search_bounds_int_vector(&v, 4, false);
+    assert_bounds(bd, 3, 3);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_int_bin_bounds_inrange_miss(void **state) {
+    (void)state;
+    int a[] = {1, 2, 4, 5};
+    int_v v = make_vec(a, 4);
+    bin_dat bd = binary_search_bounds_int_vector(&v, 3, false);
+    assert_bounds(bd, 1, 2);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_int_bin_bounds_below_range(void **state) {
+    (void)state;
+    int a[] = {1, 2, 3, 4};
+    int_v v = make_vec(a, 4);
+    bin_dat bd = binary_search_bounds_int_vector(&v, -10, false);
+    assert_bounds(bd, SIZE_MAX, 0);
+}
+// -------------------------------------------------------------------------------- 
+
+void test_int_bin_bounds_above_range(void **state) {
+    (void)state;
+    int a[] = {1, 2, 3, 4};
+    int_v v = make_vec(a, 4);
+    bin_dat bd = binary_search_bounds_int_vector(&v, 10, false);
+    assert_bounds(bd, 3, SIZE_MAX);
+}
 // ================================================================================
 // ================================================================================
 // eof

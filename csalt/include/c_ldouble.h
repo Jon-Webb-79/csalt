@@ -327,6 +327,58 @@ void trim_ldouble_vector(ldouble_v* vec);
 size_t binary_search_ldouble_vector(ldouble_v* vec, long double value, long double tolerance, bool sort_first);
 // -------------------------------------------------------------------------------- 
 
+#ifndef BIN_DAT_TYPEDEF
+#define BIN_DAT_TYPEDEF
+/**
+ * @brief Result structure for binary search bound queries (double version).
+ *
+ * The `bin_dat` struct encodes the indices that bound a given search value
+ * within a sorted or unsorted double vector.
+ *
+ * Conventions:
+ * - `lower`: Index of the last element strictly less than `value`,
+ *            or SIZE_MAX if none exist.
+ * - `upper`: Index of the first element strictly greater than `value`,
+ *            or SIZE_MAX if none exist.
+ *
+ * When the search value matches an element within `tolerance`, both
+ * `lower` and `upper` are set to that element's index.
+ */
+typedef struct {
+    size_t lower;
+    size_t upper;
+} bin_dat;
+#endif
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Locate the bounding indices of a value in a double vector.
+ *
+ * Performs a binary search on the given double vector to determine the
+ * indices of elements that bound the provided search value. If an exact
+ * match (within the specified `tolerance`) is found, both bounds are set
+ * to the matching index. Otherwise:
+ * - `lower` is the index of the last element less than `value`,
+ * - `upper` is the index of the first element greater than `value`.
+ *
+ * Special cases:
+ * - If `value` is smaller than all elements, `lower = SIZE_MAX, upper = 0`.
+ * - If `value` is larger than all elements, `lower = len-1, upper = SIZE_MAX`.
+ * - On error, both fields are set to SIZE_MAX and `errno` is set.
+ *
+ * @param vec        Pointer to a double vector (`double_v*`) to search.
+ * @param value      The target value to locate.
+ * @param tolerance  Allowed absolute error when testing for equality.
+ * @param sort_first If true, the vector is sorted in ascending order
+ *                   before performing the search.
+ *
+ * @return A `bin_dat` structure with indices bounding the value.
+ */
+bin_dat binary_search_bounds_ldouble_vector(ldouble_v* vec,
+                                            long double value,
+                                            long double tolerance,
+                                            bool sort_first);
+// -------------------------------------------------------------------------------- 
 /**
 * @function update_double_vector
 * @brief Replaces the value of a vector at a specific index

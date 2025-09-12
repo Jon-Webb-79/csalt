@@ -338,6 +338,14 @@ const struct CMUnitTest test_float_vector[] = {
     cmocka_unit_test(test_cross_float_null_inputs),
     cmocka_unit_test(test_cross_float_vector_valid),
     cmocka_unit_test(test_cross_float_vector_invalid_inputs),
+    cmocka_unit_test(test_float_bin_bounds_exact_middle),
+    cmocka_unit_test(test_float_bin_bounds_exact_first),
+    cmocka_unit_test(test_float_bin_bounds_exact_last),
+    cmocka_unit_test(test_float_bin_bounds_near_hit_within_tol),
+    cmocka_unit_test(test_float_bin_bounds_near_miss_outside_tol),
+    cmocka_unit_test(test_float_bin_bounds_inrange_miss),
+    cmocka_unit_test(test_float_bin_bounds_below_range),
+    cmocka_unit_test(test_float_bin_bounds_above_range)
 };
 // -------------------------------------------------------------------------------- 
 
@@ -522,6 +530,14 @@ const struct CMUnitTest test_double_vector[] = {
     cmocka_unit_test(test_cross_float_null_inputs),
     cmocka_unit_test(test_cross_float_vector_valid),
     cmocka_unit_test(test_cross_float_vector_invalid_inputs),
+    cmocka_unit_test(test_double_bin_bounds_exact_middle),
+    cmocka_unit_test(test_double_bin_bounds_exact_first),
+    cmocka_unit_test(test_double_bin_bounds_exact_last),
+    cmocka_unit_test(test_double_bin_bounds_near_hit_within_tol),
+    cmocka_unit_test(test_double_bin_bounds_near_miss_outside_tol),
+    cmocka_unit_test(test_double_bin_bounds_inrange_miss),
+    cmocka_unit_test(test_double_bin_bounds_below_range),
+    cmocka_unit_test(test_double_bin_bounds_above_range)
 };
 // -------------------------------------------------------------------------------- 
 
@@ -650,7 +666,15 @@ const struct CMUnitTest test_ldouble_vector[] = {
     cmocka_unit_test(test_stdev_same_ldouble_values),
     cmocka_unit_test(test_cum_sum_ldouble_basic),
     cmocka_unit_test(test_cum_sum_ldouble_negative),
-    cmocka_unit_test(test_stdev_cum_sum_ldouble_errors)
+    cmocka_unit_test(test_stdev_cum_sum_ldouble_errors),
+    cmocka_unit_test(test_ldouble_bin_bounds_exact_middle),
+    cmocka_unit_test(test_ldouble_bin_bounds_exact_first),
+    cmocka_unit_test(test_ldouble_bin_bounds_exact_last),
+    cmocka_unit_test(test_ldouble_bin_bounds_near_hit_within_tol),
+    cmocka_unit_test(test_ldouble_bin_bounds_near_miss_outside_tol),
+    cmocka_unit_test(test_ldouble_bin_bounds_inrange_miss),
+    cmocka_unit_test(test_ldouble_bin_bounds_below_range),
+    cmocka_unit_test(test_ldouble_bin_bounds_above_range)
 };
 // -------------------------------------------------------------------------------- 
 
@@ -766,7 +790,13 @@ const struct CMUnitTest test_int_vector[] = {
     cmocka_unit_test(test_stdev_single_int_value),
     cmocka_unit_test(test_stdev_same_int_values),
     cmocka_unit_test(test_cum_sum_int_basic),
-    cmocka_unit_test(test_stdev_cum_sum_int_errors)
+    cmocka_unit_test(test_stdev_cum_sum_int_errors),
+    cmocka_unit_test(test_int_bin_bounds_exact_middle),
+    cmocka_unit_test(test_int_bin_bounds_exact_first),
+    cmocka_unit_test(test_int_bin_bounds_exact_last),
+    cmocka_unit_test(test_int_bin_bounds_inrange_miss),
+    cmocka_unit_test(test_int_bin_bounds_below_range),
+    cmocka_unit_test(test_int_bin_bounds_above_range)
 };
 // -------------------------------------------------------------------------------- 
 

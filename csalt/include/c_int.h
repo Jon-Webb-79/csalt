@@ -325,6 +325,53 @@ void trim_int_vector(int_v* vec);
 size_t binary_search_int_vector(int_v* vec, int value, bool sort_first);
 // -------------------------------------------------------------------------------- 
 
+#ifndef BIN_DAT_TYPEDEF
+#define BIN_DAT_TYPEDEF
+/**
+ * @brief Result structure for binary search bound queries.
+ *
+ * The `bin_dat` struct encodes the indices that bound a given search value
+ * within a sorted or unsorted float vector.
+ *
+ * Conventions:
+ * - `lower`: Index of the last element strictly less than `value`,
+ *            or SIZE_MAX if none exist.
+ * - `upper`: Index of the first element strictly greater than `value`,
+ *            or SIZE_MAX if none exist.
+ *
+ * When the search value matches an element within `tolerance`, both
+ * `lower` and `upper` are set to that element's index.
+ */
+typedef struct {
+    size_t lower;
+    size_t upper;
+} bin_dat;
+#endif
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Locate bounding indices for an integer value in a vector.
+ *
+ * Performs a binary search to find indices that bound @p value:
+ * - On exact match: {lower = i, upper = i}.
+ * - On miss but in-range: {lower = j, upper = j+1} where
+ *   vec->data[j] < value < vec->data[j+1].
+ * - If value < all elements: {lower = SIZE_MAX, upper = 0}.
+ * - If value > all elements: {lower = len-1, upper = SIZE_MAX}.
+ * - On error: {lower = SIZE_MAX, upper = SIZE_MAX} and errno set.
+ *
+ * If sort_first is true, the vector is sorted ascending (in-place) before searching.
+ *
+ * @param vec        Pointer to integer vector
+ * @param value      Target integer value
+ * @param sort_first If true, sort ascending before search (mutates vec)
+ * @return bin_dat with bounding indices
+ */
+bin_dat binary_search_bounds_int_vector(int_v *vec,
+                                        int value,
+                                        bool sort_first);
+// -------------------------------------------------------------------------------- 
+
 /**
 * @function update_int_vector
 * @brief Replaces the value of a vector at a specific index

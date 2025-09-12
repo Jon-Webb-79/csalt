@@ -567,6 +567,69 @@ size_t binary_search_ldouble_vector(ldouble_v* vec, long double value, long doub
 }
 // -------------------------------------------------------------------------------- 
 
+bin_dat binary_search_bounds_ldouble_vector(ldouble_v *vec,
+                                            long double value,
+                                            long double tolerance,
+                                            bool sort_first) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return (bin_dat){ .lower = SIZE_MAX, .upper = SIZE_MAX };
+    }
+    if (vec->len == 0) {
+        errno = ENODATA;
+        return (bin_dat){ .lower = SIZE_MAX, .upper = SIZE_MAX };
+    }
+    if (tolerance < 0.0L || isnanl(value) || isnanl(tolerance)) {
+        errno = EINVAL;
+        return (bin_dat){ .lower = SIZE_MAX, .upper = SIZE_MAX };
+    }
+
+    if (sort_first && vec->len > 1) {
+        sort_ldouble_vector(vec, FORWARD);  // assumes you have this defined
+    }
+
+    size_t left = 0;
+    size_t right = vec->len - 1;
+
+    while (left <= right) {
+        size_t mid = left + (right - left) / 2;
+        long double diff = vec->data[mid] - value;
+
+        // Within tolerance => treat as exact hit; bounds collapse to mid
+        if (fabsl(diff) <= tolerance) {
+            return (bin_dat){ .lower = mid, .upper = mid };
+        }
+
+        if (diff < 0.0L) {
+            left = mid + 1;
+        } else {
+            // Avoid unsigned underflow: only decrement when mid > 0
+            if (mid == 0) {
+                // All remaining elements (index 0) are >= value
+                // No element less than value
+                right = SIZE_MAX; // sentinel
+                break;
+            }
+            right = mid - 1;
+        }
+    }
+
+    // ---------- compute bounds when no exact match ----------
+    if (right == SIZE_MAX) {
+        // value < vec->data[0]
+        return (bin_dat){ .lower = SIZE_MAX, .upper = 0 };
+    }
+    if (left >= vec->len) {
+        // value > vec->data[len-1]
+        return (bin_dat){ .lower = vec->len - 1, .upper = SIZE_MAX };
+    }
+
+    // Value is strictly between elements right and left
+    return (bin_dat){ .lower = right, .upper = left };
+}
+
+// -------------------------------------------------------------------------------- 
+ 
 void update_ldouble_vector(ldouble_v* vec, size_t index, long double replacement_value) {
     if (!vec || !vec->data || vec->len == 0) {
         errno = EINVAL;
