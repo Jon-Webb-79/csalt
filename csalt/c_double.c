@@ -1032,6 +1032,19 @@ double_v* cross_double_vector(const double_v* vec1, const double_v* vec2) {
     result->len = 3;
     return result;
 }
+// -------------------------------------------------------------------------------- 
+
+double double_lin_interp(double x1, double y1,
+                         double x2, double y2,
+                         double x3) {
+    if (x2 == x1 || isnan(x1) || isnan(y1) ||
+        isnan(x2) || isnan(y2) || isnan(x3)) {
+        errno = EINVAL;
+        return NAN;
+    }
+
+    return y1 + ((y2 - y1) / (x2 - x1)) * (x3 - x1);
+}
 // ================================================================================ 
 // ================================================================================ 
 

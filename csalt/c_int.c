@@ -871,6 +871,25 @@ int_v* copy_int_vector(const int_v* original) {
 
     return copy;
 }
+// -------------------------------------------------------------------------------- 
+
+int int_lin_interp(int x1, int y1,
+                   int x2, int y2,
+                   int x3) {
+    if (x2 == x1) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    double slope = (double)(y2 - y1) / (double)(x2 - x1);
+    double y3 = (double)y1 + slope * (double)(x3 - x1);
+
+    // Clamp to int range if needed
+    if (y3 > INT_MAX) return INT_MAX;
+    if (y3 < INT_MIN) return INT_MIN;
+
+    return (int)lrint(y3);   // round to nearest int (C99)
+}
 // ================================================================================ 
 // ================================================================================ 
 // DICTIONARY IMPLEMENTATION

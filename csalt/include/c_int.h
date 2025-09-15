@@ -459,6 +459,11 @@ int_v* cum_sum_int_vector(int_v* vec);
  * @return A copy of a int vector
  */
 int_v* copy_int_vector(const int_v* original);
+// -------------------------------------------------------------------------------- 
+
+int int_lin_interp(int x1, int y1,
+                   int x2, int y2,
+                   int x3);
 // ================================================================================ 
 // ================================================================================ 
 // DICTIONARY PROTOTYPES 

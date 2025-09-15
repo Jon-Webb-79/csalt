@@ -1050,6 +1050,17 @@ float_v* cross_float_vector(const float_v* vec1, const float_v* vec2) {
     result->len = 3;
     return result;
 }
+// -------------------------------------------------------------------------------- 
+
+float float_lin_interp(float x1, float y1, float x2, float y2, float x3) {
+    if (x2 == x1 || isnan(x1) || isnan(y1) ||
+        isnan(x2) || isnan(y2) || isnan(x3)) {
+        errno = EINVAL;
+        return NAN;
+    }
+
+    return y1 + ( (y2 - y1) / (x2 - x1) ) * (x3 - x1);
+}
 // ================================================================================
 // ================================================================================
 // DICTIONARY IMPLEMENTATION

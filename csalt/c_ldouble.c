@@ -789,6 +789,19 @@ ldouble_v* copy_ldouble_vector(const ldouble_v* original) {
 
     return copy;
 }
+// -------------------------------------------------------------------------------- 
+
+long double ldouble_lin_interp(long double x1, long double y1,
+                               long double x2, long double y2,
+                               long double x3) {
+    if (x2 == x1 || isnanl(x1) || isnanl(y1) ||
+        isnanl(x2) || isnanl(y2) || isnanl(x3)) {
+        errno = EINVAL;
+        return NAN;   // or return NANL if you want an explicit long-double NaN
+    }
+
+    return y1 + ((y2 - y1) / (x2 - x1)) * (x3 - x1);
+}
 // ================================================================================ 
 // ================================================================================ 
 

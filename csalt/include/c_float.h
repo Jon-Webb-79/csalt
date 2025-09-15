@@ -537,6 +537,9 @@ bool cross_float(const float* a, const float* b, float* result);
 // -------------------------------------------------------------------------------- 
 
 float_v* cross_float_vector(const float_v* vec1, const float_v* vec2);
+// -------------------------------------------------------------------------------- 
+
+float float_lin_interp(float x1, float y1, float x2, float y2, float x);
 // ================================================================================ 
 // ================================================================================ 
 // DICTIONARY PROTOTYPES 

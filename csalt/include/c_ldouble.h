@@ -466,6 +466,11 @@ ldouble_v* cum_sum_ldouble_vector(ldouble_v* vec);
  * @return A copy of a double vector
  */
 ldouble_v* copy_ldouble_vector(const ldouble_v* original);
+// -------------------------------------------------------------------------------- 
+
+long double ldouble_lin_interp(long double x1, long double y1,
+                               long double x2, long double y2,
+                               long double x3);
 // ================================================================================ 
 // ================================================================================ 
 

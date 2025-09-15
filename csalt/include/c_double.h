@@ -1265,6 +1265,9 @@ bool cross_double(const double* a, const double* b, double* result);
 // -------------------------------------------------------------------------------- 
 
 double_v* cross_double_vector(const double_v* vec1, const double_v* vec2);
+// -------------------------------------------------------------------------------- 
+
+double double_lin_interp(double x1, double y1, double x2, double y2, double x);
 // ================================================================================ 
 // ================================================================================ 
 // DICTIONARY PROTOTYPES 
