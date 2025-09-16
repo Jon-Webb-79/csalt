@@ -1,14 +1,46 @@
+.. _int_vector_file:
+
 ******************
 C Integer Overview
 ******************
 
-c_int 
-=====
-The ``c_int`` module provides robust and efficient containers for integer values.
-It supports both dynamically allocated vectors and dictionary-based mappings for
-single integers and integer arrays. The implementation includes memory-safe operations,
-automatic resizing, AVX/SSE SIMD acceleration for numeric operations, and convenient
-macros for querying container metadata.
+Integer Vector Overview
+=======================
+
+An integer vector provides both dynamic and static array containers for float values, offering
+efficient management of numerical data with automatic memory handling for dynamic arrays
+and safe access for static arrays. This implementation combines the flexibility of dynamic
+arrays with the safety of bounds checking and proper memory management.  All of the functions 
+described in this section can be found in the ``c_int.h`` header file.
+
+Key Features
+------------
+
+* Dynamic and static array support: Choose between automatic resizing or fixed-size arrays
+* Memory safety: Proper encapsulation and memory management
+* Bounds checking: Safe access to array elements
+* Efficient access: O(1) access to any double in the vector
+* Automatic cleanup: Optional garbage collection support with INTVEC_GBC
+
+When to Use Float Vectors
+-------------------------
+
+Float vectors are particularly useful when:
+
+* Managing collections of double values that may grow or shrink
+* Working with an unknown number of double values at compile time
+* Requiring sequential access to multiple double values
+* Needing efficient random access to double values by index
+* Managing related numerical data as a single unit
+* Implementing numerical algorithms or data processing pipelines
+
+Performance Characteristics
+---------------------------
+
+* Access time: O(1) for index-based access
+* Insertion time: O(1) amortized for push_back operations
+* Memory efficiency: Dynamic vectors grow geometrically to minimize reallocations
+* Memory overhead: Minimal per-element overhead
 
 Data Types
 ==========
@@ -1633,7 +1665,8 @@ Special Value Handling:
 Vector Statistics
 ------------------
 These functions can be used to determine basic statistical parameters of a 
-vector or array.
+vector or array.  The following functions implement SIMD acceleration for 
+AVX-512, AVX2, AVX, SSE4.1, SSE3, SSE2, SVE2, SVE and NEON instruction sets
 
 sum_int_vector
 ~~~~~~~~~~~~~~
@@ -2805,7 +2838,7 @@ get_values_int_dict
 
    Returns a ``int_v`` object containing all values in the dictionary as a 
    dynamically allocated vector.
-   The user should consult with the :ref:`Float Vector <vector_file>` documentation
+   The user should consult with the :ref:`Integer Vector <int_vector_file>` documentation
    to understand how to utilizie the ``int_v`` object and how to properly 
    free all vector memory.  The ``int_v`` object is contained within the 
    context of the ``c_int.h`` header file

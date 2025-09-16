@@ -1,8 +1,8 @@
 .. _double_vector_file:
 
-********
-c_double
-********
+*****************
+C Double Overview
+*****************
 
 Double Vector Overview
 ======================
@@ -19,7 +19,7 @@ Key Features
 * Memory safety: Proper encapsulation and memory management
 * Bounds checking: Safe access to array elements
 * Efficient access: O(1) access to any double in the vector
-* Automatic cleanup: Optional garbage collection support with FLTVEC_GBC
+* Automatic cleanup: Optional garbage collection support with DBLVEC_GBC
 
 When to Use Double Vectors
 --------------------------
@@ -1671,7 +1671,8 @@ Special Value Handling:
 Vector Statistics
 ------------------
 These functions can be used to determine basic statistical parameters of a 
-vector or array.
+vector or array.  The following functions implement SIMD acceleration for 
+AVX-512, AVX2, AVX, SSE4.1, SSE3, SSE2, SVE2, SVE, and NEON instruction sets.
 
 sum_double_vector
 ~~~~~~~~~~~~~~~~~
@@ -2021,6 +2022,76 @@ Copy Vector
 
       Original values: 1.0 2.0 3.0 4.0
       New values: 1.0 2.0 3.0 4.0
+
+Vector Operations 
+-----------------
+
+dot_double
+~~~~~~~~~~
+.. c:function:: float dot_double(const double* a, const double* b, size_t len)
+
+   Computes the dot product of two contiguous blocks of double-precision 
+   floating-point memory. This function is optimized using SIMD instructions 
+   (e.g., AVX or SSE) when available and appropriate.
+
+   :param a: Pointer to the first input float array
+   :param b: Pointer to the second input float array
+   :param len: Number of elements to process
+   :returns: Dot product of the two arrays, or FLT_MAX on error
+   :raises:
+      - ``EINVAL`` if either input pointer is ``NULL``
+      - ``ERANGE`` if ``len`` is zero or too large for safe processing
+
+   Example:
+
+   .. code-block:: c
+
+      double a[] = {1.0, 2.0, 3.0};
+      double b[] = {4.0, 5.0, 6.0};
+      double result = dot_double(a, b, 3);
+      // result == 32.0
+
+   .. note::
+      If compiled with `-march=native`, `-mavx`, or `-msse`, this function
+      may leverage SIMD acceleration.
+
+dot_double_vector
+~~~~~~~~~~~~~~~~
+.. c:function:: float dot_double_vector(const double_v* vec1, const double_v* vec2)
+
+   Calculates the dot product of two ``double_v`` vectors. Internally calls
+   :c:func:`dot_float` using the internal memory pointers from the input vectors.
+   Uses SIMD acceleration if available.
+
+   :param vec1: Pointer to the first double vector
+   :param vec2: Pointer to the second double vector
+   :returns: Dot product of the two vectors, or DBLE_MAX on error
+   :raises:
+      - ``EINVAL`` if either input is ``NULL`` or contains ``NULL`` data
+      - ``ERANGE`` if the vectors are of unequal length
+
+   Example:
+
+   .. code-block:: c
+
+      double_v* v1 = init_double_vector(3);
+      double_v* v2 = init_double_vector(3);
+
+      push_back_double_vector(v1, 1.0);
+      push_back_double_vector(v1, 2.0);
+      push_back_double_vector(v1, 3.0);
+
+      push_back_double_vector(v2, 4.0);
+      push_back_double_vector(v2, 5.0);
+      push_back_double_vector(v2, 6.0);
+
+      double result = dot_double_vector(v1, v2);
+      // result == 32.0
+
+      free_double_vector(v1);
+      free_double_vector(v2);
+
+   .. seealso:: :c:func:`dot_double`
 
 DOUBLE Matrix Overview 
 ======================

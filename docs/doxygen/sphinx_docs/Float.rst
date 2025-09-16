@@ -1,17 +1,46 @@
-.. _vector_file:
+.. _float_vector_file:
 
 ****************
 C Float Overview 
 ****************
 
-c_float
-=======
+Float Vector Overview
+=====================
 
 A float vector provides both dynamic and static array containers for float values, offering
 efficient management of numerical data with automatic memory handling for dynamic arrays
 and safe access for static arrays. This implementation combines the flexibility of dynamic
 arrays with the safety of bounds checking and proper memory management.  All of the functions 
 described in this section can be found in the ``c_float.h`` header file.
+
+Key Features
+------------
+
+* Dynamic and static array support: Choose between automatic resizing or fixed-size arrays
+* Memory safety: Proper encapsulation and memory management
+* Bounds checking: Safe access to array elements
+* Efficient access: O(1) access to any double in the vector
+* Automatic cleanup: Optional garbage collection support with FLTVEC_GBC
+
+When to Use Float Vectors
+-------------------------
+
+Float vectors are particularly useful when:
+
+* Managing collections of double values that may grow or shrink
+* Working with an unknown number of double values at compile time
+* Requiring sequential access to multiple double values
+* Needing efficient random access to double values by index
+* Managing related numerical data as a single unit
+* Implementing numerical algorithms or data processing pipelines
+
+Performance Characteristics
+---------------------------
+
+* Access time: O(1) for index-based access
+* Insertion time: O(1) amortized for push_back operations
+* Memory efficiency: Dynamic vectors grow geometrically to minimize reallocations
+* Memory overhead: Minimal per-element overhead
 
 Data Types
 ==========
@@ -1643,7 +1672,8 @@ Special Value Handling:
 Vector Statistics
 ------------------
 These functions can be used to determine basic statistical parameters of a 
-vector or array.
+vector or array.  These functions implement SIMD acceleration 
+for AVX-512, AVX, AVX2, SSE4.1, SSE3, SSE2, SVE2, SVE, and NEON instruction tests
 
 sum_float_vector
 ~~~~~~~~~~~~~~~~
@@ -3452,7 +3482,7 @@ get_values_float_dict
 
    Returns a ``float_v`` object containing all values in the dictionary as a 
    dynamically allocated vector.
-   The user should consult with the :ref:`Float Vector <vector_file>` documentation
+   The user should consult with the :ref:`Float Vector <float_vector_file>` documentation
    to understand how to utilizie the ``float_v`` object and how to properly 
    free all vector memory.  The ``float_v`` object is contained within the 
    context of the ``c_float.h`` header file
