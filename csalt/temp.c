@@ -13,7 +13,6 @@
 // ================================================================================
 // Include modules here
 
-#include <asm-generic/errno-base.h>
 #include <immintrin.h>  // AVX/SSE
 #include "c_float.h"
 #include <errno.h>
@@ -56,16 +55,16 @@ static const size_t VEC_FIXED_AMOUNT = 1 * 1024 * 1024;  // 1 MB
 static const size_t hashSize = 16;  //  Size fo hash map init functions
 static const uint32_t HASH_SEED = 0x45d9f3b; 
 
-// static const float SPARSE_THRESHOLD = 0.15;  // Convert to sparse if < 15% filled
-// static const float DENSE_THRESHOLD = 0.30;   // Convert to dense if > 30% filled
-// static const size_t MIN_SPARSE_SIZE = 1000;  // Below this many elements, just use dense
-// static const size_t INITIAL_COO_CAPACITY = 16;
-//
-// static const size_t MAX_DENSE_ELEMENTS = 100000;
-// static const size_t COO_TO_CSR_TRIGGER = 10000;
-//
-// static const float CSR_COMPACT_THRESHOLD = 0.25f;
-// static const size_t CSR_TOMBSTONE_COL = SIZE_MAX;
+static const float SPARSE_THRESHOLD = 0.15;  // Convert to sparse if < 15% filled
+static const float DENSE_THRESHOLD = 0.30;   // Convert to dense if > 30% filled
+static const size_t MIN_SPARSE_SIZE = 1000;  // Below this many elements, just use dense
+static const size_t INITIAL_COO_CAPACITY = 16;
+
+static const size_t MAX_DENSE_ELEMENTS = 100000;
+static const size_t COO_TO_CSR_TRIGGER = 10000;
+
+static const float CSR_COMPACT_THRESHOLD = 0.25f;
+static const size_t CSR_TOMBSTONE_COL = SIZE_MAX;
 // ================================================================================
 // ================================================================================ 
 // SIMD INSTRUCTION SETS
@@ -2179,901 +2178,1796 @@ string_v* get_keys_floatv_dict(const dict_fv* dict) {
 // ================================================================================ 
 // MATRIX FUNCTIONS
 
-static inline matrix_f* init_dense_matrix(size_t rows, size_t cols, size_t initial_alloc) {
-    if (cols != 0 && rows > SIZE_MAX / cols) { errno = EOVERFLOW; return NULL; }
-    size_t need = rows * cols;
-    if (initial_alloc < need) { errno = EINVAL; return NULL; }
+matrix_f* create_float_dense_matrix(size_t rows, size_t cols) {
+    errno = 0;
 
-    matrix_f* mat = (matrix_f*)malloc(sizeof *mat);
-    if (!mat) { errno = ENOMEM; return NULL; }
+    matrix_f* mat = malloc(sizeof(matrix_f));
+    if (!mat) {
+        errno = ENOMEM;
+        return NULL;
+    }
 
-    float* data_ptr = (float*)calloc(initial_alloc, sizeof(float));
-    if (!data_ptr) { errno = ENOMEM; free(mat); return NULL; }
+    float* data_ptr = calloc(rows * cols, sizeof(float));
+    if (!data_ptr) {
+        errno = ENOMEM;
+        free(mat);
+        return NULL;
+    }
 
-    // 1 byte per cell for now (simple, but bigger than a bitset)
-    uint8_t* init_ptr = (uint8_t*)calloc(initial_alloc, sizeof(uint8_t));
-    if (!init_ptr) { errno = ENOMEM; free(data_ptr); free(mat); return NULL; }
+    uint8_t* init_ptr = calloc(rows * cols, sizeof(uint8_t));
+    if (!init_ptr) {
+        errno = ENOMEM;
+        free(data_ptr);
+        free(mat);
+        return NULL;
+    }
 
-    mat->type = DENSE;
+    mat->type = DENSE_MATRIX;
+    mat->storage.dense.data = data_ptr;
+    mat->storage.dense.init = init_ptr;
     mat->rows = rows;
     mat->cols = cols;
-
-    mat->storage.dense.data      = data_ptr;
-    mat->storage.dense.init_bits = init_ptr;
-    mat->storage.dense.alloc     = initial_alloc;
-    mat->storage.dense.size      = 0;
+    mat->count = 0;
 
     return mat;
 }
 // -------------------------------------------------------------------------------- 
 
-static inline matrix_f* init_coo_matrix(size_t rows, size_t cols, size_t initial_alloc) {
-    // COO capacity is independent of rows*cols; allow 0 -> bump to 1.
-    if (initial_alloc == 0) initial_alloc = 1;
+matrix_f* create_float_coo_matrix(size_t rows, size_t cols) {
+    errno = 0;
 
-    matrix_f* mat = (matrix_f*)malloc(sizeof *mat);
-    if (!mat) { errno = ENOMEM; return NULL; }
+    matrix_f* mat = malloc(sizeof(matrix_f));
+    if (!mat) {
+        errno = ENOMEM;
+        return NULL;
+    }
 
-    triplet_f* triplets = (triplet_f*)malloc(initial_alloc * sizeof *triplets);
-    if (!triplets) { errno = ENOMEM; free(mat); return NULL; }
+    size_t* row_indices = malloc(INITIAL_COO_CAPACITY * sizeof(size_t));
+    size_t* col_indices = malloc(INITIAL_COO_CAPACITY * sizeof(size_t));
+    float* values = malloc(INITIAL_COO_CAPACITY * sizeof(float));
 
-    mat->type = COO;
+    if (!row_indices || !col_indices || !values) {
+        errno = ENOMEM;
+        free(row_indices);
+        free(col_indices);
+        free(values);
+        free(mat);
+        return NULL;
+    }
+
+    mat->type = SPARSE_COO_MATRIX;
+    mat->storage.coo.rows = row_indices;
+    mat->storage.coo.cols = col_indices;
+    mat->storage.coo.values = values;
+    mat->storage.coo.capacity = INITIAL_COO_CAPACITY;
+
     mat->rows = rows;
     mat->cols = cols;
-
-    mat->storage.coo.triplets = triplets;
-    mat->storage.coo.alloc    = initial_alloc;
-    mat->storage.coo.size     = 0;
-    mat->storage.coo.fast_set = true;
+    mat->count = 0;
 
     return mat;
 }
 // -------------------------------------------------------------------------------- 
 
-matrix_f* init_float_matrix(size_t rows, size_t cols, size_t initial_alloc, MatrixType mat_type) {
-    switch (mat_type) {
-        case DENSE: return init_dense_matrix(rows, cols, initial_alloc);
-        case COO:   return init_coo_matrix(rows, cols, initial_alloc);
-        default:    errno = EINVAL; return NULL; // CSR/CSC must be built via convertors
+matrix_f* create_float_csr_matrix(size_t rows, size_t cols, size_t nnz) {
+    errno = 0;
+
+    matrix_f* mat = malloc(sizeof(matrix_f));
+    if (!mat) {
+        errno = ENOMEM;
+        return NULL;
     }
+
+    size_t* row_ptrs = calloc(rows + 1, sizeof(size_t));
+    size_t* col_indices = malloc(nnz * sizeof(size_t));
+    float* values = malloc(nnz * sizeof(float));
+
+    if (!row_ptrs || !col_indices || !values) {
+        errno = ENOMEM;
+        free(row_ptrs);
+        free(col_indices);
+        free(values);
+        free(mat);
+        return NULL;
+    }
+
+    mat->type = SPARSE_CSR_MATRIX;
+    mat->storage.csr.row_ptrs = row_ptrs;
+    mat->storage.csr.col_indices = col_indices;
+    mat->storage.csr.values = values;
+
+    mat->rows = rows;
+    mat->cols = cols;
+    mat->count = nnz;
+
+    return mat;
 }
 // -------------------------------------------------------------------------------- 
 
-static inline void destroy_matrix_members(matrix_f* mat) {
-    if (!mat) return;
-    switch (mat->type) {
-        case DENSE: {
-            free(mat->storage.dense.data);
-            free(mat->storage.dense.init_bits);
-            mat->storage.dense.data = NULL;
-            mat->storage.dense.init_bits = NULL;
-            mat->storage.dense.alloc = 0;
-            mat->storage.dense.size = 0;
-        } break;
-        case COO: {
-            free(mat->storage.coo.triplets);
-            mat->storage.coo.triplets = NULL;
-            mat->storage.coo.alloc = 0;
-            mat->storage.coo.size = 0;
-            mat->storage.coo.fast_set = true;  // optional default
-        } break;
-        case CSR: {
-            free(mat->storage.csr.data);
-            free(mat->storage.csr.col_idx);
-            free(mat->storage.csr.row_ptr);
-            mat->storage.csr.data = NULL;
-            mat->storage.csr.col_idx = NULL;
-            mat->storage.csr.row_ptr = NULL;
-            mat->storage.csr.alloc = 0;
-            mat->storage.csr.size = 0;
-        } break;
-        case CSC: {
-            free(mat->storage.csc.data);
-            free(mat->storage.csc.row_idx);
-            free(mat->storage.csc.col_ptr);
-            mat->storage.csc.data = NULL;
-            mat->storage.csc.row_idx = NULL;
-            mat->storage.csc.col_ptr = NULL;
-            mat->storage.csc.alloc = 0;
-            mat->storage.csc.size = 0;
-        } break;
-        default:
-            /* Unknown/unused type: do nothing */
-            break;
+matrix_f* create_float_matrix(size_t rows, size_t cols, size_t estimated_nnz) {
+    errno = 0;
+
+    size_t total = rows * cols;
+
+    if (total < MIN_SPARSE_SIZE) {
+        return create_float_dense_matrix(rows, cols);
     }
-    mat->type = MATRIX_INVALID;
-    mat->rows = 0;
-    mat->cols = 0;
+
+    float estimated_density = (float)estimated_nnz / total;
+
+    if (estimated_density < DENSE_THRESHOLD) {
+        // Very sparse → Start with COO (can convert to CSR later)
+        return create_float_coo_matrix(rows, cols);
+    } else {
+        // Semi-sparse or dense enough → Start dense
+        return create_float_dense_matrix(rows, cols);
+    }
 }
 // -------------------------------------------------------------------------------- 
 
 void free_float_matrix(matrix_f* mat) {
     if (!mat) return;
-    destroy_matrix_members(mat);
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            free_float_dense_matrix(mat);
+            break;
+
+        case SPARSE_CSR_MATRIX:
+            free_float_csr_matrix(mat);
+            break;
+
+        case SPARSE_COO_MATRIX:
+            free_float_coo_matrix(mat);
+            break;
+
+        default:
+            // Unknown or uninitialized type
+            break;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void _free_float_matrix(matrix_f** mat) {
+    if (mat && *mat) {
+        free_float_matrix(*mat);
+        *mat = NULL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void free_float_dense_matrix(matrix_f* mat) {
+    if (!mat || mat->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return;
+    }
+    if (mat->storage.dense.data) free(mat->storage.dense.data);
+    if (mat->storage.dense.init) free(mat->storage.dense.init);
+    mat->type = 0;
+    mat->rows = 0;
+    mat->cols = 0;
+    mat->count = 0;
+    // Finally free the structure itself
     free(mat);
 }
 // -------------------------------------------------------------------------------- 
 
-void _free_float_matrix(matrix_f** pm) {
-    if (pm && *pm) {
-        free_float_matrix(*pm);
-        *pm = NULL;
+void free_float_csr_matrix(matrix_f* mat) {
+    errno = 0;
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) {
+        errno = EINVAL;
+        return;
     }
+    if (mat->storage.csr.row_ptrs) free(mat->storage.csr.row_ptrs);
+    if (mat->storage.csr.col_indices) free(mat->storage.csr.col_indices);
+    if (mat->storage.csr.values) free(mat->storage.csr.values);
+    mat->type = 0;
+    mat->rows = 0;
+    mat->cols = 0;
+    mat->count = 0;
+    // Finally free the structure itself
+    free(mat);
 }
-// -------------------------------------------------------------------------------- 
+// --------------------------------------------------------------------------------
 
-static inline bool _dense_bounds_ok(const matrix_f* m, size_t r, size_t c) {
-    return m && m->type == DENSE && r < m->rows && c < m->cols;
-}
-// -------------------------------------------------------------------------------- 
-
-static inline size_t _dense_index(const matrix_f* m, size_t r, size_t c) {
-    // r < rows and c < cols already checked; guard overflow just in case
-    if (m->cols && r > SIZE_MAX / m->cols) return (size_t)-1;
-    return r * m->cols + c;
-}
-// -------------------------------------------------------------------------------- 
-
-static bool _set_float_dense_matrix(matrix_f* m, size_t r, size_t c, float v) {
-    if (!_dense_bounds_ok(m, r, c)) { errno = EINVAL; return false; }
-    if (!m->storage.dense.data || !m->storage.dense.init_bits) { errno = ENOTSUP; return false; }
-
-    const size_t idx = _dense_index(m, r, c);
-    if (idx == (size_t)-1 || idx >= m->storage.dense.alloc) { errno = EOVERFLOW; return false; }
-
-    if (m->storage.dense.init_bits[idx]) { errno = EEXIST; return false; }
-
-    m->storage.dense.data[idx] = v;
-    m->storage.dense.init_bits[idx] = 1u;
-    if (m->storage.dense.size < m->storage.dense.alloc) {
-        m->storage.dense.size += 1;  // track how many cells have been initialized
+void free_float_coo_matrix(matrix_f* mat) {
+    errno = 0;
+    if (!mat || mat->type != SPARSE_COO_MATRIX) {
+        errno = EINVAL;
+        return;
     }
-    return true;
+    if (mat->storage.coo.rows)   free(mat->storage.coo.rows);
+    if (mat->storage.coo.cols)   free(mat->storage.coo.cols);
+    if (mat->storage.coo.values) free(mat->storage.coo.values); 
+    mat->type = 0;
+    mat->rows = 0;
+    mat->cols = 0;
+    mat->count = 0;
+    // Finally free the structure itself
+    free(mat);
 }
 // -------------------------------------------------------------------------------- 
 
-static bool _insert_float_dense_matrix(matrix_f* m, size_t r, size_t c, float v) {
-    if (!_dense_bounds_ok(m, r, c)) { errno = EINVAL; return false; }
-    if (!m->storage.dense.data) { errno = EINVAL; return false; }
+bool is_float_element_initialized(const matrix_f* mat, size_t row, size_t col) {
+    if (!mat) {
+        errno = EINVAL;
+        return false;
+    }
 
-    const size_t idx = _dense_index(m, r, c);
-    if (idx == (size_t)-1 || idx >= m->storage.dense.alloc) { errno = EOVERFLOW; return false; }
+    // Bounds checking
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return false;
+    }
 
-    m->storage.dense.data[idx] = v;
+    if (mat->count == 0)
+        return false;
 
-    if (m->storage.dense.init_bits) {
-        if (!m->storage.dense.init_bits[idx]) {
-            m->storage.dense.init_bits[idx] = 1u;
-            if (m->storage.dense.size < m->storage.dense.alloc) {
-                m->storage.dense.size += 1;
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            if (!mat->storage.dense.init) {
+                errno = EINVAL;
+                return false;
             }
+            return mat->storage.dense.init[row * mat->cols + col] != 0;
+
+        case SPARSE_COO_MATRIX: {
+            for (size_t i = 0; i < mat->count; ++i) {
+                if (mat->storage.coo.rows[i] == row &&
+                    mat->storage.coo.cols[i] == col) {
+                    return true;
+                }
+            }
+            return false;
         }
+
+        case SPARSE_CSR_MATRIX: {
+            size_t row_start = mat->storage.csr.row_ptrs[row];
+            size_t row_end = mat->storage.csr.row_ptrs[row + 1];
+            for (size_t i = row_start; i < row_end; ++i) {
+                if (mat->storage.csr.col_indices[i] == col) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        default:
+            errno = EINVAL;
+            return false;
     }
+}
+// -------------------------------------------------------------------------------- 
+
+static void set_element_initialized(matrix_f* mat, size_t row, size_t col, bool initialized) {
+    // Parameter validation
+    if (!mat || !mat->storage.dense.init) {
+        errno = EINVAL;
+        return;
+    }
+    
+    // Bounds checking
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return;
+    }
+    
+    // Get current state
+    bool was_initialized = mat->storage.dense.init[row * mat->cols + col] != 0;
+    
+    // Update initialization status
+    mat->storage.dense.init[row * mat->cols + col] = initialized ? 1 : 0;
+    
+    // Update count if state changed
+    if (initialized && !was_initialized) {
+        mat->count++;
+    } else if (!initialized && was_initialized) {
+        mat->count--;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+static bool set_dense_matrix(matrix_f* mat, size_t row, size_t col, float value, bool allow_updates) {
+    // Reset errno
+    errno = 0;
+    if (!mat || mat->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+    
+    // Parameter validation
+    if (!mat->storage.dense.data || !mat->storage.dense.init) {
+        errno = EINVAL;
+        return false;
+    }
+    
+    // Bounds checking
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return false;
+    }
+    
+    // Check if already initialized
+    bool initialized = is_float_element_initialized(mat, row, col);
+    
+    // Handle initialization rules
+    if (initialized && !allow_updates) {
+        errno = EEXIST;  // Element already exists
+        return false;
+    }
+    
+    // Set the value
+    mat->storage.dense.data[row * mat->cols + col] = value;
+    
+    // Update initialization status if needed
+    if (!initialized) {
+        set_element_initialized(mat, row, col, true);
+    }
+    
     return true;
 }
 // -------------------------------------------------------------------------------- 
 
-/* Sort helper: (row, col) */
-static int _cmp_triplet_row_col(const void* a, const void* b) {
-    const triplet_f* ta = (const triplet_f*)a;
-    const triplet_f* tb = (const triplet_f*)b;
-    if (ta->row < tb->row) return -1;
-    if (ta->row > tb->row) return  1;
-    if (ta->col < tb->col) return -1;
-    if (ta->col > tb->col) return  1;
+bool insert_float_dense_matrix(matrix_f* mat, size_t row, size_t col, float value) {
+    return set_dense_matrix(mat, row, col, value, false);
+}
+// -------------------------------------------------------------------------------- 
+
+bool update_float_dense_matrix(matrix_f* mat, size_t row, size_t col, float value) {
+    return set_dense_matrix(mat, row, col, value, true);
+}
+// -------------------------------------------------------------------------------- 
+
+static int compare_row_col(size_t r1, size_t c1, size_t r2, size_t c2) {
+    if (r1 < r2) return -1;
+    if (r1 > r2) return 1;
+    if (c1 < c2) return -1;
+    if (c1 > c2) return 1;
     return 0;
 }
 
-/* Finalize: sort by (row,col), coalesce duplicates by SUM, and mark read-optimized */
-bool finalize_float_coo_matrix(matrix_f* m) {
-    if (!m || m->type != COO) { errno = EINVAL; return false; }
-    coo_f* C = &m->storage.coo;
-    if (!C->triplets || C->size <= 1) { C->fast_set = false; return true; }
-    if (!C->fast_set) return true;  // already finalized
+static bool set_coo_matrix(matrix_f* mat, size_t row, size_t col, float value, bool allow_updates) {
+    errno = 0;
 
-    /* 1) sort */
-    qsort(C->triplets, C->size, sizeof *C->triplets, _cmp_triplet_row_col);
-
-    /* 2) coalesce in place: sum consecutive duplicates with same (row,col) */
-    size_t w = 0;
-    for (size_t i = 0; i < C->size; ) {
-        uint32_t r = C->triplets[i].row;
-        uint32_t c = C->triplets[i].col;
-        double   acc = 0.0;
-        do {
-            acc += (double)C->triplets[i].data;
-            ++i;
-        } while (i < C->size &&
-                 C->triplets[i].row == r &&
-                 C->triplets[i].col == c);
-
-        C->triplets[w].row  = r;
-        C->triplets[w].col  = c;
-        C->triplets[w].data = (float)acc;
-        ++w;
+    if (!mat || mat->type != SPARSE_COO_MATRIX || row >= mat->rows || col >= mat->cols) {
+        errno = EINVAL;
+        return false;
     }
-    C->size = w;
 
-    /* 3) mark read-optimized */
-    C->fast_set = false;
-    return true;
-}
-// -------------------------------------------------------------------------------- 
-
-/* key + lower_bound on (row,col) */
-static inline unsigned long long _key_rc(uint32_t r, uint32_t c) {
-    return ((unsigned long long)r << 32) | (unsigned long long)c;
-}
-// -------------------------------------------------------------------------------- 
-
-static size_t _lower_bound_triplets(const triplet_f* t, size_t n, uint32_t r, uint32_t c) {
-    const unsigned long long k = _key_rc(r, c);
-    size_t lo = 0, hi = n;
-    while (lo < hi) {
-        size_t mid = lo + ((hi - lo) >> 1);
-        unsigned long long km = _key_rc(t[mid].row, t[mid].col);
-        if (km < k) lo = mid + 1; else hi = mid;
+    // Binary search for insert position
+    size_t left = 0, right = mat->count;
+    while (left < right) {
+        size_t mid = (left + right) / 2;
+        int cmp = compare_row_col(mat->storage.coo.rows[mid], mat->storage.coo.cols[mid], row, col);
+        if (cmp < 0)
+            left = mid + 1;
+        else
+            right = mid;
     }
-    return lo;
-}
-// -------------------------------------------------------------------------------- 
 
-static bool _coo_ensure_capacity(coo_f* C, size_t need) {
-    if (need <= C->alloc) return true;
-    size_t new_alloc = (C->alloc == 0) ? 1 : C->alloc;
-    do {
-        if (new_alloc < VEC_THRESHOLD) {
-            if (new_alloc > SIZE_MAX / 2) { errno = EOVERFLOW; return false; }
-            new_alloc *= 2;
-        } else {
-            if (SIZE_MAX - new_alloc < (size_t)VEC_FIXED_AMOUNT) { errno = EOVERFLOW; return false; }
-            new_alloc += (size_t)VEC_FIXED_AMOUNT;
+    // Check for existing value
+    if (left < mat->count &&
+        mat->storage.coo.rows[left] == row &&
+        mat->storage.coo.cols[left] == col) {
+        if (!allow_updates) {
+            errno = EEXIST;
+            return false;
         }
-    } while (new_alloc < need);
-
-    triplet_f* t2 = (triplet_f*)realloc(C->triplets, new_alloc * sizeof *t2);
-    if (!t2) { errno = ENOMEM; return false; }
-    C->triplets = t2;
-    C->alloc = new_alloc;
-    return true;
-}
-// -------------------------------------------------------------------------------- 
-
-/* Core inserter: in build mode -> append; in finalized mode -> unique insert or overwrite */
-static bool _insert_float_coo_matrix(matrix_f* m, size_t r, size_t c, float v, bool overwrite_if_exists) {
-    if (!m || m->type != COO) { errno = EINVAL; return false; }
-    if (r >= m->rows || c >= m->cols) { errno = EINVAL; return false; }
-    coo_f* C = &m->storage.coo;
-
-    if (C->fast_set) {
-        if (!_coo_ensure_capacity(C, C->size + 1)) return false;
-        C->triplets[C->size++] = (triplet_f){ r, c, v };
+        mat->storage.coo.values[left] = value;
         return true;
     }
 
-    /* finalized: keep sorted by (row,col) */
-    size_t pos = _lower_bound_triplets(C->triplets, C->size, r, c);
-    if (pos < C->size && C->triplets[pos].row == r && C->triplets[pos].col == c) {
-        if (overwrite_if_exists) {
-            C->triplets[pos].data = v;     /* overwrite in place */
-            return true;
-        } else {
-            errno = EEXIST;                /* enforce uniqueness */
+    // Reallocate if needed
+    if (mat->count >= mat->storage.coo.capacity) {
+        size_t new_capacity = mat->storage.coo.capacity == 0 ? 1 : mat->storage.coo.capacity;
+        new_capacity = (new_capacity < VEC_THRESHOLD) ? new_capacity * 2 : new_capacity + VEC_FIXED_AMOUNT;
+
+        size_t* new_rows = realloc(mat->storage.coo.rows, new_capacity * sizeof(size_t));
+        size_t* new_cols = realloc(mat->storage.coo.cols, new_capacity * sizeof(size_t));
+        float*  new_vals = realloc(mat->storage.coo.values, new_capacity * sizeof(float));
+        if (!new_rows || !new_cols || !new_vals) {
+            errno = ENOMEM;
             return false;
         }
+        mat->storage.coo.rows = new_rows;
+        mat->storage.coo.cols = new_cols;
+        mat->storage.coo.values = new_vals;
+        mat->storage.coo.capacity = new_capacity;
     }
 
-    /* no existing entry: insert at pos */
-    if (!_coo_ensure_capacity(C, C->size + 1)) return false;
-    size_t tail = C->size - pos;
-    if (tail) {
-        memmove(&C->triplets[pos + 1], &C->triplets[pos], tail * sizeof(triplet_f));
-    }
-    C->triplets[pos] = (triplet_f){ r, c, v };
-    C->size++;
+    // Shift data to make space
+    memmove(&mat->storage.coo.rows[left + 1], &mat->storage.coo.rows[left], (mat->count - left) * sizeof(size_t));
+    memmove(&mat->storage.coo.cols[left + 1], &mat->storage.coo.cols[left], (mat->count - left) * sizeof(size_t));
+    memmove(&mat->storage.coo.values[left + 1], &mat->storage.coo.values[left], (mat->count - left) * sizeof(float));
+
+    // Insert new entry
+    mat->storage.coo.rows[left] = row;
+    mat->storage.coo.cols[left] = col;
+    mat->storage.coo.values[left] = value;
+    mat->count++;
+
     return true;
 }
 // -------------------------------------------------------------------------------- 
 
-static bool _insert_float_coo_matrix_unique(matrix_f* m, size_t r, size_t c, float v) {
-    return _insert_float_coo_matrix(m, r, c, v, /*overwrite_if_exists=*/false);
+bool insert_float_coo_matrix(matrix_f* mat, size_t row, size_t col, float value) {
+    return set_coo_matrix(mat, row, col, value, false);
 }
 // -------------------------------------------------------------------------------- 
 
-static bool _set_float_coo_matrix(matrix_f* m, size_t r, size_t c, float v) {
-    return _insert_float_coo_matrix(m, r, c, v, /*overwrite_if_exists=*/true);
+bool update_float_coo_matrix(matrix_f* mat, size_t row, size_t col, float value) {
+    return set_coo_matrix(mat, row, col, value, true);
 }
 // -------------------------------------------------------------------------------- 
 
-bool insert_float_matrix(matrix_f* m, size_t r, size_t c, float v) {
-    if (!m) {
+static int compare_size_t(const void* a, const void* b) {
+    size_t lhs = *(const size_t*)a;
+    size_t rhs = *(const size_t*)b;
+    if (lhs < rhs) return -1;
+    if (lhs > rhs) return 1;
+    return 0;
+}
+// -------------------------------------------------------------------------------- 
+
+static bool set_csr_matrix(matrix_f* mat, size_t row, size_t col, float value, bool allow_updates) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) {
         errno = EINVAL;
         return false;
     }
-    switch(m->type) {
-        case DENSE: return _insert_float_dense_matrix(m, r, c, v);
-        case COO: return _set_float_coo_matrix(m, r, c, v);
-        default: errno = ENOTSUP; return false;
-    }
-}
-// -------------------------------------------------------------------------------- 
 
-bool set_float_matrix(matrix_f* m, size_t r, size_t c, float v) {
-    if (!m) {
+    if (!mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
         errno = EINVAL;
         return false;
     }
-    switch(m->type) {
-        case DENSE: return _set_float_dense_matrix(m, r, c, v);
-        case COO: return _insert_float_coo_matrix_unique(m, r, c, v);
-        default: errno = ENOTSUP; return false;
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return false;
     }
+
+    size_t start = mat->storage.csr.row_ptrs[row];
+    size_t end   = mat->storage.csr.row_ptrs[row + 1];
+    size_t count = end - start;
+
+    size_t* found = bsearch(&col,
+                            &mat->storage.csr.col_indices[start],
+                            count,
+                            sizeof(size_t),
+                            compare_size_t);
+
+    if (found) {
+        if (!allow_updates) {
+            errno = EEXIST;
+            return false;
+        }
+
+        size_t index = found - mat->storage.csr.col_indices;
+        mat->storage.csr.values[index] = value;
+        return true;
+    }
+
+    errno = allow_updates ? ENOENT : EEXIST;
+    return false;
 }
 // -------------------------------------------------------------------------------- 
 
-static inline size_t _float_dense_matrix_size(const matrix_f* mat) {
-    if (mat->type != DENSE) {
+bool insert_float_csr_matrix(matrix_f* mat, size_t row, size_t col, float value) {
+    return set_csr_matrix(mat, row, col, value, false);
+}
+// -------------------------------------------------------------------------------- 
+
+bool update_float_csr_matrix(matrix_f* mat, size_t row, size_t col, float value) {
+    return set_csr_matrix(mat, row, col, value, true);
+}
+// -------------------------------------------------------------------------------- 
+
+static matrix_f* convert_float_dense_to_coo(const matrix_f* dense_mat) {
+    errno = 0;
+
+    if (!dense_mat || dense_mat->type != DENSE_MATRIX ||
+        !dense_mat->storage.dense.data || !dense_mat->storage.dense.init) {
         errno = EINVAL;
-        return 0;
+        return NULL;
     }
-    return mat->storage.dense.size;
+
+    size_t rows = dense_mat->rows;
+    size_t cols = dense_mat->cols;
+    size_t count = dense_mat->count;
+
+    matrix_f* coo_mat = malloc(sizeof(matrix_f));
+    if (!coo_mat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t* rows_arr = malloc(count * sizeof(size_t));
+    size_t* cols_arr = malloc(count * sizeof(size_t));
+    float* values_arr = malloc(count * sizeof(float));
+    if (!rows_arr || !cols_arr || !values_arr) {
+        free(rows_arr); free(cols_arr); free(values_arr); free(coo_mat);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t k = 0;
+    for (size_t i = 0; i < rows; ++i) {
+        for (size_t j = 0; j < cols; ++j) {
+            size_t idx = i * cols + j;
+            if (dense_mat->storage.dense.init[idx]) {
+                rows_arr[k] = i;
+                cols_arr[k] = j;
+                values_arr[k] = dense_mat->storage.dense.data[idx];
+                ++k;
+            }
+        }
+    }
+
+    coo_mat->type = SPARSE_COO_MATRIX;
+    coo_mat->rows = rows;
+    coo_mat->cols = cols;
+    coo_mat->count = count;
+    coo_mat->storage.coo.rows = rows_arr;
+    coo_mat->storage.coo.cols = cols_arr;
+    coo_mat->storage.coo.values = values_arr;
+    coo_mat->storage.coo.capacity = count;
+
+    return coo_mat;
 }
 // -------------------------------------------------------------------------------- 
 
-static inline size_t _float_coo_matrix_size(const matrix_f* mat) {
-    if (mat->type != COO) {
+static int compare_coo_entries(const void* a, const void* b) {
+    const size_t* ia = (const size_t*)a;
+    const size_t* ib = (const size_t*)b;
+    // First sort by row, then column
+    if (ia[0] != ib[0]) return (ia[0] < ib[0]) ? -1 : 1;
+    return (ia[1] < ib[1]) ? -1 : (ia[1] > ib[1]);
+}
+// -------------------------------------------------------------------------------- 
+
+static matrix_f* convert_float_coo_to_csr(const matrix_f* coo_mat) {
+    errno = 0;
+
+    if (!coo_mat || coo_mat->type != SPARSE_COO_MATRIX ||
+        !coo_mat->storage.coo.rows || !coo_mat->storage.coo.cols || !coo_mat->storage.coo.values) {
         errno = EINVAL;
-        return 0;
+        return NULL;
     }
-    return mat->storage.coo.size;
+
+    size_t nnz = coo_mat->count;
+    size_t rows = coo_mat->rows;
+    size_t cols = coo_mat->cols;
+
+    // Allocate CSR structures
+    size_t* row_ptrs = calloc(rows + 1, sizeof(size_t));
+    size_t* col_indices = malloc(nnz * sizeof(size_t));
+    float* values = malloc(nnz * sizeof(float));
+    if (!row_ptrs || !col_indices || !values) {
+        free(row_ptrs); free(col_indices); free(values);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Create sortable array of (row, col, value)
+    typedef struct {
+        size_t row, col;
+        float value;
+    } entry_t;
+
+    entry_t* entries = malloc(nnz * sizeof(entry_t));
+    if (!entries) {
+        free(row_ptrs); free(col_indices); free(values);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    for (size_t i = 0; i < nnz; ++i) {
+        entries[i].row = coo_mat->storage.coo.rows[i];
+        entries[i].col = coo_mat->storage.coo.cols[i];
+        entries[i].value = coo_mat->storage.coo.values[i];
+    }
+
+    // Sort by row, then col
+    qsort(entries, nnz, sizeof(entry_t), (int (*)(const void*, const void*))compare_coo_entries);
+
+    // Fill CSR
+    for (size_t i = 0; i < nnz; ++i) {
+        row_ptrs[entries[i].row + 1]++;
+        col_indices[i] = entries[i].col;
+        values[i] = entries[i].value;
+    }
+
+    // Convert row counts to prefix sum
+    for (size_t i = 1; i <= rows; ++i) {
+        row_ptrs[i] += row_ptrs[i - 1];
+    }
+
+    matrix_f* csr_mat = malloc(sizeof(matrix_f));
+    if (!csr_mat) {
+        free(row_ptrs); free(col_indices); free(values); free(entries);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    csr_mat->type = SPARSE_CSR_MATRIX;
+    csr_mat->rows = rows;
+    csr_mat->cols = cols;
+    csr_mat->count = nnz;
+    csr_mat->storage.csr.row_ptrs = row_ptrs;
+    csr_mat->storage.csr.col_indices = col_indices;
+    csr_mat->storage.csr.values = values;
+
+    free(entries);
+    return csr_mat;
+}
+// -------------------------------------------------------------------------------- 
+void maybe_convert_float_matrix(matrix_f** pmat, bool convert_to_csr) {
+    matrix_f* mat = *pmat;
+
+    size_t total = mat->rows * mat->cols;
+
+    // If dense and large or sparse → convert to COO
+    if (mat->type == DENSE_MATRIX) {
+        float density = (float)mat->count / total;
+        if (total > MAX_DENSE_ELEMENTS && density < SPARSE_THRESHOLD) {
+            matrix_f* new_mat = convert_float_dense_to_coo(mat);
+            if (new_mat) {
+                free_float_matrix(mat);
+                *pmat = new_mat;
+            }
+        }
+    }
+    // If COO and too large → convert to CSR
+    else if (mat->type == SPARSE_COO_MATRIX && convert_to_csr) {
+        if (mat->count >= COO_TO_CSR_TRIGGER) {
+            matrix_f* new_mat = convert_float_coo_to_csr(mat);
+            if (new_mat) {
+                free_float_matrix(mat);
+                *pmat = new_mat;
+            }
+        }
+    }
+    // CSR doesn't auto-convert
 }
 // -------------------------------------------------------------------------------- 
 
-static inline size_t _float_csr_matrix_size(const matrix_f* mat) {
-    if (mat->type != CSR) {
+bool insert_float_matrix(matrix_f** pmat, size_t row, size_t col, float value,
+                         bool convert_to_csr) {
+    if (!pmat || !*pmat) {
         errno = EINVAL;
-        return 0;
+        return false;
     }
-    return mat->storage.csr.size;
-}
-// -------------------------------------------------------------------------------- 
 
-static inline size_t _float_csc_matrix_size(const matrix_f* mat) {
-    if (mat->type != CSC) {
-        errno = EINVAL;
-        return 0;
-    }
-    return mat->storage.csc.size;
-}
-// -------------------------------------------------------------------------------- 
+    maybe_convert_float_matrix(pmat, convert_to_csr);  // Can replace *pmat with a new matrix
+    matrix_f* mat = *pmat;
 
-size_t float_matrix_size(const matrix_f* mat) {
-    switch(mat->type) {
-        case DENSE: return _float_dense_matrix_size(mat);
-        case COO: return _float_coo_matrix_size(mat);
-        case CSR: return _float_csr_matrix_size(mat);
-        case CSC: return _float_csc_matrix_size(mat);
-        default: errno = ENOTSUP; return 0;
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return insert_float_dense_matrix(mat, row, col, value);
+        case SPARSE_COO_MATRIX:
+            return insert_float_coo_matrix(mat, row, col, value);
+        case SPARSE_CSR_MATRIX:
+            return insert_float_csr_matrix(mat, row, col, value);
+        default:
+            errno = EINVAL;
+            return false;
     }
 }
 // -------------------------------------------------------------------------------- 
 
-static inline size_t _float_dense_matrix_alloc(const matrix_f* mat) {
-    if (mat->type != DENSE) {
-        errno = EINVAL;
-        return 0;
-    }
-    return mat->storage.dense.alloc;
-}
-// -------------------------------------------------------------------------------- 
-
-static inline size_t _float_coo_matrix_alloc(const matrix_f* mat) {
-    if (mat->type != COO) {
-        errno = EINVAL;
-        return 0;
-    }
-    return mat->storage.coo.alloc;
-}
-// -------------------------------------------------------------------------------- 
-
-static inline size_t _float_csr_matrix_alloc(const matrix_f* mat) {
-    if (mat->type != CSR) {
-        errno = EINVAL;
-        return 0;
-    }
-    return mat->storage.csr.alloc;
-}
-// -------------------------------------------------------------------------------- 
-
-static inline size_t _float_csc_matrix_alloc(const matrix_f* mat) {
-    if (mat->type != CSC) {
-        errno = EINVAL;
-        return 0;
-    }
-    return mat->storage.csc.alloc;
-}
-// -------------------------------------------------------------------------------- 
-
-size_t float_matrix_alloc(const matrix_f* mat) {
-    switch(mat->type) {
-        case DENSE: return _float_dense_matrix_alloc(mat);
-        case COO: return _float_coo_matrix_alloc(mat);
-        case CSR: return _float_csr_matrix_alloc(mat);
-        case CSC: return _float_csc_matrix_alloc(mat);
-        default: errno = ENOTSUP; return 0;
-    }
-}
-// -------------------------------------------------------------------------------- 
-
-MatrixType float_matrix_type(const matrix_f* mat) {
+bool update_float_matrix(matrix_f* mat, size_t row, size_t col, float value) {
+    errno = 0;
     if (!mat) {
         errno = EINVAL;
-        return MATRIX_INVALID;
+        return false;
+    }
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return update_float_dense_matrix(mat, row, col, value);
+        case SPARSE_COO_MATRIX:
+            return update_float_coo_matrix(mat, row, col, value);
+        case SPARSE_CSR_MATRIX:
+            return update_float_csr_matrix(mat, row, col, value);
+        default:
+            errno = EINVAL;
+            return false;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+float get_float_dense_matrix(const matrix_f* mat, size_t row, size_t col) {
+    errno = 0;
+    if (!mat || !mat->storage.dense.data || !mat->storage.dense.init || mat->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    if (!is_float_element_initialized(mat, row, col)) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    return mat->storage.dense.data[row * mat->cols + col];
+}
+// -------------------------------------------------------------------------------- 
+
+float get_float_coo_matrix(const matrix_f* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_COO_MATRIX ||
+        !mat->storage.coo.rows || !mat->storage.coo.cols || !mat->storage.coo.values) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    for (size_t i = 0; i < mat->count; ++i) {
+        if (mat->storage.coo.rows[i] == row &&
+            mat->storage.coo.cols[i] == col) {
+            return mat->storage.coo.values[i];
+        }
+    }
+
+    // Element not found
+    errno = ENOENT;
+    return FLT_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+float get_float_csr_matrix(const matrix_f* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_CSR_MATRIX ||
+        !mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    size_t start = mat->storage.csr.row_ptrs[row];
+    size_t end   = mat->storage.csr.row_ptrs[row + 1];
+
+    for (size_t i = start; i < end; ++i) {
+        if (mat->storage.csr.col_indices[i] == col) {
+            return mat->storage.csr.values[i];
+        }
+    }
+
+    errno = ENOENT;
+    return FLT_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+float get_float_matrix(const matrix_f* mat, size_t row, size_t col) {
+    errno = 0;
+    if (!mat) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+    if (mat->type == DENSE_MATRIX) return get_float_dense_matrix(mat, row, col);
+    else if (mat->type == SPARSE_COO_MATRIX) return get_float_coo_matrix(mat, row, col);
+    else if (mat->type == SPARSE_CSR_MATRIX) return get_float_csr_matrix(mat, row, col);
+    else {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+float pop_float_dense_matrix(matrix_f* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != DENSE_MATRIX ||
+        !mat->storage.dense.data || !mat->storage.dense.init) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    if (!is_float_element_initialized(mat, row, col)) {
+        errno = ENOENT;
+        return FLT_MAX;
+    }
+
+    size_t index = row * mat->cols + col;
+    float value = mat->storage.dense.data[index];
+
+    // Mark as uninitialized
+    set_element_initialized(mat, row, col, false);
+    mat->storage.dense.data[index] = 0.0f;  // Optional
+
+    return value;
+}
+// -------------------------------------------------------------------------------- 
+
+float pop_float_coo_matrix(matrix_f* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_COO_MATRIX ||
+        !mat->storage.coo.rows || !mat->storage.coo.cols || !mat->storage.coo.values) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    size_t left = 0, right = mat->count;
+    while (left < right) {
+        size_t mid = (left + right) / 2;
+        size_t mid_row = mat->storage.coo.rows[mid];
+        size_t mid_col = mat->storage.coo.cols[mid];
+
+        if (mid_row < row || (mid_row == row && mid_col < col)) {
+            left = mid + 1;
+        } else {
+            right = mid;
+        }
+    }
+
+    if (left < mat->count &&
+        mat->storage.coo.rows[left] == row &&
+        mat->storage.coo.cols[left] == col) {
+
+        float value = mat->storage.coo.values[left];
+        size_t elements_to_move = mat->count - left - 1;
+
+        if (elements_to_move > 0) {
+            memmove(&mat->storage.coo.rows[left],
+                    &mat->storage.coo.rows[left + 1],
+                    elements_to_move * sizeof(size_t));
+
+            memmove(&mat->storage.coo.cols[left],
+                    &mat->storage.coo.cols[left + 1],
+                    elements_to_move * sizeof(size_t));
+
+            memmove(&mat->storage.coo.values[left],
+                    &mat->storage.coo.values[left + 1],
+                    elements_to_move * sizeof(float));
+        }
+
+        mat->count--;
+        return value;
+    }
+
+    errno = ENOENT;
+    return FLT_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static void maybe_compact_csr(matrix_f* mat, size_t original_nnz) {
+    if (!mat || mat->type != SPARSE_CSR_MATRIX || original_nnz == 0) return;
+
+    float tombstone_ratio = (float)(original_nnz - mat->count) / original_nnz;
+
+    if (tombstone_ratio > CSR_COMPACT_THRESHOLD) {
+        compact_float_csr_matrix(mat);
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+float pop_float_csr_matrix(matrix_f* mat, size_t row, size_t col) {
+    errno = 0;
+
+    if (!mat || mat->type != SPARSE_CSR_MATRIX ||
+        !mat->storage.csr.row_ptrs || !mat->storage.csr.col_indices || !mat->storage.csr.values) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    if (row >= mat->rows || col >= mat->cols) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+
+    size_t start = mat->storage.csr.row_ptrs[row];
+    size_t end   = mat->storage.csr.row_ptrs[row + 1];
+    size_t count = end - start;
+    size_t* found = bsearch(&col,
+                            &mat->storage.csr.col_indices[start],
+                            count,
+                            sizeof(size_t),
+                            compare_size_t);
+
+    if (!found) {
+        errno = ENOENT;
+        return FLT_MAX;
+    }
+
+    size_t index = found - mat->storage.csr.col_indices;
+    float value = mat->storage.csr.values[index];
+
+    // Mark entry as tombstone
+    mat->storage.csr.col_indices[index] = CSR_TOMBSTONE_COL;
+    mat->storage.csr.values[index] = 0.0f;
+    size_t original_nnz = mat->count;
+    mat->count--;
+
+    maybe_compact_csr(mat, original_nnz);
+
+    return value;
+}
+// -------------------------------------------------------------------------------- 
+
+void compact_float_csr_matrix(matrix_f* mat) {
+    errno = 0;
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) return;
+
+    size_t nnz = mat->count;
+    // size_t new_capacity = nnz;
+    size_t* new_col_indices = malloc(nnz * sizeof(size_t));
+    float* new_values = malloc(nnz * sizeof(float));
+    size_t* new_row_ptrs = calloc(mat->rows + 1, sizeof(size_t));
+
+    if (!new_col_indices || !new_values || !new_row_ptrs) {
+        free(new_col_indices); free(new_values); free(new_row_ptrs);
+        errno = ENOMEM;
+        return;
+    }
+
+    size_t index = 0;
+    for (size_t row = 0; row < mat->rows; ++row) {
+        size_t start = mat->storage.csr.row_ptrs[row];
+        size_t end   = mat->storage.csr.row_ptrs[row + 1];
+
+        new_row_ptrs[row] = index;
+
+        for (size_t i = start; i < end; ++i) {
+            if (mat->storage.csr.col_indices[i] != CSR_TOMBSTONE_COL) {
+                new_col_indices[index] = mat->storage.csr.col_indices[i];
+                new_values[index] = mat->storage.csr.values[i];
+                ++index;
+            }
+        }
+    }
+
+    new_row_ptrs[mat->rows] = index;
+
+    // Replace old data
+    free(mat->storage.csr.col_indices);
+    free(mat->storage.csr.values);
+    free(mat->storage.csr.row_ptrs);
+    mat->storage.csr.col_indices = new_col_indices;
+    mat->storage.csr.values = new_values;
+    mat->storage.csr.row_ptrs = new_row_ptrs;
+}
+// -------------------------------------------------------------------------------- 
+
+static matrix_f* convert_float_csr_to_coo(const matrix_f* csr_mat) {
+    errno = 0;
+
+    if (!csr_mat || csr_mat->type != SPARSE_CSR_MATRIX ||
+        !csr_mat->storage.csr.row_ptrs || !csr_mat->storage.csr.col_indices || !csr_mat->storage.csr.values) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t rows = csr_mat->rows;
+    size_t cols = csr_mat->cols;
+    size_t nnz  = csr_mat->count;
+
+    size_t* row_arr = malloc(nnz * sizeof(size_t));
+    size_t* col_arr = malloc(nnz * sizeof(size_t));
+    float* values   = malloc(nnz * sizeof(float));
+    if (!row_arr || !col_arr || !values) {
+        free(row_arr); free(col_arr); free(values);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t k = 0;
+    for (size_t i = 0; i < rows; ++i) {
+        size_t start = csr_mat->storage.csr.row_ptrs[i];
+        size_t end   = csr_mat->storage.csr.row_ptrs[i + 1];
+        for (size_t j = start; j < end; ++j) {
+            row_arr[k] = i;
+            col_arr[k] = csr_mat->storage.csr.col_indices[j];
+            values[k]  = csr_mat->storage.csr.values[j];
+            ++k;
+        }
+    }
+
+    matrix_f* coo_mat = malloc(sizeof(matrix_f));
+    if (!coo_mat) {
+        free(row_arr); free(col_arr); free(values);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    coo_mat->type = SPARSE_COO_MATRIX;
+    coo_mat->rows = rows;
+    coo_mat->cols = cols;
+    coo_mat->count = nnz;
+    coo_mat->storage.coo.rows = row_arr;
+    coo_mat->storage.coo.cols = col_arr;
+    coo_mat->storage.coo.values = values;
+    coo_mat->storage.coo.capacity = nnz;
+
+    return coo_mat;
+}
+// -------------------------------------------------------------------------------- 
+
+static matrix_f* convert_float_coo_to_dense(const matrix_f* coo_mat) {
+    errno = 0;
+
+    if (!coo_mat || coo_mat->type != SPARSE_COO_MATRIX ||
+        !coo_mat->storage.coo.rows || !coo_mat->storage.coo.cols || !coo_mat->storage.coo.values) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t rows = coo_mat->rows;
+    size_t cols = coo_mat->cols;
+    size_t nnz  = coo_mat->count;
+
+    float* data = calloc(rows * cols, sizeof(float));
+    uint8_t* init = calloc(rows * cols, sizeof(uint8_t));  // ← fixed type
+    if (!data || !init) {
+        free(data); free(init);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    for (size_t i = 0; i < nnz; ++i) {
+        size_t r = coo_mat->storage.coo.rows[i];
+        size_t c = coo_mat->storage.coo.cols[i];
+        float  v = coo_mat->storage.coo.values[i];
+        size_t idx = r * cols + c;
+        data[idx] = v;
+        init[idx] = 1;  // ← use 1 instead of `true`
+    }
+
+    matrix_f* dense_mat = malloc(sizeof(matrix_f));
+    if (!dense_mat) {
+        free(data); free(init);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    dense_mat->type = DENSE_MATRIX;
+    dense_mat->rows = rows;
+    dense_mat->cols = cols;
+    dense_mat->count = nnz;
+    dense_mat->storage.dense.data = data;
+    dense_mat->storage.dense.init = init;
+
+    return dense_mat;
+}
+// -------------------------------------------------------------------------------- 
+
+void convert_floatMat_to_dense(matrix_f** pmat) {
+    errno = 0;
+    matrix_f* mat = *pmat;
+    if (!mat) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (mat->type == DENSE_MATRIX) return;
+
+    if (mat->type == SPARSE_COO_MATRIX) {
+        matrix_f* new_mat = convert_float_coo_to_dense(mat);
+        if (!new_mat) return;
+        free_float_matrix(mat);
+        *pmat = new_mat;
+    } else if (mat->type == SPARSE_CSR_MATRIX) {
+        matrix_f* coo_mat = convert_float_csr_to_coo(mat);
+        if (!coo_mat) return;
+        free_float_matrix(mat);
+        matrix_f* dense_mat = convert_float_coo_to_dense(coo_mat);
+        free_float_matrix(coo_mat);
+        if (!dense_mat) return;
+        *pmat = dense_mat;
+    } else {
+        errno = EINVAL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void convert_floatMat_to_coo(matrix_f** pmat) {
+    errno = 0;
+    matrix_f* mat = *pmat;
+    if (!mat) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (mat->type == SPARSE_COO_MATRIX) return;
+
+    if (mat->type == DENSE_MATRIX) {
+        matrix_f* new_mat = convert_float_dense_to_coo(mat);
+        if (!new_mat) return;
+        free_float_matrix(mat);
+        *pmat = new_mat;
+    } else if (mat->type == SPARSE_CSR_MATRIX) {
+        matrix_f* new_mat = convert_float_csr_to_coo(mat);
+        if (!new_mat) return;
+        free_float_matrix(mat);
+        *pmat = new_mat;
+    } else {
+        errno = EINVAL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void convert_floatMat_to_csr(matrix_f** pmat) {
+    errno = 0;
+    matrix_f* mat = *pmat;
+    if (!mat) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (mat->type == SPARSE_CSR_MATRIX) return;
+
+    if (mat->type == SPARSE_COO_MATRIX) {
+        matrix_f* new_mat = convert_float_coo_to_csr(mat);
+        if (!new_mat) return;
+        free_float_matrix(mat);
+        *pmat = new_mat;
+    } else if (mat->type == DENSE_MATRIX) {
+        matrix_f* coo_mat = convert_float_dense_to_coo(mat);
+        if (!coo_mat) return;
+        free_float_matrix(mat);
+        matrix_f* csr_mat = convert_float_coo_to_csr(coo_mat);
+        free_float_matrix(coo_mat);
+        if (!csr_mat) return;
+        *pmat = csr_mat;
+    } else {
+        errno = EINVAL;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+static bool should_downgrade_float_matrix(const matrix_f* mat) {
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) return false;
+
+    size_t total = mat->rows * mat->cols;
+    if (total == 0) return false;
+
+    float density = (float)mat->count / total;
+    return density < CSR_COMPACT_THRESHOLD;
+}
+// -------------------------------------------------------------------------------- 
+
+static void maybe_downgrade_matrix_format(matrix_f** pmat) {
+    if (!pmat || !*pmat) return;
+    matrix_f* mat = *pmat;
+
+    // Step 1: Try CSR → COO downgrade
+    if (mat->type == SPARSE_CSR_MATRIX && should_downgrade_float_matrix(mat)) {
+        matrix_f* coo = convert_float_csr_to_coo(mat);
+        if (coo) {
+            free_float_matrix(mat);
+            mat = coo;
+            *pmat = mat;
+        }
+    }
+
+    // Step 2: Try COO → Dense downgrade
+    if (mat->type == SPARSE_COO_MATRIX) {
+        size_t total = mat->rows * mat->cols;
+        if (total < MIN_SPARSE_SIZE || ((float)mat->count / total) > DENSE_THRESHOLD) {
+            matrix_f* dense = convert_float_coo_to_dense(mat);
+            if (dense) {
+                free_float_matrix(mat);
+                *pmat = dense;
+            }
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+float pop_float_matrix(matrix_f** pmat, size_t row, size_t col) {
+    errno = 0;
+    if (!pmat || !*pmat) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    matrix_f* mat = *pmat;
+    float result = FLT_MAX;
+
+    if (mat->type == DENSE_MATRIX)
+        result = pop_float_dense_matrix(mat, row, col);
+    else if (mat->type == SPARSE_COO_MATRIX)
+        result = pop_float_coo_matrix(mat, row, col);
+    else if (mat->type == SPARSE_CSR_MATRIX)
+        result = pop_float_csr_matrix(mat, row, col);
+    else {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+
+    // Try format downgrade (e.g., CSR → COO → DENSE)
+    maybe_downgrade_matrix_format(pmat);
+
+    return result;
+}
+// -------------------------------------------------------------------------------- 
+
+bool finalize_float_matrix(matrix_f** mat_ptr) {
+    errno = 0;
+    if (!mat_ptr || !*mat_ptr) {
+        errno = EINVAL;
+        return false;
+    }
+    maybe_convert_float_matrix(mat_ptr, true);  // allow_csr = true
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+MatrixStorageType get_float_matrix_type(matrix_f* mat) {
+    errno = 0;
+    if (!mat) {
+        errno = 0;
+        return 0;
     }
     return mat->type;
 }
 // -------------------------------------------------------------------------------- 
 
-bool set_float_fast_set(matrix_f* m) {
-    if (!m || m->type != COO) { 
-        errno = EINVAL; 
-        return false; 
+size_t get_float_matrix_rows(matrix_f* mat) {
+    errno = 0;
+    if (!mat) {
+        errno = 0;
+        return (size_t)-1;
     }
-    m->storage.coo.fast_set = true;
-    return true;
+    return mat->rows;
 }
 // -------------------------------------------------------------------------------- 
 
-static bool _delete_float_dense_element(matrix_f* m, size_t r, size_t c) {
-    if (!_dense_bounds_ok(m, r, c)) { errno = EINVAL; return false; }
-    if (!m->storage.dense.data || !m->storage.dense.init_bits) {
-        errno = ENOTSUP; return false;
+size_t get_float_matrix_cols(matrix_f* mat) {
+    errno = 0;
+    if (!mat) {
+        errno = 0;
+        return (size_t)-1;
     }
-
-    const size_t idx = _dense_index(m, r, c);
-    if (idx == (size_t)-1 || idx >= m->storage.dense.alloc) { errno = EOVERFLOW; return false; }
-
-    if (!m->storage.dense.init_bits[idx]) { errno = ENOENT; return false; }
-
-    m->storage.dense.data[idx] = 0.0f;      /* optional: zero the value */
-    m->storage.dense.init_bits[idx] = 0u;   /* mark as uninitialized */
-    if (m->storage.dense.size > 0) m->storage.dense.size--;
-    return true;
+    return mat->cols;
 }
 // -------------------------------------------------------------------------------- 
 
-static bool _delete_float_coo_element(matrix_f* m, size_t r, size_t c) {
-    if (!m || m->type != COO) { errno = EINVAL; return false; }
-    if (r >= m->rows || c >= m->cols) { errno = EINVAL; return false; }
+size_t get_float_matrix_element_count(matrix_f* mat) {
+    errno = 0;
+    if (!mat) {
+        errno = 0;
+        return (size_t)-1;
+    }
+    return mat->count;
+}
+// -------------------------------------------------------------------------------- 
 
-    coo_f* C = &m->storage.coo;
-    if (C->size == 0) { errno = ENOENT; return false; }
+matrix_f* invert_float_dense_matrix(const matrix_f* mat) {
+    errno = 0;
 
-    if (C->fast_set) {
-        /* Build mode: linear search + swap-with-last (O(1) removal) */
-        for (size_t i = 0; i < C->size; ++i) {
-            if (C->triplets[i].row == (uint32_t)r && C->triplets[i].col == (uint32_t)c) {
-                size_t last = C->size - 1;
-                if (i != last) C->triplets[i] = C->triplets[last];
-                C->size--;
-                return true;
+    if (!mat || mat->type != DENSE_MATRIX || mat->rows != mat->cols) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t n = mat->rows;
+    matrix_f* inverse = create_float_matrix(n, n, 0);
+    if (!inverse) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    float* a = malloc(n * n * sizeof(float));
+    if (!a) {
+        free_float_matrix(inverse);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Copy matrix and initialize identity
+    for (size_t i = 0; i < n * n; ++i) {
+        a[i] = mat->storage.dense.data[i];
+        inverse->storage.dense.data[i] = (i / n == i % n) ? 1.0f : 0.0f;
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+        size_t pivot = i;
+        float max = fabsf(a[i * n + i]);
+        for (size_t j = i + 1; j < n; ++j) {
+            float temp = fabsf(a[j * n + i]);
+            if (temp > max) {
+                max = temp;
+                pivot = j;
             }
         }
-        errno = ENOENT; return false;
-    } else {
-        /* Finalized: keep sorted -> lower_bound + memmove */
-        size_t pos = _lower_bound_triplets(C->triplets, C->size, (uint32_t)r, (uint32_t)c);
-        if (pos >= C->size ||
-            C->triplets[pos].row != (uint32_t)r ||
-            C->triplets[pos].col != (uint32_t)c) { errno = ENOENT; return false; }
-        size_t tail = C->size - 1 - pos;
-        if (tail) memmove(&C->triplets[pos], &C->triplets[pos + 1], tail * sizeof(triplet_f));
-        C->size--;
+
+        if (fabsf(a[pivot * n + i]) < 1e-8f) {
+            free(a);
+            free_float_matrix(inverse);
+            errno = ERANGE;
+            return NULL;
+        }
+
+        // Swap rows in A and inverse
+        if (pivot != i) {
+            for (size_t j = 0; j < n; ++j) {
+                float tmp = a[i * n + j];
+                a[i * n + j] = a[pivot * n + j];
+                a[pivot * n + j] = tmp;
+
+                tmp = inverse->storage.dense.data[i * n + j];
+                inverse->storage.dense.data[i * n + j] = inverse->storage.dense.data[pivot * n + j];
+                inverse->storage.dense.data[pivot * n + j] = tmp;
+            }
+        }
+
+        float pivot_val = a[i * n + i];
+
+#if defined(__AVX__)
+        __m256 vpivot = _mm256_set1_ps(pivot_val);
+        size_t j = 0;
+        for (; j + 8 <= n; j += 8) {
+            __m256 va = _mm256_loadu_ps(&a[i * n + j]);
+            __m256 vinv = _mm256_loadu_ps(&inverse->storage.dense.data[i * n + j]);
+            va = _mm256_div_ps(va, vpivot);
+            vinv = _mm256_div_ps(vinv, vpivot);
+            _mm256_storeu_ps(&a[i * n + j], va);
+            _mm256_storeu_ps(&inverse->storage.dense.data[i * n + j], vinv);
+        }
+        for (; j < n; ++j) {
+            a[i * n + j] /= pivot_val;
+            inverse->storage.dense.data[i * n + j] /= pivot_val;
+        }
+#else
+        for (size_t j = 0; j < n; ++j) {
+            a[i * n + j] /= pivot_val;
+            inverse->storage.dense.data[i * n + j] /= pivot_val;
+        }
+#endif
+
+        for (size_t k = 0; k < n; ++k) {
+            if (k == i) continue;
+            float factor = a[k * n + i];
+#if defined(__AVX__)
+            j = 0;
+            __m256 vfactor = _mm256_set1_ps(factor);
+            for (; j + 8 <= n; j += 8) {
+                __m256 vk = _mm256_loadu_ps(&a[k * n + j]);
+                __m256 vi = _mm256_loadu_ps(&a[i * n + j]);
+                vk = _mm256_sub_ps(vk, _mm256_mul_ps(vfactor, vi));
+                _mm256_storeu_ps(&a[k * n + j], vk);
+
+                __m256 vinvk = _mm256_loadu_ps(&inverse->storage.dense.data[k * n + j]);
+                __m256 vinvi = _mm256_loadu_ps(&inverse->storage.dense.data[i * n + j]);
+                vinvk = _mm256_sub_ps(vinvk, _mm256_mul_ps(vfactor, vinvi));
+                _mm256_storeu_ps(&inverse->storage.dense.data[k * n + j], vinvk);
+            }
+            for (; j < n; ++j) {
+                a[k * n + j] -= factor * a[i * n + j];
+                inverse->storage.dense.data[k * n + j] -= factor * inverse->storage.dense.data[i * n + j];
+            }
+#else
+            for (size_t j = 0; j < n; ++j) {
+                a[k * n + j] -= factor * a[i * n + j];
+                inverse->storage.dense.data[k * n + j] -= factor * inverse->storage.dense.data[i * n + j];
+            }
+#endif
+        }
+    }
+
+    free(a);
+    return inverse;
+}
+// -------------------------------------------------------------------------------- 
+
+bool transpose_float_dense_matrix(matrix_f** pmat) {
+    errno = 0;
+    if (!pmat || !*pmat || (*pmat)->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_f* mat = *pmat;
+    size_t rows = mat->rows;
+    size_t cols = mat->cols;
+    float* data = mat->storage.dense.data;
+
+    // Case 1: Square matrix — transpose in place
+    if (rows == cols) {
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = i + 1; j < cols; ++j) {
+                size_t idx1 = i * cols + j;
+                size_t idx2 = j * cols + i;
+                float tmp = data[idx1];
+                data[idx1] = data[idx2];
+                data[idx2] = tmp;
+            }
+        }
         return true;
     }
+
+    // Case 2: Rectangular matrix — allocate new transposed matrix
+    matrix_f* transposed = create_float_dense_matrix(cols, rows);
+    if (!transposed) {
+        errno = ENOMEM;
+        return false;
+    }
+
+    //float* new_data = transposed->storage.dense.data;
+    for (size_t i = 0; i < get_float_matrix_rows(mat); ++i) {
+        for (size_t j = 0; j < get_float_matrix_cols(mat); ++j) {
+            float value = get_float_dense_matrix(mat, i, j);   // Access original at (i, j)
+            insert_float_dense_matrix(transposed, j, i, value); // Store transposed at (j, i)
+        }
+    }
+
+    free_float_matrix(mat);
+    *pmat = transposed;
+    return true;
 }
 // -------------------------------------------------------------------------------- 
 
-bool delete_float_matrix_element(matrix_f* m, size_t r, size_t c) {
-    if (!m) { errno = EINVAL; return false; }
-    switch (m->type) {
-        case DENSE: return _delete_float_dense_element(m, r, c);
-        case COO:   return _delete_float_coo_element(m, r, c);
-        default:    errno = ENOTSUP; return false;
+bool transpose_float_coo_matrix(matrix_f** pmat) {
+    errno = 0;
+
+    if (!pmat || !*pmat || (*pmat)->type != SPARSE_COO_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_f* mat = *pmat;
+
+    for (size_t i = 0; i < mat->count; ++i) {
+        size_t tmp = mat->storage.coo.rows[i];
+        mat->storage.coo.rows[i] = mat->storage.coo.cols[i];
+        mat->storage.coo.cols[i] = tmp;
+    }
+
+    // Swap the matrix dimensions
+    size_t tmp_dim = mat->rows;
+    mat->rows = mat->cols;
+    mat->cols = tmp_dim;
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool transpose_float_csr_matrix(matrix_f** pmat) {
+    errno = 0;
+
+    if (!pmat || !*pmat || (*pmat)->type != SPARSE_CSR_MATRIX) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_f* mat = *pmat;
+    size_t rows = mat->rows;
+    size_t cols = mat->cols;
+    size_t nnz = mat->count;
+
+    size_t* row_ptrs_T = calloc(cols + 1, sizeof(size_t));
+    size_t* col_indices_T = malloc(nnz * sizeof(size_t));
+    float* values_T = malloc(nnz * sizeof(float));
+    if (!row_ptrs_T || !col_indices_T || !values_T) {
+        free(row_ptrs_T); free(col_indices_T); free(values_T);
+        errno = ENOMEM;
+        return false;
+    }
+
+    // Step 1: Count non-zeros per column (future row in transpose)
+    for (size_t i = 0; i < nnz; ++i) {
+        size_t col = mat->storage.csr.col_indices[i];
+        row_ptrs_T[col + 1]++;
+    }
+
+    // Step 2: Prefix sum to get row_ptrs
+    for (size_t i = 1; i <= cols; ++i) {
+        row_ptrs_T[i] += row_ptrs_T[i - 1];
+    }
+
+    // Step 3: Fill transposed values
+    size_t* counter = calloc(cols, sizeof(size_t));
+    if (!counter) {
+        free(row_ptrs_T); free(col_indices_T); free(values_T);
+        errno = ENOMEM;
+        return false;
+    }
+
+    for (size_t row = 0; row < rows; ++row) {
+        size_t start = mat->storage.csr.row_ptrs[row];
+        size_t end   = mat->storage.csr.row_ptrs[row + 1];
+
+        for (size_t i = start; i < end; ++i) {
+            size_t col = mat->storage.csr.col_indices[i];
+            float val = mat->storage.csr.values[i];
+
+            size_t dest = row_ptrs_T[col] + counter[col]++;
+            col_indices_T[dest] = row;
+            values_T[dest] = val;
+        }
+    }
+
+    free(counter);
+
+    // Replace contents of original matrix
+    free(mat->storage.csr.row_ptrs);
+    free(mat->storage.csr.col_indices);
+    free(mat->storage.csr.values);
+
+    mat->storage.csr.row_ptrs = row_ptrs_T;
+    mat->storage.csr.col_indices = col_indices_T;
+    mat->storage.csr.values = values_T;
+    mat->rows = cols;
+    mat->cols = rows;
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool transpose_float_matrix(matrix_f** pmat) {
+    errno = 0;
+
+    if (!pmat || !*pmat) {
+        errno = EINVAL;
+        return false;
+    }
+
+    matrix_f* mat = *pmat;
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return transpose_float_dense_matrix(pmat);
+
+        case SPARSE_COO_MATRIX:
+            return transpose_float_coo_matrix(pmat);
+
+        case SPARSE_CSR_MATRIX:
+            return transpose_float_csr_matrix(pmat);
+
+        default:
+            errno = EINVAL;
+            return false;
     }
 }
 // -------------------------------------------------------------------------------- 
 
-static inline unsigned long long _key_rc(uint32_t r, uint32_t c) {
-    return ((unsigned long long)r << 32) | (unsigned long long)c;
-}
-// -------------------------------------------------------------------------------- 
-
-static size_t _lower_bound_triplets(const triplet_f* t, size_t n, uint32_t r, uint32_t c) {
-    const unsigned long long k = _key_rc(r, c);
-    size_t lo = 0, hi = n;
-    while (lo < hi) {
-        size_t mid = lo + ((hi - lo) >> 1);
-        unsigned long long km = _key_rc(t[mid].row, t[mid].col);
-        if (km < k) lo = mid + 1; else hi = mid;
+matrix_f* copy_float_dense_matrix(const matrix_f* mat) {
+    errno = 0;
+    if (!mat || mat->type != DENSE_MATRIX) {
+        errno = EINVAL;
+        return NULL;
     }
-    return lo;
-}
-// -------------------------------------------------------------------------------- 
 
-static size_t _upper_bound_triplets(const triplet_f* t, size_t n, uint32_t r, uint32_t c) {
-    unsigned long long k = ((unsigned long long)r << 32) | (unsigned long long)c;
-    size_t lo = 0, hi = n;
-    while (lo < hi) {
-        size_t mid = lo + ((hi - lo) >> 1);
-        unsigned long long km = ((unsigned long long)t[mid].row << 32) | (unsigned long long)t[mid].col;
-        if (km <= k) lo = mid + 1; else hi = mid;
+    matrix_f* newMat = create_float_dense_matrix(mat->rows, mat->cols);
+    if (!newMat) {
+        errno = ENOMEM;
+        return NULL;
     }
-    return lo;
+
+    newMat->count = mat->count;
+
+    size_t total_elements = mat->rows * mat->cols;
+    memcpy(newMat->storage.dense.data, mat->storage.dense.data, total_elements * sizeof(float));
+    memcpy(newMat->storage.dense.init, mat->storage.dense.init, total_elements * sizeof(uint8_t));
+
+    return newMat;
 }
 // -------------------------------------------------------------------------------- 
 
-static float _get_float_dense_element(const matrix_f* m, size_t r, size_t c) {
-    if (!m || m->type != DENSE) { errno = EINVAL; return NAN; }
-    if (r >= m->rows || c >= m->cols) { errno = EINVAL; return NAN; }
-    if (!m->storage.dense.data || !m->storage.dense.init_bits) { errno = ENOTSUP; return NAN; }
+matrix_f* copy_float_coo_matrix(const matrix_f* mat) {
+    errno = 0;
 
-    /* index = r*cols + c with overflow guard (also guarded by bounds above) */
-    if (m->cols && r > SIZE_MAX / m->cols) { errno = EOVERFLOW; return NAN; }
-    size_t idx = r * m->cols + c;
-    if (idx >= m->storage.dense.alloc) { errno = EOVERFLOW; return NAN; }
+    if (!mat || mat->type != SPARSE_COO_MATRIX) {
+        errno = EINVAL;
+        return NULL;
+    }
 
-    if (!m->storage.dense.init_bits[idx]) { errno = ENODATA; return NAN; }
-    return m->storage.dense.data[idx];
+    matrix_f* newMat = malloc(sizeof(matrix_f));
+    if (!newMat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t cap = mat->storage.coo.capacity;
+    size_t* row_indices = malloc(cap * sizeof(size_t));
+    size_t* col_indices = malloc(cap * sizeof(size_t));
+    float* values = malloc(cap * sizeof(float));
+
+    if (!row_indices || !col_indices || !values) {
+        free(row_indices);
+        free(col_indices);
+        free(values);
+        free(newMat);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Copy structure metadata
+    newMat->type = SPARSE_COO_MATRIX;
+    newMat->rows = mat->rows;
+    newMat->cols = mat->cols;
+    newMat->count = mat->count;
+    newMat->storage.coo.capacity = cap;
+
+    // Assign allocated arrays
+    newMat->storage.coo.rows = row_indices;
+    newMat->storage.coo.cols = col_indices;
+    newMat->storage.coo.values = values;
+
+    // Copy used data only (up to `count`)
+    memcpy(row_indices, mat->storage.coo.rows, mat->count * sizeof(size_t));
+    memcpy(col_indices, mat->storage.coo.cols, mat->count * sizeof(size_t));
+    memcpy(values, mat->storage.coo.values, mat->count * sizeof(float));
+
+    return newMat;
 }
 // -------------------------------------------------------------------------------- 
 
-static float _get_float_coo_element(const matrix_f* m, size_t r, size_t c) {
-    if (!m || m->type != COO) { errno = EINVAL; return NAN; }
-    if (r >= m->rows || c >= m->cols) { errno = EINVAL; return NAN; }
-    const coo_f* C = &m->storage.coo;
-    if (C->size == 0) { errno = ENOENT; return NAN; }
+matrix_f* copy_float_csr_matrix(const matrix_f* mat) {
+    errno = 0;
 
-    double acc = 0.0;
-    if (C->fast_set) {
-        bool found = false;
-        for (size_t i = 0; i < C->size; ++i) {
-            if (C->triplets[i].row == (uint32_t)r && C->triplets[i].col == (uint32_t)c) {
-                acc += (double)C->triplets[i].data;
-                found = true;
+    if (!mat || mat->type != SPARSE_CSR_MATRIX) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t rows = mat->rows;
+    size_t cols = mat->cols;
+    size_t nnz = mat->count;
+
+    matrix_f* newMat = malloc(sizeof(matrix_f));
+    if (!newMat) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t* row_ptrs = calloc(rows + 1, sizeof(size_t));
+    size_t* col_indices = malloc(nnz * sizeof(size_t));
+    float* values = malloc(nnz * sizeof(float));
+
+    if (!row_ptrs || !col_indices || !values) {
+        free(row_ptrs);
+        free(col_indices);
+        free(values);
+        free(newMat);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    memcpy(row_ptrs, mat->storage.csr.row_ptrs, (rows + 1) * sizeof(size_t));
+    memcpy(col_indices, mat->storage.csr.col_indices, nnz * sizeof(size_t));
+    memcpy(values, mat->storage.csr.values, nnz * sizeof(float));
+
+    newMat->type = SPARSE_CSR_MATRIX;
+    newMat->rows = rows;
+    newMat->cols = cols;
+    newMat->count = nnz;
+
+    newMat->storage.csr.row_ptrs = row_ptrs;
+    newMat->storage.csr.col_indices = col_indices;
+    newMat->storage.csr.values = values;
+
+    return newMat;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_f* copy_float_matrix(const matrix_f* mat) {
+    errno = 0;
+
+    if (!mat) {
+        errno = EINVAL;
+        return false;
+    }
+
+    switch (mat->type) {
+        case DENSE_MATRIX:
+            return copy_float_dense_matrix(mat);
+
+        case SPARSE_COO_MATRIX:
+            return copy_float_coo_matrix(mat);
+
+        case SPARSE_CSR_MATRIX:
+            return copy_float_csr_matrix(mat);
+
+        default:
+            errno = EINVAL;
+            return false;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+float float_dense_matrix_det(const matrix_f* mat) {
+    errno = 0;
+
+    if (!mat || mat->type != DENSE_MATRIX || mat->rows != mat->cols) {
+        errno = EINVAL;
+        return NAN;
+    }
+
+    size_t n = mat->rows;
+    float* original = mat->storage.dense.data;
+
+    float* temp = malloc(n * n * sizeof(float));
+    if (!temp) {
+        errno = ENOMEM;
+        return NAN;
+    }
+
+    memcpy(temp, original, n * n * sizeof(float));
+    float det = 1.0f;
+
+    for (size_t i = 0; i < n; ++i) {
+        // Pivot selection
+        size_t pivot = i;
+        float max_val = fabsf(temp[i * n + i]);
+        for (size_t j = i + 1; j < n; ++j) {
+            float val = fabsf(temp[j * n + i]);
+            if (val > max_val) {
+                max_val = val;
+                pivot = j;
             }
         }
-        if (!found) { errno = ENOENT; return NAN; }
-    } else {
-        size_t lo = _lower_bound_triplets(C->triplets, C->size, (uint32_t)r, (uint32_t)c);
-        if (lo == C->size ||
-            C->triplets[lo].row != (uint32_t)r ||
-            C->triplets[lo].col != (uint32_t)c) {
-            errno = ENOENT; return NAN;
+
+        if (max_val < 1e-8f) {
+            free(temp);
+            return 0.0f; // Singular matrix
         }
-        size_t hi = _upper_bound_triplets(C->triplets, C->size, (uint32_t)r, (uint32_t)c);
-        for (size_t i = lo; i < hi; ++i) acc += (double)C->triplets[i].data;
-    }
-    return (float)acc;
-}
-// -------------------------------------------------------------------------------- 
 
-static float _get_float_csr_element(const matrix_f* m, size_t r, size_t c) {
-    if (!m || m->type != CSR) { errno = EINVAL; return NAN; }
-    if (r >= m->rows || c >= m->cols) { errno = EINVAL; return NAN; }
+        if (pivot != i) {
+            for (size_t k = 0; k < n; ++k) {
+                float tmp = temp[i * n + k];
+                temp[i * n + k] = temp[pivot * n + k];
+                temp[pivot * n + k] = tmp;
+            }
+            det *= -1.0f;
+        }
 
-    const csr_f* S = &m->storage.csr;
-    if (!S->row_ptr || !S->col_idx || !S->data) { errno = ENOTSUP; return NAN; }
-    if (S->size == 0) { errno = ENOENT; return NAN; }
+        float pivot_val = temp[i * n + i];
+        det *= pivot_val;
 
-    size_t start = S->row_ptr[r];
-    size_t end   = S->row_ptr[r + 1];
-    if (end < start || end > S->size) { errno = EINVAL; return NAN; }
+        for (size_t j = i + 1; j < n; ++j) {
+            float factor = temp[j * n + i] / pivot_val;
 
-    /* Binary search in col_idx[start..end) for c */
-    size_t lo = start, hi = end;
-    while (lo < hi) {
-        size_t mid = lo + ((hi - lo) >> 1);
-        uint32_t cmid = S->col_idx[mid];
-        if (cmid < (uint32_t)c) lo = mid + 1; else hi = mid;
-    }
-    if (lo == end || S->col_idx[lo] != (uint32_t)c) { errno = ENOENT; return NAN; }
+#if defined(__AVX__)
+            size_t k = i;
+            for (; k + 8 <= n; k += 8) {
+                __m256 row_i = _mm256_loadu_ps(&temp[i * n + k]);
+                __m256 row_j = _mm256_loadu_ps(&temp[j * n + k]);
+                __m256 scaled = _mm256_mul_ps(row_i, _mm256_set1_ps(factor));
+                __m256 result = _mm256_sub_ps(row_j, scaled);
+                _mm256_storeu_ps(&temp[j * n + k], result);
+            }
 
-    /* Sum any duplicates adjacent (just in case) */
-    double acc = 0.0;
-    for (size_t i = lo; i < end && S->col_idx[i] == (uint32_t)c; ++i) acc += (double)S->data[i];
-    return (float)acc;
-}
-// -------------------------------------------------------------------------------- 
-
-static float _get_float_csc_element(const matrix_f* m, size_t r, size_t c) {
-    if (!m || m->type != CSC) { errno = EINVAL; return NAN; }
-    if (r >= m->rows || c >= m->cols) { errno = EINVAL; return NAN; }
-
-    const csc_f* S = &m->storage.csc;
-    if (!S->col_ptr || !S->row_idx || !S->data) { errno = ENOTSUP; return NAN; }
-    if (S->size == 0) { errno = ENOENT; return NAN; }
-
-    size_t start = S->col_ptr[c];
-    size_t end   = S->col_ptr[c + 1];
-    if (end < start || end > S->size) { errno = EINVAL; return NAN; }
-
-    /* Binary search in row_idx[start..end) for r */
-    size_t lo = start, hi = end;
-    while (lo < hi) {
-        size_t mid = lo + ((hi - lo) >> 1);
-        uint32_t rmid = S->row_idx[mid];
-        if (rmid < (uint32_t)r) lo = mid + 1; else hi = mid;
-    }
-    if (lo == end || S->row_idx[lo] != (uint32_t)r) { errno = ENOENT; return NAN; }
-
-    /* Sum duplicates adjacent (if any) */
-    double acc = 0.0;
-    for (size_t i = lo; i < end && S->row_idx[i] == (uint32_t)r; ++i) acc += (double)S->data[i];
-    return (float)acc;
-}
-// -------------------------------------------------------------------------------- 
-
-float get_float_matrix_element(const matrix_f* m, size_t r, size_t c) {
-    if (!m) { errno = EINVAL; return NAN; }
-    switch (m->type) {
-        case DENSE: return _get_float_dense_element(m, r, c);
-        case COO:   return _get_float_coo_element(m, r, c);
-        case CSR:   return _get_float_csr_element(m, r, c);
-        case CSC:   return _get_float_csc_element(m, r, c);
-        default:    errno = ENOTSUP; return NAN;
-    }
-}
-// -------------------------------------------------------------------------------- 
-
-inline matrix_f* _init_csr_matrix(size_t rows, size_t cols, size_t initial_alloc) {
-    if (rows == 0 || cols == 0) { errno = EINVAL; return NULL; }
-    if (initial_alloc == 0) initial_alloc = 1;
-
-    /* guard rows+1 overflow */
-    if (rows == (size_t)-1) { errno = EOVERFLOW; return NULL; }
-
-    matrix_f* m = (matrix_f*)malloc(sizeof *m);
-    if (!m) { errno = ENOMEM; return NULL; }
-
-    float*    data    = (float*)   malloc(initial_alloc * sizeof(float));
-    uint32_t* col_idx = (uint32_t*)malloc(initial_alloc * sizeof(uint32_t));
-    size_t*   row_ptr = (size_t*)  calloc(rows + 1, sizeof(size_t)); /* zeroed */
-
-    if (!data || !col_idx || !row_ptr) {
-        errno = ENOMEM;
-        free(data); free(col_idx); free(row_ptr); free(m);
-        return NULL;
-    }
-
-    m->type = CSR; m->rows = rows; m->cols = cols;
-    m->storage.csr.data    = data;
-    m->storage.csr.col_idx = col_idx;
-    m->storage.csr.row_ptr = row_ptr;
-    m->storage.csr.alloc   = initial_alloc;  /* nnz capacity */
-    m->storage.csr.size    = 0;              /* nnz used */
-
-    return m;
-}
-// -------------------------------------------------------------------------------- 
-
-static matrix_f* _init_csc_matrix(size_t rows, size_t cols, size_t initial_alloc) {
-    if (rows == 0 || cols == 0) { errno = EINVAL; return NULL; }
-    if (initial_alloc == 0) initial_alloc = 1;
-
-    /* guard cols+1 overflow */
-    if (cols == (size_t)-1) { errno = EOVERFLOW; return NULL; }
-
-    matrix_f* m = (matrix_f*)malloc(sizeof *m);
-    if (!m) { errno = ENOMEM; return NULL; }
-
-    float*    data    = (float*)   malloc(initial_alloc * sizeof(float));
-    uint32_t* row_idx = (uint32_t*)malloc(initial_alloc * sizeof(uint32_t));
-    size_t*   col_ptr = (size_t*)  calloc(cols + 1, sizeof(size_t)); /* zeroed */
-
-    if (!data || !row_idx || !col_ptr) {
-        errno = ENOMEM;
-        free(data); free(row_idx); free(col_ptr); free(m);
-        return NULL;
-    }
-
-    m->type = CSC; m->rows = rows; m->cols = cols;
-    m->storage.csc.data    = data;
-    m->storage.csc.row_idx = row_idx;
-    m->storage.csc.col_ptr = col_ptr;
-    m->storage.csc.alloc   = initial_alloc;  /* nnz capacity */
-    m->storage.csc.size    = 0;              /* nnz used */
-
-    return m;
-}
-
-// -------------------------------------------------------------------------------- 
-
-static matrix_f* _dense_matrix_from_array(size_t rows, size_t cols,
-                                          const float* array, size_t arr_len,
-                                          size_t initial_alloc) {
-    if (!array) { errno = EINVAL; return NULL; }
-    if (cols && rows > SIZE_MAX / cols) { errno = EOVERFLOW; return NULL; }
-    const size_t need = rows * cols;
-
-    if (arr_len != need) { errno = ERANGE; return NULL; }          // must match exactly
-    if (initial_alloc < need) { errno = EINVAL; return NULL; }     // you can relax this if you want
-
-    matrix_f* m = init_dense_matrix(rows, cols, initial_alloc);
-    if (!m) return NULL;
-
-    memcpy(m->storage.dense.data, array, need * sizeof(float));
-
-    /* Mark initialized cells: you currently use 1 byte per cell */
-    memset(m->storage.dense.init_bits, 1, need);
-    m->storage.dense.size = need;   /* number of initialized cells */
-
-    return m;
-}
-// -------------------------------------------------------------------------------- 
-
-static matrix_f* _coo_matrix_from_array(size_t rows, size_t cols,
-                                        const float* array, size_t arr_len,
-                                        size_t initial_alloc) {
-    if (!array) { errno = EINVAL; return NULL; }
-    if (cols && rows > SIZE_MAX / cols) { errno = EOVERFLOW; return NULL; }
-    const size_t need = rows * cols;
-
-    if (arr_len != need) { errno = ERANGE; return NULL; }
-
-    matrix_f* m = init_coo_matrix(rows, cols, initial_alloc);  
-    if (!m) return NULL;
-
-    coo_f* C = &m->storage.coo;
-    C->size = 0;                    /* start empty, fast_set == true */
-    for (size_t idx = 0; idx < need; ++idx) {
-        float v = array[idx];
-        if (v != 0.0f) {
-            /* ensure capacity then append (O(1) in build mode) */
-            if (!_coo_ensure_capacity(C, C->size + 1)) { free_float_matrix(m); return NULL; }
-            size_t r = idx / cols;
-            size_t c = idx % cols;
-            C->triplets[C->size++] = (triplet_f){ (uint32_t)r, (uint32_t)c, v };
+            // Handle tail
+            for (; k < n; ++k) {
+                temp[j * n + k] -= factor * temp[i * n + k];
+            }
+#else
+            for (size_t k = i; k < n; ++k) {
+                temp[j * n + k] -= factor * temp[i * n + k];
+            }
+#endif
         }
     }
 
-    if (!finalize_float_coo_matrix(m)) { free_float_matrix(m); return NULL; }
-
-    return m;
-}
-// -------------------------------------------------------------------------------- 
-
-static inline matrix_f* _csr_matrix_from_array(size_t rows, size_t cols,
-                                               const float* array, size_t arr_len,
-                                               size_t initial_alloc) {
-    if (!array || rows == 0 || cols == 0) { errno = EINVAL; return NULL; }
-    if (cols && rows > SIZE_MAX / cols)    { errno = EOVERFLOW; return NULL; }
-    const size_t need = rows * cols;
-    if (arr_len != need) { errno = ERANGE; return NULL; }
-
-    /* Pass 1: count nnz per row */
-    size_t* row_cnt = (size_t*)calloc(rows, sizeof(size_t));
-    if (!row_cnt) { errno = ENOMEM; return NULL; }
-
-    size_t nnz = 0;
-    for (size_t idx = 0; idx < need; ++idx) {
-        float v = array[idx];
-        if (v != 0.0f) { row_cnt[idx / cols]++; nnz++; }
-    }
-
-    size_t cap = initial_alloc;
-    if (cap < nnz) cap = nnz;
-    if (cap == 0)  cap = 1;
-
-    matrix_f* m = init_csr_matrix(rows, cols, cap);
-    if (!m) { free(row_cnt); return NULL; }
-
-    csr_f* S = &m->storage.csr;
-
-    /* Build row_ptr = prefix sums of counts */
-    S->row_ptr[0] = 0;
-    for (size_t r = 0; r < rows; ++r) {
-        S->row_ptr[r + 1] = S->row_ptr[r] + row_cnt[r];
-    }
-    S->size = nnz;
-
-    /* Scatter: use a row cursor that starts at row_ptr[r] */
-    size_t* cursor = (size_t*)malloc(rows * sizeof(size_t));
-    if (!cursor) { free(row_cnt); free_float_matrix(m); errno = ENOMEM; return NULL; }
-    memcpy(cursor, S->row_ptr, rows * sizeof(size_t));
-
-    for (size_t idx = 0; idx < need; ++idx) {
-        float v = array[idx];
-        if (v != 0.0f) {
-            size_t r = idx / cols;
-            size_t c = idx % cols;
-            size_t pos = cursor[r]++;
-            /* pos is guaranteed < nnz <= cap */
-            S->data[pos]    = v;
-            S->col_idx[pos] = (uint32_t)c;
-        }
-    }
-
-    free(cursor);
-    free(row_cnt);
-    return m;
-}
-// -------------------------------------------------------------------------------- 
-
-static inline matrix_f* _csc_matrix_from_array(size_t rows, size_t cols,
-                                               const float* array, size_t arr_len,
-                                               size_t initial_alloc) {
-    if (!array || rows == 0 || cols == 0) { errno = EINVAL; return NULL; }
-    if (cols && rows > SIZE_MAX / cols)    { errno = EOVERFLOW; return NULL; }
-    const size_t need = rows * cols;
-    if (arr_len != need) { errno = ERANGE; return NULL; }
-
-    /* Pass 1: count nnz per column */
-    size_t* col_cnt = (size_t*)calloc(cols, sizeof(size_t));
-    if (!col_cnt) { errno = ENOMEM; return NULL; }
-
-    size_t nnz = 0;
-    for (size_t idx = 0; idx < need; ++idx) {
-        float v = array[idx];
-        if (v != 0.0f) { col_cnt[idx % cols]++; nnz++; }
-    }
-
-    size_t cap = initial_alloc;
-    if (cap < nnz) cap = nnz;
-    if (cap == 0)  cap = 1;
-
-    matrix_f* m = init_csc_matrix(rows, cols, cap);
-    if (!m) { free(col_cnt); return NULL; }
-
-    csc_f* S = &m->storage.csc;
-
-    /* Build col_ptr = prefix sums of counts */
-    S->col_ptr[0] = 0;
-    for (size_t c = 0; c < cols; ++c) {
-        S->col_ptr[c + 1] = S->col_ptr[c] + col_cnt[c];
-    }
-    S->size = nnz;
-
-    /* Scatter: use a column cursor that starts at col_ptr[c] */
-    size_t* cursor = (size_t*)malloc(cols * sizeof(size_t));
-    if (!cursor) { free(col_cnt); free_float_matrix(m); errno = ENOMEM; return NULL; }
-    memcpy(cursor, S->col_ptr, cols * sizeof(size_t));
-
-    for (size_t idx = 0; idx < need; ++idx) {
-        float v = array[idx];
-        if (v != 0.0f) {
-            size_t r = idx / cols;
-            size_t c = idx % cols;
-            size_t pos = cursor[c]++;
-            S->data[pos]    = v;
-            S->row_idx[pos] = (uint32_t)r;
-        }
-    }
-
-    free(cursor);
-    free(col_cnt);
-    return m;
-}
-// -------------------------------------------------------------------------------- 
-
-matrix_f* float_matrix_from_array(size_t rows, size_t cols, MatrixType type,
-                                  const float* array, size_t arr_len,
-                                  size_t initial_alloc) {
-    if (!array) { errno = EINVAL; return NULL; }
-    if (type == MATRIX_INVALID) { errno = ENOTSUP; return NULL; }
-
-    switch (type) {
-        case DENSE:
-            return _dense_matrix_from_array(rows, cols, array, arr_len, initial_alloc);
-        case COO:
-            return _coo_matrix_from_array(rows, cols, array, arr_len, initial_alloc);
-        case CSR:
-            return _csr_matrix_from_array(rows, cols, array, arr_len, initial_alloc);
-        case CSC:
-            return _csc_matrix_from_array(rows, cols, array, arr_len, initial_alloc);
-        default:
-            errno = ENOTSUP; return NULL;   // CSR/CSC not buildable from this form (yet)
-    }
+    free(temp);
+    return det;
 }
 // ================================================================================ 
 // ================================================================================ 

@@ -4435,3 +4435,88 @@ swap_float
 
       This utility function serves as a helper for other float manipulation functions
       but can also be used independently for general float value swapping operations.
+
+dot_float
+---------
+.. c:function:: float dot_float(const float* a, const float* b, size_t len)
+
+   Computes the dot product of two single-precision floating-point arrays.
+
+   This function multiplies each element of ``a`` by the corresponding element of
+   ``b`` and returns the sum of all products. Internally it may use SIMD
+   instructions (e.g., SSE/AVX/NEON) when available for faster computation.
+
+   :param a: Pointer to the first input array (length ``len``)
+   :param b: Pointer to the second input array (length ``len``)
+   :param len: Number of elements in both arrays
+   :returns: The dot product of the arrays on success, or ``FLT_MAX`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` if either pointer is ``NULL`` or if
+            ``len`` is zero.
+
+   Example:
+
+   .. code-block:: c
+
+      float v1[] = {1.0f, 2.0f, 3.0f};
+      float v2[] = {4.0f, 5.0f, 6.0f};
+
+      float result = dot_float(v1, v2, 3);
+      if (errno == 0) {
+          printf("Dot product: %.2f\n", result);
+      } else {
+          perror("dot_float failed");
+      }
+
+   Output::
+
+      Dot product: 32.00
+
+   .. note::
+
+      On invalid input, the function sets ``errno`` to ``EINVAL`` and returns
+      ``FLT_MAX`` to indicate failure. Callers should always check ``errno``
+      before using the result.
+
+cross_float
+-----------
+.. c:function:: bool cross_float(const float* a, const float* b, float* result)
+
+   Computes the 3-dimensional cross product of two single-precision vectors.
+
+   This function calculates the vector product of ``a`` and ``b`` and stores the
+   result in ``result``. All three arrays must contain at least three elements.
+   The function returns ``true`` on success or ``false`` if any input pointer is
+   ``NULL``.
+
+   :param a: Pointer to the first 3-element input vector
+   :param b: Pointer to the second 3-element input vector
+   :param result: Pointer to a 3-element array that receives the cross-product
+   :returns: ``true`` if the cross product was computed successfully,
+             or ``false`` on error
+   :raises: Sets ``errno`` to ``EINVAL`` if any pointer is ``NULL``
+
+   Example:
+
+   .. code-block:: c
+
+      float u[3] = {1.0f, 0.0f, 0.0f};
+      float v[3] = {0.0f, 1.0f, 0.0f};
+      float w[3];
+
+      if (cross_float(u, v, w)) {
+          printf("Cross product: [%.1f, %.1f, %.1f]\n", w[0], w[1], w[2]);
+      } else {
+          perror("cross_float failed");
+      }
+
+   Output::
+
+      Cross product: [0.0, 0.0, 1.0]
+
+   .. note::
+
+      The vectors ``a`` and ``b`` are treated as 3-element arrays. The caller is
+      responsible for ensuring that ``result`` points to a valid buffer of at
+      least three ``float`` elements. On failure, ``errno`` is set and no values
+      are written to ``result``.
+

@@ -1,0 +1,34 @@
+1. init_float_matrix                x
+    a. init_dense_matrix            x
+    b. init_coo_matrix              x
+2. free_float_matrix                x
+    a. _free_float_matrix           x
+    b. FLTMAT_GBC                   x
+3. insert_float_matrix              x
+4. set_float_dense_matrix           x
+5. insert_float_coo_matrix_unique   x
+6. insert_float_coo_matrix_unique   x
+7. finalize_float_coo_matrix        x
+8. set_float_fast_set               x 
+9. float_matrix_type                x      
+10. float_matrix_size               x 
+    a. float_dense_matrix_size      x
+    b. float_coo_matrix_size        x
+11. float_matrix_alloc              x
+    a. float_dense_matrix_alloc     x
+    b. float_coo_matrix_alloc       x
+12. delete_float_matrix_element     x 
+13. get_float_matrix                x 
+14. float_matrix_from_array         x
+15. float_matrix_from_2darray
+16. float_matrix_from_vector
+17. float_identity_matrix 
+    a. _float_dense_identity_matrix 
+    b. _float_coo_identity_matrix
+18. resize_float_matrix
+
+
+
+
+
+
