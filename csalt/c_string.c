@@ -20,6 +20,7 @@
 #include <string.h> // For strerror
 #include <limits.h> // For INT_MIN
 #include <ctype.h>  // For isspace
+#include <stdint.h> // For SIZE_MAX
 // ================================================================================ 
 // ================================================================================
 
@@ -136,7 +137,7 @@ void _free_string(string_t** str) {
 // --------------------------------------------------------------------------------
 
 const char* get_string(const string_t* str) {
-    if (!str || str->str) {
+    if (!str || !str->str) {
         errno = EINVAL;
         return NULL;
     }
@@ -163,7 +164,16 @@ size_t string_alloc(const string_t* str) {
 // --------------------------------------------------------------------------------
 
 bool string_string_concat(string_t* str1, const string_t* str2) {
-    if (!str1 || !str2 || !str1->str || !str2->str) {
+    if (!str1 || !str2) {
+        errno = EINVAL;
+        return false;
+    }
+    if (!str1->str) {
+        errno = EINVAL;
+        str1->error = NULL_POINTER;
+        return false;
+    }
+    if (!str2->str) {
         errno = EINVAL;
         return false;
     }
@@ -177,7 +187,7 @@ bool string_string_concat(string_t* str1, const string_t* str2) {
         char* new_buffer = realloc(str1->str, new_len + 1); // +1 for the null terminator
         if (!new_buffer) {
             errno = ENOMEM;
-            fprintf(stderr, "ERROR: Failed to reallocate memory for char* in string_string_concat()\n");
+            str1->error = REALLOC_FAIL;
             return false;
         }
         str1->str = new_buffer;

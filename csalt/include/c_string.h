@@ -378,15 +378,73 @@ size_t string_alloc(const string_t* str);
 // --------------------------------------------------------------------------------
 
 /**
- * @function string_string_concat
- * @brief Concatenates the contents of one string_t object to another.
+ * @brief Append the contents of @p str2 to @p str1, growing @p str1 as needed.
  *
- * @param str1 A pointer to the destination string_t object.
- * @param str2 A pointer to the source string_t object.
- * @return true if successful, false on failure. Sets errno to ENOMEM if memory
- *         allocation fails or EINVAL if either input is NULL.
+ * Concatenates two csalt strings. If @p str1's buffer is too small, it is
+ * reallocated to fit the result (including the terminating NUL). On success,
+ * @p str1 becomes a NUL-terminated string of length `str1->len + str2->len`,
+ * and its `len`/`alloc` fields are updated. @p str2 is not modified. Not thread-safe 
+ * for the same object.  This function mutates `str1`.  Callers must synchornize
+ * if another thread may read/modify/free `str1`.  This function is of time complexity 
+ * O(n1)+O(n2) due to the use of `strncat` within the function (which scans the destinationlength)
+ * plus potential reallocation cost.
+ *
+ * Error reporting:
+ * - Returns `false` and sets `errno` to `EINVAL` if any argument is NULL or if
+ *   an object's internal buffer is NULL. In this case, @p str1->error is set
+ *   to `NULL_POINTER` if the destination buffer was missing.
+ * - Returns `false` and sets `errno` to `ENOMEM` if reallocation fails; in this
+ *   case, @p str1->error is set to `REALLOC_FAIL`.
+ * - On success, returns `true`. (The function does not modify @p str1->error
+ *   on success; it typically remains `NO_ERROR`.)
+ *
+ * @param str1  Destination string to be extended (must be non-NULL, NUL-terminated).
+ * @param str2  Source string whose bytes are appended (must be non-NULL, NUL-terminated).
+ *
+ * @return `true` on success; `false` on failure with `errno` set as described above.
+ *
+ * @pre  `str1 != NULL`, `str2 != NULL`, `str1->str != NULL`, `str2->str != NULL`.
+ *       The two underlying buffers must not alias in a way that causes overlap.
+ * @post On success, `str1` contains the concatenation and remains NUL-terminated;
+ *       `str2` is unchanged. If a reallocation occurred, any previously borrowed
+ *       pointer from `get_string(str1)` is invalidated.
+ *
+ * @warning Do not pass the same object as both parameters. Overlapping source
+ *          and destination leads to undefined behavior.
+ *
+ * @par Example
+ * @code{.c}
+ * #include <errno.h>
+ * #include <stdio.h>
+ *
+ * string_t* a = init_string("Hello");
+ * string_t* b = init_string(", World!");
+ * if (!a || !b) { perror("init_string"); free_string(a); free_string(b); return 1; }
+ *
+ * if (!string_string_concat(a, b)) {
+ *     perror("string_string_concat");
+ *     fprintf(stderr, "dest error: %s\n", error_to_string(get_string_error(a)));
+ *     free_string(a);
+ *     free_string(b);
+ *     return 1;
+ * }
+ *
+ * printf("Result: %s\n", get_string(a));
+ * printf("Length: %zu, Alloc: %zu\n", string_size(a), string_alloc(a));
+ *
+ * free_string(a);
+ * free_string(b);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * Result: Hello, World!
+ * Length: 13, Alloc: 14
+ * @endcode
+ *
+ * @see init_string, get_string, string_size, string_alloc, free_string
  */
-bool string_string_concat(string_t* str, const string_t* string);
+bool string_string_concat(string_t* str1, const string_t* str2);
 // -------------------------------------------------------------------------------- 
 
 /**

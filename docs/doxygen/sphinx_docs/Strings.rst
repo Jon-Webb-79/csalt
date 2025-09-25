@@ -93,3 +93,13 @@ get_string_error
 
 .. doxygenfunction:: get_string_error
    :project: csalt
+
+String Manipulation 
+===================
+The functions in this section are used to manipulate data in a `string_t` object.
+
+string_string_concat 
+--------------------
+
+.. doxygenfunction:: string_string_concat
+   :project: csalt

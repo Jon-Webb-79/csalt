@@ -71,7 +71,6 @@ void test_free_string_null(void **state) {
 // Test string with special characters
 void test_init_string_special_chars(void **state) {
     const char* test_str = "Hello\n\t!@#$%^&*()";
-    //string_t* str = init_string("Hello");
     string_t* str = init_string(test_str);
     assert_non_null(str);
 
@@ -101,8 +100,8 @@ void test_init_string_long(void **state) {
 
 void test_getters_null_string(void **state) {
     assert_null(get_string(NULL));
-    assert_int_equal(string_size(NULL), LONG_MAX);
-    assert_int_equal(string_alloc(NULL), LONG_MAX);
+    assert_int_equal(string_size(NULL), SIZE_MAX);
+    assert_int_equal(string_alloc(NULL), SIZE_MAX);
     assert_int_equal(errno, EINVAL);
 }
 // --------------------------------------------------------------------------------
@@ -114,6 +113,7 @@ void test_getters_null_string(void **state) {
         assert_string_equal(get_string(str), "hello world");
         assert_int_equal(string_size(str), 11);
         assert_int_equal(string_alloc(str), 12);  // length + null terminator
+        assert_int_equal(get_string_error(str), NO_ERROR);
     }
 #endif
 // --------------------------------------------------------------------------------
@@ -127,6 +127,8 @@ void test_concat_string_nominal(void **state) {
     assert_string_equal(get_string(str1), "Hello World!");
     assert_int_equal(string_size(str1), 12);
     assert_int_equal(string_alloc(str1), 13);
+    assert_int_equal(get_string_error(str1), NO_ERROR);
+    assert_int_equal(get_string_error(str2), NO_ERROR);
     
     free_string(str1);
     free_string(str2);
@@ -152,6 +154,8 @@ void test_concat_empty_string(void **state) {
     assert_true(string_concat(str1, str2));
     assert_string_equal(get_string(str1), "Hello");
     assert_int_equal(string_size(str1), 5);
+    assert_int_equal(get_string_error(str1), NO_ERROR);
+    assert_int_equal(get_string_error(str2), NO_ERROR);
     
     free_string(str1);
     free_string(str2);

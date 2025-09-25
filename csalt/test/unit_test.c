@@ -41,9 +41,9 @@ const struct CMUnitTest test_string[] = {
     #if defined (__GNUC__) || defined (__clang__)
         cmocka_unit_test(test_string_cleanup_gbc),
     #endif
-    // cmocka_unit_test(test_concat_string_nominal),
+    cmocka_unit_test(test_concat_string_nominal),
     // cmocka_unit_test(test_concat_literal_nominal),
-    // cmocka_unit_test(test_concat_empty_string),
+    cmocka_unit_test(test_concat_empty_string),
     // cmocka_unit_test(test_concat_empty_literal),
     // cmocka_unit_test(test_concat_null_inputs),
     // cmocka_unit_test(test_concat_reallocation),
