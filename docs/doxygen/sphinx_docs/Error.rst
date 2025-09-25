@@ -46,6 +46,112 @@ Design Notes
 API Reference
 =============
 
+ErrorCode enumeration (overview)
+--------------------------------
+
+The table below summarizes each :c:enum:`ErrorCode` value, its category, and intended use.
+Authoritative comments live in ``error_codes.h``; this overview is for quick reference.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 10 16 52
+   :align: left
+
+   * - Name
+     - Value
+     - Category
+     - Description
+   * - ``INVALID_ERROR``
+     - ``1``
+     - meta
+     - Sentinel indicating an *invalid error argument* was provided to an API expecting a valid ``ErrorCode``. Not produced by normal csalt operations.
+   * - ``NO_ERROR``
+     - ``0``
+     - none
+     - Operation completed successfully.
+   * - ``BAD_ALLOC``
+     - ``-2``
+     - memory
+     - Memory allocation failed (e.g., ``malloc``/allocator returned ``NULL``).
+   * - ``REALLOC_FAIL``
+     - ``-3``
+     - memory
+     - Reallocation failed (e.g., ``realloc`` returned ``NULL`` and original buffer retained).
+   * - ``OUT_OF_MEMORY``
+     - ``-4``
+     - memory
+     - System out of memory or allocator could not satisfy the request.
+   * - ``NULL_POINTER``
+     - ``-10``
+     - argument
+     - A required pointer argument was ``NULL``.
+   * - ``OUT_OF_BOUNDS``
+     - ``-11``
+     - argument
+     - Index was outside valid range for the target container/object.
+   * - ``SIZE_MISMATCH``
+     - ``-12``
+     - argument
+     - Dimensions/shapes of inputs are incompatible for the requested operation.
+   * - ``INVALID_ARG``
+     - ``-13``
+     - argument
+     - A function argument had an invalid value or combination.
+   * - ``UNINITIALIZED``
+     - ``-14``
+     - argument
+     - Attempt to access or operate on an uninitialized element/field.
+   * - ``DIV_BY_ZERO``
+     - ``-20``
+     - numeric
+     - Division by zero detected during computation.
+   * - ``SINGULAR_MATRIX``
+     - ``-21``
+     - numeric
+     - Matrix is singular/non-invertible for the requested operation.
+   * - ``NUMERIC_OVERFLOW``
+     - ``-22``
+     - numeric
+     - Numeric overflow/underflow or domain/range error occurred.
+   * - ``FILE_OPEN``
+     - ``-30``
+     - I/O
+     - File could not be opened (missing, permissions, etc.).
+   * - ``FILE_READ``
+     - ``-31``
+     - I/O
+     - Error while reading from a file/stream.
+   * - ``FILE_WRITE``
+     - ``-32``
+     - I/O
+     - Error while writing to a file/stream.
+   * - ``TYPE_MISMATCH``
+     - ``-40``
+     - type/format
+     - Incompatible or unexpected type encountered.
+   * - ``FORMAT_INVALID``
+     - ``-41``
+     - type/format
+     - Invalid/unsupported data format or encoding.
+   * - ``UNKNOWN``
+     - ``-99``
+     - generic
+     - Fallback for unspecified/unknown failures.
+
+Legend
+~~~~~~
+- **memory**: allocation/reallocation/resource exhaustion  
+- **argument**: invalid inputs, nulls, bounds, or uninitialized access  
+- **numeric**: arithmetic/domain/singularity issues  
+- **I/O**: filesystem/stream operations  
+- **type/format**: schema, encoding, or type incompatibilities  
+- **meta**: sentinel values not produced by normal operations
+
+See also
+~~~~~~~~
+- :c:func:`error_to_string` — convert any :c:enum:`ErrorCode` to a short human-readable message (strings defined in code comments).
+
+
 Enum Types
 ----------
 
