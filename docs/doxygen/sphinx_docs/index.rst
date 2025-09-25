@@ -122,6 +122,7 @@ storage and access pattern of matrices must adapt to the structure of the data.
    :maxdepth: 1
    :caption: Modules:
 
+    error_codes <Error>
     c_string <Strings>
     c_ldouble <LDouble>
     c_double <Double>

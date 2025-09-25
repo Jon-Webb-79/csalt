@@ -15,21 +15,13 @@
 #import sys
 #sys.path.insert(0, os.path.abspath('../../../src'))
 
-# -- Project information -----------------------------------------------------
-
+# -- Project info ------------------------------------------------------------
 project = 'csalt'
 copyright = '2025, Jonathan A. Webb'
 author = 'Jonathan A. Webb'
-
-# The full version, including alpha/beta/rc tags
 release = '0.0.2'
 
-
 # -- General configuration ---------------------------------------------------
-
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
 extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
@@ -39,42 +31,28 @@ extensions = [
     "breathe",
 ]
 
+# Sphinx: replace deprecated autodoc_default_flags with autodoc_default_options
 autodoc_member_order = "groupwise"
-autodoc_default_flags = ["members", "show-inheritance"]
+autodoc_default_options = {"members": True, "show-inheritance": True}
 autosummary_generate = True
 
-# Breathe Configuration
+# Breathe configuration
+from pathlib import Path
+HERE = Path(__file__).parent.resolve()
+DOXYGEN_XML_DIR = HERE.parent / "build" / "xml"   # docs/_build/doxygen/xml
+
 breathe_default_project = "csalt"
-breathe_domain_by_extension = {"h" : "c", "c" : "c"}
+breathe_domain_by_extension = {"h": "c", "c": "c"}
+breathe_projects = {"csalt": str(DOXYGEN_XML_DIR)}
 
-# This is the folder where Doxygen XML output goes, relative to conf.py
-breathe_projects = { "c_libs": "../doxygen_docs/xml/" }
-#autodoc_member_order = "groupwise"
-#autodoc_default_flags = ["members", "show-inheritance"]
-#autosummary_generate = True
-
-# Add any paths that contain templates here, relative to this directory.
+# Optional sanity check: prints a hint during Sphinx build if XML is missing
+if not DOXYGEN_XML_DIR.exists():
+    print(f"[conf.py] WARNING: Doxygen XML not found at {DOXYGEN_XML_DIR}. "
+          f"Run 'doxygen Doxyfile' before building Sphinx.")
+    
 templates_path = ["_templates"]
-
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-
 # -- Options for HTML output -------------------------------------------------
-
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
 html_theme = "sphinx_rtd_theme"
-# html_static_path = ['_static']
-# html_css_files = [
-#    'css/custom.css',
-# ]
-# html_theme_options = {"rightsidebar": False}
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static"]
 
