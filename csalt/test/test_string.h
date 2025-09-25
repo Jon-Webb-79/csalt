@@ -47,7 +47,7 @@ void test_init_string_special_chars(void **state);
 void test_init_string_long(void **state);
 // --------------------------------------------------------------------------------
 
-void test_getters_null(void **state);
+void test_getters_null_string(void **state);
 // -------------------------------------------------------------------------------- 
 
 #if defined(__GNUC__) || defined(__clang__)

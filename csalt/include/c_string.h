@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include "error_codes.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,32 +33,145 @@ extern "C" {
  *  - chart* str: Pointer to a string literal
  *  - size_t len: The current number of elements in the arrays.
  *  - size_t alloc: The total allocated capacity of the arrays.
+ *  - ErrorCode error: The error enum
  */
 typedef struct string_t string_t;
 // --------------------------------------------------------------------------------
 
 /**
- * @function init_string
- * @brief Allocates and initializes a dynamically allocated string_t object.
+ * @brief Allocate and initialize a `string_t` from a NUL-terminated C string.
  *
- * The function initializes the string_t structure with the contents of the provided
- * string, copying the string into dynamically allocated memory.
+ * Creates a new ::string_t that owns an independent copy of @p str. The copy
+ * is exactly the bytes up to (but not including) the terminating NUL, and the
+ * internal buffer is NUL-terminated. The implementation determines the length
+ * with a standard C string scan (e.g., `strlen`). This function has no shared 
+ * mutable state; `errno` is thread local on conforming platform, safe for concurrant 
+ * calls.  This function is of time complexity O(n), typically vectorized by libc.
  *
- * @param str A null-terminated C string to initialize the string_t object with.
- * @return A pointer to the initialized string_t object, or NULL on failure.
- *         Sets errno to ENOMEM if memory allocation fails or EINVAL if `str` is NULL.
+ * Error reporting:
+ * - On failure, returns NULL and sets `errno` because no object exists to carry
+ *   an ::ErrorCode.
+ * - On success, the returned object's internal error status is initialized to ::NO_ERROR.
+ *
+ * @param str  Non-NULL pointer to a readable, NUL-terminated input string.
+ *
+ * @return Pointer to a newly allocated ::string_t on success; NULL on failure.
+ *
+ * @retval NULL
+ *   - If @p str is NULL (`errno` = `EINVAL`).
+ *   - If memory allocation fails for the object or its buffer (`errno` = `ENOMEM`).
+ *   - If a pathological size overflow is detected when allocating the terminator
+ *     (`errno` = `EOVERFLOW`).  (Defensive check for `len + 1`.)
+ *
+ * @pre  @p str points to a valid, accessible, NUL-terminated byte string.
+ * @post On success, the caller owns the returned object and must release it with
+ *       the corresponding destroy function (e.g., `free_string()`), unless using
+ *       an auto-cleanup macro such as ::STRING_GBC.
+ *
+ * @warning This unbounded initializer assumes a valid NUL terminator. Passing a
+ *          non–NUL-terminated buffer results in a read past the end of the buffer
+ *          (undefined behavior). For untrusted data, prefer a bounded or length-
+ *          based initializer if available.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("Hello, World!");
+ * if (s == NULL) {
+ *     perror("init_string failed");   // errno set to EINVAL, ENOMEM, or EOVERFLOW
+ *     return 1;
+ * }
+ * printf("String content: %s\n", get_string(s));
+ *
+ * // If compiling with GCC/Clang and using your auto-cleanup macro:
+ * // string_t* s STRING_GBC = init_string("Hello, World!");
+ * // ...use s...
+ * // (no explicit free needed when using STRING_GBC)
+ *
+ * free_string(s);  // required if not using STRING_GBC
+ * @endcode
+ *
+ * @see error_to_string, free_string, STRING_GBC
  */
 string_t* init_string(const char* str);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Get the last ::ErrorCode recorded on a csalt string object.
+ *
+ * Returns the object's current error status without modifying it. This const
+ * accessor is useful after a prior API call that may have set an error on the
+ * object. It does not inspect `errno` or change the object's state.
+ *
+ * @param str  Pointer to a ::string_t instance (may be NULL).
+ *
+ * @return The last recorded ::ErrorCode on success. If @p str is NULL, returns
+ *         ::ERR_INVALID_ERROR and sets `errno` to `EINVAL`.
+ *
+ * @errors Sets `errno` to:
+ *   - `EINVAL` — if @p str is NULL.
+ *
+ * @thread_safety Thread-compatible. Safe for concurrent reads of distinct objects.
+ *                Callers must synchronize if other threads may modify or free
+ *                the same object concurrently.
+ *
+ * @complexity O(1).
+ *
+ * @par Example
+ * @code{.c}
+ * #include <errno.h>
+ * #include <stdio.h>
+ *
+ * string_t* s = init_string("Hello");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * // Normal case: freshly constructed object has NO_ERROR
+ * ErrorCode ec1 = get_string_error(s);
+ * printf("ec1 = %d (%s)\n", (int)ec1, error_to_string(ec1));
+ *
+ * // Error path: NULL object — returns ERR_INVALID_ERROR and sets errno=EINVAL
+ * ErrorCode ec2 = get_string_error(NULL);
+ * if (ec2 == INVALID_ERROR && errno == EINVAL) {
+ *     printf("NULL object -> %s\n", error_to_string(ec2));
+ * }
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * ec1 = 0 (No error)
+ * NULL object -> Invalid error entry
+ * @endcode
+ *
+ * @see error_to_string
+ */
+ErrorCode get_string_error(const string_t* str);
 // --------------------------------------------------------------------------------
 
 /**
- * @function free_string
- * @brief Frees all memory associated with a string_t object.
+ * @brief Release a csalt string object and its owned buffer.
  *
- * The function releases the memory for the internal string and the string_t structure itself.
+ * Deallocates the internal character buffer (if present) and the ::string_t
+ * container itself. After this call, the pointer is invalid and must not be
+ * dereferenced. It is recommended to set the pointer to NULL after freeing.
+ * Safe for concurrant calls on *different* objects. Do not free same object 
+ * from multiple threads concurrently. Time complexity of O(1).
  *
- * @param str A pointer to the string_t object to be freed.
- * @return void. Logs an error if `str` is NULL.
+ * Error reporting:
+ * - If @p str is NULL, no deallocation occurs; `errno` is set to `EINVAL`
+ *   and the function returns. (NULL is treated as an error, not a no-op.)
+ *
+ * @param str  Pointer to a ::string_t previously returned by ::init_string
+ *             (or an equivalent constructor). Must not be freed twice or used
+ *             after this call.
+ *
+ * @pre  @p str is either NULL or a valid pointer obtained from the csalt API.
+ * @post If @p str was non-NULL, all memory owned by the object is released.
+ *
+ * @warning Calling this function twice on the same non-NULL pointer results
+ *          in undefined behavior (double free). Do not use @p str after freeing.
+ *
+ * @see init_string, STRING_GBC
  */
 void free_string(string_t* str);
 // -------------------------------------------------------------------------------- 
@@ -74,47 +188,191 @@ void free_string(string_t* str);
 void _free_string(string_t** str);
 // --------------------------------------------------------------------------------
 
-#if defined(__GNUC__) || defined (__clang__)
-    /**
-     * @macro STRING_GBC
-     * @brief A macro for enabling automatic cleanup of string_t objects.
-     *
-     * This macro uses the cleanup attribute to automatically call `_free_string`
-     * when the scope ends, ensuring proper memory management.
-     */
-    #define STRING_GBC __attribute__((cleanup(_free_string)))
+/* compiler attribute helper */
+#if defined(__GNUC__) || defined(__clang__)
+  #define CSALT_STR_CLEANUP(f) __attribute__((cleanup(f)))
+#else
+  #define CSALT_STR_CLEANUP(f) /* no-op on non-GNU/Clang compilers */
 #endif
+
+/**
+ * @def STRING_GBC
+ * @brief GCC/Clang auto-cleanup qualifier for ::string_t*.
+ *
+ * When appended to a pointer variable declaration, registers a cleanup handler
+ * so the pointer is automatically freed when it goes out of scope (via
+ * `__attribute__((cleanup(...)))`).
+ *
+ * @par Usage
+ * @code{.c}
+ * string_t* s STRING_GBC = init_string("Hello");
+ * if (!s) { perror("init_string"); return 1; }
+ * printf("%s\n", get_string(s));
+ * // no explicit free needed on scope exit
+ * @endcode
+ *
+ * @warning Supported only on GCC and Clang. On other compilers this macro
+ *          expands to a no-op (no automatic free).
+ *
+ * @see init_string, free_string
+ */
+#define STRING_GBC CSALT_STR_CLEANUP(_free_string)
 // --------------------------------------------------------------------------------
 
 /**
- * @function get_string
- * @brief Retrieves the C string stored in a string_t object.
+ * @brief Borrow the internal NUL-terminated C string from a csalt string object.
  *
- * @param str A pointer to the string_t object.
- * @return A pointer to the null-terminated C string stored in the object,
- *         or NULL if `str` is NULL or invalid. Sets errno to EINVAL on error.
+ * Returns a read-only pointer to the object's internal buffer. The pointer is
+ * valid until the object is modified or destroyed; the caller must not free it.
+ * This const accessor does not modify the object's ::ErrorCode field.  Safe for 
+ * concurrant reads of distinct objects.  Not safe if another thread may modify 
+ * or free the same object concurrently. This function is of a time complexity 
+ * of O(1).
+ *
+ * Error reporting:
+ * - On failure, returns NULL and sets `errno` (no mutation of the object).
+ *
+ * @param str  Pointer to a valid ::string_t instance (may be NULL).
+ *
+ * @return Read-only pointer to the internal NUL-terminated string on success;
+ *         NULL on failure.
+ *
+ * @retval NULL
+ *   - if @p str is NULL (`errno` = `EINVAL`);
+ *   - if @p str is non-NULL but its internal buffer is missing (`errno` = `EINVAL`).
+ *
+ * @warning The returned pointer is *borrowed*; do not free it and do not use it
+ *          after the object is modified or freed.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("Hello, World!");
+ * if (!s) {
+ *     perror("init_string failed");
+ *     return 1;
+ * }
+ *
+ * const char* view = get_string(s);
+ * if (!view) {
+ *     perror("get_string failed");  // errno = EINVAL
+ *     free_string(s);
+ *     return 1;
+ * }
+ *
+ * printf("String content: %s\n", view);  // prints: Hello, World!
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * String content Hello, World!
+ * @endcode*
+ *
+ * @see init_string, free_string
  */
 const char* get_string(const string_t* str);
 // --------------------------------------------------------------------------------
 
 /**
- * @function string_size
- * @brief Retrieves the current length of the string stored in a string_t object.
+ * @brief Return the number of bytes in a csalt string (excluding the terminating NUL).
  *
- * @param str A pointer to the string_t object.
- * @return The length of the string in bytes (excluding the null terminator),
- *         or -1 on error. Sets errno to EINVAL if `str` is NULL.
+ * Retrieves the cached length of the string in constant time. This accessor does
+ * not modify the object and does not return the terminating NUL in the count.
+ * Safe for cuncurrant reads of distinct objects.  Callers must synchronize if 
+ * another thread may modify or free the same object concurrently..  This function 
+ * is of time complexity O(1).
+ *
+ * Error reporting:
+ * - On invalid input (e.g., @p str is NULL or its internal buffer is NULL),
+ *   the function returns ::LONG_MAX and sets `errno` to `EINVAL`.
+ *
+ * @param str  Pointer to a valid ::string_t instance (may be NULL).
+ *
+ * @return The length of the string in bytes (excluding the terminating NUL) on
+ *         success; ::SIZE_MAX on failure with `errno` set to `EINVAL`.
+ *
+ * @par Example
+ * @code{.c}
+ * #include <errno.h>
+ * #include <limits.h>
+ * #include <stdio.h>
+ *
+ * string_t* s = init_string("Hello");
+ * if (!s) {
+ *     perror("init_string");
+ *     return 1;
+ * }
+ *
+ * size_t n = string_size(s);
+ * if (n == SIZE_MAX) {     // error path
+ *     perror("string_size");
+ *     free_string(s);
+ *     return 1;
+ * }
+ *
+ * printf("Length = %zu bytes\n", n);   // prints: Length = 5 bytes
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * Length = 5 bytes
+ * @endcode*
+ *
+ * @see init_string, get_string, free_string
  */
 size_t string_size(const string_t* str);
 // --------------------------------------------------------------------------------
 
 /**
- * @function string_alloc
- * @brief Retrieves the total allocated capacity of the string in a string_t object.
+ * @brief Return the total allocated size in bytes for a csalt string's buffer
+ *        (including the terminating NUL).
  *
- * @param str A pointer to the string_t object.
- * @return The total allocated capacity in bytes, or -1 on error.
- *         Sets errno to EINVAL if `str` is NULL.
+ * Retrieves the buffer capacity recorded for @p str. For csalt strings created
+ * by ::init_string, this is typically `string_size(str) + 1`. Future growth
+ * strategies may reserve more than the current length, so the allocation size
+ * can exceed the payload length.  Safe for cuncurrant reads of distinct objects.
+ * Callers must synchronize if another thread may modify or free the same object 
+ * concurrantly.  This function is of time complexity O(1).
+ *
+ * Error reporting:
+ * - On invalid input (e.g., @p str is NULL or its internal buffer is NULL),
+ *   the function returns ::SIZE_MAX and sets `errno` to `EINVAL`.
+ *
+ * @param str  Pointer to a valid ::string_t instance (may be NULL).
+ *
+ * @return The allocated size in bytes (including the NUL terminator) on success;
+ *         SIZE_MAX on failure with `errno` set to `EINVAL`.
+ *
+ * @par Example
+ * @code{.c}
+ * #include <errno.h>
+ * #include <limits.h>
+ * #include <stdio.h>
+ *
+ * string_t* s = init_string("Hello");
+ * if (!s) {
+ *     perror("init_string");
+ *     return 1;
+ * }
+ *
+ * size_t cap = string_alloc(s);
+ * if (cap == SIZE_MAX) {
+ *     perror("string_alloc");   // errno = EINVAL
+ *     free_string(s);
+ *     return 1;
+ * }
+ *
+ * printf("Allocated capacity = %zu bytes\n", cap);
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * Allocated capacity = 6 bytes
+ * @endcode
+ *
+ * @see init_string, string_size, get_string, free_string
  */
 size_t string_alloc(const string_t* str);
 // --------------------------------------------------------------------------------

@@ -2684,23 +2684,6 @@ bool delete_float_matrix_element(matrix_f* m, size_t r, size_t c) {
 }
 // -------------------------------------------------------------------------------- 
 
-static inline unsigned long long _key_rc(uint32_t r, uint32_t c) {
-    return ((unsigned long long)r << 32) | (unsigned long long)c;
-}
-// -------------------------------------------------------------------------------- 
-
-static size_t _lower_bound_triplets(const triplet_f* t, size_t n, uint32_t r, uint32_t c) {
-    const unsigned long long k = _key_rc(r, c);
-    size_t lo = 0, hi = n;
-    while (lo < hi) {
-        size_t mid = lo + ((hi - lo) >> 1);
-        unsigned long long km = _key_rc(t[mid].row, t[mid].col);
-        if (km < k) lo = mid + 1; else hi = mid;
-    }
-    return lo;
-}
-// -------------------------------------------------------------------------------- 
-
 static size_t _upper_bound_triplets(const triplet_f* t, size_t n, uint32_t r, uint32_t c) {
     unsigned long long k = ((unsigned long long)r << 32) | (unsigned long long)c;
     size_t lo = 0, hi = n;
@@ -2826,7 +2809,7 @@ float get_float_matrix_element(const matrix_f* m, size_t r, size_t c) {
 }
 // -------------------------------------------------------------------------------- 
 
-inline matrix_f* _init_csr_matrix(size_t rows, size_t cols, size_t initial_alloc) {
+static matrix_f* _init_csr_matrix(size_t rows, size_t cols, size_t initial_alloc) {
     if (rows == 0 || cols == 0) { errno = EINVAL; return NULL; }
     if (initial_alloc == 0) initial_alloc = 1;
 
@@ -2965,7 +2948,7 @@ static inline matrix_f* _csr_matrix_from_array(size_t rows, size_t cols,
     if (cap < nnz) cap = nnz;
     if (cap == 0)  cap = 1;
 
-    matrix_f* m = init_csr_matrix(rows, cols, cap);
+    matrix_f* m = _init_csr_matrix(rows, cols, cap);
     if (!m) { free(row_cnt); return NULL; }
 
     csr_f* S = &m->storage.csr;
@@ -3022,7 +3005,7 @@ static inline matrix_f* _csc_matrix_from_array(size_t rows, size_t cols,
     if (cap < nnz) cap = nnz;
     if (cap == 0)  cap = 1;
 
-    matrix_f* m = init_csc_matrix(rows, cols, cap);
+    matrix_f* m = _init_csc_matrix(rows, cols, cap);
     if (!m) { free(col_cnt); return NULL; }
 
     csc_f* S = &m->storage.csc;

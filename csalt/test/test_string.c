@@ -30,6 +30,7 @@ void test_init_string_nominal(void **state) {
     assert_string_equal(get_string(str), "hello world");
     assert_int_equal(string_size(str), 11);
     assert_int_equal(string_alloc(str), 12);  // length + null terminator
+    assert_int_equal(get_string_error(str), NO_ERROR);
     free_string(str);
 }
 // --------------------------------------------------------------------------------
@@ -40,6 +41,7 @@ void test_init_string_empty(void **state) {
     assert_string_equal(get_string(str), "");
     assert_int_equal(string_size(str), 0);
     assert_int_equal(string_alloc(str), 1);  // just null terminator
+    assert_int_equal(get_string_error(str), NO_ERROR);
     free_string(str);
 }
 // --------------------------------------------------------------------------------
@@ -76,6 +78,7 @@ void test_init_string_special_chars(void **state) {
     assert_string_equal(get_string(str), "Hello\n\t!@#$%^&*()");
     assert_int_equal(string_size(str), 17);
     assert_int_equal(string_alloc(str), 18);
+    assert_int_equal(get_string_error(str), NO_ERROR);
     free_string(str);
 }
 // --------------------------------------------------------------------------------
@@ -91,12 +94,12 @@ void test_init_string_long(void **state) {
     assert_string_equal(get_string(str), long_str);
     assert_int_equal(string_size(str), 999);
     assert_int_equal(string_alloc(str), 1000);
+    assert_int_equal(get_string_error(str), NO_ERROR);
     free_string(str);
 }
 // --------------------------------------------------------------------------------
 
-// Test getter functions with NULL input
-void test_getters_null(void **state) {
+void test_getters_null_string(void **state) {
     assert_null(get_string(NULL));
     assert_int_equal(string_size(NULL), LONG_MAX);
     assert_int_equal(string_alloc(NULL), LONG_MAX);

@@ -1061,7 +1061,7 @@ bool set_float_fast_set(matrix_f* mat);
 bool delete_float_matrix_element(matrix_f* m, size_t r, size_t c);
 // -------------------------------------------------------------------------------- 
 
-bool get_float_matrix_element(const matrix_f* m, size_t r, size_t c);
+float get_float_matrix_element(const matrix_f* m, size_t r, size_t c);
 // -------------------------------------------------------------------------------- 
 
 matrix_f* float_matrix_from_array(size_t rows, size_t cols, MatrixType type,

@@ -33,6 +33,7 @@ struct string_t {
     char* str;
     size_t len;
     size_t alloc;
+    ErrorCode error;
 };
 // ================================================================================ 
 // ================================================================================ 
@@ -76,22 +77,21 @@ string_t* init_string(const char* str) {
         return NULL;
     }
 
-    // Scan for null terminator
-    const char* end = str;
-    while (*end != '\0') end++;
-    size_t len = end - str;
+    // Typically SIMD-optimized in libc
+    size_t len = strlen(str);
+
+    // Guard against pathological overflow on len+1
+    if (len == SIZE_MAX) { errno = EOVERFLOW; return NULL; }
 
     string_t* ptr = malloc(sizeof(string_t));
     if (!ptr) {
         errno = ENOMEM;
-        fprintf(stderr, "ERROR: Failure to allocate memory for 'string_t' in init_string()\n"); 
         return NULL;
     }
 
     char* ptr2 = malloc(len + 1);
     if (!ptr2) {
         errno = ENOMEM;
-        fprintf(stderr, "ERROR: Failure to allocate memory for 'char*' in init_string()\n");
         free(ptr);
         return NULL;
     }
@@ -102,7 +102,16 @@ string_t* init_string(const char* str) {
     ptr->str = ptr2;
     ptr->len = len;
     ptr->alloc = len + 1;
+    ptr->error = NO_ERROR;
     return ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+ErrorCode get_string_error(const string_t* str) {
+    if (!str) {
+        errno = EINVAL;
+    }
+    return str->error;
 }
 // --------------------------------------------------------------------------------
 
@@ -127,7 +136,7 @@ void _free_string(string_t** str) {
 // --------------------------------------------------------------------------------
 
 const char* get_string(const string_t* str) {
-    if (!str || !str->str) {
+    if (!str || str->str) {
         errno = EINVAL;
         return NULL;
     }
@@ -138,7 +147,7 @@ const char* get_string(const string_t* str) {
 size_t string_size(const string_t* str) {
     if (!str || !str->str) {
         errno = EINVAL;
-        return LONG_MAX;
+        return SIZE_MAX;
     }
     return str->len;
 }
@@ -147,7 +156,7 @@ size_t string_size(const string_t* str) {
 size_t string_alloc(const string_t* str) {
     if (!str || !str->str) {
         errno = EINVAL;
-        return LONG_MAX;
+        return SIZE_MAX;
     }
     return str->alloc;
 }
