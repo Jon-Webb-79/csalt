@@ -134,31 +134,31 @@ void test_trim_empty_string(void **state);
 void test_trim_null_string(void **state);
 // --------------------------------------------------------------------------------
 
-void test_first_char_occurance_nominal(void **state);
+void test_first_char_occurrance_nominal(void **state);
 // -------------------------------------------------------------------------------- 
 
-void test_first_char_occurance_not_found(void **state);
+void test_first_char_occurrance_not_found(void **state);
 // -------------------------------------------------------------------------------- 
 
-void test_first_char_occurance_empty_string(void **state);
+void test_first_char_occurrance_empty_string(void **state);
 // -------------------------------------------------------------------------------- 
 
-void test_first_char_occurance_null(void **state);
+void test_first_char_occurrance_null(void **state);
 // -------------------------------------------------------------------------------- 
 
-void test_last_char_occurance_nominal(void **state);
+void test_last_char_occurrance_nominal(void **state);
 // -------------------------------------------------------------------------------- 
 
-void test_last_char_occurance_first_char(void **state);
+void test_last_char_occurrance_first_char(void **state);
 // -------------------------------------------------------------------------------- 
 
-void test_last_char_occurance_not_found(void **state);
+void test_last_char_occurrance_not_found(void **state);
 // -------------------------------------------------------------------------------- 
 
-void test_last_char_occurance_empty_string(void **state);
+void test_last_char_occurrance_empty_string(void **state);
 // -------------------------------------------------------------------------------- 
 
-void test_last_char_occurance_null(void **state);
+void test_last_char_occurrance_null(void **state);
 // --------------------------------------------------------------------------------
 
 void test_string_start_pointer_nominal(void **state);

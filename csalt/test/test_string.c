@@ -447,11 +447,11 @@ void test_trim_null_string(void **state) {
 // -------------------------------------------------------------------------------- 
 
 /* Test cases for first_char_occurance */
-void test_first_char_occurance_nominal(void **state) {
+void test_first_char_occurrance_nominal(void **state) {
     string_t* str = init_string("hello world");
     
     // Find first 'l'
-    char* result = first_char_occurance(str, 'l');
+    char* result = first_char_occurrance(str, 'l');
     assert_non_null(result);
     assert_int_equal(*result, 'l');
     assert_int_equal(result - get_string(str), 2);  // 'l' is at index 2
@@ -460,39 +460,39 @@ void test_first_char_occurance_nominal(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-void test_first_char_occurance_not_found(void **state) {
+void test_first_char_occurrance_not_found(void **state) {
     string_t* str = init_string("hello world");
     
-    char* result = first_char_occurance(str, 'z');
+    char* result = first_char_occurrance(str, 'z');
     assert_null(result);
     
     free_string(str);
 }
 // --------------------------------------------------------------------------------
 
-void test_first_char_occurance_empty_string(void **state) {
+void test_first_char_occurrance_empty_string(void **state) {
     string_t* str = init_string("");
     
-    char* result = first_char_occurance(str, 'a');
+    char* result = first_char_occurrance(str, 'a');
     assert_null(result);
     
     free_string(str);
 }
 // -------------------------------------------------------------------------------- 
 
-void test_first_char_occurance_null(void **state) {
-    char* result = first_char_occurance(NULL, 'a');
+void test_first_char_occurrance_null(void **state) {
+    char* result = first_char_occurrance(NULL, 'a');
     assert_null(result);
     assert_int_equal(errno, EINVAL);
 }
 // --------------------------------------------------------------------------------
 
-/* Test cases for last_char_occurance */
-void test_last_char_occurance_nominal(void **state) {
+/* Test cases for last_char_occurrance */
+void test_last_char_occurrance_nominal(void **state) {
     string_t* str = init_string("hello world");
     
     // Find last 'l'
-    char* result = last_char_occurance(str, 'l');
+    char* result = last_char_occurrance(str, 'l');
     assert_non_null(result);
     assert_int_equal(*result, 'l');
     assert_int_equal(result - get_string(str), 9);  // Last 'l' is at index 9
@@ -501,11 +501,11 @@ void test_last_char_occurance_nominal(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-void test_last_char_occurance_first_char(void **state) {
+void test_last_char_occurrance_first_char(void **state) {
     string_t* str = init_string("hello world");
     
     // Find 'h' which is at the start
-    char* result = last_char_occurance(str, 'h');
+    char* result = last_char_occurrance(str, 'h');
     assert_non_null(result);
     assert_int_equal(*result, 'h');
     assert_int_equal(result - get_string(str), 0);
@@ -514,28 +514,28 @@ void test_last_char_occurance_first_char(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-void test_last_char_occurance_not_found(void **state) {
+void test_last_char_occurrance_not_found(void **state) {
     string_t* str = init_string("hello world");
     
-    char* result = last_char_occurance(str, 'z');
+    char* result = last_char_occurrance(str, 'z');
     assert_null(result);
     
     free_string(str);
 }
 // --------------------------------------------------------------------------------
 
-void test_last_char_occurance_empty_string(void **state) {
+void test_last_char_occurrance_empty_string(void **state) {
     string_t* str = init_string("");
     
-    char* result = last_char_occurance(str, 'a');
+    char* result = last_char_occurrance(str, 'a');
     assert_null(result);
     
     free_string(str);
 }
 // --------------------------------------------------------------------------------
 
-void test_last_char_occurance_null(void **state) {
-    char* result = last_char_occurance(NULL, 'a');
+void test_last_char_occurrance_null(void **state) {
+    char* result = last_char_occurrance(NULL, 'a');
     assert_null(result);
     assert_int_equal(errno, EINVAL);
 }

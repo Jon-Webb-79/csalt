@@ -76,6 +76,12 @@ trim_string
 .. doxygenfunction:: trim_string
    :project: csalt
 
+reserve-string
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: reserve_string
+   :project: csalt
+
 Utility Funcitons 
 -----------------
 The functions in this section are used to retrieve data from the `string_t` 
@@ -149,6 +155,23 @@ string_concat
 ~~~~~~~~~~~~~
 
 .. doxygendefine:: string_concat
+   :project: csalt
+
+Search String 
+-------------
+The functions in this section can be used to search a string for spechic 
+`char` values or sub strings.
+
+first_char_occurance
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: first_char_occurrance
+   :project: csalt
+
+last_char_occurance
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: last_char_occurrance
    :project: csalt
 
 String Vector Overview 

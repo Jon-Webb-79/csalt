@@ -832,14 +832,66 @@ string_t* copy_string(const string_t* str);
 // --------------------------------------------------------------------------------
 
 /**
- * @function reserve_string
- * @brief Reserves memory for the string_t data type to avoid constant memory allocations
+ * @brief Increase a csalt string's buffer capacity to a specific size.
  *
- * Will not allow the user to reserve less memory than exists at function call 
+ * Attempts to reallocate @p str so that its total buffer capacity becomes
+ * exactly @p len bytes (including space for the terminating NUL). The current
+ * contents up to `str->len` are preserved. This function only grows capacity:
+ * if @p len is less than or equal to the current allocation, the call fails.
  *
- * @param str A string_t data type
- * @param len The buffer length to allocate in string
- * @return true of allocation is successful, false otherwise
+ * Error reporting:
+ * - Returns `false` and sets `errno = EINVAL` if @p str is NULL, if the
+ *   internal buffer is NULL (sets `str->error = ::NULL_POINTER`), or if
+ *   @p len is not strictly greater than the current allocation
+ *   (sets `str->error = ::INVALID_ARG`).
+ * - Returns `false` and sets `errno = ENOMEM` if reallocation fails
+ *   (sets `str->error = ::REALLOC_FAIL`).
+ * - On success, returns `true` and leaves `str->error` unchanged (typically ::NO_ERROR).
+ *
+ * @param str  Pointer to a ::string_t to be grown.
+ * @param len  Requested total capacity in bytes **including** the NUL terminator.
+ *             Must satisfy `len > str->alloc`.
+ *
+ * @return `true` on success; `false` on failure with `errno` and `str->error` set.
+ *
+ * @note A successful reallocation may move the buffer. Any previously borrowed
+ *       pointer obtained from `get_string(str)` becomes invalid after success.
+ *
+ * @par Example
+ * @code{.c}
+ * #include <errno.h>
+ * #include <stdio.h>
+ *
+ * string_t* s = init_string("Hello");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * printf("Before: len=%zu alloc=%zu\n", string_size(s), string_alloc(s));
+ *
+ * // Grow capacity to 128 bytes (including NUL)
+ * if (!reserve_string(s, 128)) {
+ *     perror("reserve_string (grow)");   // errno = ENOMEM on failure
+ *     free_string(s);
+ *     return 1;
+ * }
+ *
+ * printf("After grow: len=%zu alloc=%zu\n", string_size(s), string_alloc(s));
+ *
+ * // This call fails because requested size is not greater than current alloc
+ * if (!reserve_string(s, string_alloc(s))) {
+ *     perror("reserve_string (no-op rejected)");  // errno = EINVAL
+ * }
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * Before: len=5 alloc=6
+ * After grow: len=5 alloc=128
+ * reserve_string (no-op rejected): Invalid argument
+ * @endcode
+ *
+ * @see trim_string, string_alloc, string_size, get_string
  */
 bool reserve_string(string_t* str, size_t len);
 // -------------------------------------------------------------------------------- 
@@ -907,29 +959,146 @@ bool trim_string(string_t* str);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Finds the first occurance of a char between two pointers
+ * @brief Find the **first** occurrence of a byte in a csalt string and return a
+ *        writable pointer into the string's buffer.
  *
- * This function deterimines the first appearance of a char value in 
- * a string literal.
+ * Searches the current payload of @p str (exactly `str->len` bytes; the
+ * terminating NUL is not examined) for the first byte equal to @p value and
+ * returns a *borrowed* pointer to that position on success. The pointer aliases
+ * the object’s internal storage and remains valid until the string is
+ * reallocated, trimmed, otherwise modified, or destroyed. Comparison is
+ * performed as `(unsigned char)value`.
  *
- * @param str A pointer to the string_t data type
- * @param value The char value being search for in the string_t data type
- * @return A char pointer to character value or a NULL pointer.
+ * **Thread-safety:** This function does not modify the character data, but it
+ * may update `str->error` for status reporting. Treat it as **not thread-safe
+ * for the same object** unless callers synchronize access to @p str (i.e., no
+ * concurrent reads that also update `str->error`, and no concurrent writes or
+ * frees). Concurrent calls on **distinct** objects are fine.
+ *
+ * **Time complexity:** O(n) in the string length. Implementations commonly use
+ * `memchr()` which may be vectorized by the C library on many platforms, but
+ * worst-case complexity remains linear.
+ *
+ * Error reporting:
+ * - Returns `NULL` and sets `errno = EINVAL` if @p str is `NULL` or if the
+ *   internal buffer is `NULL` (in the latter case, `str->error = ::NULL_POINTER`).
+ * - Returns `NULL` when the byte is not found; in this case `errno` is left
+ *   unchanged. On valid inputs, `str->error` may be set to ::NO_ERROR.
+ *
+ * @param str    Pointer to a ::string_t instance (must be initialized).
+ * @param value  Byte to search for (compared as `(unsigned char)value`).
+ *
+ * @return Writable pointer to the first matching byte on success; `NULL` on
+ *         failure or if no match exists.
+ *
+ * @warning The returned pointer aliases @p str’s internal storage. It becomes
+ *          invalid after any operation that can move or modify the buffer
+ *          (e.g., concatenation, reserve, trim, or destruction). Do **not**
+ *          `free()` the returned pointer.
+ *
+ * @note To search for the terminator `'\0'`, include it explicitly in the
+ *       search length; this function searches only `str->len` bytes.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("abracadabra");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * char* p = first_char_occurrance(s, 'a');
+ * if (p) {
+ *     const char* base = get_string(s);
+ *     printf("first 'a' at %zu: \"%s\"\n", (size_t)(p - base), p);
+ *     *p = 'A';  // mutate in place
+ *     printf("after mutate: %s\n", get_string(s));
+ * } else {
+ *     puts("byte not found");
+ * }
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * first 'a' at 0: "abracadabra"
+ * after mutate: Abracadabra
+ * @endcode
+ *
+ * @see last_char_occurrance, get_string, string_lit_concat, string_string_concat,
+ *      reserve_string, trim_string
  */
-char* first_char_occurance(string_t* str, char value);
+char* first_char_occurrance(string_t* str, char value);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Finds the last occurance of a char between two pointers
+ * @brief Find the **last** occurrence of a byte in a csalt string and return a
+ *        writable pointer into the string's buffer.
  *
- * This function deterimines the first appearance of a char value in 
- * a string literal.
+ * Searches the current payload of @p str (exactly `str->len` bytes; the
+ * terminating NUL is not examined) for the last byte equal to @p value and
+ * returns a *borrowed* pointer to that position on success. The pointer aliases
+ * the object’s internal storage and remains valid until the string is
+ * reallocated, trimmed, otherwise modified, or destroyed. Comparison is
+ * performed as `(unsigned char)value`.
  *
- * @param str A pointer to the string_t data type
- * @param value The char value being search for in the string_t data type
- * @return A char pointer to character value or a NULL pointer.
+ * **Thread-safety:** This function does not modify the character data, but it
+ * may update `str->error` for status reporting. Treat it as **not thread-safe
+ * for the same object** unless callers synchronize access to @p str (i.e., no
+ * concurrent reads that also update `str->error`, and no concurrent writes or
+ * frees). Concurrent calls on **distinct** objects are fine.
+ *
+ * **Time complexity:** O(n) in the string length. The implementation may use
+ * SIMD-accelerated forward scans internally (tracking the last match per chunk)
+ * when built with vector backends (e.g., SSE2/AVX2/AVX-512/NEON/SVE), but the
+ * worst-case complexity is still linear.
+ *
+ * Error reporting:
+ * - Returns `NULL` and sets `errno = EINVAL` if @p str is `NULL` or if the
+ *   internal buffer is `NULL` (in the latter case, `str->error = ::NULL_POINTER`).
+ * - Returns `NULL` when the byte is not found; in this case `errno` is left
+ *   unchanged. On valid inputs, `str->error` may be set to ::NO_ERROR.
+ *
+ * @param str    Pointer to a ::string_t instance (must be initialized).
+ * @param value  Byte to search for (compared as `(unsigned char)value`).
+ *
+ * @return Writable pointer to the last matching byte on success; `NULL` on
+ *         failure or if no match exists.
+ *
+ * @warning The returned pointer aliases @p str’s internal storage. It becomes
+ *          invalid after any operation that can move or modify the buffer
+ *          (e.g., concatenation, reserve, trim, or destruction). Do **not**
+ *          `free()` the returned pointer.
+ *
+ * @note To search for the terminator `'\0'`, include it explicitly in the
+ *       search length; this function searches only `str->len` bytes.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("Hello, World!");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * char* p = last_char_occurrance(s, 'l');
+ * if (p) {
+ *     const char* base = get_string(s);
+ *     printf("last 'l' at %zu: \"%s\"\n", (size_t)(p - base), p);
+ *     *p = 'L';  // mutate in place
+ *     printf("after mutate: %s\n", get_string(s));
+ * } else {
+ *     puts("byte not found");
+ * }
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * last 'l' at 10: "ld!"
+ * after mutate: Hello, WorLd!
+ * @endcode
+ *
+ * @see first_char_occurrance, get_string, string_lit_concat, string_string_concat,
+ *      reserve_string, trim_string
  */
-char* last_char_occurance(string_t* str, char value);
+char* last_char_occurrance(string_t* str, char value);
 // -------------------------------------------------------------------------------- 
 
 /**

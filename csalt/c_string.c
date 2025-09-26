@@ -21,6 +21,63 @@
 #include <limits.h> // For INT_MIN
 #include <ctype.h>  // For isspace
 #include <stdint.h> // For SIZE_MAX
+
+#if defined(__AVX512BW__)
+  #include <immintrin.h>
+  #include "simd_avx512_char.inl"
+#elif defined(__AVX2__)
+  #include <immintrin.h>
+  #include "simd_avx2_char.inl"
+#elif defined(__AVX__)
+  #include <immintrin.h>
+  #include "simd_avx_char.inl"
+#elif defined(__SSE4_1__)
+  #include <smmintrin.h>
+  #include "simd_sse41_char.inl"
+#elif defined(__SSE3__)
+  #include <pmmintrin.h>
+  #include "simd_sse3_char.inl"
+#elif defined(__SSE2__)
+  #include <emmintrin.h>
+  #include "simd_sse2_char.inl"
+#elif defined(__ARM_FEATURE_SVE2)
+  #include <arm_sve.h>
+  #include "simd_sve2_char.inl"
+#elif defined(__ARM_FEATURE_SVE)
+  #include <arm_sve.h>
+  #include "simd_sve_char.inl"
+#elif defined(__aarch64__) && defined(__ARM_NEON)
+  #include <arm_neon.h>
+  #include "simd_neon_char.inl"
+#endif
+
+// ================================================================================ 
+// ================================================================================ 
+
+static inline size_t simd_last_u8_index(const unsigned char* s, size_t n, unsigned char c) {
+    #if defined(__AVX512BW__)
+        return simd_last_index_u8_avx512bw(s, n, c);
+    #elif defined(__AVX2__)
+        return simd_last_index_u8_avx2(s, n, c);
+    #elif defined(__AVX__)
+        return simd_last_index_u8_avx_fallback_sse2(s, n, c);
+    #elif defined(__SSE4_1__)
+        return simd_last_index_u8_sse41(s, n, c);
+    #elif defined(__SSE3__)
+        return simd_last_index_u8_sse3(s, n, c);
+    #elif defined(__SSE2__)
+        return simd_last_index_u8_sse2(s, n, c);
+    #elif defined(__ARM_FEATURE_SVE2)
+        return simd_last_index_u8_sve2(s, n, c);
+    #elif defined(__ARM_FEATURE_SVE)
+        return simd_last_index_u8_sve(s, n, c);
+    #elif defined(__aarch64__) && defined(__ARM_NEON)
+        return simd_last_index_u8_neon(s, n, c);
+    #else
+        return simd_last_index_u8_scalar(s, n, c);
+    #endif
+}
+
 // ================================================================================ 
 // ================================================================================
 
@@ -70,7 +127,6 @@ static char* _last_literal_between_ptrs(const char* string, char* min_ptr, char*
 }
 // ================================================================================ 
 // ================================================================================ 
-// --------------------------------------------------------------------------------
 
 string_t* init_string(const char* str) {
     if (str == NULL) {
@@ -368,13 +424,19 @@ string_t* copy_string(const string_t* str) {
 // --------------------------------------------------------------------------------
 
 bool reserve_string(string_t* str, size_t len) {
-    if (!str || !str->str) {
+    if (!str) {
         errno = EINVAL;
+        return false;
+    }
+    if (!str->str) {
+        errno = EINVAL;
+        str->error = NULL_POINTER;
         return false;
     }
     // Ensure the requested length is greater than the current allocation
     if (len <= str->alloc) {
         errno = EINVAL;
+        str->error = INVALID_ARG;
         return false;
     }
 
@@ -382,7 +444,7 @@ bool reserve_string(string_t* str, size_t len) {
     char* ptr = realloc(str->str, sizeof(char) * len);
     if (!ptr) {
         errno = ENOMEM;
-        fprintf(stderr,"ERROR: Failed to reallocate memory for char* in reserver_string()\n");
+        str->error = REALLOC_FAIL;
         return false;
     }
 
@@ -431,42 +493,33 @@ bool trim_string(string_t* str) {
 }
 // -------------------------------------------------------------------------------- 
 
-char* first_char_occurance(string_t* str, char value) {
-    if (!str || !str->str) {
+char* first_char_occurrance(string_t* str, char value) {
+    if (!str) {
         errno = EINVAL;
         return NULL;
     }
-    
-    char* current = str->str;
-    while (*current != '\0') {
-        if (*current == value) {
-            return current;
-        }
-        current++;
+    if (!str->str) {
+        errno = EINVAL;
+        str->error = NULL_POINTER;
+        return NULL;
     }
-    
-    return NULL;
+    void* p = memchr(str->str, (unsigned char)value, str->len);
+    str->error = NO_ERROR;
+    return (char*)p; 
 }
 // -------------------------------------------------------------------------------- 
 
-char* last_char_occurance(string_t* str, char value) {
-    if (!str || !str->str) {
-        errno = EINVAL;
-        return NULL;
-    }
-    
-    // Start from last character (before null terminator)
-    char* current = str->str + str->len - 1;
-    
-    // Continue until we reach the beginning of the string
-    while (current >= str->str) {
-        if (*current == value) {
-            return current;
-        }
-        current--;
-    }
-    
-    return NULL;
+char* last_char_occurrance(string_t* str, char value) {
+    if (!str)               { errno = EINVAL; return NULL; }
+    if (!str->str)          { errno = EINVAL; str->error = NULL_POINTER; return NULL; }
+
+    const unsigned char* s = (const unsigned char*)str->str;
+    size_t n = str->len;
+    unsigned char c = (unsigned char)value;
+
+    size_t idx = simd_last_u8_index(s, n, c);
+    str->error = NO_ERROR;
+    return (idx == SIZE_MAX) ? NULL : (char*)(str->str + idx);
 }
 // --------------------------------------------------------------------------------
 
