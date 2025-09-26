@@ -366,6 +366,8 @@ void test_reserve_string_nominal(void **state) {
     assert_int_equal(string_alloc(str), 20);
     assert_string_equal(get_string(str), "test");  // Verify content unchanged
     assert_int_equal(string_size(str), 4);         // Verify length unchanged
+    assert_int_equal(get_string_error(str), NO_ERROR);
+
    
     free_string(str);
 }
@@ -384,8 +386,9 @@ void test_reserve_string_smaller_size(void **state) {
 // --------------------------------------------------------------------------------
 
 void test_reserve_string_null(void **state) {
-   assert_false(reserve_string(NULL, 10));
-   assert_int_equal(errno, EINVAL);
+    assert_false(reserve_string(NULL, 10));
+    assert_int_equal(errno, EINVAL);
+
 }
 // -------------------------------------------------------------------------------- 
 
@@ -400,6 +403,7 @@ void test_trim_string_nominal(void **state) {
     assert_int_equal(string_size(str), 4);
     assert_int_equal(string_alloc(str), 5);  // length + null terminator
     assert_string_equal(get_string(str), "test");
+    assert_int_equal(get_string_error(str), NO_ERROR);
     
     free_string(str);
 }
@@ -412,6 +416,7 @@ void test_trim_already_minimal(void **state) {
     assert_int_equal(string_size(str), 4);
     assert_int_equal(string_alloc(str), 5);
     assert_string_equal(get_string(str), "test");
+    assert_int_equal(get_string_error(str), NO_ERROR);
     
     free_string(str);
 }
@@ -428,6 +433,7 @@ void test_trim_empty_string(void **state) {
     assert_int_equal(string_size(str), 0);
     assert_int_equal(string_alloc(str), 1);  // Just null terminator
     assert_string_equal(get_string(str), "");
+    assert_int_equal(get_string_error(str), NO_ERROR);
     
     free_string(str);
 }
@@ -436,6 +442,7 @@ void test_trim_empty_string(void **state) {
 void test_trim_null_string(void **state) {
     assert_false(trim_string(NULL));
     assert_int_equal(errno, EINVAL);
+
 }
 // -------------------------------------------------------------------------------- 
 

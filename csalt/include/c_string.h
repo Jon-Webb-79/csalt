@@ -583,12 +583,28 @@ bool string_lit_concat(string_t* str1, const char* literal);
  * @code{.text}
  * Hello, world!
  * @endcode
+ */ 
+/**
+ * @def string_concat
+ * @brief Generic front-end to concatenate onto a csalt string.
+ * ...
  */
-#if __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
-    #define string_concat(str_one, str_two) _Generic((str_two), \
-        const char*: string_lit_concat, \
-        char*: string_lit_concat, \
-        default: string_string_concat) (str_one, str_two)
+bool string_concat__type_mismatch(const string_t*, void*);
+#if defined(DOXYGEN)
+/* Simple definition so Doxygen indexes the macro unconditionally */
+#  define string_concat(str_one, str_two) string_string_concat((str_one), (str_two))
+#elif __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
+#  define string_concat(str_one, str_two) \
+     _Generic((str_two), \
+        const char*:     string_lit_concat, \
+        char*:           string_lit_concat, \
+        string_t*:       string_string_concat, \
+        const string_t*: string_string_concat, \
+        void*:           string_string_concat, \
+        default:         string_concat__type_mismatch \
+     )((str_one), (str_two))
+#else
+#  define string_concat(str_one, str_two) string_string_concat((str_one), (str_two))
 #endif
 // --------------------------------------------------------------------------------
 
@@ -739,22 +755,80 @@ int compare_strings_string(const string_t* str_struct_one, string_t* str_struct_
  * -4
  * @endcode
  */ 
-#if __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
-    #define compare_strings(str_one, str_two) _Generic((str_two), \
-        const char*: compare_strings_lit, \
-        char*: compare_strings_lit, \
-        default: compare_strings_string) (str_one, str_two)
+#if defined(DOXYGEN)
+/* Simple definition so Doxygen always indexes the macro */
+#  define compare_strings(str_one, str_two) compare_strings_string((str_one), (str_two))
+#elif __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
+#  define compare_strings(str_one, str_two) \
+     _Generic((str_two), \
+        const char*:      compare_strings_lit,    \
+        char*:            compare_strings_lit,    \
+        const string_t*:  compare_strings_string, \
+        string_t*:        compare_strings_string, \
+        void*:            compare_strings_string, \
+        default:          compare_strings__type_mismatch \
+     )((str_one), (str_two))
+int compare_strings__type_mismatch(const string_t*, void*);
+#else
+/* Pre-C11 fallback: caller must pass csalt strings */
+#  define compare_strings(str_one, str_two) compare_strings_string((str_one), (str_two))
 #endif
+
 // --------------------------------------------------------------------------------
 
 /**
- * @function copy_string
- * @brief Creates a deep copy of a string data type
+ * @brief Deep-copy a csalt string.
  *
- * @param str A string_t data type
- * @return A string_t data type with the exact contents of str
+ * Allocates a new ::string_t and copies the contents of @p str into it. The
+ * resulting object owns its own buffer (no sharing). If the source has a larger
+ * reserved capacity than its current length, this function attempts to reserve
+ * at least the same capacity in the copy so future appends behave similarly.
+ * This function is thread-compaitible; however, the source must not be modified 
+ * or freed concurrently with this call.  this function has a time complexity 
+ * of O(n).
+ *
+ * Error reporting:
+ * - Returns NULL and sets `errno` to `EINVAL` if @p str is NULL, if @p str has
+ *   no internal buffer, or if borrowing the source buffer via ::get_string fails.
+ * - Returns NULL and sets `errno` to `ENOMEM` if allocation fails (either during
+ *   construction or while reserving capacity to match the source).
+ *
+ * @param str  Source ::string_t to copy (must be non-NULL and initialized).
+ *
+ * @return Pointer to a newly allocated ::string_t on success; NULL on failure
+ *         with `errno` set as described above.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* a = init_string("Hello");
+ * if (!a) { perror("init_string"); return 1; }
+ *
+ * // Make a deep copy 'b' of 'a'
+ * string_t* b = copy_string(a);
+ * if (!b) {
+ *     perror("copy_string");
+ *     free_string(a);
+ *     return 1;
+ * }
+ *
+ * printf("a: %s (len=%zu, alloc=%zu)\n",
+ *        get_string(a), string_size(a), string_alloc(a));
+ * printf("b: %s (len=%zu, alloc=%zu)\n",
+ *        get_string(b), string_size(b), string_alloc(b));
+ *
+ * free_string(a);
+ * free_string(b);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * a: Hello (len=5, alloc=6)
+ * b: Hello (len=5, alloc=6)
+ * @endcode
+ *
+ * @see init_string, get_string, reserve_string, free_string
  */
-string_t* copy_string(const string_t *str);
+string_t* copy_string(const string_t* str);
 // --------------------------------------------------------------------------------
 
 /**
@@ -771,13 +845,63 @@ bool reserve_string(string_t* str, size_t len);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Tims the string memory to the minimum necessary size 
+ * @brief Shrink a csalt string's buffer to the minimum needed size.
  *
- * THis function will determine the minimum memory allocation needed to fit 
- * the string and will resize to the minimum memory if oversized.
+ * Reduces the allocation of @p str so that `alloc == len + 1` (just enough
+ * for the payload plus the terminating NUL). The string contents are unchanged.
+ * If the buffer is already minimal, this is a no-op and succeeds.
  *
- * @param str A string container of type string_t
- * @return true if operation is succesful, false otherwise with stderr printout
+ * Error reporting:
+ * - Returns `false` and sets `errno = EINVAL` if @p str is NULL or if the
+ *   internal buffer is NULL (sets `str->error = ::NULL_POINTER`).
+ * - Returns `false` and sets `errno = EINVAL` if a corrupted size invariant is
+ *   detected (`len + 1 > alloc`; sets `str->error = ::SIZE_MISMATCH`).
+ * - Returns `false` and sets `errno = ENOMEM` if the shrink `realloc` fails
+ *   (sets `str->error = ::REALLOC_FAIL`).
+ * - On success, returns `true` and sets `str->error = ::NO_ERROR`.
+ *
+ * @param str  Pointer to a ::string_t to be trimmed.
+ *
+ * @return `true` on success; `false` on failure with `errno` and `str->error` set.
+ *
+ * @note This function may move the buffer (via `realloc`). Any previously
+ *       borrowed pointer obtained from `get_string(str)` becomes invalid after
+ *       a successful trim.
+ *
+ * @par Example
+ * @code{.c}
+ * #include <errno.h>
+ * #include <stdio.h>
+ *
+ * string_t* s = init_string("Hello");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * // Ensure excess capacity so trim has an effect (API may differ in your project)
+ * if (!reserve_string(s, 128)) {  // grow capacity to at least 128 bytes
+ *     perror("reserve_string");
+ *     free_string(s);
+ *     return 1;
+ * }
+ *
+ * printf("Before trim: len=%zu, alloc=%zu\n", string_size(s), string_alloc(s));
+ *
+ * if (!trim_string(s)) {
+ *     perror("trim_string");
+ *     free_string(s);
+ *     return 1;
+ * }
+ *
+ * printf("After trim:  len=%zu, alloc=%zu\n", string_size(s), string_alloc(s));
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * Before trim: len=5, alloc=128
+ * After trim:  len=5, alloc=6
+ * @endcode
+ *
+ * @see reserve_string, string_size, string_alloc, get_string, free_string
  */
 bool trim_string(string_t* str);
 // -------------------------------------------------------------------------------- 

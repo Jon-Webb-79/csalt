@@ -70,6 +70,12 @@ STRING_GBC
 .. doxygendefine:: STRING_GBC 
    :project: csalt 
 
+trim_string
+~~~~~~~~~~~
+
+.. doxygenfunction:: trim_string
+   :project: csalt
+
 Utility Funcitons 
 -----------------
 The functions in this section are used to retrieve data from the `string_t` 
@@ -115,6 +121,12 @@ compare_strings
 ~~~~~~~~~~~~~~~
 
 .. doxygendefine:: compare_strings
+   :project: csalt
+
+copy_string 
+~~~~~~~~~~~
+
+.. doxygenfunction:: copy_string
    :project: csalt
 
 String Manipulation 
