@@ -390,9 +390,10 @@ size_t string_alloc(const string_t* str);
  * plus potential reallocation cost.
  *
  * Error reporting:
- * - Returns `false` and sets `errno` to `EINVAL` if any argument is NULL or if
- *   an object's internal buffer is NULL. In this case, @p str1->error is set
- *   to `NULL_POINTER` if the destination buffer was missing.
+ * - Returns `false` and sets `errno` to `EINVAL` if any argument is NULL.  If  
+ *   `str1` is present but `str2` is NULL, the error code is set to `INVALID_ARG` 
+ *   on `str1`.  If any of the buffers are missing `errno` is set to `EINVAL` and 
+ *   the error code for `str1` is set to `NULL_POINTER`.
  * - Returns `false` and sets `errno` to `ENOMEM` if reallocation fails; in this
  *   case, @p str1->error is set to `REALLOC_FAIL`.
  * - On success, returns `true`. (The function does not modify @p str1->error
@@ -408,9 +409,6 @@ size_t string_alloc(const string_t* str);
  * @post On success, `str1` contains the concatenation and remains NUL-terminated;
  *       `str2` is unchanged. If a reallocation occurred, any previously borrowed
  *       pointer from `get_string(str1)` is invalidated.
- *
- * @warning Do not pass the same object as both parameters. Overlapping source
- *          and destination leads to undefined behavior.
  *
  * @par Example
  * @code{.c}
@@ -448,71 +446,305 @@ bool string_string_concat(string_t* str1, const string_t* str2);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @function string_lit_concat
- * @brief Concatenates a string literal to a string_t object.
+ * @brief Append a C string to a csalt string, growing the destination as needed.
  *
- * @param str1 A pointer to the destination string_t object.
- * @param literal A null-terminated C string to append to the string_t object.
- * @return true if successful, false on failure. Sets errno to ENOMEM if memory
- *         allocation fails or EINVAL if either input is NULL.
+ * Concatenates the bytes of @p literal to the end of @p str1. If @p str1 does not
+ * have enough capacity, its internal buffer is reallocated to fit the result,
+ * including the terminating NUL. Overlapping inputs are handled safely:
+ * if @p literal points into @p str1's current buffer, the implementation uses
+ * a temporary copy (when growth is required) and `memmove` to avoid undefined
+ * behavior.  Not thread-safe for the same object (mutates @p str`). Callers 
+ * must synchronize if other threads may read/modify/free @p str1.  This function 
+ * has a time complexity of )(n) driven by the reallocation cost and by the search 
+ * for the nul terminator.
+ *
+ * Error reporting:
+ * - Returns `false` and sets `errno` to `EINVAL` for invalid arguments (NULL
+ *   pointers). In this case, `str1->error` is set to ::INVALID_ARG or
+ *   ::NULL_POINTER as appropriate.
+ * - Returns `false` and sets `errno` to `EOVERFLOW` if the required size would
+ *   exceed `SIZE_MAX` (sets `str1->error` to ::NUMERIC_OVERFLOW).
+ * - Returns `false` and sets `errno` to `ENOMEM` on allocation failure
+ *   (sets `str1->error` to ::BAD_ALLOC or ::REALLOC_FAIL).
+ * - On success, returns `true` and sets `str1->error` to ::NO_ERROR.
+ *
+ * @param str1     Destination string to be extended (must be non-NULL and initialized).
+ * @param literal  NUL-terminated C string to append (may alias @p str1->str).
+ *
+ * @return `true` on success; `false` on failure with `errno` and `str1->error` set.
+ *
+ * @pre  `str1 != NULL`, `str1->str != NULL`, `literal != NULL`.
+ * @post On success, @p str1 contains the concatenation and remains NUL-terminated.
+ *       If a reallocation occurred, any previously borrowed pointer obtained via
+ *       `get_string(str1)` is invalidated.
+ *
+ * @par Example
+ * @code{.c}
+ * #include <errno.h>
+ * #include <stdio.h>
+ *
+ * string_t* s = init_string("Hello");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * // Simple append
+ * if (!string_lit_concat(s, ", World!")) {
+ *     perror("string_lit_concat");
+ *     fprintf(stderr, "error: %s\n", error_to_string(get_string_error(s)));
+ *     free_string(s);
+ *     return 1;
+ * }
+ * printf("Result: %s\n", get_string(s));
+ *
+ * // Overlapping append (safe): append from inside the current buffer
+ * // After the first concat, get_string(s) == "Hello, World!"
+ * const char* tail = get_string(s) + 7; // points to "World!"
+ * if (!string_lit_concat(s, tail)) {
+ *     perror("string_lit_concat (overlap)");
+ *     fprintf(stderr, "error: %s\n", error_to_string(get_string_error(s)));
+ *     free_string(s);
+ *     return 1;
+ * }
+ * printf("After overlap: %s\n", get_string(s));
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * Result: Hello, World!
+ * After overlap: Hello, World!World!
+ * @endcode
+ *
+ * @see init_string, get_string, string_string_concat, string_size, string_alloc, free_string
  */
-bool string_lit_concat(string_t* str, const char* string);
+bool string_lit_concat(string_t* str1, const char* literal);
 // --------------------------------------------------------------------------------
 
 /**
- * @macro string_concat
- * @brief A generic macro that selects the appropriate concatenation function
- *        based on the type of the second argument.
+ * @def string_concat
+ * @brief Generic front-end to concatenate onto a csalt string.
  *
- * If the second argument is a `char*`, it calls `string_lit_concat`.
- * Otherwise, it calls `string_string_concat`.
+ * Dispatches at compile time (C11 `_Generic`) based on the type of @p str_two:
+ * - If @p str_two is a C string pointer (`const char*` or `char*`), calls
+ *   ::string_lit_concat(@p str_one, @p str_two).
+ * - Otherwise, calls ::string_string_concat(@p str_one, @p str_two).
+ *
+ * @param str_one  Destination ::string_t* to be extended.
+ * @param str_two  Either a C string (``const char*``/``char*``) or a
+ *                 ::string_t pointer (``const string_t*``/``string_t*``).
+ *
+ * @return See the selected function:
+ *         ::string_lit_concat or ::string_string_concat (both return `bool`).
+ *
+ * @note This macro relies on C11 generic selection. It requires a compiler
+ *       with `_Generic` support (C11) and that `__STDC_NO_GENERIC__` is not defined.
+ *
+ * @warning Error handling and thread-safety characteristics are those of the
+ *          selected function. See ::string_lit_concat and ::string_string_concat
+ *          for details (they set `errno` and update `str_one->error`).
+ *
+ * @par Example (C string)
+ * @code{.c}
+ * string_t* s = init_string("pi = ");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * if (!string_concat(s, "3.14159")) {    // dispatches to string_lit_concat
+ *     perror("string_concat");
+ *     fprintf(stderr, "error: %s\n", error_to_string(get_string_error(s)));
+ *     free_string(s);
+ *     return 1;
+ * }
+ * printf("%s\n", get_string(s));
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * pi = 3.14159
+ * @endcode
+ *
+ * @par Example (csalt string)
+ * @code{.c}
+ * string_t* a = init_string("Hello");
+ * string_t* b = init_string(", world!");
+ * if (!a || !b) { perror("init_string"); free_string(a); free_string(b); return 1; }
+ *
+ * if (!string_concat(a, b)) {            // dispatches to string_string_concat
+ *     perror("string_concat");
+ *     fprintf(stderr, "error: %s\n", error_to_string(get_string_error(a)));
+ *     free_string(a); free_string(b);
+ *     return 1;
+ * }
+ * printf("%s\n", get_string(a));
+ * free_string(a); free_string(b);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * Hello, world!
+ * @endcode
  */
-#define string_concat(str_one, str_two) _Generic((str_two), \
-    char*: string_lit_concat, \
-    default: string_string_concat) (str_one, str_two)
+#if __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
+    #define string_concat(str_one, str_two) _Generic((str_two), \
+        const char*: string_lit_concat, \
+        char*: string_lit_concat, \
+        default: string_string_concat) (str_one, str_two)
+#endif
 // --------------------------------------------------------------------------------
 
 /**
- * @function compare_strings_lit
- * @brief Compares a string_t object with a string literal.
+ * @brief Lexicographically compare a csalt string with a NUL-terminated C string.
  *
- * The comparison is lexicographical and case-sensitive.
+ * Compares the bytes of @p str_struct to those of @p string in lexicographic
+ * order (like `strcmp`). Returns a negative value if @p str_struct is less than
+ * @p string, zero if they are equal, or a positive value if it is greater.
  *
- * @param str_struct A pointer to the string_t object.
- * @param string A null-terminated C string to compare with.
- * @return An integer less than, equal to, or greater than zero if the string_t
- *         is found, respectively, to be less than, to match, or to be greater than `string`.
- *         Returns INT_MIN on error (sets errno to EINVAL).
+ * Error reporting:
+ * - On invalid input (e.g., @p str_struct is NULL, its buffer is NULL, or
+ *   @p string is NULL), sets `errno` to `EINVAL` and returns ::INT_MIN as an
+ *   error sentinel.
+ *
+ * @param str_struct  Pointer to a valid ::string_t.
+ * @param string      Pointer to a NUL-terminated C string.
+ *
+ * @return Negative, zero, or positive according to lexicographic order;
+ *         ::INT_MIN on failure with `errno` = `EINVAL`.
+ *
+ * @note For consistent `strcmp`-like semantics with non-ASCII bytes, compare
+ *       as **unsigned** bytes (i.e., cast to `unsigned char` before subtraction).
+ *
+ * @thread_safety Thread-compatible. Safe for concurrent reads of distinct objects.
+ *
+ * @complexity O(min(n, m)).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* a = init_string("abc");
+ * int r1 = compare_strings_lit(a, "abd");   // r1 < 0
+ * int r2 = compare_strings_lit(a, "abc");   // r2 == 0
+ * int r3 = compare_strings_lit(a, "ab");    // r3 > 0
+ * printf("%d %d %d\n", r1, r2, r3);
+ * free_string(a);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * -1 0 1
+ * @endcode
  */
 int compare_strings_lit(const string_t* str_struct, const char* string);
 // --------------------------------------------------------------------------------
 
 /**
- * @function compare_strings_string
- * @brief Compares two string_t objects.
+ * @brief Lexicographically compare two csalt strings.
  *
- * The comparison is lexicographical and case-sensitive.
+ * Compares @p str_struct_one to @p str_struct_two byte-by-byte in lexicographic
+ * order (like `strcmp`). Returns a negative value if the first is less than the
+ * second, zero if they are equal, or a positive value if it is greater.
  *
- * @param str_struct_one A pointer to the first string_t object.
- * @param str_struct_two A pointer to the second string_t object.
- * @return An integer less than, equal to, or greater than zero if the first string_t
- *         is found, respectively, to be less than, to match, or to be greater than the second string_t.
- *         Returns INT_MIN on error (sets errno to EINVAL).
+ * Error reporting:
+ * - On invalid input (any pointer NULL or missing internal buffer), sets `errno`
+ *   to `EINVAL` and returns ::INT_MIN as an error sentinel.
+ *
+ * @param str_struct_one  First ::string_t to compare.
+ * @param str_struct_two  Second ::string_t to compare.
+ *
+ * @return Negative, zero, or positive according to lexicographic order;
+ *         ::INT_MIN on failure with `errno` = `EINVAL`.
+ *
+ * @note The second parameter is not modified and could be declared `const`
+ *       in future revisions of the API.
+ * @note For consistent `strcmp`-like semantics with non-ASCII bytes, compare
+ *       as **unsigned** bytes (i.e., cast to `unsigned char` before subtraction).
+ *
+ * @thread_safety Thread-compatible. Safe for concurrent reads of distinct objects.
+ *
+ * @complexity O(min(n, m)).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* a = init_string("Hello");
+ * string_t* b = init_string("Hello");
+ * string_t* c = init_string("Help");
+ *
+ * int ab = compare_strings_string(a, b);  // 0
+ * int ac = compare_strings_string(a, c);  // negative ('l' < 'p')
+ * int ca = compare_strings_string(c, a);  // positive
+ *
+ * printf("%d %d %d\n", ab, ac, ca);
+ * free_string(a); free_string(b); free_string(c);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * 0 -4 4
+ * @endcode
  */
 int compare_strings_string(const string_t* str_struct_one, string_t* str_struct_two);
 // --------------------------------------------------------------------------------
 
 /**
- * @macro compare_strings
- * @brief A generic macro that selects the appropriate string comparison function
- *        based on the type of the second argument.
+ * @def compare_strings
+ * @brief Generic, `strcmp`-style comparison for csalt strings.
  *
- * If the second argument is a `char*`, it calls `compare_strings_lit`.
- * Otherwise, it calls `compare_strings_string`.
- */
-#define compare_strings(str_one, str_two) _Generic((str_two), \
-    char*: compare_strings_lit, \
-    default: compare_strings_string) (str_one, str_two)
+ * Dispatches at compile time (C11 `_Generic`) based on the type of @p str_two:
+ * - If @p str_two is a C string pointer, calls ::compare_strings_lit(@p str_one, @p str_two).
+ * - Otherwise, calls ::compare_strings_string(@p str_one, @p str_two).
+ *
+ * Semantics mirror `strcmp`:
+ * - return < 0  ⇒  @p str_one is lexicographically less than @p str_two
+ * - return = 0  ⇒  equal
+ * - return > 0  ⇒  greater
+ *
+ * Error reporting:
+ * - On invalid input, the selected function sets `errno = EINVAL` and returns
+ *   ::INT_MIN as an error sentinel.
+ *
+ * @param str_one  Pointer to the first ::string_t to compare.
+ * @param str_two  Either a C string (``char*``/``const char*``) or a csalt string
+ *                 (``string_t*``/``const string_t*``).
+ *
+ * @return Negative, zero, or positive according to lexicographic order; ::INT_MIN on failure.
+ *
+ * @note Requires a C11 compiler with `_Generic` support (not available if
+ *       `__STDC_NO_GENERIC__` is defined).
+ *
+ * @warning The macro inherits thread-safety and error behavior from the selected
+ *          function. See ::compare_strings_lit and ::compare_strings_string.
+ *
+ * @par Example (C string)
+ * @code{.c}
+ * string_t* a = init_string("abc");
+ * int r = compare_strings(a, "abd");   // dispatches to compare_strings_lit
+ * printf("%d\n", r);                   // negative (e.g., -1)
+ * free_string(a);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * -1
+ * @endcode
+ *
+ * @par Example (csalt string)
+ * @code{.c}
+ * string_t* x = init_string("Hello");
+ * string_t* y = init_string("Help");
+ * int rx = compare_strings(x, y);      // dispatches to compare_strings_string
+ * printf("%d\n", rx);                  // negative ('l' < 'p')
+ * free_string(x); free_string(y);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * -4
+ * @endcode
+ */ 
+#if __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
+    #define compare_strings(str_one, str_two) _Generic((str_two), \
+        const char*: compare_strings_lit, \
+        char*: compare_strings_lit, \
+        default: compare_strings_string) (str_one, str_two)
+#endif
 // --------------------------------------------------------------------------------
 
 /**

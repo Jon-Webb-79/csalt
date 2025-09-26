@@ -42,64 +42,104 @@ This struct is provided as an opaque data structure.
        ErrorCode error;     // The error code
    } string_v;
 
+String Overview 
+===============
+This section describes the attributes and functions associated with the 
+`string_t` data type.
+
 Initialization and Memory Management
-====================================
+------------------------------------
 The functions and Macros in this section are used to control the creation,
 memory allocation, and specific destruction of ``string_t`` data types.
 
 init_string
------------
+~~~~~~~~~~~
 
 .. doxygenfunction:: init_string
    :project: csalt
 
 free_string
------------
+~~~~~~~~~~~
 
 .. doxygenfunction:: free_string
    :project: csalt
 
 STRING_GBC 
-----------
+~~~~~~~~~~
 
 .. doxygendefine:: STRING_GBC 
    :project: csalt 
 
 Utility Funcitons 
-=================
+-----------------
 The functions in this section are used to retrieve data from the `string_t` 
 data structure.
 
 get_string 
-----------
+~~~~~~~~~~
 
 .. doxygenfunction:: get_string
    :project: csalt
 
 string_size
------------
+~~~~~~~~~~~
 
 .. doxygenfunction:: string_size
    :project: csalt
 
 string_alloc
-------------
+~~~~~~~~~~~~
 
 .. doxygenfunction:: string_alloc
    :project: csalt
 
 get_string_error
-----------------
+~~~~~~~~~~~~~~~~
 
 .. doxygenfunction:: get_string_error
    :project: csalt
 
+compare_strings_lit
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: compare_strings_lit
+   :project: csalt
+
+compare_strings_string
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: compare_strings_string
+   :project: csalt
+
+compare_strings
+~~~~~~~~~~~~~~~
+
+.. doxygendefine:: compare_strings
+   :project: csalt
+
 String Manipulation 
-===================
+-------------------
 The functions in this section are used to manipulate data in a `string_t` object.
 
 string_string_concat 
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 .. doxygenfunction:: string_string_concat
    :project: csalt
+
+string_lit_concat 
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: string_lit_concat
+   :project: csalt
+
+string_concat 
+~~~~~~~~~~~~~
+
+.. doxygendefine:: string_concat
+   :project: csalt
+
+String Vector Overview 
+======================
+This section describes that attributes and functions associated with the 
+`string_v` data type.

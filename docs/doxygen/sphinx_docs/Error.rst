@@ -10,6 +10,12 @@ Purpose
 The ``error_codes.h`` interface defines a common error model for the **csalt** library.
 Every public data structure in csalt exposes a field of type ``ErrorCode`` and every
 public function that can fail sets this error field on the output object it modifies.
+However, any function that allocates a data structure or destroys a data structure will 
+rely on `errno` for error handling.  In addition, data structures passed to a function 
+with a `const` reference will not have error fields set on the output object.  In addition 
+at the beginning of each function where an error code can be set on an object it 
+is reset to `NO_ERROR` to ensure that any attached error codes are local to the  
+function.
 This allows callers to:
 
 1. Invoke an operation on a csalt object.
@@ -19,6 +25,7 @@ This allows callers to:
 By convention, ``NO_ERROR`` is ``0`` and all error conditions are **negative** values.
 This avoids collisions with valid sizes/indices and allows simple checks like
 ``if (err < 0)`` to detect failures.
+
 
 Typical Usage
 =============

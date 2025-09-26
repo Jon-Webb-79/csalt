@@ -166,8 +166,11 @@ size_t string_alloc(const string_t* str) {
 bool string_string_concat(string_t* str1, const string_t* str2) {
     if (!str1 || !str2) {
         errno = EINVAL;
+        if (str1) str1->error = INVALID_ARG;
         return false;
     }
+    // Reset error code 
+    str1->error = NO_ERROR;
     if (!str1->str) {
         errno = EINVAL;
         str1->error = NULL_POINTER;
@@ -175,64 +178,144 @@ bool string_string_concat(string_t* str1, const string_t* str2) {
     }
     if (!str2->str) {
         errno = EINVAL;
+        str1->error = NULL_POINTER;
+        /* str2 is const; don't mutate it */
         return false;
     }
 
-    // Calculate the new required length
-    size_t new_len = str1->len + str2->len;
+    const size_t len1 = str1->len;
+    const size_t len2 = str2->len;
 
-    // Check if the current buffer can hold the concatenated string
-    if (new_len + 1 > str1->alloc) { // +1 for the null terminator
-        // Reallocate the buffer to accommodate the new string
-        char* new_buffer = realloc(str1->str, new_len + 1); // +1 for the null terminator
-        if (!new_buffer) {
+    /* size_t overflow guard for len1 + len2 + 1 */
+    if (len2 > SIZE_MAX - 1 - len1) {
+        errno = EOVERFLOW;
+        str1->error = NUMERIC_OVERFLOW;
+        return false;
+    }
+    const size_t needed = len1 + len2 + 1;
+
+    /* Detect if src lies inside str1->str (overlap before a potential realloc) */
+    const char* src_initial = str2->str;
+    const char* s1_begin    = str1->str;
+    const char* s1_end_used = str1->str + len1 + 1; /* include NUL */
+
+    const bool src_overlaps_dest = (src_initial >= s1_begin && src_initial < s1_end_used);
+    char* temp = NULL;
+
+    /* If we must grow AND the source overlaps str1's buffer, stash a temp copy first */
+    if (needed > str1->alloc && src_overlaps_dest) {
+        temp = (char*)malloc(len2);
+        if (!temp) {
+            errno = ENOMEM;
+            str1->error = BAD_ALLOC;
+            return false;
+        }
+        memcpy(temp, src_initial, len2);
+        src_initial = temp; /* use temp as the copy source after realloc */
+    }
+
+    /* Ensure capacity */
+    if (needed > str1->alloc) {
+        char* newbuf = (char*)realloc(str1->str, needed);
+        if (!newbuf) {
+            free(temp);
             errno = ENOMEM;
             str1->error = REALLOC_FAIL;
             return false;
         }
-        str1->str = new_buffer;
-        str1->alloc = new_len + 1;
+        str1->str   = newbuf;
+        str1->alloc = needed;
     }
 
-    // Append the second string to the first
-    strncat(str1->str, str2->str, str2->len);
+    /* If str1 == str2, the source is the start of the (possibly moved) buffer */
+    if (str1 == str2) {
+        src_initial = str1->str;
+    }
 
-    // Update the length of the first string
-    str1->len = new_len;
+    /* Append safely; memmove handles any overlap */
+    memmove(str1->str + len1, src_initial, len2);
+    str1->str[len1 + len2] = '\0';
+
+    str1->len   = len1 + len2;
+    str1->error = NO_ERROR;
+
+    free(temp);
     return true;
 }
 // --------------------------------------------------------------------------------
 
 bool string_lit_concat(string_t* str1, const char* literal) {
-    if (!str1 || !str1->str || !literal) {
+    if (!str1 || !literal) {
+        if (str1) str1->error = INVALID_ARG;
+        errno = EINVAL;
+        return false;
+    }
+    // Reset error code 
+    str1->error = NO_ERROR;
+    if (!str1->str) {
+        str1->error = NULL_POINTER;
         errno = EINVAL;
         return false;
     }
 
-    // Calculate the new required length
-    size_t literal_len = strlen(literal);
-    size_t new_len = str1->len + literal_len;
+    const size_t len1 = str1->len;
+    const size_t len2 = strlen(literal);
 
-    // Check if the current buffer can hold the concatenated string
-    if (new_len + 1 > str1->alloc) { // +1 for the null terminator
-        // Reallocate the buffer to accommodate the new string
-        char* new_buffer = realloc(str1->str, new_len + 1); // +1 for the null terminator
-        if (!new_buffer) {
-            errno = ENOMEM;
-            fprintf(stderr, "ERROR: Failed to reallocate memory for char* in string_lit_concat()\n");
-            return false;
-        }
-        str1->str = new_buffer;
-        str1->alloc = new_len + 1;
+    // Fast path: nothing to append
+    if (len2 == 0) {
+        str1->error = NO_ERROR;
+        return true;
     }
 
-    // Append the string literal to the first string
-    strncat(str1->str, literal, literal_len);
+    // Guard against size_t overflow in len1 + len2 + 1
+    if (len2 > SIZE_MAX - 1 - len1) {
+        str1->error = NUMERIC_OVERFLOW;
+        errno = EOVERFLOW;
+        return false;
+    }
+    const size_t needed = len1 + len2 + 1;
 
-    // Update the length of the first string
-    str1->len = new_len;
+    // Does the source pointer lie inside str1->str's *current used* region?
+    const char* s1_begin    = str1->str;
+    const char* s1_end_used = str1->str + len1 + 1;  // include current NUL
+    const bool   overlaps   = (literal >= s1_begin && literal < s1_end_used);
 
-    return true; // Indicate success
+    // If we must grow and the source aliases str1->str, stash a temp copy first
+    const char* src = literal;
+    char* temp = NULL;
+    if (needed > str1->alloc && overlaps) {
+        temp = (char*)malloc(len2);
+        if (!temp) {
+            str1->error = BAD_ALLOC;
+            errno = ENOMEM;
+            return false;
+        }
+        memcpy(temp, literal, len2);
+        src = temp;  // safe to use after realloc
+    }
+
+    // Ensure capacity
+    if (needed > str1->alloc) {
+        char* newbuf = (char*)realloc(str1->str, needed);
+        if (!newbuf) {
+            free(temp);
+            str1->error = REALLOC_FAIL;
+            errno = ENOMEM;
+            return false;
+        }
+        str1->str   = newbuf;
+        str1->alloc = needed;
+    }
+
+    // Append safely; memmove handles any overlap
+    memmove(str1->str + len1, src, len2);
+    str1->str[len1 + len2] = '\0';
+
+    str1->len   = len1 + len2;
+    str1->error = NO_ERROR;
+
+    free(temp);
+    return true;
 }
 // --------------------------------------------------------------------------------
 
