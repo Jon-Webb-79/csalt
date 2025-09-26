@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <arm_sve.h>
+#include <string.h>
 
 static inline size_t simd_last_index_u8_sve2(const unsigned char* s, size_t n, unsigned char c) {
     size_t i = 0, last = SIZE_MAX;
@@ -29,7 +30,34 @@ static inline size_t simd_last_index_u8_sve2(const unsigned char* s, size_t n, u
     return last;
 }
 
-#define CSALT_LAST_U8_INDEX(s, n, c) simd_last_index_u8_sve2((s), (n), (c))
+static inline size_t simd_first_substr_index_sve2(const unsigned char* s, size_t n,
+                                                  const unsigned char* pat, size_t m) {
+    if (m == 0) return 0;
+    if (m == 1) {
+        const void* p = memchr(s, pat[0], n);
+        return p ? (size_t)((const unsigned char*)p - s) : SIZE_MAX;
+    }
+
+    size_t i = 0;
+    while (i < n) {
+        svbool_t pg = svwhilelt_b8((uint64_t)i, (uint64_t)n);
+        svuint8_t v = svld1_u8(pg, (const uint8_t*)(s + i));
+        svbool_t  msk = svcmpeq_n_u8(pg, v, pat[0]);
+
+        if (svptest_any(svptrue_b8(), msk)) {
+            uint64_t vl = svcntb();
+            uint64_t end = i + vl;
+            if (end > n) end = n;
+            for (size_t j = i; j < end; ++j) {
+                if (s[j] == pat[0]) {
+                    if (j + m <= n && memcmp(s + j, pat, m) == 0) return j;
+                }
+            }
+        }
+        i += svcntb();
+    }
+    return SIZE_MAX;
+}
 
 #endif /* CSALT_SIMD_SVE2_CHAR_INL */
 

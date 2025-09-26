@@ -25,6 +25,8 @@ extern "C" {
 // ================================================================================ 
 // ================================================================================ 
 
+#define CSALT_CSTR(p) ((const char*)(p))
+
 /**
  * @struct string_t
  * @brief Forward declaration for a dynamic data structure for storing strings.
@@ -1102,44 +1104,276 @@ char* last_char_occurrance(string_t* str, char value);
 // -------------------------------------------------------------------------------- 
 
 /**
-* @function first_lit_substr_occurance
-* @brief Finds the first occurrence of a C string literal substring within a string_t object.
-*
-* @param str The string_t object to search within
-* @param sub_str The C string literal to search for
-* @return Pointer to the beginning of the first occurrence of sub_str, or NULL if not found
-*         Sets errno to EINVAL if either input is NULL
-*/
-char* first_lit_substr_occurrence(string_t* str, char* sub_str);
+ * @brief Find the first occurrence of a C-string substring in a csalt string.
+ *
+ * Searches the payload of @p str (exactly `str->len` bytes; the terminating
+ * NUL is not examined) for the first occurrence of @p sub_str and returns a
+ * *borrowed* pointer into the object’s internal buffer at the match position.
+ * The returned pointer remains valid until the string is reallocated, trimmed,
+ * otherwise modified, or destroyed.
+ *
+ * When built with vector backends (e.g., SSE2/AVX/AVX2/AVX-512BW on x86, NEON
+ * or SVE/SVE2 on ARM), the implementation may use SIMD to prefilter candidate
+ * positions (by scanning for the first byte of @p sub_str) and then verify with
+ * `memcmp`. This accelerates the common case while preserving correctness.
+ *
+ * **Thread-safety:** This function does not modify the character payload, but
+ * it may update `str->error` for status reporting. Treat it as **not
+ * thread-safe for the same object** unless callers synchronize access to @p str
+ * (no concurrent calls that could update `str->error`, and no concurrent
+ * writes/frees). Concurrent calls on **distinct** objects are safe.
+ *
+ * **Time complexity:** Worst case O(n) for single-character substrings and
+ * O(n · α) for longer substrings, where `α` is the average fraction of
+ * candidate positions that need verification. SIMD prefiltering typically
+ * reduces `α` substantially on supported hardware, but the asymptotic bound
+ * remains linear in the haystack length @p str->len.
+ *
+ * Error reporting:
+ * - Returns `NULL` and sets `errno = EINVAL` if @p str is `NULL`, if
+ *   `str->str` is `NULL` (also sets `str->error = ::NULL_POINTER`), or if
+ *   @p sub_str is `NULL` (also sets `str->error = ::INVALID_ARG`).
+ * - On a valid search (including “not found”), leaves `errno` unchanged and
+ *   sets `str->error = ::NO_ERROR`.
+ *
+ * Matching policy:
+ * - If `@p sub_str` is empty (`""`), this function returns `str->str`
+ *   (match at offset 0), consistent with `strstr`.
+ * - If the needle is longer than the haystack, returns `NULL`.
+ *
+ * @param str      Pointer to a ::string_t to search (must be initialized).
+ * @param sub_str  NUL-terminated C string to find.
+ *
+ * @return Pointer to the first match inside @p str on success; `NULL` if no
+ *         match exists or on invalid input (see errors above).
+ *
+ * @warning The returned pointer aliases @p str’s internal storage. It becomes
+ *          invalid after any operation that can move or modify the buffer
+ *          (e.g., concatenation, reserve, trim, or destruction). Do **not**
+ *          `free()` the returned pointer.
+ *
+ * @note Only `str->len` bytes are searched; the terminator is not considered.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("abracadabra");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * char* p = first_lit_substr_occurrence(s, "cad");
+ * if (p) {
+ *     const char* base = get_string(s);
+ *     printf("found at offset %zu: \"%s\"\n", (size_t)(p - base), p);
+ * } else {
+ *     puts("not found");
+ * }
+ *
+ * // Empty needle matches at start
+ * char* p0 = first_lit_substr_occurrence(s, "");
+ * printf("empty needle offset: %zu\n", (size_t)(p0 - get_string(s)));
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * found at offset 4: "cadabra"
+ * empty needle offset: 0
+ * @endcode
+ *
+ * @see first_char_occurrance, last_char_occurrance, get_string,
+ *      string_lit_concat, string_string_concat, reserve_string, trim_string
+ */
+char* first_lit_substr_occurrence(string_t* str, const char* sub_str);
 // --------------------------------------------------------------------------------
 
 /**
-* @function first_string_substr_occurance
-* @brief Finds the first occurrence of a string_t substring within another string_t object.
-*
-* @param str_1 The string_t object to search within
-* @param str_2 The string_t substring to search for
-* @return Pointer to the beginning of the first occurrence of str_2, or NULL if not found
-*         Sets errno to EINVAL if either input is NULL
-*/
-char* first_string_substr_occurrence(string_t* str_1, string_t* str_2);
+ * @brief Find the first occurrence of a csalt string (needle) inside another
+ *        csalt string (haystack) and return a writable pointer into the
+ *        haystack’s buffer.
+ *
+ * Searches the payload of @p hay (exactly `hay->len` bytes; the terminating
+ * NUL is not examined) for the first occurrence of @p needle’s bytes and
+ * returns a *borrowed* pointer into @p hay’s internal buffer at the match
+ * position. The pointer remains valid until the haystack is reallocated,
+ * trimmed, otherwise modified, or destroyed.
+ *
+ * When built with vector backends (e.g., SSE2/AVX/AVX2/AVX-512BW on x86,
+ * NEON or SVE/SVE2 on ARM), the implementation may use SIMD to prefilter
+ * candidate positions (scanning for the first byte of @p needle) and then
+ * verify with `memcmp`. This accelerates the common case while preserving
+ * correctness.
+ *
+ * **Thread-safety:** The function may update `hay->error` for status reporting
+ * and returns a pointer aliasing `hay`’s internal storage. Treat it as **not
+ * thread-safe for the same object** unless callers synchronize access (no
+ * concurrent ops that might update `hay->error`, mutate, or free `hay`). Calls
+ * on **distinct** objects are safe.
+ *
+ * **Time complexity:** Worst case O(n) for single-byte needles and O(n·α) for
+ * longer needles, where `α` is the fraction of candidate positions that reach
+ * full verification. SIMD prefiltering typically reduces `α`, but the
+ * asymptotic bound remains linear in `hay->len`.
+ *
+ * Matching policy:
+ * - If `needle->len == 0`, the function returns `hay->str` (match at offset 0),
+ *   consistent with `strstr`.
+ * - If `needle->len > hay->len`, the function returns `NULL`.
+ *
+ * Error reporting:
+ * - Returns `NULL` and sets `errno = EINVAL` if @p hay is `NULL` or @p needle
+ *   is `NULL` (also sets `hay->error = ::INVALID_ARG` when @p hay is non-NULL).
+ * - Returns `NULL` and sets `errno = EINVAL` if `hay->str` is `NULL`
+ *   (also sets `hay->error = ::NULL_POINTER`).
+ * - Returns `NULL` and sets `errno = EINVAL` if `needle->str` is `NULL`
+ *   (does not modify `hay->error`).
+ * - On a valid search (including “not found”), leaves `errno` unchanged and
+ *   sets `hay->error = ::NO_ERROR`.
+ *
+ * @param hay     Haystack ::string_t to search (must be initialized).
+ * @param needle  Needle ::string_t to find (must be initialized).
+ *
+ * @return Pointer to the first match inside @p hay on success; `NULL` if no
+ *         match exists or on invalid input (see errors above).
+ *
+ * @warning The returned pointer aliases @p hay’s internal storage. It becomes
+ *          invalid after any operation that can move or modify the buffer
+ *          (e.g., concatenation, reserve, trim, or destruction). Do **not**
+ *          `free()` the returned pointer.
+ *
+ * @note Only `hay->len` bytes are searched; the terminator is not considered.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* h = init_string("abracadabra");
+ * string_t* n = init_string("cad");
+ * if (!h || !n) { perror("init_string"); free_string(h); free_string(n); return 1; }
+ *
+ * char* p = first_string_substr_occurrence(h, n);
+ * if (p) {
+ *     const char* base = get_string(h);
+ *     printf("found at offset %zu: \"%s\"\n", (size_t)(p - base), p);
+ * } else {
+ *     puts("not found");
+ * }
+ *
+ * // Empty needle matches at start
+ * n->len = 0; n->str[0] = '\0';
+ * char* p0 = first_string_substr_occurrence(h, n);
+ * printf("empty needle offset: %zu\n", (size_t)(p0 - get_string(h)));
+ *
+ * free_string(h);
+ * free_string(n);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * found at offset 4: "cadabra"
+ * empty needle offset: 0
+ * @endcode
+ *
+ * @see first_lit_substr_occurrence, first_char_occurrance, last_char_occurrance,
+ *      get_string, reserve_string, trim_string
+ */
+char* first_string_substr_occurrence(string_t* hay, const string_t* needle);
 // -------------------------------------------------------------------------------- 
 
 /**
-* @macro first_substr_occurance
-* @brief A generic macro that selects the appropriate substring search function
-*        based on the type of the second argument.
-*
-* If the second argument is a char*, calls first_lit_substr_occurance.
-* If the second argument is a string_t*, calls first_string_substr_occurance.
-*
-* Example usage:
-*     first_substr_occurance(str, "substring")     // Uses literal version
-*     first_substr_occurance(str1, str2)          // Uses string_t version
-*/
-#define first_substr_occurrence(str1, str2) _Generic((str2), \
-    char*: first_lit_substr_occurrence, \
-    string_t*: first_string_substr_occurrence) (str1, str2)
+ * @def first_substr_occurrence
+ * @brief Generic front-end that finds the first occurrence of a substring in a
+ *        csalt string, dispatching to the appropriate implementation based on
+ *        the needle’s type.
+ *
+ * **Dispatch rules**
+ * - `const char*` / `char*`          ➜ ::first_lit_substr_occurrence(hay, lit)
+ * - `const string_t*` / `string_t*`  ➜ ::first_string_substr_occurrence(hay, needle)
+ *
+ * The haystack argument (`str1`) must be a valid ::string_t*. The needle
+ * (`str2`) may be either a NUL-terminated C string or another ::string_t.
+ * For string literals (type `const char[N]`), wrap with ::CSALT_CSTR to
+ * ensure array-to-pointer decay, e.g.:
+ *
+ * @code{.c}
+ * char* p = first_substr_occurrence(hay, CSALT_CSTR("cad"));
+ * @endcode
+ *
+ * **Thread-safety:** The selected function may update `hay->error` and returns
+ * a pointer aliasing `hay`’s internal storage. Treat calls as **not
+ * thread-safe for the same object** unless you synchronize access to @p hay.
+ * Concurrent calls on distinct objects are safe.
+ *
+ * **Time complexity:** Worst-case linear in the haystack length
+ * (O(n) for 1-byte needles; O(n·α) for longer needles, where α is the fraction
+ * of candidate positions that require full verification). Builds targeting
+ * SIMD ISAs (e.g., SSE2/AVX/AVX2/AVX-512BW, NEON, SVE/SVE2) may prefilter
+ * candidates vectorially but the asymptotic bound remains linear.
+ *
+ * **Matching policy**
+ * - Empty needle matches at offset 0 (like `strstr`).
+ * - If the needle is longer than the haystack, no match is reported.
+ * - Only `hay->len` bytes are searched; the terminating NUL is not examined.
+ *
+ * **Return value**
+ * - On success: a *borrowed* writable pointer into `hay->str` at the first
+ *   match position.
+ * - On “not found”: `NULL` (with `errno` unchanged and typically `hay->error = ::NO_ERROR`).
+ * - On invalid input: `NULL` and `errno = EINVAL`. When @p hay is non-NULL,
+ *   its error code may be set (e.g., ::INVALID_ARG, ::NULL_POINTER).
+ *
+ * @warning The returned pointer aliases `hay`’s internal buffer and becomes
+ * invalid after any operation that may move or modify the buffer (concat,
+ * reserve, trim, destroy). Do **not** `free()` the returned pointer.
+ *
+ * **Compile-time checks**
+ * - If `str2`’s type is unsupported, the macro resolves to
+ *   `first_substr__type_mismatch`, which is annotated to produce a compile-time
+ *   diagnostic on GCC/Clang (and a strong deprecation on MSVC).
+ * - For documentation builds, defining `DOXYGEN` ensures this macro is always
+ *   visible to the indexer.
+ *
+ * @param str1  Haystack ::string_t* to search.
+ * @param str2  Needle as either `const char*`/`char*` or `const string_t*`/`string_t*`.
+ *
+ * @see first_lit_substr_occurrence, first_string_substr_occurrence,
+ *      first_char_occurrance, last_char_occurrance, CSALT_CSTR
+ *
+ * @par Example (C string needle)
+ * @code{.c}
+ * string_t* h = init_string("abracadabra");
+ * if (!h) { perror("init_string"); return 1; }
+ * char* p = first_substr_occurrence(h, CSALT_CSTR("cad"));
+ * if (p) printf("found at %zu: \"%s\"\n", (size_t)(p - get_string(h)), p);
+ * free_string(h);
+ * @endcode
+ *
+ * @par Example (csalt string needle)
+ * @code{.c}
+ * string_t* h = init_string("mississippi");
+ * string_t* n = init_string("issi");
+ * if (!h || !n) { perror("init_string"); free_string(h); free_string(n); return 1; }
+ * char* p = first_substr_occurrence(h, n);
+ * if (p) printf("found at %zu\n", (size_t)(p - get_string(h)));
+ * free_string(h); free_string(n);
+ * @endcode
+ */
+char* first_substr__type_mismatch(string_t*, void*);
+#if defined(DOXYGEN)
+/* Make Doxygen always see the macro symbol */
+#  define first_substr_occurrence(str1, str2) first_string_substr_occurrence((str1), (str2))
+#elif __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
+#  define first_substr_occurrence(str1, str2) \
+     _Generic((str2), \
+        const char*:      first_lit_substr_occurrence,    \
+        char*:            first_lit_substr_occurrence,    \
+        const string_t*:  first_string_substr_occurrence, \
+        string_t*:        first_string_substr_occurrence, \
+        void*:            first_string_substr_occurrence, /* allow NULL → runtime check */ \
+        default:          first_substr__type_mismatch     \
+     )((str1), (str2))
+char* first_substr__type_mismatch(string_t*, void*);
+#else
+/* Pre-C11 fallback: only the string_t path is supported via explicit call */
+#  define first_substr_occurrence(str1, str2) first_string_substr_occurrence((str1), (str2))
+#endif
 // -------------------------------------------------------------------------------- 
 
 /**

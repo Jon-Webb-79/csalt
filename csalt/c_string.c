@@ -77,6 +77,38 @@ static inline size_t simd_last_u8_index(const unsigned char* s, size_t n, unsign
         return simd_last_index_u8_scalar(s, n, c);
     #endif
 }
+static inline size_t simd_first_substr_index(const unsigned char* s, size_t n,
+                                             const unsigned char* pat, size_t m) {
+#if defined(__AVX512BW__)
+    return simd_first_substr_index_avx512bw(s, n, pat, m);
+#elif defined(__AVX2__)
+    return simd_first_substr_index_avx2(s, n, pat, m);
+#elif defined(__AVX__)
+    return simd_first_substr_index_avx(s, n, pat, m);
+#elif defined(__SSE4_1__)
+    return simd_first_substr_index_sse41(s, n, pat, m);
+#elif defined(__SSE3__)
+    return simd_first_substr_index_sse3(s, n, pat, m);
+#elif defined(__SSE2__)
+    return simd_first_substr_index_sse2(s, n, pat, m);
+#elif defined(__ARM_FEATURE_SVE2)
+    return simd_first_substr_index_sve2(s, n, pat, m);
+#elif defined(__ARM_FEATURE_SVE)
+    return simd_first_substr_index_sve(s, n, pat, m);
+#elif defined(__aarch64__) && defined(__ARM_NEON)
+    return simd_first_substr_index_neon(s, n, pat, m);
+#else
+    /* scalar fallback */
+    if (m == 0) return 0;
+    if (m == 1) {
+        const void* p = memchr(s, pat[0], n);
+        return p ? (size_t)((const unsigned char*)p - s) : SIZE_MAX;
+    }
+    for (size_t i = 0; i + m <= n; ++i)
+        if (s[i] == pat[0] && memcmp(s + i, pat, m) == 0) return i;
+    return SIZE_MAX;
+#endif
+}
 
 // ================================================================================ 
 // ================================================================================
@@ -523,69 +555,74 @@ char* last_char_occurrance(string_t* str, char value) {
 }
 // --------------------------------------------------------------------------------
 
-char* first_lit_substr_occurrence(string_t* str, char* sub_str) {
-    if (!str || !str->str || !sub_str) {
+char* first_lit_substr_occurrence(string_t* str, const char* sub_str) {
+    if (!str || !sub_str) {
+        if (str) str->error = INVALID_ARG;
         errno = EINVAL;
         return NULL;
     }
-    
-    size_t sub_len = strlen(sub_str);
-    
-    // Check if substring is longer than main string
-    if (sub_len > str->len) {
+    if (!str->str) {
+        str->error = NULL_POINTER;
+        errno = EINVAL;
         return NULL;
     }
-    
-    char* min_ptr = first_char(str);
-    // Only need to check up to the point where substring could still fit
-    char* max_ptr = min_ptr + (str->len - sub_len);
-    
-    for (char* it = min_ptr; it <= max_ptr; it++) {
-        size_t j;
-        for (j = 0; j < sub_len; j++) {
-            if (sub_str[j] != *(it + j)) {
-                break;
-            }
-        }
-        if (j == sub_len) {
-            return it;
-        }
+
+    const size_t n = str->len;
+    const size_t m = strlen(sub_str);
+
+    /* Policy: empty needle matches at start (like strstr). */
+    if (m == 0) {
+        str->error = NO_ERROR;
+        return str->str;
     }
-    
-    return NULL;
+    if (m > n) {
+        str->error = NO_ERROR;   /* valid query; just not found */
+        return NULL;
+    }
+
+    /* SIMD-accelerated index lookup (dispatcher you wired up per ISA) */
+    size_t idx = simd_first_substr_index(
+        (const unsigned char*)str->str, n,
+        (const unsigned char*)sub_str,  m
+    );
+
+    str->error = NO_ERROR;       /* valid search completed */
+    return (idx == SIZE_MAX) ? NULL : (char*)(str->str + idx);
 }
 // -------------------------------------------------------------------------------- 
 
-char* first_string_substr_occurrence(string_t* str, string_t* sub_str) {
-    if (!str || !str->str || !sub_str || !sub_str->str) {
+char* first_string_substr_occurrence(string_t* hay, const string_t* needle) {
+    if (!hay || !needle) {
+        if (hay) hay->error = INVALID_ARG;
         errno = EINVAL;
         return NULL;
     }
-    
-    size_t sub_len = sub_str->len;
-    
-    // Check if substring is longer than main string
-    if (sub_len > str->len) {
+    if (!hay->str) {
+        hay->error = NULL_POINTER;
+        errno = EINVAL;
         return NULL;
     }
-    
-    char* min_ptr = first_char(str);
-    // Only need to check up to the point where substring could still fit
-    char* max_ptr = min_ptr + (str->len - sub_len);
-    
-    for (char* it = min_ptr; it <= max_ptr; it++) {
-        size_t j;
-        for (j = 0; j < sub_len; j++) {
-            if (sub_str->str[j] != *(it + j)) {
-                break;
-            }
-        }
-        if (j == sub_len) {
-            return it;
-        }
+    if (!needle->str) {
+        /* needle is invalid; we don't mutate it but report input error */
+        errno = EINVAL;
+        return NULL;
     }
-    
-    return NULL;
+
+    const size_t n = hay->len;
+    const size_t m = needle->len;
+
+    /* Policy: empty needle matches at start (like strstr) */
+    if (m == 0) { hay->error = NO_ERROR; return hay->str; }
+    if (m > n)   { hay->error = NO_ERROR; return NULL; }
+
+    /* SIMD-accelerated index lookup (you already have this dispatcher) */
+    size_t idx = simd_first_substr_index(
+        (const unsigned char*)hay->str, n,
+        (const unsigned char*)needle->str, m
+    );
+
+    hay->error = NO_ERROR;
+    return (idx == SIZE_MAX) ? NULL : (char*)(hay->str + idx);
 }
 // --------------------------------------------------------------------------------
 

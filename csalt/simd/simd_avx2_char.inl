@@ -30,8 +30,37 @@ static inline size_t simd_last_index_u8_avx2(const unsigned char* s, size_t n, u
     return last;
 }
 
-/* Convenience macro so callers can use one name across ISAs */
-#define CSALT_LAST_U8_INDEX(s, n, c) simd_last_index_u8_avx2((s), (n), (c))
+static inline size_t simd_first_substr_index_avx2(const unsigned char* s, size_t n,
+                                                  const unsigned char* pat, size_t m) {
+    if (m == 0) return 0;
+    if (m == 1) {
+        const void* p = memchr(s, pat[0], n);
+        return p ? (size_t)((const unsigned char*)p - s) : SIZE_MAX;
+    }
+
+    size_t i = 0;
+    const __m256i needle0 = _mm256_set1_epi8((char)pat[0]);
+
+    while (i + 32 <= n) {
+        __m256i v  = _mm256_loadu_si256((const __m256i*)(s + i));
+        __m256i eq = _mm256_cmpeq_epi8(v, needle0);
+        uint32_t mask = (uint32_t)_mm256_movemask_epi8(eq);
+
+        while (mask) {
+            int pos = __builtin_ctz(mask);         // lowest set bit
+            size_t cand = i + (size_t)pos;
+            if (cand + m <= n && memcmp(s + cand, pat, m) == 0) return cand;
+            mask &= mask - 1;                      // clear lowest set bit
+        }
+        i += 32;
+    }
+
+    /* tail (covers [i, n-m]) */
+    for (; i + m <= n; ++i) {
+        if (s[i] == pat[0] && memcmp(s + i, pat, m) == 0) return i;
+    }
+    return SIZE_MAX;
+}
 
 #endif /* CSALT_SIMD_AVX2_CHAR_INL */
 

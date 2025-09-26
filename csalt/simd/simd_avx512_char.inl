@@ -7,6 +7,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <immintrin.h>
+#include <string.h>
 
 static inline int csalt_highbit_u64(uint64_t m) { return 63 - __builtin_clzll(m); }
 
@@ -28,8 +30,30 @@ static inline size_t simd_last_index_u8_avx512bw(const unsigned char* s, size_t 
     return last;
 }
 
-/* Convenience macro so callers can use one name across ISAs */
-#define CSALT_LAST_U8_INDEX(s, n, c) simd_last_index_u8_avx512bw((s), (n), (c))
+static inline size_t simd_first_substr_index_avx512bw(const unsigned char* s, size_t n,
+                                                      const unsigned char* pat, size_t m) {
+    if (m == 0) return 0;
+    if (m == 1) {
+        const void* p = memchr(s, pat[0], n);
+        return p ? (size_t)((const unsigned char*)p - s) : SIZE_MAX;
+    }
+    size_t i = 0;
+    const __m512i needle0 = _mm512_set1_epi8((char)pat[0]);
 
+    while (i + 64 <= n) {
+        __m512i v = _mm512_loadu_si512((const void*)(s + i));
+        __mmask64 k = _mm512_cmpeq_epi8_mask(v, needle0);
+        while (k) {
+            unsigned long pos = __builtin_ctzll((uint64_t)k);
+            size_t cand = i + (size_t)pos;
+            if (cand + m <= n && memcmp(s + cand, pat, m) == 0) return cand;
+            k &= (k - 1);  /* clear lowest set bit */
+        }
+        i += 64;
+    }
+    for (; i + m <= n; ++i)
+        if (s[i] == pat[0] && memcmp(s + i, pat, m) == 0) return i;
+    return SIZE_MAX;
+}
 #endif /* CSALT_SIMD_AVX512_CHAR_INL */
 
