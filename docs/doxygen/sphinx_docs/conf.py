@@ -16,7 +16,7 @@
 #sys.path.insert(0, os.path.abspath('../../../src'))
 
 # -- Project info ------------------------------------------------------------
-project = 'csalt'
+project = 'csalt-lib'
 copyright = '2025, Jonathan A. Webb'
 author = 'Jonathan A. Webb'
 release = '0.0.2'

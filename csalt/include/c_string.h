@@ -1377,338 +1377,343 @@ char* first_substr__type_mismatch(string_t*, void*);
 // -------------------------------------------------------------------------------- 
 
 /**
-* @function last_lit_substr_occurance
-* @brief Finds the last occurrence of a C string literal substring within a string_t object.
-*
-* @param str The string_t object to search within
-* @param sub_str The C string literal to search for
-* @return Pointer to the beginning of the last occurrence of sub_str, or NULL if not found
-*         Sets errno to EINVAL if either input is NULL
-*/
-char* last_lit_substr_occurrence(string_t* str, char* sub_str);
+ * @brief Find the **last** occurrence of a C-string substring in a csalt string.
+ *
+ * Searches the payload of @p str (exactly `str->len` bytes; the terminating
+ * NUL is not examined) for the last occurrence of @p sub_str and returns a
+ * *borrowed* pointer into the object’s internal buffer at the match position.
+ * The pointer remains valid until the string is reallocated, trimmed, otherwise
+ * modified, or destroyed.
+ *
+ * When built with vector backends (e.g., SSE2/AVX/AVX2/AVX-512BW on x86, NEON
+ * or SVE/SVE2 on ARM), the implementation may use a SIMD prefilter (scan for
+ * the first byte of @p sub_str across wide chunks) and then verify candidates
+ * with `memcmp`, keeping the rightmost match. This typically speeds up common
+ * cases while preserving correctness.
+ *
+ * **Thread-safety:** This function may update `str->error` for status
+ * reporting and returns a pointer aliasing `str`’s internal storage. Treat it
+ * as **not thread-safe for the same object** unless callers synchronize access
+ * (no concurrent updates to `str->error`, and no concurrent writes/frees).
+ * Calls on **distinct** objects are safe.
+ *
+ * **Time complexity:** Worst case O(n) for a 1-byte needle and O(n·α) for
+ * longer needles, where `α` is the fraction of candidate positions requiring
+ * full verification. SIMD prefiltering typically reduces `α`, but the
+ * asymptotic bound remains linear in `str->len`.
+ *
+ * **Matching policy:**
+ * - If `@p sub_str` is empty (`""`), this function returns `str->str + str->len`
+ *   (match at end).
+ * - If the needle is longer than the haystack, returns `NULL`.
+ * - Only `str->len` bytes are searched; the terminator is not considered.
+ *
+ * **Error reporting:**
+ * - Returns `NULL` and sets `errno = EINVAL` if @p str is `NULL`, if
+ *   `str->str` is `NULL` (also sets `str->error = ::NULL_POINTER`), or if
+ *   @p sub_str is `NULL` (also sets `str->error = ::INVALID_ARG`).
+ * - On a valid search (including “not found”), leaves `errno` unchanged and
+ *   sets `str->error = ::NO_ERROR`.
+ *
+ * @param str      Haystack ::string_t to search (must be initialized).
+ * @param sub_str  NUL-terminated C string to find (needle).
+ *
+ * @return Pointer to the last match inside @p str on success; `NULL` if no
+ *         match exists or on invalid input (see above).
+ *
+ * @warning The returned pointer aliases @p str’s internal buffer and becomes
+ *          invalid after any operation that can move or modify the buffer
+ *          (e.g., concatenation, reserve, trim, destruction). Do **not**
+ *          `free()` the returned pointer.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("abracadabra");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * const char* needle = "abra";
+ * char* p = last_lit_substr_occurrence(s, needle);
+ * if (p) {
+ *     const char* base = get_string(s);
+ *     printf("last \"%s\" at offset %zu: \"%s\"\n", needle, (size_t)(p - base), p);
+ * } else {
+ *     puts("not found");
+ * }
+ *
+ * // Empty needle matches at end
+ * char* pend = last_lit_substr_occurrence(s, "");
+ * printf("empty needle offset: %zu\n", (size_t)(pend - get_string(s)));
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * last "abra" at offset 7: "abra"
+ * empty needle offset: 11
+ * @endcode
+ *
+ * @see first_lit_substr_occurrence, first_string_substr_occurrence,
+ *      last_string_substr_occurrence, get_string, reserve_string, trim_string
+ */
+char* last_lit_substr_occurrence(string_t* str, const char* sub_str);
 // --------------------------------------------------------------------------------
 
 /**
-* @function last_string_substr_occurance
-* @brief Finds the last occurrence of a string_t substring within another string_t object.
-*
-* @param str_1 The string_t object to search within
-* @param str_2 The string_t substring to search for
-* @return Pointer to the beginning of the last occurrence of str_2, or NULL if not found
-*         Sets errno to EINVAL if either input is NULL
-*/
-char* last_string_substr_occurrence(string_t* str_1, string_t* str_2);
+ * @brief Find the **last** occurrence of a csalt string (needle) inside another
+ *        csalt string (haystack) and return a writable pointer into the
+ *        haystack’s buffer.
+ *
+ * Searches the payload of @p hay (exactly `hay->len` bytes; the terminating
+ * NUL is not examined) for the last occurrence of @p needle’s bytes and returns
+ * a *borrowed* pointer into @p hay’s internal buffer at the match position. The
+ * pointer remains valid until the haystack is reallocated, trimmed, otherwise
+ * modified, or destroyed.
+ *
+ * When built with vector backends (e.g., SSE2/AVX/AVX-512BW on x86, NEON or
+ * SVE/SVE2 on ARM), the implementation may employ SIMD prefiltering to locate
+ * candidate positions (by scanning for the first byte of @p needle) and then
+ * verify candidates with `memcmp`, tracking the rightmost match.
+ *
+ * **Thread-safety:** The function may update `hay->error` for status reporting
+ * and returns a pointer aliasing `hay`’s internal storage. Treat it as **not
+ * thread-safe for the same object** unless callers synchronize access (no
+ * concurrent updates to `hay->error`, and no concurrent writes/frees). Calls on
+ * **distinct** objects are safe.
+ *
+ * **Time complexity:** Worst case O(n) for 1-byte needles and O(n·α) for longer
+ * needles, with `α` the fraction of candidates that require full verification.
+ * SIMD filtering typically reduces `α`, but the bound remains linear in
+ * `hay->len`.
+ *
+ * **Matching policy:**
+ * - If `needle->len == 0`, this function returns `hay->str + hay->len`
+ *   (match at end).
+ * - If `needle->len > hay->len`, the function returns `NULL`.
+ * - Only `hay->len` bytes are searched; the terminator is not considered.
+ *
+ * **Error reporting:**
+ * - Returns `NULL` and sets `errno = EINVAL` if @p hay is `NULL` or @p needle
+ *   is `NULL` (also sets `hay->error = ::INVALID_ARG` when @p hay is non-NULL).
+ * - Returns `NULL` and sets `errno = EINVAL` if `hay->str` is `NULL`
+ *   (also sets `hay->error = ::NULL_POINTER`).
+ * - Returns `NULL` and sets `errno = EINVAL` if `needle->str` is `NULL`
+ *   (does not modify `hay->error`).
+ * - On a valid search (including “not found”), leaves `errno` unchanged and
+ *   sets `hay->error = ::NO_ERROR`.
+ *
+ * @param hay     Haystack ::string_t to search (must be initialized).
+ * @param needle  Needle ::string_t to find (must be initialized).
+ *
+ * @return Pointer to the last match inside @p hay on success; `NULL` if no
+ *         match exists or on invalid input (see above).
+ *
+ * @warning The returned pointer aliases @p hay’s internal buffer and becomes
+ *          invalid after any operation that can move or modify the buffer
+ *          (e.g., concatenation, reserve, trim, destruction). Do **not**
+ *          `free()` the returned pointer.
+ *
+ * @note Only the payload is searched (`hay->len` bytes); the NUL terminator is
+ *       not examined.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* h = init_string("mississippi");
+ * string_t* n = init_string("iss");
+ * if (!h || !n) { perror("init_string"); free_string(h); free_string(n); return 1; }
+ *
+ * char* p = last_string_substr_occurrence(h, n);
+ * if (p) {
+ *     const char* base = get_string(h);
+ *     printf("last \"%s\" at offset %zu: \"%s\"\n", get_string(n), (size_t)(p - base), p);
+ * } else {
+ *     puts("not found");
+ * }
+ *
+ * // Empty needle matches at end
+ * n->len = 0; n->str[0] = '\0';
+ * char* pend = last_string_substr_occurrence(h, n);
+ * printf("empty needle offset: %zu\n", (size_t)(pend - get_string(h)));
+ *
+ * free_string(h);
+ * free_string(n);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * last "iss" at offset 4: "issippi"
+ * empty needle offset: 11
+ * @endcode
+ *
+ * @see last_lit_substr_occurrence, first_string_substr_occurrence,
+ *      first_lit_substr_occurrence, get_string, reserve_string, trim_string
+ */
+char* last_string_substr_occurrence(string_t* hay, const string_t* needle);
 // -------------------------------------------------------------------------------- 
 
 /**
-* @macro last_substr_occurance
-* @brief A generic macro that selects the appropriate substring search function
-*        based on the type of the second argument.
-*
-* If the second argument is a char*, calls last_lit_substr_occurance.
-* If the second argument is a string_t*, calls last_string_substr_occurance.
-*
-* Example usage:
-*     last_substr_occurance(str, "substring")      // Uses literal version
-*     last_substr_occurance(str1, str2)           // Uses string_t version
-*/
-#define last_substr_occurrence(str1, str2) _Generic((str2), \
-    char*: last_lit_substr_occurrence, \
-    string_t*: last_string_substr_occurrence) (str1, str2)
+ * @def last_substr_occurrence
+ * @brief Generic front-end that finds the **last** occurrence of a substring in
+ *        a csalt string, dispatching to the correct implementation based on the
+ *        needle’s type.
+ *
+ * **Dispatch rules**
+ * - `const char*` / `char*`
+ *     ➜ ::last_lit_substr_occurrence(@p str1, @p str2)
+ * - `const string_t*` / `string_t*`
+ *     ➜ ::last_string_substr_occurrence(@p str1, @p str2)
+ *
+ * The haystack argument (`str1`) must be a valid ::string_t*. The needle
+ * (`str2`) may be either a NUL-terminated C string or another ::string_t.
+ * For string literals (type `const char[N]`), wrap with a cast/helper to ensure
+ * array-to-pointer decay, e.g.:
+ *
+ * @code{.c}
+ * char* p = last_substr_occurrence(hay, (const char*)"abra");           // or CSALT_CSTR("abra")
+ * @endcode
+ *
+ * **Thread-safety:** The selected function may update `str1->error` and returns
+ * a pointer that aliases `str1`’s internal storage. Treat calls as **not
+ * thread-safe for the same object** unless you synchronize access to @p str1.
+ * Concurrent calls on **distinct** objects are safe.
+ *
+ * **Time complexity:** Worst-case linear in the haystack length. Implementations
+ * may use SIMD prefiltering on supported ISAs (e.g., SSE2/AVX/AVX2/AVX-512BW,
+ * NEON, SVE/SVE2) but the asymptotic bound remains O(n).
+ *
+ * **Matching policy**
+ * - Empty needle matches at the end: returns `str1->str + str1->len`.
+ * - If the needle is longer than the haystack, no match is reported.
+ * - Only the payload is searched (`str1->len` bytes); the NUL terminator is not examined.
+ *
+ * **Return value**
+ * - On success: a *borrowed* writable pointer into `str1->str` at the **last**
+ *   match position.
+ * - On “not found”: `NULL` (with `errno` unchanged and typically `str1->error = ::NO_ERROR`).
+ * - On invalid input: `NULL` and `errno = EINVAL`. When @p str1 is non-NULL,
+ *   its error code may be set (e.g., ::INVALID_ARG, ::NULL_POINTER).
+ *
+ * @warning The returned pointer aliases `str1`’s internal buffer and becomes
+ * invalid after any operation that can move or modify the buffer (concatenate,
+ * reserve, trim, destroy). Do **not** `free()` the returned pointer.
+ *
+ * **Compile-time checks**
+ * - If `str2`’s type is unsupported, the macro resolves to
+ *   `last_substr__type_mismatch`, which is annotated to produce a compile-time
+ *   diagnostic on GCC/Clang (and a strong deprecation on MSVC).
+ * - For documentation builds, defining `DOXYGEN` ensures this macro is indexed.
+ *
+ * @param str1  Haystack ::string_t* to search.
+ * @param str2  Needle as either `const char*`/`char*` or `const string_t*`/`string_t*`.
+ *
+ * @see last_lit_substr_occurrence, last_string_substr_occurrence,
+ *      first_substr_occurrence, first_lit_substr_occurrence, first_string_substr_occurrence
+ *
+ * @par Example (C string needle)
+ * @code{.c}
+ * string_t* s = init_string("abracadabra");
+ * if (!s) { perror("init_string"); return 1; }
+ * char* p = last_substr_occurrence(s, (const char*)"abra");
+ * if (p) printf("last \"abra\" at %zu\n", (size_t)(p - get_string(s)));
+ * free_string(s);
+ * @endcode
+ *
+ * @par Example (csalt string needle)
+ * @code{.c}
+ * string_t* h = init_string("mississippi");
+ * string_t* n = init_string("iss");
+ * if (!h || !n) { perror("init_string"); free_string(h); free_string(n); return 1; }
+ * char* p = last_substr_occurrence(h, n);
+ * if (p) printf("last \"%s\" at %zu\n", get_string(n), (size_t)(p - get_string(h)));
+ * free_string(h); free_string(n);
+ * @endcode
+ */
+
+#if defined(DOXYGEN)
+#  define last_substr_occurrence(str1, str2) last_string_substr_occurrence((str1), (str2))
+#elif __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
+#  define last_substr_occurrence(str1, str2) \
+     _Generic((str2), \
+        const char*:      last_lit_substr_occurrence,    \
+        char*:            last_lit_substr_occurrence,    \
+        const string_t*:  last_string_substr_occurrence, \
+        string_t*:        last_string_substr_occurrence, \
+        void*:            last_string_substr_occurrence, /* allow NULL → runtime check */ \
+        default:          last_substr__type_mismatch     \
+     )((str1), (str2))
+char* last_substr__type_mismatch(string_t*, void*);
+#else
+/* Pre-C11 fallback */
+#  define last_substr_occurrence(str1, str2) last_string_substr_occurrence((str1), (str2))
+#endif
 // --------------------------------------------------------------------------------
 
-/**
-* @function first_char
-* @brief Returns a pointer to the beginning of a string
-*
-* @param str A string_t object
-* @return Pointer to the beginning of the string NULL if not found
-*         Sets errno to EINVAL if either input is NULL
-*/
 char* first_char(string_t* str);
 // --------------------------------------------------------------------------------
 
-/**
-* @function last_char
-* @brief Returns a pointer to the end of a string
-*
-* @param str A string_t object
-* @return Pointer to the end of the string NULL if not found
-*         Sets errno to EINVAL if either input is NULL
-*/
 char* last_char(string_t* str);
 // --------------------------------------------------------------------------------
 
-/**
-* @function is_string_ptr
-* @brief Deterimes if a pointer is within the bounds of a function
-*
-* @param str A string_t object
-* @param ptr A char pointer 
-* @return true if the pointer is within the string bounds, 
-*         false otherwise.  If str, str->str, or ptr are NULL,
-*         the function will return false and set errno to EINVAL
-*/
 bool is_string_ptr(string_t* str, char* ptr);
 // --------------------------------------------------------------------------------
 
-/**
-* @function drop_lit_substr
-* @brief Removes all occurrences of a C string literal substring between two pointers.
-*
-* Searches from end to beginning of the specified range and removes each occurrence
-* of the substring, preserving existing spaces between words.
-*
-* @param string string_t object to modify
-* @param substring C string literal to remove
-* @param min_ptr Pointer to start of search range within string
-* @param max_ptr Pointer to end of search range within string
-* @return bool true if successful (including when no matches found), false on error
-*         Sets errno to EINVAL if inputs are NULL or range invalid
-*         Sets errno to ERANGE if pointers are out of bounds
-*/
 bool drop_lit_substr(string_t* string, const char* substring, char* min_ptr,
                      char* max_ptr);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function drop_string_substr
-* @brief Removes all occurrences of a string_t substring between two pointers.
-*
-* Searches from end to beginning of the specified range and removes each occurrence
-* of the substring, preserving existing spaces between words.
-*
-* @param string string_t object to modify
-* @param substring string_t object containing substring to remove
-* @param min_ptr Pointer to start of search range within string
-* @param max_ptr Pointer to end of search range within string
-* @return bool true if successful (including when no matches found), false on error
-*         Sets errno to EINVAL if inputs are NULL or range invalid
-*         Sets errno to ERANGE if pointers are out of bounds
-*/
 bool drop_string_substr(string_t* string, const string_t* substring, char* min_ptr,
                         char* max_ptr);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @macro drop_substr
-* @brief Generic macro that selects appropriate substring removal function based on type.
-*
-* If the substring is char*, calls drop_lit_substr.
-* If the substring is string_t*, calls drop_string_substr.
-*
-* Example usage:
-*     drop_substr(str, "hello", start, end)      // Uses literal version
-*     drop_substr(str1, str2, start, end)        // Uses string_t version
-*/
 #define drop_substr(string, substr, min_ptr, max_ptr) _Generic((substr), \
     char*: drop_lit_substr, \
     string_t*: drop_string_substr) (string, substr, min_ptr, max_ptr)
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function replace_lit_substring
-* @brief Replaces all occurrences of a C string literal pattern with a replacement string
-*        between two specified pointers in a string_t object.
-*
-* If the replacement string is longer than the pattern, memory will be reallocated as needed.
-* If shorter, the string will be compacted. The function maintains proper null termination.
-*
-* @param string string_t object to modify
-* @param pattern const C string literal to search for and replace
-* @param replace_string const C string literal to replace pattern with
-* @param min_ptr Pointer to start of search range within string
-* @param max_ptr Pointer to end of search range within string
-* @return bool true if successful (including when no matches found), false on error
-*         Sets errno to EINVAL if inputs are NULL
-*         Sets errno to ERANGE if pointers are out of bounds
-*         Sets errno to ENOMEM if memory reallocation fails
-*/
 bool replace_lit_substr(string_t* string, const char* pattern, const char* replace_string,
                         char* min_ptr, char* max_ptr);
 // --------------------------------------------------------------------------------
 
-/**
-* @function replace_string_substring
-* @brief Replaces all occurrences of a string_t pattern with another string_t
-*        between two specified pointers in a string_t object.
-*
-* If the replacement string is longer than the pattern, memory will be reallocated as needed.
-* If shorter, the string will be compacted. The function maintains proper null termination.
-*
-* @param string string_t object to modify
-* @param pattern const string_t object containing pattern to search for and replace
-* @param replace_string const string_t object containing string to replace pattern with
-* @param min_ptr Pointer to start of search range within string
-* @param max_ptr Pointer to end of search range within string
-* @return bool true if successful (including when no matches found), false on error
-*         Sets errno to EINVAL if inputs are NULL
-*         Sets errno to ERANGE if pointers are out of bounds
-*         Sets errno to ENOMEM if memory reallocation fails
-*/
 bool replace_string_substr(string_t* string, const string_t* pattern, const string_t* replace_string,
                            char* min_ptr, char* max_ptr);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @macro replace_substr
-* @brief Generic macro that selects appropriate substring replacement function based on type.
-*
-* If the pattern is char*, calls replace_lit_substring.
-* If the pattern is string_t*, calls replace_string_substring.
-*
-* Example usage:
-*     replace_substr(str, "old", "new", start, end)          // Uses literal version
-*     replace_substr(str1, pattern, replacement, start, end)  // Uses string_t version
-*/
 #define replace_substr(string, pattern, replace_string, min_ptr, max_ptr) _Generic((pattern), \
     char*: replace_lit_substr, \
     string_t*: replace_string_substr) (string, pattern, replace_string, min_ptr, max_ptr)
 // ================================================================================
 // ================================================================================ 
 
-/**
- * @func to_upper_char
- * @brief Transforms a char value to its uppercase form 
- *
- * Sets the value of errno to EINVAL if val points to a NULL value
- *
- * @param val A pointer to he char value to be transformed to its uppercase form
- */
 void to_upper_char(char* val);
 // --------------------------------------------------------------------------------
 
-/**
- * @func to_lower_char
- * @brief Transforms a char value to its lowercase form 
- *
- * Sets the value of errno to EINVAL if val points to a NULL value
- *
- * @param val A pointer to he char value to be transformed to its lowercase form
- */
 void to_lower_char(char* val);
 // --------------------------------------------------------------------------------
 
-/**
- * @func to_uppercase
- * @brief Transforms all values in a string to uppercase
- *
- * Sets the value of errno to EINVAL if val points to a NULL value or a null value 
- * of val->str
- *
- * @param val A pointer to a string_t data type
- */
 void to_uppercase(string_t* val);
 // --------------------------------------------------------------------------------
 
-/**
- * @func to_lowercase
- * @brief Transforms all values in a string to lowercase
- *
- * Sets the value of errno to EINVAL if val points to a NULL value or a null value 
- * of val->str
- *
- * @param val A pointer to a string_t data type
- */
 void to_lowercase(string_t* val);
 // --------------------------------------------------------------------------------
 
-/**
-* @function pop_string_token
-* @brief Splits a string at the rightmost occurrence of a token character.
-*
-* Returns the portion of the string after the token as a new string_t object and
-* modifies the original string to contain only the portion before the token.
-* The token character is removed from the original string.
-*
-* @param str_struct string_t object to split
-* @param token Character to use as splitting token
-* @return New string_t object containing portion after token, or NULL if token not found
-*         Sets errno to EINVAL if str_struct is NULL
-*/
 string_t* pop_string_token(string_t* str_struct, char token);
 // --------------------------------------------------------------------------------
 
-/**
-* @function token_count
-* @brief Counts the number of tokens in a string separated by specified delimiter(s).
-*
-* Consecutive delimiters are treated as a single delimiter. Leading and trailing
-* delimiters are ignored.
-*
-* @param str string_t object to analyze
-* @param delim String containing delimiter character(s)
-* @return Number of tokens found, or 0 if str is empty or on error
-*         Sets errno to EINVAL if str or delim is NULL
-*
-* Example:
-*     string_t* str = init_string("hello world there");
-*     size_t count = token_count(str, " ");  // Returns 3
-*
-*     string_t* str2 = init_string("one,two;three");
-*     size_t count2 = token_count(str2, ",;");  // Returns 3
-*/
 size_t token_count(const string_t* str, const char* delim);
 // --------------------------------------------------------------------------------
 
-/**
- * @function get_char 
- * @brief Returns a chare to the user from a string_t data structure.
- *
- * @param str A string_t data type 
- * @param index The index from within the string_t data type from which a char will 
- *              be retrieved 
- * @return A char value.  Sets errno to EINVAL if str or str->str is NULL, or
- *         ERANGE if index is out of range
- */
 char get_char(string_t* str, size_t index);
 // --------------------------------------------------------------------------------
 
-/**
- * @function replace_char 
- * @brief Replaces an existing char value in a string_t data type with another 
- *
- * Sets errno to EINVAL if str or str->str is NULL or ERANGE if index is out
- * of range
- *
- * @param str A string_t data type 
- * @param index The index within str where a char value will be replaced 
- * @param value The char value to replace with 
- *
- */
 void replace_char(string_t* str, size_t index, char value);
 // --------------------------------------------------------------------------------
 
-/**
- * @function trim_leading_whitespace 
- * @brief Removes any white space at the leading edge of a string 
- *
- * Sets errno to EINVAL if str or str->str is NULL
- *
- * @param str A string_t data type 
- */
 void trim_leading_whitespace(string_t* str);
 // --------------------------------------------------------------------------------
 
-/**
- * @function trim_trailing_whitespace 
- * @brief Removes any white space at the trailing edge of a string 
- *
- * Sets errno to EINVAL if str or str->str is NULL
- *
- * @param str A string_t data type 
- */
 void trim_trailing_whitespace(string_t* str);
 // --------------------------------------------------------------------------------
 
-/**
- * @function trim_all_whitespace 
- * @brief Removes all white space in a string 
- *
- * Sets errno to EINVAL if str or str->str is NULL
- *
- * @param str A string_t data type 
- */
 void trim_all_whitespace(string_t* str);
 // ================================================================================
 // ================================================================================

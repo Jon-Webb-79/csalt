@@ -192,6 +192,24 @@ first_substr_occurrance
 .. doxygendefine:: first_substr_occurrence 
    :project: csalt
 
+last_lit_substr_occurrance 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: last_lit_substr_occurrence 
+   :project: csalt
+
+last_string_substr_occurrance 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: last_string_substr_occurrence 
+   :project: csalt
+
+last_substr_occurrance 
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: last_substr_occurrence 
+   :project: csalt
+
 String Vector Overview 
 ======================
 This section describes that attributes and functions associated with the 

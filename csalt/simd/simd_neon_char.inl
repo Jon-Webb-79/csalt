@@ -88,6 +88,32 @@ static inline size_t simd_first_substr_index_neon(const unsigned char* s, size_t
     }
     return SIZE_MAX;
 }
+static inline size_t simd_last_substr_index_neon(const unsigned char* s, size_t n,
+                                                   const unsigned char* pat, size_t m) {
+      if (m == 0) return n;
+      if (m == 1) {
+          for (size_t i = n; i-- > 0; ) if (s[i] == pat[0]) return i;
+          return SIZE_MAX;
+      }
+      size_t i = 0, last = SIZE_MAX;
+      const uint8x16_t needle0 = vdupq_n_u8(pat[0]);
+
+      while (i + 16 <= n) {
+          uint8x16_t v  = vld1q_u8(s + i);
+          uint8x16_t eq = vceqq_u8(v, needle0);
+          uint32_t mask = neon_movemask_u8(eq);
+          while (mask) {
+              int pos = hi_bit32(mask);
+              size_t cand = i + (size_t)pos;
+              if (cand + m <= n && memcmp(s + cand, pat, m) == 0) { last = cand; break; }
+              mask &= (1u << pos) - 1;
+          }
+          i += 16;
+      }
+      for (size_t j = (n >= m ? n - m : 0); j + 1 > i; --j)
+          if (s[j] == pat[0] && memcmp(s + j, pat, m) == 0) return j;
+      return last;
+  }
 
 #endif /* CSALT_SIMD_NEON_CHAR_INL */
 
