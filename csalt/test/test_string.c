@@ -866,7 +866,7 @@ void test_is_string_ptr_within_bounds(void **state) {
    
     // Check middle of string
     char* mid = first_char(str) + 5;  // Points to space
-    assert_true(is_string_ptr(str, mid));
+    assert_true(is_string_ptr(str, mid, false));
    
     free_string(str);
 }
@@ -877,11 +877,11 @@ void test_is_string_ptr_at_boundaries(void **state) {
    
     // Check first character
     char* start = first_char(str);
-    assert_true(is_string_ptr(str, start));
+    assert_true(is_string_ptr(str, start, false));
    
     // Check last character
     char* last = first_char(str) + string_size(str) - 1;
-    assert_true(is_string_ptr(str, last));
+    assert_true(is_string_ptr(str, last, false));
    
     free_string(str);
 }
@@ -892,11 +892,11 @@ void test_is_string_ptr_outside_bounds(void **state) {
    
     // Check one past the end (at null terminator)
     char* past_end = first_char(str) + string_size(str);
-    assert_false(is_string_ptr(str, past_end));
+    assert_false(is_string_ptr(str, past_end, false));
    
     // Check before start (undefined behavior in practice, but good for testing)
     char* before_start = first_char(str) - 1;
-    assert_false(is_string_ptr(str, before_start));
+    assert_false(is_string_ptr(str, before_start, false));
    
     free_string(str);
 }
@@ -907,7 +907,7 @@ void test_is_string_ptr_empty_string(void **state) {
     char* ptr = first_char(str);
    
     // Even with empty string, the pointer to the start should be valid
-    assert_false(is_string_ptr(str, ptr));  // False because len is 0
+    assert_false(is_string_ptr(str, ptr, false));  // False because len is 0
    
     free_string(str);
 }
@@ -917,11 +917,11 @@ void test_is_string_ptr_null_inputs(void **state) {
     string_t* str = init_string("test");
    
     // Test NULL string_t
-    assert_false(is_string_ptr(NULL, first_char(str)));
+    assert_false(is_string_ptr(NULL, first_char(str), false));
     assert_int_equal(errno, EINVAL);
    
     // Test NULL pointer
-    assert_false(is_string_ptr(str, NULL));
+    assert_false(is_string_ptr(str, NULL, false));
     assert_int_equal(errno, EINVAL);
    
     free_string(str);

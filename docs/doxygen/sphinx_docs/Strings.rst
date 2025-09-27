@@ -210,6 +210,28 @@ last_substr_occurrance
 .. doxygendefine:: last_substr_occurrence 
    :project: csalt
 
+is_string_ptr 
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: is_string_ptr
+   :project: csalt
+
+String Iterator 
+---------------
+The following functions can be used to iterator over a string .
+
+first_char
+~~~~~~~~~~
+
+.. doxygenfunction:: first_char
+   :project: csalt
+
+last_char
+~~~~~~~~~
+
+.. doxygenfunction:: last_char
+   :project: csalt
+
 String Vector Overview 
 ======================
 This section describes that attributes and functions associated with the 

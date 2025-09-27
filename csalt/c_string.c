@@ -720,32 +720,44 @@ char* last_string_substr_occurrence(string_t* hay, const string_t* needle) {
 
 char* first_char(string_t* str) {
     if (!str || !str->str) {
+        if (str) str->error = NULL_POINTER;
         errno = EINVAL;
         return NULL;
     }
+    str->error= NO_ERROR;
     return str->str;
 }
 // --------------------------------------------------------------------------------
 
 char* last_char(string_t* str) {
     if (!str || !str->str) {
+        if (str) str->error = NULL_POINTER;
         errno = EINVAL;
         return NULL;
     }
+    str->error = NO_ERROR;
     return str->str + str->len - 1;
 }
 // --------------------------------------------------------------------------------
 
-bool is_string_ptr(string_t* str, char* ptr) {
-    if (!str || !str->str || !ptr) {
+bool is_string_ptr(string_t* str, const char* ptr, bool include_terminator) {
+    if (!str || !ptr) {
+        if (str) str->error = INVALID_ARG;  // argument itself is invalid
         errno = EINVAL;
-        return false;  // Changed from NULL to false
+        return false;
     }
-    
-    char* start = first_char(str);
-    char* end = start + str->len;  // Points one past the last character
-    
-    return (ptr >= start && ptr < end);
+    if (!str->str) {
+        str->error = NULL_POINTER;          // object lacks a buffer
+        errno = EINVAL;
+        return false;
+    }
+
+    const uintptr_t base = (uintptr_t)(const void*)str->str;
+    const uintptr_t end  = base + str->len + (include_terminator ? 1u : 0u);
+    const uintptr_t p    = (uintptr_t)(const void*)ptr;
+
+    str->error = NO_ERROR;
+    return (p >= base) && (p < end);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -754,7 +766,7 @@ bool drop_lit_substr(string_t* string, const char* substring, char* min_ptr, cha
         errno = EINVAL;
         return false;
     }
-    if (!is_string_ptr(string, min_ptr) || !is_string_ptr(string, max_ptr)) {
+    if (!is_string_ptr(string, min_ptr, false) || !is_string_ptr(string, max_ptr, false)) {
         errno = ERANGE;
         return false;
     }
@@ -791,7 +803,7 @@ bool drop_string_substr(string_t* string, const string_t* substring, char* min_p
         errno = EINVAL;
         return false;
     }
-    if (!is_string_ptr(string, min_ptr) || !is_string_ptr(string, max_ptr)) {
+    if (!is_string_ptr(string, min_ptr, false) || !is_string_ptr(string, max_ptr, false)) {
         errno = ERANGE;
         return false;
     }
@@ -831,7 +843,7 @@ bool replace_lit_substr(string_t* string, const char* pattern, const char* repla
         return false;
     }
    
-    if (!is_string_ptr(string, min_ptr) || !is_string_ptr(string, max_ptr)) {
+    if (!is_string_ptr(string, min_ptr, false) || !is_string_ptr(string, max_ptr, false)) {
         errno = ERANGE;
         return false;
     } 
@@ -926,7 +938,7 @@ bool replace_string_substr(string_t* string, const string_t* pattern, const stri
         return false;
     }
   
-    if (!is_string_ptr(string, min_ptr) || !is_string_ptr(string, max_ptr)) {
+    if (!is_string_ptr(string, min_ptr, false) || !is_string_ptr(string, max_ptr, false)) {
         errno = ERANGE;
         return false;
     }

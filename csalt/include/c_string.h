@@ -1648,13 +1648,109 @@ char* last_substr__type_mismatch(string_t*, void*);
 #endif
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Return a writable pointer to the **first byte** of a csalt string.
+ *
+ * Provides a *borrowed* pointer to the beginning of @p str’s internal buffer.
+ * This is useful for iterator-style traversal: the corresponding one-past-last
+ * pointer is `first_char(str) + string_size(str)`. The pointer remains valid
+ * until the string is reallocated, trimmed, otherwise modified, or destroyed.
+ *
+ * **Thread-safety:** This function updates `str->error` and returns a pointer
+ * aliasing @p str’s internal storage. Treat it as **not thread-safe for the
+ * same object** unless you synchronize access to @p str. Calls on distinct
+ * objects are safe.
+ *
+ * **Notes:**
+ * - For an empty string (`string_size(str) == 0`), the returned pointer points
+ *   to the terminating NUL (`'\0'`). That is a valid address for read/write
+ *   of the terminator, but there is no payload to iterate.
+ *
+ * **Error reporting:**
+ * - Returns `NULL` and sets `errno = EINVAL` if @p str is `NULL` or if the
+ *   internal buffer is `NULL` (also sets `str->error = ::NULL_POINTER`).
+ * - On success, sets `str->error = ::NO_ERROR`.
+ *
+ * @param str  Target ::string_t (must be initialized).
+ * @return Pointer to the first byte on success; `NULL` on invalid input.
+ *
+ * @warning The returned pointer becomes invalid after any operation that may
+ *          move or modify the buffer (e.g., concatenation, reserve, trim, or
+ *          destruction). Do **not** `free()` the returned pointer.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("iterate");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * char* begin = first_char(s);
+ * char* end   = begin + string_size(s);   // one-past-last
+ * for (char* it = begin; it < end; ++it) putchar(*it);
+ * putchar('\n');
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * iterate
+ * @endcode
+ */
 char* first_char(string_t* str);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Return a writable pointer to the **last byte** of a csalt string.
+ *
+ * Provides a *borrowed* pointer to the final character in @p str’s payload
+ * (i.e., `first_char(str) + string_size(str) - 1`). The pointer remains valid
+ * until the string is reallocated, trimmed, otherwise modified, or destroyed.
+ *
+ * **Thread-safety:** This function updates `str->error` and returns a pointer
+ * aliasing @p str’s internal storage. Treat it as **not thread-safe for the
+ * same object** unless you synchronize access to @p str. Calls on distinct
+ * objects are safe.
+ *
+ * **Precondition (important):**
+ * - The string must be **non-empty** (`string_size(str) > 0`). Calling this
+ *   function on an empty string yields an invalid address (one byte *before*
+ *   the buffer) and is undefined behavior. Check the size first.
+ *
+ * **Error reporting:**
+ * - Returns `NULL` and sets `errno = EINVAL` if @p str is `NULL` or if the
+ *   internal buffer is `NULL` (also sets `str->error = ::NULL_POINTER`).
+ * - On success, sets `str->error = ::NO_ERROR`.
+ *
+ * @param str  Target ::string_t (must be initialized and non-empty).
+ * @return Pointer to the last byte on success; `NULL` on invalid input.
+ *
+ * @warning The returned pointer becomes invalid after any operation that may
+ *          move or modify the buffer (e.g., concatenation, reserve, trim, or
+ *          destruction). Do **not** `free()` the returned pointer.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("xyz");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * if (string_size(s) > 0) {
+ *     char* b = first_char(s);
+ *     char* e = last_char(s);
+ *     printf("first='%c', last='%c'\n", *b, *e);
+ * }
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * first='x', last='z'
+ * @endcode
+ */
 char* last_char(string_t* str);
 // --------------------------------------------------------------------------------
 
-bool is_string_ptr(string_t* str, char* ptr);
+bool is_string_ptr(string_t* str, const char* ptr, bool include_terminator);
 // --------------------------------------------------------------------------------
 
 bool drop_lit_substr(string_t* string, const char* substring, char* min_ptr,
