@@ -157,6 +157,42 @@ string_concat
 .. doxygendefine:: string_concat
    :project: csalt
 
+drop_lit_substr
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: drop_lit_substr
+   :project: csalt
+
+drop_string_substr
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: drop_string_substr
+   :project: csalt
+
+drop_substr
+~~~~~~~~~~~
+
+.. doxygendefine:: drop_substr
+   :project: csalt
+
+replace_lit_substr
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: replace_lit_substr
+   :project: csalt
+
+replace_string_substr
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: replace_string_substr
+   :project: csalt
+
+replace_substr
+~~~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: replace_substr
+   :project: csalt
+
 Search String 
 -------------
 The functions in this section can be used to search a string for spechic 
