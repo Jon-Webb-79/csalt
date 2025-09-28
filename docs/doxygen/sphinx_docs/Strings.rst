@@ -135,6 +135,12 @@ copy_string
 .. doxygenfunction:: copy_string
    :project: csalt
 
+pop_string_token 
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_string_token
+   :project: csalt
+
 String Manipulation 
 -------------------
 The functions in this section are used to manipulate data in a `string_t` object.
@@ -188,9 +194,33 @@ replace_string_substr
    :project: csalt
 
 replace_substr
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
 
 .. doxygendefine:: replace_substr
+   :project: csalt
+
+to_upper_char
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: to_upper_char
+   :project: csalt
+
+to_lower_char
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: to_lower_char
+   :project: csalt
+
+to_uppercase
+~~~~~~~~~~~~
+
+.. doxygenfunction:: to_uppercase
+   :project: csalt
+
+to_lowercase
+~~~~~~~~~~~~
+
+.. doxygenfunction:: to_lowercase
    :project: csalt
 
 Search String 

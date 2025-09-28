@@ -1138,26 +1138,14 @@ void test_replace_substr_invalid_range(void **state) {
     string_t* str = init_string("test string");
     char* start = first_char(str);
     char* end = last_char(str);
-    // Backup original stderr
-    FILE *original_stderr = stderr;
-
-    // Redirect stderr to /dev/null to suppress output
-    stderr = fopen("/dev/null", "w");
-    if (!stderr) {
-        fprintf(original_stderr, "Failed to redirect stderr\n");
-        return;
-    }
     bool val = replace_substr(str, "test", "new", end, start); 
     // Test with end before start
     assert_false(val);
-    assert_int_equal(errno, ERANGE);
-   
-    // Test with out of bounds pointers
-    assert_false(replace_substr(str, "test", "new", start - 1, end));
-    assert_int_equal(errno, ERANGE);
-    // Close the redirected stderr and restore the original stderr
-    fclose(stderr);
-    stderr = original_stderr; 
+ 
+   // Test with out of bounds pointers
+   assert_false(replace_substr(str, "test", "new", start - 1, end));
+   assert_int_equal(errno, ERANGE);
+   assert_int_equal(get_string_error(str), OUT_OF_BOUNDS);
     free_string(str);
 }
 // --------------------------------------------------------------------------------

@@ -83,5 +83,32 @@ static inline size_t simd_last_substr_index_sve2(const unsigned char* s, size_t 
     return last;
 }
 
+static inline size_t simd_last_substr_index_sve2(const unsigned char* s, size_t n,
+                                                 const unsigned char* pat, size_t m) {
+    if (m == 0) return n;
+    if (m == 1) { for (size_t i=n; i-- > 0; ) if (s[i]==pat[0]) return i; return SIZE_MAX; }
+    if (n < m) return SIZE_MAX;
+
+    size_t i = 0, last = SIZE_MAX;
+    while (i < n) {
+        svbool_t pg = svwhilelt_b8((uint64_t)i, (uint64_t)n);
+        svuint8_t v = svld1_u8(pg, (const uint8_t*)(s + i));
+        svbool_t  msk = svcmpeq_n_u8(pg, v, pat[0]);
+
+        if (svptest_any(svptrue_b8(), msk)) {
+            uint64_t vl = svcntb();
+            uint64_t end = i + vl; if (end > n) end = n;
+            for (size_t j = end; j-- > i; ) {
+                if (s[j] == pat[0]) {
+                    if (j + m <= n && memcmp(s + j, pat, m) == 0) { last = j; break; }
+                }
+            }
+        }
+        i += svcntb();
+    }
+    return last;
+}
+
+
 #endif /* CSALT_SIMD_SVE2_CHAR_INL */
 

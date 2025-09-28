@@ -146,7 +146,6 @@ static inline size_t simd_last_substr_index(const unsigned char* s, size_t n,
     return SIZE_MAX;
 #endif
 }
-
 // ================================================================================ 
 // ================================================================================
 
@@ -166,33 +165,39 @@ struct string_t {
 // ================================================================================ 
 // PRIVATE FUNCTIONS
 
-static char* _last_literal_between_ptrs(const char* string, char* min_ptr, char* max_ptr) {
-    if (!string) {
-        fprintf(stderr, "ERROR: Null string provided for last_literal_between_ptrs\n");
-        return NULL;
-    }
-    if (min_ptr >= max_ptr) {
-        fprintf(stderr, "ERROR: Min pointer larger than max pointer in last_literal_between_ptrs\n");
-        return NULL;
-    }
-    
-    size_t str_len = strlen(string);
-    if (str_len == 0) return NULL;
-    
-    // Ensure we don't search past the end
-    char* search_start = max_ptr - str_len + 1;
-    if (search_start < min_ptr) return NULL;
-    
-    for (char* it = search_start; it >= min_ptr; it--) {
-        size_t j;
-        for (j = 0; j < str_len; j++) {
-            if (string[j] != *(it + j)) {
-                break;
-            }
-        }
-        if (j == str_len) return it;
-    }
-    return NULL;
+static inline char*
+_last_string_between_ptrs_simd(const string_t* hay,
+                               const string_t* needle,
+                               const char* lo,
+                               const char* hi_inclusive) {
+    /* Fast preconditions expected to be enforced by the caller: */
+    /* - hay && hay->str, needle && needle->str
+       - lo, hi_inclusive inside payload (NUL excluded), and hi_inclusive >= lo */
+
+    const size_t n = hay->len;
+    const size_t m = needle->len;
+
+    /* Empty needle: caller decides policy; we return no match. */
+    if (m == 0) return NULL;
+
+    /* Map window to [off_lo, end_excl) in 0..n */
+    size_t off_lo   = (size_t)(lo - hay->str);
+    size_t end_excl = (size_t)(hi_inclusive - hay->str) + 1;   /* inclusive → exclusive */
+
+    /* Clamp right edge to payload end (defensive) */
+    if (end_excl > n) end_excl = n;
+    if (off_lo >= end_excl) return NULL;
+
+    const size_t span = end_excl - off_lo;
+    if (m > span) return NULL;
+
+    /* SIMD-dispatched last-substring search on the slice */
+    const size_t idx = simd_last_substr_index(
+        (const unsigned char*)(hay->str + off_lo), span,
+        (const unsigned char*)needle->str,        m
+    );
+
+    return (idx == SIZE_MAX) ? NULL : (char*)(hay->str + off_lo + idx);
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -761,252 +766,372 @@ bool is_string_ptr(string_t* str, const char* ptr, bool include_terminator) {
 }
 // -------------------------------------------------------------------------------- 
 
-bool drop_lit_substr(string_t* string, const char* substring, char* min_ptr, char* max_ptr) {
-    if (!string || !substring || !string->str) {
-        errno = EINVAL;
-        return false;
-    }
-    if (!is_string_ptr(string, min_ptr, false) || !is_string_ptr(string, max_ptr, false)) {
-        errno = ERANGE;
-        return false;
-    }
-    if (max_ptr <= min_ptr) {
-        errno = EINVAL;
-        return false;
-    }
-    
-    size_t substr_len = strlen(substring);
-    if (string->len < substr_len) return true;
-    
-    char* ptr;
-    while ((ptr = _last_literal_between_ptrs(substring, min_ptr, max_ptr))) {
-        size_t drop_len = substr_len;
-        // Check if there's a space after the substring and it's within bounds
-        if (ptr + substr_len < string->str + string->len && 
-            *(ptr + substr_len) == ' ') {
-            drop_len++;  // Include the space
-        }
-        
-        size_t move_length = max_ptr - (ptr + drop_len) + 1;
-        memmove(ptr, ptr + drop_len, move_length);
-        
-        string->len -= drop_len;
-        max_ptr -= drop_len;
-        *(string->str + string->len) = '\0';
-    }
-    return true;
-}
-// --------------------------------------------------------------------------------
+static char* _last_literal_between_ptrs_simd(
+    const string_t* s, const char* needle, const char* min_ptr, const char* max_ptr)
+{
+    const unsigned char* base = (const unsigned char*)s->str;
+    const size_t n = s->len;
+    const size_t m = strlen(needle);
 
-bool drop_string_substr(string_t* string, const string_t* substring, char* min_ptr, char* max_ptr) {
-    if (!string || !substring || !string->str || !substring->str) {
-        errno = EINVAL;
-        return false;
+    size_t off_lo    = (size_t)(min_ptr - (const char*)base);
+    size_t end_excl  = (size_t)(max_ptr  - (const char*)base) + 1;  /* inclusive→exclusive */
+    if (end_excl > n) end_excl = n;
+
+    if (m == 0 || off_lo >= end_excl) return NULL;
+    size_t span = end_excl - off_lo;
+    if (m > span) return NULL;
+
+    size_t idx = simd_last_substr_index(base + off_lo, span,
+                                        (const unsigned char*)needle, m);
+    return (idx == SIZE_MAX) ? NULL : (char*)(s->str + off_lo + idx);
+}
+// -------------------------------------------------------------------------------- 
+
+bool drop_lit_substr(string_t* s, const char* needle, char* min_ptr, char* max_ptr) {
+    if (!s || !needle)                 { if (s) s->error = INVALID_ARG; errno = EINVAL; return false; }
+    if (!s->str)                       { s->error = NULL_POINTER; errno = EINVAL; return false; }
+    if (!is_string_ptr(s, min_ptr, false) || !is_string_ptr(s, max_ptr, false)) {
+        s->error = OUT_OF_BOUNDS; errno = ERANGE; return false;
     }
-    if (!is_string_ptr(string, min_ptr, false) || !is_string_ptr(string, max_ptr, false)) {
-        errno = ERANGE;
-        return false;
-    }
-    if (max_ptr <= min_ptr) {
-        errno = EINVAL;
-        return false;
-    }
-    
-    size_t substr_len = substring->len;
-    if (string->len < substr_len) return true;
-    
-    char* ptr;
-    while ((ptr = _last_literal_between_ptrs(substring->str, min_ptr, max_ptr))) {
-        size_t drop_len = substr_len;
-        // Check if there's a space after the substring and it's within bounds
-        if (ptr + substr_len < string->str + string->len && 
-            *(ptr + substr_len) == ' ') {
-            drop_len++;  // Include the space
+    if (max_ptr < min_ptr)             { s->error = INVALID_ARG; errno = EINVAL; return false; }
+
+    const size_t m = strlen(needle);
+    if (m == 0) { s->error = NO_ERROR; return true; }
+
+    for (;;) {
+        /* window remaining must fit the needle */
+        size_t span = (size_t)(max_ptr - min_ptr + 1);
+        if (span < m) break;
+
+        char* hit = _last_literal_between_ptrs_simd(s, needle, min_ptr, max_ptr);
+        if (!hit) break;
+
+        /* Optionally consume a trailing space if still in payload */
+        size_t hit_off = (size_t)(hit - s->str);
+        size_t drop_len = m;
+        if (hit_off + m < s->len && hit[m] == ' ') ++drop_len;
+
+        /* Move the entire suffix INCLUDING the '\0' left by drop_len. */
+        size_t bytes_from_src = (s->len + 1) - (hit_off + drop_len); /* +1 for NUL */
+        memmove(hit, hit + drop_len, bytes_from_src);
+
+        s->len -= drop_len;            /* logical size shrinks; NUL already moved */
+        /* Keep the window aligned with the new content: slide right edge left. */
+        if (max_ptr >= hit) {
+            ptrdiff_t d = (ptrdiff_t)drop_len;
+            if (s->len == 0) {
+                max_ptr = s->str;      /* harmless placeholder; loop will end */
+            } else {
+                max_ptr -= d;
+                if (max_ptr >= s->str + s->len) max_ptr = s->str + s->len - 1;
+            }
         }
-        
-        size_t move_length = max_ptr - (ptr + drop_len) + 1;
-        memmove(ptr, ptr + drop_len, move_length);
-        
-        string->len -= drop_len;
-        max_ptr -= drop_len;
-        *(string->str + string->len) = '\0';
+        if ((size_t)(max_ptr - min_ptr + 1) < m) break;
     }
+
+    s->error = NO_ERROR;
     return true;
 }
 // -------------------------------------------------------------------------------- 
 
-bool replace_lit_substr(string_t* string, const char* pattern, const char* replace_string,
-                        char* min_ptr, char* max_ptr) {
-    if (!string || !string->str || !pattern ||  !replace_string || 
-        !min_ptr || !max_ptr) {
-        errno = EINVAL;
-        return false;
+bool drop_string_substr(string_t* s, const string_t* needle, char* min_ptr, char* max_ptr) {
+    if (!s || !needle)                 { if (s) s->error = INVALID_ARG; errno = EINVAL; return false; }
+    if (!s->str || !needle->str)       { if (s && !s->str) s->error = NULL_POINTER; errno = EINVAL; return false; }
+    if (!is_string_ptr(s, min_ptr, false) || !is_string_ptr(s, max_ptr, false)) {
+        s->error = OUT_OF_BOUNDS; errno = ERANGE; return false;
     }
-   
-    if (!is_string_ptr(string, min_ptr, false) || !is_string_ptr(string, max_ptr, false)) {
-        errno = ERANGE;
-        return false;
-    } 
+    if (max_ptr < min_ptr)             { s->error = INVALID_ARG; errno = EINVAL; return false; }
 
-    if (min_ptr > max_ptr) {
-        errno = ERANGE;
-        return false;
-    }
-    
-    // Calculate the delta between the pattern and replacement lengths.
-    int delta = strlen(replace_string) - strlen(pattern);
+    const size_t m = needle->len;
+    if (m == 0) { s->error = NO_ERROR; return true; }
 
-    size_t pattern_len = strlen(pattern);
-    size_t replace_len = strlen(replace_string);
+    for (;;) {
+        size_t span = (size_t)(max_ptr - min_ptr + 1);
+        if (span < m) break;
 
-    // Pre-allocate if we need more space
-    size_t count = 0;
-    if (delta > 0) {
-        char* search_ptr = min_ptr;
-        char* end_ptr = max_ptr;
-        while ((search_ptr = _last_literal_between_ptrs(pattern, min_ptr, end_ptr))) {
-            count++;
-            if (search_ptr <= min_ptr) break;  // Found match at start, we're done
-            end_ptr = search_ptr - 1;
-        } 
-        size_t new_size = string->len + (delta * count) + 1;
-        if (new_size > string->alloc) {
-            size_t min_pos = min_ptr - string->str;
-            size_t max_pos = max_ptr - string->str;
-            
-            char* new_data = realloc(string->str, new_size);
-            if (!new_data) {
-                errno = ENOMEM;
-                fprintf(stderr, "ERROR: Realloc failed in replace_lit_substring\n");
-                return false;
+        /* reuse the literal helper with known length by passing needle->str */
+        char* hit = _last_literal_between_ptrs_simd(s, needle->str, min_ptr, max_ptr);
+        if (!hit) break;
+
+        size_t hit_off = (size_t)(hit - s->str);
+        size_t drop_len = m;
+        if (hit_off + m < s->len && hit[m] == ' ') ++drop_len;
+
+        size_t bytes_from_src = (s->len + 1) - (hit_off + drop_len);
+        memmove(hit, hit + drop_len, bytes_from_src);
+
+        s->len -= drop_len;
+        if (max_ptr >= hit) {
+            ptrdiff_t d = (ptrdiff_t)drop_len;
+            if (s->len == 0) {
+                max_ptr = s->str;
+            } else {
+                max_ptr -= d;
+                if (max_ptr >= s->str + s->len) max_ptr = s->str + s->len - 1;
             }
-            string->str = new_data;
-            string->alloc = new_size;
-            min_ptr = string->str + min_pos;
-            max_ptr = string->str + max_pos;
         }
-    }
-    
-    char* ptr = _last_literal_between_ptrs(pattern, min_ptr, max_ptr);
-    while (ptr) {
-        // If the replacement string is the same length, copy it over.
-        if (delta == 0) {
-            memcpy(ptr, replace_string, replace_len);
-            max_ptr = ptr;
-        }
-
-        // - If replacement string is smaller, copy string, move memory to the 
-        //   left, and update length
-        else if (delta < 0) {
-            memcpy(ptr, replace_string, replace_len);
-
-            size_t tail_length = string->str + string->len - (ptr + pattern_len);
-            memmove(ptr + replace_len, ptr + pattern_len, tail_length);
-
-            string->len += delta; // delta is negative, so it reduces string->len
-
-            string->str[string->len] = '\0';
-
-            max_ptr -= pattern_len - replace_len;
-        }
-        else {
-            memmove(ptr + replace_len,
-                    ptr + pattern_len,
-                    string->len - (ptr - string->str) - pattern_len);
-            memcpy(ptr, replace_string, replace_len);
-            string->len += delta;
-            string->str[string->len] = '\0';
-            ptr += delta;
-            max_ptr = ptr;
-        }        
-         // Find the next pattern instance within the updated pointer bounds.
-         if (min_ptr < max_ptr)
-            ptr = _last_literal_between_ptrs(pattern, min_ptr, max_ptr);
-         else
-            ptr = NULL;
+        if ((size_t)(max_ptr - min_ptr + 1) < m) break;
     }
 
+    s->error = NO_ERROR;
     return true;
 }
 // --------------------------------------------------------------------------------
 
-bool replace_string_substr(string_t* string, const string_t* pattern, const string_t* replace_string,
-                           char* min_ptr, char* max_ptr) {
-    if (!string || !string->str || !pattern || !pattern->str || 
-        !replace_string || !replace_string->str || !min_ptr || !max_ptr) {
-        errno = EINVAL;
-        return false;
+bool replace_lit_substr(string_t* string,
+                        const char* pattern,
+                        const char* repl,
+                        char* min_ptr,
+                        char* max_ptr) {
+    /* ---- validation ---- */
+    if (!string || !pattern || !repl) {
+        if (string) string->error = INVALID_ARG;
+        errno = EINVAL; return false;
     }
-  
-    if (!is_string_ptr(string, min_ptr, false) || !is_string_ptr(string, max_ptr, false)) {
-        errno = ERANGE;
-        return false;
+    if (!string->str) { string->error = NULL_POINTER; errno = EINVAL; return false; }
+    if (!is_string_ptr(string, min_ptr, false) ||
+        !is_string_ptr(string, max_ptr, false)) {
+        string->error = OUT_OF_BOUNDS; errno = ERANGE; return false;
+    }
+    if (max_ptr < min_ptr) { string->error = INVALID_ARG; errno = EINVAL; return false; }
+
+    const size_t pat_len = strlen(pattern);
+    const size_t rep_len = strlen(repl);
+
+    /* Empty pattern → no-op */
+    if (pat_len == 0) { string->error = NO_ERROR; return true; }
+
+    /* Window too small to contain pattern → nothing to do */
+    if ((size_t)(max_ptr - min_ptr + 1) < pat_len) { string->error = NO_ERROR; return true; }
+
+    /* If replacement text aliases the same buffer, stash a safe copy once. */
+    const char* rsrc = repl;
+    char* rtmp = NULL;
+    {
+        const char* base = string->str;
+        const char* end  = base + string->len + 1;  /* include NUL */
+        if (rsrc >= base && rsrc < end) {
+            rtmp = (char*)malloc(rep_len ? rep_len : 1);
+            if (!rtmp && rep_len) { string->error = BAD_ALLOC; errno = ENOMEM; return false; }
+            if (rep_len) memcpy(rtmp, rsrc, rep_len);
+            rsrc = rtmp;  /* safe stable source for all edits */
+        }
     }
 
-    if (min_ptr > max_ptr) {
-        errno = ERANGE;
-        return false;
-    }
-   
-    // Calculate the delta between the pattern and replacement lengths.
-    int delta = replace_string->len - pattern->len;
-   
-    // Count occurrences within specified range if we need to grow the string
-    size_t count = 0;
+    /* ---- growth pre-pass (if replacement longer) ---- */
+    const ptrdiff_t delta = (ptrdiff_t)rep_len - (ptrdiff_t)pat_len;
     if (delta > 0) {
-        char* search_ptr = min_ptr;
-        char* end_ptr = max_ptr;
-        while ((search_ptr = _last_literal_between_ptrs(pattern->str, min_ptr, end_ptr))) {
-            count++;
-            if (search_ptr <= min_ptr) break;  // Found match at start, we're done
-            end_ptr = search_ptr - 1;
+        size_t count = 0;
+        char* end = max_ptr;
+        for (;;) {
+            char* hit = _last_literal_between_ptrs_simd(string, pattern, min_ptr, end);
+            if (!hit) break;
+            ++count;
+            if (hit <= min_ptr) break;
+            end = hit - 1;  /* ensure non-overlapping counting */
         }
-       
-        // Pre-allocate all needed memory
-        size_t new_size = string->len + (delta * count) + 1;
-        if (new_size > string->alloc) {
-            size_t min_pos = min_ptr - string->str;
-            size_t max_pos = max_ptr - string->str;
-           
-            char* new_data = realloc(string->str, new_size);
-            if (!new_data) {
-                errno = ENOMEM;
-                fprintf(stderr, "ERROR: Realloc failed in replace_string_substring\n");
-                return false;
+
+        if (count) {
+            /* overflow-safe compute: len + delta*count + 1 */
+            if ((size_t)delta > 0 &&
+                count > (SIZE_MAX - (size_t)string->len - 1) / (size_t)delta) {
+                free(rtmp);
+                errno = EOVERFLOW; return false;
             }
-            string->str = new_data;
-            string->alloc = new_size;
-            min_ptr = string->str + min_pos;
-            max_ptr = string->str + max_pos;
+            size_t add = (size_t)delta * count;
+            size_t new_size = string->len + add + 1;
+
+            if (new_size > string->alloc) {
+                size_t off_min = (size_t)(min_ptr - string->str);
+                size_t off_max = (size_t)(max_ptr - string->str);
+
+                char* newbuf = (char*)realloc(string->str, new_size);
+                if (!newbuf) { free(rtmp); string->error = REALLOC_FAIL; errno = ENOMEM; return false; }
+
+                string->str   = newbuf;
+                string->alloc = new_size;
+
+                /* Rebase window to new buffer address */
+                min_ptr = string->str + off_min;
+                max_ptr = string->str + off_max;
+            }
         }
     }
-   
-    char* ptr = _last_literal_between_ptrs(pattern->str, min_ptr, max_ptr);
-    while (ptr) {
+
+    /* ---- right-to-left replace loop ---- */
+    for (;;) {
+        size_t span = (size_t)(max_ptr - min_ptr + 1);
+        if (span < pat_len) break;
+
+        char* hit = _last_literal_between_ptrs_simd(string, pattern, min_ptr, max_ptr);
+        if (!hit) break;
+
+        const size_t hit_off = (size_t)(hit - string->str);
+        const size_t suffix_src_off = hit_off + pat_len;
+        const size_t suffix_bytes   = (string->len + 1) - suffix_src_off;  /* includes NUL */
+
         if (delta == 0) {
-            memcpy(ptr, replace_string->str, replace_string->len);
+            /* same length: overwrite */
+            if (rep_len) memcpy(hit, rsrc, rep_len);
+        } else if (delta < 0) {
+            /* shrink: write replacement, then close the gap (moves NUL too) */
+            if (rep_len) memcpy(hit, rsrc, rep_len);
+            memmove(string->str + hit_off + rep_len,
+                    string->str + suffix_src_off,
+                    suffix_bytes);
+            string->len = (size_t)((ptrdiff_t)string->len + delta);
+        } else {
+            /* grow: open space (moves NUL), then write replacement */
+            memmove(string->str + hit_off + rep_len,
+                    string->str + suffix_src_off,
+                    suffix_bytes);
+            if (rep_len) memcpy(hit, rsrc, rep_len);
+            string->len = (size_t)((ptrdiff_t)string->len + delta);
         }
-        else if (delta < 0) {
-            memcpy(ptr, replace_string->str, replace_string->len);
-            memmove(ptr + replace_string->len, 
-                    ptr + pattern->len,
-                    string->len - (ptr - string->str) - pattern->len + 1);
-            string->len += delta;
+
+        /* Keep searching earlier: slide right edge left by delta if it was at/after hit */
+        if (max_ptr >= hit) {
+            max_ptr -= delta;
+            if (string->len) {
+                if ((size_t)(max_ptr - string->str) >= string->len)
+                    max_ptr = string->str + string->len - 1;
+            } else {
+                max_ptr = string->str; /* harmless placeholder */
+            }
         }
-        else {  // delta > 0
-            memmove(ptr + replace_string->len,
-                    ptr + pattern->len,
-                    string->len - (ptr - string->str) - pattern->len + 1);
-            memcpy(ptr, replace_string->str, replace_string->len);
-            string->len += delta;
-        }
-       
-        max_ptr = ptr - 1;
+
         if (min_ptr >= max_ptr) break;
-        ptr = _last_literal_between_ptrs(pattern->str, min_ptr, max_ptr);
     }
-   
+
+    /* Ensure NUL at logical end (already moved by memmove, but explicit is fine) */
     string->str[string->len] = '\0';
+    string->error = NO_ERROR;
+    free(rtmp);
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool replace_string_substr(string_t* string,
+                           const string_t* pattern,
+                           const string_t* repl,
+                           char* min_ptr,
+                           char* max_ptr) {
+    /* ---- basic validation ---- */
+    if (!string || !pattern || !repl) {
+        if (string) string->error = INVALID_ARG;
+        errno = EINVAL; return false;
+    }
+    if (!string->str) { string->error = NULL_POINTER; errno = EINVAL; return false; }
+    if (!pattern->str || !repl->str) { errno = EINVAL; return false; }
+
+    if (!is_string_ptr(string, min_ptr, false) ||
+        !is_string_ptr(string, max_ptr, false)) {
+        string->error = OUT_OF_BOUNDS; errno = ERANGE; return false;
+    }
+    if (max_ptr < min_ptr) { string->error = INVALID_ARG; errno = EINVAL; return false; }
+
+    const size_t pat_len = pattern->len;
+    const size_t rep_len = repl->len;
+
+    /* Policy: empty pattern → no-op */
+    if (pat_len == 0) { string->error = NO_ERROR; return true; }
+
+    /* Window too small to contain pattern → nothing to do */
+    if ((size_t)(max_ptr - min_ptr + 1) < pat_len) { string->error = NO_ERROR; return true; }
+
+    /* ---- growth pre-pass (if replacement longer) ---- */
+    const ptrdiff_t delta = (ptrdiff_t)rep_len - (ptrdiff_t)pat_len;
+    if (delta > 0) {
+        size_t count = 0;
+        char* end = max_ptr;
+        for (;;) {
+            char* hit = _last_string_between_ptrs_simd(string, pattern, min_ptr, end);
+            if (!hit) break;
+            ++count;
+            if (hit <= min_ptr) break;     /* no more room to the left */
+            end = hit - 1;                 /* keep matches non-overlapping */
+        }
+
+        if (count) {
+            /* overflow-safe size calc: len + delta*count + 1 */
+            size_t add;
+            if ((size_t)delta > 0 &&
+                count > (SIZE_MAX - (size_t)string->len - 1) / (size_t)delta) {
+                errno = EOVERFLOW; return false;
+            }
+            add = (size_t)delta * count;
+            size_t new_size = string->len + add + 1;
+
+            if (new_size > string->alloc) {
+                size_t off_min = (size_t)(min_ptr - string->str);
+                size_t off_max = (size_t)(max_ptr - string->str);
+
+                char* newbuf = (char*)realloc(string->str, new_size);
+                if (!newbuf) { string->error = REALLOC_FAIL; errno = ENOMEM; return false; }
+
+                string->str   = newbuf;
+                string->alloc = new_size;
+
+                /* Rebase window to the (potentially moved) buffer */
+                min_ptr = string->str + off_min;
+                max_ptr = string->str + off_max;
+            }
+        }
+    }
+
+    /* ---- right-to-left replacement loop ---- */
+    for (;;) {
+        /* If the remaining window can’t fit the pattern, we’re done */
+        size_t span = (size_t)(max_ptr - min_ptr + 1);
+        if (span < pat_len) break;
+
+        char* hit = _last_string_between_ptrs_simd(string, pattern, min_ptr, max_ptr);
+        if (!hit) break;
+
+        const size_t hit_off = (size_t)(hit - string->str);
+        /* suffix (including NUL) starts after the matched pattern */
+        const size_t suffix_src_off = hit_off + pat_len;
+        const size_t suffix_bytes   = (string->len + 1) - suffix_src_off; /* +1 for NUL */
+
+        if (delta == 0) {
+            /* same length: overwrite in place */
+            memcpy(hit, repl->str, rep_len);
+        } else if (delta < 0) {
+            /* shrink: write replacement, then close the gap (moves NUL too) */
+            memcpy(hit, repl->str, rep_len);
+            memmove(string->str + hit_off + rep_len,
+                    string->str + suffix_src_off,
+                    suffix_bytes);
+            string->len = (size_t)((ptrdiff_t)string->len + delta);
+        } else {
+            /* grow: open space then write replacement */
+            memmove(string->str + hit_off + rep_len,
+                    string->str + suffix_src_off,
+                    suffix_bytes);
+            memcpy(hit, repl->str, rep_len);
+            string->len = (size_t)((ptrdiff_t)string->len + delta);
+        }
+
+        /* slide right edge left to keep searching earlier positions */
+        if (max_ptr >= hit) {
+            ptrdiff_t d = delta;
+            /* After shrink/grow, max_ptr refers to the same logical character earlier */
+            max_ptr -= d;
+            if (string->len) {
+                if ((size_t)(max_ptr - string->str) >= string->len)
+                    max_ptr = string->str + string->len - 1;
+            } else {
+                max_ptr = string->str; /* harmless placeholder */
+            }
+        }
+
+        /* If we’ve collapsed the window or can’t fit another pattern, stop */
+        if (min_ptr >= max_ptr) break;
+    }
+
+    /* Ensure NUL is at the logical end (already moved with memmove, but belt & suspenders) */
+    string->str[string->len] = '\0';
+    string->error = NO_ERROR;
     return true;
 }
 // --------------------------------------------------------------------------------
@@ -1032,6 +1157,7 @@ void to_lower_char(char* val) {
 void to_uppercase(string_t *s) {
     if(!s || !s->str) {
         errno = EINVAL;
+        if (s) s->error = NULL_POINTER;
         return;
     }
     char* begin = s->str;
@@ -1045,6 +1171,7 @@ void to_uppercase(string_t *s) {
 void to_lowercase(string_t *s) {
     if(!s || !s->str) {
         errno = EINVAL;
+        if (s) s->error = NULL_POINTER;
         return;
     }
     char* begin = s->str;
@@ -1055,29 +1182,45 @@ void to_lowercase(string_t *s) {
 }
 // --------------------------------------------------------------------------------
 
-string_t* pop_string_token(string_t* str_struct, char token) {
-    if (!str_struct || !str_struct->str) {
+string_t* pop_string_token(string_t* s, char token) {
+    if (!s || !s->str) {
+        if (s) s->error = NULL_POINTER;
         errno = EINVAL;
         return NULL;
     }
-    if (str_struct->len == 0) {
+    if (s->len == 0) {
+        s->error = INVALID_ARG;         /* “empty input” rather than UNINITIALIZED */
+        errno = EINVAL;
         return NULL;
     }
-    for (int i = str_struct->len - 1; i >= 0; i--) {
-        if (str_struct->str[i] == token) {
-            // Handle case where token is last character
-            if (i == (int)str_struct->len - 1) {
-                str_struct->str[i] = '\0';
-                str_struct->len = i;
-                return init_string("");
+    if ((unsigned char)token == '\0') { /* NUL never appears in payload */
+        s->error = INVALID_ARG;
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* Search from end without signed underflow */
+    for (size_t i = s->len; i-- > 0; ) {
+        if (s->str[i] == token) {
+            /* Allocate the suffix *before* mutating the source */
+            const char* suffix = s->str + i + 1;   /* points to '\0' if token is last */
+            string_t* out = init_string(suffix);
+            if (!out) {
+                /* init_string set errno (likely ENOMEM); reflect library code too */
+                s->error = BAD_ALLOC;
+                return NULL;
             }
-            
-            string_t *one = init_string(str_struct->str + (i + 1));
-            str_struct->str[i] = '\0';
-            str_struct->len = i;
-            return one;
+            /* Now safely truncate the source at the token */
+            s->str[i] = '\0';
+            s->len    = i;
+            s->error  = NO_ERROR;
+            return out;
         }
     }
+
+    /* Not found */
+    s->error = NOT_FOUND;
+    errno = ENOENT;
     return NULL;
 }
 // --------------------------------------------------------------------------------

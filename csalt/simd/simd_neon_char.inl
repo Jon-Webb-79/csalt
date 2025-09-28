@@ -113,7 +113,51 @@ static inline size_t simd_last_substr_index_neon(const unsigned char* s, size_t 
       for (size_t j = (n >= m ? n - m : 0); j + 1 > i; --j)
           if (s[j] == pat[0] && memcmp(s + j, pat, m) == 0) return j;
       return last;
-  }
+}
+
+static inline uint32_t csalt_neon_movemask_u8(uint8x16_t v) {
+    /* Convert top bits to a 16-bit mask. */
+    static const uint8_t shift_tbl[16] = {1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128};
+    uint8x16_t msb  = vshrq_n_u8(v, 7);
+    uint8x16_t bits = vld1q_u8(shift_tbl);
+    uint8x16_t andv = vandq_u8(msb, bits);
+    uint16x8_t s16  = vpaddlq_u8(andv);
+    uint32x4_t s32  = vpaddlq_u16(s16);
+    uint64x2_t s64  = vpaddlq_u32(s32);
+    uint64_t lo = vgetq_lane_u64(s64, 0);
+    uint64_t hi = vgetq_lane_u64(s64, 1);
+    return (uint32_t)(lo | (hi << 8));
+}
+
+static inline int csalt_hi_bit32_neon(uint32_t m) { return 31 - __builtin_clz(m); }
+
+static inline size_t simd_last_substr_index_neon(const unsigned char* s, size_t n,
+                                                 const unsigned char* pat, size_t m) {
+    if (m == 0) return n;
+    if (m == 1) { for (size_t i=n; i-- > 0; ) if (s[i]==pat[0]) return i; return SIZE_MAX; }
+    if (n < m) return SIZE_MAX;
+
+    size_t i = 0, last = SIZE_MAX;
+    const uint8x16_t b0 = vdupq_n_u8(pat[0]);
+
+    while (i + 16 <= n) {
+        uint8x16_t v  = vld1q_u8(s + i);
+        uint8x16_t eq = vceqq_u8(v, b0);
+        uint32_t mask = csalt_neon_movemask_u8(eq);
+        while (mask) {
+            int pos = csalt_hi_bit32_neon(mask);
+            size_t cand = i + (size_t)pos;
+            if (cand + m <= n && memcmp(s + cand, pat, m) == 0) { last = cand; break; }
+            mask &= (1u << pos) - 1u;
+        }
+        i += 16;
+    }
+
+    for (size_t j = (n - m); j + 1 > i; --j)
+        if (s[j] == pat[0] && memcmp(s + j, pat, m) == 0) return j;
+
+    return last;
+}
 
 #endif /* CSALT_SIMD_NEON_CHAR_INL */
 

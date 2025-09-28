@@ -25,6 +25,7 @@ const char* error_to_string(ErrorCode code) {
         case BAD_ALLOC:          return "Memory allocation failed";
         case REALLOC_FAIL:       return "memory reallocation failed";
         case OUT_OF_MEMORY:      return "System out of memory";
+        case NOT_FOUND:          return "Data not found";
 
         /* Argument / input errors */
         case NULL_POINTER:       return "Null pointer passed";

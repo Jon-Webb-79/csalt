@@ -88,6 +88,10 @@ Authoritative comments live in ``error_codes.h``; this overview is for quick ref
      - ``-4``
      - memory
      - System out of memory or allocator could not satisfy the request.
+   * - ``NOT_FOUND``
+     - -5 
+     - argument 
+     - Data not found 
    * - ``NULL_POINTER``
      - ``-10``
      - argument

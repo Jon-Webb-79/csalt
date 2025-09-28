@@ -1355,7 +1355,6 @@ char* first_string_substr_occurrence(string_t* hay, const string_t* needle);
  * free_string(h); free_string(n);
  * @endcode
  */
-char* first_substr__type_mismatch(string_t*, void*);
 #if defined(DOXYGEN)
 /* Make Doxygen always see the macro symbol */
 #  define first_substr_occurrence(str1, str2) first_string_substr_occurrence((str1), (str2))
@@ -1750,49 +1749,884 @@ char* first_char(string_t* str);
 char* last_char(string_t* str);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Test whether a pointer lies inside a csalt string’s buffer.
+ *
+ * Determines if @p ptr points into @p str’s storage. By default this checks
+ * the **payload region** only (the first @c str->len bytes). When
+ * @p include_terminator is @c true, the check also accepts a pointer to the
+ * trailing NUL, i.e., the range becomes @c [str->str, str->str + str->len + 1).
+ *
+ * This function does not modify the character data. It may update
+ * @c str->error for status reporting.
+ *
+ * **Thread-safety:** Not thread-safe for the same object because it writes
+ * @c str->error. Calls on distinct objects are safe.
+ *
+ * **Time complexity:** @c O(1).
+ *
+ * **Edge cases:**
+ * - For an **empty** string (`str->len == 0`), the payload range is empty.
+ *   With @p include_terminator = @c false, only @c false can be returned.
+ *   With @p include_terminator = @c true, a pointer equal to @c str->str
+ *   (the NUL terminator) is accepted.
+ *
+ * **Error reporting:**
+ * - Returns @c false and sets @c errno = @c EINVAL if @p str is @c NULL,
+ *   if @p ptr is @c NULL (also sets @c str->error = ::INVALID_ARG when
+ *   @p str is non-NULL), or if @c str->str is @c NULL (also sets
+ *   @c str->error = ::NULL_POINTER).
+ * - On a valid check, leaves @c errno unchanged and sets
+ *   @c str->error = ::NO_ERROR.
+ *
+ * @param str                 Target ::string_t (must be initialized).
+ * @param ptr                 Pointer to test (may alias @c str->str or be
+ *                            unrelated).
+ * @param include_terminator  If @c true, accept the pointer to the trailing
+ *                            NUL as “inside” the buffer; if @c false, only
+ *                            the payload bytes are considered.
+ *
+ * @return @c true if @p ptr lies in the selected range of @p str’s buffer;
+ *         @c false otherwise (or on invalid input; see errors above).
+ *
+ * @warning The returned boolean reflects the buffer layout at the time of
+ *          the call. Any operation that can reallocate or modify the buffer
+ *          (concatenate, reserve, trim, destroy) may invalidate prior
+ *          pointers and change subsequent results.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("abc");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * const char* base = get_string(s);
+ * const char* p0   = base;          // 'a'
+ * const char* p1   = base + 3;      // points to terminating '\0'
+ * const char* px   = base + 10;     // clearly out of range
+ *
+ * printf("p0 in payload? %s\n", is_string_ptr(s, p0, false) ? "yes" : "no");
+ * printf("p1 in payload? %s\n", is_string_ptr(s, p1, false) ? "yes" : "no");
+ * printf("p1 in buffer ? %s\n", is_string_ptr(s, p1, true ) ? "yes" : "no");
+ * printf("px in buffer ? %s\n", is_string_ptr(s, px, true ) ? "yes" : "no");
+ *
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * p0 in payload? yes
+ * p1 in payload? no
+ * p1 in buffer ? yes
+ * px in buffer ? no
+ * @endcode
+ */
 bool is_string_ptr(string_t* str, const char* ptr, bool include_terminator);
 // --------------------------------------------------------------------------------
 
-bool drop_lit_substr(string_t* string, const char* substring, char* min_ptr,
-                     char* max_ptr);
+/**
+ * @brief Remove all occurrences of a literal C substring within a bounded window,
+ *        compacting the string in-place.
+ *
+ * Repeatedly locates the **rightmost** occurrence of @p substring inside the
+ * inclusive window `[min_ptr, max_ptr]` of @p string, removes it, and shifts
+ * the remainder of the buffer (including the terminating NUL) left with
+ * `memmove`. After each removal:
+ * - `string->len` is decremented by the number of bytes removed, and
+ * - the `'\0'` terminator is moved left accordingly (because the entire suffix,
+ *   including the terminator, is moved).
+ *
+ * As a convenience, if a removed match is immediately followed by a single
+ * space that is still inside the payload, that space is also removed. The
+ * window’s right edge is internally slid left to remain aligned with the
+ * now-shorter buffer. The function stops when no further matches exist within
+ * the window or the remaining window can no longer accommodate the needle.
+ *
+ * When compiled with supported ISAs, the search phase may be SIMD-accelerated
+ * (SSE2/AVX/AVX2/AVX-512BW, NEON, SVE/SVE2). The erase phase uses `memmove`,
+ * which is typically optimized by libc.
+ *
+ * **Thread-safety:** Not thread-safe for the **same** object. The function
+ * mutates `string->str`, `string->len`, and `string->error`. Calls on distinct
+ * objects are safe.
+ *
+ * **Time complexity:** Let `W = max_ptr - min_ptr + 1`, and let `R` be the
+ * number of removals. Search is ~O(W) in total (often faster with SIMD).
+ * Each removal performs one `memmove` proportional to the remaining suffix,
+ * so worst-case is O(W·R). In practice, `R` is small for typical inputs.
+ *
+ * **Error reporting:**
+ * - Returns `false`, sets `errno = EINVAL` if any argument is invalid
+ *   (`string == NULL`, `substring == NULL`, `string->str == NULL`,
+ *   or `max_ptr < min_ptr`). Also sets `string->error` to ::INVALID_ARG
+ *   or ::NULL_POINTER as appropriate.
+ * - Returns `false`, sets `errno = ERANGE` if `min_ptr` or `max_ptr` do not
+ *   lie within the **payload** of `string` (checked via `is_string_ptr(..., false)`).
+ * - Returns `true` on success, even if no occurrences were found/removed.
+ *   On any successful exit, `string->error = ::NO_ERROR`.
+ *
+ * **Notes:**
+ * - An empty needle (`substring[0] == '\0'`) is a no-op and returns `true`.
+ * - Capacity is not reduced; call ::trim_string if you wish to shrink `alloc`.
+ * - Any previously saved pointers into `string->str` may no longer point to the
+ *   same characters after removals, since content is shifted.
+ *
+ * @param string     Haystack ::string_t to modify (must be initialized).
+ * @param substring  NUL-terminated C string to remove (needle).
+ * @param min_ptr    Inclusive lower bound pointer into `string->str` payload.
+ * @param max_ptr    Inclusive upper bound pointer into `string->str` payload.
+ *
+ * @return `true` if the operation completed (even with zero removals);
+ *         `false` on invalid input or range errors (see above).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("foo bar foo baz");
+ * if (!s) { perror("init_string"); return 1; }
+ * char* lo = first_char(s);
+ * char* hi = last_char(s);
+ *
+ * if (!drop_lit_substr(s, "foo", lo, hi)) {
+ *     perror("drop_lit_substr");
+ *     fprintf(stderr, "err: %s\n", error_to_string(get_string_error(s)));
+ *     free_string(s);
+ *     return 1;
+ * }
+ * printf("Result: \"%s\" (len=%zu)\n", get_string(s), string_size(s));
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * Result: "bar baz" (len=7)
+ * @endcode
+ *
+ * @see drop_string_substr, is_string_ptr, first_char, last_char, trim_string
+ */
+bool drop_lit_substr(string_t* string, const char* substring,
+                     char* min_ptr, char* max_ptr);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Remove all occurrences of a csalt string needle within a bounded window
+ *        of another csalt string, compacting the haystack in-place.
+ *
+ * Repeatedly locates the **rightmost** occurrence of @p substring’s payload
+ * inside the inclusive window `[min_ptr, max_ptr]` of @p string, removes it,
+ * and shifts the remainder of the buffer (including the terminating NUL) left
+ * with `memmove`. After each removal:
+ * - `string->len` is decremented by the number of bytes removed, and
+ * - the `'\0'` terminator is moved left accordingly.
+ *
+ * If a removed match is immediately followed by a single space still inside
+ * the payload, that space is also removed. The window’s right edge is updated
+ * internally to track the shorter buffer. The function stops when no further
+ * matches exist within the window or the remaining window cannot accommodate
+ * the needle.
+ *
+ * The search phase may be SIMD-accelerated on supported ISAs (SSE2/AVX/AVX2/AVX-512BW,
+ * NEON, SVE/SVE2). The erase phase uses `memmove`.
+ *
+ * **Thread-safety:** Not thread-safe for the **same** object. The function
+ * mutates `string->str`, `string->len`, and `string->error`. Calls on distinct
+ * objects are safe. The needle object @p substring is not modified.
+ *
+ * **Time complexity:** Let `W = max_ptr - min_ptr + 1`, and let `R` be the
+ * number of removals. Search is ~O(W) in total (often faster with SIMD).
+ * Each removal uses one `memmove` of the remaining suffix, yielding a worst case
+ * around O(W·R).
+ *
+ * **Error reporting:**
+ * - Returns `false`, sets `errno = EINVAL` if any argument is invalid
+ *   (`string == NULL`, `substring == NULL`, `string->str == NULL`,
+ *   `substring->str == NULL`, or `max_ptr < min_ptr`). Also sets
+ *   `string->error` to ::INVALID_ARG or ::NULL_POINTER as appropriate.
+ * - Returns `false`, sets `errno = ERANGE` if `min_ptr` or `max_ptr` do not
+ *   lie within the **payload** of `string` (checked via `is_string_ptr(..., false)`).
+ * - Returns `true` on success, even if no occurrences were found/removed.
+ *   On any successful exit, `string->error = ::NO_ERROR`.
+ *
+ * **Notes:**
+ * - An empty needle (`substring->len == 0`) is a no-op and returns `true`.
+ * - Capacity is not reduced; call ::trim_string to shrink `alloc` if desired.
+ * - Previously saved pointers into `string->str` may no longer refer to the
+ *   same characters after removals, since content is shifted.
+ *
+ * @param string     Haystack ::string_t to modify (must be initialized).
+ * @param substring  Needle ::string_t whose payload will be removed where found
+ *                   (must be initialized; not modified).
+ * @param min_ptr    Inclusive lower bound pointer into `string->str` payload.
+ * @param max_ptr    Inclusive upper bound pointer into `string->str` payload.
+ *
+ * @return `true` if the operation completed (even with zero removals);
+ *         `false` on invalid input or range errors (see above).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* hay = init_string("alpha beta alpha gamma alpha");
+ * string_t* ndl = init_string("alpha");
+ * if (!hay || !ndl) { perror("init_string"); free_string(hay); free_string(ndl); return 1; }
+ *
+ * char* lo = first_char(hay);
+ * char* hi = last_char(hay);
+ *
+ * if (!drop_string_substr(hay, ndl, lo, hi)) {
+ *     perror("drop_string_substr");
+ *     fprintf(stderr, "err: %s\n", error_to_string(get_string_error(hay)));
+ *     free_string(hay); free_string(ndl); return 1;
+ * }
+ * printf("Result: \"%s\" (len=%zu)\n", get_string(hay), string_size(hay));
+ *
+ * free_string(hay);
+ * free_string(ndl);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * Result: "beta gamma" (len=10)
+ * @endcode
+ *
+ * @see drop_lit_substr, is_string_ptr, first_char, last_char, trim_string
+ */
 bool drop_string_substr(string_t* string, const string_t* substring, char* min_ptr,
                         char* max_ptr);
 // -------------------------------------------------------------------------------- 
 
-#define drop_substr(string, substr, min_ptr, max_ptr) _Generic((substr), \
-    char*: drop_lit_substr, \
-    string_t*: drop_string_substr) (string, substr, min_ptr, max_ptr)
+/**
+ * @def drop_substr
+ * @brief Generic front-end that removes all occurrences of a substring within a
+ *        bounded window of a csalt string, dispatching by needle type.
+ *
+ * **Dispatch rules**
+ * - `const char*` / `char*` / (`const unsigned char*` / `unsigned char*`)
+ *     ➜ ::drop_lit_substr(@p string, @p substr, @p min_ptr, @p max_ptr)
+ * - `const string_t*` / `string_t*`
+ *     ➜ ::drop_string_substr(@p string, @p substr, @p min_ptr, @p max_ptr)
+ *
+ * The window is **inclusive**: the function removes matches that start in
+ * `[min_ptr, max_ptr]`. For each removal, the remainder of the buffer
+ * (including the terminating NUL) is shifted left with `memmove`, and
+ * `string->len` is decreased accordingly. If a removed match is immediately
+ * followed by a single space still inside the payload, that space is also
+ * removed. The macro repeats removal from the **rightmost** match inside the
+ * window until no more matches fit.
+ *
+ * **Thread-safety:** This macro mutates the target string (content, `len`,
+ * and `error`) through the selected function. Treat calls as **not thread-safe
+ * for the same object** unless you synchronize access. Calls on distinct
+ * objects are safe.
+ *
+ * **Time complexity:** Let `W = max_ptr - min_ptr + 1`, and let `R` be the
+ * number of removals. The search phase is ~O(W) in total (often faster on
+ * machines with SIMD), and each removal performs one `memmove` proportional to
+ * the remaining suffix, yielding a worst case around O(W · R).
+ *
+ * **Error reporting:** The selected function returns `bool`.
+ * - On invalid arguments (nulls, `max_ptr < min_ptr`), returns `false`,
+ *   sets `errno = EINVAL`, and sets `string->error` to ::INVALID_ARG or
+ *   ::NULL_POINTER as appropriate.
+ * - If `min_ptr` or `max_ptr` do not lie inside the payload of @p string,
+ *   returns `false`, sets `errno = ERANGE`, and sets `string->error` =
+ *   ::OUT_OF_BOUNDS.
+ * - Returns `true` on success, even when zero occurrences were removed; on any
+ *   successful exit, `string->error = ::NO_ERROR`.
+ *
+ * **Notes**
+ * - An empty needle is a no-op and yields `true`.
+ * - Capacity is not reduced; call ::trim_string if you want to shrink `alloc`.
+ * - Any saved pointers into the buffer may become invalid as content moves.
+ * - The macro forces array-to-pointer decay for string literals; you may still
+ *   cast explicitly, e.g., `(const char*)"foo"`, if you prefer.
+ *
+ * **Compile-time checks**
+ * - If @p substr has an unsupported type, the macro resolves to an internal
+ *   `drop_substr__type_mismatch` symbol that is annotated to produce a
+ *   compile-time diagnostic on GCC/Clang (strong deprecation on MSVC).
+ *
+ * @param string   Haystack ::string_t* to modify.
+ * @param substr   Needle as either a C string pointer or a ::string_t*.
+ * @param min_ptr  Inclusive lower-bound pointer into `string->str` (payload).
+ * @param max_ptr  Inclusive upper-bound pointer into `string->str` (payload).
+ *
+ * @return `bool` — `true` if the operation completed; `false` on invalid input
+ *         or range errors (see above).
+ *
+ * @par Example (C-string needle)
+ * @code{.c}
+ * string_t* s = init_string("foo bar foo baz");
+ * char* lo = first_char(s);
+ * char* hi = last_char(s);
+ * if (!drop_substr(s, (const char*)"foo", lo, hi)) {
+ *     perror("drop_substr");
+ *     fprintf(stderr, "%s\n", error_to_string(get_string_error(s)));
+ * }
+ * printf("Result: \"%s\" (len=%zu)\n", get_string(s), string_size(s));
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * Result: "bar baz" (len=7)
+ * @endcode
+ *
+ * @par Example (csalt string needle)
+ * @code{.c}
+ * string_t* h = init_string("alpha beta alpha gamma alpha");
+ * string_t* n = init_string("alpha");
+ * char* lo = first_char(h);
+ * char* hi = last_char(h);
+ * (void)drop_substr(h, n, lo, hi);
+ * printf("Result: \"%s\"\n", get_string(h));
+ * free_string(h); free_string(n);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * Result: "beta gamma"
+ * @endcode
+ *
+ * @see drop_lit_substr, drop_string_substr, is_string_ptr, first_char, last_char, trim_string
+ */
+
+#if defined(DOXYGEN)
+#  define drop_substr(string, substr, min_ptr, max_ptr) \
+     drop_string_substr((string), (substr), (min_ptr), (max_ptr))
+#elif __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
+#  define drop_substr(string, substr, min_ptr, max_ptr)                                      \
+     ( _Generic(((substr)),        /* +0 forces array-to-pointer decay for literals */   \
+         const char*:          drop_lit_substr,                                              \
+         char*:                drop_lit_substr,                                              \
+         const unsigned char*: drop_lit_substr,                                              \
+         unsigned char*:       drop_lit_substr,                                              \
+         const string_t*:      drop_string_substr,                                           \
+         string_t*:            drop_string_substr,                                           \
+         void*:                drop_lit_substr,   /* tolerate NULL as (void*)0 */            \
+         default:              drop_substr__type_mismatch                                    \
+       )((string), (substr), (min_ptr), (max_ptr)) )
+bool drop_substr__type_mismatch(string_t*, void*, char*, char*);
+#else
+#  define drop_substr(string, substr, min_ptr, max_ptr) \
+     drop_string_substr((string), (substr), (min_ptr), (max_ptr))
+#endif
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Replace all occurrences of a **literal C string** needle within a bounded
+ *        window of a csalt string, compacting/growing the buffer in-place.
+ *
+ * Searches the inclusive window `[min_ptr, max_ptr]` of @p string for the **rightmost**
+ * occurrence of the C-string @p pattern, replaces it with the C-string @p repl, and
+ * repeats right-to-left until no further matches remain in the window. The suffix
+ * (including the terminating NUL) is moved with `memmove` and `string->len` is updated
+ * after each replacement.
+ *
+ * The search may be SIMD-accelerated on supported ISAs via the project dispatcher.
+ * When the replacement text aliases @p string’s buffer (e.g., `repl` points inside
+ * `string->str`), the implementation stashes a temporary copy to avoid overlap hazards.
+ * If the replacement is longer than the pattern, the function first **counts matches**
+ * (bounded by the window) and performs at most one `realloc` to grow capacity.
+ *
+ * Thread-safety: not thread-safe for the **same** object; the function mutates
+ * `string->str`, `string->len`, and `string->error`. Calls on distinct objects are safe.
+ *
+ * Time complexity: With window width `W` and `R` replacements, total search ~O(W),
+ * and each replacement uses one `memmove` of the remaining suffix → worst case O(W·R).
+ *
+ * Error reporting:
+ * - Returns `false`, sets `errno = EINVAL` if any argument is invalid (`string == NULL`,
+ *   `pattern == NULL`, `repl == NULL`, `string->str == NULL`, or `max_ptr < min_ptr`).
+ *   Also sets `string->error` to ::INVALID_ARG or ::NULL_POINTER as appropriate.
+ * - Returns `false`, sets `errno = ERANGE` if `min_ptr` or `max_ptr` are outside the
+ *   **payload** (checked via `is_string_ptr(..., false)`).
+ * - Returns `false`, sets `errno = ENOMEM` on allocation failure (and
+ *   `string->error = ::REALLOC_FAIL` when `realloc` fails).
+ * - Returns `false`, sets `errno = EOVERFLOW` if a size computation would overflow.
+ * - Returns `true` on success (even with zero replacements); on any successful exit,
+ *   `string->error = ::NO_ERROR`.
+ *
+ * Notes:
+ * - Empty pattern (`pattern[0] == '\0'`) is a no-op and returns `true`.
+ * - Capacity may grow but is not trimmed automatically (see ::trim_string).
+ * - Saved pointers into `string->str` may be invalidated by growth.
+ *
+ * @param string   Haystack ::string_t to be modified (must be initialized).
+ * @param pattern  NUL-terminated C string to search for (needle).
+ * @param repl     NUL-terminated C string to write in place of each match.
+ * @param min_ptr  Inclusive lower-bound pointer into `string->str` (payload).
+ * @param max_ptr  Inclusive upper-bound pointer into `string->str` (payload).
+ *
+ * @return `true` if the operation completed; `false` on error (see above).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("foo bar foo baz");
+ * if (!s) { perror("init_string"); return 1; }
+ * char* lo = first_char(s);
+ * char* hi = last_char(s);
+ *
+ * if (!replace_lit_substr(s, "foo", "qux", lo, hi)) {
+ *     perror("replace_lit_substr");
+ *     fprintf(stderr, "%s\n", error_to_string(get_string_error(s)));
+ * }
+ *
+ * printf("Result: \"%s\" (len=%zu)\n", get_string(s), string_size(s));
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * Result: "qux bar qux baz" (len=15)
+ * @endcode
+ */
 bool replace_lit_substr(string_t* string, const char* pattern, const char* replace_string,
                         char* min_ptr, char* max_ptr);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Replace all occurrences of a csalt-string needle within a bounded window
+ *        of another csalt string, compacting/growing the buffer in-place.
+ *
+ * Searches the inclusive window `[min_ptr, max_ptr]` of @p string for the **rightmost**
+ * occurrence of @p pattern’s payload, replaces it with @p repl’s payload, and repeats
+ * right-to-left until no further matches remain in the window. Edits are performed with
+ * `memmove`, moving the **entire suffix including the terminating NUL**, and
+ * `string->len` is updated after each replacement.
+ *
+ * The search phase may be SIMD-accelerated on supported ISAs (SSE2/AVX/AVX2/AVX-512BW,
+ * NEON, SVE/SVE2) via the project’s dispatcher. Replacing from right to left avoids
+ * rescanning shifted content and prevents overlapping artifacts within the same pass.
+ * If the replacement is longer than the pattern, the function first **counts matches**
+ * (using the same bounded search) and performs at most one `realloc` to grow capacity.
+ *
+ * Thread-safety: not thread-safe for the **same** object; the function mutates
+ * `string->str`, `string->len`, and `string->error`. Calls on distinct objects are safe.
+ *
+ * Time complexity: Let `W = max_ptr - min_ptr + 1` and `R` the number of replacements.
+ * The total search is ~O(W) (often faster with SIMD); each replacement performs one
+ * `memmove` proportional to the remaining suffix, yielding a worst case around O(W·R).
+ *
+ * Error reporting:
+ * - Returns `false`, sets `errno = EINVAL` if any argument is invalid
+ *   (`string == NULL`, `pattern == NULL`, `repl == NULL`,
+ *   `string->str == NULL`, `pattern->str == NULL`, `repl->str == NULL`,
+ *   or `max_ptr < min_ptr`). Also sets `string->error` to ::INVALID_ARG or
+ *   ::NULL_POINTER as appropriate.
+ * - Returns `false`, sets `errno = ERANGE` if `min_ptr` or `max_ptr` lie outside
+ *   the **payload** of @p string (validated via `is_string_ptr(..., false)`).
+ * - Returns `false`, sets `errno = ENOMEM` on allocation failure (and
+ *   `string->error = ::REALLOC_FAIL` when `realloc` fails).
+ * - Returns `false`, sets `errno = EOVERFLOW` if a size computation would overflow.
+ * - Returns `true` on success, even when zero replacements occurred; on any successful
+ *   exit, `string->error = ::NO_ERROR`.
+ *
+ * Notes:
+ * - Empty pattern (`pattern->len == 0`) is a no-op and returns `true`.
+ * - Capacity may grow but is not automatically trimmed; call ::trim_string to shrink.
+ * - Any previously saved pointers into `string->str` may be invalidated by growth.
+ *
+ * @param string       Haystack ::string_t to be modified (must be initialized).
+ * @param pattern      Needle ::string_t to search for (read-only).
+ * @param replace_string  Replacement ::string_t whose payload replaces matches (read-only).
+ * @param min_ptr      Inclusive lower-bound pointer into `string->str` (payload).
+ * @param max_ptr      Inclusive upper-bound pointer into `string->str` (payload).
+ *
+ * @return `true` if the operation completed; `false` on error (see above).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s   = init_string("alpha beta alpha gamma alpha");
+ * string_t* pat = init_string("alpha");
+ * string_t* rep = init_string("ALPHA");
+ * if (!s || !pat || !rep) { perror("init_string"); goto done; }
+ *
+ * char* lo = first_char(s);
+ * char* hi = last_char(s);
+ * if (!replace_string_substr(s, pat, rep, lo, hi)) {
+ *     perror("replace_string_substr");
+ *     fprintf(stderr, "%s\n", error_to_string(get_string_error(s)));
+ * }
+ * printf("Result: \"%s\" (len=%zu)\n", get_string(s), string_size(s));
+ * done:
+ * free_string(s); free_string(pat); free_string(rep);
+ * @endcode
+ *
+ * @par Output (example)
+ * @code{.text}
+ * Result: "ALPHA beta ALPHA gamma ALPHA" (len=29)
+ * @endcode
+ */
 bool replace_string_substr(string_t* string, const string_t* pattern, const string_t* replace_string,
                            char* min_ptr, char* max_ptr);
 // -------------------------------------------------------------------------------- 
 
-#define replace_substr(string, pattern, replace_string, min_ptr, max_ptr) _Generic((pattern), \
-    char*: replace_lit_substr, \
-    string_t*: replace_string_substr) (string, pattern, replace_string, min_ptr, max_ptr)
+/**
+ * @def replace_substr
+ * @brief Generic front-end to replace a substring inside a bounded window of a
+ *        csalt string, dispatching by **pattern** type and validating the
+ *        replacement type at compile time.
+ *
+ * **Dispatch rules (via C11 `_Generic`):**
+ * - If @p pattern is a C string pointer (`const char*`, `char*`,
+ *   `const unsigned char*`, or `unsigned char*`, and also `void*` to allow
+ *   `(void*)0`/`NULL`), this macro calls
+ *   ::replace_lit_substr(@p string, @p pattern, @p replace_string, @p min_ptr, @p max_ptr).
+ *   In this branch, @p replace_string must also be a C string pointer (same set).
+ * - If @p pattern is a csalt string (`const string_t*` or `string_t*`), this macro calls
+ *   ::replace_string_substr(@p string, @p pattern, @p replace_string, @p min_ptr, @p max_ptr).
+ *   In this branch, @p replace_string must also be `const string_t*` / `string_t*`.
+ *
+ * The window is **inclusive**: matches starting in `[@p min_ptr, @p max_ptr]` are eligible.
+ * The selected function replaces occurrences **right-to-left**, moving the entire suffix
+ * (including the NUL terminator) with `memmove`, and updates `string->len` after each edit.
+ * If the replacement is longer than the pattern, capacity may be grown (with at most one
+ * `realloc` in the typical implementation).
+ *
+ * **Thread-safety:** Not thread-safe for the **same** object; the selected function mutates
+ * `string->str`, `string->len`, and `string->error`. Calls on distinct objects are safe.
+ *
+ * **Time complexity:** Let `W = max_ptr - min_ptr + 1`, and `R` the number of replacements.
+ * Total search is ~O(W) (often faster on SIMD builds); each replacement performs one
+ * `memmove` of the remaining suffix → worst case about O(W · R).
+ *
+ * **Error reporting (from the selected function):**
+ * - Returns `false`, sets `errno = EINVAL` for invalid inputs (`NULL` args, or `max_ptr < min_ptr`);
+ *   also sets `string->error` to ::INVALID_ARG or ::NULL_POINTER as appropriate.
+ * - Returns `false`, sets `errno = ERANGE` if @p min_ptr or @p max_ptr lie outside the payload
+ *   of @p string (validated via `is_string_ptr(..., false)`).
+ * - Returns `false`, sets `errno = ENOMEM` on allocation failure (and `string->error = ::REALLOC_FAIL`
+ *   when `realloc` fails).
+ * - Returns `false`, sets `errno = EOVERFLOW` if a size computation would overflow.
+ * - Returns `true` on success (even if zero replacements occur); on success,
+ *   `string->error = ::NO_ERROR`.
+ *
+ * **Notes:**
+ * - An **empty pattern** is treated as a no-op and yields `true`.
+ * - Capacity may grow during replacement but is not automatically trimmed; call ::trim_string
+ *   to shrink `alloc` if needed.
+ * - The macro forces **array-to-pointer decay** for string literals so `"foo"` matches the C-string
+ *   branch. If your platform’s `NULL` is plain `0`, cast to `(const char*)NULL` to select the
+ *   literal branch explicitly.
+ * - Saved pointers into `string->str` may be invalidated when the buffer grows.
+ *
+ * **Compile-time checks:** Passing a mismatched type for @p replace_string relative to @p pattern
+ * (e.g., `pattern` is `string_t*` but `replace_string` is `char*`) triggers a compile-time
+ * diagnostic on GCC/Clang (strong deprecation on MSVC), via an internal
+ * `replace_substr__type_mismatch` symbol.
+ *
+ * @param string          Haystack ::string_t* to modify (must be initialized).
+ * @param pattern         Needle: C string pointer or ::string_t* (determines dispatch).
+ * @param replace_string  Replacement: must match @p pattern’s category (C string vs ::string_t*).
+ * @param min_ptr         Inclusive lower-bound pointer into `string->str` (payload).
+ * @param max_ptr         Inclusive upper-bound pointer into `string->str` (payload).
+ *
+ * @return `bool` — `true` if the operation completed; `false` on error (see above).
+ *
+ * @par Example (C-string pattern)
+ * @code{.c}
+ * string_t* s = init_string("foo bar foo baz");
+ * char* lo = first_char(s);
+ * char* hi = last_char(s);
+ * if (!replace_substr(s, "foo", "qux", lo, hi)) {
+ *     perror("replace_substr");
+ *     fprintf(stderr, "%s\n", error_to_string(get_string_error(s)));
+ * }
+ * printf("Result: \"%s\" (len=%zu)\n", get_string(s), string_size(s));
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * Result: "qux bar qux baz" (len=15)
+ * @endcode
+ *
+ * @par Example (csalt string pattern)
+ * @code{.c}
+ * string_t* s   = init_string("alpha beta alpha gamma");
+ * string_t* pat = init_string("alpha");
+ * string_t* rep = init_string("ALPHA");
+ * char* lo = first_char(s);
+ * char* hi = last_char(s);
+ * (void)replace_substr(s, pat, rep, lo, hi);   // dispatches to replace_string_substr
+ * printf("Result: \"%s\"\n", get_string(s));
+ * free_string(s); free_string(pat); free_string(rep);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * Result: "ALPHA beta ALPHA gamma"
+ * @endcode
+ *
+ * @see replace_lit_substr, replace_string_substr, drop_substr, is_string_ptr,
+ *      first_char, last_char, trim_string
+ */
+bool replace_substr__type_mismatch(string_t*, void*, void*, char*, char*);
+
+#if defined(DOXYGEN)
+/* Simple mapping so Doxygen always indexes it */
+#  define replace_substr(string, pattern, replace_string, min_ptr, max_ptr) \
+       replace_string_substr((string), (pattern), (replace_string), (min_ptr), (max_ptr))
+#elif __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_GENERIC__)
+/* Single-macro, nested _Generic: dispatch by pattern type, then validate replacement type */
+#  define replace_substr(string, pattern, replace_string, min_ptr, max_ptr)                              \
+( _Generic((&*(pattern)),                                                                                 \
+    /* ---- C-string pattern ---- */                                                                      \
+    const char*: _Generic((&*(replace_string)),                                                           \
+        const char*:          replace_lit_substr,                                                         \
+        char*:                replace_lit_substr,                                                         \
+        const unsigned char*: replace_lit_substr,                                                         \
+        unsigned char*:       replace_lit_substr,                                                         \
+        default:              replace_substr__type_mismatch                                               \
+    ),                                                                                                    \
+    char*: _Generic((&*(replace_string)),                                                                 \
+        const char*:          replace_lit_substr,                                                         \
+        char*:                replace_lit_substr,                                                         \
+        const unsigned char*: replace_lit_substr,                                                         \
+        unsigned char*:       replace_lit_substr,                                                         \
+        default:              replace_substr__type_mismatch                                               \
+    ),                                                                                                    \
+    const unsigned char*: _Generic((&*(replace_string)),                                                  \
+        const char*:          replace_lit_substr,                                                         \
+        char*:                replace_lit_substr,                                                         \
+        const unsigned char*: replace_lit_substr,                                                         \
+        unsigned char*:       replace_lit_substr,                                                         \
+        default:              replace_substr__type_mismatch                                               \
+    ),                                                                                                    \
+    unsigned char*: _Generic((&*(replace_string)),                                                        \
+        const char*:          replace_lit_substr,                                                         \
+        char*:                replace_lit_substr,                                                         \
+        const unsigned char*: replace_lit_substr,                                                         \
+        unsigned char*:       replace_lit_substr,                                                         \
+        default:              replace_substr__type_mismatch                                               \
+    ),                                                                                                    \
+    /* ---- csalt string pattern ---- */                                                                  \
+    const string_t*: _Generic((replace_string),                                                           \
+        const string_t*:      replace_string_substr,                                                      \
+        string_t*:            replace_string_substr,                                                      \
+        default:              replace_substr__type_mismatch                                               \
+    ),                                                                                                    \
+    string_t*: _Generic((replace_string),                                                                 \
+        const string_t*:      replace_string_substr,                                                      \
+        string_t*:            replace_string_substr,                                                      \
+        default:              replace_substr__type_mismatch                                               \
+    ),                                                                                                    \
+    /* ---- anything else ---- */                                                                          \
+    default: replace_substr__type_mismatch                                                                \
+  )((string), (pattern), (replace_string), (min_ptr), (max_ptr)) )
+#else
+/* Pre-C11 fallback */
+#  define replace_substr(string, pattern, replace_string, min_ptr, max_ptr) \
+       replace_string_substr((string), (pattern), (replace_string), (min_ptr), (max_ptr))
+#endif
 // ================================================================================
 // ================================================================================ 
 
+ /**
+ * @brief Uppercase a single ASCII character in place.
+ *
+ * Converts the byte referenced by @p val to uppercase if it lies in the ASCII
+ * range `'a'..'z'`. Non-letters are left unchanged. The pointer must be valid.
+ *
+ * Error handling:
+ * - If @p val is NULL, the function returns immediately and sets `errno = EINVAL`.
+ *
+ * Thread-safety: Safe for concurrent calls; operates only on the provided byte.
+ * Complexity: O(1).
+ *
+ * @param val Pointer to the character to modify in place.
+ *
+ * @return void
+ *
+ * @par Example
+ * @code{.c}
+ * char c = 'b';
+ * to_upper_char(&c);
+ * printf("%c\n", c);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * B
+ * @endcode
+ *
+ * @note ASCII-only. For locale-aware behavior use `<ctype.h>` and
+ *       `toupper((unsigned char)*p)`.
+ */
 void to_upper_char(char* val);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Lowercase a single ASCII character in place.
+ *
+ * Converts the byte referenced by @p val to lowercase if it lies in the ASCII
+ * range `'A'..'Z'`. Non-letters are left unchanged. The pointer must be valid.
+ *
+ * Error handling:
+ * - If @p val is NULL, the function returns immediately and sets `errno = EINVAL`.
+ *
+ * Thread-safety: Safe for concurrent calls; operates only on the provided byte.
+ * Complexity: O(1).
+ *
+ * @param val Pointer to the character to modify in place.
+ *
+ * @return void
+ *
+ * @par Example
+ * @code{.c}
+ * char c = 'G';
+ * to_lower_char(&c);
+ * printf("%c\n", c);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * g
+ * @endcode
+ *
+ * @note ASCII-only. For locale-aware behavior use `<ctype.h>` and
+ *       `tolower((unsigned char)*p)`.
+ */
 void to_lower_char(char* val);
 // --------------------------------------------------------------------------------
 
-void to_uppercase(string_t* val);
+/**
+ * @brief Convert all ASCII letters in a csalt string to uppercase, in place.
+ *
+ * Walks the payload of @p s and uppercases bytes in the range `'a'..'z'`. Bytes
+ * outside ASCII letters are left unchanged. The function mutates the buffer
+ * referenced by `s->str`.
+ *
+ * Error handling:
+ * - If @p s is NULL, or `s->str` is NULL, the function returns immediately and
+ *   sets `errno = EINVAL`. When `s` is non-NULL but `s->str` is NULL, it also sets
+ *   `s->error = ::NULL_POINTER`.
+ *
+ * Thread-safety: Not thread-safe for the same object (mutates `s->str` and may
+ * update `s->error`). Calls on distinct objects are safe.
+ * Complexity: O(n), where n = `s->len`.
+ *
+ * @param s Pointer to an initialized ::string_t to modify in place.
+ *
+ * @return void
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("Hello, World! 123");
+ * to_uppercase(s);
+ * printf("%s\n", get_string(s));
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * HELLO, WORLD! 123
+ * @endcode
+ *
+ * @note ASCII-only transformation. For locale/Unicode-aware casing, consider a
+ *       higher-level library. If you prefer to clear error state on success,
+ *       set `s->error = ::NO_ERROR` before returning.
+ */
+void to_uppercase(string_t *s);
 // --------------------------------------------------------------------------------
 
-void to_lowercase(string_t* val);
+/**
+ * @brief Convert all ASCII letters in a csalt string to lowercase, in place.
+ *
+ * Walks the payload of @p s and lowercases bytes in the range `'A'..'Z'`. Bytes
+ * outside ASCII letters are left unchanged. The function mutates the buffer
+ * referenced by `s->str`.
+ *
+ * Error handling:
+ * - If @p s is NULL, or `s->str` is NULL, the function returns immediately and
+ *   sets `errno = EINVAL`. When `s` is non-NULL but `s->str` is NULL, it also sets
+ *   `s->error = ::NULL_POINTER`.
+ *
+ * Thread-safety: Not thread-safe for the same object (mutates `s->str` and may
+ * update `s->error`). Calls on distinct objects are safe.
+ * Complexity: O(n), where n = `s->len`.
+ *
+ * @param s Pointer to an initialized ::string_t to modify in place.
+ *
+ * @return void
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("Hello, World! 123");
+ * to_lowercase(s);
+ * printf("%s\n", get_string(s));
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * hello, world! 123
+ * @endcode
+ *
+ * @note ASCII-only transformation. For locale/Unicode-aware casing, consider a
+ *       higher-level library. If you prefer to clear error state on success,
+ *       set `s->error = ::NO_ERROR` before returning.
+ */
+void to_lowercase(string_t *s);
 // --------------------------------------------------------------------------------
 
-string_t* pop_string_token(string_t* str_struct, char token);
+/**
+ * @brief Pop and return the suffix after the **last** occurrence of @p token, truncating @p s in place.
+ *
+ * Scans the payload of @p s from right to left for the last occurrence of the delimiter
+ * byte @p token. If found at index `i`, the function:
+ * - Allocates and returns a new ::string_t containing the bytes **after** the delimiter
+ *   (`s->str + i + 1 .. s->str + s->len - 1`). If the delimiter is the last byte, the
+ *   returned string is `""` (empty).
+ * - Truncates @p s in place at the delimiter by writing `'\0'` at `s->str[i]` and setting
+ *   `s->len = i`. The capacity `s->alloc` is unchanged.
+ *
+ * Thread-safety: **Not thread-safe for the same object.** This function mutates @p s
+ * (`str`, `len`, and `error`). Calls on distinct objects are safe.
+ *
+ * Time complexity: **O(n)** for a string of length `n`, plus O(k) to construct the
+ * returned suffix (where `k` is the suffix length). No extra scans are performed.
+ *
+ * Error reporting:
+ * - If `s == NULL` or `s->str == NULL`: returns `NULL`, sets `errno = EINVAL`;
+ *   when `s != NULL` but `s->str == NULL`, also sets `s->error = ::NULL_POINTER`.
+ * - If `s->len == 0` or `token == '\0'`: returns `NULL`, sets `errno = EINVAL`,
+ *   and sets `s->error = ::INVALID_ARG`.
+ * - If @p token does **not** occur in the payload: returns `NULL`, sets `errno = ENOENT`,
+ *   and sets `s->error = ::NOT_FOUND`.
+ * - If allocation of the returned suffix fails: returns `NULL`, leaves @p s unchanged,
+ *   sets `errno = ENOMEM`, and sets `s->error = ::BAD_ALLOC` (or ::OUT_OF_MEMORY).
+ * - On success: sets `s->error = ::NO_ERROR`.
+ *
+ * Notes:
+ * - The operation reduces the logical length only; capacity is preserved. Use
+ *   ::trim_string if you want to shrink `alloc` to `len + 1`.
+ * - Any pointers previously obtained with ::first_char / ::last_char that point
+ *   **beyond** the new `s->len` become invalid; pointers into the kept prefix
+ *   remain valid.
+ *
+ * @param s      Source ::string_t to modify in place (must be initialized).
+ * @param token  Delimiter byte to search for (raw ASCII/byte comparison).
+ *
+ * @return Newly allocated ::string_t containing the popped suffix (caller owns it),
+ *         or `NULL` on error / not found (see Error reporting).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("path/to/file.txt");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * string_t* tail = pop_string_token(s, '/');
+ * if (!tail) {
+ *     perror("pop_string_token");                       // ENOENT if '/' not found
+ *     fprintf(stderr, "%s\n", error_to_string(get_string_error(s)));
+ *     free_string(s);
+ *     return 1;
+ * }
+ *
+ * printf("head = \"%s\" (len=%zu)\n", get_string(s), string_size(s));
+ * printf("tail = \"%s\" (len=%zu)\n", get_string(tail), string_size(tail));
+ *
+ * free_string(tail);
+ * free_string(s);
+ * @endcode
+ *
+ * @par Output
+ * @code{.text}
+ * head = "path/to" (len=7)
+ * tail = "file.txt" (len=8)
+ * @endcode
+ */
+string_t* pop_string_token(string_t* s, char token);
 // --------------------------------------------------------------------------------
 
 size_t token_count(const string_t* str, const char* delim);

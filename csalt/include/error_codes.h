@@ -59,6 +59,7 @@ typedef enum {
     BAD_ALLOC           = -2,  /* Memory allocation failed */
     REALLOC_FAIL        = -3,  /* Reallocation failed */
     OUT_OF_MEMORY       = -4,  /* System out of memory */
+    NOT_FOUND           = -5,  /* Data not found */
 
     /* Argument / input errors */
     NULL_POINTER        = -10, /* Null pointer passed */
