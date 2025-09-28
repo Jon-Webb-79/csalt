@@ -118,6 +118,17 @@ Key features:
 Typical use cases include large engineering calculations (e.g., PDEs, FEM solvers) where the 
 storage and access pattern of matrices must adapt to the structure of the data.
 
+Work Forward 
+------------
+The following are areas for future improvement in the code base 
+
+* Update all documentation to link to Doxygen doc strings (IN PROGRESS)
+* Incorporate ErrorCode enums and related error handling into all data structures and functions (IN PROGRESS)
+* Refactor entire Matrix code base
+* Test on a wider array of platforms and compilers to exercise all SIMD instruction sets 
+* Increase robustness of edge cases for unit tests 
+* Refactor string_t type to handle non ASCI data 
+
 .. toctree::
    :maxdepth: 1
    :caption: Modules:

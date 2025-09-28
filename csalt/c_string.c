@@ -146,6 +146,42 @@ static inline size_t simd_last_substr_index(const unsigned char* s, size_t n,
     return SIZE_MAX;
 #endif
 }
+static inline size_t token_count_simd(const char* s, size_t n,
+                                      const char* delim, size_t dlen) {
+#if defined(__AVX512BW__)
+    return simd_token_count_avx512bw(s, n, delim, dlen);
+#elif defined(__AVX2__)
+    return simd_token_count_avx2(s, n, delim, dlen);
+#elif defined(__AVX__)
+    return simd_token_count_avx(s, n, delim, dlen);
+#elif defined(__SSE4_1__)
+    return simd_token_count_sse41(s, n, delim, dlen);
+#elif defined(__SSE3__)
+    return simd_token_count_sse3(s, n, delim, dlen);
+#elif defined(__SSE2__)
+    return simd_token_count_sse2(s, n, delim, dlen);
+#elif defined(__ARM_FEATURE_SVE2)
+    return simd_token_count_sve2(s, n, delim, dlen);
+#elif defined(__ARM_FEATURE_SVE)
+    return simd_token_count_sve(s, n, delim, dlen);
+#elif defined(__aarch64__) && defined(__ARM_NEON)
+    return simd_token_count_neon(s, n, delim, dlen);
+#else
+    /* Scalar fallback copied from earlier */
+    uint8_t lut[256]; memset(lut, 0, sizeof(lut));
+    for (const unsigned char* p = (const unsigned char*)delim; *p; ++p) lut[*p] = 1;
+
+    size_t count = 0;
+    bool in_token = false;
+    for (size_t i = 0; i < n; ++i) {
+        const bool is_delim = lut[(unsigned char)s[i]] != 0;
+        if (!is_delim) { if (!in_token) { ++count; in_token = true; } }
+        else in_token = false;
+    }
+    return count;
+#endif
+}
+
 // ================================================================================ 
 // ================================================================================
 

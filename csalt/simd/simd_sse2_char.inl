@@ -112,7 +112,36 @@ static inline size_t simd_last_substr_index_sse2(const unsigned char* s, size_t 
     return last;
 }
 
+static inline size_t simd_token_count_sse2(const char* s, size_t n,
+                                           const char* delim, size_t dlen)
+{
+    size_t i = 0, count = 0;
+    uint32_t prev_is_delim = 1;
 
+    for (; i + 16 <= n; i += 16) {
+        __m128i v = _mm_loadu_si128((const __m128i*)(s + i));
+        __m128i m = _mm_setzero_si128();
+        for (size_t j = 0; j < dlen; ++j) {
+            __m128i dj = _mm_set1_epi8((char)delim[j]);
+            m = _mm_or_si128(m, _mm_cmpeq_epi8(v, dj));
+        }
+        uint32_t dm = (uint32_t)_mm_movemask_epi8(m);
+        uint32_t non = ~dm & 0xFFFFu;
+        uint32_t starts = non & ((dm << 1) | (prev_is_delim & 1));
+        count += (size_t)__builtin_popcount(starts);
+        prev_is_delim = (dm >> 15) & 1u;
+    }
+
+    uint8_t lut[256]; memset(lut, 0, sizeof(lut));
+    for (const unsigned char* p = (const unsigned char*)delim; *p; ++p) lut[*p] = 1;
+    bool in_token = !prev_is_delim;
+    for (; i < n; ++i) {
+        const bool is_delim = lut[(unsigned char)s[i]] != 0;
+        if (!is_delim) { if (!in_token) { ++count; in_token = true; } }
+        else in_token = false;
+    }
+    return count;
+}
 
 #endif /* CSALT_SIMD_SSE2_CHAR_INL */
 

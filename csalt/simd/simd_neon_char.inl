@@ -158,6 +158,47 @@ static inline size_t simd_last_substr_index_neon(const unsigned char* s, size_t 
 
     return last;
 }
+static inline size_t simd_token_count_neon(const char* s, size_t n,
+                                           const char* delim, size_t dlen)
+{
+    size_t i = 0, count = 0;
+    uint8_t prev_last = 0xFF; /* virtual delimiter before start */
+
+    for (; i + 16 <= n; i += 16) {
+        uint8x16_t v = vld1q_u8((const uint8_t*)(s + i));
+        uint8x16_t dm = vceqq_u8(v, vdupq_n_u8((uint8_t)delim[0]));
+        for (size_t j = 1; j < dlen; ++j) {
+            dm = vorrq_u8(dm, vceqq_u8(v, vdupq_n_u8((uint8_t)delim[j])));
+        }
+        uint8x16_t non = vmvnq_u8(dm);
+        uint8x16_t prev_fill = vdupq_n_u8(prev_last);
+        /* previous-delim per position: [prev_last, dm[0], dm[1], ... dm[14]] */
+        uint8x16_t prev = vextq_u8(prev_fill, dm, 15);
+        uint8x16_t starts = vandq_u8(non, prev);
+
+        /* convert 0xFF -> 1, 0x00 -> 0, then horizontal sum */
+        uint8x16_t ones = vshrq_n_u8(starts, 7);
+        uint16x8_t  s16  = vpaddlq_u8(ones);
+        uint32x4_t  s32  = vpaddlq_u16(s16);
+        uint64x2_t  s64  = vpaddlq_u32(s32);
+        count += (size_t)(vgetq_lane_u64(s64, 0) + vgetq_lane_u64(s64, 1));
+
+        /* carry last-lane delimiter flag (0xFF or 0x00) */
+        prev_last = (uint8_t)(vgetq_lane_u8(dm, 15) ? 0xFF : 0x00);
+    }
+
+    /* scalar tail */
+    uint8_t lut[256]; memset(lut, 0, sizeof(lut));
+    for (const unsigned char* p = (const unsigned char*)delim; *p; ++p) lut[*p] = 1;
+    bool in_token = (prev_last == 0x00);
+    for (; i < n; ++i) {
+        const bool is_delim = lut[(unsigned char)s[i]] != 0;
+        if (!is_delim) { if (!in_token) { ++count; in_token = true; } }
+        else in_token = false;
+    }
+    return count;
+}
+
 
 #endif /* CSALT_SIMD_NEON_CHAR_INL */
 

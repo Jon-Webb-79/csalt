@@ -2629,6 +2629,58 @@ void to_lowercase(string_t *s);
 string_t* pop_string_token(string_t* s, char token);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Count tokens in a csalt string separated by any of the delimiter bytes.
+ *
+ * Interprets @p delim as a **set of separator bytes** and scans the payload of
+ * @p str to count the number of maximal runs of non-delimiter bytes (“tokens”).
+ * Consecutive delimiters do not produce empty tokens; leading and trailing
+ * delimiters are ignored.
+ *
+ * Semantics:
+ * - A byte belongs to the delimiter set if it matches **any** byte in @p delim.
+ * - Tokens are maximal substrings of bytes **not** in the delimiter set.
+ * - If @p delim is the empty string (`""`) or `str->len == 0`, the result is 0.
+ * - Comparison is byte-wise (ASCII). Multibyte encodings (e.g., UTF-8) are not
+ *   recognized as single logical delimiters.
+ *
+ * Error handling:
+ * - On invalid input (`str == NULL`, `str->str == NULL`, or `delim == NULL`),
+ *   the function returns 0 and sets `errno = EINVAL`. (No ::ErrorCode is set
+ *   because @p str is `const`.)
+ * - On success, `errno` is not modified.
+ *
+ * Thread-safety: Read-only; safe for concurrent calls on the same or different
+ * objects (does not mutate @p str).
+ *
+ * Complexity: O(n) for a string of length `n`. When compiled with suitable ISA
+ * flags, the implementation may use SIMD to process 16/32/64 bytes per step
+ * (SSE2/SSE4.1/AVX/AVX2/AVX-512BW, NEON, SVE/SVE2), with a scalar tail.
+ *
+ * @param str    Pointer to an initialized ::string_t (must have `str->str != NULL`).
+ * @param delim  NUL-terminated C string listing delimiter bytes (e.g., `" ,;\t\n"`).
+ *
+ * @return Number of tokens as `size_t`. Returns 0 on error or when no tokens exist
+ *         (distinguish via `errno`).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("  hello, world;  this,is  ");
+ * if (!s) { perror("init_string"); return 1; }
+ *
+ * size_t n = token_count(s, " ,;");
+ * printf("tokens = %zu\n", n);
+ *
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * tokens = 4
+ * @endcode
+ *
+ * @note Duplicate characters in @p delim are harmless. A NUL byte (`'\0'`) in
+ *       @p delim is ignored because @p delim is parsed as a C string.
+ */
 size_t token_count(const string_t* str, const char* delim);
 // --------------------------------------------------------------------------------
 

@@ -109,6 +109,39 @@ static inline size_t simd_last_substr_index_avx512bw(const unsigned char* s, siz
 
     return last;
 }
+static inline size_t simd_token_count_avx512bw(const char* s, size_t n,
+                                               const char* delim, size_t dlen)
+{
+    size_t i = 0, count = 0;
+    /* treat virtual byte before s[0] as delimiter */
+    uint64_t prev_is_delim = 1;
+
+    for (; i + 64 <= n; i += 64) {
+        __m512i v = _mm512_loadu_si512((const void*)(s + i));
+        __mmask64 dm = 0;
+        for (size_t j = 0; j < dlen; ++j) {
+            __m512i dj = _mm512_set1_epi8((char)delim[j]);
+            dm |= _mm512_cmpeq_epi8_mask(v, dj);
+        }
+        __mmask64 non = ~dm;
+        /* starts = non & (dm << 1 | prev) */
+        __mmask64 starts = non & ((dm << 1) | (prev_is_delim & 1));
+        count += (size_t)_mm_popcnt_u64(starts);
+        prev_is_delim = (dm >> 63) & 1u;
+    }
+
+    /* scalar tail with LUT */
+    uint8_t lut[256]; memset(lut, 0, sizeof(lut));
+    for (const unsigned char* p = (const unsigned char*)delim; *p; ++p) lut[*p] = 1;
+    bool in_token = !prev_is_delim;
+    for (; i < n; ++i) {
+        const bool is_delim = lut[(unsigned char)s[i]] != 0;
+        if (!is_delim) { if (!in_token) { ++count; in_token = true; } }
+        else in_token = false;
+    }
+    return count;
+}
+
 
 #endif /* CSALT_SIMD_AVX512_CHAR_INL */
 

@@ -141,6 +141,12 @@ pop_string_token
 .. doxygenfunction:: pop_string_token
    :project: csalt
 
+token_count 
+~~~~~~~~~~~
+
+.. doxygenfunction:: token_count
+   :project: csalt
+
 String Manipulation 
 -------------------
 The functions in this section are used to manipulate data in a `string_t` object.
