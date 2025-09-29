@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
+#include <stdlib.h>
 
 #include "test_string.h"
 #include "c_string.h"
@@ -1622,96 +1623,183 @@ void test_trim_all_whitespace_string(void **state) {
    
     free_string(str);
 }
-// --------------------------------------------------------------------------------
+// ================================================================================ 
+// ================================================================================ 
 
-void test_string_iterator_forward(void **state) {
-   string_t* str = init_string("hello");
-   str_iter iter = init_str_iter();
-   
-   char* current = iter.begin(str);
-   //char* end = iter.end(str);
-   
-   // Verify forward iteration
-   assert_int_equal(iter.get(&current), 'h');
-   iter.next(&current);
-   assert_int_equal(iter.get(&current), 'e');
-   iter.next(&current);
-   assert_int_equal(iter.get(&current), 'l');
-   iter.next(&current);
-   assert_int_equal(iter.get(&current), 'l');
-   iter.next(&current);
-   assert_int_equal(iter.get(&current), 'o');
-   
-   free_string(str);
+int setup_hello(void **state) {
+    string_t* s = init_string("Hello, world!");
+    assert_non_null(s);
+    *state = s;
+    return 0;
 }
-// --------------------------------------------------------------------------------
 
-void test_string_iterator_reverse(void **state) {
-   string_t* str = init_string("hello");
-   str_iter iter = init_str_iter();
-   
-   char* current = iter.end(str) - 1;  // Start from last character
-   //char* begin = iter.begin(str);
-   
-   // Verify reverse iteration
-   assert_int_equal(iter.get(&current), 'o');
-   iter.prev(&current);
-   assert_int_equal(iter.get(&current), 'l');
-   iter.prev(&current);
-   assert_int_equal(iter.get(&current), 'l');
-   iter.prev(&current);
-   assert_int_equal(iter.get(&current), 'e');
-   iter.prev(&current);
-   assert_int_equal(iter.get(&current), 'h');
-   
-   free_string(str);
+int teardown_string(void **state) {
+    if (*state) {
+        free_string((string_t*)(*state));
+        *state = NULL;
+    }
+    return 0;
 }
-// --------------------------------------------------------------------------------
 
-void test_string_iterator_empty_string(void **state) {
-   string_t* str = init_string("");
-   str_iter iter = init_str_iter();
-   
-   char* begin = iter.begin(str);
-   char* end = iter.end(str);
-   
-   // Verify begin and end point to same location for empty string
-   assert_ptr_equal(begin, end);
-   
-   free_string(str);
-}
-// --------------------------------------------------------------------------------
+/* ---------- Helpers (internal) ---------- */
 
-void test_string_iterator_null_string(void **state) {
-   str_iter iter = init_str_iter();
-   
-   char* begin = iter.begin(NULL);
-   assert_null(begin);
-   assert_int_equal(errno, EINVAL);
-   
-   char* end = iter.end(NULL);
-   assert_null(end);
-   assert_int_equal(errno, EINVAL);
-}
-// --------------------------------------------------------------------------------
+static char* collect_with_iter(const string_t* s) {
+    size_t n = string_size((string_t*)s);
+    char* out = (char*)malloc(n + 1);
+    assert_non_null(out);
 
-void test_string_iterator_bounds(void **state) {
-   string_t* str = init_string("test");
-   str_iter iter = init_str_iter();
-   
-   char* begin = iter.begin(str);
-   char* end = iter.end(str);
-   
-   // Verify begin points to first character
-   assert_int_equal(iter.get(&begin), 't');
-   
-   // Verify end points one past last character
-   char* last = end - 1;
-   assert_int_equal(iter.get(&last), 't');
-   
-   free_string(str);
+    cstr_iter it = cstr_iter_make(s);
+    size_t i = 0;
+    for (; cstr_iter_valid(&it); cstr_iter_next(&it)) {
+        out[i++] = cstr_iter_get(&it);
+    }
+    out[i] = '\0';
+    return out;
 }
-// --------------------------------------------------------------------------------
+
+/* ---------- Tests ---------- */
+
+void test_make_basic(void **state) {
+    string_t* s = (string_t*)(*state);
+
+    cstr_iter it = cstr_iter_make(s);
+    const size_t n = string_size(s);
+
+    if (n == 0) {
+        assert_false(cstr_iter_valid(&it));
+    } else {
+        assert_true(cstr_iter_valid(&it));
+        assert_int_equal(cstr_iter_pos(&it), 0u);
+
+        const char* base = get_string(s);
+        assert_non_null(base);
+
+        /* current pointer should be the first byte */
+        assert_ptr_equal(cstr_iter_ptr(&it), &base[0]);
+        assert_int_equal((unsigned char)cstr_iter_get(&it),
+                         (unsigned char)base[0]);
+    }
+}
+
+void test_make_const_and_collect(void **state) {
+    string_t* s = (string_t*)(*state);
+    char* collected = collect_with_iter(s);
+    assert_string_equal(collected, get_string(s));
+    free(collected);
+}
+
+void test_forward_positions(void **state) {
+    string_t* s = (string_t*)(*state);
+    const char* base = get_string(s);
+    assert_non_null(base);
+
+    cstr_iter it = cstr_iter_make(s);
+    size_t pos = 0, n = string_size(s);
+
+    for (; cstr_iter_valid(&it); cstr_iter_next(&it), ++pos) {
+        assert_int_equal(cstr_iter_pos(&it), pos);
+        assert_ptr_equal(cstr_iter_ptr(&it), &base[pos]);
+        assert_int_equal((unsigned char)cstr_iter_get(&it),
+                         (unsigned char)base[pos]);
+    }
+    assert_int_equal(pos, n);
+}
+
+void test_reverse_iteration(void **state) {
+    string_t* s = (string_t*)(*state);
+    const char* base = get_string(s);
+    assert_non_null(base);
+
+    const size_t n = string_size(s);
+    str_iter it = str_iter_make(s);
+
+    /* End is not valid; step once back to last if non-empty */
+    assert_false(str_iter_seek_end(&it));
+    if (n == 0) {
+        assert_false(str_iter_prev(&it));
+        return;
+    }
+    assert_true(str_iter_prev(&it));
+
+    size_t pos = n - 1;
+    for (;;) {
+        assert_int_equal(str_iter_pos(&it), pos);
+        assert_int_equal((unsigned char)str_iter_get(&it),
+                         (unsigned char)base[pos]);
+        if (pos == 0) break;
+        assert_true(str_iter_prev(&it));
+        --pos;
+    }
+    assert_int_equal(pos, 0u);
+}
+
+void test_advance_and_clamp(void **state) {
+    string_t* s = (string_t*)(*state);
+    const size_t n = string_size(s);
+
+    str_iter it = str_iter_make(s);
+
+    /* Overshoot forward → clamp to end (becomes invalid) */
+    assert_false(str_iter_advance(&it, +1000));
+
+    if (n > 0) {
+        /* One step back from end → last valid element */
+        assert_true(str_iter_prev(&it));
+        assert_int_equal(str_iter_pos(&it), n - 1);
+
+        /* Overshoot backward → clamp to begin (valid) */
+        assert_true(str_iter_advance(&it, -(ptrdiff_t)1000));
+        assert_true(str_iter_valid(&it));
+        assert_int_equal(str_iter_pos(&it), 0u);
+    }
+}
+
+void test_empty_string(void **state) {
+    (void)state;
+    string_t* s = init_string("");
+    assert_non_null(s);
+
+    cstr_iter it = cstr_iter_make(s);
+    assert_false(cstr_iter_valid(&it));
+    assert_int_equal(cstr_iter_get(&it), 0);
+    assert_false(cstr_iter_seek_begin(&it));
+    assert_false(cstr_iter_seek_end(&it));
+
+    free_string(s);
+}
+
+void test_invalid_inputs_make(void **state) {
+    (void)state;
+    errno = 0;
+    cstr_iter it = cstr_iter_make(NULL);
+    assert_false(cstr_iter_valid(&it));
+    assert_int_equal(errno, EINVAL);
+}
+
+void test_invalidation_after_reserve(void **state) {
+    string_t* s = (string_t*)(*state);
+
+    /* build iterator, record a harmless property */
+    cstr_iter it = cstr_iter_make(s);
+    const size_t n_before = string_size(s);
+    (void)it;
+
+    /* Force growth → may realloc and invalidate pointers/iters */
+    size_t old_alloc = string_alloc(s);
+    assert_true(reserve_string(s, old_alloc + 256));
+
+    /* Rebuild iterator after mutation */
+    cstr_iter it2 = cstr_iter_make(s);
+    if (n_before > 0) {
+        assert_true(cstr_iter_valid(&it2));
+        assert_int_equal(cstr_iter_pos(&it2), 0u);
+    } else {
+        assert_false(cstr_iter_valid(&it2));
+    }
+}
+// ================================================================================ 
+// ================================================================================ 
+// TEST STRING VECTOR
 
 void test_tokenize_basic(void **state) {
    string_t* str = init_string("hello world test");

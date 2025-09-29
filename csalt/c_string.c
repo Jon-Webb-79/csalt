@@ -277,6 +277,7 @@ string_t* init_string(const char* str) {
 ErrorCode get_string_error(const string_t* str) {
     if (!str) {
         errno = EINVAL;
+        return INVALID_ERROR;
     }
     return str->error;
 }
@@ -614,22 +615,46 @@ char* first_char_occurrance(string_t* str, char value) {
         return NULL;
     }
     void* p = memchr(str->str, (unsigned char)value, str->len);
+    if (!p) {
+        errno = ENOENT;
+        str->error = NOT_FOUND;
+        return NULL;
+    }
     str->error = NO_ERROR;
     return (char*)p; 
 }
 // -------------------------------------------------------------------------------- 
 
 char* last_char_occurrance(string_t* str, char value) {
-    if (!str)               { errno = EINVAL; return NULL; }
-    if (!str->str)          { errno = EINVAL; str->error = NULL_POINTER; return NULL; }
+    if (!str) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!str->str) {
+        str->error = NULL_POINTER;
+        errno = EINVAL;
+        return NULL;
+    }
+    if (str->len == 0) {               /* nothing to search */
+        str->error = NOT_FOUND;
+        errno = ENOENT;
+        return NULL;
+    }
 
     const unsigned char* s = (const unsigned char*)str->str;
-    size_t n = str->len;
-    unsigned char c = (unsigned char)value;
+    const size_t n        = str->len;
+    const unsigned char c = (unsigned char)value;
 
-    size_t idx = simd_last_u8_index(s, n, c);
+    const size_t idx = simd_last_u8_index(s, n, c);  /* returns SIZE_MAX if absent */
+
+    if (idx == SIZE_MAX) {
+        str->error = NOT_FOUND;
+        errno = ENOENT;
+        return NULL;
+    }
+
     str->error = NO_ERROR;
-    return (idx == SIZE_MAX) ? NULL : (char*)(str->str + idx);
+    return (char*)(str->str + idx);
 }
 // --------------------------------------------------------------------------------
 
@@ -1262,78 +1287,66 @@ string_t* pop_string_token(string_t* s, char token) {
 // --------------------------------------------------------------------------------
 
 size_t token_count(const string_t* str, const char* delim) {
-    if (!str || !str->str || !delim) {
-        errno = EINVAL;
-        return 0;
-    }
-    
-    if (str->len == 0 || strlen(delim) == 0) {
-        return 0;
-    }
-
-    size_t count = 0;
-    const char* ptr = str->str;
-    bool in_token = false;
-
-    while (*ptr) {
-        bool is_delim = false;
-        // Check if current character is a delimiter
-        for (size_t i = 0; delim[i] != '\0'; i++) {
-            if (*ptr == delim[i]) {
-                is_delim = true;
-                break;
-            }
-        }
-
-        if (!is_delim && !in_token) {
-            // Start of new token
-            count++;
-            in_token = true;
-        }
-        else if (is_delim) {
-            // End of current token
-            in_token = false;
-        }
-        ptr++;
-    }
-
-    return count;
+    if (!str || !str->str || !delim) { errno = EINVAL; return 0; }
+    const size_t n = str->len;
+    const size_t dlen = strlen(delim);
+    if (n == 0 || dlen == 0) return 0;
+    return token_count_simd(str->str, n, delim, dlen);
 }
 // --------------------------------------------------------------------------------
 
 char get_char(string_t* str, size_t index) {
     if (!str || !str->str) {
+        if (str) str->error = INVALID_ARG;
         errno = EINVAL;
         return 0;
     }
     if (index > str->len - 1) {
         errno = ERANGE;
+        str->error = OUT_OF_BOUNDS;
         return 0;
     }
+    if (str->len == 0) {
+        errno = ERANGE;
+        str->error = INVALID_ARG;
+        return 0;
+    }
+    str->error = NO_ERROR;
     return str->str[index];
 }
 // --------------------------------------------------------------------------------
 
 void replace_char(string_t* str, size_t index, char value) {
     if (!str || !str->str) {
+        if(str) str->error = NULL_POINTER;
         errno = EINVAL;
         return;
     }
     if (index > str->len - 1) {
         errno = ERANGE;
+        str->error = OUT_OF_BOUNDS;
         return;
     }
+    if (str->len == 0) {
+        errno = ERANGE;
+        str->error = INVALID_ARG;
+        return;
+    }
+    str->error = NO_ERROR;
     str->str[index] = value;
 }
 // --------------------------------------------------------------------------------
 
 void trim_leading_whitespace(string_t* str) {
     if (!str || !str->str) {
+        if (str) str->error = NULL_POINTER;
         errno = EINVAL;
         return;
     }
     
     if (str->len == 0) {
+        errno = ERANGE;
+        str->error = INVALID_ARG;
         return;
     }
     
@@ -1356,7 +1369,7 @@ void trim_leading_whitespace(string_t* str) {
     
     // Update length
     str->len -= whitespace_count;
-    
+    str->error = NO_ERROR;
     return;
 }
 // -------------------------------------------------------------------------------- 
@@ -1364,10 +1377,13 @@ void trim_leading_whitespace(string_t* str) {
 void trim_trailing_whitespace(string_t* str) {
     if (!str || !str->str) {
         errno = EINVAL;
+        if(str) str->error = NULL_POINTER;
         return;
     }
     
     if (str->len == 0) {
+        errno = ERANGE;
+        str->error = INVALID_ARG;
         return;
     }
     
@@ -1384,17 +1400,21 @@ void trim_trailing_whitespace(string_t* str) {
     *ptr = '\0';
     
     // Update length (ptr - str->str gives new length)
+    str->error = NO_ERROR;
     str->len = ptr - str->str;
 }
 // --------------------------------------------------------------------------------
 
 void trim_all_whitespace(string_t* str) {
     if (!str || !str->str) {
+        if (str) str->error = NULL_POINTER;
         errno = EINVAL;
         return;
     }
     
     if (str->len == 0) {
+        errno = ERANGE;
+        str->error = INVALID_ARG;
         return;
     }
     
@@ -1414,45 +1434,118 @@ void trim_all_whitespace(string_t* str) {
     
     // Update length (write - str->str gives new length)
     str->len = write - str->str;
-    
+    str->error = NO_ERROR; 
     return;
 }
 // ================================================================================ 
 // ================================================================================ 
 
-static char* _str_end(string_t* s) {
+/* ---------- helpers ---------- */
+static inline bool _valid_begin_end(const char *begin, const char *end) {
+    return (begin != NULL) && (end != NULL) && (begin <= end);
+}
+
+/* ---------- constructors ---------- */
+str_iter str_iter_make(string_t *s) {
+    str_iter it = {0};
     if (!s || !s->str) {
-        return NULL;
+        if (s) { /* report on the owner if we have it */
+            /* s->error = NULL_POINTER; */ /* uncomment if you prefer to set it here */
+        }
+        errno = EINVAL;
+        return it;
     }
-    return s->str + s->len;
+    it.owner = s;
+    it.begin = s->str;
+    it.end   = s->str + s->len; /* one past last, not the NUL */
+    it.cur   = it.begin;
+    return it;
 }
-// --------------------------------------------------------------------------------
 
-static void _str_next(char** current) {
-    (*current)++;
+cstr_iter cstr_iter_make(const string_t *s) {
+    cstr_iter it = {0};
+    if (!s || !s->str) {
+        errno = EINVAL;
+        return it;
+    }
+    it.owner = s;
+    it.begin = s->str;
+    it.end   = s->str + s->len;
+    it.cur   = it.begin;
+    return it;
 }
-// --------------------------------------------------------------------------------
 
-static void _str_prev(char** current) {
-    (*current)--;
+/* ---------- predicates ---------- */
+bool str_iter_valid(const str_iter *it) {
+    return it && _valid_begin_end(it->begin, it->end) && it->cur && (it->cur < it->end);
 }
-// --------------------------------------------------------------------------------
-
-static char _str_get(char** current) {
-    return **current;
+bool cstr_iter_valid(const cstr_iter *it) {
+    return it && _valid_begin_end(it->begin, it->end) && it->cur && (it->cur < it->end);
 }
-// --------------------------------------------------------------------------------
+bool str_iter_at_end (const str_iter  *it) { return !str_iter_valid(it); }
+bool cstr_iter_at_end(const cstr_iter *it) { return !cstr_iter_valid(it); }
 
-str_iter init_str_iter() {
-    str_iter iter;
-
-    iter.begin = first_char;
-    iter.end = _str_end;
-    iter.next = _str_next;
-    iter.prev = _str_prev;
-    iter.get = _str_get;
-    return iter;
+/* ---------- accessors ---------- */
+char str_iter_get(const str_iter *it) {
+    return str_iter_valid(it) ? *it->cur : 0;
 }
+char cstr_iter_get(const cstr_iter *it) {
+    return cstr_iter_valid(it) ? *it->cur : 0;
+}
+char* str_iter_ptr(const str_iter *it) {
+    return str_iter_valid(it) ? it->cur : NULL;
+}
+const char* cstr_iter_ptr(const cstr_iter *it) {
+    return cstr_iter_valid(it) ? it->cur : NULL;
+}
+size_t str_iter_pos(const str_iter *it) {
+    if (!it || !_valid_begin_end(it->begin, it->end) || !it->cur) { errno = EINVAL; return (size_t)-1; }
+    return (size_t)(it->cur - it->begin);
+}
+size_t cstr_iter_pos(const cstr_iter *it) {
+    if (!it || !_valid_begin_end(it->begin, it->end) || !it->cur) { errno = EINVAL; return (size_t)-1; }
+    return (size_t)(it->cur - it->begin);
+}
+
+/* ---------- movement ---------- */
+static inline bool _advance_core(char **pcur, const char *begin, const char *end, ptrdiff_t delta) {
+    if (!pcur || !*pcur || !begin || !end) return false;
+    const char *cur = *pcur;
+    const char *target = cur + delta;
+    if (delta > 0) {
+        if (target > end) target = end;
+    } else if (delta < 0) {
+        if (target < begin) target = begin;
+    }
+    *pcur = (char*)target;
+    return (target < end);
+}
+static inline bool _advance_core_const(const char **pcur, const char *begin, const char *end, ptrdiff_t delta) {
+    if (!pcur || !*pcur || !begin || !end) return false;
+    const char *cur = *pcur;
+    const char *target = cur + delta;
+    if (delta > 0) {
+        if (target > end) target = end;
+    } else if (delta < 0) {
+        if (target < begin) target = begin;
+    }
+    *pcur = target;
+    return (target < end);
+}
+
+bool str_iter_next (str_iter *it)  { return _advance_core(&it->cur, it->begin, it->end, +1); }
+bool cstr_iter_next(cstr_iter *it) { return _advance_core_const(&it->cur, it->begin, it->end, +1); }
+bool str_iter_prev (str_iter *it)  { return _advance_core(&it->cur, it->begin, it->end, -1); }
+bool cstr_iter_prev(cstr_iter *it) { return _advance_core_const(&it->cur, it->begin, it->end, -1); }
+
+bool str_iter_advance (str_iter *it,  ptrdiff_t delta) { return _advance_core(&it->cur,  it->begin,  it->end,  delta); }
+bool cstr_iter_advance(cstr_iter *it, ptrdiff_t delta) { return _advance_core_const(&it->cur, it->begin, it->end, delta); }
+
+bool str_iter_seek_begin (str_iter *it)  { if (!it) return false; it->cur = it->begin; return it->cur < it->end; }
+bool cstr_iter_seek_begin(cstr_iter *it) { if (!it) return false; it->cur = it->begin; return it->cur < it->end; }
+
+bool str_iter_seek_end (str_iter *it)  { if (!it) return false; it->cur = it->end; return false; }
+bool cstr_iter_seek_end(cstr_iter *it) { if (!it) return false; it->cur = it->end; return false; }
 // ================================================================================ 
 // ================================================================================ 
 

@@ -42,6 +42,29 @@ This struct is provided as an opaque data structure.
        ErrorCode error;     // The error code
    } string_v;
 
+str_iter 
+--------
+The `str_iter` data type is used to manage a string iterator for 
+quick user access to the internal string. 
+
+.. code-block:: c
+
+   // mutable interface
+   typedef struct {
+       string_t *owner;
+       char     *begin;
+       char     *end;    /* one past last */
+       char     *cur;    /* current; valid iff cur < end */
+   } str_iter;
+
+   // immutable interface
+   typedef struct {
+       const string_t *owner;
+       const char     *begin;
+       const char     *end;    /* one past last */
+       const char     *cur;    /* current; valid iff cur < end */
+   } cstr_iter;
+
 String Overview 
 ===============
 This section describes the attributes and functions associated with the 
@@ -147,6 +170,24 @@ token_count
 .. doxygenfunction:: token_count
    :project: csalt
 
+get_char
+~~~~~~~~
+
+.. doxygenfunction:: get_char
+   :project: csalt
+
+first_char
+~~~~~~~~~~
+
+.. doxygenfunction:: first_char
+   :project: csalt
+
+last_char
+~~~~~~~~~
+
+.. doxygenfunction:: last_char
+   :project: csalt
+
 String Manipulation 
 -------------------
 The functions in this section are used to manipulate data in a `string_t` object.
@@ -229,6 +270,30 @@ to_lowercase
 .. doxygenfunction:: to_lowercase
    :project: csalt
 
+replace_char
+~~~~~~~~~~~~
+
+.. doxygenfunction:: replace_char
+   :project: csalt
+
+trim_leading_whitespace
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: trim_leading_whitespace
+   :project: csalt
+
+trim_trailing_whitespace
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: trim_trailing_whitespace
+   :project: csalt
+
+trim_all_whitespace
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: trim_all_whitespace
+   :project: csalt
+
 Search String 
 -------------
 The functions in this section can be used to search a string for spechic 
@@ -290,19 +355,243 @@ is_string_ptr
 
 String Iterator 
 ---------------
-The following functions can be used to iterator over a string .
+The iterator lets you traverse the payload of a ``string_t`` without exposing
+its internals. Iterators are invalidated by operations that can reallocate,
+such as concatenation, reserve, replace, or drop.
 
-first_char
-~~~~~~~~~~
-
-.. doxygenfunction:: first_char
+Mutable API Reference
+~~~~~~~~~~~~~~~~~~~~~
+.. doxygenstruct:: str_iter
+   :project: csalt
+.. doxygenfunction:: str_iter_make
+   :project: csalt
+.. doxygenfunction:: str_iter_valid
+   :project: csalt
+.. doxygenfunction:: str_iter_get
+   :project: csalt
+.. doxygenfunction:: str_iter_next
+   :project: csalt
+.. doxygenfunction:: str_iter_prev
+   :project: csalt
+.. doxygenfunction:: str_iter_advance
+   :project: csalt
+.. doxygenfunction:: str_iter_seek_begin
+   :project: csalt
+.. doxygenfunction:: str_iter_seek_end
    :project: csalt
 
-last_char
-~~~~~~~~~
-
-.. doxygenfunction:: last_char
+Immutable API Reference 
+~~~~~~~~~~~~~~~~~~~~~~~
+.. doxygenstruct:: cstr_iter
    :project: csalt
+.. doxygenfunction:: cstr_iter_make
+   :project: csalt
+.. doxygenfunction:: cstr_iter_valid
+   :project: csalt
+.. doxygenfunction:: cstr_iter_get
+   :project: csalt
+.. doxygenfunction:: cstr_iter_next
+   :project: csalt
+.. doxygenfunction:: cstr_iter_prev
+   :project: csalt
+.. doxygenfunction:: cstr_iter_advance
+   :project: csalt
+.. doxygenfunction:: cstr_iter_seek_begin
+   :project: csalt
+.. doxygenfunction:: cstr_iter_seek_end
+   :project: csalt
+
+Basic forward iteration
+~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: c
+
+   #include "c_string.h"
+   #include "csalt_string_iter.h"
+   #include <stdio.h>
+
+   void print_forward(string_t* s) {
+       cstr_iter it = cstr_iter_make(s);
+       for (; cstr_iter_valid(&it); cstr_iter_next(&it)) {
+           putchar(cstr_iter_get(&it));
+       }
+       putchar('\n');
+   }
+
+   int main(void) {
+       string_t* s = init_string("Hello, world!");
+       if (!s) { perror("init_string"); return 1; }
+       print_forward(s);
+       free_string(s);
+       return 0;
+   }
+
+Output::
+  
+  Hello, world!
+
+Reverse iteration
+~~~~~~~~~~~~~~~~~
+.. code-block:: c
+
+   #include "c_string.h"
+   #include "csalt_string_iter.h"
+   #include <stdio.h>
+
+   void print_reverse(string_t* s) {
+       str_iter it = str_iter_make(s);
+
+       /* Go to end (one-past-last), then step back to last if any */
+       str_iter_seek_end(&it);
+       while (str_iter_prev(&it)) {
+           putchar(str_iter_get(&it));
+       }
+       putchar('\n');
+   }
+
+   int main(void) {
+       string_t* s = init_string("abcde");
+       if (!s) { perror("init_string"); return 1; }
+       print_reverse(s);
+       free_string(s);
+       return 0;
+   }
+
+Output::
+  
+  edcba
+
+Find the first digit (returns pointer and index)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: c
+
+   #include "c_string.h"
+   #include "csalt_string_iter.h"
+   #include <stdio.h>
+
+   const char* find_first_digit_ptr(const string_t* s) {
+       cstr_iter it = cstr_iter_make(s);
+       for (; cstr_iter_valid(&it); cstr_iter_next(&it)) {
+           char ch = cstr_iter_get(&it);
+           if (ch >= '0' && ch <= '9') {
+               return cstr_iter_ptr(&it);  /* pointer into s payload */
+           }
+       }
+       return NULL;
+   }
+
+   int main(void) {
+       string_t* s = init_string("id=42; name=alice");
+       if (!s) { perror("init_string"); return 1; }
+
+       const char* p = find_first_digit_ptr(s);
+       if (p) {
+           /* position via iterator rebuilt at p */
+           cstr_iter it = cstr_iter_make(s);
+           while (cstr_iter_valid(&it) && cstr_iter_ptr(&it) != p) {
+               cstr_iter_next(&it);
+           }
+           printf("first digit '%c' at index %zu\\n", *p, cstr_iter_pos(&it));
+       } else {
+           puts("no digit");
+       }
+       free_string(s);
+       return 0;
+   }
+
+Possible output::
+  
+  first digit '4' at index 3
+
+Windowed replacement using iterator-friendly bounds
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: c
+
+   #include "c_string.h"
+   #include "csalt_string_iter.h"
+   #include <stdio.h>
+
+   int main(void) {
+       string_t* s = init_string("foo X foo Y foo Z");
+       if (!s) { perror("init_string"); return 1; }
+
+       /* Choose a window: first 9 characters only ("foo X foo") */
+       char* lo = first_char(s);   /* inclusive lower bound */
+       char* hi = lo + 8;          /* inclusive upper bound */
+
+       if (!replace_substr(s, "foo", "BAR", lo, hi)) {
+           perror("replace_substr");
+           fprintf(stderr, "%s\\n", error_to_string(get_string_error(s)));
+           free_string(s);
+           return 1;
+       }
+
+       printf("%s\\n", get_string(s));
+       free_string(s);
+       return 0;
+   }
+
+Output::
+  
+  BAR X BAR Y foo Z
+
+Uppercase in place with the mutable iterator
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: c
+
+   #include "c_string.h"
+   #include "csalt_string_iter.h"
+   #include <ctype.h>
+
+   void to_uppercase_iter(string_t* s) {
+       str_iter it = str_iter_make(s);
+       for (; str_iter_valid(&it); str_iter_next(&it)) {
+           char* p = str_iter_ptr(&it);
+           unsigned char c = (unsigned char)*p;
+           if (c >= 'a' && c <= 'z') *p = (char)(c - ('a' - 'A'));
+       }
+   }
+
+   int main(void) {
+       string_t* s = init_string("Hello, World! 123");
+       to_uppercase_iter(s);
+       puts(get_string(s));  /* HELLO, WORLD! 123 */
+       free_string(s);
+       return 0;
+   }
+
+Checksum over bytes with a const iterator
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: c
+
+   #include "c_string.h"
+   #include "csalt_string_iter.h"
+   #include <stdint.h>
+   #include <stdio.h>
+
+   uint32_t checksum32(const string_t* s) {
+       uint32_t h = 2166136261u;          /* FNV-1a base */
+       cstr_iter it = cstr_iter_make(s);
+       for (; cstr_iter_valid(&it); cstr_iter_next(&it)) {
+           h ^= (uint8_t)cstr_iter_get(&it);
+           h *= 16777619u;
+       }
+       return h;
+   }
+
+   int main(void) {
+       string_t* s = init_string("abc");
+       printf("%u\\n", (unsigned)checksum32(s));
+       free_string(s);
+       return 0;
+   }
+
+.. note::
+
+   - Iterators are **invalidated** by any operation that may reallocate or resize
+     the string (e.g., concat, reserve, replace, drop). If you need to mutate and
+     then continue iterating, store **offsets** (indices) rather than raw pointers,
+     perform the mutation, then **rebuild** the iterator from the new buffer.
+   - ``end`` is one-past-last; ``*_get`` returns ``0`` when the iterator is not valid.
 
 String Vector Overview 
 ======================

@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include "error_codes.h"
 
 #ifdef __cplusplus
@@ -984,8 +985,9 @@ bool trim_string(string_t* str);
  * Error reporting:
  * - Returns `NULL` and sets `errno = EINVAL` if @p str is `NULL` or if the
  *   internal buffer is `NULL` (in the latter case, `str->error = ::NULL_POINTER`).
- * - Returns `NULL` when the byte is not found; in this case `errno` is left
- *   unchanged. On valid inputs, `str->error` may be set to ::NO_ERROR.
+ * - Returns `NULL` when the byte is not found; in this case `errno` is set to 
+ *   ENOENT and str->error is set to NOT_FOUND. 
+ *   On valid inputs, `str->error` may be set to ::NO_ERROR.
  *
  * @param str    Pointer to a ::string_t instance (must be initialized).
  * @param value  Byte to search for (compared as `(unsigned char)value`).
@@ -1056,8 +1058,8 @@ char* first_char_occurrance(string_t* str, char value);
  * Error reporting:
  * - Returns `NULL` and sets `errno = EINVAL` if @p str is `NULL` or if the
  *   internal buffer is `NULL` (in the latter case, `str->error = ::NULL_POINTER`).
- * - Returns `NULL` when the byte is not found; in this case `errno` is left
- *   unchanged. On valid inputs, `str->error` may be set to ::NO_ERROR.
+ * - Returns `NULL` when the byte is not found; in this case `errno` is set to ENOENT,
+ *   and str->error is set to NOT_FOUND. On valid inputs, `str->error` may be set to ::NO_ERROR.
  *
  * @param str    Pointer to a ::string_t instance (must be initialized).
  * @param value  Byte to search for (compared as `(unsigned char)value`).
@@ -2684,33 +2686,353 @@ string_t* pop_string_token(string_t* s, char token);
 size_t token_count(const string_t* str, const char* delim);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Get the byte at @p index from a csalt string.
+ *
+ * Returns the character stored at zero-based @p index. The function does not
+ * modify the string. If the index is out of range or the inputs are invalid,
+ * it returns 0 (NUL) and sets errno / the error code as described below.
+ *
+ * Error handling:
+ * - If @p str is NULL or `str->str` is NULL: returns 0 and sets `errno = EINVAL`;
+ *   when @p str is non-NULL but `str->str` is NULL, also sets `str->error = ::INVALID_ARG`.
+ * - If @p index is out of bounds (greater than the last valid position): returns 0,
+ *   sets `errno = ERANGE`, and sets `str->error = ::OUT_OF_BOUNDS`.
+ * - If `str->len == 0`: returns 0, sets `errno = ERANGE`, and sets
+ *   `str->error = ::INVALID_ARG`.
+ * - On success: sets `str->error = ::NO_ERROR`.
+ *
+ * Thread-safety: Read-only; safe for concurrent calls on the same or different objects.
+ * Complexity: O(1).
+ *
+ * @param str    Pointer to an initialized ::string_t.
+ * @param index  Zero-based position into the payload (`0 <= index < str->len`).
+ *
+ * @return The byte value at @p index on success; 0 on error (check `errno`).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("Hello");
+ * char c = get_char(s, 4);
+ * printf("%c\n", c);
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * o
+ * @endcode
+ */
 char get_char(string_t* str, size_t index);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Replace the byte at @p index with @p value, in place.
+ *
+ * Overwrites `str->str[index]` with @p value, leaving `len`/`alloc` unchanged.
+ *
+ * Error handling:
+ * - If @p str is NULL or `str->str` is NULL: sets `errno = EINVAL`;
+ *   when @p str is non-NULL but `str->str` is NULL, sets `str->error = ::NULL_POINTER`.
+ * - If @p index is out of bounds: sets `errno = ERANGE` and `str->error = ::OUT_OF_BOUNDS`.
+ * - If `str->len == 0`: sets `errno = ERANGE` and `str->error = ::INVALID_ARG`.
+ * - On success: sets `str->error = ::NO_ERROR`.
+ *
+ * Thread-safety: Not thread-safe for the same object (mutates the buffer and error field).
+ * Complexity: O(1).
+ *
+ * @param str    Pointer to an initialized ::string_t to modify.
+ * @param index  Zero-based position into the payload (`0 <= index < str->len`).
+ * @param value  Replacement byte.
+ *
+ * @return void
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("Hello");
+ * replace_char(s, 0, 'h');
+ * printf("%s\n", get_string(s));
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * hello
+ * @endcode
+ */
 void replace_char(string_t* str, size_t index, char value);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove leading ASCII whitespace from a csalt string, in place.
+ *
+ * Advances the payload past any run of leading whitespace, moves the remaining
+ * bytes to the front (using `memmove`), writes the NUL terminator, and updates
+ * `str->len`. Whitespace is detected with `isspace((unsigned char)c)` and is
+ * therefore locale-dependent.
+ *
+ * Error handling:
+ * - If @p str is NULL or `str->str` is NULL: sets `errno = EINVAL`;
+ *   when @p str is non-NULL but `str->str` is NULL, sets `str->error = ::NULL_POINTER`.
+ * - If `str->len == 0`: sets `errno = ERANGE` and `str->error = ::INVALID_ARG`.
+ * - On success: sets `str->error = ::NO_ERROR`.
+ *
+ * Thread-safety: Not thread-safe for the same object (mutates the buffer/length).
+ * Complexity: O(n) in the worst case; O(k) where k is the number of leading
+ * whitespace bytes plus the size of the shifted tail.
+ *
+ * @param str Pointer to an initialized ::string_t to modify.
+ *
+ * @return void
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("   abc  ");
+ * trim_leading_whitespace(s);
+ * printf("\"%s\" (len=%zu)\n", get_string(s), string_size(s));
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * "abc  " (len=5)
+ * @endcode
+ */
 void trim_leading_whitespace(string_t* str);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove trailing ASCII whitespace from a csalt string, in place.
+ *
+ * Walks backward over the payload trimming a run of trailing whitespace
+ * (space, tab, newline in this implementation), writes the NUL terminator,
+ * and updates `str->len`.
+ *
+ * Error handling:
+ * - If @p str is NULL or `str->str` is NULL: sets `errno = EINVAL`;
+ *   when @p str is non-NULL but `str->str` is NULL, sets `str->error = ::NULL_POINTER`.
+ * - If `str->len == 0`: sets `errno = ERANGE` and `str->error = ::INVALID_ARG`.
+ * - On success: sets `str->error = ::NO_ERROR`.
+ *
+ * Thread-safety: Not thread-safe for the same object (mutates the buffer/length).
+ * Complexity: O(t) where t is the number of trailing whitespace bytes (≤ n).
+ *
+ * @param str Pointer to an initialized ::string_t to modify.
+ *
+ * @return void
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string("abc  \n\t");
+ * trim_trailing_whitespace(s);
+ * printf("\"%s\" (len=%zu)\n", get_string(s), string_size(s));
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * "abc" (len=3)
+ * @endcode
+ *
+ * @note You may widen the definition of whitespace (e.g., use `isspace`) if desired.
+ */
 void trim_trailing_whitespace(string_t* str);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove **all** ASCII whitespace from a csalt string, in place.
+ *
+ * Compacts the payload by copying non-whitespace bytes (space, tab, newline in
+ * this implementation) over the original buffer, then NUL-terminates and
+ * updates `str->len`. The relative order of non-whitespace bytes is preserved.
+ *
+ * Error handling:
+ * - If @p str is NULL or `str->str` is NULL: sets `errno = EINVAL`;
+ *   when @p str is non-NULL but `str->str` is NULL, sets `str->error = ::NULL_POINTER`.
+ * - If `str->len == 0`: sets `errno = ERANGE` and `str->error = ::INVALID_ARG`.
+ * - On success: sets `str->error = ::NO_ERROR`.
+ *
+ * Thread-safety: Not thread-safe for the same object (mutates the buffer/length).
+ * Complexity: O(n), where n is the original length.
+ *
+ * @param str Pointer to an initialized ::string_t to modify.
+ *
+ * @return void
+ *
+ * @par Example
+ * @code{.c}
+ * string_t* s = init_string(" a\tb \n c ");
+ * trim_all_whitespace(s);
+ * printf("\"%s\" (len=%zu)\n", get_string(s), string_size(s));
+ * free_string(s);
+ * @endcode
+ * @par Output
+ * @code{.text}
+ * "abc" (len=3)
+ * @endcode
+ *
+ * @note For locale-aware whitespace detection, prefer `isspace((unsigned char)c)`.
+ */
 void trim_all_whitespace(string_t* str);
 // ================================================================================
 // ================================================================================
 // STRING ITERATOR
 
-typedef struct str_iter {
-    char* (*begin) (string_t *s);
-    char* (*end) (string_t *s);
-    void (*next) (char** current);
-    void (*prev) (char** current);
-    char (*get) (char** current);
+/**
+ * @brief Mutable byte iterator over a ::string_t payload.
+ *
+ * Iterates over the half-open range `[begin, end)`, where:
+ * - `begin == owner->str`
+ * - `end   == owner->str + owner->len`  (one past last byte; not the NUL)
+ * - `cur` points at the **current** element; `cur < end` means valid.
+ *
+ * Invalidation: any operation that may reallocate or resize `owner->str`
+ * (e.g., concat, reserve, replace, drop) invalidates all iterators for that
+ * object. Do not continue using an iterator across such mutations.
+ */
+typedef struct {
+    string_t *owner;
+    char     *begin;
+    char     *end;    /* one past last */
+    char     *cur;    /* current; valid iff cur < end */
 } str_iter;
-// -------------------------------------------------------------------------------- 
 
-str_iter init_str_iter();
+/**
+ * @brief Read-only byte iterator over a ::string_t payload.
+ *
+ * Same semantics as ::str_iter, but cannot mutate the underlying string.
+ */
+typedef struct {
+    const string_t *owner;
+    const char     *begin;
+    const char     *end;    /* one past last */
+    const char     *cur;    /* current; valid iff cur < end */
+} cstr_iter;
+
+/* -------- Construction -------- */
+
+/**
+ * @brief Create a mutable iterator for @p s.
+ *
+ * On invalid input (`s == NULL` or `s->str == NULL`), returns an empty iterator
+ * (`owner = begin = end = cur = NULL`) and sets `errno = EINVAL`.
+ * If @p s is non-NULL but has a NULL buffer, sets `s->error = ::NULL_POINTER`.
+ */
+str_iter  str_iter_make (string_t *s);
+
+/**
+ * @brief Create a const iterator for @p s.
+ *
+ * On invalid input (`s == NULL` or `s->str == NULL`), returns an empty iterator
+ * and sets `errno = EINVAL`.
+ */
+cstr_iter cstr_iter_make(const string_t *s);
+
+/* -------- Predicates -------- */
+
+/** @return true iff @p it is non-NULL and points at a valid element. */
+bool str_iter_valid (const str_iter  *it);
+/** @return true iff @p it is non-NULL and points at a valid element. */
+bool cstr_iter_valid(const cstr_iter *it);
+
+/** @return true iff @p it is at or beyond end (i.e., not valid). */
+bool str_iter_at_end (const str_iter  *it);
+/** @return true iff @p it is at or beyond end (i.e., not valid). */
+bool cstr_iter_at_end(const cstr_iter *it);
+
+/* -------- Accessors -------- */
+
+/**
+ * @brief Get current byte; returns 0 if not valid.
+ * Does not advance the iterator.
+ */
+char        str_iter_get (const str_iter  *it);
+/** @copydoc str_iter_get */
+char        cstr_iter_get(const cstr_iter *it);
+
+/**
+ * @brief Return the current pointer (or NULL if not valid).
+ * Useful for APIs that accept `char*` directly.
+ */
+char*       str_iter_ptr (const str_iter  *it);
+
+/**
+ * @brief Return the current pointer (or NULL if not valid).
+ * Useful for APIs that accept `const char*` directly.
+ */
+const char* cstr_iter_ptr(const cstr_iter *it);
+
+/**
+ * @brief Zero-based offset of `cur` from `begin`.
+ * Returns SIZE_MAX on invalid iterator and sets `errno = EINVAL`.
+ */
+size_t      str_iter_pos (const str_iter  *it);
+
+/**
+ * @brief Zero-based offset of `cur` from `begin`.
+ * Returns SIZE_MAX on invalid iterator and sets `errno = EINVAL`.
+ */
+size_t      cstr_iter_pos(const cstr_iter *it);
+
+/* -------- Movement -------- */
+
+/**
+ * @brief Advance to the next byte (if any).
+ * @return true iff iterator is valid after the move.
+ */
+bool str_iter_next (str_iter  *it);
+
+/**
+ * @brief Advance to the next byte (if any).
+ * @return true iff iterator is valid after the move.
+ */
+bool cstr_iter_next(cstr_iter *it);
+
+/**
+ * @brief Move to the previous byte (if any).
+ * @return true iff iterator is valid after the move.
+ */
+bool str_iter_prev (str_iter  *it);
+
+/**
+ * @brief Move to the previous byte (if any).
+ * @return true iff iterator is valid after the move.
+ */
+bool cstr_iter_prev(cstr_iter *it);
+
+/**
+ * @brief Move by @p delta bytes; positive moves forward, negative backward.
+ * Clamps to the valid range `[begin, end]` (end means “not valid”).
+ * @return true iff iterator is valid after the move.
+ */
+bool str_iter_advance (str_iter  *it, ptrdiff_t delta);
+
+/**
+ * @brief Move by @p delta bytes; positive moves forward, negative backward.
+ * Clamps to the valid range `[begin, end]` (end means “not valid”).
+ * @return true iff iterator is valid after the move.
+ */
+bool cstr_iter_advance(cstr_iter *it, ptrdiff_t delta);
+
+/**
+ * @brief Reset to the first byte (if any).
+ * @return true iff iterator becomes valid.
+ */
+bool str_iter_seek_begin (str_iter  *it);
+
+/**
+ * @brief Reset to the first byte (if any).
+ * @return true iff iterator becomes valid.
+ */
+bool cstr_iter_seek_begin(cstr_iter *it);
+
+/**
+ * @brief Reset to one-past-last (i.e., end / not valid).
+ * @return false (by definition, end is not valid).
+ */
+bool str_iter_seek_end (str_iter  *it);
+
+/**
+ * @brief Reset to one-past-last (i.e., end / not valid).
+ * @return false (by definition, end is not valid).
+ */
+bool cstr_iter_seek_end(cstr_iter *it);
 // ================================================================================ 
 // ================================================================================ 
 

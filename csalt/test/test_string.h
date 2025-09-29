@@ -438,22 +438,26 @@ void test_trim_null_input(void **state);
 // --------------------------------------------------------------------------------
 
 void test_trim_all_whitespace_string(void **state);
-// --------------------------------------------------------------------------------
+// ================================================================================ 
+// ================================================================================ 
+// TEST STRING ITERATOR
 
-void test_string_iterator_forward(void **state);
-// --------------------------------------------------------------------------------
+/* CMocka fixtures */
+int setup_hello(void **state);
+int teardown_string(void **state);
 
-void test_string_iterator_reverse(void **state);
-// --------------------------------------------------------------------------------
-
-void test_string_iterator_empty_string(void **state);
-// --------------------------------------------------------------------------------
-
-void test_string_iterator_null_string(void **state);
-// --------------------------------------------------------------------------------
-
-void test_string_iterator_bounds(void **state);
-// --------------------------------------------------------------------------------
+/* Tests */
+void test_make_basic(void **state);
+void test_make_const_and_collect(void **state);
+void test_forward_positions(void **state);
+void test_reverse_iteration(void **state);
+void test_advance_and_clamp(void **state);
+void test_empty_string(void **state);
+void test_invalid_inputs_make(void **state);
+void test_invalidation_after_reserve(void **state);
+// ================================================================================ 
+// ================================================================================ 
+// TEST STRING VECTOR
 
 void test_tokenize_basic(void **state);
 // --------------------------------------------------------------------------------
