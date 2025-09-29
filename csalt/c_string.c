@@ -1553,6 +1553,7 @@ struct string_v {
     string_t* data;
     size_t len;
     size_t alloc;
+    ErrorCode error;
 };
 // -------------------------------------------------------------------------------- 
 
@@ -1562,21 +1563,29 @@ string_v* init_str_vector(size_t buff) {
         errno = ENOMEM;
         return NULL;
     }
-   
-    string_t* data_ptr = malloc(buff * sizeof(string_t));
+
+    // Allocate storage for `buff` string_t elements (zero-initialized).
+    string_t* data_ptr = calloc(buff, sizeof(string_t));
     if (data_ptr == NULL) {
         free(struct_ptr);
         errno = ENOMEM;
-        return NULL; 
+        return NULL;
     }
-   
-    // Initialize all elements
-    memset(data_ptr, 0, buff * sizeof(string_t));
-   
-    struct_ptr->data = data_ptr;
-    struct_ptr->len = 0;
+
+    struct_ptr->data  = data_ptr;
+    struct_ptr->len   = 0;
     struct_ptr->alloc = buff;
+    struct_ptr->error = NO_ERROR;
     return struct_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+ErrorCode get_str_vector_error(const string_v* vec) {
+    if (!vec) {
+        errno = EINVAL;
+        return INVALID_ERROR;
+    }
+    return vec->error;
 }
 // --------------------------------------------------------------------------------
 

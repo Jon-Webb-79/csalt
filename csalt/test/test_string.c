@@ -1913,13 +1913,13 @@ void test_tokenize_empty_delimiter(void **state) {
 // ================================================================================ 
 
 void test_str_vector_init(void **state) {
-   string_v* vec = init_str_vector(5);
+    string_v* vec = init_str_vector(5);
    
-   assert_non_null(vec);
-   assert_int_equal(str_vector_size(vec), 0);
-   assert_int_equal(str_vector_alloc(vec), 5);
-   
-   free_str_vector(vec);
+    assert_non_null(vec);
+    assert_int_equal(str_vector_size(vec), 0);
+    assert_int_equal(str_vector_alloc(vec), 5);
+    assert_int_equal(get_str_vector_error(vec), NO_ERROR); 
+    free_str_vector(vec);
 }
 // --------------------------------------------------------------------------------
 

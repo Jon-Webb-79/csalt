@@ -3047,14 +3047,107 @@ typedef struct string_v string_v;
 // --------------------------------------------------------------------------------
 
 /**
-* @function init_str_vector
-* @brief Initializes a new string vector with specified initial capacity
-*
-* @param buffer Initial capacity (number of strings) to allocate
-* @return Pointer to new string_v object, or NULL on allocation failure
-*         Sets errno to ENOMEM if memory allocation fails
-*/
+ * @brief Allocate and initialize a dynamic vector of ::string_t.
+ *
+ * Creates a new opaque ::string_v container with capacity for @p buffer
+ * elements. The vector’s metadata is initialized (length = 0, capacity =
+ * @p buffer, error = ::NO_ERROR) and the element storage is zero-initialized so
+ * each slot begins as an empty/uninitialized ::string_t. This function has no
+ * shared mutable state; `errno` is thread-local on conforming platforms and
+ * safe for concurrent calls.
+ *
+ * **Error reporting:**
+ * - On failure, returns NULL and sets `errno` because no object exists to carry
+ *   an ::ErrorCode.
+ * - On success, the returned object’s internal error status is initialized to ::NO_ERROR.
+ *
+ * @param buffer  Initial capacity (number of ::string_t slots to allocate).
+ *                A value of 0 is permitted; the vector will be valid with
+ *                capacity 0 and length 0.
+ *
+ * @return Pointer to a newly allocated ::string_v on success; NULL on failure.
+ *
+ * @retval NULL
+ *   - If memory allocation fails for the container or its element storage
+ *     (`errno` = `ENOMEM`).
+ *
+ * @pre  None beyond standard memory availability.
+ * @post On success:
+ *       - `vec->len == 0`
+ *       - `vec->alloc == buffer`
+ *       - `vec->error == NO_ERROR`
+ *       - All element slots are zeroed (safe to initialize later).
+ *       The caller owns the returned object and must release it with
+ *       ::free_str_vector(), unless using an auto-cleanup macro such as ::STRVEC_GBC.
+ *
+ * @warning This function performs dynamic allocation. Do not share a single
+ *          instance across threads without external synchronization for
+ *          subsequent mutations (push/pop/resize, etc.).
+ *
+ * @par Example
+ * @code{.c}
+ * string_v* vec = init_str_vector(16);
+ * if (vec == NULL) {
+ *     perror("init_str_vector failed");  // errno = ENOMEM
+ *     return 1;
+ * }
+ *
+ * // ... push/assign strings into vec ...
+ *
+ * free_str_vector(vec);  // or declare with: string_v* vec STRVEC_GBC = init_str_vector(16);
+ * @endcode
+ *
+ * @see free_str_vector, STRVEC_GBC
+ */
 string_v* init_str_vector(size_t buffer);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Retrieve the last recorded ::ErrorCode for a ::string_v.
+ *
+ * Returns the current error/status field stored inside @p vec. This is an
+ * O(1) accessor and does not modify the vector. It can be used by callers to
+ * inspect the result of the most recent operation that updates the vector’s
+ * internal error state.
+ *
+ * **Error reporting:**
+ * - On invalid input (@p vec is NULL), sets `errno` to `EINVAL` and returns
+ *   ::INVALID_ERROR.
+ * - On valid input, no `errno` is set.
+ *
+ * @param vec  Pointer to a ::string_v (may be NULL).
+ *
+ * @return The ::ErrorCode stored in @p vec on success; ::INVALID_ERROR if
+ *         @p vec is NULL.
+ *
+ * @retval INVALID_ERROR
+ *   - If @p vec is NULL (`errno` = `EINVAL`).
+ *
+ * @pre  None beyond @p vec being either NULL or a valid ::string_v pointer.
+ * @post No state changes; this function is const and thread-safe for concurrent
+ *       reads of distinct ::string_v instances.
+ *
+ * @warning A return value of ::NO_ERROR does not guarantee that a previous API
+ *          call succeeded unless that API documents updating this field. Consult
+ *          the specific mutating function’s contract to understand when
+ *          `vec->error` is set.
+ *
+ * @par Example
+ * @code{.c}
+ * string_v* vec = init_str_vector(8);
+ * if (!vec) { perror("init_str_vector"); return 1; }
+ *
+ * ErrorCode ec = get_str_vector_error(vec);
+ * if (ec != NO_ERROR) {
+ *     fprintf(stderr, "vector error: %d\n", (int)ec);
+ * }
+ *
+ * free_str_vector(vec);
+ * @endcode
+ *
+ * @see init_str_vector, free_str_vector
+ */
+ErrorCode get_str_vector_error(const string_v* vec);
 // --------------------------------------------------------------------------------
 
 /**
@@ -3207,15 +3300,51 @@ bool delete_any_str_vector(string_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 
 /**
-* @function free_str_vector
-* @brief Frees all memory associated with string vector
-*
-* Frees all contained strings and the vector itself.
-*
-* @param vec String vector to free
-* @return void
-*         Sets errno to EINVAL for NULL input
-*/
+ * @brief Destroy a ::string_v and release all owned resources.
+ *
+ * Frees each initialized ::string_t element in the vector and then releases
+ * the vector’s element storage and the vector object itself. Time complexity
+ * is O(n) in the current length (`vec->len`).
+ *
+ * **Error reporting:**
+ * - On invalid input (@p vec is NULL), the function does nothing and sets
+ *   `errno` to `EINVAL`.
+ * - On valid input, no `errno` is set on success.
+ *
+ * @param vec  Pointer to a ::string_v previously returned by ::init_str_vector().
+ *
+ * @retval void
+ *
+ * @pre  @p vec is either NULL or points to a valid ::string_v.
+ * @post If @p vec was non-NULL, all contained strings and internal buffers
+ *       are freed, and the ::string_v object itself is freed. The caller’s
+ *       pointer is left indeterminate (dangling); assign it to NULL if it will
+ *       be reused.
+ *
+ * @warning Do not use @p vec after this call. This function does not set the
+ *          caller’s pointer to NULL. If you need scope-bound cleanup with
+ *          automatic nulling, consider declaring the pointer with ::STRVEC_GBC.
+ *
+ * @note If your ::string_t type has a dedicated destructor (e.g., `free_string()`),
+ *       prefer calling that in place of directly freeing internal fields.
+ *
+ * @par Example
+ * @code{.c}
+ * // Manual cleanup
+ * string_v* vec = init_str_vector(16);
+ * if (!vec) { perror("init_str_vector"); return 1; }
+ * // ... use vec ...
+ * free_str_vector(vec);
+ * vec = NULL;  // avoid dangling pointer
+ *
+ * // Or with GCC/Clang auto-cleanup:
+ * // string_v* vec STRVEC_GBC = init_str_vector(16);
+ * // ... use vec ...
+ * // (no explicit free needed on scope exit)
+ * @endcode
+ *
+ * @see init_str_vector, STRVEC_GBC
+ */
 void free_str_vector(string_v* vec);
 // --------------------------------------------------------------------------------
 
@@ -3231,15 +3360,41 @@ void free_str_vector(string_v* vec);
 void _free_str_vector(string_v** vec);
 // --------------------------------------------------------------------------------
 
-#if defined(__GNUC__) || defined (__clang__)
-    /**
-     * @macro STRVEC_GBC
-     * @brief A macro for enabling automatic cleanup of str_vector objects.
-     *
-     * This macro uses the cleanup attribute to automatically call `_free_str_vector`
-     * when the scope ends, ensuring proper memory management.
-     */
+/**
+ * @brief Cleanup hook for ::STRVEC_GBC; frees and NULLs a ::string_v* variable.
+ *
+ * Designed to be used with the GNU/Clang `cleanup` attribute. The compiler
+ * passes the address of the annotated variable (i.e., a `string_v**`) to this
+ * function at scope exit. If non-NULL and pointing to a non-NULL object, it
+ * calls ::free_str_vector() and then sets the caller’s pointer to NULL to
+ * avoid dangling references.
+ *
+ * **Error reporting:**
+ * - On invalid input (@p vec is NULL), the function does nothing and sets
+ *   `errno` to `EINVAL`.
+ * - On valid input, no `errno` is set on success.*
+ *
+ * @param vec  Address of a `string_v*` local variable (may be NULL or point to NULL).
+ *
+ * @retval void
+ *
+ * @pre  `vec` either equals NULL or points to a valid `string_v*` variable.
+ * @post If `vec && *vec`, the vector is freed and `*vec` is set to NULL.
+ *
+ * @par Example
+ * @code{.c}
+ * // The compiler emits a call equivalent to: _free_str_vector(&vec);
+ * string_v* vec STRVEC_GBC = init_str_vector(8);
+ * // ... use vec ...
+ * @endcode
+ *
+ * @see STRVEC_GBC, free_str_vector
+ */
+#if defined(__GNUC__) || defined(__clang__)
     #define STRVEC_GBC __attribute__((cleanup(_free_str_vector)))
+#else
+    // Portable fallback: macro becomes a no-op on non-GNU compilers.
+    #define STRVEC_GBC
 #endif
 // -------------------------------------------------------------------------------- 
 

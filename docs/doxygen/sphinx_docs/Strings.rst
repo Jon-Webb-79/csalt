@@ -99,7 +99,7 @@ trim_string
 .. doxygenfunction:: trim_string
    :project: csalt
 
-reserve-string
+reserve_string
 ~~~~~~~~~~~~~~
 
 .. doxygenfunction:: reserve_string
@@ -133,6 +133,8 @@ get_string_error
 
 .. doxygenfunction:: get_string_error
    :project: csalt
+
+.. note:: Error codes can be found in :ref:`Error Code Overview <error_code_file>`. 
 
 compare_strings_lit
 ~~~~~~~~~~~~~~~~~~~
@@ -597,3 +599,44 @@ String Vector Overview
 ======================
 This section describes that attributes and functions associated with the 
 `string_v` data type.
+
+Initialization and Memory Management
+------------------------------------
+
+init_str_vector
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_str_vector
+   :project: csalt
+
+free_str_vector
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: free_str_vector
+   :project: csalt
+
+STRVEC_GBC 
+~~~~~~~~~~
+
+.. doxygendefine:: STRVEC_GBC 
+   :project: csalt
+
+Utility Funcitons 
+-----------------
+
+get_str_vector_error
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: get_str_vector_error
+   :project: csalt
+
+.. note:: Error codes can be found in :ref:`Error Code Overview <error_code_file>`.
+
+Vector Manipulation 
+-------------------
+
+Search Vector
+-------------
+
+String Vector Iterator 
+----------------------
