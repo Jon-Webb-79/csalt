@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "error_codes.h"
+#include "c_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -3150,152 +3150,51 @@ string_v* init_str_vector(size_t buffer);
 ErrorCode get_str_vector_error(const string_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function push_back_str_vector
-* @brief Adds a string to the end of the vector
-*
-* Automatically resizes the vector if necessary.
-*
-* @param vec Target string vector
-* @param value String to add
-* @return true if successful, false on error
-*         Sets errno to EINVAL for NULL inputs or ENOMEM on allocation failure
-*/
+
 bool push_back_str_vector(string_v* vec, const char* value);
 // --------------------------------------------------------------------------------
 
-/**
-* @function push_front_str_vector
-* @brief Adds a string to the beginning of the vector
-*
-* Shifts existing elements right and automatically resizes if necessary.
-*
-* @param vec Target string vector
-* @param value String to add
-* @return true if successful, false on error
-*         Sets errno to EINVAL for NULL inputs or ENOMEM on allocation failure
-*/
+
 bool push_front_str_vector(string_v* vec, const char* value);
 // --------------------------------------------------------------------------------
 
-/**
-* @function insert_str_vector
-* @brief Inserts a string at specified index in the vector
-*
-* Shifts elements right starting at index and resizes if necessary.
-*
-* @param vec Target string vector
-* @param value String to insert
-* @param index Position to insert at
-* @return true if successful, false on error
-*         Sets errno to EINVAL for NULL inputs or index out of bounds, ENOMEM on allocation failure
-*/
+
 bool insert_str_vector(string_v* vec, const char* value, size_t index);
 // --------------------------------------------------------------------------------
 
-/**
-* @function str_vector_index
-* @brief Retrieves pointer to string_t at specified index
-*
-* @param vec Source string vector
-* @param index Position to access
-* @return Pointer to string_t object, or NULL on error
-*         Sets errno to EINVAL for NULL input or ERANGE if index out of bounds
-*/
+
 const string_t* str_vector_index(const string_v* vec, size_t index);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function str_vector_size
-* @brief Returns current number of strings in vector
-*
-* @param vec String vector to query
-* @return Number of strings in vector, or LONG_MAX on error
-*         Sets errno to EINVAL for NULL input
-*/
+
 size_t str_vector_size(const string_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function str_vector_alloc
-* @brief Returns current allocation size of vector
-*
-* @param vec String vector to query
-* @return Current allocation capacity, or LONG_MAX on error
-*         Sets errno to EINVAL for NULL input
-*/
+
 size_t str_vector_alloc(const string_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function pop_back_str_vector
-* @brief Removes and returns last string in vector
-*
-* @param vec Source string vector
-* @return Pointer to removed string_t object, or NULL if vector empty
-*         Sets errno to EINVAL for NULL input
-*/
+
 string_t* pop_back_str_vector(string_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function pop_front_str_vector
-* @brief Removes and returns first string in vector
-*
-* Shifts remaining elements left.
-*
-* @param vec Source string vector
-* @return Pointer to removed string_t object, or NULL if vector empty
-*         Sets errno to EINVAL for NULL input
-*/
+
 string_t* pop_front_str_vector(string_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function pup_any_str_vector
-* @brief Removes and returns string at specified index
-*
-* Shifts remaining elements left to fill gap.
-*
-* @param vec Source string vector
-* @param index Position to remove from
-* @return Pointer to removed string_t object, or NULL on error
-*         Sets errno to EINVAL for NULL input or ERANGE if index out of bounds
-*/
+
 string_t* pop_any_str_vector(string_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 
-/**
-* @function delete_back_str_vector
-* @brief Removes the last string in a vector
-*
-* @param vec Source string vector
-* @return true if successful, false otherwise, or NULL if vector empty
-*         Sets errno to EINVAL for NULL input
-*/
+
 bool delete_back_str_vector(string_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function delete_front_str_vector
-* @brief Removes the first string in a vector
-*
-* @param vec Source string vector
-* @return true if successful, false otherwise, or NULL if vector empty
-*         Sets errno to EINVAL for NULL input
-*/
+
 bool delete_front_str_vector(string_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function delete_any_str_vector
-* @brief Removes any string in a vector
-*
-* @param vec Source string vector
-* @param index The index to be deleted
-* @return true if successful, false otherwise, or NULL if vector empty
-*         Sets errno to EINVAL for NULL input
-*/
+
 bool delete_any_str_vector(string_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 
@@ -3398,47 +3297,13 @@ void _free_str_vector(string_v** vec);
 #endif
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function reverse_str_vector
- * @brief Reverses the order of elements in a string vector in place.
- *
- * The function reverses the order of elements by swapping elements from the
- * beginning and end of the vector until the middle is reached.
- *
- * @param vec string vector to reverse
- * @return void
- *         Sets errno to EINVAL if vec is NULL or invalid
- */
+
 void reverse_str_vector(string_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
- * @function swap_string
- * @brief Swaps the contents of two string_t objects.
- *
- * Performs an in-place swap of all attributes (str pointer, length, and allocation)
- * between two string_t objects. The operation maintains memory ownership and
- * allocation status.
- *
- * @param a Pointer to first string_t object
- * @param b Pointer to second string_t object
- * @return void
- *         Sets errno to EINVAL if either input is NULL
- */
 void swap_string(string_t* a, string_t* b);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function binary_search_str_vector
-* @brief Searches a float vector to find the index where a value exists
-*
-* @param vec string vector object
-* @param value The value to search for
-* @param sort_first true if the vector or array needs to be sorted, false otherwise
-* @return The index where a value exists, SIZE_MAX if the value is not in the array.
-*         Sets errno to EINVAL if vec is NULL or invalid, ENODATA if the array is 
-*         not populated
-*/
 size_t binary_search_str_vector(string_v* vec, char* value, bool sort_first);
 // ================================================================================
 // ================================================================================ 

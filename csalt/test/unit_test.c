@@ -25,9 +25,51 @@
 #include "test_double.h"
 #include "test_ldouble.h"
 #include "test_int.h"
+#include "test_error.h"
 // ================================================================================ 
 // ================================================================================
 // Begin code
+
+const struct CMUnitTest test_error[] = {
+    cmocka_unit_test(test_error_to_string_no_error),
+    cmocka_unit_test(test_error_to_string_invalid_error),
+    cmocka_unit_test(test_error_to_string_argument_cases),
+    cmocka_unit_test(test_error_to_string_memory_cases),
+    cmocka_unit_test(test_error_to_string_state_cases),
+    cmocka_unit_test(test_error_to_string_math_cases),
+    cmocka_unit_test(test_error_to_string_io_cases),
+    cmocka_unit_test(test_error_to_string_format_cases),
+    cmocka_unit_test(test_error_to_string_concurrency_cases),
+    cmocka_unit_test(test_error_to_string_config_cases),
+    cmocka_unit_test(test_error_to_string_generic_cases),
+    cmocka_unit_test(test_error_to_string_fallback_unrecognized),
+    cmocka_unit_test(test_error_to_string_pointer_stability),
+    cmocka_unit_test(test_error_cat_to_string_all),
+    cmocka_unit_test(test_error_cat_to_string_unknown),
+    cmocka_unit_test(test_error_cat_to_string_pointer_stability),
+    cmocka_unit_test(test_set_errno_no_error),
+    cmocka_unit_test(test_set_errno_invalid_error),
+    cmocka_unit_test(test_set_errno_argument_group),
+    cmocka_unit_test(test_set_errno_uninitialized_special),
+    cmocka_unit_test(test_set_errno_memory_group),
+    cmocka_unit_test(test_set_errno_overflow_group),
+    cmocka_unit_test(test_set_errno_state_group),
+    cmocka_unit_test(test_set_errno_math_group),
+    cmocka_unit_test(test_set_errno_io_group),
+    cmocka_unit_test(test_set_errno_format_group),
+    cmocka_unit_test(test_set_errno_concurrency_group),
+    cmocka_unit_test(test_set_errno_config_group),
+    cmocka_unit_test(test_set_errno_generic_group),
+    cmocka_unit_test(test_error_from_errno_zero_success),
+    cmocka_unit_test(test_error_from_errno_core_mappings),
+    cmocka_unit_test(test_error_from_errno_wouldblock_again),
+    cmocka_unit_test(test_error_from_errno_optional_codes),
+    cmocka_unit_test(test_error_from_errno_deadlock_aliases),
+    cmocka_unit_test(test_error_from_errno_notsup_aliases),
+    cmocka_unit_test(test_error_from_errno_does_not_touch_errno),
+    cmocka_unit_test(test_error_from_errno_unknown_fallback),
+};
+// -------------------------------------------------------------------------------- 
 
 const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_init_string_nominal),
@@ -811,11 +853,14 @@ const struct CMUnitTest test_int_dict[] = {
 // ================================================================================ 
 int main(int argc, const char * argv[]) {
     int status;
-    status = cmocka_run_group_tests(test_string, NULL, NULL);
+    status = cmocka_run_group_tests(test_error, NULL, NULL);
     if (status != 0) 
-        return status;	
-    status = cmocka_run_group_tests(test_string_vector, NULL, NULL);
-    if (status != 0) 
+        return status;
+    status = cmocka_run_group_tests(test_string, NULL, NULL); 
+    if (status != 0)
+        return status;
+    // status = cmocka_run_group_tests(test_string_vector, NULL, NULL);
+    // if (status != 0) 
  //        return status;
  //    status = cmocka_run_group_tests(test_float_vector, NULL, NULL);
  //    if (status != 0) 

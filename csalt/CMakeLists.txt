@@ -54,7 +54,7 @@ set(CSALT_SOURCES
   c_double.c
   c_ldouble.c
   c_int.c
-  error_codes.c
+  c_error.c
 )
 
 set(CSALT_PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -1616,6 +1616,7 @@ void _free_str_vector(string_v** vec) {
 
 bool push_back_str_vector(string_v* vec, const char* value) {
     if (!vec || !vec->data || !value) {
+        if (vec) vec->error = NULL_POINTER;
         errno = EINVAL;
         return false;
     }
@@ -1632,6 +1633,7 @@ bool push_back_str_vector(string_v* vec, const char* value) {
         // Allocate more space for the array of str structs
         string_t* new_data = realloc(vec->data, new_alloc * sizeof(string_t));
         if (!new_data) {
+            vec->error = REALLOC_FAIL;
             errno = ENOMEM;
             return false;
         }
