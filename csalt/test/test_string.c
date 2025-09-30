@@ -2262,11 +2262,13 @@ void test_pop_empty_vector(void **state) {
    
     string_t* back = pop_back_str_vector(vec);
     assert_null(back);
-    assert_int_equal(errno, EINVAL);
-   
+    assert_int_equal(get_str_vector_error(vec), UNINITIALIZED);
+    assert_int_equal(errno, ENODATA);
+
     string_t* front = pop_front_str_vector(vec);
     assert_null(front);
-    assert_int_equal(errno, EINVAL);
+    assert_int_equal(get_str_vector_error(vec), UNINITIALIZED);
+    assert_int_equal(errno, ENODATA);
    
     free_str_vector(vec);
 }
@@ -2442,7 +2444,7 @@ void test_pop_any_empty_vector(void **state) {
    
     string_t* popped = pop_any_str_vector(vec, 0);
     assert_null(popped);
-    assert_int_equal(errno, EINVAL);
+    assert_int_equal(errno, ENODATA);
    
     free_str_vector(vec);
 }

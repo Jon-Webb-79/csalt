@@ -228,41 +228,41 @@ const struct CMUnitTest test_string[] = {
 
 const struct CMUnitTest test_string_vector[] = {
 	cmocka_unit_test(test_str_vector_init),
-    // cmocka_unit_test(test_str_vector_push_back),
-    // cmocka_unit_test(test_str_vector_auto_resize),
-    // cmocka_unit_test(test_str_vector_null_inputs),
-    // cmocka_unit_test(test_str_vector_empty_string),
-    // cmocka_unit_test(test_str_vector_multiple_pushes),
-    // #if defined (__GNUC__) || defined (__clang__) 
-    //     cmocka_unit_test(test_str_vector_gbc),
-    // #endif
-    // cmocka_unit_test(test_push_front_empty_vector),
-    // cmocka_unit_test(test_push_front_existing_elements),
-    // cmocka_unit_test(test_push_front_reallocation),
-    // cmocka_unit_test(test_push_front_multiple),
-    // cmocka_unit_test(test_push_front_null_inputs),
-    // cmocka_unit_test(test_push_front_empty_string),
-    // cmocka_unit_test(test_insert_str_vector_middle),
-    // cmocka_unit_test(test_insert_str_vector_start),
-    // cmocka_unit_test(test_insert_str_vector_end),
-    // cmocka_unit_test(test_insert_str_vector_reallocation),
-    // cmocka_unit_test(test_insert_str_vector_invalid_index),
-    // cmocka_unit_test(test_insert_str_vector_null_inputs),
-    // cmocka_unit_test(test_insert_str_vector_empty_string),
-    // cmocka_unit_test(test_pop_back_nominal),
-    // cmocka_unit_test(test_pop_front_nominal),
-    // cmocka_unit_test(test_pop_empty_vector),
-    // cmocka_unit_test(test_pop_multiple_back),
-    // cmocka_unit_test(test_pop_multiple_front),
-    // cmocka_unit_test(test_pop_null_vector),
-    // cmocka_unit_test(test_pop_alternating),
-    // cmocka_unit_test(test_pop_any_nominal),
-    // cmocka_unit_test(test_pop_any_first),
-    // cmocka_unit_test(test_pop_any_last),
-    // cmocka_unit_test(test_pop_any_invalid_index),
-    // cmocka_unit_test(test_pop_any_empty_vector),
-    // cmocka_unit_test(test_pop_any_null_vector),
-    // cmocka_unit_test(test_pop_any_multiple),
+    cmocka_unit_test(test_str_vector_push_back),
+    cmocka_unit_test(test_str_vector_auto_resize),
+    cmocka_unit_test(test_str_vector_null_inputs),
+    cmocka_unit_test(test_str_vector_empty_string),
+    cmocka_unit_test(test_str_vector_multiple_pushes),
+    #if defined (__GNUC__) || defined (__clang__) 
+        cmocka_unit_test(test_str_vector_gbc),
+    #endif
+    cmocka_unit_test(test_push_front_empty_vector),
+    cmocka_unit_test(test_push_front_existing_elements),
+    cmocka_unit_test(test_push_front_reallocation),
+    cmocka_unit_test(test_push_front_multiple),
+    cmocka_unit_test(test_push_front_null_inputs),
+    cmocka_unit_test(test_push_front_empty_string),
+    cmocka_unit_test(test_insert_str_vector_middle),
+    cmocka_unit_test(test_insert_str_vector_start),
+    cmocka_unit_test(test_insert_str_vector_end),
+    cmocka_unit_test(test_insert_str_vector_reallocation),
+    cmocka_unit_test(test_insert_str_vector_invalid_index),
+    cmocka_unit_test(test_insert_str_vector_null_inputs),
+    cmocka_unit_test(test_insert_str_vector_empty_string),
+    cmocka_unit_test(test_pop_back_nominal),
+    cmocka_unit_test(test_pop_front_nominal),
+    cmocka_unit_test(test_pop_empty_vector),
+    cmocka_unit_test(test_pop_multiple_back),
+    cmocka_unit_test(test_pop_multiple_front),
+    cmocka_unit_test(test_pop_null_vector),
+    cmocka_unit_test(test_pop_alternating),
+    cmocka_unit_test(test_pop_any_nominal),
+    cmocka_unit_test(test_pop_any_first),
+    cmocka_unit_test(test_pop_any_last),
+    cmocka_unit_test(test_pop_any_invalid_index),
+    cmocka_unit_test(test_pop_any_empty_vector),
+    cmocka_unit_test(test_pop_any_null_vector),
+    cmocka_unit_test(test_pop_any_multiple),
     // cmocka_unit_test(test_sort_empty_vector),
     // cmocka_unit_test(test_sort_single_element),
     // cmocka_unit_test(test_sort_forward_already_sorted),
@@ -859,9 +859,9 @@ int main(int argc, const char * argv[]) {
     status = cmocka_run_group_tests(test_string, NULL, NULL); 
     if (status != 0)
         return status;
-    // status = cmocka_run_group_tests(test_string_vector, NULL, NULL);
-    // if (status != 0) 
- //        return status;
+    status = cmocka_run_group_tests(test_string_vector, NULL, NULL);
+    if (status != 0) 
+        return status;
  //    status = cmocka_run_group_tests(test_float_vector, NULL, NULL);
  //    if (status != 0) 
  //        return status;
