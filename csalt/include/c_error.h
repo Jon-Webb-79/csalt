@@ -239,22 +239,6 @@ const char* error_to_string(ErrorCode code);
  * // -> "[MEMORY ERROR] allocation failed"
  * @endcode
  */
-const char* error_cat_to_string(ErrorCategory cat) {
-    switch (cat) {
-        case ECAT_NONE:  return "NO ERROR";
-        case ECAT_ARG:   return "ARGUMENT ERROR";
-        case ECAT_MEM:   return "MEMORY ERROR";
-        case ECAT_STATE: return "STATE ERROR";
-        case ECAT_MATH:  return "MATH ERROR";
-        case ECAT_IO:    return "I/O ERROR";
-        case ECAT_FMT:   return "TYPE/FORMAT ERROR";
-        case ECAT_CONC:  return "CONCURRENCY ERROR";
-        case ECAT_CFG:   return "CONFIG ERROR";
-        case ECAT_GEN:   return "GENERIC ERROR";
-    }
-    return "UNKNOWN ERROR";
-}
-
 const char* error_cat_to_string(ErrorCategory cat);
 // ================================================================================ 
 // ================================================================================ 
@@ -436,7 +420,6 @@ int set_errno_from_error(ErrorCode code);
  * }
  * @endcode
  */
-
 ErrorCode error_from_errno(int e);
 // ================================================================================ 
 // ================================================================================ 

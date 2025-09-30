@@ -247,7 +247,7 @@ void test_set_errno_argument_group(void **state)
     (void)state;
     expect_errno_for(INVALID_ARG,       EINVAL);
     expect_errno_for(NULL_POINTER,      EINVAL);
-    expect_errno_for(OUT_OF_BOUNDS,     EINVAL);
+    expect_errno_for(OUT_OF_BOUNDS,     ERANGE);
     expect_errno_for(SIZE_MISMATCH,     EINVAL);
     expect_errno_for(ITERATOR_INVALID,  EINVAL);
     expect_errno_for(PRECONDITION_FAIL, EINVAL);

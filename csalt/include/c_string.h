@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <errno.h>
 #include "c_error.h"
 
 #ifdef __cplusplus
@@ -593,6 +594,7 @@ bool string_lit_concat(string_t* str1, const char* literal);
  * ...
  */
 bool string_concat__type_mismatch(const string_t*, void*);
+
 #if defined(DOXYGEN)
 /* Simple definition so Doxygen indexes the macro unconditionally */
 #  define string_concat(str_one, str_two) string_string_concat((str_one), (str_two))

@@ -127,8 +127,8 @@ int set_errno_from_error(ErrorCode code)
 
         /* -1xx: argument/input */
         case INVALID_ARG:
-        case NULL_POINTER:
-        case OUT_OF_BOUNDS:
+        case NULL_POINTER:            e = EINVAL; break;
+        case OUT_OF_BOUNDS:           e = ERANGE; break;
         case SIZE_MISMATCH:
         case ITERATOR_INVALID:
         case PRECONDITION_FAIL:

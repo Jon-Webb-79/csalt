@@ -332,20 +332,23 @@ size_t string_alloc(const string_t* str) {
 
 bool string_string_concat(string_t* str1, const string_t* str2) {
     if (!str1 || !str2) {
-        errno = EINVAL;
-        if (str1) str1->error = INVALID_ARG;
+        if (str1) { 
+            str1->error = INVALID_ARG;
+            errno = set_errno_from_error(str1->error);
+        }
+        else errno = EINVAL;
         return false;
     }
     // Reset error code 
     str1->error = NO_ERROR;
     if (!str1->str) {
-        errno = EINVAL;
         str1->error = NULL_POINTER;
+        errno = set_errno_from_error(str1->error);
         return false;
     }
     if (!str2->str) {
-        errno = EINVAL;
         str1->error = NULL_POINTER;
+        errno = set_errno_from_error(str1->error);
         /* str2 is const; don't mutate it */
         return false;
     }
@@ -355,8 +358,8 @@ bool string_string_concat(string_t* str1, const string_t* str2) {
 
     /* size_t overflow guard for len1 + len2 + 1 */
     if (len2 > SIZE_MAX - 1 - len1) {
-        errno = EOVERFLOW;
         str1->error = NUMERIC_OVERFLOW;
+        errno = set_errno_from_error(str1->error);
         return false;
     }
     const size_t needed = len1 + len2 + 1;
@@ -373,8 +376,8 @@ bool string_string_concat(string_t* str1, const string_t* str2) {
     if (needed > str1->alloc && src_overlaps_dest) {
         temp = (char*)malloc(len2);
         if (!temp) {
-            errno = ENOMEM;
             str1->error = BAD_ALLOC;
+            errno = set_errno_from_error(str1->error);
             return false;
         }
         memcpy(temp, src_initial, len2);
@@ -386,8 +389,8 @@ bool string_string_concat(string_t* str1, const string_t* str2) {
         char* newbuf = (char*)realloc(str1->str, needed);
         if (!newbuf) {
             free(temp);
-            errno = ENOMEM;
             str1->error = REALLOC_FAIL;
+            errno = set_errno_from_error(str1->error);
             return false;
         }
         str1->str   = newbuf;
@@ -413,15 +416,18 @@ bool string_string_concat(string_t* str1, const string_t* str2) {
 
 bool string_lit_concat(string_t* str1, const char* literal) {
     if (!str1 || !literal) {
-        if (str1) str1->error = INVALID_ARG;
-        errno = EINVAL;
+        if (str1) {
+            str1->error = INVALID_ARG;
+            errno = set_errno_from_error(str1->error);
+        }
+        else errno = EINVAL;
         return false;
     }
     // Reset error code 
     str1->error = NO_ERROR;
     if (!str1->str) {
         str1->error = NULL_POINTER;
-        errno = EINVAL;
+        errno = set_errno_from_error(str1->error);
         return false;
     }
 
@@ -437,7 +443,7 @@ bool string_lit_concat(string_t* str1, const char* literal) {
     // Guard against size_t overflow in len1 + len2 + 1
     if (len2 > SIZE_MAX - 1 - len1) {
         str1->error = NUMERIC_OVERFLOW;
-        errno = EOVERFLOW;
+        errno = set_errno_from_error(str1->error);
         return false;
     }
     const size_t needed = len1 + len2 + 1;
@@ -454,7 +460,7 @@ bool string_lit_concat(string_t* str1, const char* literal) {
         temp = (char*)malloc(len2);
         if (!temp) {
             str1->error = BAD_ALLOC;
-            errno = ENOMEM;
+            errno = set_errno_from_error(str1->error);
             return false;
         }
         memcpy(temp, literal, len2);
@@ -467,7 +473,7 @@ bool string_lit_concat(string_t* str1, const char* literal) {
         if (!newbuf) {
             free(temp);
             str1->error = REALLOC_FAIL;
-            errno = ENOMEM;
+            errno = set_errno_from_error(str1->error);
             return false;
         }
         str1->str   = newbuf;
@@ -540,22 +546,22 @@ bool reserve_string(string_t* str, size_t len) {
         return false;
     }
     if (!str->str) {
-        errno = EINVAL;
         str->error = NULL_POINTER;
+        errno = set_errno_from_error(str->error);
         return false;
     }
     // Ensure the requested length is greater than the current allocation
     if (len <= str->alloc) {
-        errno = EINVAL;
         str->error = INVALID_ARG;
+        errno = set_errno_from_error(str->error);
         return false;
     }
 
     // Attempt to reallocate memory
     char* ptr = realloc(str->str, sizeof(char) * len);
     if (!ptr) {
-        errno = ENOMEM;
         str->error = REALLOC_FAIL;
+        errno = set_errno_from_error(str->error);
         return false;
     }
 
@@ -573,8 +579,8 @@ bool trim_string(string_t* str) {
         return false;
     }
     if (!str->str) {
-        errno = EINVAL;
         str->error = NULL_POINTER;
+        errno = set_errno_from_error(str->error);
         return false;
     }
     // RESET ERROR VALUE 
@@ -586,15 +592,15 @@ bool trim_string(string_t* str) {
     
     // Sanity check for corrupted string_t
     if (str->len + 1 > str->alloc) {
-        errno = EINVAL;
         str->error = SIZE_MISMATCH;
+        errno = set_errno_from_error(str->error);
         return false;
     }
 
     char *ptr = realloc(str->str, str->len + 1);
     if (ptr == NULL) {
-        errno = ENOMEM;
         str->error = REALLOC_FAIL;
+        errno = set_errno_from_error(str->error);
         return false;
     }
     
@@ -610,14 +616,14 @@ char* first_char_occurrance(string_t* str, char value) {
         return NULL;
     }
     if (!str->str) {
-        errno = EINVAL;
         str->error = NULL_POINTER;
+        errno = set_errno_from_error(str->error);
         return NULL;
     }
     void* p = memchr(str->str, (unsigned char)value, str->len);
     if (!p) {
-        errno = ENOENT;
         str->error = NOT_FOUND;
+        errno = set_errno_from_error(str->error);
         return NULL;
     }
     str->error = NO_ERROR;
@@ -632,12 +638,12 @@ char* last_char_occurrance(string_t* str, char value) {
     }
     if (!str->str) {
         str->error = NULL_POINTER;
-        errno = EINVAL;
+        errno = set_errno_from_error(str->error);
         return NULL;
     }
     if (str->len == 0) {               /* nothing to search */
         str->error = NOT_FOUND;
-        errno = ENOENT;
+        errno = set_errno_from_error(str->error);
         return NULL;
     }
 
@@ -648,8 +654,8 @@ char* last_char_occurrance(string_t* str, char value) {
     const size_t idx = simd_last_u8_index(s, n, c);  /* returns SIZE_MAX if absent */
 
     if (idx == SIZE_MAX) {
-        str->error = NOT_FOUND;
-        errno = ENOENT;
+        str->error = LENGTH_OVERFLOW;
+        errno = set_errno_from_error(str->error);
         return NULL;
     }
 
@@ -660,13 +666,16 @@ char* last_char_occurrance(string_t* str, char value) {
 
 char* first_lit_substr_occurrence(string_t* str, const char* sub_str) {
     if (!str || !sub_str) {
-        if (str) str->error = INVALID_ARG;
-        errno = EINVAL;
+        if (str) {
+            str->error = INVALID_ARG;
+            errno = set_errno_from_error(str->error);
+        }
+        else errno = EINVAL;
         return NULL;
     }
     if (!str->str) {
         str->error = NULL_POINTER;
-        errno = EINVAL;
+        errno = set_errno_from_error(str->error);
         return NULL;
     }
 
@@ -675,11 +684,12 @@ char* first_lit_substr_occurrence(string_t* str, const char* sub_str) {
 
     /* Policy: empty needle matches at start (like strstr). */
     if (m == 0) {
-        str->error = NO_ERROR;
-        return str->str;
+        str->error = NOT_FOUND;
+        return NULL;
     }
     if (m > n) {
-        str->error = NO_ERROR;   /* valid query; just not found */
+        str->error = NOT_FOUND; 
+        errno = set_errno_from_error(str->error);
         return NULL;
     }
 
@@ -688,26 +698,33 @@ char* first_lit_substr_occurrence(string_t* str, const char* sub_str) {
         (const unsigned char*)str->str, n,
         (const unsigned char*)sub_str,  m
     );
-
+    if (idx == SIZE_MAX) {
+        str->error = LENGTH_OVERFLOW;
+        errno = set_errno_from_error(str->error);
+        return NULL;
+    }
     str->error = NO_ERROR;       /* valid search completed */
-    return (idx == SIZE_MAX) ? NULL : (char*)(str->str + idx);
+    return (char*)(str->str + idx);
 }
 // -------------------------------------------------------------------------------- 
 
 char* first_string_substr_occurrence(string_t* hay, const string_t* needle) {
     if (!hay || !needle) {
-        if (hay) hay->error = INVALID_ARG;
-        errno = EINVAL;
+        if (hay) {
+            hay->error = INVALID_ARG;
+            errno = set_errno_from_error(hay->error);
+        }
+        else errno = EINVAL;
         return NULL;
     }
     if (!hay->str) {
         hay->error = NULL_POINTER;
-        errno = EINVAL;
+        errno = set_errno_from_error(hay->error);
         return NULL;
     }
     if (!needle->str) {
-        /* needle is invalid; we don't mutate it but report input error */
-        errno = EINVAL;
+        hay->error = NULL_POINTER;
+        errno = set_errno_from_error(hay->error);
         return NULL;
     }
 
@@ -715,29 +732,44 @@ char* first_string_substr_occurrence(string_t* hay, const string_t* needle) {
     const size_t m = needle->len;
 
     /* Policy: empty needle matches at start (like strstr) */
-    if (m == 0) { hay->error = NO_ERROR; return hay->str; }
-    if (m > n)   { hay->error = NO_ERROR; return NULL; }
+    if (m == 0) { 
+        hay->error = NOT_FOUND;
+        errno = set_errno_from_error(hay->error);
+        return NULL; 
+    }
+    if (m > n)   { 
+        hay->error = NOT_FOUND; 
+        errno = set_errno_from_error(hay->error);
+        return NULL; 
+    }
 
     /* SIMD-accelerated index lookup (you already have this dispatcher) */
     size_t idx = simd_first_substr_index(
         (const unsigned char*)hay->str, n,
         (const unsigned char*)needle->str, m
     );
-
+    if (idx == SIZE_MAX) {
+        hay->error = LENGTH_OVERFLOW;
+        errno = set_errno_from_error(hay->error);
+        return NULL;
+    }
     hay->error = NO_ERROR;
-    return (idx == SIZE_MAX) ? NULL : (char*)(hay->str + idx);
+    return (char*)(hay->str + idx);
 }
 // --------------------------------------------------------------------------------
 
 char* last_lit_substr_occurrence(string_t* str, const char* sub_str) {
     if (!str || !sub_str) {
-        if (str) str->error = INVALID_ARG;
-        errno = EINVAL;
+        if (str) {
+            str->error = INVALID_ARG;
+            errno = set_errno_from_error(str->error);
+        }
+        else errno = EINVAL;
         return NULL;
     }
     if (!str->str) {
         str->error = NULL_POINTER;
-        errno = EINVAL;
+        errno = set_errno_from_error(str->error);
         return NULL;
     }
 
@@ -752,19 +784,30 @@ char* last_lit_substr_occurrence(string_t* str, const char* sub_str) {
         (const unsigned char*)str->str, n,
         (const unsigned char*)sub_str,  m
     );
-
+    if (idx == SIZE_MAX) {
+        str->error = LENGTH_OVERFLOW;
+        errno = set_errno_from_error(str->error);
+        return NULL;
+    }
     str->error = NO_ERROR;                 /* valid search completed */
-    return (idx == SIZE_MAX) ? NULL : (char*)(str->str + idx);
+    return (char*)(str->str + idx);
 }
 // -------------------------------------------------------------------------------- 
 
 char* last_string_substr_occurrence(string_t* hay, const string_t* needle) {
     if (!hay || !needle) {
-        if (hay) hay->error = INVALID_ARG;
-        errno = EINVAL;
+        if (hay) {
+            hay->error = INVALID_ARG;
+            errno = set_errno_from_error(hay->error);
+        }
+        else errno = EINVAL;
         return NULL;
     }
-    if (!hay->str)    { hay->error = NULL_POINTER; errno = EINVAL; return NULL; }
+    if (!hay->str) { 
+        hay->error = NULL_POINTER; 
+        errno = set_errno_from_error(hay->error); 
+        return NULL; 
+    }
     if (!needle->str) { errno = EINVAL; return NULL; }
 
     const size_t n = hay->len;
@@ -777,17 +820,24 @@ char* last_string_substr_occurrence(string_t* hay, const string_t* needle) {
         (const unsigned char*)hay->str, n,
         (const unsigned char*)needle->str, m
     );
-
+    if (idx == SIZE_MAX) {
+        hay->error = LENGTH_OVERFLOW;
+        errno = set_errno_from_error(hay->error);
+        return NULL;
+    }
     hay->error = NO_ERROR;
-    return (idx == SIZE_MAX) ? NULL : (char*)(hay->str + idx);
+    return (char*)(hay->str + idx);
 }
 
 // --------------------------------------------------------------------------------
 
 char* first_char(string_t* str) {
     if (!str || !str->str) {
-        if (str) str->error = NULL_POINTER;
-        errno = EINVAL;
+        if (str) {
+            str->error = NULL_POINTER;
+            errno = set_errno_from_error(str->error);
+        }
+        else errno = EINVAL;
         return NULL;
     }
     str->error= NO_ERROR;
@@ -797,8 +847,11 @@ char* first_char(string_t* str) {
 
 char* last_char(string_t* str) {
     if (!str || !str->str) {
-        if (str) str->error = NULL_POINTER;
-        errno = EINVAL;
+        if (str) {
+            str->error = NULL_POINTER;
+            errno = set_errno_from_error(str->error);
+        }
+        else errno = EINVAL;
         return NULL;
     }
     str->error = NO_ERROR;
@@ -808,13 +861,16 @@ char* last_char(string_t* str) {
 
 bool is_string_ptr(string_t* str, const char* ptr, bool include_terminator) {
     if (!str || !ptr) {
-        if (str) str->error = INVALID_ARG;  // argument itself is invalid
-        errno = EINVAL;
+        if (str) {
+            str->error = INVALID_ARG;  // argument itself is invalid
+            errno = set_errno_from_error(str->error);
+        }
+        else errno = EINVAL;
         return false;
     }
     if (!str->str) {
         str->error = NULL_POINTER;          // object lacks a buffer
-        errno = EINVAL;
+        errno = set_errno_from_error(str->error);
         return false;
     }
 
@@ -849,12 +905,29 @@ static char* _last_literal_between_ptrs_simd(
 // -------------------------------------------------------------------------------- 
 
 bool drop_lit_substr(string_t* s, const char* needle, char* min_ptr, char* max_ptr) {
-    if (!s || !needle)                 { if (s) s->error = INVALID_ARG; errno = EINVAL; return false; }
-    if (!s->str)                       { s->error = NULL_POINTER; errno = EINVAL; return false; }
-    if (!is_string_ptr(s, min_ptr, false) || !is_string_ptr(s, max_ptr, false)) {
-        s->error = OUT_OF_BOUNDS; errno = ERANGE; return false;
+    if (!s || !needle) { 
+        if (s) { 
+            s->error = INVALID_ARG; 
+            errno = set_errno_from_error(s->error); 
+        }
+        else errno = EINVAL;
+        return false; 
     }
-    if (max_ptr < min_ptr)             { s->error = INVALID_ARG; errno = EINVAL; return false; }
+    if (!s->str) { 
+        s->error = NULL_POINTER; 
+        errno = set_errno_from_error(s->error); 
+        return false; 
+    }
+    if (!is_string_ptr(s, min_ptr, false) || !is_string_ptr(s, max_ptr, false)) {
+        s->error = OUT_OF_BOUNDS; 
+        errno = set_errno_from_error(s->error); 
+        return false;
+    }
+    if (max_ptr < min_ptr) { 
+        s->error = INVALID_ARG; 
+        errno = set_errno_from_error(s->error); 
+        return false; 
+    }
 
     const size_t m = strlen(needle);
     if (m == 0) { s->error = NO_ERROR; return true; }
@@ -896,15 +969,34 @@ bool drop_lit_substr(string_t* s, const char* needle, char* min_ptr, char* max_p
 // -------------------------------------------------------------------------------- 
 
 bool drop_string_substr(string_t* s, const string_t* needle, char* min_ptr, char* max_ptr) {
-    if (!s || !needle)                 { if (s) s->error = INVALID_ARG; errno = EINVAL; return false; }
-    if (!s->str || !needle->str)       { if (s && !s->str) s->error = NULL_POINTER; errno = EINVAL; return false; }
-    if (!is_string_ptr(s, min_ptr, false) || !is_string_ptr(s, max_ptr, false)) {
-        s->error = OUT_OF_BOUNDS; errno = ERANGE; return false;
+    if (!s || !needle) { 
+        if (s) {
+            s->error = INVALID_ARG; 
+            errno = set_errno_from_error(s->error); 
+        } else errno = EINVAL;
+        return false; 
     }
-    if (max_ptr < min_ptr)             { s->error = INVALID_ARG; errno = EINVAL; return false; }
+    if (!s->str || !needle->str) { 
+        if (s && !s->str) s->error = NULL_POINTER; 
+        errno = set_errno_from_error(s->error); 
+        return false; 
+    }
+    if (!is_string_ptr(s, min_ptr, false) || !is_string_ptr(s, max_ptr, false)) {
+        s->error = OUT_OF_BOUNDS; 
+        errno = set_errno_from_error(s->error); 
+        return false;
+    }
+    if (max_ptr < min_ptr) { 
+        s->error = INVALID_ARG; 
+        errno = set_errno_from_error(s->error); 
+        return false; 
+    }
 
     const size_t m = needle->len;
-    if (m == 0) { s->error = NO_ERROR; return true; }
+    if (m == 0) { 
+        s->error = NO_ERROR; 
+        return true; 
+    }
 
     for (;;) {
         size_t span = (size_t)(max_ptr - min_ptr + 1);
@@ -946,24 +1038,45 @@ bool replace_lit_substr(string_t* string,
                         char* max_ptr) {
     /* ---- validation ---- */
     if (!string || !pattern || !repl) {
-        if (string) string->error = INVALID_ARG;
-        errno = EINVAL; return false;
+        if (string) {
+            string->error = INVALID_ARG;
+            errno = set_errno_from_error(string->error); 
+        } else errno = EINVAL;
+        return false;
     }
-    if (!string->str) { string->error = NULL_POINTER; errno = EINVAL; return false; }
+    if (!string->str) { 
+        string->error = NULL_POINTER; 
+        errno = set_errno_from_error(string->error); 
+        return false; 
+    }
     if (!is_string_ptr(string, min_ptr, false) ||
         !is_string_ptr(string, max_ptr, false)) {
-        string->error = OUT_OF_BOUNDS; errno = ERANGE; return false;
+        string->error = OUT_OF_BOUNDS; 
+        errno = set_errno_from_error(string->error); 
+        return false;
     }
-    if (max_ptr < min_ptr) { string->error = INVALID_ARG; errno = EINVAL; return false; }
+    if (max_ptr < min_ptr) { 
+        string->error = INVALID_ARG; 
+        errno = set_errno_from_error(string->error); 
+        return false; 
+    }
 
     const size_t pat_len = strlen(pattern);
     const size_t rep_len = strlen(repl);
 
     /* Empty pattern → no-op */
-    if (pat_len == 0) { string->error = NO_ERROR; return true; }
+    if (pat_len == 0) { 
+        string->error = NOT_FOUND;
+        errno = set_errno_from_error(string->error);
+        return true; 
+    }
 
     /* Window too small to contain pattern → nothing to do */
-    if ((size_t)(max_ptr - min_ptr + 1) < pat_len) { string->error = NO_ERROR; return true; }
+    if ((size_t)(max_ptr - min_ptr + 1) < pat_len) { 
+        string->error = NOT_FOUND; 
+        errno = set_errno_from_error(string->error);
+        return true; 
+    }
 
     /* If replacement text aliases the same buffer, stash a safe copy once. */
     const char* rsrc = repl;
@@ -973,7 +1086,11 @@ bool replace_lit_substr(string_t* string,
         const char* end  = base + string->len + 1;  /* include NUL */
         if (rsrc >= base && rsrc < end) {
             rtmp = (char*)malloc(rep_len ? rep_len : 1);
-            if (!rtmp && rep_len) { string->error = BAD_ALLOC; errno = ENOMEM; return false; }
+            if (!rtmp && rep_len) { 
+                string->error = BAD_ALLOC; 
+                errno = set_errno_from_error(string->error); 
+                return false; 
+            }
             if (rep_len) memcpy(rtmp, rsrc, rep_len);
             rsrc = rtmp;  /* safe stable source for all edits */
         }
@@ -1079,26 +1196,51 @@ bool replace_string_substr(string_t* string,
                            char* max_ptr) {
     /* ---- basic validation ---- */
     if (!string || !pattern || !repl) {
-        if (string) string->error = INVALID_ARG;
-        errno = EINVAL; return false;
+        if (string) {
+            string->error = INVALID_ARG;
+            errno = set_errno_from_error(string->error); 
+        } else errno = EINVAL;
+        return false;
     }
-    if (!string->str) { string->error = NULL_POINTER; errno = EINVAL; return false; }
-    if (!pattern->str || !repl->str) { errno = EINVAL; return false; }
+    if (!string->str) { 
+        string->error = NULL_POINTER; 
+        errno = set_errno_from_error(string->error); 
+        return false; 
+    }
+    if (!pattern->str || !repl->str) { 
+        string->error = NULL_POINTER;
+        errno = set_errno_from_error(string->error); 
+        return false; 
+    }
 
     if (!is_string_ptr(string, min_ptr, false) ||
         !is_string_ptr(string, max_ptr, false)) {
-        string->error = OUT_OF_BOUNDS; errno = ERANGE; return false;
+        string->error = OUT_OF_BOUNDS; 
+        errno = set_errno_from_error(string->error); 
+        return false;
     }
-    if (max_ptr < min_ptr) { string->error = INVALID_ARG; errno = EINVAL; return false; }
+    if (max_ptr < min_ptr) { 
+        string->error = INVALID_ARG; 
+        errno = set_errno_from_error(string->error); 
+        return false; 
+    }
 
     const size_t pat_len = pattern->len;
     const size_t rep_len = repl->len;
 
     /* Policy: empty pattern → no-op */
-    if (pat_len == 0) { string->error = NO_ERROR; return true; }
+    if (pat_len == 0) { 
+        string->error = NOT_FOUND;
+        errno = set_errno_from_error(string->error);
+        return true; 
+    }
 
     /* Window too small to contain pattern → nothing to do */
-    if ((size_t)(max_ptr - min_ptr + 1) < pat_len) { string->error = NO_ERROR; return true; }
+    if ((size_t)(max_ptr - min_ptr + 1) < pat_len) { 
+        string->error = NOT_FOUND;
+        errno = set_errno_from_error(string->error);
+        return true; 
+    }
 
     /* ---- growth pre-pass (if replacement longer) ---- */
     const ptrdiff_t delta = (ptrdiff_t)rep_len - (ptrdiff_t)pat_len;
@@ -1217,8 +1359,10 @@ void to_lower_char(char* val) {
 
 void to_uppercase(string_t *s) {
     if(!s || !s->str) {
-        errno = EINVAL;
-        if (s) s->error = NULL_POINTER;
+        if (s) {
+            s->error = NULL_POINTER;
+            errno = set_errno_from_error(s->error);
+        } else errno = EINVAL;
         return;
     }
     char* begin = s->str;
@@ -1226,13 +1370,16 @@ void to_uppercase(string_t *s) {
     for (char* i =  begin; i != end; i++) {
         if (*i >= 'a' && *i <= 'z') *i -= 32;
     }
+    s->error = NO_ERROR;
 }
 // --------------------------------------------------------------------------------
 
 void to_lowercase(string_t *s) {
     if(!s || !s->str) {
-        errno = EINVAL;
-        if (s) s->error = NULL_POINTER;
+        if (s) {
+            s->error = NULL_POINTER;
+            errno = set_errno_from_error(s->error);
+        } else errno = EINVAL;
         return;
     }
     char* begin = s->str;
@@ -1240,23 +1387,26 @@ void to_lowercase(string_t *s) {
     for (char* i =  begin; i != end; i++) {
         if (*i >= 'A' && *i <= 'Z') *i += 32;
     }
+    s->error = NO_ERROR;
 }
 // --------------------------------------------------------------------------------
 
 string_t* pop_string_token(string_t* s, char token) {
     if (!s || !s->str) {
-        if (s) s->error = NULL_POINTER;
-        errno = EINVAL;
+        if (s) {
+            s->error = NULL_POINTER;
+            errno = set_errno_from_error(s->error);
+        } else errno = EINVAL;
         return NULL;
     }
     if (s->len == 0) {
         s->error = INVALID_ARG;         /* “empty input” rather than UNINITIALIZED */
-        errno = EINVAL;
+        errno = set_errno_from_error(s->error);
         return NULL;
     }
     if ((unsigned char)token == '\0') { /* NUL never appears in payload */
         s->error = INVALID_ARG;
-        errno = EINVAL;
+        errno = set_errno_from_error(s->error);
         return NULL;
     }
 
@@ -1269,6 +1419,7 @@ string_t* pop_string_token(string_t* s, char token) {
             if (!out) {
                 /* init_string set errno (likely ENOMEM); reflect library code too */
                 s->error = BAD_ALLOC;
+                errno = set_errno_from_error(s->error);
                 return NULL;
             }
             /* Now safely truncate the source at the token */
@@ -1281,13 +1432,16 @@ string_t* pop_string_token(string_t* s, char token) {
 
     /* Not found */
     s->error = NOT_FOUND;
-    errno = ENOENT;
+    errno = set_errno_from_error(s->error);
     return NULL;
 }
 // --------------------------------------------------------------------------------
 
 size_t token_count(const string_t* str, const char* delim) {
-    if (!str || !str->str || !delim) { errno = EINVAL; return 0; }
+    if (!str || !str->str || !delim) { 
+        errno = EINVAL; 
+        return 0; 
+    }
     const size_t n = str->len;
     const size_t dlen = strlen(delim);
     if (n == 0 || dlen == 0) return 0;
@@ -1297,18 +1451,20 @@ size_t token_count(const string_t* str, const char* delim) {
 
 char get_char(string_t* str, size_t index) {
     if (!str || !str->str) {
-        if (str) str->error = INVALID_ARG;
-        errno = EINVAL;
+        if (str) {
+            str->error = NULL_POINTER;
+            errno = set_errno_from_error(str->error);
+        } else errno = EINVAL;
         return 0;
     }
     if (index > str->len - 1) {
-        errno = ERANGE;
         str->error = OUT_OF_BOUNDS;
+        errno = set_errno_from_error(str->error);
         return 0;
     }
     if (str->len == 0) {
-        errno = ERANGE;
         str->error = INVALID_ARG;
+        errno = set_errno_from_error(str->error);
         return 0;
     }
     str->error = NO_ERROR;
@@ -1318,18 +1474,20 @@ char get_char(string_t* str, size_t index) {
 
 void replace_char(string_t* str, size_t index, char value) {
     if (!str || !str->str) {
-        if(str) str->error = NULL_POINTER;
-        errno = EINVAL;
+        if(str) {
+            str->error = NULL_POINTER;
+            errno = set_errno_from_error(str->error);
+        } else errno = EINVAL;
         return;
     }
     if (index > str->len - 1) {
-        errno = ERANGE;
         str->error = OUT_OF_BOUNDS;
+        errno = set_errno_from_error(str->error);
         return;
     }
     if (str->len == 0) {
-        errno = ERANGE;
         str->error = INVALID_ARG;
+        errno = set_errno_from_error(str->error);
         return;
     }
     str->error = NO_ERROR;
@@ -1339,14 +1497,16 @@ void replace_char(string_t* str, size_t index, char value) {
 
 void trim_leading_whitespace(string_t* str) {
     if (!str || !str->str) {
-        if (str) str->error = NULL_POINTER;
-        errno = EINVAL;
+        if (str) {
+            str->error = NULL_POINTER;
+            errno = set_errno_from_error(str->error);
+        } else errno = EINVAL;
         return;
     }
     
     if (str->len == 0) {
-        errno = ERANGE;
         str->error = INVALID_ARG;
+        errno = set_errno_from_error(str->error);
         return;
     }
     
@@ -1376,14 +1536,16 @@ void trim_leading_whitespace(string_t* str) {
 
 void trim_trailing_whitespace(string_t* str) {
     if (!str || !str->str) {
-        errno = EINVAL;
-        if(str) str->error = NULL_POINTER;
+        if(str) {
+            str->error = NULL_POINTER;
+            errno = set_errno_from_error(str->error);
+        } else errno = EINVAL;
         return;
     }
     
     if (str->len == 0) {
-        errno = ERANGE;
         str->error = INVALID_ARG;
+        errno = set_errno_from_error(str->error);
         return;
     }
     
@@ -1407,14 +1569,16 @@ void trim_trailing_whitespace(string_t* str) {
 
 void trim_all_whitespace(string_t* str) {
     if (!str || !str->str) {
-        if (str) str->error = NULL_POINTER;
-        errno = EINVAL;
+        if (str) {
+            str->error = NULL_POINTER;
+            errno = set_errno_from_error(str->error);
+        } else errno = EINVAL;
         return;
     }
     
     if (str->len == 0) {
-        errno = ERANGE;
         str->error = INVALID_ARG;
+        errno = set_errno_from_error(str->error);
         return;
     }
     
