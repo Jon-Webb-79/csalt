@@ -1780,8 +1780,10 @@ void _free_str_vector(string_v** vec) {
 
 bool push_back_str_vector(string_v* vec, const char* value) {
     if (!vec || !vec->data || !value) {
-        if (vec) vec->error = NULL_POINTER;
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
    
@@ -1798,7 +1800,7 @@ bool push_back_str_vector(string_v* vec, const char* value) {
         string_t* new_data = realloc(vec->data, new_alloc * sizeof(string_t));
         if (!new_data) {
             vec->error = REALLOC_FAIL;
-            errno = ENOMEM;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
        
@@ -1813,7 +1815,8 @@ bool push_back_str_vector(string_v* vec, const char* value) {
     size_t str_len = strlen(value);
     vec->data[vec->len].str = malloc(str_len + 1);
     if (!vec->data[vec->len].str) {
-        errno = ENOMEM;
+        vec->error = BAD_ALLOC;
+        errno = set_errno_from_error(vec->error);
         return false;
     }
    
@@ -1821,14 +1824,17 @@ bool push_back_str_vector(string_v* vec, const char* value) {
     vec->data[vec->len].alloc = str_len + 1;
     vec->data[vec->len].len = str_len;
     vec->len++;
-   
+    vec->error = NO_ERROR; 
     return true;
 }
 // --------------------------------------------------------------------------------
 
 bool push_front_str_vector(string_v* vec, const char* value) {
     if (!vec || !vec->data || !value) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
    
@@ -1843,7 +1849,8 @@ bool push_front_str_vector(string_v* vec, const char* value) {
        
         string_t* new_data = realloc(vec->data, new_alloc * sizeof(string_t));
         if (!new_data) {
-            errno = ENOMEM;
+            vec->error = REALLOC_FAIL;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
        
@@ -1863,7 +1870,8 @@ bool push_front_str_vector(string_v* vec, const char* value) {
     size_t str_len = strlen(value);
     vec->data[0].str = malloc(str_len + 1);
     if (!vec->data[0].str) {
-        errno = ENOMEM;
+        vec->error = BAD_ALLOC;
+        errno = set_errno_from_error(vec->error);
         memmove(vec->data, vec->data + 1, vec->len * sizeof(string_t));
         return false;
     }
@@ -1872,17 +1880,22 @@ bool push_front_str_vector(string_v* vec, const char* value) {
     vec->data[0].alloc = str_len + 1;
     vec->data[0].len = str_len;
     vec->len++;
+    vec->error = NO_ERROR;
     return true;
 }
 // --------------------------------------------------------------------------------
 
 bool insert_str_vector(string_v* vec, const char* str, size_t index) {
     if (!vec || !vec->data || !str) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
     if (index > vec->len) {
-        errno = ERANGE;
+        vec->error = OUT_OF_BOUNDS;
+        errno = set_errno_from_error(vec->error);
         return false;
     }
    

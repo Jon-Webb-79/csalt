@@ -3152,27 +3152,367 @@ string_v* init_str_vector(size_t buffer);
 ErrorCode get_str_vector_error(const string_v* vec);
 // --------------------------------------------------------------------------------
 
-
+/**
+ * @brief Append a NUL-terminated C string to a string vector (by copying).
+ *
+ * Appends @p value as a new element to the opaque ::string_v container created
+ * by ::init_str_vector(). The function ensures capacity (growing the internal
+ * storage if needed), allocates an independent buffer for the new string,
+ * copies the bytes (excluding the terminator), and updates the vector state.
+ *
+ * On failure, returns `false`, sets `errno` via ::set_errno_from_error(), and
+ * records a specific ::ErrorCode in the vector’s internal error slot, which
+ * you can retrieve with ::get_str_vector_error(). On success, `errno` is not
+ * modified.
+ *
+ * Growth policy (implementation detail):
+ * - If the vector is full, capacity increases—typically by doubling up to a
+ *   threshold and then by a fixed increment thereafter. Newly added slots are
+ *   zero-initialized. Exact thresholds/increments may change between releases.
+ *
+ * Error handling (returns `false`):
+ * - ::INVALID_ARG / ::NULL_POINTER — if @p vec is NULL, or the vector is not
+ *   properly initialized, or @p value is NULL (mapped to `EINVAL`).
+ * - ::REALLOC_FAIL — if growing the element array fails (mapped to `ENOMEM`).
+ * - ::BAD_ALLOC — if allocating the new element’s character buffer fails
+ *   (mapped to `ENOMEM`).
+ *
+ * @param vec    Opaque pointer to a valid string vector (from ::init_str_vector()).
+ * @param value  Pointer to a readable, NUL-terminated byte string to append.
+ *
+ * @return `true` on success; `false` on error (see Error handling above).
+ *
+ * @post On success:
+ * - The vector contains one additional element that owns an independent copy of
+ *   @p value (NUL-terminated).
+ * - The element order is preserved; the new string appears at the end.
+ * - The vector’s capacity may have changed (internal reallocation).
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; external
+ *   synchronization is required if multiple threads may append/modify.
+ * - Concurrent reads on a *stable* vector are safe provided no other thread
+ *   might trigger growth/reallocation at the same time.
+ *
+ * **complexity**
+ * - Amortized O(1) per append for capacity management, plus O(n) to copy the
+ *   bytes of @p value (where n = `strlen(value)`). Worst-case O(n) when a
+ *   growth reallocation occurs.
+ *
+ * @note Any raw element pointers obtained through accessors may be invalidated
+ *       if this call grows the vector’s internal storage.
+ *
+ * @par Example
+ * @code{.c}
+ * string_v *v = init_str_vector(4);
+ * if (!v) { perror("init_str_vector"); return 1; }
+ *
+ * if (!push_back_str_vector(v, "alpha")) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     fprintf(stderr, "[%d] %s\n", (int)ec, error_to_string(ec));
+ *     perror("push_back_str_vector");  // errno set by callee on error
+ *     free_str_vector(v);
+ *     return 1;
+ * }
+ *
+ * // ... use other vector APIs to inspect elements ...
+ *
+ * free_str_vector(v);
+ * @endcode
+ *
+ * @see init_str_vector, free_str_vector, get_str_vector_error,
+ *      set_errno_from_error, error_to_string
+ */
 bool push_back_str_vector(string_v* vec, const char* value);
 // --------------------------------------------------------------------------------
 
-
+/**
+ * @brief Prepend a NUL-terminated C string to a string vector (insert at index 0).
+ *
+ * Appends @p value to the **front** of the opaque ::string_v created by
+ * ::init_str_vector(). The function ensures capacity (growing internal storage
+ * if needed), shifts existing elements one slot to the right, allocates an
+ * independent buffer for the new first element, copies the bytes of @p value
+ * (excluding the terminator), and updates the vector state.
+ *
+ * On failure, returns `false`, sets `errno` via ::set_errno_from_error(), and
+ * records a specific ::ErrorCode internally (retrievable with
+ * ::get_str_vector_error()). On success, `errno` is not modified.
+ *
+ * Behavior & guarantees:
+ * - If the vector must grow, capacity increases using the implementation’s
+ *   growth policy (e.g., geometric growth up to a threshold then fixed
+ *   increments). Newly added slots are zero-initialized.
+ * - Existing elements are shifted using a shallow move of element metadata
+ *   (e.g., pointers). Underlying strings are not copied—only their owning
+ *   element slots move.
+ * - If allocation of the new first element’s buffer fails **after** growth and
+ *   shifting, the function restores the original order (shifts elements back)
+ *   and returns `false`. Thus, on failure the vector’s externally observable
+ *   contents and length are unchanged.
+ *
+ * Error handling (returns `false`):
+ * - ::NULL_POINTER — if @p vec is non-NULL but uninitialized, or @p value is NULL
+ *   (mapped to `EINVAL`).
+ * - **`EINVAL` directly** — if @p vec is NULL (no error slot to write).
+ * - ::REALLOC_FAIL — if growing the element array fails (mapped to `ENOMEM`).
+ * - ::BAD_ALLOC — if allocating the new element’s character buffer fails
+ *   (mapped to `ENOMEM`).
+ *
+ * @param vec    Opaque pointer to a valid string vector (from ::init_str_vector()).
+ * @param value  Pointer to a readable, NUL-terminated byte string to insert at the front.
+ *
+ * @return `true` on success; `false` on error (see Error handling above).
+ *
+ * @post On success:
+ * - The vector contains one additional element at index 0 that owns an
+ *   independent, NUL-terminated copy of @p value.
+ * - The relative order of previous elements is preserved but each index is
+ *   increased by 1 due to the front insertion.
+ * - Internal storage may have been reallocated; any previously held raw
+ *   pointers into the vector’s element array are invalidated.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; use external
+ *   synchronization if multiple threads may insert/modify concurrently.
+ * - Concurrent readers must ensure no other thread can trigger growth or
+ *   reordering at the same time.
+ *
+ * **complexity**
+ * - Let @c m be the current number of elements and @c n = `strlen(value)`.
+ *   - Shifting elements: O(m)
+ *   - Copying @p value: O(n)
+ *   - Capacity growth (when it occurs): O(m) to move element slots (amortized
+ *     constant per push across many operations).
+ *   Overall worst-case: **O(m + n)**; amortized cost dominated by O(n) for the copy.
+ *
+ * @note Any raw element pointers obtained through accessors may change even
+ *       without a reallocation, because front insertion reindexes elements.
+ *
+ * @par Example
+ * @code{.c}
+ * string_v *v = init_str_vector(2);
+ * if (!v) { perror("init_str_vector"); return 1; }
+ *
+ * if (!push_front_str_vector(v, "first")) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     fprintf(stderr, "[%d] %s\n", (int)ec, error_to_string(ec));
+ *     perror("push_front_str_vector");  // errno set by callee on error
+ *     free_str_vector(v);
+ *     return 1;
+ * }
+ *
+ * // ... use other vector APIs to access elements in order ...
+ *
+ * free_str_vector(v);
+ * @endcode
+ *
+ * @see init_str_vector, push_back_str_vector, free_str_vector,
+ *      get_str_vector_error, set_errno_from_error, error_to_string
+ */
 bool push_front_str_vector(string_v* vec, const char* value);
 // --------------------------------------------------------------------------------
 
-
+/**
+ * @brief Insert a NUL-terminated C string at a given index in a string vector.
+ *
+ * Inserts @p str as a new element of the opaque ::string_v (created by
+ * ::init_str_vector()) at position @p index. If the vector is full, the
+ * function grows internal storage, shifts existing elements at and after
+ * @p index one slot to the right, allocates an independent buffer for the new
+ * element, copies the bytes of @p str (excluding the terminator), and updates
+ * the vector state.
+ *
+ * On failure, returns `false`, sets `errno` via ::set_errno_from_error(), and
+ * records a specific ::ErrorCode in the vector’s internal error slot, which you
+ * can retrieve with ::get_str_vector_error(). On success, `errno` is not
+ * modified.
+ *
+ * Semantics & bounds:
+ * - Valid positions are `0 <= index <= length`. Inserting at `index == length`
+ *   is equivalent to a push-back; inserting at `index == 0` is a push-front.
+ * - If growth occurs, newly added slots are zero-initialized.
+ * - If allocation of the new element’s character buffer fails **after** any
+ *   growth and shifting, the function restores the original order (shifts
+ *   elements back) and returns `false`. Thus, on failure the externally
+ *   observable contents and length remain unchanged.
+ *
+ * Error handling (returns `false`):
+ * - ::NULL_POINTER — if @p vec is non-NULL but uninitialized, or @p str is NULL
+ *   (mapped to `EINVAL`). If @p vec itself is NULL, the function sets `errno`
+ *   to `EINVAL` (no internal error slot to update).
+ * - ::OUT_OF_BOUNDS — if @p index is greater than the current length.
+ * - ::REALLOC_FAIL — if growing the element array fails (mapped to `ENOMEM`).
+ * - ::BAD_ALLOC — if allocating the new element’s character buffer fails
+ *   (mapped to `ENOMEM`).
+ *
+ * @param vec    Opaque pointer to a valid string vector (from ::init_str_vector()).
+ * @param str    Pointer to a readable, NUL-terminated byte string to insert.
+ * @param index  Zero-based insertion position; must satisfy `0 <= index <= length`.
+ *
+ * @return `true` on success; `false` on error (see Error handling above).
+ *
+ * @post On success:
+ * - The vector contains one additional element at @p index that owns an
+ *   independent, NUL-terminated copy of @p str.
+ * - The relative order of previous elements is preserved, but items at and
+ *   after @p index are shifted one position to the right.
+ * - Internal storage may have been reallocated; any previously held raw
+ *   pointers/iterators into the element array are invalidated.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; use external
+ *   synchronization if multiple threads may insert/modify concurrently.
+ * - Concurrent readers must ensure no other thread can trigger growth or
+ *   reindexing at the same time.
+ *
+ * **complexity**
+ * - Let @c m be the current number of elements and @c k = (m - index) the
+ *   number of shifted elements; let @c n = `strlen(str)`.
+ *   - Shifting element slots: O(k)
+ *   - Copying @p str: O(n)
+ *   - Capacity growth (when it occurs): O(m) to move element slots (amortized
+ *     constant per operation across many inserts).
+ *   Overall worst-case: **O(k + n)**; amortized cost dominated by O(n) for the copy.
+ *
+ * @note This function follows the conventional `errno` policy: it sets `errno`
+ *       only when an error occurs; on success, it leaves `errno` unchanged.
+ *
+ * @par Example
+ * @code{.c}
+ * string_v *v = init_str_vector(2);
+ * if (!v) { perror("init_str_vector"); return 1; }
+ *
+ * if (!insert_str_vector(v, "middle", 0)) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     fprintf(stderr, "[%d] %s\n", (int)ec, error_to_string(ec));
+ *     perror("insert_str_vector");  // errno set by callee on error
+ *     free_str_vector(v);
+ *     return 1;
+ * }
+ *
+ * // ... use other vector APIs to access elements ...
+ *
+ * free_str_vector(v);
+ * @endcode
+ *
+ * @see init_str_vector, push_front_str_vector, push_back_str_vector,
+ *      get_str_vector_error, set_errno_from_error, error_to_string
+ *
+ * @warning The implementation names the allocation failure for the element
+ *          buffer as ::BAD_ALLOC in the error taxonomy. If your code currently
+ *          uses a different enumerator (e.g., ALLOC_FAIL), align it to
+ *          ::BAD_ALLOC to keep mapping and tests consistent.
+ */
 bool insert_str_vector(string_v* vec, const char* value, size_t index);
 // --------------------------------------------------------------------------------
 
-
+/**
+ * @brief Return a read-only handle to the element at @p index in a string vector.
+ *
+ * Retrieves a pointer to the stored ::string_t at zero-based position @p index
+ * in the opaque ::string_v created by ::init_str_vector(). The element is not
+ * copied; the returned pointer refers to storage owned by the vector and must
+ * **not** be freed by the caller.
+ *
+ * On invalid input or out-of-range index, returns `NULL` and sets `errno`
+ * (see Error reporting). On success, `errno` is not modified.
+ *
+ * Lifetime & aliasing:
+ * - The returned pointer remains valid until a subsequent operation that may
+ *   reallocate or reorder internal storage (e.g., insert, erase, push, growth).
+ *   After such mutations, previously obtained pointers may be invalid.
+ *
+ * Error reporting:
+ * - `EINVAL` — if @p vec is `NULL` or not properly initialized.
+ * - `ERANGE` — if @p index is outside the valid range (`index >= size`).
+ *
+ * @param vec    Opaque pointer to a valid string vector (from ::init_str_vector()).
+ * @param index  Zero-based index; must satisfy `0 <= index < size`.
+ *
+ * @return Pointer to the const element on success; `NULL` on error.
+ *
+ * **complexity O(1)**
+ *
+ * @thread_safety
+ * - Safe for concurrent **reads** provided no other thread mutates the same
+ *   vector concurrently.
+ * - Not safe if another thread may insert/erase/grow at the same time.
+ *
+ * @par Example
+ * @code{.c}
+ * const string_t *elt = str_vector_index(v, i);
+ * if (!elt) {
+ *     perror("str_vector_index");       // errno set to EINVAL or ERANGE
+ *     return;
+ * }
+ * printf("%zu: %s\n", i, get_string(elt));  // via your string_t accessors
+ * @endcode
+ *
+ * @see str_vector_size, str_vector_alloc
+ */
 const string_t* str_vector_index(const string_v* vec, size_t index);
 // -------------------------------------------------------------------------------- 
 
-
+/**
+ * @brief Return the number of elements currently stored in the vector.
+ *
+ * @param vec  Opaque pointer to a string vector.
+ *
+ * @return Current logical size (element count) on success.
+ *         On error, returns `LONG_MAX` and sets `errno = EINVAL`.
+ *
+ * @thread_safety
+ * - Safe to call when no other thread mutates the same vector concurrently.
+ *
+ * **complexity**
+ * - O(1).
+ *
+ * @note On success, this function does **not** modify `errno`.
+ * @note The error sentinel is `LONG_MAX`; callers should prefer checking
+ *       `errno != 0` to detect failure rather than relying solely on the
+ *       sentinel value.
+ *
+ * @par Example
+ * @code{.c}
+ * errno = 0;
+ * size_t n = str_vector_size(v);
+ * if (errno != 0) { perror("str_vector_size");}
+ * else            { printf("size = %zu\n", n); }
+ * @endcode
+ */
 size_t str_vector_size(const string_v* vec);
 // -------------------------------------------------------------------------------- 
 
-
+/**
+ * @brief Return the current capacity (allocated slots) of the vector.
+ *
+ * Reports how many element slots are currently allocated internally. This is
+ * the maximum number of elements that can be stored without triggering a grow.
+ *
+ * @param vec  Opaque pointer to a string vector.
+ *
+ * @return Capacity in elements on success.
+ *         On error, returns `LONG_MAX` and sets `errno = EINVAL`.
+ *
+ * @thread_safety
+ * - Safe to call when no other thread mutates the same vector concurrently.
+ *
+ * @complexity
+ * - O(1).
+ *
+ * @note On success, this function does **not** modify `errno`.
+ * @note The error sentinel is `LONG_MAX`; callers should prefer checking
+ *       `errno != 0` to detect failure.
+ *
+ * @par Example
+ * @code{.c}
+ * errno = 0;
+ * size_t cap = str_vector_alloc(v);
+ * if (errno != 0) { perror("str_vector_alloc");}
+ * else            { printf("capacity = %zu\n", cap); }
+ * @endcode
+ */
 size_t str_vector_alloc(const string_v* vec);
 // --------------------------------------------------------------------------------
 

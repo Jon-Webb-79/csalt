@@ -632,8 +632,45 @@ get_str_vector_error
 
 .. note:: Error codes can be found in :ref:`Error Code Overview <error_code_file>`.
 
+str_vector_size
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: str_vector_size
+   :project: csalt
+
+str_vector_alloc
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: str_vector_alloc
+   :project: csalt
+
+str_vector_index
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: str_vector_index
+   :project: csalt
+
 Vector Manipulation 
 -------------------
+The following functions can be used to insert data into a string vector.
+
+push_back_str_vector
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: push_back_str_vector
+   :project: csalt
+
+push_front_str_vector
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: push_front_str_vector
+   :project: csalt
+
+insert_str_vector
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: insert_str_vector
+   :project: csalt
 
 Search Vector
 -------------
