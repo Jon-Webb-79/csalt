@@ -666,6 +666,24 @@ push_front_str_vector
 .. doxygenfunction:: push_front_str_vector
    :project: csalt
 
+pop_back_str_vector
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_back_str_vector
+   :project: csalt
+
+pop_front_str_vector
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_front_str_vector
+   :project: csalt
+
+pop_any_str_vector
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_any_str_vector
+   :project: csalt
+
 insert_str_vector
 ~~~~~~~~~~~~~~~~~
 

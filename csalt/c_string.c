@@ -1910,7 +1910,8 @@ bool insert_str_vector(string_v* vec, const char* str, size_t index) {
        
         string_t* new_data = realloc(vec->data, new_alloc * sizeof(string_t));
         if (!new_data) {
-            errno = ENOMEM;
+            vec->error = REALLOC_FAIL;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
        
@@ -1933,7 +1934,8 @@ bool insert_str_vector(string_v* vec, const char* str, size_t index) {
     size_t str_len = strlen(str);
     vec->data[index].str = malloc(str_len + 1);
     if (!vec->data[index].str) {
-        errno = ENOMEM;
+        vec->error = BAD_ALLOC;
+        errno = set_errno_from_error(vec->error);
         if (index < vec->len) {  // Only restore if not appending
             memmove(vec->data + index, vec->data + index + 1, 
                     (vec->len - index) * sizeof(string_t));
@@ -1945,24 +1947,31 @@ bool insert_str_vector(string_v* vec, const char* str, size_t index) {
     vec->data[index].alloc = str_len + 1;
     vec->data[index].len = str_len;
     vec->len++;
+    vec->error = NO_ERROR;
     return true;
 }
 // --------------------------------------------------------------------------------
 
 string_t* pop_back_str_vector(string_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return NULL;
     }
     
     if (vec->len == 0) {
-        errno = EINVAL;
+        vec->error = UNINITIALIZED;
+        errno = set_errno_from_error(vec->error);
         return NULL;
     }
     
     // Create copy of last element
     string_t* temp = copy_string(&vec->data[vec->len - 1]);
     if (!temp) {
+        vec->error = BAD_ALLOC;
+        errno = set_errno_from_error(vec->error);
         return NULL;  // copy_string will set errno
     }
     
@@ -1973,24 +1982,31 @@ string_t* pop_back_str_vector(string_v* vec) {
     vec->data[vec->len - 1].alloc = 0;
     
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------
 
 string_t* pop_front_str_vector(string_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return NULL;
     }
    
     if (vec->len == 0) {
-        errno = EINVAL;
+        vec->error = UNINITIALIZED;
+        errno = set_errno_from_error(vec->error); 
         return NULL;
     }
    
     // Create copy of first element
     string_t* temp = copy_string(&vec->data[0]);
     if (!temp) {
+        vec->error = BAD_ALLOC;
+        errno = set_errno_from_error(vec->error);
         return NULL;  // copy_string will set errno
     }
    
@@ -2004,29 +2020,37 @@ string_t* pop_front_str_vector(string_v* vec) {
     memset(&vec->data[vec->len - 1], 0, sizeof(string_t));
    
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------
 
 string_t* pop_any_str_vector(string_v* vec, size_t index) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return NULL;
     }
    
     if (vec->len == 0) {
-        errno = EINVAL;
+        vec->error = UNINITIALIZED;
+        errno = set_errno_from_error(vec->error);
         return NULL;
     }
 
     if (index >= vec->len) {
-        errno = ERANGE;
+        vec->error = OUT_OF_BOUNDS;
+        errno = set_errno_from_error(vec->error);
         return NULL;
     }
 
     // Create copy of element to pop
     string_t* temp = copy_string(&vec->data[index]);
     if (!temp) {
+        vec->error = BAD_ALLOC;
+        errno = set_errno_from_error(vec->error);
         return NULL;  // copy_string will set errno
     }
    
@@ -2041,6 +2065,7 @@ string_t* pop_any_str_vector(string_v* vec, size_t index) {
     memset(&vec->data[vec->len - 1], 0, sizeof(string_t));
     
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------

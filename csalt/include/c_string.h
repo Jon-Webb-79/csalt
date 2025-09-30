@@ -3399,10 +3399,6 @@ bool push_front_str_vector(string_v* vec, const char* value);
  * @see init_str_vector, push_front_str_vector, push_back_str_vector,
  *      get_str_vector_error, set_errno_from_error, error_to_string
  *
- * @warning The implementation names the allocation failure for the element
- *          buffer as ::BAD_ALLOC in the error taxonomy. If your code currently
- *          uses a different enumerator (e.g., ALLOC_FAIL), align it to
- *          ::BAD_ALLOC to keep mapping and tests consistent.
  */
 bool insert_str_vector(string_v* vec, const char* value, size_t index);
 // --------------------------------------------------------------------------------
@@ -3516,15 +3512,209 @@ size_t str_vector_size(const string_v* vec);
 size_t str_vector_alloc(const string_v* vec);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove the last element from a string vector and return a heap-owned copy.
+ *
+ * Removes the final element of an opaque ::string_v (created by ::init_str_vector())
+ * and returns a newly allocated ::string_t that owns an independent copy of that
+ * string. The vector’s internal slot is cleared for reuse; capacity is unchanged.
+ *
+ * Strong safety:
+ * - The function first creates a copy of the last element. If copying fails,
+ *   the vector is left **unchanged** and `NULL` is returned.
+ *
+ * Error handling:
+ * - On failure, returns `NULL` and sets `errno` (via ::set_errno_from_error()).
+ *   A specific ::ErrorCode is recorded internally and can be retrieved with
+ *   ::get_str_vector_error().
+ *   - Invalid/NULL inputs or uninitialized vector storage → `EINVAL`
+ *     (internal error: ::NULL_POINTER).
+ *   - Pop from an empty vector → mapped to a category error (implementation uses
+ *     ::UNINITIALIZED for “empty”; callers should treat it as “no element to pop”).
+ *   - Copy failure for the outgoing element → `ENOMEM` (internal error: ::BAD_ALLOC).
+ *
+ * @param vec  Opaque pointer to a valid string vector.
+ *
+ * @return Pointer to a newly allocated ::string_t on success; `NULL` on error.
+ *         The caller owns the returned object and must destroy it with the
+ *         appropriate destructor (e.g., `free_string()`).
+ *
+ * @post On success:
+ * - The vector’s logical size decreases by 1 (last element removed).
+ * - The removed element’s internal storage is freed and its slot zeroed.
+ * - Vector capacity is unchanged; existing (non-removed) elements remain valid.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; external
+ *   synchronization is required if multiple threads may pop/modify.
+ * - Concurrent readers must ensure no other thread mutates the vector at the same time.
+ *
+ * **complexity**
+ * - Let @c n be the length of the removed string. Copying the element is O(n);
+ *   all other operations are O(1). Overall: **O(n)**.
+ *
+ * @note On success, this function leaves `errno` unchanged (conventional POSIX policy).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t *last = pop_back_str_vector(v);
+ * if (!last) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     fprintf(stderr, "pop failed: %s\n", error_to_string(ec));
+ *     perror("pop_back_str_vector");
+ * } else {
+ *     // use 'last' via your string_t API
+ *     // ...
+ *     free_string(last);  // caller responsibility
+ * }
+ * @endcode
+ *
+ * @see init_str_vector, get_str_vector_error, error_to_string, set_errno_from_error,
+ *      free_str_vector
+ */
 
 string_t* pop_back_str_vector(string_v* vec);
 // -------------------------------------------------------------------------------- 
 
-
+/**
+ * @brief Remove the first element from a string vector and return a heap-owned copy.
+ *
+ * Removes the element at index 0 of an opaque ::string_v (created by
+ * ::init_str_vector()) and returns a newly allocated ::string_t that owns an
+ * independent copy of that string. Remaining elements are shifted one slot to
+ * the left; vector capacity is unchanged.
+ *
+ * Strong safety:
+ * - The function first creates a copy of the first element. If copying fails,
+ *   the vector is left **unchanged** and `NULL` is returned.
+ *
+ * Error handling:
+ * - On failure, returns `NULL` and sets `errno` via ::set_errno_from_error().
+ *   A specific ::ErrorCode is recorded internally and can be read with
+ *   ::get_str_vector_error().
+ *   - Invalid/NULL inputs or uninitialized storage → `EINVAL`
+ *     (internal error: ::NULL_POINTER).
+ *   - Pop from an empty vector → mapped category error (implementation uses
+ *     ::UNINITIALIZED to signal “no element to pop”).
+ *   - Copy failure for the outgoing element → `ENOMEM` (internal error: ::BAD_ALLOC).
+ *
+ * @param vec  Opaque pointer to a valid string vector.
+ *
+ * @return Pointer to a newly allocated ::string_t on success; `NULL` on error.
+ *         The caller owns the returned object and must destroy it with the
+ *         appropriate destructor (e.g., `free_string()`).
+ *
+ * @post On success:
+ * - The vector’s logical size decreases by 1, elements shift left, and order
+ *   among the remaining elements is preserved.
+ * - The removed element’s internal storage is freed; its former slot is zeroed.
+ * - Capacity is unchanged; any previously held raw pointers to elements may be
+ *   invalidated due to shifting.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; synchronize
+ *   externally if multiple threads may pop/modify concurrently.
+ * - Concurrent readers must ensure no other thread mutates or reindexes the vector.
+ *
+ * **complexity**
+ * - Let @c n be the length (in bytes) of the removed string and @c m be the
+ *   number of remaining elements. Copying the element is O(n); shifting is O(m).
+ *   Overall: **O(m + n)**.
+ *
+ * @note On success, this function leaves `errno` unchanged (conventional POSIX policy).
+ *
+ * @par Example
+ * @code{.c}
+ * string_t *first = pop_front_str_vector(v);
+ * if (!first) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     fprintf(stderr, "pop_front failed: %s\n", error_to_string(ec));
+ *     perror("pop_front_str_vector");
+ * } else {
+ *     // use 'first' via your string_t API
+ *     // ...
+ *     free_string(first);  // caller responsibility
+ * }
+ * @endcode
+ *
+ * @see init_str_vector, pop_back_str_vector, get_str_vector_error,
+ *      error_to_string, set_errno_from_error, free_str_vector
+ */
 string_t* pop_front_str_vector(string_v* vec);
 // --------------------------------------------------------------------------------
 
-
+/**
+ * @brief Remove the element at @p index from a string vector and return a heap-owned copy.
+ *
+ * Removes the element at position @p index from an opaque ::string_v (created by
+ * ::init_str_vector()) and returns a newly allocated ::string_t that owns an
+ * independent copy of that string. Remaining elements are shifted one slot left
+ * to fill the gap; vector capacity is unchanged.
+ *
+ * Strong safety:
+ * - The function first creates a copy of the target element. If copying fails,
+ *   the vector is left **unchanged** and `NULL` is returned.
+ *
+ * Bounds & behavior:
+ * - Valid indices satisfy `0 <= index < size`. Use ::str_vector_size() to query
+ *   the current size if needed.
+ * - On success the relative order of the other elements is preserved (aside from
+ *   the left-shift caused by the removal).
+ *
+ * Error handling:
+ * - On failure, returns `NULL` and sets `errno` via ::set_errno_from_error().
+ *   A specific ::ErrorCode is recorded internally and may be retrieved with
+ *   ::get_str_vector_error().
+ *   - Invalid/NULL inputs or uninitialized storage → `EINVAL`
+ *     (internal error: ::NULL_POINTER).
+ *   - Empty vector (no element to remove) → mapped category error
+ *     (implementation uses ::UNINITIALIZED).
+ *   - @p index out of range → `ERANGE` (internal error: ::OUT_OF_BOUNDS).
+ *   - Copy failure for the outgoing element → `ENOMEM` (internal error: ::BAD_ALLOC).
+ *
+ * @param vec    Opaque pointer to a valid string vector.
+ * @param index  Zero-based position of the element to remove; must be `< size`.
+ *
+ * @return Pointer to a newly allocated ::string_t on success; `NULL` on error.
+ *         The caller owns the returned object and must destroy it with the
+ *         appropriate destructor (e.g., `free_string()`).
+ *
+ * @post On success:
+ * - The vector’s logical size decreases by 1; elements after @p index shift left.
+ * - The removed element’s internal storage is freed; its former slot is zeroed.
+ * - Capacity is unchanged; any previously held raw pointers/iterators into the
+ *   vector’s element array are invalidated due to shifting.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; synchronize
+ *   externally if multiple threads may remove/modify concurrently.
+ * - Concurrent readers must ensure no other thread mutates or reindexes the vector.
+ *
+ * **complexity**
+ * - Let @c m be the number of elements after @p index (i.e., `size - index - 1`)
+ *   that must shift, and @c n be the length of the removed string in bytes.
+ *   Copying the element is O(n); shifting is O(m). Overall: **O(m + n)**.
+ *
+ * @note On success, this function leaves `errno` unchanged (conventional POSIX policy).
+ *
+ * @par Example
+ * @code{.c}
+ * size_t idx = 2;
+ * string_t *removed = pop_any_str_vector(v, idx);
+ * if (!removed) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     fprintf(stderr, "pop_any failed: %s\n", error_to_string(ec));
+ *     perror("pop_any_str_vector");
+ * } else {
+ *     // use 'removed' via your string_t API
+ *     // ...
+ *     free_string(removed);  // caller responsibility
+ * }
+ * @endcode
+ *
+ * @see init_str_vector, pop_front_str_vector, pop_back_str_vector,
+ *      str_vector_size, get_str_vector_error, error_to_string, set_errno_from_error
+ */
 string_t* pop_any_str_vector(string_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 
