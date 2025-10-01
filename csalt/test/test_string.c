@@ -2845,6 +2845,153 @@ void test_reverse_str_vector(void **state) {
 
     free_str_vector(vec);
 }
+// -------------------------------------------------------------------------------- 
+
+static string_v* make_vec(const char* items[], size_t n) {
+    string_v* v = init_str_vector(n > 0 ? n : 1);
+    if (!v) return NULL;
+
+    for (size_t i = 0; i < n; ++i) {
+        if (!push_back_str_vector(v, items[i])) {
+            free_str_vector(v);
+            return NULL;
+        }
+    }
+    return v;
+}
+
+/* Check ascending lexical order using public accessors. */
+static bool is_sorted_asc(const string_v* v) {
+    errno = 0;
+    size_t n = str_vector_size(v);
+    assert_int_equal(errno, 0);
+
+    for (size_t i = 1; i < n; ++i) {
+        const string_t* a = str_vector_index(v, i - 1);
+        const string_t* b = str_vector_index(v, i);
+        assert_non_null(a);
+        assert_non_null(b);
+        const char* as = get_string(a);
+        const char* bs = get_string(b);
+        assert_non_null(as);
+        assert_non_null(bs);
+        if (strcmp(as, bs) > 0) return false;
+    }
+    return true;
+}
+
+/* ---------- Tests ---------- */
+
+void test_bs_null_vec(void **state) {
+    (void)state;
+    errno = 0;
+    size_t idx = binary_search_str_vector(NULL, (char*)"x", false); /* see note about const */
+    assert_int_equal(idx, SIZE_MAX);
+    assert_int_equal(errno, EINVAL);
+}
+
+void test_bs_null_value(void **state) {
+    (void)state;
+    string_v* v = init_str_vector(2);
+    assert_non_null(v);
+
+    errno = 0;
+    size_t idx = binary_search_str_vector(v, NULL, false);
+    assert_int_equal(idx, SIZE_MAX);
+    assert_int_equal(errno, EINVAL);
+    assert_int_equal(get_str_vector_error(v), NULL_POINTER);
+
+    free_str_vector(v);
+}
+
+void test_bs_empty_vector(void **state) {
+    (void)state;
+    string_v* v = init_str_vector(4);
+    assert_non_null(v);
+
+    errno = 0;
+    size_t idx = binary_search_str_vector(v, (char*)"a", false);
+    assert_int_equal(idx, SIZE_MAX);
+    assert_int_equal(errno, ENOENT);
+    assert_int_equal(get_str_vector_error(v), NOT_FOUND);
+
+    free_str_vector(v);
+}
+
+void test_bs_found_sorted_no_sort(void **state) {
+    (void)state;
+    const char* items[] = {"alpha", "beta", "delta", "omega"}; /* already ascending */
+    string_v* v = make_vec(items, 4);
+    assert_non_null(v);
+
+    errno = EINTR; /* should be preserved on success */
+    size_t idx = binary_search_str_vector(v, (char*)"delta", false);
+    assert_true(idx != SIZE_MAX);
+    assert_int_equal(errno, EINTR);
+    assert_int_equal(get_str_vector_error(v), NO_ERROR);
+
+    /* Optional: verify we actually matched the right string */
+    const string_t* hit = str_vector_index(v, idx);
+    assert_non_null(hit);
+    assert_string_equal(get_string(hit), "delta");
+
+    free_str_vector(v);
+}
+
+void test_bs_not_found_sorted_no_sort(void **state) {
+    (void)state;
+    const char* items[] = {"alpha", "beta", "delta", "omega"};
+    string_v* v = make_vec(items, 4);
+    assert_non_null(v);
+
+    errno = 0;
+    size_t idx = binary_search_str_vector(v, (char*)"kappa", false);
+    assert_int_equal(idx, SIZE_MAX);
+    assert_int_equal(errno, ENOENT);
+    assert_int_equal(get_str_vector_error(v), NOT_FOUND);
+
+    free_str_vector(v);
+}
+
+void test_bs_found_unsorted_sort_first_true(void **state) {
+    (void)state;
+    const char* items[] = {"delta", "alpha", "omega", "beta"}; /* intentionally unsorted */
+    string_v* v = make_vec(items, 4);
+    assert_non_null(v);
+
+    errno = EBUSY; /* should be preserved on success */
+    size_t idx = binary_search_str_vector(v, (char*)"beta", true); /* will sort first */
+    assert_true(idx != SIZE_MAX);
+    assert_int_equal(errno, EBUSY);
+    assert_int_equal(get_str_vector_error(v), NO_ERROR);
+    assert_true(is_sorted_asc(v));
+
+    const string_t* hit = str_vector_index(v, idx);
+    assert_non_null(hit);
+    assert_string_equal(get_string(hit), "beta");
+
+    free_str_vector(v);
+}
+
+void test_bs_duplicates_sort_first_true(void **state) {
+    (void)state;
+    const char* items[] = {"beta", "alpha", "beta", "beta", "gamma"};
+    string_v* v = make_vec(items, 5);
+    assert_non_null(v);
+
+    errno = 0;
+    size_t idx = binary_search_str_vector(v, (char*)"beta", true);
+    assert_true(idx != SIZE_MAX);
+    assert_int_equal(errno, 0);
+    assert_true(is_sorted_asc(v));
+
+    const string_t* hit = str_vector_index(v, idx);
+    assert_non_null(hit);
+    assert_string_equal(get_string(hit), "beta");
+    /* We do not assert first/last duplicate—algorithm is allowed to return any match */
+
+    free_str_vector(v);
+}
 // ================================================================================
 // ================================================================================
 // eof

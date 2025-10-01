@@ -296,6 +296,18 @@ trim_all_whitespace
 .. doxygenfunction:: trim_all_whitespace
    :project: csalt
 
+swap_string
+~~~~~~~~~~~
+
+.. doxygenfunction:: swap_string
+   :project: csalt
+
+tokenize_string 
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: tokenize_string
+   :project: csalt
+
 Search String 
 -------------
 The functions in this section can be used to search a string for spechic 
@@ -708,8 +720,26 @@ delete_any_str_vector
 .. doxygenfunction:: delete_any_str_vector
    :project: csalt
 
+reverse_str_vector
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: reverse_str_vector
+   :project: csalt
+
+sort_str_vector
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: sort_str_vector
+   :project: csalt
+
 Search Vector
 -------------
+
+binary_search_str_vector
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: binary_search_str_vector
+   :project: csalt
 
 String Vector Iterator 
 ----------------------

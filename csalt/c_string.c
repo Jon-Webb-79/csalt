@@ -2195,7 +2195,10 @@ size_t str_vector_alloc(const string_v* vec) {
 
 void reverse_str_vector(string_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return;
     }
     int i = 0;
@@ -2205,6 +2208,7 @@ void reverse_str_vector(string_v* vec) {
        i++;
        j--;
     }
+    vec->error = NO_ERROR;
 }
 // ================================================================================
 // ================================================================================ 
@@ -2212,12 +2216,21 @@ void reverse_str_vector(string_v* vec) {
 
 void swap_string(string_t* a, string_t* b) {
     if (!a || !b) {
-        errno = EINVAL;
+        if (a) {
+            a->error = NULL_POINTER;
+            errno = set_errno_from_error(a->error);
+        } 
+        else if (b) {
+            b->error = NULL_POINTER;
+            errno = set_errno_from_error(b->error);
+        } else errno = EINVAL;
         return;
     }
     string_t temp = *a;
     *a = *b;
     *b = temp;
+    a->error = NO_ERROR;
+    b->error = NO_ERROR;
 }
 // --------------------------------------------------------------------------------
 
@@ -2304,12 +2317,75 @@ static void _quicksort_str_vector(string_t* vec, int low, int high, iter_dir dir
 
 void sort_str_vector(string_v* vec, iter_dir direction) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return;
     }
-    if (vec->len < 2) return;
+    if (vec->len < 2) {
+        vec->error = NO_ERROR;
+        return;
+    }
     
     _quicksort_str_vector(vec->data, 0, vec->len - 1, direction);
+    vec->error = NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t binary_search_str_vector(string_v* vec, char* value, bool sort_first) {
+    if (!vec || !vec->data || !value) {
+        if (vec) {
+            vec->error = NULL_POINTER;
+            set_errno_from_error(vec->error);
+        } else {
+            errno = EINVAL;
+        }
+        return SIZE_MAX;
+    }
+
+    if (vec->len == 0) {
+        vec->error = NOT_FOUND;            /* empty: nothing to find */
+        set_errno_from_error(vec->error);  /* -> ENOENT */
+        return SIZE_MAX;
+    }
+
+    /* Optional: sort ascending first */
+    if (sort_first) {
+        sort_str_vector(vec, FORWARD);
+        if (vec->error != NO_ERROR) {
+            /* sort_str_vector has already set errno */
+            return SIZE_MAX;
+        }
+    }
+
+    /* Binary search (ascending order) */
+    size_t low = 0, high = vec->len - 1;
+    while (low <= high) {
+        size_t mid = low + (high - low) / 2;
+
+        /* Defensive: ensure element buffer exists */
+        if (!vec->data[mid].str) {
+            vec->error = STATE_CORRUPT;
+            set_errno_from_error(vec->error);
+            return SIZE_MAX;
+        }
+
+        int cmp = strcmp(vec->data[mid].str, value);
+        if (cmp == 0) {
+            vec->error = NO_ERROR;
+            return mid;
+        } else if (cmp < 0) {
+            low = mid + 1;
+        } else {
+            if (mid == 0) break;  /* prevent size_t underflow */
+            high = mid - 1;
+        }
+    }
+
+    vec->error = NOT_FOUND;
+    set_errno_from_error(vec->error);      /* -> ENOENT */
+    return SIZE_MAX;
 }
 // --------------------------------------------------------------------------------
 
@@ -2323,6 +2399,7 @@ string_v* tokenize_string(const string_t* str, const char* delim) {
     size_t count = token_count(str, delim);
     string_v* tokens = init_str_vector(count);
     if (!tokens) {
+        errno = ENOMEM;
         return NULL;
     }
     

@@ -4003,193 +4003,198 @@ void _free_str_vector(string_v** vec);
 #endif
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Reverse the order of elements in a string vector in place.
+ *
+ * Reverses the opaque ::string_v created by ::init_str_vector() by swapping the
+ * first and last elements, then the second and second-to-last, and so on. The
+ * operation is **in place**: no element buffers are copied or reallocated;
+ * ownership of each element’s internal string simply moves to the mirror index
+ * (via ::swap_string). Capacity is unchanged.
+ *
+ * Error handling:
+ * - On invalid input, the function returns immediately, sets `errno` (via
+ *   ::set_errno_from_error), and records an internal ::ErrorCode retrievable with
+ *   ::get_str_vector_error().
+ *   - ::NULL_POINTER → `EINVAL` if @p vec is non-NULL but uninitialized (e.g.,
+ *     internal storage missing). If @p vec itself is NULL, `errno` is set to `EINVAL`.
+ * - On success (including the trivial cases of size 0 or 1), `errno` is **not**
+ *   modified and the vector’s internal error state is set to ::NO_ERROR.
+ *
+ * @param vec  Opaque pointer to a valid string vector.
+ *
+ * @return void
+ *
+ * @post On success:
+ * - The element order is reversed: item formerly at index @c i moves to
+ *   index @c (size-1-i).
+ * - Element ownership is swapped; underlying string buffers are not duplicated.
+ * - Capacity and total size are unchanged.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; use external
+ *   synchronization if other threads may modify the vector.
+ * - Concurrent readers must not assume stable ordering while this runs.
+ *
+ * **complexity**
+ * - Let @c m be the number of elements. Performs ~@c m/2 swaps.
+ *   Time: **O(m)**; Space: **O(1)**.
+ *
+ * @warning Any previously held indices/iterators to elements will now refer to
+ *          different logical positions due to the reversal.
+ *
+ * @par Example
+ * @code{.c}
+ * // v contains: ["alpha", "beta", "gamma"]
+ * reverse_str_vector(v);
+ * // v now contains: ["gamma", "beta", "alpha"]
+ * @endcode
+ *
+ * @see swap_string, init_str_vector, get_str_vector_error,
+ *      error_to_string, set_errno_from_error
+ */
 
 void reverse_str_vector(string_v* vec);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Swap two ::string_t objects by value (shallow, O(1)).
+ *
+ * Exchanges the complete contents of @p a and @p b, including ownership of any
+ * internal buffers. This is a **shallow** swap: the character buffers are not
+ * copied or reallocated; only the owners of those buffers are exchanged. If
+ * @p a and @p b are the same pointer, the function is a no-op.
+ *
+ * Error handling:
+ * - On invalid input, the function returns immediately and sets `errno`
+ *   (via ::set_errno_from_error) without modifying either object’s buffers.
+ *   - If exactly one pointer is non-NULL, that object’s internal error slot is
+ *     set to ::NULL_POINTER and `errno` is set accordingly.
+ *   - If both pointers are NULL, `errno` is set to `EINVAL`.
+ * - On success (both non-NULL), `errno` is **not** modified and both objects’
+ *   internal error slots are set to ::NO_ERROR.
+ *
+ * @param a  Pointer to the first ::string_t.
+ * @param b  Pointer to the second ::string_t.
+ *
+ * @return void
+ *
+ * @post On success:
+ * - @p a receives the prior contents of @p b, and @p b receives the prior contents
+ *   of @p a, including buffer pointers, lengths, and capacities.
+ * - Both objects report ::NO_ERROR internally.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** if the same ::string_t is accessed concurrently from
+ *   multiple threads. External synchronization is required for concurrent mutation.
+ *
+ * **complexity**
+ * - **O(1)** time and **O(1)** additional space.
+ *
+ * @warning This is a shallow swap. Any external pointers you held to the
+ *          character buffers prior to the call now refer to the *other* object’s
+ *          buffer after the swap.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t *x = init_string("left");
+ * string_t *y = init_string("right");
+ * if (!x || !y) { // hanlde allocation failure }
+ *
+ * swap_string(x, y);
+ * // Now *x owns "right", *y owns "left"
+ *
+ * free_string(x);
+ * free_string(y);
+ * @endcode
+ *
+ * @see set_errno_from_error, error_to_string, init_string, free_string
+ */
 void swap_string(string_t* a, string_t* b);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Binary search a string vector for a NUL-terminated C string.
+ *
+ * Searches the opaque ::string_v (created by ::init_str_vector()) for an
+ * element whose contents are equal to @p value (lexicographic equality). If
+ * @p sort_first is `true`, the vector is first sorted in **ascending** order
+ * (via ::sort_str_vector(FORWARD)); otherwise, the caller must ensure the
+ * vector is already sorted ascending according to the library comparator.
+ *
+ * On success, returns the zero-based index of a matching element and leaves
+ * `errno` unchanged. On failure (invalid input, empty vector, or no match),
+ * returns `SIZE_MAX` and sets an ::ErrorCode internally along with `errno`
+ * via ::set_errno_from_error().
+ *
+ * Semantics:
+ * - Comparison is performed against each element’s character buffer using
+ *   lexicographic order (like `strcmp`).
+ * - If multiple equal elements exist, the index of **one** matching element
+ *   is returned (no stability/first-occurrence guarantee).
+ * - If @p sort_first is `true`, this call **reorders** the vector (in place).
+ *
+ * Error handling (returns `SIZE_MAX`):
+ * - ::NULL_POINTER → `EINVAL` if @p vec is non-NULL but uninitialized
+ *   (e.g., internal storage missing) or if @p value is NULL.
+ *   If @p vec itself is NULL, `errno` is set to `EINVAL`.
+ * - ::NOT_FOUND → `ENOENT` if no matching element exists, or if the vector
+ *   is empty.
+ * - ::STATE_CORRUPT → `EFAULT` if a searched element’s internal string buffer
+ *   is unexpectedly NULL (defensive check).
+ * - Any error emitted by ::sort_str_vector(FORWARD) when @p sort_first is `true`
+ *   is propagated (e.g., ::NULL_POINTER).
+ *
+ * @param vec         Opaque pointer to a string vector.
+ * @param value       Pointer to a readable, NUL-terminated key to search for.
+ * @param sort_first  If `true`, sort ascending before searching; if `false`,
+ *                    the vector must already be sorted ascending.
+ *
+ * @return Index of a matching element on success; `SIZE_MAX` on failure/not found.
+ *
+ * @post
+ * - On success: `errno` is not modified; internal error is ::NO_ERROR.
+ * - On failure: internal error is set (see above) and `errno` is set accordingly.
+ * - If @p sort_first is `true`, the vector is sorted in ascending order.
+ *
+ * @thread_safety
+ * - **Not thread-safe** for concurrent mutation of the same vector. If
+ *   @p sort_first is `true`, this function also reorders elements and thus
+ *   invalidates any external indices/iterators.
+ *
+ * @complexity
+ * - If @p sort_first is `false` and the vector is already sorted: **O(log m)**,
+ *   where @c m is the number of elements.
+ * - If @p sort_first is `true`: **O(m log m)** for the sort + **O(log m)**
+ *   for the search (overall dominated by the sort).
+ *
+ * @example
+ * @code{.c}
+ * size_t idx = binary_search_str_vector(v, "needle", false); // assumes v is sorted asc
+ * if (idx == SIZE_MAX) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     if (ec == NOT_FOUND) {
+ *         // handle no-match case
+ *     } else {
+ *         perror("binary_search_str_vector"); // errno set by callee
+ *     }
+ * } else {
+ *     // found at idx
+ * }
+ * @endcode
+ *
+ * @see sort_str_vector, get_str_vector_error, error_to_string, set_errno_from_error
+ */
 size_t binary_search_str_vector(string_v* vec, char* value, bool sort_first);
 // ================================================================================
 // ================================================================================ 
-// DICTIONARY PROTOTYPES
-
-/**
- * @typedef dict_t
- * @brief Opaque struct representing a dictionary.
- *
- * This structure encapsulates a hash table that maps string keys to int values.
- * The details of the struct are hidden from the user and managed internally.
- */
-// typedef struct dict_t dict_t;
-// // --------------------------------------------------------------------------------
-//
-// /**
-//  * @brief Initializes a new dictionary.
-//  *
-//  * Allocates and initializes a dictionary object with a default size for the hash table.
-//  *
-//  * @return A pointer to the newly created dictionary, or NULL if allocation fails.
-//  */
-// dict_t* init_dict();
-// // -------------------------------------------------------------------------------- 
-//
-// /**
-//  * @brief Inserts a key-value pair into the dictionary.
-//  *
-//  * Adds a new key-value pair to the dictionary. If the key already exists, the function
-//  * does nothing and returns false. If the dictionary's load factor exceeds a threshold,
-//  * it automatically resizes.
-//  *
-//  * @param dict Pointer to the dictionary.
-//  * @param key The key to insert.
-//  * @param value The value associated with the key.
-//  * @return true if the key-value pair was inserted successfully, false otherwise.
-//  */
-// bool insert_dict(dict_t* dict, const char* key, size_t value);
-// // --------------------------------------------------------------------------------
-//
-// /**
-//  * @brief Removes a key-value pair from the dictionary.
-//  *
-//  * Finds the specified key in the dictionary, removes the associated key-value pair,
-//  * and returns the value.
-//  *
-//  * @param dict Pointer to the dictionary.
-//  * @param key The key to remove.
-//  * @return The value associated with the key if it was found and removed; FLT_MAX otherwise.
-//  */
-// size_t pop_dict(dict_t* dict,  char* key);
-// // --------------------------------------------------------------------------------
-//
-// /**
-//  * @brief Retrieves the value associated with a key.
-//  *
-//  * Searches the dictionary for the specified key and returns the corresponding value.
-//  *
-//  * @param dict Pointer to the dictionary.
-//  * @param key The key to search for.
-//  * @return The value associated with the key, or FLT_MAX if the key is not found.
-//  */
-// const size_t get_dict_value(const dict_t* dict, char* key);
-// // --------------------------------------------------------------------------------
-//
-// /**
-//  * @brief Frees the memory associated with the dictionary.
-//  *
-//  * Releases all memory allocated for the dictionary, including all key-value pairs.
-//  *
-//  * @param dict Pointer to the dictionary to free.
-//  */
-// void free_dict(dict_t* dict);
-// // --------------------------------------------------------------------------------
-//
-// /**
-//  * @brief Safely frees a dictionary and sets the pointer to NULL.
-//  *
-//  * A wrapper around `free_dict` that ensures the dictionary pointer is also set to NULL
-//  * after being freed. Useful for preventing dangling pointers.
-//  *
-//  * @param dict Pointer to the dictionary pointer to free.
-//  */
-// void _free_dict(dict_t** dict);
-// // --------------------------------------------------------------------------------
-//
-// #if defined(__GNUC__) || defined (__clang__)
-//     /**
-//      * @macro DICT_GBC
-//      * @brief A macro for enabling automatic cleanup of dict_t objects.
-//      *
-//      * This macro uses the cleanup attribute to automatically call `_free_vector`
-//      * when the scope ends, ensuring proper memory management.
-//      */
-//     #define DICT_GBC __attribute__((cleanup(_free_dict)))
-// #endif
-// // --------------------------------------------------------------------------------
-//
-// /**
-//  * @brief Updates the value associated with a key in the dictionary.
-//  *
-//  * Searches for the specified key in the dictionary and updates its value.
-//  * If the key does not exist, the function takes no action.
-//  *
-//  * @param dict Pointer to the dictionary.
-//  * @param key The key to update.
-//  * @param value The new value to associate with the key.
-//  */
-// bool update_dict(dict_t* dict, char* key, size_t value);
-// // --------------------------------------------------------------------------------
-//
-// /**
-//  * @brief Gets the number of non-empty buckets in the dictionary.
-//  *
-//  * Returns the total number of buckets in the hash table that contain at least one key-value pair.
-//  *
-//  * @param dict Pointer to the dictionary.
-//  * @return The number of non-empty buckets.
-//  */
-// const size_t dict_size(const dict_t* dict);
-// // --------------------------------------------------------------------------------
-//
-// /**
-//  * @brief Gets the total capacity of the dictionary.
-//  *
-//  * Returns the total number of buckets currently allocated in the hash table.
-//  *
-//  * @param dict Pointer to the dictionary.
-//  * @return The total number of buckets in the dictionary.
-//  */
-// const size_t dict_alloc(const dict_t* dict);
-// // --------------------------------------------------------------------------------
-//
-// /**
-//  * @brief Gets the total number of key-value pairs in the dictionary.
-//  *
-//  * Returns the total number of key-value pairs currently stored in the dictionary.
-//  *
-//  * @param dict Pointer to the dictionary.
-//  * @return The number of key-value pairs.
-//  */
-// const size_t dict_hash_size(const dict_t* dict);
-// // --------------------------------------------------------------------------------
-//
-// /**
-// * @function is_key_value
-// * @brief returns true if a key value pair exists in dictionary
-// *
-// * @param str dict_t object to tokenize
-// * @param key A string literal representing a key word
-// * @return returns true of key value pair exists, false otherwise.  if char 
-// *         pointer or dict_t data type is a null pointer will sett errno 
-// *         to ENOMEM and return false
-// */
-// bool is_key_value(const dict_t* dict, const char* key);
-// ================================================================================ 
-// ================================================================================ 
 // GENERIC MACROS 
 
-/**
-* @macro s_size
-* @brief Generic macro to return the populated length of a string data type such as
-*        string_t and string_v
-*
-* @param dat A pointer to a string_t or strinv_v data type
-* @return The populated length of a string data type
-*/
 #define s_size(dat) _Generic((dat), \
     string_t*: string_size, \
     string_v*: str_vector_size) (dat)
 // --------------------------------------------------------------------------------
 
-/**
-* @macro s_alloc
-* @brief Generic macro to return the allocated size of a string data type such as
-*        string_t and string_v
-*
-* @param dat A pointer to a string_t or strinv_v data type
-* @return The allocated length of a string data type
-*/
 #define s_alloc(dat) _Generic((dat), \
     string_t*: string_alloc, \
     string_v*: str_vector_alloc) (dat)
@@ -4215,65 +4220,157 @@ size_t binary_search_str_vector(string_v* vec, char* value, bool sort_first);
 // --------------------------------------------------------------------------------
 
 /**
-* @function sort_str_vector
-* @brief Sorts a string vector in ascending or descending order.
-*
-* Uses an optimized QuickSort algorithm with median-of-three pivot selection
-* and insertion sort for small subarrays. Sort direction is determined by
-* the iter_dir parameter.
-*
-* @param vec string vector to sort
-* @param direction FORWARD for ascending order, REVERSE for descending
-* @return void
-*         Sets errno to EINVAL if vec is NULL or invalid
-*/
+ * @brief Sort the elements of a string vector in place (ascending or descending).
+ *
+ * Reorders the opaque ::string_v created by ::init_str_vector() according to
+ * lexicographic order using the library comparator (`compare_strings_string`).
+ * The sort is performed **in place** and is **unstable**: element ownership
+ * (their internal string buffers) is swapped/moved, but buffers are not copied.
+ *
+ * Algorithm (implementation detail):
+ * - Hybrid quicksort with median-of-three pivot selection and tail-recursion
+ *   elimination to bound stack depth.
+ * - Small partitions finalized with insertion sort (cache-friendly).
+ * - Direction selects order:
+ *   - ::FORWARD  → ascending
+ *   - ::REVERSE  → descending
+ *
+ * Error handling:
+ * - If @p vec is NULL or not initialized (e.g., internal storage missing),
+ *   sets the vector’s internal error to ::NULL_POINTER, sets `errno`
+ *   accordingly via ::set_errno_from_error(), and returns without sorting.
+ * - If the vector has fewer than two elements, the function returns without
+ *   modifying `errno` and sets the internal error to ::NO_ERROR.
+ * - On successful sort, sets the internal error to ::NO_ERROR and does **not**
+ *   modify `errno`.
+ * - You may retrieve the last error via ::get_str_vector_error().
+ *
+ * @param vec        Opaque pointer to a valid string vector.
+ * @param direction  ::FORWARD for ascending, ::REVERSE for descending.
+ *
+ * @return void
+ *
+ * @post On success:
+ * - The elements are permuted into the requested order.
+ * - Capacity is unchanged (sorting does not reallocate the vector storage).
+ * - Internal error state is ::NO_ERROR.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; use external
+ *   synchronization if multiple threads may sort/modify concurrently.
+ * - Any concurrently held raw element pointers/iterators become invalid due to
+ *   reordering.
+ *
+ * **complexity**
+ * - Let @c m be the number of elements:
+ *   - Average: **O(m log m)**
+ *   - Worst-case: **O(m²)** (mitigated by median-of-three)
+ *   - Extra space: **O(log m)** for recursion (further reduced by tail-call
+ *     elimination on the larger partition).
+ *
+ * @warning The sort is **unstable**: equal keys may not preserve their original
+ *          relative order. Use a stable algorithm if stability is required.
+ *
+ * @note Underlying string buffers are not duplicated or reallocated; only the
+ *       owning element slots are swapped.
+ *
+ * @par Example
+ * @code{.c}
+ * sort_str_vector(v, FORWARD);
+ * if (get_str_vector_error(v) != NO_ERROR) {
+ *     perror("sort_str_vector"); // errno set on error
+ * }
+ * @endcode
+ *
+ * @see init_str_vector, reverse_str_vector, compare_strings_string,
+ *      get_str_vector_error, set_errno_from_error
+ */
+
 void sort_str_vector(string_v* vec, iter_dir direction);
 // --------------------------------------------------------------------------------
 
 /**
-* @function tokenize_string
-* @brief Splits a string into tokens based on delimiter characters.
-*
-* Creates a vector of strings containing each token found in the input string.
-* Multiple consecutive delimiters are treated as a single delimiter, and
-* the original string is preserved.
-*
-* @param str string_t object to tokenize
-* @param delim string containing delimiter characters (e.g., " ,;")
-* @return string vector containing tokens, or NULL on error
-*         Sets errno to EINVAL for NULL inputs, ENOMEM for allocation failure
-*
-* Example:
-*     string_t* str = init_string("hello,world;test");
-*     string_v* tokens = tokenize_string(str, ",;");
-*     // tokens now contains ["hello", "world", "test"]
-*/
+ * @brief Split a \c string_t into tokens using a set of delimiter characters.
+ *
+ * Scans the bytes of @p str and produces a new string vector (\c string_v)
+ * containing copies of each maximal run of non-delimiter characters. The set
+ * of delimiters is specified by @p delim as a NUL-terminated C string; **each
+ * byte in @p delim is treated as an independent delimiter character** (like
+ * \c strpbrk), not as multi-character separators. Consecutive delimiters are
+ * collapsed—no empty tokens are produced. Leading and trailing delimiters are
+ * skipped.
+ *
+ * Implementation notes:
+ * - The function first calls \c token_count(str, delim) to pre-compute capacity.
+ *   If it returns zero, this function returns \c NULL and forwards \c errno from
+ *   \c token_count.
+ * - A new vector is created with \c init_str_vector(count). Each token is copied
+ *   and appended via ::push_back_str_vector(). On any append failure, the vector
+ *   is freed and \c NULL is returned (with \c errno set by the failing call).
+ * - Token detection is byte-wise and locale-agnostic (no multibyte/Unicode
+ *   awareness); comparisons are raw \c char equality to any delimiter byte.
+ *
+ * Error handling:
+ * - Returns \c NULL and sets \c errno in these cases:
+ *   - \c EINVAL if @p str is NULL, its internal buffer is NULL, or @p delim is NULL.
+ *   - Errors signaled by \c token_count(str, delim) when no tokens are found or
+ *     an input is invalid (this function forwards \c errno as set by \c token_count).
+ *   - \c ENOMEM if vector allocation via ::init_str_vector fails, or if any
+ *     element allocation within ::push_back_str_vector fails (the latter sets
+ *     \c errno itself; this function forwards it).
+ * - On success, \c errno is **not** modified.
+ *
+ * @param str    Pointer to a readable \c string_t whose contents are to be tokenized.
+ *               Assumes the content has no embedded NUL bytes that must be preserved
+ *               within tokens (see warning below).
+ * @param delim  NUL-terminated C string; each character is treated as a delimiter.
+ *
+ * @return Pointer to a newly allocated \c string_v on success; \c NULL on failure.
+ *         The caller owns the returned vector and must release it with
+ *         ::free_str_vector().
+ *
+ * @post On success:
+ * - The returned vector contains one \c string_t per token, each owning an
+ *   independent, NUL-terminated copy of that token.
+ * - The order of tokens reflects their left-to-right order in @p str.
+ *
+ * @thread_safety
+ * - Not thread-safe with respect to the returned vector (it is a new, mutable
+ *   object). Reading @p str concurrently is safe if no other thread mutates it.
+ *
+ * @complexity
+ * - Let \c n = \c str->len. Scanning is O(n). Total copying is proportional to the
+ *   number of non-delimiter bytes, so overall O(n) time; O(k) auxiliary memory
+ *   in the returned vector, where \c k is the number of tokens.
+ *
+ * @warning
+ * - This implementation builds each token as a temporary NUL-terminated C string
+ *   before pushing; if @p str contains embedded NUL bytes within a token, they
+ *   will truncate the token at the first NUL when measured by \c strlen() inside
+ *   the push routine. If you must support embedded NULs, switch to a length-based
+ *   element initializer instead of C-string-based copies.
+ * - For very large tokens, the temporary token buffer is stack-allocated as a VLA;
+ *   extremely large tokens can exhaust stack space. Consider refactoring to a
+ *   heap buffer if unbounded token sizes are expected.
+ *
+ * @par Example
+ * @code{.c}
+ * string_t *s = init_string("a,,b;c  d");
+ * const char *delims = ",; ";
+ * string_v *v = tokenize_string(s, delims);
+ * if (!v) {
+ *     perror("tokenize_string");
+ *     free_string(s);
+ *     return 1;
+ * }
+ * // v now contains: ["a", "b", "c", "d"]
+ * free_str_vector(v);
+ * free_string(s);
+ * @endcode
+ *
+ * @see token_count, init_str_vector, push_back_str_vector, free_str_vector
+ */
 string_v* tokenize_string(const string_t* str, const char* delim);
-// // -------------------------------------------------------------------------------- 
-//
-// /**
-// * @function get_dict_keys
-// * @brief Returns a string vector of dictionary keys
-// *
-// * @param dict A dict_t type
-// * @return string vector containing dictionary keys, or NULL on error
-// *         Sets errno to EINVAL for NULL inputs, ENOMEM for allocation failure
-// */
-// string_v* get_dict_keys(const dict_t* dict);
-// // --------------------------------------------------------------------------------
-//
-// /**
-// * @function count_words
-// * @brief Returns a dictionary of words that occur in a string and the number 
-// *        of their occurrances
-// *
-// * @param dict A dict_t type
-// * @param delim A stirng literal of delimters used to parse a string
-// * @return A dictionary containing dictionary keys, or NULL on error
-// *         Sets errno to EINVAL for NULL inputs, ENOMEM for allocation failure
-// *
-// */
-// dict_t* count_words(const string_t* str, const char* delim);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

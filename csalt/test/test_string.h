@@ -657,6 +657,15 @@ void test_delete_any_multiple(void **state);
 // --------------------------------------------------------------------------------
 
 void test_reverse_str_vector(void **state);
+// -------------------------------------------------------------------------------- 
+
+void test_bs_null_vec(void **state);
+void test_bs_null_value(void **state);
+void test_bs_empty_vector(void **state);
+void test_bs_found_sorted_no_sort(void **state);
+void test_bs_not_found_sorted_no_sort(void **state);
+void test_bs_found_unsorted_sort_first_true(void **state);
+void test_bs_duplicates_sort_first_true(void **state);
 // ================================================================================
 // ================================================================================ 
 #endif /* test_string_H */
