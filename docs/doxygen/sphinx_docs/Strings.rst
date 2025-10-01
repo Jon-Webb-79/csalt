@@ -690,6 +690,24 @@ insert_str_vector
 .. doxygenfunction:: insert_str_vector
    :project: csalt
 
+delete_front_str_vector
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: delete_front_str_vector
+   :project: csalt
+
+delete_back_str_vector
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: delete_back_str_vector
+   :project: csalt
+
+delete_any_str_vector
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: delete_any_str_vector
+   :project: csalt
+
 Search Vector
 -------------
 

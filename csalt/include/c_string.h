@@ -3718,14 +3718,188 @@ string_t* pop_front_str_vector(string_v* vec);
 string_t* pop_any_str_vector(string_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove the last element from a string vector (no return value).
+ *
+ * Deletes (pops) the final element of an opaque ::string_v created by
+ * ::init_str_vector(). The element’s owned character buffer is freed, the slot
+ * is cleared for reuse, and the vector’s length is decremented. Capacity is
+ * unchanged.
+ *
+ * Error handling:
+ * - On failure, returns `false` and sets `errno` via ::set_errno_from_error().
+ *   An internal ::ErrorCode is recorded and can be retrieved with
+ *   ::get_str_vector_error().
+ *   - ::NULL_POINTER → `EINVAL` if @p vec is non-NULL but not properly
+ *     initialized (or @p vec->data is NULL). If @p vec itself is NULL, the
+ *     function sets `errno = EINVAL` (no internal error slot to update).
+ *   - ::UNINITIALIZED → mapped to `ENODATA` when available (else `EINVAL`) if
+ *     the vector is empty (no element to delete).
+ * - On success, `errno` is **not** modified.
+ *
+ * @param vec  Opaque pointer to a valid string vector.
+ *
+ * @return `true` on success; `false` on error (see Error handling above).
+ *
+ * @post On success:
+ * - The last element is removed; the vector’s size decreases by 1.
+ * - The removed element’s storage is freed and its slot zeroed.
+ * - Capacity is unchanged; remaining elements and their order are unaffected.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; use external
+ *   synchronization if multiple threads may delete/modify concurrently.
+ * - Concurrent readers must ensure no other thread mutates the vector at the
+ *   same time.
+ *
+ * **complexity**
+ * - O(1) with respect to the number of elements (freeing one string and updating
+ *   metadata).
+ *
+ * @par Example
+ * @code{.c}
+ * if (!delete_back_str_vector(v)) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     fprintf(stderr, "delete_back failed: %s\n", error_to_string(ec));
+ *     perror("delete_back_str_vector");
+ * } else {
+ *     // last element removed; capacity unchanged
+ * }
+ * @endcode
+ *
+ * @see init_str_vector, pop_back_str_vector, get_str_vector_error,
+ *      set_errno_from_error, error_to_string, free_str_vector
+ */
 
 bool delete_back_str_vector(string_v* vec);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove the first element from a string vector (no return value).
+ *
+ * Deletes the element at index 0 of an opaque ::string_v created by
+ * ::init_str_vector(). The element’s owned character buffer is freed, remaining
+ * elements are shifted one slot to the left to fill the gap, the vacated tail
+ * slot is zeroed, and the vector’s length is decremented. Capacity is unchanged.
+ *
+ * Error handling:
+ * - On failure, returns `false` and sets `errno` via ::set_errno_from_error();
+ *   an internal ::ErrorCode is recorded and can be retrieved with
+ *   ::get_str_vector_error().
+ *   - ::NULL_POINTER → `EINVAL` if @p vec is non-NULL but not properly
+ *     initialized (e.g., internal storage missing). If @p vec itself is NULL,
+ *     the function sets `errno = EINVAL` (no internal error slot to update).
+ *   - ::UNINITIALIZED → mapped to `ENODATA` when available (else `EINVAL`)
+ *     if the vector is empty (no element to delete).
+ * - On success, `errno` is **not** modified.
+ *
+ * @param vec  Opaque pointer to a valid string vector.
+ *
+ * @return `true` on success; `false` on error (see Error handling above).
+ *
+ * @post On success:
+ * - The first element is removed; the vector’s size decreases by 1.
+ * - Elements formerly at indices `[1 .. size-1]` shift left by one.
+ * - The removed element’s storage is freed and the last slot is zeroed.
+ * - Capacity is unchanged.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; use external
+ *   synchronization if multiple threads may delete/modify concurrently.
+ * - Concurrent readers must ensure no other thread mutates or reindexes the vector.
+ *
+ * **complexity**
+ * - Let @c m be the number of remaining elements after removal. Shifting element
+ *   metadata is O(m); freeing one string is O(1). Overall: **O(m)**.
+ *
+ * @warning Any raw element pointers/iterators previously obtained may be
+ *          invalidated due to reindexing and (in other operations) possible
+ *          reallocation.
+ *
+ * @par Example
+ * @code{.c}
+ * if (!delete_front_str_vector(v)) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     fprintf(stderr, "delete_front failed: %s\n", error_to_string(ec));
+ *     perror("delete_front_str_vector");
+ * } else {
+ *     // first element removed; order of remaining elements preserved
+ * }
+ * @endcode
+ *
+ * @see init_str_vector, delete_back_str_vector, pop_front_str_vector,
+ *      get_str_vector_error, set_errno_from_error, error_to_string, free_str_vector
+ */
 
 bool delete_front_str_vector(string_v* vec);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove the element at @p index from a string vector (no return value).
+ *
+ * Deletes the element at position @p index from an opaque ::string_v created by
+ * ::init_str_vector(). The element’s owned character buffer is freed, elements
+ * after @p index are shifted one slot to the left to fill the gap, the vacated
+ * tail slot is zeroed, and the vector’s length is decremented. Capacity is
+ * unchanged.
+ *
+ * Bounds & behavior:
+ * - Valid indices satisfy `0 <= index < size`. Use ::str_vector_size() to query
+ *   the current size if needed.
+ * - The relative order of the *remaining* elements is preserved aside from the
+ *   left-shift induced by the removal.
+ *
+ * Error handling:
+ * - On failure, returns `false` and sets `errno` via ::set_errno_from_error();
+ *   a specific ::ErrorCode is recorded internally and can be retrieved with
+ *   ::get_str_vector_error().
+ *   - ::NULL_POINTER → `EINVAL` if @p vec is non-NULL but uninitialized (or
+ *     internal storage missing). If @p vec itself is NULL, the function sets
+ *     `errno = EINVAL` (no internal error slot to update).
+ *   - ::UNINITIALIZED → `ENODATA` when available (else `EINVAL`) if the vector
+ *     is empty (no element to delete).
+ *   - ::OUT_OF_BOUNDS → `EINVAL` if @p index is not less than the current size.
+ * - On success, this function leaves `errno` **unchanged** (conventional POSIX policy).
+ *
+ * @param vec    Opaque pointer to a valid string vector.
+ * @param index  Zero-based position of the element to remove; must be `< size`.
+ *
+ * @return `true` on success; `false` on error (see Error handling above).
+ *
+ * @post On success:
+ * - The vector’s logical size decreases by 1; elements after @p index shift left.
+ * - The removed element’s storage is freed; the last slot is zeroed.
+ * - Capacity is unchanged.
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector; synchronize
+ *   externally if multiple threads may remove/modify concurrently.
+ * - Concurrent readers must ensure no other thread mutates or reindexes the vector.
+ *
+ * **complexity**
+ * - Let @c m be the number of elements after @p index (i.e., `size - index - 1`).
+ *   Freeing one string is O(1); shifting element slots is O(m). Overall: **O(m)**.
+ *
+ * @warning Any raw element pointers/iterators previously obtained may be
+ *          invalidated due to reindexing (and, in other operations, possible
+ *          reallocation).
+ *
+ * @par Example
+ * @code{.c}
+ * size_t idx = 2;
+ * if (!delete_any_str_vector(v, idx)) {
+ *     ErrorCode ec = get_str_vector_error(v);
+ *     fprintf(stderr, "delete_any failed: %s\n", error_to_string(ec));
+ *     perror("delete_any_str_vector");
+ * } else {
+ *     // element at idx removed; order preserved among remaining elements
+ * }
+ * @endcode
+ *
+ * @see init_str_vector, delete_front_str_vector, delete_back_str_vector,
+ *      pop_any_str_vector, str_vector_size, get_str_vector_error,
+ *      set_errno_from_error, error_to_string
+ */
 
 bool delete_any_str_vector(string_v* vec, size_t index);
 // --------------------------------------------------------------------------------

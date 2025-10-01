@@ -2072,12 +2072,16 @@ string_t* pop_any_str_vector(string_v* vec, size_t index) {
 
 bool delete_back_str_vector(string_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
     
     if (vec->len == 0) {
-        errno = EINVAL;
+        vec->error = UNINITIALIZED;
+        errno = set_errno_from_error(vec->error);
         return false;
     }
     
@@ -2088,21 +2092,24 @@ bool delete_back_str_vector(string_v* vec) {
     vec->data[vec->len - 1].alloc = 0;
     
     vec->len--;
+    vec->error = NO_ERROR;
     return true;
 }
 // --------------------------------------------------------------------------------
 
 bool delete_front_str_vector(string_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
-   
     if (vec->len == 0) {
-        errno = EINVAL;
+        vec->error = UNINITIALIZED;
+        errno = set_errno_from_error(vec->error);
         return false;
-    }
-   
+    } 
     // Free the first element
     free(vec->data[0].str);
    
@@ -2113,23 +2120,29 @@ bool delete_front_str_vector(string_v* vec) {
     memset(&vec->data[vec->len - 1], 0, sizeof(string_t));
    
     vec->len--;
+    vec->error = NO_ERROR;
     return true;
 }
 // --------------------------------------------------------------------------------
 
 bool delete_any_str_vector(string_v* vec, size_t index) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
-   
+  
     if (vec->len == 0) {
-        errno = EINVAL;
+        vec->error = UNINITIALIZED;
+        errno = set_errno_from_error(vec->error);
         return false;
     }
-
+    
     if (index >= vec->len) {
-        errno = ERANGE;
+        vec->error = OUT_OF_BOUNDS;
+        errno = set_errno_from_error(vec->error);
         return false;
     }
 
@@ -2144,6 +2157,7 @@ bool delete_any_str_vector(string_v* vec, size_t index) {
     memset(&vec->data[vec->len - 1], 0, sizeof(string_t));
     
     vec->len--;
+    vec->error = NO_ERROR;
     return true;
 }
 // --------------------------------------------------------------------------------

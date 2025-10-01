@@ -2641,10 +2641,12 @@ void test_delete_empty_vector(void **state) {
     string_v* vec = init_str_vector(1);
    
     delete_back_str_vector(vec);
-    assert_int_equal(errno, EINVAL);
+    assert_int_equal(errno, ENODATA);
+    assert_int_equal(get_str_vector_error(vec), UNINITIALIZED);
    
     delete_front_str_vector(vec);
-    assert_int_equal(errno, EINVAL);
+    assert_int_equal(errno, ENODATA);
+    assert_int_equal(get_str_vector_error(vec), UNINITIALIZED);
    
     free_str_vector(vec);
 }
@@ -2790,7 +2792,8 @@ void test_delete_any_empty_vector(void **state) {
     string_v* vec = init_str_vector(1);
    
     delete_any_str_vector(vec, 0);
-    assert_int_equal(errno, EINVAL);
+    assert_int_equal(errno, ENODATA);
+    assert_int_equal(get_str_vector_error(vec), UNINITIALIZED);
    
     free_str_vector(vec);
 }
