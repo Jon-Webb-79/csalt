@@ -2173,6 +2173,19 @@ const string_t* cstr_vector_index(const string_v* vec, size_t index) {
     }
     return &vec->data[index];
 }
+// -------------------------------------------------------------------------------- 
+
+string_t* str_vector_index(string_v* vec, size_t index) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return NULL;
+    }
+    return &vec->data[index];
+}
 // --------------------------------------------------------------------------------
 
 size_t str_vector_size(const string_v* vec) {

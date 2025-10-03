@@ -657,9 +657,15 @@ str_vector_alloc
    :project: csalt
 
 cstr_vector_index
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 .. doxygenfunction:: cstr_vector_index
+   :project: csalt
+
+str_vector_index
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: str_vector_index
    :project: csalt
 
 Vector Manipulation 

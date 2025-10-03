@@ -3451,6 +3451,71 @@ const string_t* cstr_vector_index(const string_v* vec, size_t index);
 // -------------------------------------------------------------------------------- 
 
 /**
+ * @brief Return a **mutable** handle to the element at @p index.
+ *
+ * Looks up the @p index-th element of the opaque ::string_v (created by
+ * ::init_str_vector()) and returns a **non-const** ::string_t* that aliases the
+ * vector’s internal storage. This allows in-place modification of the element
+ * via your public ::string_t API (e.g., append/assign helpers).
+ *
+ * **Safety & ownership caveats (important):**
+ * - The returned pointer refers to **internal storage owned by the vector**.
+ *   Do **not** call `free()` on the returned ::string_t or its internal buffer;
+ *   doing so will corrupt the vector and likely cause double-free or UAF.
+ * - Do **not** manually null out fields or otherwise mutate internals directly.
+ *   Use the provided ::string_t API (e.g., `string_lit_concat`, `string_string_concat`,
+ *   `swap_string`, etc.) which preserves invariants.
+ * - Any operation that grows/shrinks/reorders the vector (push/insert/erase,
+ *   sort, reverse, reallocation) can **invalidate** previously returned pointers.
+ *   Re-acquire the pointer after such operations.
+ * - For read-only access, prefer ::cstr_vector_index() which returns a `const` handle.
+ *
+ * @param vec    Opaque pointer to a string vector.
+ * @param index  Zero-based element index; must satisfy `index < size`.
+ *
+ * @return On success, a non-NULL pointer to the internal ::string_t at @p index.
+ *         On error, returns NULL and sets `errno`.
+ *
+ * @retval NULL with `errno = EINVAL`
+ *         if @p vec is NULL or not properly initialized.
+ * @retval NULL with `errno = ERANGE`
+ *         if @p index is out of bounds (`index >= size`).
+ *
+ * **thread_safety**
+ * - **Not thread-safe** for concurrent mutation of the same vector/element.
+ *   External synchronization is required if other threads can modify the vector
+ *   or the returned element concurrently.
+ *
+ * **complexity**
+ * - O(1).
+ *
+ * @warning Do **not** free or detach the returned element or its buffer; the
+ *          vector remains the owner. If you need an independently owned object,
+ *          use a copying API (e.g., `copy_string(...)`) or one of the `pop_*`
+ *          helpers that return a heap-owned ::string_t.
+ *
+ * @note On success, this function does **not** modify `errno`.
+ *
+ * @par Example (safe in-place edit)
+ * @code{.c}
+ * string_t *s = str_vector_index(v, 3);
+ * if (!s) {
+ *     perror("str_vector_index");
+ *     return;
+ * }
+ * // Modify via string_t API (do NOT free or poke internals directly)
+ * if (!string_lit_concat(s, " suffix")) {
+ *     perror("string_lit_concat");
+ * }
+ * @endcode
+ *
+ * @see cstr_vector_index, str_vector_size, get_str_vector_error,
+ *      string_lit_concat, string_string_concat, swap_string
+ */
+string_t* str_vector_index(string_v* vec, size_t index);
+// -------------------------------------------------------------------------------- 
+
+/**
  * @brief Return the number of elements currently stored in the vector.
  *
  * @param vec  Opaque pointer to a string vector.
