@@ -3437,7 +3437,7 @@ bool insert_str_vector(string_v* vec, const char* value, size_t index);
  *
  * @par Example
  * @code{.c}
- * const string_t *elt = str_vector_index(v, i);
+ * const string_t *elt = cstr_vector_index(v, i);
  * if (!elt) {
  *     perror("str_vector_index");       // errno set to EINVAL or ERANGE
  *     return;
@@ -3447,7 +3447,7 @@ bool insert_str_vector(string_v* vec, const char* value, size_t index);
  *
  * @see str_vector_size, str_vector_alloc
  */
-const string_t* str_vector_index(const string_v* vec, size_t index);
+const string_t* cstr_vector_index(const string_v* vec, size_t index);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -4190,14 +4190,25 @@ size_t binary_search_str_vector(string_v* vec, char* value, bool sort_first);
 // ================================================================================ 
 // GENERIC MACROS 
 
-#define s_size(dat) _Generic((dat), \
+#define str_size(dat) _Generic((dat), \
     string_t*: string_size, \
-    string_v*: str_vector_size) (dat)
+    string_v*: str_vector_size, \
+    void*: string_size, \
+    default: string_size) (dat)
 // --------------------------------------------------------------------------------
 
-#define s_alloc(dat) _Generic((dat), \
+#define str_alloc(dat) _Generic((dat), \
     string_t*: string_alloc, \
-    string_v*: str_vector_alloc) (dat)
+    string_v*: str_vector_alloc, \
+    void*: string_alloc, \
+    default: string_alloc) (dat)
+// -------------------------------------------------------------------------------- 
+
+#define str_error(dat) _Generic((dat), \
+    string_t*: get_string_error, \
+    string_v*: get_str_vector_error, \
+    void*: get_string_error, \
+    default: get_string_error) (dat)
 // ================================================================================
 // ================================================================================
 

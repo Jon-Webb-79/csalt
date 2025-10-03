@@ -1806,9 +1806,9 @@ void test_tokenize_basic(void **state) {
    
    assert_non_null(tokens);
    assert_int_equal(str_vector_size(tokens), 3);
-   assert_string_equal(get_string(str_vector_index(tokens, 0)), "hello");
-   assert_string_equal(get_string(str_vector_index(tokens, 1)), "world");
-   assert_string_equal(get_string(str_vector_index(tokens, 2)), "test");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 0)), "hello");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 1)), "world");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 2)), "test");
    
    free_str_vector(tokens);
    free_string(str);
@@ -1821,10 +1821,10 @@ void test_tokenize_multiple_delimiters(void **state) {
    
    assert_non_null(tokens);
    assert_int_equal(str_vector_size(tokens), 4);
-   assert_string_equal(get_string(str_vector_index(tokens, 0)), "hello");
-   assert_string_equal(get_string(str_vector_index(tokens, 1)), "world");
-   assert_string_equal(get_string(str_vector_index(tokens, 2)), "test");
-   assert_string_equal(get_string(str_vector_index(tokens, 3)), "done");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 0)), "hello");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 1)), "world");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 2)), "test");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 3)), "done");
    
    free_str_vector(tokens);
    free_string(str);
@@ -1837,9 +1837,9 @@ void test_tokenize_consecutive_delimiters(void **state) {
    
    assert_non_null(tokens);
    assert_int_equal(str_vector_size(tokens), 3);
-   assert_string_equal(get_string(str_vector_index(tokens, 0)), "hello");
-   assert_string_equal(get_string(str_vector_index(tokens, 1)), "world");
-   assert_string_equal(get_string(str_vector_index(tokens, 2)), "test");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 0)), "hello");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 1)), "world");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 2)), "test");
    
    free_str_vector(tokens);
    free_string(str);
@@ -1864,7 +1864,7 @@ void test_tokenize_no_delimiters_found(void **state) {
    
    assert_non_null(tokens);
    assert_int_equal(str_vector_size(tokens), 1);
-   assert_string_equal(get_string(str_vector_index(tokens, 0)), "helloworld");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 0)), "helloworld");
    
    free_str_vector(tokens);
    free_string(str);
@@ -1903,7 +1903,7 @@ void test_tokenize_empty_delimiter(void **state) {
    
    assert_non_null(tokens);
    assert_int_equal(str_vector_size(tokens), 1);
-   assert_string_equal(get_string(str_vector_index(tokens, 0)), "test");
+   assert_string_equal(get_string(cstr_vector_index(tokens, 0)), "test");
    
    free_str_vector(tokens);
    free_string(str);
@@ -1928,14 +1928,14 @@ void test_str_vector_push_back(void **state) {
    // Add first string
    assert_true(push_back_str_vector(vec, "hello"));
    assert_int_equal(str_vector_size(vec), 1);
-   assert_string_equal(get_string(str_vector_index(vec, 0)), "hello");
-   assert_int_equal(string_size(str_vector_index(vec, 0)), 5);
+   assert_string_equal(get_string(cstr_vector_index(vec, 0)), "hello");
+   assert_int_equal(string_size(cstr_vector_index(vec, 0)), 5);
    
    // Add second string
    assert_true(push_back_str_vector(vec, "world"));
    assert_int_equal(str_vector_size(vec), 2);
-   assert_string_equal(get_string(str_vector_index(vec, 1)), "world");
-   assert_int_equal(string_size(str_vector_index(vec, 1)), 5);
+   assert_string_equal(get_string(cstr_vector_index(vec, 1)), "world");
+   assert_int_equal(string_size(cstr_vector_index(vec, 1)), 5);
    
    free_str_vector(vec);
 }
@@ -1956,8 +1956,8 @@ void test_str_vector_auto_resize(void **state) {
    assert_int_equal(str_vector_alloc(vec), 2);
     
    // Verify both strings are intact
-   assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-   assert_string_equal(get_string(str_vector_index(vec, 1)), "second");
+   assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+   assert_string_equal(get_string(cstr_vector_index(vec, 1)), "second");
    
    free_str_vector(vec);
 }
@@ -1990,8 +1990,8 @@ void test_str_vector_empty_string(void **state) {
    
    assert_true(push_back_str_vector(vec, ""));
    assert_int_equal(str_vector_size(vec), 1);
-   assert_string_equal(get_string(str_vector_index(vec, 0)), "");
-   assert_int_equal(string_size(str_vector_index(vec, 0)), 0);
+   assert_string_equal(get_string(cstr_vector_index(vec, 0)), "");
+   assert_int_equal(string_size(cstr_vector_index(vec, 0)), 0);
    
    free_str_vector(vec);
 }
@@ -2004,7 +2004,7 @@ void test_str_vector_multiple_pushes(void **state) {
    for (size_t i = 0; i < 5; i++) {
        assert_true(push_back_str_vector(vec, strings[i]));
        assert_int_equal(str_vector_size(vec), i + 1);
-       assert_string_equal(get_string(str_vector_index(vec, i)), strings[i]);
+       assert_string_equal(get_string(cstr_vector_index(vec, i)), strings[i]);
    }
    
    free_str_vector(vec);
@@ -2018,7 +2018,7 @@ void test_str_vector_gbc(void **state) {
    for (size_t i = 0; i < 5; i++) {
        assert_true(push_back_str_vector(vec, strings[i]));
        assert_int_equal(str_vector_size(vec), i + 1);
-       assert_string_equal(get_string(str_vector_index(vec, i)), strings[i]);
+       assert_string_equal(get_string(cstr_vector_index(vec, i)), strings[i]);
    }
 }
 // --------------------------------------------------------------------------------
@@ -2028,7 +2028,7 @@ void test_push_front_empty_vector(void **state) {
    
     assert_true(push_front_str_vector(vec, "first"));
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
    
     free_str_vector(vec);
 }
@@ -2042,8 +2042,8 @@ void test_push_front_existing_elements(void **state) {
     assert_true(push_front_str_vector(vec, "front"));
    
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "front");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "back");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "front");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "back");
    
     free_str_vector(vec);
 }
@@ -2063,8 +2063,8 @@ void test_push_front_reallocation(void **state) {
     assert_true(str_vector_alloc(vec) > 1);
    
     // Verify order is maintained
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "second");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "first");
    
     free_str_vector(vec);
 }
@@ -2077,13 +2077,13 @@ void test_push_front_multiple(void **state) {
     for (size_t i = 0; i < 3; i++) {
         assert_true(push_front_str_vector(vec, strings[i]));
         assert_int_equal(str_vector_size(vec), i + 1);
-        assert_string_equal(get_string(str_vector_index(vec, 0)), strings[i]);
+        assert_string_equal(get_string(cstr_vector_index(vec, 0)), strings[i]);
     }
    
     // Verify final order
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "one");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "two");
-    assert_string_equal(get_string(str_vector_index(vec, 2)), "three");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "one");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "two");
+    assert_string_equal(get_string(cstr_vector_index(vec, 2)), "three");
    
     free_str_vector(vec);
 }
@@ -2107,8 +2107,8 @@ void test_push_front_empty_string(void **state) {
    
     assert_true(push_front_str_vector(vec, ""));
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "");
-    assert_int_equal(string_size(str_vector_index(vec, 0)), 0);
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "");
+    assert_int_equal(string_size(cstr_vector_index(vec, 0)), 0);
    
     free_str_vector(vec);
 }
@@ -2126,9 +2126,9 @@ void test_insert_str_vector_middle(void **state) {
     assert_int_equal(str_vector_size(vec), 3);
    
     // Verify order
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "second");
-    assert_string_equal(get_string(str_vector_index(vec, 2)), "third");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 2)), "third");
    
     free_str_vector(vec);
 }
@@ -2143,8 +2143,8 @@ void test_insert_str_vector_start(void **state) {
     assert_true(insert_str_vector(vec, "new_first", 0));
     assert_int_equal(str_vector_size(vec), 2);
    
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "new_first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "old_first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "new_first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "old_first");
    
     free_str_vector(vec);
 }
@@ -2159,8 +2159,8 @@ void test_insert_str_vector_end(void **state) {
     assert_true(insert_str_vector(vec, "last", 1));
     assert_int_equal(str_vector_size(vec), 2);
     
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "last");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "last");
    
     free_str_vector(vec);
 }
@@ -2177,8 +2177,8 @@ void test_insert_str_vector_reallocation(void **state) {
     assert_true(insert_str_vector(vec, "middle", 1));
     assert_true(str_vector_alloc(vec) > initial_alloc);
    
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "middle");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "middle");
    
     free_str_vector(vec);
 }
@@ -2194,7 +2194,7 @@ void test_insert_str_vector_invalid_index(void **state) {
    
     // Verify original string unchanged
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
    
     free_str_vector(vec);
 }
@@ -2218,8 +2218,8 @@ void test_insert_str_vector_empty_string(void **state) {
     push_back_str_vector(vec, "test");
    
     assert_true(insert_str_vector(vec, "", 1));
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "");
-    assert_int_equal(string_size(str_vector_index(vec, 1)), 0);
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "");
+    assert_int_equal(string_size(cstr_vector_index(vec, 1)), 0);
    
     free_str_vector(vec);
 }
@@ -2234,7 +2234,7 @@ void test_pop_back_nominal(void **state) {
     assert_non_null(popped);
     assert_string_equal(get_string(popped), "second");
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
    
     free_string(popped);
     free_str_vector(vec);
@@ -2250,7 +2250,7 @@ void test_pop_front_nominal(void **state) {
     assert_non_null(popped);
     assert_string_equal(get_string(popped), "first");
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "second");
    
     free_string(popped);
     free_str_vector(vec);
@@ -2308,12 +2308,12 @@ void test_pop_multiple_front(void **state) {
     // Pop all elements from front
     string_t* first = pop_front_str_vector(vec);
     assert_string_equal(get_string(first), "one");
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "two");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "two");
     free_string(first);
    
     string_t* second = pop_front_str_vector(vec);
     assert_string_equal(get_string(second), "two");
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "three");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "three");
     free_string(second);
    
     string_t* third = pop_front_str_vector(vec);
@@ -2350,7 +2350,7 @@ void test_pop_alternating(void **state) {
     free_string(front);
    
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "two");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "two");
    
     free_str_vector(vec);
 }
@@ -2370,8 +2370,8 @@ void test_pop_any_nominal(void **state) {
    
     // Verify remaining elements and order
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "third");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "third");
    
     free_string(popped);
     free_str_vector(vec);
@@ -2391,8 +2391,8 @@ void test_pop_any_first(void **state) {
    
     // Verify remaining elements shifted correctly
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "second");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "third");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "third");
    
     free_string(popped);
     free_str_vector(vec);
@@ -2412,8 +2412,8 @@ void test_pop_any_last(void **state) {
    
     // Verify remaining elements unchanged
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "second");
    
     free_string(popped);
     free_str_vector(vec);
@@ -2432,8 +2432,8 @@ void test_pop_any_invalid_index(void **state) {
    
     // Verify vector unchanged
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "second");
    
     free_str_vector(vec);
 }
@@ -2458,17 +2458,17 @@ void test_pop_any_null_vector(void **state) {
 
 void test_pop_any_multiple(void **state) {
     string_v* vec = init_str_vector(4);
-    assert_int_equal(4, s_alloc(vec));
+    assert_int_equal(4, str_alloc(vec));
     push_back_str_vector(vec, "one");
     push_back_str_vector(vec, "two");
     push_back_str_vector(vec, "three");
     push_back_str_vector(vec, "four");
    
-    assert_int_equal(4, s_size(vec));
+    assert_int_equal(4, str_size(vec));
     // Pop elements in various positions
     string_t* popped1 = pop_any_str_vector(vec, 1);  // Pop "two"
-    assert_int_equal(3, s_size(popped1));
-    assert_int_equal(4, s_alloc(popped1));
+    assert_int_equal(3, str_size(popped1));
+    assert_int_equal(4, str_alloc(popped1));
     assert_string_equal(get_string(popped1), "two");
     free_string(popped1);
    
@@ -2478,8 +2478,8 @@ void test_pop_any_multiple(void **state) {
    
     // Verify remaining elements
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "one");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "three");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "one");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "three");
    
     free_str_vector(vec);
 }
@@ -2501,7 +2501,7 @@ void test_sort_single_element(void **state) {
    
     sort_str_vector(vec, FORWARD);  // Should handle single element gracefully
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "test");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "test");
    
     free_str_vector(vec);
 }
@@ -2514,9 +2514,9 @@ void test_sort_forward_already_sorted(void **state) {
     push_back_str_vector(vec, "cherry");
    
     sort_str_vector(vec, FORWARD);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "apple");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "banana");
-    assert_string_equal(get_string(str_vector_index(vec, 2)), "cherry");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "apple");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "banana");
+    assert_string_equal(get_string(cstr_vector_index(vec, 2)), "cherry");
    
     free_str_vector(vec);
 }
@@ -2529,9 +2529,9 @@ void test_sort_forward_reverse_sorted(void **state) {
     push_back_str_vector(vec, "apple");
    
     sort_str_vector(vec, FORWARD);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "apple");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "banana");
-    assert_string_equal(get_string(str_vector_index(vec, 2)), "cherry");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "apple");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "banana");
+    assert_string_equal(get_string(cstr_vector_index(vec, 2)), "cherry");
    
     free_str_vector(vec);
 }
@@ -2544,9 +2544,9 @@ void test_sort_reverse_already_sorted(void **state) {
    push_back_str_vector(vec, "apple");
    
    sort_str_vector(vec, REVERSE);
-   assert_string_equal(get_string(str_vector_index(vec, 0)), "cherry");
-   assert_string_equal(get_string(str_vector_index(vec, 1)), "banana");
-   assert_string_equal(get_string(str_vector_index(vec, 2)), "apple");
+   assert_string_equal(get_string(cstr_vector_index(vec, 0)), "cherry");
+   assert_string_equal(get_string(cstr_vector_index(vec, 1)), "banana");
+   assert_string_equal(get_string(cstr_vector_index(vec, 2)), "apple");
    
    free_str_vector(vec);
 }
@@ -2565,8 +2565,8 @@ void test_sort_large_vector(void **state) {
    
     sort_str_vector(vec, FORWARD);
     // Verify order
-    assert_true(compare_strings_string(str_vector_index(vec, 0), 
-                                       (string_t*)str_vector_index(vec, 1)) <= 0);
+    assert_true(compare_strings_string(cstr_vector_index(vec, 0), 
+                                       (string_t*)cstr_vector_index(vec, 1)) <= 0);
     // ... verify more elements ...
    
     free_str_vector(vec);
@@ -2581,10 +2581,10 @@ void test_sort_duplicate_elements(void **state) {
     push_back_str_vector(vec, "cherry");
    
     sort_str_vector(vec, FORWARD);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "apple");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "apple");
-    assert_string_equal(get_string(str_vector_index(vec, 2)), "banana");
-    assert_string_equal(get_string(str_vector_index(vec, 3)), "cherry");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "apple");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "apple");
+    assert_string_equal(get_string(cstr_vector_index(vec, 2)), "banana");
+    assert_string_equal(get_string(cstr_vector_index(vec, 3)), "cherry");
    
     free_str_vector(vec);
 }
@@ -2597,9 +2597,9 @@ void test_sort_with_empty_strings(void **state) {
     push_back_str_vector(vec, "");
    
     sort_str_vector(vec, FORWARD);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "");
-    assert_string_equal(get_string(str_vector_index(vec, 2)), "apple");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "");
+    assert_string_equal(get_string(cstr_vector_index(vec, 2)), "apple");
    
     free_str_vector(vec);
 }
@@ -2618,7 +2618,7 @@ void test_delete_back_nominal(void **state) {
    
     delete_back_str_vector(vec);
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
    
     free_str_vector(vec);
 }
@@ -2631,7 +2631,7 @@ void test_delete_front_nominal(void **state) {
    
     delete_front_str_vector(vec);
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "second");
    
     free_str_vector(vec);
 }
@@ -2677,10 +2677,10 @@ void test_delete_multiple_front(void **state) {
    
     // Pop all elements from front
     delete_front_str_vector(vec);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "two");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "two");
    
     delete_front_str_vector(vec);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "three");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "three");
    
     delete_front_str_vector(vec);
    
@@ -2709,7 +2709,7 @@ void test_delete_alternating(void **state) {
     delete_front_str_vector(vec);
    
     assert_int_equal(str_vector_size(vec), 1);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "two");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "two");
    
     free_str_vector(vec);
 }
@@ -2727,8 +2727,8 @@ void test_delete_any_nominal(void **state) {
    
     // Verify remaining elements and order
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "third");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "third");
    
     free_str_vector(vec);
 }
@@ -2745,8 +2745,8 @@ void test_delete_any_first(void **state) {
    
     // Verify remaining elements shifted correctly
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "second");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "third");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "third");
    
     free_str_vector(vec);
 }
@@ -2763,8 +2763,8 @@ void test_delete_any_last(void **state) {
    
     // Verify remaining elements unchanged
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "second");
    
     free_str_vector(vec);
 }
@@ -2781,8 +2781,8 @@ void test_delete_any_invalid_index(void **state) {
    
     // Verify vector unchanged
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "first");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "second");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "first");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "second");
    
     free_str_vector(vec);
 }
@@ -2807,13 +2807,13 @@ void test_delete_any_null_vector(void **state) {
 
 void test_delete_any_multiple(void **state) {
     string_v* vec = init_str_vector(4);
-    assert_int_equal(4, s_alloc(vec));
+    assert_int_equal(4, str_alloc(vec));
     push_back_str_vector(vec, "one");
     push_back_str_vector(vec, "two");
     push_back_str_vector(vec, "three");
     push_back_str_vector(vec, "four");
    
-    assert_int_equal(4, s_size(vec));
+    assert_int_equal(4, str_size(vec));
     // Pop elements in various positions
     delete_any_str_vector(vec, 1);  // Pop "two"
    
@@ -2821,8 +2821,8 @@ void test_delete_any_multiple(void **state) {
    
     // Verify remaining elements
     assert_int_equal(str_vector_size(vec), 2);
-    assert_string_equal(get_string(str_vector_index(vec, 0)), "one");
-    assert_string_equal(get_string(str_vector_index(vec, 1)), "three");
+    assert_string_equal(get_string(cstr_vector_index(vec, 0)), "one");
+    assert_string_equal(get_string(cstr_vector_index(vec, 1)), "three");
    
     free_str_vector(vec);
 }
@@ -2830,7 +2830,7 @@ void test_delete_any_multiple(void **state) {
 
 void test_reverse_str_vector(void **state) {
     string_v* vec = init_str_vector(4);
-    assert_int_equal(4, s_alloc(vec));
+    assert_int_equal(4, str_alloc(vec));
     push_back_str_vector(vec, "one");
     push_back_str_vector(vec, "two");
     push_back_str_vector(vec, "three");
@@ -2839,8 +2839,8 @@ void test_reverse_str_vector(void **state) {
     reverse_str_vector(vec);
 
     char* a[4] = {"four", "three", "two", "one"};
-    for (size_t i = 0; i < s_size(vec); i++) {
-        assert_string_equal(a[i], get_string(str_vector_index(vec, i)));
+    for (size_t i = 0; i < str_size(vec); i++) {
+        assert_string_equal(a[i], get_string(cstr_vector_index(vec, i)));
     }
 
     free_str_vector(vec);
@@ -2867,8 +2867,8 @@ static bool is_sorted_asc(const string_v* v) {
     assert_int_equal(errno, 0);
 
     for (size_t i = 1; i < n; ++i) {
-        const string_t* a = str_vector_index(v, i - 1);
-        const string_t* b = str_vector_index(v, i);
+        const string_t* a = cstr_vector_index(v, i - 1);
+        const string_t* b = cstr_vector_index(v, i);
         assert_non_null(a);
         assert_non_null(b);
         const char* as = get_string(a);
@@ -2931,7 +2931,7 @@ void test_bs_found_sorted_no_sort(void **state) {
     assert_int_equal(get_str_vector_error(v), NO_ERROR);
 
     /* Optional: verify we actually matched the right string */
-    const string_t* hit = str_vector_index(v, idx);
+    const string_t* hit = cstr_vector_index(v, idx);
     assert_non_null(hit);
     assert_string_equal(get_string(hit), "delta");
 
@@ -2966,7 +2966,7 @@ void test_bs_found_unsorted_sort_first_true(void **state) {
     assert_int_equal(get_str_vector_error(v), NO_ERROR);
     assert_true(is_sorted_asc(v));
 
-    const string_t* hit = str_vector_index(v, idx);
+    const string_t* hit = cstr_vector_index(v, idx);
     assert_non_null(hit);
     assert_string_equal(get_string(hit), "beta");
 
@@ -2985,7 +2985,7 @@ void test_bs_duplicates_sort_first_true(void **state) {
     assert_int_equal(errno, 0);
     assert_true(is_sorted_asc(v));
 
-    const string_t* hit = str_vector_index(v, idx);
+    const string_t* hit = cstr_vector_index(v, idx);
     assert_non_null(hit);
     assert_string_equal(get_string(hit), "beta");
     /* We do not assert first/last duplicate—algorithm is allowed to return any match */

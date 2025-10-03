@@ -2162,7 +2162,7 @@ bool delete_any_str_vector(string_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-const string_t* str_vector_index(const string_v* vec, size_t index) {
+const string_t* cstr_vector_index(const string_v* vec, size_t index) {
     if (!vec || !vec->data) {
         errno = EINVAL;
         return NULL;
