@@ -281,6 +281,13 @@ ErrorCode get_string_error(const string_t* str) {
     }
     return str->error;
 }
+// -------------------------------------------------------------------------------- 
+
+bool is_string_valid(const string_t* str) {
+    if (str && str->str) return true;
+    errno = EINVAL;
+    return false;
+}
 // --------------------------------------------------------------------------------
 
 void free_string(string_t* str) {
@@ -1604,6 +1611,22 @@ void trim_all_whitespace(string_t* str) {
 // ================================================================================ 
 // ================================================================================ 
 
+struct str_iter {
+    string_t *owner;
+    char *begin;
+    char *end;
+    char *cur;
+};
+// -------------------------------------------------------------------------------- 
+
+struct cstr_iter {
+    const string_t *owner;
+    const char *begin;
+    const char *end;
+    const char *cur;
+};
+// -------------------------------------------------------------------------------- 
+
 /* ---------- helpers ---------- */
 static inline bool _valid_begin_end(const char *begin, const char *end) {
     return (begin != NULL) && (end != NULL) && (begin <= end);
@@ -1613,10 +1636,10 @@ static inline bool _valid_begin_end(const char *begin, const char *end) {
 str_iter str_iter_make(string_t *s) {
     str_iter it = {0};
     if (!s || !s->str) {
-        if (s) { /* report on the owner if we have it */
-            /* s->error = NULL_POINTER; */ /* uncomment if you prefer to set it here */
-        }
-        errno = EINVAL;
+        if (s) { 
+            s->error = NULL_POINTER;
+            errno = set_errno_from_error(s->error);
+        } else errno = EINVAL;
         return it;
     }
     it.owner = s;
@@ -1750,6 +1773,13 @@ ErrorCode get_str_vector_error(const string_v* vec) {
         return INVALID_ERROR;
     }
     return vec->error;
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_str_vector_valid(const string_v* vec) {
+    if (vec && vec->data) return true;
+    errno = EINVAL;
+    return false;
 }
 // --------------------------------------------------------------------------------
 
@@ -2465,6 +2495,181 @@ string_v* tokenize_string(const string_t* str, const char* delim) {
     }
     
     return tokens;
+}
+// -------------------------------------------------------------------------------- 
+
+strv_iter strv_iter_make(string_v *vec) {
+    strv_iter it = {0};
+    if (!vec || !vec->data) {
+        if (vec) {  
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
+        return it;
+    }
+    it.owner = vec;
+    it.begin = vec->data;
+    it.end   = vec->data + vec->len; /* one past last, not the NUL */
+    it.cur   = it.begin;
+    return it;
+}
+// -------------------------------------------------------------------------------- 
+
+cstrv_iter cstrv_iter_make(const string_v *vec) {
+    cstrv_iter it = {0};
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return it;
+    }
+    it.owner = vec;
+    it.begin = vec->data;
+    it.end   = vec->data + vec->len;
+    it.cur   = it.begin;
+    return it;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline bool strv_iter_well_formed(const strv_iter *it) {
+    return it && it->owner && it->begin && it->end && it->cur
+        && (it->begin <= it->cur) && (it->cur <= it->end);
+}
+// -------------------------------------------------------------------------------- 
+
+static inline bool cstrv_iter_well_formed(const cstrv_iter *it) {
+    return it && it->owner && it->begin && it->end && it->cur
+        && (it->begin <= it->cur) && (it->cur <= it->end);
+}
+// -------------------------------------------------------------------------------- 
+
+bool strv_iter_valid(const strv_iter *it) {
+    if (!strv_iter_well_formed(it)) { errno = EINVAL; return false; }
+    return it->cur < it->end;
+}
+// -------------------------------------------------------------------------------- 
+
+bool cstrv_iter_valid(const cstrv_iter *it) {
+    if (!cstrv_iter_well_formed(it)) { errno = EINVAL; return false; }
+    return it->cur < it->end;
+}
+// -------------------------------------------------------------------------------- 
+
+bool strv_iter_at_end(const strv_iter *it) {
+    if (!strv_iter_well_formed(it)) { errno = EINVAL; return false; }
+    return it->cur == it->end;
+}
+// -------------------------------------------------------------------------------- 
+
+/** @return true iff iterator is well-formed and exactly at end (cur == end). */
+bool cstrv_iter_at_end(const cstrv_iter *it) {
+    if (!cstrv_iter_well_formed(it)) { errno = EINVAL; return false; }
+    return it->cur == it->end;
+}
+// -------------------------------------------------------------------------------- 
+
+string_t *strv_iter_get(const strv_iter *it) {
+    return (it->cur == it->end) ? NULL : (string_t*)it->cur;
+}
+// -------------------------------------------------------------------------------- 
+
+/** @return current element or NULL if at end; sets errno only if malformed. */
+const string_t *cstrv_iter_get(const cstrv_iter *it) {
+    if (!cstrv_iter_well_formed(it)) { errno = EINVAL; return NULL; }
+    return (it->cur == it->end) ? NULL : it->cur;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t strv_iter_pos(const strv_iter *it) {
+    if (!strv_iter_well_formed(it)) { errno = EINVAL; return (size_t)-1; }
+    return (size_t)(it->cur - it->begin);
+}
+// -------------------------------------------------------------------------------- 
+
+/** @return 0-based index (begin..size). Returns (size_t)-1 if malformed. */
+size_t cstrv_iter_pos(const cstrv_iter *it) {
+    if (!cstrv_iter_well_formed(it)) { errno = EINVAL; return (size_t)-1; }
+    return (size_t)(it->cur - it->begin);
+}
+// -------------------------------------------------------------------------------- 
+
+bool strv_iter_next(strv_iter *it)   { 
+    if (strv_iter_well_formed(it) && it->cur < it->end) {
+        ++it->cur; 
+        return true;
+    }
+    return false;
+}
+// -------------------------------------------------------------------------------- 
+
+bool cstrv_iter_next(cstrv_iter *it) { 
+    if (cstrv_iter_well_formed(it) && it->cur < it->end) {
+        ++it->cur;
+        return true;
+    }
+    return false;
+}
+// -------------------------------------------------------------------------------- 
+
+bool strv_iter_prev(strv_iter *it) { 
+    if (strv_iter_well_formed(it) && it->cur > it->begin) {
+        --it->cur;
+        return true;
+    }
+    return false;
+}
+// -------------------------------------------------------------------------------- 
+
+bool cstrv_iter_prev(cstrv_iter *it) { 
+    if (cstrv_iter_well_formed(it) && it->cur > it->begin) {
+        --it->cur;
+        return true;
+    }
+    return false;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t strv_iter_advance(strv_iter *it, size_t n) {
+    if (!strv_iter_well_formed(it)) { errno = EINVAL; return 0; }
+    size_t left = (size_t)(it->end - it->cur);
+    size_t step = (n < left) ? n : left;
+    it->cur += step;
+    return step;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t cstrv_iter_advance(cstrv_iter *it, size_t n) {
+    if (!cstrv_iter_well_formed(it)) { errno = EINVAL; return 0; }
+    size_t left = (size_t)(it->end - it->cur);
+    size_t step = (n < left) ? n : left;
+    it->cur += step;
+    return step;
+}
+// -------------------------------------------------------------------------------- 
+
+bool strv_iter_seek_begin(strv_iter *it) {
+    if (!strv_iter_well_formed(it)) { errno = EINVAL; return false; }
+    it->cur = it->begin;
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool cstrv_iter_seek_begin(cstrv_iter *it) {
+    if (!cstrv_iter_well_formed(it)) { errno = EINVAL; return false; }
+    it->cur = it->begin;
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool strv_iter_seek_end(strv_iter *it) {
+    if (!strv_iter_well_formed(it)) { errno = EINVAL; return false; }
+    it->cur = it->end;
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool cstrv_iter_seek_end(cstrv_iter *it) {
+    if (!cstrv_iter_well_formed(it)) { errno = EINVAL; return false; }
+    it->cur = it->end;
+    return true;
 }
 // ================================================================================
 // ================================================================================

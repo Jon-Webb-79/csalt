@@ -150,6 +150,49 @@ string_t* init_string(const char* str);
  * @see error_to_string
  */
 ErrorCode get_string_error(const string_t* str);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Check that a \c string_t handle and its backing buffer are non-NULL.
+ *
+ * Lightweight guard used before read/write operations on a \c string_t. The
+ * function returns \c true iff @p str is non-NULL and @p str->str is non-NULL.
+ * It does **not** verify deeper invariants (e.g., NUL-termination, length vs.
+ * allocation consistency, or ownership).
+ *
+ * Error reporting:
+ * - On failure, returns \c false and sets \c errno to \c EINVAL.
+ * - On success, returns \c true and leaves \c errno unchanged.
+ *
+ * @param str  Candidate \c string_t handle to validate (may be NULL).
+ *
+ * @return \c true if the handle and its internal buffer are non-NULL; otherwise \c false.
+ *
+ * @retval false, \c errno = EINVAL  If @p str is NULL or @p str->str is NULL.
+ *
+ * @thread_safety
+ * - The check is read-only. However, if another thread can mutate or free the
+ *   same \c string_t concurrently, the result is inherently racy. Use external
+ *   synchronization if needed.
+ *
+ * @complexity
+ * - \f$O(1)\f$.
+ *
+ * @warning This is a **shallow** validity check. It does not detect unterminated
+ *          buffers, mismatched \c len/\c alloc, or other invariants. For stricter
+ *          validation, provide a heavier-weight routine that checks those fields.
+ *
+ * @par Example
+ * @code{.c}
+ * if (!is_string_valid(s)) {
+ *     perror("is_string_valid");        // errno == EINVAL on failure
+ *     return;
+ * }
+ * // safe to call getters like get_string(s) or read s->len
+ * puts(get_string(s));
+ * @endcode
+ */
+bool is_string_valid(const string_t* str);
 // --------------------------------------------------------------------------------
 
 /**
@@ -2890,21 +2933,17 @@ void trim_all_whitespace(string_t* str);
  */
 typedef struct {
     string_t *owner;
-    char     *begin;
-    char     *end;    /* one past last */
-    char     *cur;    /* current; valid iff cur < end */
+    char *begin;
+    char *end;
+    char *cur;
 } str_iter;
+// -------------------------------------------------------------------------------- 
 
-/**
- * @brief Read-only byte iterator over a ::string_t payload.
- *
- * Same semantics as ::str_iter, but cannot mutate the underlying string.
- */
 typedef struct {
     const string_t *owner;
-    const char     *begin;
-    const char     *end;    /* one past last */
-    const char     *cur;    /* current; valid iff cur < end */
+    const char *begin;
+    const char *end;
+    const char *cur;
 } cstr_iter;
 
 /* -------- Construction -------- */
@@ -3150,6 +3189,54 @@ string_v* init_str_vector(size_t buffer);
  * @see init_str_vector, free_str_vector
  */
 ErrorCode get_str_vector_error(const string_v* vec);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Check that a \c string_v handle is usable (vector exists and storage initialized).
+ *
+ * Lightweight guard used before operating on a string vector. The function
+ * returns \c true iff @p vec is non-NULL and its internal element storage has
+ * been initialized (i.e., the vector was successfully created). It performs a
+ * **shallow** check only and does not inspect element contents or other
+ * invariants.
+ *
+ * Error reporting:
+ * - On failure, returns \c false and sets \c errno to \c EINVAL.
+ * - On success, returns \c true and leaves \c errno unchanged.
+ *
+ * @param vec  Candidate \c string_v handle to validate (may be NULL).
+ *
+ * @return \c true if the vector handle is non-NULL and its internal storage
+ *         is initialized; otherwise \c false.
+ *
+ * @retval false, \c errno = EINVAL  If @p vec is NULL or its storage is uninitialized.
+ *
+ * @thread_safety
+ * - This routine reads vector state without modification; however, if another
+ *   thread can mutate or free the same vector concurrently, the result is
+ *   inherently racy. Use external synchronization if needed.
+ *
+ * @complexity
+ * - \f$O(1)\f$.
+ *
+ * @warning This is a **shallow** validity check. It does not verify:
+ *   - length vs. capacity consistency,
+ *   - that individual elements are initialized/valid \c string_t objects,
+ *   - absence of corruption or aliasing.
+ *   For stricter diagnostics, provide a heavier-weight validator that checks
+ *   these invariants.
+ *
+ * @par Example
+ * @code{.c}
+ * if (!is_str_vector_valid(v)) {
+ *     perror("is_str_vector_valid");   // errno == EINVAL on failure
+ *     return;
+ * }
+ * // Safe to call public APIs that assume an initialized vector
+ * size_t n = str_vector_size(v);
+ * @endcode
+ */
+bool is_str_vector_valid(const string_v* vec);
 // --------------------------------------------------------------------------------
 
 /**
@@ -4447,6 +4534,248 @@ void sort_str_vector(string_v* vec, iter_dir direction);
  * @see token_count, init_str_vector, push_back_str_vector, free_str_vector
  */
 string_v* tokenize_string(const string_t* str, const char* delim);
+// -------------------------------------------------------------------------------- 
+// STRING VECTOR ITERATOR 
+
+typedef struct {
+    const string_v *owner;
+    const string_t *begin;
+    const string_t *end;
+    const string_t *cur;
+} cstrv_iter;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    string_v *owner;
+    string_t *begin;
+    string_t *end;
+    string_t *cur;
+} strv_iter;
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Construct a mutable iterator positioned at the first element of a vector.
+ *
+ * Initializes and returns a ::strv_iter that traverses the elements of @p vec
+ * from the beginning. On success, the iterator points to the first element and
+ * can be advanced with ::strv_iter_next (or other iterator helpers). The
+ * resulting iterator is **invalidated** by any operation that may reallocate
+ * or reorder @p vec (e.g., push/insert/erase/pop, sort, reverse, reserve/growth).
+ *
+ * Error handling:
+ * - If @p vec is NULL or not initialized, returns a **zeroed** iterator
+ *   (all fields NULL) and sets @c errno. Implementations in this library also
+ *   set @p vec’s internal error field to ::NULL_POINTER and translate that to
+ *   @c errno via ::set_errno_from_error.
+ * - On success, does not modify @c errno.
+ *
+ * @param vec  Target vector to iterate (may be NULL).
+ *
+ * @return A ::strv_iter positioned at the first element on success; a zeroed
+ *         iterator on failure.
+ *
+ * @thread_safety
+ * - Construction is read-only. However, iterators are invalidated by concurrent
+ *   mutations of @p vec; use external synchronization if @p vec can be mutated
+ *   concurrently.
+ *
+ * @complexity
+ * - \f$O(1)\f$.
+ *
+ * @par Example
+ * @code{.c}
+ * strv_iter it = strv_iter_make(v);
+ * for (; strv_iter_valid(&it); strv_iter_next(&it)) {
+ *     string_t *s = strv_iter_get(&it);
+ *     // ... use s via string_t API ...
+ * }
+ * @endcode
+ */
+strv_iter strv_iter_make(string_v* vec);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Construct a read-only iterator positioned at the first element of a vector.
+ *
+ * Initializes and returns a ::cstrv_iter that traverses the elements of @p vec
+ * from the beginning without allowing mutation through the iterator. On success,
+ * the iterator points to the first element and can be advanced with
+ * ::cstrv_iter_next (or other iterator helpers). The resulting iterator is
+ * **invalidated** by any operation that may reallocate or reorder @p vec.
+ *
+ * Error handling:
+ * - If @p vec is NULL or not initialized, returns a **zeroed** iterator
+ *   (all fields NULL) and sets @c errno to @c EINVAL.
+ * - On success, does not modify @c errno.
+ *
+ * @param vec  Target vector to iterate (may be NULL).
+ *
+ * @return A ::cstrv_iter positioned at the first element on success; a zeroed
+ *         iterator on failure.
+ *
+ * @thread_safety
+ * - Construction is read-only. Iterators become invalid if other threads mutate
+ *   @p vec; synchronize appropriately.
+ *
+ * @complexity
+ * - \f$O(1)\f$.
+ *
+ * @par Example
+ * @code{.c}
+ * cstrv_iter it = cstrv_iter_make(v);
+ * for (; cstrv_iter_valid(&it); cstrv_iter_next(&it)) {
+ *     const string_t *s = cstrv_iter_get(&it);
+ *     puts(get_string(s));
+ * }
+ * @endcode
+ */
+cstrv_iter cstrv_iter_make(const string_v* vec);
+// -------------------------------------------------------------------------------- 
+
+/** @return true iff @p it is non-NULL and points at a valid element (cur < end). */
+bool strv_iter_valid(const strv_iter *it);
+
+// -------------------------------------------------------------------------------- 
+
+/** @return true iff @p it is non-NULL and points at a valid element (cur < end). */
+bool cstrv_iter_valid(const cstrv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/** @return true iff iterator is well-formed and exactly at end (cur == end). */
+bool strv_iter_at_end(const strv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/** @return true iff iterator is well-formed and exactly at end (cur == end). */
+bool cstrv_iter_at_end(const cstrv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/** @return current element or NULL if at end; sets errno only if malformed. */
+string_t *strv_iter_get(const strv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/** @return current element or NULL if at end; sets errno only if malformed. */
+const string_t *cstrv_iter_get(const cstrv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/** @return 0-based index (begin..size). Returns (size_t)-1 if malformed. */
+size_t strv_iter_pos(const strv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/** @return 0-based index (begin..size). Returns (size_t)-1 if malformed. */
+size_t cstrv_iter_pos(const cstrv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Advance to the next element (mutable iterator).
+ *
+ * Increments @p it->cur by one if the iterator is well-formed and not at end.
+ *
+ * @param it Iterator over a ::string_v (may be NULL).
+ * @return true if advanced; false if @p it is malformed or already at end.
+ *
+ * @note Does not modify @c errno. If you need diagnostics, call ::strv_iter_valid().
+ * @warning Any mutation of the underlying vector (push/insert/erase/pop, sort,
+ *          reverse, growth) may invalidate @p it.
+ * @complexity \f$O(1)\f$.
+ */
+bool strv_iter_next(strv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Advance to the next element (const iterator).
+ *
+ * Same semantics as ::strv_iter_next but for ::cstrv_iter.
+ *
+ * @param it Const iterator over a ::string_v (may be NULL).
+ * @return true if advanced; false if @p it is malformed or already at end.
+ *
+ * @note Does not modify @c errno. For diagnostics, use ::cstrv_iter_valid().
+ * @warning Any mutation of the underlying vector may invalidate @p it.
+ * @complexity \f$O(1)\f$.
+ */
+bool cstrv_iter_next(cstrv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Move to the previous element (mutable iterator).
+ *
+ * Decrements @p it->cur by one if the iterator is well-formed and not at begin.
+ *
+ * @param it Iterator over a ::string_v (may be NULL).
+ * @return true if moved; false if @p it is malformed or already at begin.
+ *
+ * @note Does not modify @c errno. For diagnostics, use ::strv_iter_valid().
+ * @warning Any mutation of the underlying vector may invalidate @p it.
+ * @complexity \f$O(1)\f$.
+ */
+bool strv_iter_prev(strv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Move to the previous element (const iterator).
+ *
+ * Same semantics as ::strv_iter_prev but for ::cstrv_iter.
+ *
+ * @param it Const iterator over a ::string_v (may be NULL).
+ * @return true if moved; false if @p it is malformed or already at begin.
+ *
+ * @note Does not modify @c errno. For diagnostics, use ::cstrv_iter_valid().
+ * @warning Any mutation of the underlying vector may invalidate @p it.
+ * @complexity \f$O(1)\f$.
+ */
+bool cstrv_iter_prev(cstrv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Advance by up to @p n elements; returns steps actually taken.
+ * @param it Iterator (mutable).
+ * @param n  Requested steps forward.
+ * @return steps taken (0..n). On malformed iterator, returns 0 and sets errno=EINVAL.
+ * @complexity O(1).  Does not modify errno on normal end-of-range.
+ */
+size_t strv_iter_advance(strv_iter *it, size_t n);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Advance by up to @p n elements; returns steps actually taken.
+ * @param it Iterator (mutable).
+ * @param n  Requested steps forward.
+ * @return steps taken (0..n). On malformed iterator, returns 0 and sets errno=EINVAL.
+ * @complexity O(1).  Does not modify errno on normal end-of-range.
+ */
+size_t cstrv_iter_advance(cstrv_iter *it, size_t n);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Seek iterator to the first element (begin).
+ * @return true on success; false with errno=EINVAL if iterator is malformed.
+ * @complexity O(1).  Does not change errno on success.
+ */
+bool strv_iter_seek_begin(strv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Seek iterator to the first element (begin).
+ * @return true on success; false with errno=EINVAL if iterator is malformed.
+ * @complexity O(1).  Does not change errno on success.
+ */
+bool cstrv_iter_seek_begin(cstrv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Seek iterator to one-past-the-last element (end).
+ * @return true on success; false with errno=EINVAL if iterator is malformed.
+ * @complexity O(1).  End-of-range is not an error; this function does not set errno on success.
+ */
+bool strv_iter_seek_end(strv_iter *it);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Seek iterator to one-past-the-last element (end).
+ * @return true on success; false with errno=EINVAL if iterator is malformed.
+ * @complexity O(1).  End-of-range is not an error; this function does not set errno on success.
+ */
+bool cstrv_iter_seek_end(cstrv_iter *it);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

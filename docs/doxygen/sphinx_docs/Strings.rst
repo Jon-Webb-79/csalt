@@ -110,6 +110,12 @@ Utility Funcitons
 The functions in this section are used to retrieve data from the `string_t` 
 data structure.
 
+is_string_valid 
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: is_string_valid
+   :project: csalt
+
 get_string 
 ~~~~~~~~~~
 
@@ -636,6 +642,12 @@ STRVEC_GBC
 Utility Funcitons 
 -----------------
 
+is_str_vector_valid 
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: is_str_vector_valid
+   :project: csalt
+
 get_str_vector_error
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -749,3 +761,182 @@ binary_search_str_vector
 
 String Vector Iterator 
 ----------------------
+The iterator lets you traverse the payload of a ``string_v`` without exposing
+its internals. Iterators are invalidated by operations that can reallocate,
+such as concatenation, reserve, replace, or drop.
+
+Mutable API Reference
+~~~~~~~~~~~~~~~~~~~~~
+.. doxygenfunction:: strv_iter_make
+   :project: csalt
+.. doxygenfunction:: strv_iter_valid
+   :project: csalt
+.. doxygenfunction:: strv_iter_get
+   :project: csalt
+.. doxygenfunction:: strv_iter_next
+   :project: csalt
+.. doxygenfunction:: strv_iter_prev
+   :project: csalt
+.. doxygenfunction:: strv_iter_advance
+   :project: csalt
+.. doxygenfunction:: strv_iter_seek_begin
+   :project: csalt
+.. doxygenfunction:: strv_iter_seek_end
+   :project: csalt
+
+Immutable API Reference 
+~~~~~~~~~~~~~~~~~~~~~~~
+.. doxygenfunction:: cstrv_iter_make
+   :project: csalt
+.. doxygenfunction:: cstrv_iter_valid
+   :project: csalt
+.. doxygenfunction:: cstrv_iter_get
+   :project: csalt
+.. doxygenfunction:: cstrv_iter_next
+   :project: csalt
+.. doxygenfunction:: cstrv_iter_prev
+   :project: csalt
+.. doxygenfunction:: cstrv_iter_advance
+   :project: csalt
+.. doxygenfunction:: cstrv_iter_seek_begin
+   :project: csalt
+.. doxygenfunction:: cstrv_iter_seek_end
+   :project: csalt
+
+
+Examples
+~~~~~~~~
+
+.. code-block:: c
+
+   #include "c_string.h"  /* string_v / string_t + iterator APIs */
+
+   /* Print each element with its index using the immutable iterator. */
+   void demo_citer_print_all(void) {
+       string_v *v = init_str_vector(4);
+       push_back_str_vector(v, "alpha");
+       push_back_str_vector(v, "beta");
+       push_back_str_vector(v, "gamma");
+
+       cstrv_iter it = cstrv_iter_make(v);
+       for (; cstrv_iter_valid(&it); cstrv_iter_next(&it)) {
+           const string_t *s = cstrv_iter_get(&it);
+           printf("[%zu] %s\n", cstrv_iter_pos(&it), get_string(s));
+       }
+
+       free_str_vector(v);
+   }
+
+Output::
+
+   [0] alpha
+   [1] beta
+   [2] gamma
+
+.. code-block:: c
+
+   #include "c_string.h"
+
+   void demo_citer_advance_seek(void) {
+       string_v *v = init_str_vector(4);
+       push_back_str_vector(v, "red");
+       push_back_str_vector(v, "green");
+       push_back_str_vector(v, "blue");
+       push_back_str_vector(v, "cyan");
+
+       cstrv_iter it = cstrv_iter_make(v);
+
+       /* Skip first two (clamped to end if k > size). */
+       (void)cstrv_iter_advance(&it, 2);
+       for (; cstrv_iter_valid(&it); cstrv_iter_next(&it)) {
+           puts(get_string(cstrv_iter_get(&it)));
+       }
+
+       /* Seek to end (one-past-last), then back to begin and print the first. */
+       (void)cstrv_iter_seek_end(&it);
+       if (cstrv_iter_at_end(&it)) {
+           (void)cstrv_iter_seek_begin(&it);
+       }
+       if (cstrv_iter_valid(&it)) {
+           printf("First again: %s\n", get_string(cstrv_iter_get(&it)));
+       }
+
+       free_str_vector(v);
+   }
+
+Output::
+
+   blue
+   cyan
+   First again: red
+
+.. code-block:: c
+
+   #include "c_string.h"
+
+   void demo_miter_append_suffix(void) {
+       string_v *v = init_str_vector(3);
+       push_back_str_vector(v, "oak");
+       push_back_str_vector(v, "pine");
+       push_back_str_vector(v, "elm");
+
+       /* Mutate payloads only (safe for iterator): */
+       strv_iter it = strv_iter_make(v);
+       for (; strv_iter_valid(&it); strv_iter_next(&it)) {
+           string_t *s = strv_iter_get(&it);
+           if (!string_lit_concat(s, "_tree")) {
+               perror("string_lit_concat");
+               break;
+           }
+       }
+
+       /* Verify with a const iterator. */
+       cstrv_iter cit = cstrv_iter_make(v);
+       for (; cstrv_iter_valid(&cit); cstrv_iter_next(&cit)) {
+           puts(get_string(cstrv_iter_get(&cit)));
+       }
+
+       free_str_vector(v);
+   }
+
+Output::
+
+   oak_tree
+   pine_tree
+   elm_tree
+
+.. code-block:: c
+
+   #include "c_string.h"
+
+   void demo_miter_step_pos(void) {
+       string_v *v = init_str_vector(3);
+       push_back_str_vector(v, "A");
+       push_back_str_vector(v, "B");
+       push_back_str_vector(v, "C");
+
+       strv_iter it = strv_iter_make(v);
+
+       (void)strv_iter_advance(&it, 2);   /* A,B, now at C */
+       if (!strv_iter_prev(&it)) {
+           /* malformed or at begin; errno set only if malformed */
+       }
+
+       if (strv_iter_valid(&it)) {
+           printf("Index=%zu Value=%s\n",
+                  strv_iter_pos(&it), get_string(strv_iter_get(&it)));
+       }
+
+       free_str_vector(v);
+   }
+
+Output::
+
+   Index=1 Value=B
+
+.. note::
+
+   Any operation that may **reallocate or reorder** the vector
+   (push/insert/erase/pop, sort, reverse, reserve/growth) **invalidates existing
+   iterators**. Recreate iterators after such operations.
+

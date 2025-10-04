@@ -2992,6 +2992,173 @@ void test_bs_duplicates_sort_first_true(void **state) {
 
     free_str_vector(v);
 }
+// -------------------------------------------------------------------------------- 
+
+static string_v* make_new_vec(const char* const items[], size_t n) {
+    errno = 0;
+    string_v *v = init_str_vector(n ? n : 1);
+    if (!v) return NULL;
+    for (size_t i = 0; i < n; ++i) {
+        assert_true(push_back_str_vector(v, items[i]));
+    }
+    return v;
+}
+
+/* ---------- Fixtures ---------- */
+
+int setup_vec_abc(void **state) {
+    static const char* items[] = {"alpha","beta","gamma"};
+    string_v *v = make_new_vec(items, 3);
+    if (!v) return -1;
+    *state = v;
+    return 0;
+}
+
+int setup_vec_colors(void **state) {
+    static const char* items[] = {"red","green","blue","cyan"};
+    string_v *v = make_new_vec(items, 4);
+    if (!v) return -1;
+    *state = v;
+    return 0;
+}
+
+int teardown_vec(void **state) {
+    if (state && *state) {
+        free_str_vector((string_v*)*state);
+        *state = NULL;
+    }
+    return 0;
+}
+
+/* ---------- Immutable iterator tests ---------- */
+
+void test_citer_make_null(void **state) {
+    (void)state;
+    errno = 0;
+    cstrv_iter it = cstrv_iter_make(NULL);
+    assert_false(cstrv_iter_valid(&it));
+    assert_int_equal(errno, EINVAL);
+
+    /* At-end query on malformed should also fail (policy: set EINVAL). */
+    errno = 0;
+    assert_false(cstrv_iter_at_end(&it));
+    assert_int_equal(errno, EINVAL);
+
+    /* Position on malformed should fail and set errno. */
+    errno = 0;
+    assert_int_equal(cstrv_iter_pos(&it), (size_t)-1);
+    assert_int_equal(errno, EINVAL);
+}
+
+void test_citer_walk_indices(void **state) {
+    string_v *v = (string_v*)*state;
+
+    cstrv_iter it = cstrv_iter_make(v);
+    assert_true(cstrv_iter_valid(&it));
+
+    /* [0] alpha */
+    assert_int_equal(cstrv_iter_pos(&it), 0);
+    assert_string_equal(get_string(cstrv_iter_get(&it)), "alpha");
+
+    /* [1] beta */
+    assert_true(cstrv_iter_next(&it));
+    assert_true(cstrv_iter_valid(&it));
+    assert_int_equal(cstrv_iter_pos(&it), 1);
+    assert_string_equal(get_string(cstrv_iter_get(&it)), "beta");
+
+    /* [2] gamma */
+    assert_true(cstrv_iter_next(&it));
+    assert_true(cstrv_iter_valid(&it));
+    assert_int_equal(cstrv_iter_pos(&it), 2);
+    assert_string_equal(get_string(cstrv_iter_get(&it)), "gamma");
+
+    /* End-of-range */
+    assert_true(cstrv_iter_next(&it));
+    assert_false(cstrv_iter_valid(&it));
+    /* End-of-range is not an error: errno must remain unchanged. */
+    int saved = errno;
+    assert_true(cstrv_iter_at_end(&it));
+    assert_int_equal(errno, saved);
+    assert_null(cstrv_iter_get(&it));  /* NULL at end, errno unchanged */
+    assert_int_equal(errno, saved);
+}
+
+void test_citer_advance_clamp_and_seek(void **state) {
+    string_v *v = (string_v*)*state;
+    cstrv_iter it = cstrv_iter_make(v);
+
+    /* Advance past end; should clamp and not alter errno. */
+    errno = 0;
+    size_t moved = cstrv_iter_advance(&it, 1000);
+    assert_true(moved >= 4);                  /* moved to end */
+    assert_true(cstrv_iter_at_end(&it));
+    assert_false(cstrv_iter_valid(&it));
+    assert_int_equal(errno, 0);
+
+    /* Seek back to begin. */
+    assert_true(cstrv_iter_seek_begin(&it));
+    assert_true(cstrv_iter_valid(&it));
+    assert_int_equal(cstrv_iter_pos(&it), 0);
+    assert_string_equal(get_string(cstrv_iter_get(&it)), "red");
+
+    /* Seek to end explicitly. */
+    assert_true(cstrv_iter_seek_end(&it));
+    assert_true(cstrv_iter_at_end(&it));
+    assert_false(cstrv_iter_valid(&it));
+}
+
+/* ---------- Mutable iterator tests ---------- */
+
+void test_miter_append_suffix(void **state) {
+    string_v *v = (string_v*)*state;
+
+    /* Mutate payloads only: iterator remains valid across steps. */
+    strv_iter it = strv_iter_make(v);
+    for (; strv_iter_valid(&it); strv_iter_next(&it)) {
+        string_t *s = strv_iter_get(&it);
+        assert_non_null(s);
+        assert_true(string_lit_concat(s, "_X"));
+    }
+
+    /* Verify via const iterator. */
+    const char* expect[] = {"red_X","green_X","blue_X","cyan_X"};
+    size_t idx = 0;
+    cstrv_iter cit = cstrv_iter_make(v);
+    for (; cstrv_iter_valid(&cit); cstrv_iter_next(&cit), ++idx) {
+        assert_string_equal(get_string(cstrv_iter_get(&cit)), expect[idx]);
+        assert_int_equal(cstrv_iter_pos(&cit), idx);
+    }
+    assert_int_equal(idx, 4);
+}
+
+void test_miter_prev_at_begin_and_pos_end(void **state) {
+    string_v *v = (string_v*)*state;
+
+    strv_iter it = strv_iter_make(v);
+
+    /* At begin: prev should return false and NOT set errno. */
+    errno = 0;
+    assert_false(strv_iter_prev(&it));
+    assert_int_equal(errno, 0);
+
+    /* Move to index 2, then back to 1. */
+    assert_int_equal(strv_iter_advance(&it, 2), 2);
+    assert_true(strv_iter_prev(&it));
+    assert_true(strv_iter_valid(&it));
+    assert_int_equal(strv_iter_pos(&it), 1);
+
+    /* Now jump to end; get() should return NULL and not change errno. */
+    assert_true(strv_iter_seek_end(&it));
+    int saved = errno;
+    assert_false(strv_iter_valid(&it));
+    assert_true(strv_iter_at_end(&it));
+    assert_null(strv_iter_get(&it));
+    assert_int_equal(errno, saved);
+
+    /* Position at end should equal size (via public API if available). */
+    size_t size = str_vector_size(v);   /* assumes you expose size getter */
+    assert_int_equal(strv_iter_pos(&it), size);
+}
 // ================================================================================
 // ================================================================================
 // eof

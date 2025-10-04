@@ -666,6 +666,18 @@ void test_bs_found_sorted_no_sort(void **state);
 void test_bs_not_found_sorted_no_sort(void **state);
 void test_bs_found_unsorted_sort_first_true(void **state);
 void test_bs_duplicates_sort_first_true(void **state);
+// -------------------------------------------------------------------------------- 
+
+void test_citer_make_null(void **state);
+void test_citer_walk_indices(void **state);
+void test_citer_advance_clamp_and_seek(void **state);
+void test_miter_append_suffix(void **state);
+void test_miter_prev_at_begin_and_pos_end(void **state);
+/* Shared fixtures. */
+int setup_vec_abc(void **state);
+int setup_vec_colors(void **state);
+int teardown_vec(void **state);
+
 // ================================================================================
 // ================================================================================ 
 #endif /* test_string_H */

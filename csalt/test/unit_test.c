@@ -294,6 +294,16 @@ const struct CMUnitTest test_string_vector[] = {
     cmocka_unit_test(test_bs_not_found_sorted_no_sort),
     cmocka_unit_test(test_bs_found_unsorted_sort_first_true),
     cmocka_unit_test(test_bs_duplicates_sort_first_true),
+    cmocka_unit_test_setup_teardown(test_citer_make_null,
+                                    NULL, NULL),
+    cmocka_unit_test_setup_teardown(test_citer_walk_indices,
+                                    setup_vec_abc, teardown_vec),
+    cmocka_unit_test_setup_teardown(test_citer_advance_clamp_and_seek,
+                                    setup_vec_colors, teardown_vec),
+    cmocka_unit_test_setup_teardown(test_miter_append_suffix,
+                                    setup_vec_colors, teardown_vec),
+    cmocka_unit_test_setup_teardown(test_miter_prev_at_begin_and_pos_end,
+                                    setup_vec_colors, teardown_vec),
 };
 // ================================================================================ 
 // ================================================================================ 
