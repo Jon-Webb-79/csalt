@@ -25,7 +25,7 @@ key features for the implementation of ``float_v`` data types.
 * Dynamic and static array support: Choose between automatic resizing or fixed-size arrays
 * Memory safety: Proper encapsulation and memory management
 * Bounds checking: Safe access to array elements
-* Efficient access: O(1) access to any double in the vector
+* Efficient access: O(1) access to any value in the vector
 * Automatic cleanup: Optional garbage collection support with FLTVEC_GBC
 
 Float vectors are particularly useful when:
@@ -47,7 +47,30 @@ characteristics.
 
 Data Types
 ----------
+The follwing enums and structs can be found in the ``c_float.h`` file to produce 
+derived data types.
 
+.. code:: c
+
+   typedef enum {
+       FORWARD = 0, // visit elements in forward order 
+       REVERSE = 1  // visit elements in reverse order 
+   } iter_dir;
+
+   typedef enum {
+       STATIC = 0  // Indicates static memory allocation on the stack 
+       DYNAMIC = 1 // Indicates dynamic memory allocation on the heap 
+   } alloc_t;
+
+   typedef struct {
+       float* data;       // Pointer to c-style array of float values
+       size_t len;        // The populated length of the array 
+       size_t alloc;      // The allocated length of the array 
+       ErrorCode error;   // ErrorCode enum describing relevant errors 
+       alloc_t alloc_type // DYNAMIC or STATIC memory allocation
+   } float_v;
+
+.. note:: ``ErrorCode`` enum can be found in the :ref:`c_error.h <error_code_file>` file.
 
 Initialization and Memory Management
 ------------------------------------

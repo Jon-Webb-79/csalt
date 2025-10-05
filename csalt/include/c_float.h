@@ -30,35 +30,79 @@ extern "C" {
 // ================================================================================
 // ================================================================================
 
+/**
+ * @enum iter_dir
+ * @brief Direction selector for container iteration.
+ *
+ * Use this enum to configure iterators or traversal helpers to walk a
+ * sequence either from the first element to the last or in reverse.
+ *
+ * Typical usage:
+ * - `FORWARD`  — visit elements in ascending index order: 0, 1, ..., len-1
+ * - `REVERSE`  — visit elements in descending index order: len-1, ..., 0
+ */
 #ifndef ITER_DIR_H
 #define ITER_DIR_H
-    /**
-     * @brief An enum containing keywords for an iterator 
-     *
-     * This enum contains keywords that are used to describe the order of iteration
-     * within an iterator 
-     *
-     * @attribute FORWARD Keyword to command a forward iteration 
-     * @attribute REVERSE Keyword to command a reverese iteration
-     */
     typedef enum {
-        FORWARD,
-        REVERSE
+        FORWARD = 0,
+        REVERSE = 1
     }iter_dir;
 #endif /* ITER_DIR_H*/
 // --------------------------------------------------------------------------------    
 
+/**
+ * @enum alloc_t
+ * @brief Allocation/ownership mode for a vector's storage.
+ *
+ * This enum communicates whether a vector's underlying memory is owned
+ * and managed by the csalt container, or whether it wraps caller-provided
+ * storage with fixed capacity.
+ *
+ * Semantics:
+ * - `DYNAMIC` — memory is owned by the vector and may be resized/reallocated
+ *               by csalt functions. The vector is responsible for freeing it.
+ * - `STATIC`  — memory is supplied by the caller (non-owned). Capacity is
+ *               fixed to the provided buffer size; resize operations must fail
+ *               gracefully (e.g., set an error code) instead of reallocating.
+ */
 #ifndef ALLOC_H 
 #define ALLOC_H 
 
     typedef enum {
-        STATIC,
-        DYNAMIC
+        STATIC = 0,
+        DYNAMIC = 1
     } alloc_t;
 
 #endif /*ALLOC_H*/
 
-
+/**
+ * @struct float_v
+ * @brief Dynamically sized vector of `float` values with error/status metadata.
+ *
+ * A `float_v` holds a contiguous array of `float` elements together with
+ * size/capacity information, a last-error code, and an allocation mode
+ * (`alloc_type`) indicating ownership semantics.
+ *
+ * ### Invariants
+ * - `alloc >= len`
+ * - `data == NULL` implies `len == 0` and typically `alloc == 0`
+ * - When `alloc_type == STATIC`, the buffer is non-owned and must **not** be
+ *   reallocated or freed by the vector; capacity is fixed at `alloc`.
+ * - When `alloc_type == DYNAMIC`, the buffer is owned by the vector and may be
+ *   grown/shrunk by csalt functions; the vector is responsible for freeing it.
+ *
+ * ### Error handling
+ * - `error` contains the last error reported by a csalt operation on this
+ *   instance (see `ErrorCode` enum). Successful operations should set it to
+ *   the library’s success code (commonly `ERR_OK`).
+ *
+ * ### Thread-safety
+ * - `float_v` is **not** thread-safe. Protect instances with external
+ *   synchronization if accessed from multiple threads.
+ *
+ * @note The `ErrorCode` enum is defined elsewhere in csalt and is shared across
+ *       components for consistent error reporting.
+ */
 typedef struct {
     float* data;
     size_t len;
