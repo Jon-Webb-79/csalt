@@ -112,8 +112,60 @@ typedef struct {
 } float_v;
 // --------------------------------------------------------------------------------
 
-
-float_v* init_float_vector(size_t buffer);
+/**
+ * @brief Create a dynamically allocated vector of @c float with given capacity.
+ *
+ * Allocates a @ref float_v control block and a zero-initialized data buffer
+ * of @p buff elements on the heap. On success, the vector is configured for
+ * dynamic ownership ( @ref alloc_t :: DYNAMIC ), its size is set to 0, and
+ * its last-error field is cleared to @c NO_ERROR.
+ *
+ * @param buff
+ *     Requested capacity in elements (must be > 0).
+ *
+ * @return
+ *     Pointer to a newly created @ref float_v on success; @c NULL on failure.
+ *
+ * @par Errors
+ * - Sets @c errno to:
+ *   - @c EINVAL if @p buff == 0
+ *   - @c ENOMEM if allocation of the control block or data buffer fails
+ *
+ * @post
+ * - On success:
+ *   - @c result->data != NULL
+ *   - @c result->len == 0
+ *   - @c result->alloc == buff
+ *   - @c result->alloc_type == DYNAMIC
+ *   - @c result->error == NO_ERROR
+ * - On failure:
+ *   - Returns @c NULL and sets @c errno as above. No allocations are leaked.
+ *
+ * @attention Ownership
+ * The returned vector and its buffer are heap-allocated. Free them with the
+ * library’s designated destructor (e.g., @c free_float_vector(result) ), which
+ * must release both the data buffer and the control block. Do not @c free()
+ * the @c data pointer separately.
+ *
+ * **thread_safety**
+ * Not thread-safe. External synchronization is required if accessed from
+ * multiple threads.
+ *
+ * **complexity**
+ * O(1) time; O(@p buff) zero-initialization of the data buffer.
+ *
+ * @code
+ * float_v* v = init_float_vector(128);
+ * if (!v) {
+ *     perror("init_float_vector");
+ *     return 1;
+ * }
+ * // use v->data up to v->alloc capacity; v->len tracks initialized elements
+ * // ...
+ * free_float_vector(v); // library-provided destructor
+ * @endcode
+ */
+float_v* init_float_vector(size_t buff);
 // -------------------------------------------------------------------------------- 
 
 #define init_float_array(size) \

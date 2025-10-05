@@ -74,6 +74,14 @@ derived data types.
 
 Initialization and Memory Management
 ------------------------------------
+The functions and macros documented in this section can be used to initialize 
+a ``float_v`` data structure and manage its memory.
+
+init_float_vector 
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_float_vector 
+   :project: csalt
 
 Utility Functions 
 -----------------
