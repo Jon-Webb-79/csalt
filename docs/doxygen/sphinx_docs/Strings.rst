@@ -1,3 +1,5 @@
+.. _string_type_file:
+
 *****************
 C String Overview
 *****************
@@ -961,7 +963,7 @@ str_alloc
    :project: csalt
 
 str_error 
---------
+---------
 
 .. doxygendefine:: str_error
    :project: csalt

@@ -21,15 +21,14 @@ When to Use This Library
 ########################
 
 All of the functionality in this library can be accessed from the ``c_float.h``,
-``c_double.h``, ``c_ldouble.h``, ``c_int.h``, and ``c-string.h`` header files.
+``c_double.h``, ``c_ldouble.h``, ``c_int.h``, and ``c_string.h`` header files.
 
 This library is particularly useful when:
 
-* Working with arrays of unknown or varying size
-* Requiring safe bounds-checked access to arrays
+* The use of intuitive and safe data structures is required
+* Requiring safe bounds-checked access to arrays, matrices, and dictionaries
 * Managing collections of named values
-* Performing numerical computations with dynamic data sets
-* Implementing algorithms that require flexible storage
+* Performing numerical computations with dynamic and static data sets
 
 The library's encapsulated design prevents common array manipulation 
 errors while maintaining the performance characteristics expected in C programs.
@@ -66,7 +65,7 @@ Dictionary
 
 Matrix
 ------
-The matrix module provides adaptive storage for two-dimensional floating-point matrices, with
+The matrix module provides adaptive storage for two-dimensional matrices, with
 automatic conversion between dense and sparse formats based on size and sparsity characteristics.
 
 Supported formats:
@@ -74,17 +73,7 @@ Supported formats:
 * **Dense Matrix** — row-major, with optional initialization tracking for missing values
 * **Coordinate List (COO)** — stores only non-zero entries with explicit row and column indices
 * **Compressed Sparse Row (CSR)** — optimized for fast row-based access and memory efficiency
-
-Key features:
-
-* Seamless format conversion:
-  - Dense → COO when sparsity exceeds a threshold
-  - COO → CSR when matrix size and sparsity justify compression
-  - CSR → COO or COO → Dense when sparsity decreases
-* Support for dynamic insertions, deletions (`pop`), and element retrieval
-* Format-agnostic API for `get`, `insert`, `pop`, and metadata access
-* Automatic bounds checking and error signaling via `errno`
-* Full compatibility with CMocka for unit testing and regression validation
+* **Compressed Sparse Column (CSC)** - optimized for dast column-based access and memory efficiency
 
 Typical use cases include large engineering calculations (e.g., PDEs, FEM solvers) where the 
 storage and access pattern of matrices must adapt to the structure of the data.
@@ -245,7 +234,8 @@ Contribute to Code Base
 #. Once the package has been downloade, you will also need to install
    Python3.10 or later version to support documentation with Sphinx.
 
-#. Navigate to the ``csalt/docs/doxygen`` directory.
+EADME.rst
+
 
 #. Create a Python virtual environment with the following command.
 

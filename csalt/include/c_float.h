@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "c_string.h"
+#include "c_error.h"
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -50,10 +51,6 @@ extern "C" {
 #ifndef ALLOC_H 
 #define ALLOC_H 
 
-    /**
-     * @enum alloc_t 
-     * @brief An enum to discern if an array is statically or allocated 
-     */
     typedef enum {
         STATIC,
         DYNAMIC
@@ -61,270 +58,77 @@ extern "C" {
 
 #endif /*ALLOC_H*/
 
-/**
-* @struct float_v
-* @brief Dynamic array (vector) container for float objects
-*
-* This structure manages a resizable array of float objects with automatic
-* memory management and capacity handling.
-*/
+
 typedef struct {
     float* data;
     size_t len;
     size_t alloc;
+    ErrorCode error;
     alloc_t alloc_type;
 } float_v;
 // --------------------------------------------------------------------------------
 
-/**
-* @function init_float_vector
-* @brief Initializes a new dynamically allocated float vector with specified initial capacity
-*
-* @param buffer Initial capacity to allocate
-* @return Pointer to new float_v object, or NULL on allocation failure
-*         Sets errno to ENOMEM if memory allocation fails
-*/
+
 float_v* init_float_vector(size_t buffer);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function init_float_static_array
- * @brief Creates a stack-based float vector with static array
- *
- * @param size Size of the array
- */
 #define init_float_array(size) \
     ((float_v){.data = (float[size]){0}, .len = 0, .alloc = size, .alloc_type = STATIC})
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief returns a c style pointer to the beginning of an array 
- *
- * @param vec A pointer to a float_v data type 
- * @return A pointer to the beginning of a float array
- */
 float* c_float_ptr(float_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function push_back_float_vector
-* @brief Adds a float value to the end of the vector
-*
-* Automatically resizes the vector if necessary.
-*
-* @param vec Target float vector
-* @param value Float value to add
-* @return true if successful, false on error
-*         Sets errno to EINVAL for NULL inputs or ENOMEM on allocation failure
-*/
 bool push_back_float_vector(float_v* vec, const float value);
 // --------------------------------------------------------------------------------
 
-/**
-* @function push_front_float_vector
-* @brief Adds a float value to the beginning of the vector
-*
-* Shifts existing elements right and automatically resizes if necessary.
-*
-* @param vec Target float vector
-* @param value Float value to add
-* @return true if successful, false on error
-*         Sets errno to EINVAL for NULL inputs or ENOMEM on allocation failure
-*/
 bool push_front_float_vector(float_v* vec, const float value);
 // --------------------------------------------------------------------------------
 
-/**
-* @function insert_float_vector
-* @brief Inserts a float value at specified index in the vector
-*
-* Shifts elements right starting at index and resizes if necessary.
-*
-* @param vec Target float vector
-* @param value Float value to insert
-* @param index Position to insert at
-* @return true if successful, false on error
-*         Sets errno to EINVAL for NULL inputs or index out of bounds, ENOMEM on allocation failure
-*/
 bool insert_float_vector(float_v* vec, const float value, size_t index);
 // --------------------------------------------------------------------------------
 
-/**
-* @function float_vector_index
-* @brief Retrieves pointer to string_t at specified index
-*
-* @param vec Source float vector
-* @param index Position to access
-* @return Pointer to string_t object, or NULL on error
-*         Sets errno to EINVAL for NULL input or ERANGE if index out of bounds
-*/
 float float_vector_index(const float_v* vec, size_t index);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function float_vector_size
-* @brief Returns current number of strings in vector
-*
-* @param vec Float vector to query
-* @return Number of strings in vector, or LONG_MAX on error
-*         Sets errno to EINVAL for NULL input
-*/
 size_t float_vector_size(const float_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function float_vector_alloc
-* @brief Returns current allocation size of vector
-*
-* @param vec Float vector to query
-* @return Current allocation capacity, or LONG_MAX on error
-*         Sets errno to EINVAL for NULL input
-*/
 size_t float_vector_alloc(const float_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function pop_back_float_vector
-* @brief Removes and returns last float value in vector
-*
-* @param vec Source float vector
-* @return Pointer to removed float object, or NULL if vector empty
-*         Sets errno to EINVAL for NULL input
-*/
 float pop_back_float_vector(float_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function pop_front_float_vector
-* @brief Removes and returns first float value in vector
-*
-* Shifts remaining elements left.
-*
-* @param vec Source string vector
-* @return Pointer to removed float object, or NULL if vector empty
-*         Sets errno to EINVAL for NULL input
-*/
 float pop_front_float_vector(float_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function pup_any_float_vector
-* @brief Removes and returns float value at specified index
-*
-* Shifts remaining elements left to fill gap.
-*
-* @param vec Source float vector
-* @param index Position to remove from
-* @return Pointer to removed float_t object, or NULL on error
-*         Sets errno to EINVAL for NULL input or ERANGE if index out of bounds
-*/
 float pop_any_float_vector(float_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 
-/**
-* @function free_float_vector
-* @brief Frees all memory associated with string vector
-*
-* Frees all contained strings and the vector itself.
-*
-* @param vec Float vector to free
-* @return void
-*         Sets errno to EINVAL for NULL input
-*/
 void free_float_vector(float_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function _free_float_vector
-* @brief Helper function for garbage collection of float vectors
-*
-* Used with FLTVEC_GBC macro for automatic cleanup.
-*
-* @param vec Double pointer to float vector to free
-* @return void
-*/
 void _free_float_vector(float_v** vec);
 // --------------------------------------------------------------------------------
 
 #if defined(__GNUC__) || defined (__clang__)
-    /**
-     * @macro FLTVEC_GBC
-     * @brief A macro for enabling automatic cleanup of float vector objects.
-     *
-     * This macro uses the cleanup attribute to automatically call `_free_float_vector`
-     * when the scope ends, ensuring proper memory management.
-     */
     #define FLTVEC_GBC __attribute__((cleanup(_free_float_vector)))
 #endif
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function reverse_float_vector
- * @brief Reverses the order of elements in a float vector in place.
- *
- * The function reverses the order of elements by swapping elements from the
- * beginning and end of the vector until the middle is reached.
- *
- * @param vec float vector to reverse
- * @return void
- *         Sets errno to EINVAL if vec is NULL or invalid
- */
 void reverse_float_vector(float_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
- * @function swap_float
- * @brief Swaps the contents of two float objects.
- *
- * Performs an in-place swap of float values
- *
- * @param a Pointer to first float object
- * @param b Pointer to second float object
- * @return void
- *         Sets errno to EINVAL if either input is NULL
- */
 void swap_float(float* a, float* b);
 // --------------------------------------------------------------------------------
 
-/**
-* @function sort_float_vector
-* @brief Sorts a float vector in ascending or descending order.
-*
-* Uses an optimized QuickSort algorithm with median-of-three pivot selection
-* and insertion sort for small subarrays. Sort direction is determined by
-* the iter_dir parameter.
-*
-* @param vec float vector to sort
-* @param direction FORWARD for ascending order, REVERSE for descending
-* @return void
-*         Sets errno to EINVAL if vec is NULL or invalid
-*/
 void sort_float_vector(float_v* vec, iter_dir direction);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function trim_float_vector
-* @brief Trims all un-necessary memory from a vector
-*
-* @param vec float vector to trim
-* @return void
-*         Sets errno to EINVAL if vec is NULL or invalid
-*/
 void trim_float_vector(float_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function binary_search_float_vector
-* @brief Searches a float vector to find the index where a value exists
-*
-* @param vec float vector object
-* @param value The value to search for
-* @param tolerance The float tolerance for finding a value 
-* @param sort_first true if the vector or array needs to be sorted, false otherwise
-* @return The index where a value exists, LONG_MAX if the value is not in the array.
-*         Sets errno to EINVAL if vec is NULL or invalid, ENODATA if the array is 
-*         not populated
-*/
 size_t binary_search_float_vector(float_v* vec, float value, float tolerance, bool sort_first);
 // -------------------------------------------------------------------------------- 
 
@@ -352,187 +156,42 @@ typedef struct {
 #endif
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Locate the bounding indices of a value in a float vector.
- *
- * Performs a binary search on the given float vector to determine the
- * indices of elements that bound the provided search value. If an exact
- * match (within the specified `tolerance`) is found, both bounds are set
- * to the matching index. Otherwise:
- * - `lower` is the index of the last element less than `value`,
- * - `upper` is the index of the first element greater than `value`.
- *
- * Special cases:
- * - If `value` is smaller than all elements, `lower = SIZE_MAX, upper = 0`.
- * - If `value` is larger than all elements, `lower = len-1, upper = SIZE_MAX`.
- * - On error, both fields are set to SIZE_MAX and `errno` is set.
- *
- * @param vec        Pointer to a float vector (`float_v*`) to search.
- * @param value      The target value to locate.
- * @param tolerance  Allowed absolute error when testing for equality.
- * @param sort_first If true, the vector is sorted in ascending order
- *                   before performing the search.
- *
- * @return A `bin_dat` structure with indices bounding the value.
- */
 bin_dat binary_search_bounds_float_vector(float_v* vec, 
                                           float value, 
                                           float tolerance, 
                                           bool sort_first);
 // -------------------------------------------------------------------------------- 
-/**
-* @function update_float_vector
-* @brief Replaces the value of a vector at a specific index
-*
-* @param vec float vector object
-* @param index The index where data will be replaced
-* @param replacement_value The replacement value
-* @return void, Sets errno to EINVAL if vec does not exsist, or ERANGE 
-*         if the index is out of bounds
-*/
+
 void update_float_vector(float_v* vec, size_t index, float replacement_value);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function min_float_vector 
- * @brief Returns the minimum value in a vector or array 
- *
- * @param vec A float vector or array object 
- * @return The minimum value in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 float min_float_vector(float_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function max_float_vector 
- * @brief Returns the maximum value in a vector or array 
- *
- * @param vec A float vector or array object 
- * @return The maximum value in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 float max_float_vector(float_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function sum_float_vector 
- * @brief Returns the summation of all values in a vector or array
- *
- * @param vec A float vector or array object 
- * @return The summation of all values in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 float sum_float_vector(float_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function average_float_vector 
- * @brief Returns the average of all values in a vector or array
- *
- * @param vec A float vector or array object 
- * @return The average of all values in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 float average_float_vector(float_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function stdev_float_vector 
- * @brief Returns the standard deviation of all values in a vector or array
- *
- * @param vec A float vector or array object 
- * @return The standard deviation of all values in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 float stdev_float_vector(float_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function cum_sum_float_vector 
- * @brief Returns a dynamically allocated array containing the cumulative sum of all 
- *        values in vec
- *
- * @param vec A float vector or array object 
- * @return A float_v object with the cumulative sum of all values in vec.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 float_v* cum_sum_float_vector(float_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief creates a deep copy of a vector
- *
- * @param original A vector to be copied 
- * @return A copy of a float vector
- */
 float_v* copy_float_vector(const float_v* original);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Computes the dot product of two contiguous float arrays.
- *
- * This function calculates the dot product of two continuous memory blocks
- * of float values. If available, it uses SIMD acceleration (AVX or SSE)
- * for performance optimization.
- *
- * :param a: Pointer to the first float array.
- * :param b: Pointer to the second float array.
- * :param len: Number of elements in each array.
- * :returns: Dot product result as a float, or FLT_MAX on error.
- * :raises: Sets errno to EINVAL for NULL input, or if len is zero.
- *
- * Example:
- * .. code-block:: c
- *
- *    float a[] = {1.0f, 2.0f, 3.0f};
- *    float b[] = {4.0f, 5.0f, 6.0f};
- *    float result = dot_float(a, b, 3);  // result = 32.0
- */
 float dot_float(const float* a, const float* b, size_t len);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Computes the dot product of two float vectors.
- *
- * This function takes two dynamically allocated float vectors (`float_v`)
- * and returns their dot product by delegating to the `dot_float` function.
- *
- * :param vec1: Pointer to the first float vector.
- * :param vec2: Pointer to the second float vector.
- * :returns: Dot product result as a float, or FLT_MAX on error.
- * :raises: Sets errno to EINVAL if either input is NULL or uninitialized.
- *          Sets errno to ERANGE if vector lengths do not match.
- *
- * Example:
- * .. code-block:: c
- *
- *    float_v* v1 = init_float_vector(3);
- *    float_v* v2 = init_float_vector(3);
- *    push_back_float_vector(v1, 1.0f);
- *    push_back_float_vector(v1, 2.0f);
- *    push_back_float_vector(v1, 3.0f);
- *    push_back_float_vector(v2, 4.0f);
- *    push_back_float_vector(v2, 5.0f);
- *    push_back_float_vector(v2, 6.0f);
- *    float result = dot_float_vector(v1, v2);  // result = 32.0
- *    free_float_vector(v1);
- *    free_float_vector(v2);
- */
 float dot_float_vector(const float_v* vec1, const float_v* vec2);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Computes the cross product of two 3D float vectors.
- *
- * This function takes two input arrays of length 3 and computes the cross product,
- * storing the result in the output array.
- *
- * @param a Pointer to first 3-element float array.
- * @param b Pointer to second 3-element float array.
- * @param result Pointer to 3-element float array to store the result.
- * @return true on success, false on error (sets errno).
- */
 bool cross_float(const float* a, const float* b, float* result);
 // -------------------------------------------------------------------------------- 
 
