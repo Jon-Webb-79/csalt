@@ -20,6 +20,7 @@ for all basic c data types:
 * A safe wrapper for static arrays with bounds checking
 * A dictionary implementation for mapping strings to primitive data types 
 * A dictionary implementation for mapping strings to arrays of primitive data types
+* A dictionary implementation for dense and sparse storage methods
 
 Performance Acceleration
 ------------------------
@@ -33,12 +34,6 @@ target platform, including:
 * **SSE4.1**, **SSE3**, and **SSE2** on legacy x86 processors
 * **SVE2** and **SVE** on ARMv9/ARMv8-A processors
 * **NEON** on ARMv8-A (AArch64) processors
-
-Where applicable, common operations such as ``sum``, ``min``, ``max``, ``dot product``,
-``mean``, and ``standard deviation`` are computed with SIMD-accelerated kernels.
-This provides significant performance improvements compared to scalar-only code,
-while still maintaining a safe scalar fallback path for environments without SIMD
-support.
 
 When to Use This Library
 ########################
@@ -92,8 +87,7 @@ Dictionary
 Matrix
 ------
 
-**NOTE:** The matrix implementation in this package will recieve a large overhaul
-in the future.
+**NOTE:** The matrix implementation in this package is being updated for a more intuitive interface.
 
 The matrix module provides adaptive storage for two-dimensional floating-point matrices, with
 automatic conversion between dense and sparse formats based on size and sparsity characteristics.
@@ -103,17 +97,7 @@ Supported formats:
 * **Dense Matrix** — row-major, with optional initialization tracking for missing values
 * **Coordinate List (COO)** — stores only non-zero entries with explicit row and column indices
 * **Compressed Sparse Row (CSR)** — optimized for fast row-based access and memory efficiency
-
-Key features:
-
-* Seamless format conversion:
-  - Dense → COO when sparsity exceeds a threshold
-  - COO → CSR when matrix size and sparsity justify compression
-  - CSR → COO or COO → Dense when sparsity decreases
-* Support for dynamic insertions, deletions (`pop`), and element retrieval
-* Format-agnostic API for `get`, `insert`, `pop`, and metadata access
-* Automatic bounds checking and error signaling via `errno`
-* Full compatibility with CMocka for unit testing and regression validation
+* **Compressed Sparse Column (CSC)** - optimized for dast column-based access and memory efficiency
 
 Typical use cases include large engineering calculations (e.g., PDEs, FEM solvers) where the 
 storage and access pattern of matrices must adapt to the structure of the data.

@@ -16,6 +16,7 @@ for all basic c data types:
 * A safe wrapper for static arrays with bounds checking
 * A dictionary implementation for mapping strings to primitive data types 
 * A dictionary implementation for mapping strings to arrays of primitive data types
+* A matrix implementation for dense and sparse storage methods
 
 When to Use This Library
 ########################
@@ -35,6 +36,19 @@ errors while maintaining the performance characteristics expected in C programs.
 
 This project encapsulates its functionality, which is wrapped in the header 
 guard ``#ifdef __cplusplus`` to allow compilation with both C and C++. 
+
+Performance Acceleration
+------------------------
+
+Dynamically allocated vectors in ``csalt`` are optimized with hardware acceleration
+using SIMD (Single Instruction, Multiple Data) instruction sets where available.
+The library automatically dispatches to the best implementation supported by the
+target platform, including:
+
+* **AVX-512**, **AVX2**, and **AVX** on modern x86 processors
+* **SSE4.1**, **SSE3**, and **SSE2** on legacy x86 processors
+* **SVE2** and **SVE** on ARMv9/ARMv8-A processors
+* **NEON** on ARMv8-A (AArch64) processors
 
 Implementation Details
 ######################
@@ -65,6 +79,9 @@ Dictionary
 
 Matrix
 ------
+
+**NOTE:** The matrix implementation in this package is being updated for a more intuitive interface.
+
 The matrix module provides adaptive storage for two-dimensional matrices, with
 automatic conversion between dense and sparse formats based on size and sparsity characteristics.
 
@@ -77,6 +94,17 @@ Supported formats:
 
 Typical use cases include large engineering calculations (e.g., PDEs, FEM solvers) where the 
 storage and access pattern of matrices must adapt to the structure of the data.
+
+Work Forward
+============
+The following are areas for future improvement in the code base 
+
+* Update all documentation to link to Doxygen doc strings (IN PROGRESS)
+* Incorporate ErrorCode enums and related error handling into all data structures and functions (IN PROGRESS)
+* Refactor entire Matrix code base
+* Test on a wider array of platforms and compilers to exercise all SIMD instruction sets 
+* Increase robustness of edge cases for unit tests 
+* Refactor string_t type to handle non ASCI data 
 
 Contributing
 ############
