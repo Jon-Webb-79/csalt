@@ -940,3 +940,28 @@ Output::
    (push/insert/erase/pop, sort, reverse, reserve/growth) **invalidates existing
    iterators**. Recreate iterators after such operations.
 
+Generic Macros 
+==============
+
+The following macros use the `_Generic` keyword to provide type safe compile
+time dispatching for the correct function based on data type.  In essense 
+these macros provide generic helper functions for `string_t` and `string_v`
+functions.
+
+str_size 
+--------
+
+.. doxygendefine:: str_size
+   :project: csalt
+
+str_alloc 
+---------
+
+.. doxygendefine:: str_alloc
+   :project: csalt
+
+str_error 
+--------
+
+.. doxygendefine:: str_error
+   :project: csalt

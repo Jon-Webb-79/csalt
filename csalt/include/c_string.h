@@ -4342,25 +4342,107 @@ size_t binary_search_str_vector(string_v* vec, char* value, bool sort_first);
 // ================================================================================ 
 // GENERIC MACROS 
 
+/**
+ * \def str_size(dat)
+ * \brief Polymorphic size accessor for csalt string types.
+ *
+ * C11 `_Generic` dispatcher that routes to the correct size function based on
+ * the pointer type:
+ *  - `string_t*` / `const string_t*`   →  #string_size
+ *  - `string_v*` / `const string_v*`   →  #str_vector_size
+ *
+ * Use this when you want the **populated length** (number of elements in use).
+ *
+ * \param dat Pointer to a `string_t` or `string_v` (may be `const`).
+ * \return `size_t` populated element count as reported by the underlying function.
+ *
+ * \par Notes
+ * - The argument expression is evaluated exactly once.
+ * - There is **no** `default` arm on purpose: passing an unsupported type
+ *   yields a compile-time error (“no matching generic association”).
+ *
+ * \code
+ * const string_t *s = init_string("hello");
+ * string_v *sv = make_string_vector();
+ * size_t n1 = str_size(s);   // calls string_size(s)
+ * size_t n2 = str_size(sv);  // calls str_vector_size(sv)
+ * \endcode
+ *
+ * \sa string_size, str_vector_size
+ */
 #define str_size(dat) _Generic((dat), \
     string_t*: string_size, \
+    const string_t*: string_size, \
     string_v*: str_vector_size, \
-    void*: string_size, \
-    default: string_size) (dat)
+    const string_v*: str_vector_size) (dat)
 // --------------------------------------------------------------------------------
 
+/**
+ * \def str_alloc(dat)
+ * \brief Polymorphic capacity accessor for csalt string types.
+ *
+ * C11 `_Generic` dispatcher that routes to the correct **allocation/capacity**
+ * function based on the pointer type:
+ *  - `string_t*` / `const string_t*`   →  #string_alloc
+ *  - `string_v*` / `const string_v*`   →  #str_vector_alloc
+ *
+ * This returns the **allocated capacity** (e.g., bytes or elements reserved),
+ * not the populated size. Use together with #str_size to reason about headroom.
+ *
+ * \param dat Pointer to a `string_t` or `string_v` (may be `const`).
+ * \return `size_t` capacity reported by the underlying function.
+ *
+ * \par Notes
+ * - Argument is evaluated exactly once.
+ * - No `default` arm: unsupported types fail at compile time.
+ *
+ * \code
+ * string_t *s = init_string_reserve(64);
+ * size_t used = str_size(s);   // elements in use
+ * size_t cap  = str_alloc(s);  // total reserved
+ * \endcode
+ *
+ * \sa string_alloc, str_vector_alloc, str_size
+ */
 #define str_alloc(dat) _Generic((dat), \
     string_t*: string_alloc, \
+    const string_t*: string_alloc, \
     string_v*: str_vector_alloc, \
-    void*: string_alloc, \
-    default: string_alloc) (dat)
+    const string_v*: str_vector_alloc) (dat)
 // -------------------------------------------------------------------------------- 
 
+/**
+ * \def str_error(dat)
+ * \brief Polymorphic error query for csalt string types.
+ *
+ * C11 `_Generic` dispatcher that returns the last error/status associated
+ * with the object, as maintained by your string API:
+ *  - `string_t*` / `const string_t*`   →  #get_string_error
+ *  - `string_v*` / `const string_v*`   →  #get_str_vector_error
+ *
+ * \param dat Pointer to a `string_t` or `string_v` (may be `const`).
+ * \return The error/status code type returned by the underlying function
+ *         (e.g., `ErrorCode` or `int`), unchanged.
+ *
+ * \par Notes
+ * - Argument is evaluated exactly once.
+ * - No `default` arm: unsupported types fail at compile time.
+ * - Exact semantics (what is stored/returned, when it resets) follow the
+ *   underlying functions.
+ *
+ * \code
+ * const string_t *s = init_string("abc");
+ * ErrorCode ec = str_error(s);      // calls get_string_error(s)
+ * if (ec != NO_ERROR} { // handle }
+ * \endcode
+ *
+ * \sa get_string_error, get_str_vector_error
+ */
 #define str_error(dat) _Generic((dat), \
     string_t*: get_string_error, \
+    const string_t*: get_string_error, \
     string_v*: get_str_vector_error, \
-    void*: get_string_error, \
-    default: get_string_error) (dat)
+    const string_v*: get_str_vector_error) (dat)
 // ================================================================================
 // ================================================================================
 
