@@ -29,319 +29,272 @@ extern "C" {
 
 #ifndef ITER_DIR_H
 #define ITER_DIR_H
-    /**
-     * @brief An enum containing keywords for an iterator 
-     *
-     * This enum contains keywords that are used to describe the order of iteration
-     * within an iterator 
-     *
-     * @attribute FORWARD Keyword to command a forward iteration 
-     * @attribute REVERSE Keyword to command a reverese iteration
-     */
-    typedef enum {
-        FORWARD,
-        REVERSE
-    }iter_dir;
+typedef enum {
+    FORWARD = 0,
+    REVERSE = 1
+}iter_dir;
 #endif /* ITER_DIR_H*/
 // --------------------------------------------------------------------------------    
 
 #ifndef ALLOC_H 
 #define ALLOC_H 
 
-    /**
-     * @enum alloc_t 
-     * @brief An enum to discern if an array is statically or allocated 
-     */
     typedef enum {
-        STATIC,
-        DYNAMIC
+        STATIC = 0,
+        DYNAMIC = 1
     } alloc_t;
 
 #endif /*ALLOC_H*/
 
-/**
-* @struct float_v
-* @brief Dynamic array (vector) container for float objects
-*
-* This structure manages a resizable array of float objects with automatic
-* memory management and capacity handling.
-*/
 typedef struct {
     int* data;
     size_t len;
     size_t alloc;
+    ErrorCode error;
     alloc_t alloc_type;
 } int_v;
 // --------------------------------------------------------------------------------
 
 /**
-* @function init_int_vector
-* @brief Initializes a new dynamically allocated int vector with specified initial capacity
-*
-* @param buffer Initial capacity to allocate
-* @return Pointer to new int_v object, or NULL on allocation failure
-*         Sets errno to ENOMEM if memory allocation fails
-*/
+ * @brief Create a dynamically allocated vector of @c int with given capacity.
+ *
+ * Allocates a @ref int_v control block and a zero-initialized data buffer
+ * of @p buff elements on the heap. On success, the vector is configured for
+ * dynamic ownership ( @ref alloc_t :: DYNAMIC ), its size is set to 0, and
+ * its last-error field is cleared to @c NO_ERROR.
+ *
+ * @param buff
+ *     Requested capacity in elements (must be > 0).
+ *
+ * @return
+ *     Pointer to a newly created @ref int_v on success; @c NULL on failure.
+ *
+ * @par Errors
+ * - Sets @c errno to:
+ *   - @c EINVAL if @p buff == 0
+ *   - @c ENOMEM if allocation of the control block or data buffer fails
+ *
+ * @post
+ * - On success:
+ *   - @c result->data != NULL
+ *   - @c result->len == 0
+ *   - @c result->alloc == buff
+ *   - @c result->alloc_type == DYNAMIC
+ *   - @c result->error == NO_ERROR
+ * - On failure:
+ *   - Returns @c NULL and sets @c errno as above. No allocations are leaked.
+ *
+ * @attention Ownership
+ * The returned vector and its buffer are heap-allocated. Free them with the
+ * library’s designated destructor (e.g., @c free_int_vector(result) ), which
+ * must release both the data buffer and the control block. Do not @c free()
+ * the @c data pointer separately.
+ *
+ * **thread_safety**
+ * Not thread-safe. External synchronization is required if accessed from
+ * multiple threads.
+ *
+ * **complexity**
+ * O(1) time; O(@p buff) zero-initialization of the data buffer.
+ *
+ * @code
+ * int_v* v = init_int_vector(128);
+ * if (!v) {
+ *     perror("init_int_vector");
+ *     return 1;
+ * }
+ * // ...
+ * free_int_vector(v); // library-provided destructor
+ * @endcode
+ */
 int_v* init_int_vector(size_t buffer);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function init_int_static_array
- * @brief Creates a stack-based int vector with static array
- *
- * @param size Size of the array
- */
-#define init_int_array(size) \
-    ((int_v){.data = (int[size]){0}, .len = 0, .alloc = size, .alloc_type = STATIC})
-// -------------------------------------------------------------------------------- 
+#if defined(DOXYGEN)
 
 /**
- * @brief returns a c style pointer to the beginning of an array 
+ * \def init_int_array(size)
+ * \brief Create a ::int_v that wraps a zero-initialized, fixed-capacity array.
  *
- * @param vec A pointer to a int_v data type 
- * @return A pointer to the beginning of a int array
+ * Expands to a value of type ::int_v with:
+ * - data       → points to `(int[size]){0}` (automatic storage, zero-initialized)
+ * - len        → 0
+ * - alloc      → size
+ * - error      → NO_ERROR
+ * - alloc_type → ::STATIC (non-owned, fixed capacity)
+ *
+ * \param size Number of elements (must be > 0). Evaluated twice — avoid side effects.
+ *
+ * \warning The backing storage has **automatic duration** and is valid **only
+ * within the enclosing block**. Do not return the vector or store pointers to
+ * its data beyond that scope.
+ *
+ * \note Requires C99 compound literals; if `__STDC_NO_GENERIC__` is defined, \p size
+ * must be a compile-time constant.
+ *
+ * \par Example (macro enabled)
+ * \code
+ * void demo_macro(void) {
+ *     // Storage is automatic: valid only inside this block.
+ *     int_v v = init_int_array(16);
+ *
+ *     // Fill first three elements and record logical length
+ *     push_back_int_vector(&v, 1);
+ *     push_back_int_vector(&v, 2);
+ *     push_back_int_vector(&v, 3);
+ *     size_t len = double_vector_size(&v);
+ *
+ *     // Use only APIs that respect STATIC semantics (no reallocation/free).
+ * } // v.data becomes invalid here
+ * \endcode
  */
+#define init_int_array(size) /* docs-only definition */
+
+/**
+ * \brief Wrap caller-provided storage as a ::int_v with ::STATIC semantics.
+ *
+ * Use this function as the **supported replacement** for static allocation when
+ * the `init_int_array` macro is disabled (e.g., strict/MISRA builds) or when
+ * you prefer not to rely on compound literals. The storage lifetime/ownership
+ * remains with the caller.
+ *
+ * \param buf Pointer to at least \p n int.
+ * \param n   Capacity of \p buf (must be > 0).
+ * \return    A ::int_v referring to \p buf with len=0, alloc=n, error=NO_ERROR,
+ *            alloc_type=STATIC.
+ *
+ * \warning The function does **not** allocate or free memory. The caller must
+ * manage \p buf and ensure it outlives the ::int_v usage.
+ *
+ * \par Example A (file-scope static buffer)
+ * \code
+ * static int file_buf[32];
+ *
+ * void demo_wrap_filescope(void) {
+ *     int_v v = wrap_int_array(file_buf, 32);
+ *     push_back_int_vector(&v, 42);
+ *     size_t size = int_vector_size(&v); // 1
+ *     size_t alloc = int_vector_alloc(&v); // 32
+ *     // file_buf persists for program lifetime (or translation unit scope).
+ * }
+ * \endcode
+ *
+ * \par Example B (local fixed array without compound literals)
+ * \code
+ * void demo_wrap_local(void) {
+ *     int local_buf[8] = {0};          // automatic storage
+ *     int_v v = wrap_int_array(local_buf, 8);
+ *     // v.data valid until end of this block (same as local_buf)
+ * }
+ * \endcode
+ */
+double_v wrap_int_array(float *buf, size_t n);
+
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) && !defined(__STDC_NO_GENERIC__)
+
+/* Real macro (C99 compound literal). Attach docs via copydoc so they render even if
+ * Doxygen parses this branch rather than the DOXYGEN stub above. */
+/** \copydoc init_double_array */
+#define init_int_array(size)                                                    \
+    ((int_v){ .data = (int[(size)]){0}, .len = 0, .alloc = (size),            \
+                .error = NO_ERROR, .alloc_type = STATIC })
+
+/* Provide the wrapper in all builds (convenient and portable). */
+/** \copydoc wrap_int_array */
+static inline int_v wrap_int_array(int *buf, size_t n)
+{
+    int_v v;
+    v.data = buf;
+    v.len = 0;
+    v.alloc = n;
+    v.error = NO_ERROR;
+    v.alloc_type = STATIC;
+    return v;
+}
+
+#else /* Strict/MISRA or non-C99 compilers (macro disabled) */
+
+/* Macro disabled; only the wrapper is available. */
+/** \copydoc wrap_double_array */
+static inline int_v wrap_int_array(int *buf, size_t n)
+{
+    int_v v;
+    v.data = buf;
+    v.len = 0;
+    v.alloc = n;
+    v.error = NO_ERROR;
+    v.alloc_type = STATIC;
+    return v;
+}
+
+/* Breadcrumb for users trying to use the macro in a disabled build. */
+#if !defined(init_int_array)
+#define init_int_array(size) /* unavailable: use wrap_float_array(buf, n) */
+#endif
+
+#endif /* feature gate */
+
+// -------------------------------------------------------------------------------- 
+
 int* c_int_ptr(int_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function push_back_int_vector
-* @brief Adds a int value to the end of the vector
-*
-* Automatically resizes the vector if necessary.
-*
-* @param vec Target int vector
-* @param value Float value to add
-* @return true if successful, false on error
-*         Sets errno to EINVAL for NULL inputs or ENOMEM on allocation failure
-*/
 bool push_back_int_vector(int_v* vec, const int value);
 // --------------------------------------------------------------------------------
 
-/**
-* @function push_front_int_vector
-* @brief Adds a int value to the beginning of the vector
-*
-* Shifts existing elements right and automatically resizes if necessary.
-*
-* @param vec Target int vector
-* @param value Float value to add
-* @return true if successful, false on error
-*         Sets errno to EINVAL for NULL inputs or ENOMEM on allocation failure
-*/
 bool push_front_int_vector(int_v* vec, const int value);
 // --------------------------------------------------------------------------------
 
-/**
-* @function insert_int_vector
-* @brief Inserts a int value at specified index in the vector
-*
-* Shifts elements right starting at index and resizes if necessary.
-*
-* @param vec Target int vector
-* @param value Float value to insert
-* @param index Position to insert at
-* @return true if successful, false on error
-*         Sets errno to EINVAL for NULL inputs or index out of bounds, ENOMEM on allocation failure
-*/
 bool insert_int_vector(int_v* vec, const int value, size_t index);
 // --------------------------------------------------------------------------------
 
-/**
-* @function int_vector_index
-* @brief Retrieves pointer to string_t at specified index
-*
-* @param vec Source int vector
-* @param index Position to access
-* @return Pointer to string_t object, or NULL on error
-*         Sets errno to EINVAL for NULL input or ERANGE if index out of bounds
-*/
 int int_vector_index(const int_v* vec, size_t index);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function int_vector_size
-* @brief Returns current number of strings in vector
-*
-* @param vec Float vector to query
-* @return Number of strings in vector, or LONG_MAX on error
-*         Sets errno to EINVAL for NULL input
-*/
 size_t int_vector_size(const int_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function int_vector_alloc
-* @brief Returns current allocation size of vector
-*
-* @param vec Float vector to query
-* @return Current allocation capacity, or LONG_MAX on error
-*         Sets errno to EINVAL for NULL input
-*/
 size_t int_vector_alloc(const int_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function pop_back_int_vector
-* @brief Removes and returns last int value in vector
-*
-* @param vec Source int vector
-* @return Pointer to removed int object, or NULL if vector empty
-*         Sets errno to EINVAL for NULL input
-*/
 int pop_back_int_vector(int_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function pop_front_int_vector
-* @brief Removes and returns first int value in vector
-*
-* Shifts remaining elements left.
-*
-* @param vec Source string vector
-* @return Pointer to removed int object, or NULL if vector empty
-*         Sets errno to EINVAL for NULL input
-*/
 int pop_front_int_vector(int_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function pup_any_int_vector
-* @brief Removes and returns int value at specified index
-*
-* Shifts remaining elements left to fill gap.
-*
-* @param vec Source int vector
-* @param index Position to remove from
-* @return Pointer to removed int_t object, or NULL on error
-*         Sets errno to EINVAL for NULL input or ERANGE if index out of bounds
-*/
 int pop_any_int_vector(int_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 
-/**
-* @function free_int_vector
-* @brief Frees all memory associated with string vector
-*
-* Frees all contained strings and the vector itself.
-*
-* @param vec Float vector to free
-* @return void
-*         Sets errno to EINVAL for NULL input
-*/
 void free_int_vector(int_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
-* @function _free_int_vector
-* @brief Helper function for garbage collection of int vectors
-*
-* Used with FLTVEC_GBC macro for automatic cleanup.
-*
-* @param vec Double pointer to int vector to free
-* @return void
-*/
 void _free_int_vector(int_v** vec);
 // --------------------------------------------------------------------------------
 
 #if defined(__GNUC__) || defined (__clang__)
-    /**
-     * @macro FLTVEC_GBC
-     * @brief A macro for enabling automatic cleanup of int vector objects.
-     *
-     * This macro uses the cleanup attribute to automatically call `_free_int_vector`
-     * when the scope ends, ensuring proper memory management.
-     */
     #define INTVEC_GBC __attribute__((cleanup(_free_int_vector)))
 #endif
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function reverse_int_vector
- * @brief Reverses the order of elements in a int vector in place.
- *
- * The function reverses the order of elements by swapping elements from the
- * beginning and end of the vector until the middle is reached.
- *
- * @param vec int vector to reverse
- * @return void
- *         Sets errno to EINVAL if vec is NULL or invalid
- */
 void reverse_int_vector(int_v* vec);
 // --------------------------------------------------------------------------------
 
-/**
- * @function swap_int
- * @brief Swaps the contents of two int objects.
- *
- * Performs an in-place swap of int values
- *
- * @param a Pointer to first int object
- * @param b Pointer to second int object
- * @return void
- *         Sets errno to EINVAL if either input is NULL
- */
 void swap_int(int* a, int* b);
 // --------------------------------------------------------------------------------
 
-/**
-* @function sort_int_vector
-* @brief Sorts a int vector in ascending or descending order.
-*
-* Uses an optimized QuickSort algorithm with median-of-three pivot selection
-* and insertion sort for small subarrays. Sort direction is determined by
-* the iter_dir parameter.
-*
-* @param vec int vector to sort
-* @param direction FORWARD for ascending order, REVERSE for descending
-* @return void
-*         Sets errno to EINVAL if vec is NULL or invalid
-*/
 void sort_int_vector(int_v* vec, iter_dir direction);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function trim_int_vector
-* @brief Trims all un-necessary memory from a vector
-*
-* @param vec int vector to trim
-* @return void
-*         Sets errno to EINVAL if vec is NULL or invalid
-*/
 void trim_int_vector(int_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function binary_search_int_vector
-* @brief Searches a int vector to find the index where a value exists
-*
-* @param vec int vector object
-* @param value The value to search for
-* @param sort_first true if the vector or array needs to be sorted, false otherwise
-* @return The index where a value exists, LONG_MAX if the value is not in the array.
-*         Sets errno to EINVAL if vec is NULL or invalid, ENODATA if the array is 
-*         not populated
-*/
+
 size_t binary_search_int_vector(int_v* vec, int value, bool sort_first);
 // -------------------------------------------------------------------------------- 
 
 #ifndef BIN_DAT_TYPEDEF
 #define BIN_DAT_TYPEDEF
-/**
- * @brief Result structure for binary search bound queries.
- *
- * The `bin_dat` struct encodes the indices that bound a given search value
- * within a sorted or unsorted float vector.
- *
- * Conventions:
- * - `lower`: Index of the last element strictly less than `value`,
- *            or SIZE_MAX if none exist.
- * - `upper`: Index of the first element strictly greater than `value`,
- *            or SIZE_MAX if none exist.
- *
- * When the search value matches an element within `tolerance`, both
- * `lower` and `upper` are set to that element's index.
- */
 typedef struct {
     size_t lower;
     size_t upper;
@@ -349,115 +302,32 @@ typedef struct {
 #endif
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Locate bounding indices for an integer value in a vector.
- *
- * Performs a binary search to find indices that bound @p value:
- * - On exact match: {lower = i, upper = i}.
- * - On miss but in-range: {lower = j, upper = j+1} where
- *   vec->data[j] < value < vec->data[j+1].
- * - If value < all elements: {lower = SIZE_MAX, upper = 0}.
- * - If value > all elements: {lower = len-1, upper = SIZE_MAX}.
- * - On error: {lower = SIZE_MAX, upper = SIZE_MAX} and errno set.
- *
- * If sort_first is true, the vector is sorted ascending (in-place) before searching.
- *
- * @param vec        Pointer to integer vector
- * @param value      Target integer value
- * @param sort_first If true, sort ascending before search (mutates vec)
- * @return bin_dat with bounding indices
- */
 bin_dat binary_search_bounds_int_vector(int_v *vec,
                                         int value,
                                         bool sort_first);
 // -------------------------------------------------------------------------------- 
 
-/**
-* @function update_int_vector
-* @brief Replaces the value of a vector at a specific index
-*
-* @param vec int vector object
-* @param index The index where data will be replaced
-* @param replacement_value The replacement value
-* @return void, Sets errno to EINVAL if vec does not exsist, or ERANGE 
-*         if the index is out of bounds
-*/
 void update_int_vector(int_v* vec, size_t index, int replacement_value);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function min_int_vector 
- * @brief Returns the minimum value in a vector or array 
- *
- * @param vec A int vector or array object 
- * @return The minimum value in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 int min_int_vector(int_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function max_int_vector 
- * @brief Returns the maximum value in a vector or array 
- *
- * @param vec A int vector or array object 
- * @return The maximum value in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 int max_int_vector(int_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function sum_int_vector 
- * @brief Returns the summation of all values in a vector or array
- *
- * @param vec A int vector or array object 
- * @return The summation of all values in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 int sum_int_vector(int_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function average_int_vector 
- * @brief Returns the average of all values in a vector or array
- *
- * @param vec A int vector or array object 
- * @return The average of all values in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 float average_int_vector(int_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function stdev_int_vector 
- * @brief Returns the standard deviation of all values in a vector or array
- *
- * @param vec A int vector or array object 
- * @return The standard deviation of all values in a vector.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 float stdev_int_vector(int_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @function cum_sum_int_vector 
- * @brief Returns a dynamically allocated array containing the cumulative sum of all 
- *        values in vec
- *
- * @param vec A int vector or array object 
- * @return A int_v object with the cumulative sum of all values in vec.  Sets errno to EINVAL if vec or 
- *         vec-data is NULL, or if length is 0 and returns FLT_MAX
- */
 int_v* cum_sum_int_vector(int_v* vec);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief creates a deep copy of a vector
- *
- * @param original A vector to be copied 
- * @return A copy of a int vector
- */
 int_v* copy_int_vector(const int_v* original);
 // -------------------------------------------------------------------------------- 
 

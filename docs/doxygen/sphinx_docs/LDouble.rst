@@ -10,8 +10,8 @@ float values with a string keyword as well as various matrices to include
 ``Dense``, ``CSC``, ``CSR``, and ``COO`` matrix types.
 
 
-Float Vector Overview
-=====================
+Long Double Vector Overview
+===========================
 
 A long double vector provides both dynamic and static array containers for long double values, offering
 efficient management of numerical data with automatic memory handling for dynamic arrays
@@ -28,7 +28,7 @@ key features for the implementation of ``ldouble_v`` data types.
 * Efficient access: O(1) access to any value in the vector
 * Automatic cleanup: Optional garbage collection support with LDBLEVEC_GBC
 
-Float vectors are particularly useful when:
+Double vectors are particularly useful when:
 
 * Managing collections of long double values that may grow or shrink
 * Working with an unknown number of long value values at compile time
@@ -76,6 +76,25 @@ derived data types.
 Initialization and Memory Management
 ------------------------------------
 
+init_ldouble_vector 
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_ldouble_vector 
+   :project: csalt
+
+init_ldouble_array 
+~~~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: init_ldouble_array
+   :project: csalt
+
+wrap_ldouble_array 
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: wrap_ldouble_array
+   :project: csalt
+
+
 Utility Functions 
 -----------------
 
@@ -88,8 +107,8 @@ Search Vector
 Vector Iterator 
 ---------------
 
-Float Matrix Overview 
-=====================
+Double Matrix Overview 
+======================
 
 Data Type 
 ---------
@@ -106,8 +125,8 @@ Matrix Manipulation
 Matrix Operations 
 -----------------
 
-Float Dictionary Overview
-==========================
+Long Double Dictionary Overview
+===============================
 
 A long double dictionary provides a hash table implementation for mapping string keys to long double values, 
 offering efficient key-value storage and retrieval. This implementation uses chained hashing for 
@@ -145,8 +164,8 @@ Data Types
 
 The following are derived data types used in the implementation of long double dictionaries.
 
-General Float Functions 
-=======================
+General Long Double Functions 
+=============================
 
 Generic Macro Overview
 ======================

@@ -83,6 +83,18 @@ init_float_vector
 .. doxygenfunction:: init_float_vector 
    :project: csalt
 
+init_float_array 
+~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: init_float_array
+   :project: csalt
+
+wrap_float_array 
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: wrap_float_array
+   :project: csalt
+
 Utility Functions 
 -----------------
 

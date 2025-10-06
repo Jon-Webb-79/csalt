@@ -206,6 +206,7 @@ int_v* init_int_vector(size_t buff) {
     struct_ptr->len = 0;
     struct_ptr->alloc = buff;
     struct_ptr->alloc_type = DYNAMIC;
+    struct_ptr->error = NO_ERROR;
     return struct_ptr;
 }
 // -------------------------------------------------------------------------------- 

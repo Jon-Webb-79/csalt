@@ -160,7 +160,6 @@ typedef struct {
  *     perror("init_float_vector");
  *     return 1;
  * }
- * // use v->data up to v->alloc capacity; v->len tracks initialized elements
  * // ...
  * free_float_vector(v); // library-provided destructor
  * @endcode
@@ -168,8 +167,129 @@ typedef struct {
 float_v* init_float_vector(size_t buff);
 // -------------------------------------------------------------------------------- 
 
-#define init_float_array(size) \
-    ((float_v){.data = (float[size]){0}, .len = 0, .alloc = size, .alloc_type = STATIC})
+#if defined(DOXYGEN)
+
+/**
+ * \def init_float_array(size)
+ * \brief Create a ::float_v that wraps a zero-initialized, fixed-capacity array.
+ *
+ * Expands to a value of type ::float_v with:
+ * - data       → points to `(float[size]){0}` (automatic storage, zero-initialized)
+ * - len        → 0
+ * - alloc      → size
+ * - error      → NO_ERROR
+ * - alloc_type → ::STATIC (non-owned, fixed capacity)
+ *
+ * \param size Number of elements (must be > 0). Evaluated twice — avoid side effects.
+ *
+ * \warning The backing storage has **automatic duration** and is valid **only
+ * within the enclosing block**. Do not return the vector or store pointers to
+ * its data beyond that scope.
+ *
+ * \note Requires C99 compound literals; if `__STDC_NO_GENERIC__` is defined, \p size
+ * must be a compile-time constant.
+ *
+ * \par Example (macro enabled)
+ * \code
+ * void demo_macro(void) {
+ *     // Storage is automatic: valid only inside this block.
+ *     float_v v = init_float_array(16);
+ *
+ *     // Fill first three elements and record logical length
+ *     push_back_float_vector(&v, 1.0f);
+ *     push_back_float_vector(&v, 2.0f);
+ *     push_back_float_vector(&v, 3.0f);
+ *     size_t len = float_vector_size(&v);
+ *
+ *     // Use only APIs that respect STATIC semantics (no reallocation/free).
+ * } // v.data becomes invalid here
+ * \endcode
+ */
+#define init_float_array(size) /* docs-only definition */
+
+/**
+ * \brief Wrap caller-provided storage as a ::float_v with ::STATIC semantics.
+ *
+ * Use this function as the **supported replacement** for static allocation when
+ * the `init_float_array` macro is disabled (e.g., strict/MISRA builds) or when
+ * you prefer not to rely on compound literals. The storage lifetime/ownership
+ * remains with the caller.
+ *
+ * \param buf Pointer to at least \p n floats.
+ * \param n   Capacity of \p buf (must be > 0).
+ * \return    A ::float_v referring to \p buf with len=0, alloc=n, error=NO_ERROR,
+ *            alloc_type=STATIC.
+ *
+ * \warning The function does **not** allocate or free memory. The caller must
+ * manage \p buf and ensure it outlives the ::float_v usage.
+ *
+ * \par Example A (file-scope static buffer)
+ * \code
+ * static float file_buf[32];
+ *
+ * void demo_wrap_filescope(void) {
+ *     float_v v = wrap_float_array(file_buf, 32);
+ *     push_back_float_vector(&v, 42.0f);
+ *     size_t size = float_vector_size(&v); // 1
+ *     size_t alloc = float_vector_alloc(&v); // 32
+ *     // file_buf persists for program lifetime (or translation unit scope).
+ * }
+ * \endcode
+ *
+ * \par Example B (local fixed array without compound literals)
+ * \code
+ * void demo_wrap_local(void) {
+ *     float local_buf[8] = {0};          // automatic storage
+ *     float_v v = wrap_float_array(local_buf, 8);
+ *     // v.data valid until end of this block (same as local_buf)
+ * }
+ * \endcode
+ */
+float_v wrap_float_array(float *buf, size_t n);
+
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) && !defined(__STDC_NO_GENERIC__)
+
+/* Real macro (C99 compound literal). Attach docs via copydoc so they render even if
+ * Doxygen parses this branch rather than the DOXYGEN stub above. */
+/** \copydoc init_float_array */
+#define init_float_array(size)                                                    \
+    ((float_v){ .data = (float[(size)]){0}, .len = 0, .alloc = (size),            \
+                .error = NO_ERROR, .alloc_type = STATIC })
+
+/* Provide the wrapper in all builds (convenient and portable). */
+/** \copydoc wrap_float_array */
+static inline float_v wrap_float_array(float *buf, size_t n)
+{
+    float_v v;
+    v.data = buf;
+    v.len = 0;
+    v.alloc = n;
+    v.error = NO_ERROR;
+    v.alloc_type = STATIC;
+    return v;
+}
+
+#else /* Strict/MISRA or non-C99 compilers (macro disabled) */
+
+/* Macro disabled; only the wrapper is available. */
+/** \copydoc wrap_float_array */
+static inline float_v wrap_float_array(float *buf, size_t n)
+{
+    float_v v;
+    v.data = buf;
+    v.len = 0;
+    v.alloc = n;
+    v.error = NO_ERROR;
+    v.alloc_type = STATIC;
+    return v;
+}
+
+/* Breadcrumb for users trying to use the macro in a disabled build. */
+#if !defined(init_float_array)
+#define init_float_array(size) /* unavailable: use wrap_float_array(buf, n) */
+#endif
+
+#endif /* feature gate */
 // -------------------------------------------------------------------------------- 
 
 float* c_float_ptr(float_v* vec);

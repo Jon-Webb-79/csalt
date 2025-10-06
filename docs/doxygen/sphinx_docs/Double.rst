@@ -28,7 +28,7 @@ key features for the implementation of ``float_v`` data types.
 * Efficient access: O(1) access to any value in the vector
 * Automatic cleanup: Optional garbage collection support with DBLEVEC_GBC
 
-Float vectors are particularly useful when:
+Double vectors are particularly useful when:
 
 * Managing collections of double values that may grow or shrink
 * Working with an unknown number of double values at compile time
@@ -74,6 +74,24 @@ derived data types.
 
 Initialization and Memory Management
 ------------------------------------
+
+init_double_vector 
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_double_vector 
+   :project: csalt
+
+init_double_array 
+~~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: init_double_array
+   :project: csalt
+
+wrap_double_array 
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: wrap_double_array
+   :project: csalt
 
 Utility Functions 
 -----------------
@@ -123,7 +141,7 @@ The key features of a double dictionary are the following;
 
 A double-precision dicitonary should be used for the following reasons.
 
-Float dictionaries are particularly useful when:
+Double dictionaries are particularly useful when:
 
 * Mapping strings to numerical values
 * Requiring fast key-value lookups

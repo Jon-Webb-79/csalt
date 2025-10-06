@@ -10,8 +10,8 @@ float values with a string keyword as well as various matrices to include
 ``Dense``, ``CSC``, ``CSR``, and ``COO`` matrix types.
 
 
-Float Vector Overview
-=====================
+Integer Vector Overview
+=======================
 
 An int vector provides both dynamic and static array containers for int values, offering
 efficient management of numerical data with automatic memory handling for dynamic arrays
@@ -28,7 +28,7 @@ key features for the implementation of ``int_v`` data types.
 * Efficient access: O(1) access to any value in the vector
 * Automatic cleanup: Optional garbage collection support with FLTVEC_GBC
 
-Float vectors are particularly useful when:
+Integer vectors are particularly useful when:
 
 * Managing collections of int values that may grow or shrink
 * Working with an unknown number of int values at compile time
@@ -75,6 +75,24 @@ derived data types.
 Initialization and Memory Management
 ------------------------------------
 
+init_int_vector 
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_int_vector 
+   :project: csalt
+
+init_int_array 
+~~~~~~~~~~~~~~
+
+.. doxygendefine:: init_int_array
+   :project: csalt
+
+wrap_int_array 
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: wrap_int_array
+   :project: csalt
+
 Utility Functions 
 -----------------
 
@@ -87,8 +105,8 @@ Search Vector
 Vector Iterator 
 ---------------
 
-Float Matrix Overview 
-=====================
+Integer Matrix Overview 
+=======================
 
 Data Type 
 ---------
@@ -105,8 +123,8 @@ Matrix Manipulation
 Matrix Operations 
 -----------------
 
-Float Dictionary Overview
-==========================
+Integer Dictionary Overview
+===========================
 
 An int dictionary provides a hash table implementation for mapping string keys to int values, 
 offering efficient key-value storage and retrieval. This implementation uses chained hashing for 
@@ -144,8 +162,8 @@ Data Types
 
 The following are derived data types used in the implementation of int dictionaries.
 
-General Float Functions 
-=======================
+General Integer Functions 
+=========================
 
 Generic Macro Overview
 ======================
