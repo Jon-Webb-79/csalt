@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <float.h>
 #include "c_string.h"
 #include "c_error.h"
 // ================================================================================ 
@@ -537,7 +538,64 @@ bool push_front_double_vector(double_v* vec, double value);
 bool insert_double_vector(double_v* vec, double value, size_t index);
 // --------------------------------------------------------------------------------
 
-double double_vector_index(const double_v* vec, size_t index);
+/**
+ * @brief Return the element at @p index from an ::double_v with bounds checking.
+ *
+ * On success, returns `vec->data[index]`. On failure, returns the sentinel
+ * `DBL_MAX` and sets `errno` to indicate the reason. This accessor does **not**
+ * modify `vec->error`; callers should check `errno` (or validate inputs) to
+ * distinguish a real value equal to `INT_MAX` from an error.
+ *
+ * @param vec    Podoubleer to an ::double_v (must be non-NULL and have `data != NULL`).
+ * @param index  Zero-based index to access; must satisfy `index < vec->len`.
+ *
+ * @return
+ * - The `double` at position @p index on success.
+ * - `DBL_MAX` on failure (and `errno` is set).
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` if `vec == NULL` or `vec->data == NULL`.
+ * - Sets `errno = ERANGE` if `index >= vec->len` (out of bounds).
+ *
+ * @note This function does not alter `vec->error`. If your vectors can store
+ * `DBL_MAX` legitimately, check `errno` (or pre-validate inputs) to disambiguate.
+ *
+ * @warning
+ * - Not thread-safe. Do not call concurrently with writers to the same vector.
+ * - Ensure the index is valid (`index < vec->len`). Calling with `vec->len == 0`
+ *   is always invalid.
+ *
+ * @complexity O(1).
+ *
+ * @code
+ * // Success
+ * double_v* v = init_double_vector(3);
+ * push_back_double_vector(v, 10.0);
+ * push_back_double_vector(v, 20.0);
+ * errno = 0;
+ * double x = double_vector_index(v, 1);   // x == 20, errno == 0
+ *
+ * // Failure: out of bounds
+ * errno = 0;
+ * double y = double_vector_index(v, 5);   // y == DBL_MAX, errno == ERANGE
+ *
+ * // Failure: NULL vector
+ * errno = 0;
+ * double z = double_vector_index(NULL, 0); // z == DBL_MAX, errno == EINVAL
+ * free_double_vector(v);
+ * @endcode
+ */
+static inline double double_vector_index(const double_v* vec, size_t index) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return DBL_MAX;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return DBL_MAX;
+    }
+    return vec->data[index]; 
+}
 // -------------------------------------------------------------------------------- 
 
 size_t double_vector_size(const double_v* vec);

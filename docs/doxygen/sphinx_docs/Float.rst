@@ -171,6 +171,12 @@ pop_any_float_vector
 Search Vector 
 -------------
 
+float_vector_index 
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: float_vector_index
+   :project: csalt
+
 Vector Iterator 
 ---------------
 

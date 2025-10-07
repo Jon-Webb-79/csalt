@@ -326,19 +326,6 @@ long double pop_any_ldouble_vector(ldouble_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-long double ldouble_vector_index(const ldouble_v* vec, size_t index) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return LDBL_MAX;
-    }
-    if (index > vec->len - 1) {
-        errno = ERANGE;
-        return LDBL_MAX;
-    }
-    return vec->data[index];
-}
-// // --------------------------------------------------------------------------------
-//
 size_t ldouble_vector_size(const ldouble_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;

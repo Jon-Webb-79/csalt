@@ -483,37 +483,6 @@ int pop_any_int_vector(int_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-int int_vector_index(const int_v* vec, size_t index) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return INT_MAX;
-    }
-    if (index > vec->len - 1) {
-        errno = ERANGE;
-        return INT_MAX;
-    }
-    return vec->data[index];
-}
-// --------------------------------------------------------------------------------
-
-size_t int_vector_size(const int_v* vec) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return LONG_MAX;
-    }
-    return vec->len;
-}
-// --------------------------------------------------------------------------------
-
-size_t int_vector_alloc(const int_v* vec) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return SIZE_MAX;
-    }
-    return vec->alloc;
-}
-// --------------------------------------------------------------------------------
-
 void reverse_int_vector(int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;

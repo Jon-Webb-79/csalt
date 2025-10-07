@@ -17,6 +17,8 @@
  
 #include <stdlib.h>
 #include <stdbool.h>
+#include <limits.h>
+#include <stdint.h>
 #include "c_string.h"
 // ================================================================================ 
 // ================================================================================ 
@@ -537,13 +539,82 @@ bool push_front_int_vector(int_v* vec, int value);
 bool insert_int_vector(int_v* vec, int value, size_t index);
 // --------------------------------------------------------------------------------
 
-int int_vector_index(const int_v* vec, size_t index);
+/**
+ * @brief Return the element at @p index from an ::int_v with bounds checking.
+ *
+ * On success, returns `vec->data[index]`. On failure, returns the sentinel
+ * `INT_MAX` and sets `errno` to indicate the reason. This accessor does **not**
+ * modify `vec->error`; callers should check `errno` (or validate inputs) to
+ * distinguish a real value equal to `INT_MAX` from an error.
+ *
+ * @param vec    Pointer to an ::int_v (must be non-NULL and have `data != NULL`).
+ * @param index  Zero-based index to access; must satisfy `index < vec->len`.
+ *
+ * @return
+ * - The `int` at position @p index on success.
+ * - `INT_MAX` on failure (and `errno` is set).
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` if `vec == NULL` or `vec->data == NULL`.
+ * - Sets `errno = ERANGE` if `index >= vec->len` (out of bounds).
+ *
+ * @note This function does not alter `vec->error`. If your vectors can store
+ * `INT_MAX` legitimately, check `errno` (or pre-validate inputs) to disambiguate.
+ *
+ * @warning
+ * - Not thread-safe. Do not call concurrently with writers to the same vector.
+ * - Ensure the index is valid (`index < vec->len`). Calling with `vec->len == 0`
+ *   is always invalid.
+ *
+ * @complexity O(1).
+ *
+ * @code
+ * // Success
+ * int_v* v = init_int_vector(3);
+ * push_back_int_vector(v, 10);
+ * push_back_int_vector(v, 20);
+ * errno = 0;
+ * int x = int_vector_index(v, 1);   // x == 20, errno == 0
+ *
+ * // Failure: out of bounds
+ * errno = 0;
+ * int y = int_vector_index(v, 5);   // y == INT_MAX, errno == ERANGE
+ *
+ * // Failure: NULL vector
+ * errno = 0;
+ * int z = int_vector_index(NULL, 0); // z == INT_MAX, errno == EINVAL
+ * free_int_vector(v);
+ * @endcode
+ */
+static inline int int_vector_index(const int_v* vec, size_t index) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return INT_MAX;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return INT_MAX;
+    }
+    return vec->data[index]; 
+}
 // -------------------------------------------------------------------------------- 
 
-size_t int_vector_size(const int_v* vec);
+static inline size_t int_vector_size(const int_v* vec) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return SIZE_MAX;
+    }
+    return vec->len;
+}
 // -------------------------------------------------------------------------------- 
 
-size_t int_vector_alloc(const int_v* vec);
+static inline size_t int_vector_alloc(const int_v* vec) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return SIZE_MAX;
+    }
+    return vec->alloc;
+}
 // --------------------------------------------------------------------------------
 
 /**

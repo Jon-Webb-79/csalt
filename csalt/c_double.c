@@ -529,19 +529,6 @@ double pop_any_double_vector(double_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-double double_vector_index(const double_v* vec, size_t index) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return DBL_MAX;
-    }
-    if (index > vec->len - 1) {
-        errno = ERANGE;
-        return DBL_MAX;
-    }
-    return vec->data[index];
-}
-// // --------------------------------------------------------------------------------
-//
 size_t double_vector_size(const double_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;

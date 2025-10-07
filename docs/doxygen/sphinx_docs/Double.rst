@@ -169,6 +169,12 @@ pop_any_double_vector
 Search Vector 
 -------------
 
+double_vector_index 
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: double_vector_index
+   :project: csalt
+
 Vector Iterator 
 ---------------
 

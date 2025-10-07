@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <float.h>
 #include "c_string.h"
 #include "c_error.h"
 // ================================================================================ 
@@ -593,7 +594,64 @@ bool push_front_float_vector(float_v* vec, float value);
 bool insert_float_vector(float_v* vec, float value, size_t index);
 // --------------------------------------------------------------------------------
 
-float float_vector_index(const float_v* vec, size_t index);
+/**
+ * @brief Return the element at @p index from an ::float_v with bounds checking.
+ *
+ * On success, returns `vec->data[index]`. On failure, returns the sentinel
+ * `FLT_MAX` and sets `errno` to indicate the reason. This accessor does **not**
+ * modify `vec->error`; callers should check `errno` (or validate inputs) to
+ * distinguish a real value equal to `INT_MAX` from an error.
+ *
+ * @param vec    Pofloater to an ::float_v (must be non-NULL and have `data != NULL`).
+ * @param index  Zero-based index to access; must satisfy `index < vec->len`.
+ *
+ * @return
+ * - The `float` at position @p index on success.
+ * - `FLT_MAX` on failure (and `errno` is set).
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` if `vec == NULL` or `vec->data == NULL`.
+ * - Sets `errno = ERANGE` if `index >= vec->len` (out of bounds).
+ *
+ * @note This function does not alter `vec->error`. If your vectors can store
+ * `FLT_MAX` legitimately, check `errno` (or pre-validate inputs) to disambiguate.
+ *
+ * @warning
+ * - Not thread-safe. Do not call concurrently with writers to the same vector.
+ * - Ensure the index is valid (`index < vec->len`). Calling with `vec->len == 0`
+ *   is always invalid.
+ *
+ * @complexity O(1).
+ *
+ * @code
+ * // Success
+ * float_v* v = init_float_vector(3);
+ * push_back_float_vector(v, 10.0f);
+ * push_back_float_vector(v, 20.0f);
+ * errno = 0;
+ * float x = float_vector_index(v, 1);   // x == 20, errno == 0
+ *
+ * // Failure: out of bounds
+ * errno = 0;
+ * float y = float_vector_index(v, 5);   // y == FLT_MAX, errno == ERANGE
+ *
+ * // Failure: NULL vector
+ * errno = 0;
+ * float z = float_vector_index(NULL, 0); // z == FLT_MAX, errno == EINVAL
+ * free_float_vector(v);
+ * @endcode
+ */
+static inline float float_vector_index(const float_v* vec, size_t index) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return FLT_MAX;
+    }
+    if (index > vec->len - 1) {
+        errno = ERANGE;
+        return FLT_MAX;
+    }
+    return vec->data[index]; 
+}
 // -------------------------------------------------------------------------------- 
 
 size_t float_vector_size(const float_v* vec);

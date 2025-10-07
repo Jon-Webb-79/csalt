@@ -536,19 +536,6 @@ float pop_any_float_vector(float_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-float float_vector_index(const float_v* vec, size_t index) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return FLT_MAX;
-    }
-    if (index > vec->len - 1) {
-        errno = ERANGE;
-        return FLT_MAX;
-    }
-    return vec->data[index];
-}
-// --------------------------------------------------------------------------------
-
 size_t float_vector_size(const float_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;

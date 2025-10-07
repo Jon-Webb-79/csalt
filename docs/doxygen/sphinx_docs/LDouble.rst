@@ -170,6 +170,12 @@ pop_any_ldouble_vector
 Search Vector 
 -------------
 
+ldouble_vector_index 
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: ldouble_vector_index
+   :project: csalt
+
 Vector Iterator 
 ---------------
 
