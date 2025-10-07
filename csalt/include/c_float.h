@@ -432,10 +432,80 @@ static inline ErrorCode get_float_vector_error(const float_v* vec) {
 bool push_back_float_vector(float_v* vec, float value);
 // --------------------------------------------------------------------------------
 
-bool push_front_float_vector(float_v* vec, const float value);
+/**
+ * @brief Prepend a value to a ::float_v, shifting elements right; grows if needed.
+ *
+ * Inserts @p value at index 0. If the vector is ::DYNAMIC and at capacity, the
+ * function grows the buffer using an adaptive policy (see **Growth policy**).
+ * After ensuring capacity, existing elements `[0 .. len-1]` are shifted one
+ * slot to the right via `memmove`, then `data[0]` is set and `len` incremented.
+ *
+ * @param vec    Pointer to a ::float_v (must be non-NULL and have `data != NULL`).
+ * @param value  The @c float value to insert at the front.
+ *
+ * @return
+ * - `true`  on success (value prepended, length incremented, `vec->error = ::NO_ERROR`)
+ * - `false` on failure (no prepend; `vec->error` set and `errno` updated)
+ *
+ * @par Growth policy
+ * When `len == alloc` and `alloc_type == ::DYNAMIC`, capacity is increased:
+ * - If `alloc < ::VEC_THRESHOLD`, capacity doubles.
+ * - Otherwise, capacity grows by `::VEC_FIXED_AMOUNT`.
+ * Newly added capacity is zero-initialized. Reallocation may change `vec->data`.
+ *
+ * @par STATIC vs DYNAMIC
+ * - ::DYNAMIC vectors may grow; reallocation can occur.
+ * - ::STATIC vectors cannot grow. If an insert would exceed `alloc`, the call
+ *   fails with ::INVALID_ARG.
+ *
+ * @par Errors
+ * On failure the function returns `false` and sets `vec->error` (when `vec` is non-NULL)
+ * and `errno` via `set_errno_from_error()`:
+ * - ::NULL_POINTER if `vec` is non-NULL but `vec->data` is `NULL`
+ * - ::INVALID_ARG  if `vec` is ::STATIC and `len == alloc`
+ * - ::REALLOC_FAIL if a growth attempt fails
+ * If `vec` is `NULL`, sets `errno = EINVAL` and returns `false`.
+ *
+ * @post
+ * - Success: `data[0] == value`, prior elements shifted to `[1 .. old_len]`,
+ *   `len` increased by 1, `error == ::NO_ERROR`.
+ * - Failure: contents and `len` unchanged; on reallocation failure, the original
+ *   buffer remains valid.
+ *
+ * @warning
+ * - Reallocation (when growing) may invalidate any saved pointers to `vec->data`.
+ * - Even without reallocation, the front insert shifts elements; any previously
+ *   saved element addresses may now point to different values.
+ * - Not thread-safe.
+ *
+ * **complexity**
+ * - O(n) for the shift (`memmove`) on every successful prepend.
+ * - If a growth step occurs: O(n) for reallocation + O(k) for zero-initializing new tail.
+ *
+ * @code{.c}
+ * // Example 1: dynamic vector, multiple prepends
+ * float_v* v = init_float_vector(2);
+ * if (!v) { perror("init_float_vector"); return; }
+ * (void)push_front_float_vector(v, 2.0f);  // [2]
+ * (void)push_front_float_vector(v, 1.0f);  // [1, 2]
+ * (void)push_front_float_vector(v, 0.0f);  // grows if needed -> [0, 1, 2]
+ * // v->len == 3
+ * free_float_vector(v);
+ *
+ * // Example 2: static vector fails when full
+ * {
+ *     float_v s = init_float_array(1);     // STATIC storage, capacity 1
+ *     (void)push_front_float_vector(&s, 1.0f); // ok -> [1]
+ *     if (!push_front_float_vector(&s, 2.0f)) { // would exceed capacity
+ *         // s.error == INVALID_ARG; errno set via set_errno_from_error()
+ *     }
+ * } // s.data lifetime ends with the block
+ * @endcode
+ */
+bool push_front_float_vector(float_v* vec, float value);
 // --------------------------------------------------------------------------------
 
-bool insert_float_vector(float_v* vec, const float value, size_t index);
+bool insert_float_vector(float_v* vec, float value, size_t index);
 // --------------------------------------------------------------------------------
 
 float float_vector_index(const float_v* vec, size_t index);

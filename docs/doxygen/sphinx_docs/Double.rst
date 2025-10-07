@@ -136,6 +136,12 @@ push_back_double_vector
 .. doxygenfunction:: push_back_double_vector
    :project: csalt
 
+push_front_double_vector 
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: push_front_double_vector
+   :project: csalt
+
 Search Vector 
 -------------
 

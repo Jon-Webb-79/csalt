@@ -365,9 +365,9 @@ static inline ErrorCode get_int_vector_error(const int_v* vec) {
  * // Example 2: static vector fails when full
  * {
  *     int_v s = init_int_array(2);  // STATIC storage
- *     (void)push_back_int_vector(&s, 1.0f);  // ok
- *     (void)push_back_int_vector(&s, 2.0f);  // ok
- *     if (!push_back_int_vector(&s, 3.0f)) { // exceeds capacity
+ *     (void)push_back_int_vector(&s, 1);  // ok
+ *     (void)push_back_int_vector(&s, 2);  // ok
+ *     if (!push_back_int_vector(&s, 3)) { // exceeds capacity
  *         // s.error == INVALID_ARG; errno set via set_errno_from_error()
  *     }
  * } // s.data lifetime ends with the block
@@ -376,10 +376,80 @@ static inline ErrorCode get_int_vector_error(const int_v* vec) {
 bool push_back_int_vector(int_v* vec, int value);
 // --------------------------------------------------------------------------------
 
-bool push_front_int_vector(int_v* vec, const int value);
+/**
+ * @brief Prepend a value to a ::int_v, shifting elements right; grows if needed.
+ *
+ * Inserts @p value at index 0. If the vector is ::DYNAMIC and at capacity, the
+ * function grows the buffer using an adaptive policy (see **Growth policy**).
+ * After ensuring capacity, existing elements `[0 .. len-1]` are shifted one
+ * slot to the right via `memmove`, then `data[0]` is set and `len` incremented.
+ *
+ * @param vec    Pointer to a ::int_v (must be non-NULL and have `data != NULL`).
+ * @param value  The @c int value to insert at the front.
+ *
+ * @return
+ * - `true`  on success (value prepended, length incremented, `vec->error = ::NO_ERROR`)
+ * - `false` on failure (no prepend; `vec->error` set and `errno` updated)
+ *
+ * @par Growth policy
+ * When `len == alloc` and `alloc_type == ::DYNAMIC`, capacity is increased:
+ * - If `alloc < ::VEC_THRESHOLD`, capacity doubles.
+ * - Otherwise, capacity grows by `::VEC_FIXED_AMOUNT`.
+ * Newly added capacity is zero-initialized. Reallocation may change `vec->data`.
+ *
+ * @par STATIC vs DYNAMIC
+ * - ::DYNAMIC vectors may grow; reallocation can occur.
+ * - ::STATIC vectors cannot grow. If an insert would exceed `alloc`, the call
+ *   fails with ::INVALID_ARG.
+ *
+ * @par Errors
+ * On failure the function returns `false` and sets `vec->error` (when `vec` is non-NULL)
+ * and `errno` via `set_errno_from_error()`:
+ * - ::NULL_POINTER if `vec` is non-NULL but `vec->data` is `NULL`
+ * - ::INVALID_ARG  if `vec` is ::STATIC and `len == alloc`
+ * - ::REALLOC_FAIL if a growth attempt fails
+ * If `vec` is `NULL`, sets `errno = EINVAL` and returns `false`.
+ *
+ * @post
+ * - Success: `data[0] == value`, prior elements shifted to `[1 .. old_len]`,
+ *   `len` increased by 1, `error == ::NO_ERROR`.
+ * - Failure: contents and `len` unchanged; on reallocation failure, the original
+ *   buffer remains valid.
+ *
+ * @warning
+ * - Reallocation (when growing) may invalidate any saved pointers to `vec->data`.
+ * - Even without reallocation, the front insert shifts elements; any previously
+ *   saved element addresses may now point to different values.
+ * - Not thread-safe.
+ *
+ * **complexity**
+ * - O(n) for the shift (`memmove`) on every successful prepend.
+ * - If a growth step occurs: O(n) for reallocation + O(k) for zero-initializing new tail.
+ *
+ * @code{.c}
+ * // Example 1: dynamic vector, multiple prepends
+ * int_v* v = init_int_vector(2);
+ * if (!v) { perror("init_int_vector"); return; }
+ * (void)push_front_int_vector(v, 2);  // [2]
+ * (void)push_front_int_vector(v, 1);  // [1, 2]
+ * (void)push_front_int_vector(v, 0);  // grows if needed -> [0, 1, 2]
+ * // v->len == 3
+ * free_int_vector(v);
+ *
+ * // Example 2: static vector fails when full
+ * {
+ *     int_v s = init_int_array(1);     // STATIC storage, capacity 1
+ *     (void)push_front_int_vector(&s, 1); // ok -> [1]
+ *     if (!push_front_int_vector(&s, 2)) { // would exceed capacity
+ *         // s.error == INVALID_ARG; errno set via set_errno_from_error()
+ *     }
+ * } // s.data lifetime ends with the block
+ * @endcode
+ */
+bool push_front_int_vector(int_v* vec, int value);
 // --------------------------------------------------------------------------------
 
-bool insert_int_vector(int_v* vec, const int value, size_t index);
+bool insert_int_vector(int_v* vec, int value, size_t index);
 // --------------------------------------------------------------------------------
 
 int int_vector_index(const int_v* vec, size_t index);

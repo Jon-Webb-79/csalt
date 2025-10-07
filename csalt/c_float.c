@@ -325,16 +325,20 @@ bool push_back_float_vector(float_v* vec, const float value) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_front_float_vector(float_v* vec, const float value) {
+bool push_front_float_vector(float_v* vec, float value) {
     if (vec == NULL || vec->data == NULL) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
    
     // Check if we need to resize
     if (vec->len >= vec->alloc) {
         if (vec->alloc_type == STATIC) {
-            errno = EINVAL;
+            vec->error = INVALID_ARG;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
         
@@ -345,15 +349,10 @@ bool push_front_float_vector(float_v* vec, const float value) {
             new_alloc += VEC_FIXED_AMOUNT;
         }
         
-        // Check for size_t overflow
-        if (new_alloc > SIZE_MAX / sizeof(float)) {
-            errno = ERANGE;
-            return false;
-        }
-       
         float* new_data = realloc(vec->data, new_alloc * sizeof(float));
         if (!new_data) {
-            errno = ENOMEM;
+            vec->error = REALLOC_FAIL;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
        
@@ -361,12 +360,6 @@ bool push_front_float_vector(float_v* vec, const float value) {
        
         vec->data = new_data;
         vec->alloc = new_alloc;
-    }
-
-    // Check for length overflow
-    if (vec->len > SIZE_MAX - 1) {
-        errno = ERANGE;
-        return false;
     }
     
     // Move existing elements right if there are any
@@ -376,6 +369,7 @@ bool push_front_float_vector(float_v* vec, const float value) {
     
     vec->data[0] = value;    
     vec->len++;
+    vec->error = NO_ERROR;
     return true;
 }
 // --------------------------------------------------------------------------------

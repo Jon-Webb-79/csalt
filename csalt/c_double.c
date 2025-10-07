@@ -275,7 +275,7 @@ void _free_double_vector(double_v** vec) {
 }
 // -------------------------------------------------------------------------------- 
 
-bool push_back_double_vector(double_v* vec, const double value) {
+bool push_back_double_vector(double_v* vec, double value) {
     if (vec == NULL|| vec->data == NULL) {
         if (vec) {
             vec->error = NULL_POINTER;
@@ -319,16 +319,20 @@ bool push_back_double_vector(double_v* vec, const double value) {
 }
 // --------------------------------------------------------------------------------
 
-bool push_front_double_vector(double_v* vec, const double value) {
+bool push_front_double_vector(double_v* vec, double value) {
     if (vec == NULL || vec->data == NULL) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
    
     // Check if we need to resize
     if (vec->len >= vec->alloc) {
         if (vec->alloc_type == STATIC) {
-            errno = EINVAL;
+            vec->error = INVALID_ARG;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
         
@@ -338,16 +342,11 @@ bool push_front_double_vector(double_v* vec, const double value) {
         } else {
             new_alloc += VEC_FIXED_AMOUNT;
         }
-        
-        // Check for size_t overflow
-        if (new_alloc > SIZE_MAX / sizeof(double)) {
-            errno = ERANGE;
-            return false;
-        }
-       
+              
         double* new_data = realloc(vec->data, new_alloc * sizeof(double));
         if (!new_data) {
-            errno = ENOMEM;
+            vec->error = REALLOC_FAIL;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
        
@@ -357,12 +356,6 @@ bool push_front_double_vector(double_v* vec, const double value) {
         vec->alloc = new_alloc;
     }
 
-    // Check for length overflow
-    if (vec->len > SIZE_MAX - 1) {
-        errno = ERANGE;
-        return false;
-    }
-    
     // Move existing elements right if there are any
     if (vec->len > 0) {
         memmove(vec->data + 1, vec->data, vec->len * sizeof(double));
@@ -370,6 +363,7 @@ bool push_front_double_vector(double_v* vec, const double value) {
     
     vec->data[0] = value;    
     vec->len++;
+    vec->error = NO_ERROR;
     return true;
 }
 // --------------------------------------------------------------------------------

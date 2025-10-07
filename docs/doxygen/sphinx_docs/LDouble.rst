@@ -137,6 +137,12 @@ push_back_ldouble_vector
 .. doxygenfunction:: push_back_ldouble_vector
    :project: csalt
 
+push_front_ldouble_vector 
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: push_front_ldouble_vector
+   :project: csalt
+
 Search Vector 
 -------------
 

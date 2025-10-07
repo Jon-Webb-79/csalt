@@ -136,6 +136,12 @@ push_back_int_vector
 .. doxygenfunction:: push_back_int_vector
    :project: csalt
 
+push_front_int_vector 
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: push_front_int_vector
+   :project: csalt
+
 Search Vector 
 -------------
 
