@@ -155,6 +155,18 @@ pop_back_ldouble_vector
 .. doxygenfunction:: pop_back_ldouble_vector
    :project: csalt
 
+pop_front_ldouble_vector 
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_front_ldouble_vector
+   :project: csalt
+
+pop_any_ldouble_vector 
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_any_ldouble_vector
+   :project: csalt
+
 Search Vector 
 -------------
 

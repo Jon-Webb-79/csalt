@@ -440,7 +440,7 @@ float pop_back_float_vector(float_v* vec) {
     if (!vec || !vec->data) {
         if (vec) {
             vec->error = NULL_POINTER;
-            errno = set_errno_from_error(vec-.error);
+            errno = set_errno_from_error(vec->error);
         } else errno = EINVAL;
         return FLT_MAX;
     }
@@ -492,17 +492,22 @@ float pop_front_float_vector(float_v* vec) {  // Fixed function name
 
 float pop_any_float_vector(float_v* vec, size_t index) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return FLT_MAX;
     }
    
     if (vec->len == 0) {
-        errno = ENODATA;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return FLT_MAX;
     }
     
     if (index >= vec->len) {
-        errno = ERANGE;
+        vec->error = OUT_OF_BOUNDS;
+        errno = set_errno_from_error(vec->error);
         return FLT_MAX;
     }
     
@@ -513,7 +518,8 @@ float pop_any_float_vector(float_v* vec, size_t index) {
     if (index < vec->len - 1) {
         // Check for overflow in memmove size calculation
         if ((vec->len - index - 1) > SIZE_MAX / sizeof(float)) {
-            errno = ERANGE;
+            vec->error = SIZE_MISMATCH;
+            errno = set_errno_from_error(vec->error);
             return FLT_MAX;
         }
         
@@ -525,6 +531,7 @@ float pop_any_float_vector(float_v* vec, size_t index) {
     memset(&vec->data[vec->len - 1], 0, sizeof(float));
     
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------

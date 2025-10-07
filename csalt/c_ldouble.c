@@ -197,7 +197,7 @@ bool insert_ldouble_vector(ldouble_v* vec, long double value, size_t index) {
         
         long double* new_data = realloc(vec->data, new_alloc * sizeof(long double));
         if (!new_data) {
-            vec->error = RALLOC_FAIL;
+            vec->error = REALLOC_FAIL;
             errno = set_errno_from_error(vec->error);
             return false;
         }
@@ -255,18 +255,16 @@ long double pop_back_ldouble_vector(ldouble_v* vec) {
 
 long double pop_front_ldouble_vector(ldouble_v* vec) {  // Fixed function name
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return LDBL_MAX;
     }
    
     if (vec->len == 0) {
-        errno = ENODATA;
-        return LDBL_MAX;
-    }
-   
-    // Check for overflow in memmove size calculation
-    if (vec->len > SIZE_MAX / sizeof(long double)) {
-        errno = ERANGE;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return LDBL_MAX;
     }
    
@@ -279,23 +277,27 @@ long double pop_front_ldouble_vector(ldouble_v* vec) {  // Fixed function name
     memset(&vec->data[vec->len - 1], 0, sizeof(long double));
    
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------
 
 long double pop_any_ldouble_vector(ldouble_v* vec, size_t index) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        vec->error = NULL_POINTER;
+        errno = set_errno_from_error(vec->error);
         return LDBL_MAX;
     }
    
     if (vec->len == 0) {
-        errno = ENODATA;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return LDBL_MAX;
     }
     
     if (index >= vec->len) {
-        errno = ERANGE;
+        vec->error = OUT_OF_BOUNDS;
+        errno = set_errno_from_error(vec->error);
         return LDBL_MAX;
     }
     
@@ -306,7 +308,8 @@ long double pop_any_ldouble_vector(ldouble_v* vec, size_t index) {
     if (index < vec->len - 1) {
         // Check for overflow in memmove size calculation
         if ((vec->len - index - 1) > SIZE_MAX / sizeof(long double)) {
-            errno = ERANGE;
+            vec->error = SIZE_MISMATCH;
+            errno = set_errno_from_error(vec->error);
             return LDBL_MAX;
         }
         
@@ -318,6 +321,7 @@ long double pop_any_ldouble_vector(ldouble_v* vec, size_t index) {
     memset(&vec->data[vec->len - 1], 0, sizeof(long double));
     
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------

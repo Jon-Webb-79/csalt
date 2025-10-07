@@ -601,9 +601,145 @@ size_t int_vector_alloc(const int_v* vec);
 int pop_back_int_vector(int_v* vec);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Remove and return the first element of an ::int_v, shifting the rest left.
+ *
+ * Removes the element at index 0, shifts the remaining `len-1` elements one slot
+ * to the left via `memmove`, zeroes the vacated tail slot, decrements `len`, and
+ * returns the removed value. Works for both ::STATIC and ::DYNAMIC vectors; no
+ * reallocation occurs.
+ *
+ * @param vec  Pointer to an ::int_v (must be non-NULL with `data != NULL` and `len > 0`).
+ *
+ * @return
+ * - The removed `int` value on success (and sets `vec->error = ::NO_ERROR`).
+ * - `INT_MAX` on failure (no removal performed).
+ *
+ * @par Errors
+ * On failure the function returns `INT_MAX` and:
+ * - If `vec` is non-NULL but `vec->data` is `NULL`:
+ *   - sets `vec->error = ::NULL_POINTER` and `errno` via `set_errno_from_error()`
+ * - If `vec` is non-NULL and `vec->len == 0` (empty vector):
+ *   - sets `vec->error = ::INVALID_ARG` and `errno` accordingly
+ * - If `vec` is `NULL`:
+ *   - sets `errno = EINVAL`
+ *
+ * @post
+ * - Success: original `data[0]` is returned; elements `[1 .. old_len-1]` are moved to
+ *   `[0 .. old_len-2]`; `data[old_len-1]` is set to `0`; `len` is decremented by 1;
+ *   `error == ::NO_ERROR`.
+ * - Failure: contents and `len` unchanged.
+ *
+ * @note The error sentinel is `INT_MAX` (see `<limits.h>`). If your vector can
+ * legitimately contain `INT_MAX`, distinguish success from failure by checking
+ * `vec->error` (or `errno`) after the call.
+ *
+ * @warning
+ * - This operation is O(n) due to the left shift; any saved pointers/references to
+ *   elements may no longer refer to the same logical item afterward.
+ * - Not thread-safe. Synchronize externally if shared.
+ *
+ * **complexity**
+ * - O(n) for the shift; O(1) otherwise.
+ *
+ * @code{.c}
+ * // Example: pop from the front of a dynamic vector
+ * int_v* v = init_int_vector(4);
+ * push_back_int_vector(v, 10);
+ * push_back_int_vector(v, 20);
+ * push_back_int_vector(v, 30);       // v = [10, 20, 30], len = 3
+ *
+ * int first = pop_front_int_vector(v); // first == 10, v -> [20, 30, 0], len = 2
+ * if (first == INT_MAX && v->error != NO_ERROR) {
+ *     perror("pop_front_int_vector");
+ * }
+ * free_int_vector(v);
+ *
+ * // Example: popping from an empty vector -> failure
+ * int_v* w = init_int_vector(1);
+ * int val = pop_front_int_vector(w);   // returns INT_MAX, w->error == INVALID_ARG
+ * free_int_vector(w);
+ * @endcode
+ */
 int pop_front_int_vector(int_v* vec);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove and return the element at @p index from an ::int_v, shifting the tail left.
+ *
+ * Removes the element at position @p index (0-based), shifts any following elements
+ * one slot to the left via `memmove`, zeroes the vacated tail slot, decrements
+ * `len`, and returns the removed value. Works for both ::STATIC and ::DYNAMIC
+ * vectors; no reallocation occurs.
+ *
+ * @param vec    Pointer to an ::int_v (must be non-NULL and have `data != NULL`).
+ * @param index  Position of the element to remove. Must satisfy `index < vec->len`.
+ *
+ * @return
+ * - The removed `int` value on success (and sets `vec->error = ::NO_ERROR`).
+ * - `INT_MAX` on failure (no removal performed).
+ *
+ * @par Valid indices
+ * - `0 <= index < vec->len`
+ * - `index == vec->len - 1` removes the last element (no shift needed).
+ *
+ * @par Errors
+ * On failure the function returns `INT_MAX` and:
+ * - If `vec` is non-NULL but `vec->data` is `NULL`:
+ *   - sets `vec->error = ::NULL_POINTER` and `errno` via `set_errno_from_error()`
+ * - If `vec` is non-NULL and `vec->len == 0` (empty vector):
+ *   - sets `vec->error = ::INVALID_ARG` and `errno` accordingly
+ * - If `index >= vec->len`:
+ *   - sets `vec->error = ::OUT_OF_BOUNDS` and `errno` accordingly
+ * - If the internal byte count for `memmove` would overflow `size_t`:
+ *   - sets `vec->error = ::SIZE_MISMATCH` and `errno` accordingly
+ * - If `vec` is `NULL`:
+ *   - sets `errno = EINVAL`
+ *
+ * @post
+ * - Success: element at `data[index]` is returned; elements `[index+1 .. old_len-1]`
+ *   are moved to `[index .. old_len-2]`; `data[old_len-1]` is set to `0`; `len`
+ *   is decremented by 1; `error == ::NO_ERROR`.
+ * - Failure: contents and `len` are unchanged.
+ *
+ * @note The error sentinel is `INT_MAX` (see `<limits.h>`). If your vector can
+ * legitimately contain `INT_MAX`, distinguish success from failure by checking
+ * `vec->error` (or `errno`) after the call.
+ *
+ * @warning
+ * - This operation is O(n - index) due to the left shift; any saved pointers/
+ *   references to elements may no longer refer to the same logical item afterward.
+ * - Not thread-safe. Synchronize externally if shared.
+ *
+ * **complexity**
+ * - O(n - index) for the shift; O(1) otherwise.
+ *
+ * @code{.c}
+ * // Example 1: remove middle element
+ * int_v* v = init_int_vector(4);
+ * push_back_int_vector(v, 10); // [10]
+ * push_back_int_vector(v, 20); // [10,20]
+ * push_back_int_vector(v, 30); // [10,20,30]
+ * int removed = pop_any_int_vector(v, 1); // removes 20; v -> [10,30,0], len=2
+ * if (removed == INT_MAX && v->error != NO_ERROR) {
+ *     perror("pop_any_int_vector");
+ * }
+ * free_int_vector(v);
+ *
+ * // Example 2: remove last element (no shift)
+ * int_v* w = init_int_vector(2);
+ * push_back_int_vector(w, 1);  // [1]
+ * push_back_int_vector(w, 2);  // [1,2]
+ * (void)pop_any_int_vector(w, w->len - 1); // removes 2; w -> [1,0], len=1
+ * free_int_vector(w);
+ *
+ * // Example 3: invalid index
+ * int_v* z = init_int_vector(1);
+ * push_back_int_vector(z, 5);  // [5]
+ * int bad = pop_any_int_vector(z, 3); // OUT_OF_BOUNDS -> returns INT_MAX
+ * free_int_vector(z);
+ * @endcode
+ */
 int pop_any_int_vector(int_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 

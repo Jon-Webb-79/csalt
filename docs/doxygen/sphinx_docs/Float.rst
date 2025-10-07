@@ -156,6 +156,18 @@ pop_back_float_vector
 .. doxygenfunction:: pop_back_float_vector
    :project: csalt
 
+pop_front_float_vector 
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_front_float_vector
+   :project: csalt
+
+pop_any_float_vector 
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_any_float_vector
+   :project: csalt
+
 Search Vector 
 -------------
 
