@@ -236,10 +236,144 @@ static inline int_v wrap_int_array(int *buf, size_t n)
 
 // -------------------------------------------------------------------------------- 
 
-int* c_int_ptr(int_v* vec);
+/**
+ * @brief Get the last nonzero error code recorded on a ::int_v.
+ *
+ * Returns the value of @p vec->error when it is a nonzero ::ErrorCode set by a
+ * prior csalt operation. This accessor is intended for use *after* an API call
+ * has failed and stored a diagnostic on the vector.
+ *
+ * If @p vec is NULL **or** if @p vec->error equals ::NO_ERROR (i.e., no error
+ * has been recorded), the function sets @c errno to @c EINVAL and returns
+ * ::INVALID_ERROR.
+ *
+ * @param vec  Pointer to a ::int_v to query (may be NULL).
+ *
+ * @return
+ *   - The nonzero ::ErrorCode stored in @p vec->error on success.
+ *   - ::INVALID_ERROR if @p vec is NULL or @p vec->error == ::NO_ERROR.
+ *
+ * @par Errors
+ * - Sets @c errno to @c EINVAL if:
+ *   - @p vec is @c NULL, or
+ *   - @p vec->error == ::NO_ERROR (no error recorded to report).
+ *
+ * @note This function does not modify or clear @p vec->error.
+ *
+ * @warning This accessor deliberately treats “no error recorded” as invalid
+ * input for retrieval. Only call it when you expect a prior operation to have
+ * set a nonzero error code.
+ *
+ * **thread_safety** Not thread-safe. Synchronize externally if shared.
+ * **complexity** O(1).
+ *
+ * @code{.c}
+ * // Example: retrieving an error after a failed operation
+ * if (!push_back_int_vector(v, 3.14f)) {
+ *     ErrorCode ec = get_int_vector_error(v);
+ *     if (ec == INVALID_ERROR) {
+ *         // Either v is NULL or no error was recorded
+ *         perror("get_int_vector_error");
+ *     } else {
+ *         // Handle the specific error code 'ec'
+ *     }
+ * }
+ *
+ * // Example: calling when no error was recorded -> INVALID_ERROR + errno=EINVAL
+ * ErrorCode ec2 = get_int_vector_error(v);
+ * // ec2 == INVALID_ERROR if v->error was NO_ERROR
+ * @endcode
+ */
+static inline ErrorCode get_int_vector_error(const int_v* vec) {
+    if (!vec || !vec->error) {
+        errno = EINVAL;
+        return INVALID_ERROR;
+    }
+    return vec->error;
+}
 // --------------------------------------------------------------------------------
 
-bool push_back_int_vector(int_v* vec, const int value);
+/**
+ * @brief Append a value to a ::int_v, growing capacity if needed.
+ *
+ * Appends @p value at index @c vec->len and increments the length. If the
+ * vector is ::DYNAMIC and at capacity, the function grows the buffer using an
+ * adaptive policy:
+ *
+ * - If @c vec->alloc < ::VEC_THRESHOLD, capacity doubles.
+ * - Otherwise, capacity increases by ::VEC_FIXED_AMOUNT.
+ *
+ * Newly added capacity is zero-initialized.
+ *
+ * @param vec    Pointer to a ::int_v (must be non-NULL and have @c data != NULL).
+ * @param value  The @c int value to append.
+ *
+ * @return
+ * - @c true  on success (value stored, length incremented, @c vec->error = ::NO_ERROR)
+ * - @c false on failure (no append; @c vec->error set and @c errno updated)
+ *
+ * @par Growth policy
+ * Controlled by the compile-time macros ::VEC_THRESHOLD and ::VEC_FIXED_AMOUNT.
+ * When reallocation occurs, @c vec->data may change; all previous raw pointers
+ * into the buffer become invalid.
+ *
+ * @par STATIC vs DYNAMIC
+ * - ::DYNAMIC vectors may grow; reallocation can occur.
+ * - ::STATIC vectors cannot grow. If an append would exceed @c alloc, the call
+ *   fails with ::INVALID_ARG.
+ *
+ * @par Errors
+ * On failure the function returns @c false and sets @c vec->error (when @p vec is
+ * non-NULL) and @c errno via @c set_errno_from_error():
+ * - ::NULL_POINTER if @p vec is non-NULL but @c vec->data is @c NULL
+ *   (also sets @c errno = set_errno_from_error(::NULL_POINTER)).
+ * - ::INVALID_ARG if @p vec is ::STATIC and @c vec->len == @c vec->alloc
+ *   (also sets @c errno accordingly).
+ * - ::REALLOC_FAIL if a reallocation attempt fails
+ *   (also sets @c errno accordingly).
+ * If @p vec is @c NULL, sets @c errno = @c EINVAL and returns @c false.
+ *
+ * @post
+ * - Success: one element appended; @c vec->len increased by 1; @c vec->error = ::NO_ERROR.
+ * - Failure: no change to contents or length; for reallocation failure the original
+ *   buffer remains valid (strong exception-safety for data and length).
+ *
+ * @warning
+ * - Reallocation may occur; any saved pointers into @c vec->data become invalid.
+ * - Do not call on ::STATIC vectors once full; resize is not permitted.
+ * - This function is not thread-safe.
+ *
+ * **complexity**
+ * - Amortized O(1) appends for ::DYNAMIC vectors.
+ * - O(n) when a growth step occurs (due to @c realloc + zero-initialization of new tail).
+ *
+ * @code{.c}
+ * // Example 1: dynamic vector append
+ * int_v* v = init_int_vector(4);
+ * if (!v) { perror("init_int_vector"); return; }
+ * for (int i = 0; i < 10; ++i) {
+ *     if (!push_back_int_vector(v, (int)i)) {
+ *         perror("push_back_int_vector");
+ *         // v->error contains a csalt-specific code (e.g., REALLOC_FAIL)
+ *         free_int_vector(v);
+ *         return;
+ *     }
+ * }
+ * // v->len == 10; capacity likely grew according to the policy
+ * free_int_vector(v);
+ *
+ * // Example 2: static vector fails when full
+ * {
+ *     int_v s = init_int_array(2);  // STATIC storage
+ *     (void)push_back_int_vector(&s, 1.0f);  // ok
+ *     (void)push_back_int_vector(&s, 2.0f);  // ok
+ *     if (!push_back_int_vector(&s, 3.0f)) { // exceeds capacity
+ *         // s.error == INVALID_ARG; errno set via set_errno_from_error()
+ *     }
+ * } // s.data lifetime ends with the block
+ * @endcode
+ */
+bool push_back_int_vector(int_v* vec, int value);
 // --------------------------------------------------------------------------------
 
 bool push_front_int_vector(int_v* vec, const int value);

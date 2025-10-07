@@ -123,8 +123,20 @@ FLTVEC_GBC
 Utility Functions 
 -----------------
 
+get_float_vector_error
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: get_float_vector_error
+   :project: csalt
+
 Vector Manipulation 
 -------------------
+
+push_back_float_vector 
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: push_back_float_vector
+   :project: csalt
 
 Search Vector 
 -------------

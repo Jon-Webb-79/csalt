@@ -121,8 +121,20 @@ INTVEC_GBC
 Utility Functions 
 -----------------
 
+get_int_vector_error
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: get_int_vector_error
+   :project: csalt
+
 Vector Manipulation 
 -------------------
+
+push_back_int_vector 
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: push_back_int_vector
+   :project: csalt
 
 Search Vector 
 -------------

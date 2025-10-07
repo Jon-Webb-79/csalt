@@ -57,15 +57,6 @@ ldouble_v* init_ldouble_vector(size_t buff) {
 }
 // -------------------------------------------------------------------------------- 
 
-long double* c_ldouble_ptr(ldouble_v* vec) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return NULL;
-    }
-    return vec->data;
-}
-// --------------------------------------------------------------------------------
-
 void free_ldouble_vector(ldouble_v* vec) {
    if (!vec || !vec->alloc_type || vec->alloc_type == STATIC) {
        errno = EINVAL;
@@ -86,14 +77,18 @@ void _free_ldouble_vector(ldouble_v** vec) {
 
 bool push_back_ldouble_vector(ldouble_v* vec, const long double value) {
     if (vec == NULL|| vec->data == NULL) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
    
     // Check if we need to resize
     if (vec->len >= vec->alloc) {
         if (vec->alloc_type == STATIC) {
-            errno = EINVAL;
+            vec->error = INVALID_ARG;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
         size_t new_alloc = vec->alloc == 0 ? 1 : vec->alloc;
@@ -106,7 +101,8 @@ bool push_back_ldouble_vector(ldouble_v* vec, const long double value) {
         // Allocate more space for the array of str structs
         long double* new_data = realloc(vec->data, new_alloc * sizeof(long double));
         if (!new_data) {
-            errno = ENOMEM;
+            vec->error = REALLOC_FAIL;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
        
@@ -118,7 +114,7 @@ bool push_back_ldouble_vector(ldouble_v* vec, const long double value) {
     }
     vec->data[vec->len] = value; 
     vec->len++;
-   
+    vec->error = NO_ERROR; 
     return true;
 }
 // --------------------------------------------------------------------------------

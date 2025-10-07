@@ -121,8 +121,20 @@ DBLEVEC_GBC
 Utility Functions 
 -----------------
 
+get_double_vector_error
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: get_double_vector_error
+   :project: csalt
+
 Vector Manipulation 
 -------------------
+
+push_back_double_vector 
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: push_back_double_vector
+   :project: csalt
 
 Search Vector 
 -------------

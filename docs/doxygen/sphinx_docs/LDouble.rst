@@ -122,8 +122,20 @@ LDBLEVEC_GBC
 Utility Functions 
 -----------------
 
+get_ldouble_vector_error
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: get_ldouble_vector_error
+   :project: csalt
+
 Vector Manipulation 
 -------------------
+
+push_back_ldouble_vector 
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: push_back_ldouble_vector
+   :project: csalt
 
 Search Vector 
 -------------
