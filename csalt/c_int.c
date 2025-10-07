@@ -385,12 +385,16 @@ bool insert_int_vector(int_v* vec, int value, size_t index) {
 
 int pop_back_int_vector(int_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return INT_MAX;
     }
     
     if (vec->len == 0) {
-        errno = ENODATA;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return INT_MAX;
     }
     
@@ -399,6 +403,7 @@ int pop_back_int_vector(int_v* vec) {
     // Clear the last element (which was moved)
     memset(&vec->data[vec->len - 1], 0, sizeof(int));
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------

@@ -148,6 +148,12 @@ insert_double_vector
 .. doxygenfunction:: insert_double_vector
    :project: csalt
 
+pop_back_double_vector 
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_back_double_vector
+   :project: csalt
+
 Search Vector 
 -------------
 

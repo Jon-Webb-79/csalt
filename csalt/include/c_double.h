@@ -546,6 +546,58 @@ size_t double_vector_size(const double_v* vec);
 size_t double_vector_alloc(const double_v* vec);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove and return the last element of an ::double_v.
+ *
+ * Decrements @p vec->len by one, returns the previous last value, and
+ * zero-initializes the vacated slot. Works for both ::STATIC and ::DYNAMIC
+ * vectors since no reallocation occurs.
+ *
+ * @param vec  Podoubleer to an ::double_v (must be non-NULL with @c data != NULL and @c len > 0).
+ *
+ * @return
+ * - The removed @c double value on success (and sets @c vec->error = ::NO_ERROR).
+ * - @c DBL_MAX on failure (no removal performed).
+ *
+ * @par Errors
+ * On failure the function returns @c INT_MAX and:
+ * - If @p vec is non-NULL but @c vec->data is @c NULL:
+ *   - sets @c vec->error = ::NULL_POINTER and @c errno via @c set_errno_from_error()
+ * - If @p vec is non-NULL and @c vec->len == 0 (empty vector):
+ *   - sets @c vec->error = ::INVALID_ARG and @c errno accordingly
+ * - If @p vec is @c NULL:
+ *   - sets @c errno = @c EINVAL
+ *
+ * @post
+ * - Success: @c vec->len is decremented by 1; @c vec->data[vec->len] is set to 0;
+ *   @c vec->error == ::NO_ERROR; returned value is the removed element.
+ * - Failure: @c vec and its contents are unchanged.
+ *
+ * @note The error sentinel is @c DBL_MAX (from <limits.h>). If your vector can
+ * legitimately contain @c DBL_MAX, distinguish success from failure by checking
+ * @c vec->error (or @c errno) after the call.
+ *
+ * @warning Not thread-safe. External synchronization is required for concurrent use.
+ *
+ * **complexity** O(1).
+ *
+ * @code{.c}
+ * // Example: pop from a dynamic vector
+ * double_v* v = init_double_vector(4);
+ * push_back_double_vector(v, 10.0);
+ * push_back_double_vector(v, 20.0);
+ * double last = pop_back_double_vector(v);  // last == 20, v->len decremented, slot zeroed
+ * if (last == DBL_MAX && v->error != NO_ERROR) {
+ *     perror("pop_back_double_vector");
+ * }
+ * free_double_vector(v);
+ *
+ * // Example: popping from an empty vector -> failure
+ * double_v* w = init_double_vector(1);
+ * double val = pop_back_double_vector(w);   // empty -> returns INT_MAX, w->error == INVALID_ARG
+ * free_double_vector(w);
+ * @endcode
+ */
 double pop_back_double_vector(double_v* vec);
 // -------------------------------------------------------------------------------- 
 

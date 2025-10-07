@@ -545,6 +545,58 @@ size_t ldouble_vector_size(const ldouble_v* vec);
 size_t ldouble_vector_alloc(const ldouble_v* vec);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Remove and return the last element of an ::ldouble_v.
+ *
+ * Decrements @p vec->len by one, returns the previous last value, and
+ * zero-initializes the vacated slot. Works for both ::STATIC and ::DYNAMIC
+ * vectors since no reallocation occurs.
+ *
+ * @param vec  Poldoubleer to an ::ldouble_v (must be non-NULL with @c data != NULL and @c len > 0).
+ *
+ * @return
+ * - The removed @c long double value on success (and sets @c vec->error = ::NO_ERROR).
+ * - @c LDBL_MAX on failure (no removal performed).
+ *
+ * @par Errors
+ * On failure the function returns @c LDBL_MAX and:
+ * - If @p vec is non-NULL but @c vec->data is @c NULL:
+ *   - sets @c vec->error = ::NULL_POINTER and @c errno via @c set_errno_from_error()
+ * - If @p vec is non-NULL and @c vec->len == 0 (empty vector):
+ *   - sets @c vec->error = ::INVALID_ARG and @c errno accordingly
+ * - If @p vec is @c NULL:
+ *   - sets @c errno = @c EINVAL
+ *
+ * @post
+ * - Success: @c vec->len is decremented by 1; @c vec->data[vec->len] is set to 0;
+ *   @c vec->error == ::NO_ERROR; returned value is the removed element.
+ * - Failure: @c vec and its contents are unchanged.
+ *
+ * @note The error sentinel is @c LDBL_MAX (from <limits.h>). If your vector can
+ * legitimately contain @c INT_MAX, distinguish success from failure by checking
+ * @c vec->error (or @c errno) after the call.
+ *
+ * @warning Not thread-safe. External synchronization is required for concurrent use.
+ *
+ * **complexity** O(1).
+ *
+ * @code{.c}
+ * // Example: pop from a dynamic vector
+ * ldouble_v* v = init_ldouble_vector(4);
+ * push_back_ldouble_vector(v, 10);
+ * push_back_ldouble_vector(v, 20);
+ * ldouble last = pop_back_ldouble_vector(v);  // last == 20, v->len decremented, slot zeroed
+ * if (last == INT_MAX && v->error != NO_ERROR) {
+ *     perror("pop_back_ldouble_vector");
+ * }
+ * free_ldouble_vector(v);
+ *
+ * // Example: popping from an empty vector -> failure
+ * ldouble_v* w = init_ldouble_vector(1);
+ * ldouble val = pop_back_ldouble_vector(w);   // empty -> returns INT_MAX, w->error == INVALID_ARG
+ * free_ldouble_vector(w);
+ * @endcode
+ */
 long double pop_back_ldouble_vector(ldouble_v* vec);
 // -------------------------------------------------------------------------------- 
 

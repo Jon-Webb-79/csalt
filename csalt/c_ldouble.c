@@ -230,12 +230,16 @@ bool insert_ldouble_vector(ldouble_v* vec, long double value, size_t index) {
 
 long double pop_back_ldouble_vector(ldouble_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return LDBL_MAX;
     }
     
     if (vec->len == 0) {
-        errno = ENODATA;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return LDBL_MAX;
     }
     
@@ -244,6 +248,7 @@ long double pop_back_ldouble_vector(ldouble_v* vec) {
     // Clear the last element (which was moved)
     memset(&vec->data[vec->len - 1], 0, sizeof(long double));
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------

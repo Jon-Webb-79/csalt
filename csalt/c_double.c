@@ -431,12 +431,16 @@ bool insert_double_vector(double_v* vec, double value, size_t index) {
 
 double pop_back_double_vector(double_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return DBL_MAX;
     }
     
     if (vec->len == 0) {
-        errno = ENODATA;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return DBL_MAX;
     }
     
@@ -445,6 +449,7 @@ double pop_back_double_vector(double_v* vec) {
     // Clear the last element (which was moved)
     memset(&vec->data[vec->len - 1], 0, sizeof(double));
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------

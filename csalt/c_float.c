@@ -438,12 +438,16 @@ bool insert_float_vector(float_v* vec, float value, size_t index) {
 
 float pop_back_float_vector(float_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec-.error);
+        } else errno = EINVAL;
         return FLT_MAX;
     }
     
     if (vec->len == 0) {
-        errno = ENODATA;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return FLT_MAX;
     }
     
@@ -452,24 +456,23 @@ float pop_back_float_vector(float_v* vec) {
     // Clear the last element (which was moved)
     memset(&vec->data[vec->len - 1], 0, sizeof(float));
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------
 
 float pop_front_float_vector(float_v* vec) {  // Fixed function name
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return FLT_MAX;
     }
    
     if (vec->len == 0) {
-        errno = ENODATA;
-        return FLT_MAX;
-    }
-   
-    // Check for overflow in memmove size calculation
-    if (vec->len > SIZE_MAX / sizeof(float)) {
-        errno = ERANGE;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return FLT_MAX;
     }
    
@@ -482,6 +485,7 @@ float pop_front_float_vector(float_v* vec) {  // Fixed function name
     memset(&vec->data[vec->len - 1], 0, sizeof(float));
    
     vec->len--;
+    vec->error = NO_ERROR;
     return temp;
 }
 // --------------------------------------------------------------------------------

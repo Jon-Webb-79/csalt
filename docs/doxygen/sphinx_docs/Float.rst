@@ -150,6 +150,12 @@ insert_float_vector
 .. doxygenfunction:: insert_float_vector
    :project: csalt
 
+pop_back_float_vector 
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_back_float_vector
+   :project: csalt
+
 Search Vector 
 -------------
 
