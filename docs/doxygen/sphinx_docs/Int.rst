@@ -121,6 +121,12 @@ INTVEC_GBC
 Utility Functions 
 -----------------
 
+int_vector_size 
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: int_vector_size
+   :project: csalt
+
 get_int_vector_error
 ~~~~~~~~~~~~~~~~~~~~
 

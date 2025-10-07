@@ -326,15 +326,6 @@ long double pop_any_ldouble_vector(ldouble_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-size_t ldouble_vector_size(const ldouble_v* vec) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return LONG_MAX;
-    }
-    return vec->len;
-}
-// --------------------------------------------------------------------------------
-
 size_t ldouble_vector_alloc(const ldouble_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;

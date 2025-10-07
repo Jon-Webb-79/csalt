@@ -121,6 +121,12 @@ DBLEVEC_GBC
 Utility Functions 
 -----------------
 
+double_vector_size 
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: double_vector_size
+   :project: csalt
+
 get_double_vector_error
 ~~~~~~~~~~~~~~~~~~~~~~~
 

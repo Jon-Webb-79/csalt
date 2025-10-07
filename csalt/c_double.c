@@ -529,15 +529,6 @@ double pop_any_double_vector(double_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-size_t double_vector_size(const double_v* vec) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return LONG_MAX;
-    }
-    return vec->len;
-}
-// --------------------------------------------------------------------------------
-
 size_t double_vector_alloc(const double_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;

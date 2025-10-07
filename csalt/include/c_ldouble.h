@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <float.h>
+#include <stdint.h>
 #include "c_string.h"
 #include "c_error.h"
 // ================================================================================ 
@@ -564,9 +565,9 @@ bool insert_ldouble_vector(ldouble_v* vec, long double value, size_t index);
  * - Ensure the index is valid (`index < vec->len`). Calling with `vec->len == 0`
  *   is always invalid.
  *
- * @complexity O(1).
+ * **complexity** O(1).
  *
- * @code
+ * @code{.c}
  * // Success
  * ldouble_v* v = init_ldouble_vector(3);
  * push_back_ldouble_vector(v, 10.0);
@@ -597,7 +598,48 @@ static inline long double ldouble_vector_index(const ldouble_v* vec, size_t inde
 }
 // -------------------------------------------------------------------------------- 
 
-size_t ldouble_vector_size(const ldouble_v* vec);
+/**
+ * @brief Return the current logical length of an ::ldouble_v.
+ *
+ * Retrieves the number of initialized elements (`len`) stored in @p vec.
+ * Works for both ::STATIC and ::DYNAMIC vectors. This accessor validates the
+ * input and reports errors via `errno`; it does **not** modify `vec->error`.
+ *
+ * @param vec  Poldoubleer to an ::ldouble_v (must be non-NULL with `data != NULL`).
+ *
+ * @return
+ * - The element count (`vec->len`) on success.
+ * - `SIZE_MAX` on failure (and sets `errno` accordingly).
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` if `vec == NULL` or `vec->data == NULL`.
+ *
+ * @note The failure sentinel is `SIZE_MAX`. If your design could ever reach
+ * `SIZE_MAX` elements (improbable in practice), disambiguate by checking `errno`
+ * after the call.
+ *
+ * **thread_safety** Not thread-safe. Synchronize externally if shared.
+ * **complexity** O(1).
+ *
+ * @code{.c}
+ * ldouble_v* v = init_ldouble_vector(8);
+ * push_back_ldouble_vector(v, 1.0);
+ * push_back_ldouble_vector(v, 2.0);
+ * errno = 0;
+ * size_t n = ldouble_vector_size(v);     // n == 2, errno == 0
+ *
+ * errno = 0;
+ * size_t bad = ldouble_vector_size(NULL); // bad == SIZE_MAX, errno == EINVAL
+ * free_ldouble_vector(v);
+ * @endcode
+ */
+static inline size_t ldouble_vector_size(const ldouble_v* vec) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return SIZE_MAX;
+    }
+    return vec->len;
+}
 // -------------------------------------------------------------------------------- 
 
 size_t ldouble_vector_alloc(const ldouble_v* vec);

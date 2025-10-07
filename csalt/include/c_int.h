@@ -566,9 +566,9 @@ bool insert_int_vector(int_v* vec, int value, size_t index);
  * - Ensure the index is valid (`index < vec->len`). Calling with `vec->len == 0`
  *   is always invalid.
  *
- * @complexity O(1).
+ * **complexity** O(1).
  *
- * @code
+ * @code{.c}
  * // Success
  * int_v* v = init_int_vector(3);
  * push_back_int_vector(v, 10);
@@ -599,6 +599,41 @@ static inline int int_vector_index(const int_v* vec, size_t index) {
 }
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the current logical length of an ::int_v.
+ *
+ * Retrieves the number of initialized elements (`len`) stored in @p vec.
+ * Works for both ::STATIC and ::DYNAMIC vectors. This accessor validates the
+ * input and reports errors via `errno`; it does **not** modify `vec->error`.
+ *
+ * @param vec  Pointer to an ::int_v (must be non-NULL with `data != NULL`).
+ *
+ * @return
+ * - The element count (`vec->len`) on success.
+ * - `SIZE_MAX` on failure (and sets `errno` accordingly).
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` if `vec == NULL` or `vec->data == NULL`.
+ *
+ * @note The failure sentinel is `SIZE_MAX`. If your design could ever reach
+ * `SIZE_MAX` elements (improbable in practice), disambiguate by checking `errno`
+ * after the call.
+ *
+ * **thread_safety** Not thread-safe. Synchronize externally if shared.
+ * **complexity** O(1).
+ *
+ * @code{.c}
+ * int_v* v = init_int_vector(8);
+ * push_back_int_vector(v, 1);
+ * push_back_int_vector(v, 2);
+ * errno = 0;
+ * size_t n = int_vector_size(v);     // n == 2, errno == 0
+ *
+ * errno = 0;
+ * size_t bad = int_vector_size(NULL); // bad == SIZE_MAX, errno == EINVAL
+ * free_int_vector(v);
+ * @endcode
+ */
 static inline size_t int_vector_size(const int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;

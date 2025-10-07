@@ -122,6 +122,12 @@ LDBLEVEC_GBC
 Utility Functions 
 -----------------
 
+ldouble_vector_size 
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: ldouble_vector_size
+   :project: csalt
+
 get_ldouble_vector_error
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -123,6 +123,12 @@ FLTVEC_GBC
 Utility Functions 
 -----------------
 
+float_vector_size 
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: float_vector_size
+   :project: csalt
+
 get_float_vector_error
 ~~~~~~~~~~~~~~~~~~~~~~
 

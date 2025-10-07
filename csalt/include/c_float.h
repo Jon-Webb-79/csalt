@@ -621,9 +621,9 @@ bool insert_float_vector(float_v* vec, float value, size_t index);
  * - Ensure the index is valid (`index < vec->len`). Calling with `vec->len == 0`
  *   is always invalid.
  *
- * @complexity O(1).
+ * **complexity** O(1).
  *
- * @code
+ * @code{.c}
  * // Success
  * float_v* v = init_float_vector(3);
  * push_back_float_vector(v, 10.0f);
@@ -654,7 +654,48 @@ static inline float float_vector_index(const float_v* vec, size_t index) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t float_vector_size(const float_v* vec);
+/**
+ * @brief Return the current logical length of an ::float_v.
+ *
+ * Retrieves the number of initialized elements (`len`) stored in @p vec.
+ * Works for both ::STATIC and ::DYNAMIC vectors. This accessor validates the
+ * input and reports errors via `errno`; it does **not** modify `vec->error`.
+ *
+ * @param vec  Pofloater to an ::float_v (must be non-NULL with `data != NULL`).
+ *
+ * @return
+ * - The element count (`vec->len`) on success.
+ * - `SIZE_MAX` on failure (and sets `errno` accordingly).
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` if `vec == NULL` or `vec->data == NULL`.
+ *
+ * @note The failure sentinel is `SIZE_MAX`. If your design could ever reach
+ * `SIZE_MAX` elements (improbable in practice), disambiguate by checking `errno`
+ * after the call.
+ *
+ * **thread_safety** Not thread-safe. Synchronize externally if shared.
+ * **complexity** O(1).
+ *
+ * @code{.c}
+ * float_v* v = init_float_vector(8);
+ * push_back_float_vector(v, 1.0f);
+ * push_back_float_vector(v, 2.0f);
+ * errno = 0;
+ * size_t n = float_vector_size(v);     // n == 2, errno == 0
+ *
+ * errno = 0;
+ * size_t bad = float_vector_size(NULL); // bad == SIZE_MAX, errno == EINVAL
+ * free_float_vector(v);
+ * @endcode
+ */
+static inline size_t float_vector_size(const float_v* vec) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return SIZE_MAX;
+    }
+    return vec->len;
+}
 // -------------------------------------------------------------------------------- 
 
 size_t float_vector_alloc(const float_v* vec);
