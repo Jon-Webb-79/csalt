@@ -266,15 +266,127 @@ double pop_front_double_vector(double_v* vec);
 double pop_any_double_vector(double_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Destroy a dynamically allocated ::double_v and its heap buffer.
+ *
+ * Frees the data buffer (if present) and then frees the vector control block
+ * itself. This function is only valid for vectors created with dynamic
+ * ownership (e.g., @ref init_double_vector) where @c alloc_type == ::DYNAMIC.
+ *
+ * @param vec  Pointer to a ::double_v previously created with dynamic allocation.
+ *             Must be non-NULL and have @c alloc_type == ::DYNAMIC.
+ *
+ * @par Errors
+ * - Sets @c errno to @c EINVAL and returns without freeing if:
+ *   - @p vec is @c NULL, or
+ *   - @p vec->alloc_type is ::STATIC (i.e., vector wraps caller-owned storage).
+ *
+ * @post
+ * - On success, both @p vec->data and @p vec are freed; @p vec becomes a
+ *   dangling pointer. The caller should set their pointer to @c NULL after
+ *   calling this function.
+ *
+ * @warning
+ * - Do **not** call this function on vectors created with ::STATIC semantics,
+ *   such as those from @ref init_double_array or @ref wrap_double_array; the
+ *   storage is caller-owned and must not be freed here. Simply let the
+ *   wrapper object go out of scope (or manage its lifetime yourself).
+ * - Calling this function more than once on the same pointer results in
+ *   undefined behavior (double-free). Set your pointer to @c NULL after use.
+ *
+ * **thread_safety** Not thread-safe. Synchronize externally if shared.
+ * **complexity**    O(1).
+ *
+ * @code{.c}
+ * // Correct: dynamic vector
+ * double_v* v = init_double_vector(64);
+ * if (!v) { perror("init_double_vector"); return; }
+ * // ... use v ...
+ * free_double_vector(v);
+ * v = NULL; // prevent accidental reuse
+ *
+ * // Incorrect: static vector (will set errno=EINVAL and return)
+ * {
+ *     double_v s = init_double_array(16);   // STATIC storage, automatic duration
+ *     // free_double_vector(&s);           // <-- don't do this
+ * } // s.data becomes invalid here automatically
+ *
+ * // Correct: static wrapper when macros are disabled or avoided
+ * {
+ *     double buf[8] = {0};
+ *     double_v w = wrap_double_array(buf, 8); // STATIC, caller-owned buffer
+ *     // ... use w ...
+ *     // Do NOT call free_double_vector(&w); just let 'w' go out of scope.
+ * }
+ * @endcode
+ */
 void free_double_vector(double_v* vec);
 // --------------------------------------------------------------------------------
 
 void _free_double_vector(double_v** vec);
 // --------------------------------------------------------------------------------
 
-#if defined(__GNUC__) || defined (__clang__)
-    #define DBLEVEC_GBC __attribute__((cleanup(_free_double_vector)))
-#endif
+#if defined(DOXYGEN)
+
+/**
+ * \def DBLEVEC_GBC
+ * \brief GCC/Clang cleanup attribute that auto-frees a ::double_v* on scope exit.
+ *
+ * When applied to a variable of type `double_v*`, the pointer will be passed to an internal
+ * cleanup handler at scope exit, which calls ::free_double_vector on it and then nulls it.
+ *
+ * **Availability:** Defined only for GCC/Clang builds when the project does not define
+ * `__STDC_NO_GENERIC__` (used here as a global “strict/MISRA” switch). In other builds the
+ * macro expands to nothing.
+ *
+ * \par Correct usage
+ * \code{.c}
+ * void demo(void) {
+ *     double_v* v DBLEVEC_GBC = init_double_vector(256);
+ *     if (!v) { perror("init_double_vector"); return; }
+ *     // ... use v ...
+ * } // v is automatically freed here
+ * \endcode
+ *
+ * \par Returning ownership (cancel auto-free)
+ * \code{.c}
+ * double_v* make_vec(void) {
+ *     double_v* v DBLEVEC_GBC = init_double_vector(64);
+ *     if (!v) return NULL;
+ *     // ... populate v ...
+ *     double_v* out = v;   // transfer ownership
+ *     v = NULL;           // cancel cleanup (handler sees NULL and does nothing)
+ *     return out;
+ * }
+ * \endcode
+ *
+ * \warning Apply to **`double_v*` variables only** (not to `double_v` by value).
+ * Do not use for ::STATIC wrappers (e.g., from init_double_array / wrap_double_array).
+ * The handler calls ::free_double_vector, which only frees ::DYNAMIC vectors.
+ *
+ * \note This is a compiler extension (not ISO C). MSVC and some toolchains do not support it.
+ * On such builds `DBLEVEC_GBC` is a no-op.
+ */
+#define DBLEVEC_GBC
+
+/**
+ * \brief Cleanup handler used by ::DBLEVEC_GBC (documentation stub).
+ * \param pp  Address of a `double_v*` variable. If non-NULL, frees `*pp` and sets it to NULL.
+ * \internal Users should not call this directly.
+ */
+void _free_double_vector(double_v **pp);
+
+#elif (defined(__GNUC__) || defined(__clang__)) && !defined(__STDC_NO_GENERIC__)
+
+/* Apply as a suffix: double_v* v DBLEVEC_GBC = init_double_vector(...); */
+#define DBLEVEC_GBC __attribute__((cleanup(_free_double_vector)))
+
+#else  /* Portable/strict builds: make it a no-op so code still compiles cleanly. */
+
+/* No cleanup attribute available (or globally disabled by __STDC_NO_GENERIC__). */
+#define DBLEVEC_GBC /* no-op: call free_double_vector() manually */
+
+#endif /* feature gate */
 // -------------------------------------------------------------------------------- 
 
 void reverse_double_vector(double_v* vec);

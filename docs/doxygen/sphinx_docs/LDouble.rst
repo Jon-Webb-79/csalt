@@ -51,6 +51,9 @@ Data Types
 The follwing enums and structs can be found in the ``c_ldouble.h`` file to produce 
 derived data types.
 
+iter_dir enum 
+~~~~~~~~~~~~~
+
 .. code:: c
 
    typedef enum {
@@ -58,10 +61,20 @@ derived data types.
        REVERSE = 1  // visit elements in reverse order 
    } iter_dir;
 
+alloc_t enum 
+~~~~~~~~~~~~
+
+.. code:: c
+
    typedef enum {
        STATIC = 0  // Indicates static memory allocation on the stack 
        DYNAMIC = 1 // Indicates dynamic memory allocation on the heap 
    } alloc_t;
+
+ldouble_v struct 
+~~~~~~~~~~~~~~~~
+
+.. code:: c
 
    typedef struct {
        long double* data;    // Pointer to c-style array of long double values
@@ -94,6 +107,17 @@ wrap_ldouble_array
 .. doxygenfunction:: wrap_ldouble_array
    :project: csalt
 
+free_ldouble_vector
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: free_ldouble_vector
+   :project: csalt
+
+LDBLEVEC_GBC 
+~~~~~~~~~~~~
+
+.. doxygendefine:: LDBLEVEC_GBC
+   :project: csalt
 
 Utility Functions 
 -----------------

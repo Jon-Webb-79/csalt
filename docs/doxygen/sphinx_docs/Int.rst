@@ -50,6 +50,9 @@ Data Types
 The follwing enums and structs can be found in the ``c_int.h`` file to produce 
 derived data types.
 
+iter_dir enum
+~~~~~~~~~~~~~
+
 .. code:: c
 
    typedef enum {
@@ -57,10 +60,20 @@ derived data types.
        REVERSE = 1  // visit elements in reverse order 
    } iter_dir;
 
+alloc_t enum 
+~~~~~~~~~~~~
+
+.. code:: c
+
    typedef enum {
        STATIC = 0  // Indicates static memory allocation on the stack 
        DYNAMIC = 1 // Indicates dynamic memory allocation on the heap 
    } alloc_t;
+
+int_v struct 
+~~~~~~~~~~~~
+
+.. code:: c
 
    typedef struct {
        int* data;         // Pointer to c-style array of int values
@@ -91,6 +104,18 @@ wrap_int_array
 ~~~~~~~~~~~~~~
 
 .. doxygenfunction:: wrap_int_array
+   :project: csalt
+
+free_int_vector
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: free_int_vector
+   :project: csalt
+
+INTVEC_GBC 
+~~~~~~~~~~
+
+.. doxygendefine:: INTVEC_GBC
    :project: csalt
 
 Utility Functions 

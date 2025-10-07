@@ -322,15 +322,126 @@ float pop_front_float_vector(float_v* vec);
 float pop_any_float_vector(float_v* vec, size_t index);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Destroy a dynamically allocated ::float_v and its heap buffer.
+ *
+ * Frees the data buffer (if present) and then frees the vector control block
+ * itself. This function is only valid for vectors created with dynamic
+ * ownership (e.g., @ref init_float_vector) where @c alloc_type == ::DYNAMIC.
+ *
+ * @param vec  Pointer to a ::float_v previously created with dynamic allocation.
+ *             Must be non-NULL and have @c alloc_type == ::DYNAMIC.
+ *
+ * @par Errors
+ * - Sets @c errno to @c EINVAL and returns without freeing if:
+ *   - @p vec is @c NULL, or
+ *   - @p vec->alloc_type is ::STATIC (i.e., vector wraps caller-owned storage).
+ *
+ * @post
+ * - On success, both @p vec->data and @p vec are freed; @p vec becomes a
+ *   dangling pointer. The caller should set their pointer to @c NULL after
+ *   calling this function.
+ *
+ * @warning
+ * - Do **not** call this function on vectors created with ::STATIC semantics,
+ *   such as those from @ref init_float_array or @ref wrap_float_array; the
+ *   storage is caller-owned and must not be freed here. Simply let the
+ *   wrapper object go out of scope (or manage its lifetime yourself).
+ * - Calling this function more than once on the same pointer results in
+ *   undefined behavior (double-free). Set your pointer to @c NULL after use.
+ *
+ * **thread_safety** Not thread-safe. Synchronize externally if shared.
+ * **complexity**    O(1).
+ *
+ * @code{.c}
+ * // Correct: dynamic vector
+ * float_v* v = init_float_vector(64);
+ * if (!v) { perror("init_float_vector"); return; }
+ * // ... use v ...
+ * free_float_vector(v);
+ * v = NULL; // prevent accidental reuse
+ *
+ * // Incorrect: static vector (will set errno=EINVAL and return)
+ * {
+ *     float_v s = init_float_array(16);   // STATIC storage, automatic duration
+ *     // free_float_vector(&s);           // <-- don't do this
+ * } // s.data becomes invalid here automatically
+ *
+ * // Correct: static wrapper when macros are disabled or avoided
+ * {
+ *     float buf[8] = {0};
+ *     float_v w = wrap_float_array(buf, 8); // STATIC, caller-owned buffer
+ *     // ... use w ...
+ *     // Do NOT call free_float_vector(&w); just let 'w' go out of scope.
+ * }
+ * @endcode
+ */
 void free_float_vector(float_v* vec);
 // --------------------------------------------------------------------------------
 
 void _free_float_vector(float_v** vec);
 // --------------------------------------------------------------------------------
+#if defined(DOXYGEN)
 
-#if defined(__GNUC__) || defined (__clang__)
-    #define FLTVEC_GBC __attribute__((cleanup(_free_float_vector)))
-#endif
+/**
+ * \def FLTVEC_GBC
+ * \brief GCC/Clang cleanup attribute that auto-frees a ::float_v* on scope exit.
+ *
+ * When applied to a variable of type `float_v*`, the pointer will be passed to an internal
+ * cleanup handler at scope exit, which calls ::free_float_vector on it and then nulls it.
+ *
+ * **Availability:** Defined only for GCC/Clang builds when the project does not define
+ * `__STDC_NO_GENERIC__` (used here as a global “strict/MISRA” switch). In other builds the
+ * macro expands to nothing.
+ *
+ * \par Correct usage
+ * \code{.c}
+ * void demo(void) {
+ *     float_v* v FLTVEC_GBC = init_float_vector(256);
+ *     if (!v) { perror("init_float_vector"); return; }
+ *     // ... use v ...
+ * } // v is automatically freed here
+ * \endcode
+ *
+ * \par Returning ownership (cancel auto-free)
+ * \code{.c}
+ * float_v* make_vec(void) {
+ *     float_v* v FLTVEC_GBC = init_float_vector(64);
+ *     if (!v) return NULL;
+ *     // ... populate v ...
+ *     float_v* out = v;   // transfer ownership
+ *     v = NULL;           // cancel cleanup (handler sees NULL and does nothing)
+ *     return out;
+ * }
+ * \endcode
+ *
+ * \warning Apply to **`float_v*` variables only** (not to `float_v` by value).
+ * Do not use for ::STATIC wrappers (e.g., from init_float_array / wrap_float_array).
+ * The handler calls ::free_float_vector, which only frees ::DYNAMIC vectors.
+ *
+ * \note This is a compiler extension (not ISO C). MSVC and some toolchains do not support it.
+ * On such builds `FLTVEC_GBC` is a no-op.
+ */
+#define FLTVEC_GBC
+
+/**
+ * \brief Cleanup handler used by ::FLTVEC_GBC (documentation stub).
+ * \param pp  Address of a `float_v*` variable. If non-NULL, frees `*pp` and sets it to NULL.
+ * \internal Users should not call this directly.
+ */
+void _free_float_vector(float_v **pp);
+
+#elif (defined(__GNUC__) || defined(__clang__)) && !defined(__STDC_NO_GENERIC__)
+
+/* Apply as a suffix: float_v* v FLTVEC_GBC = init_float_vector(...); */
+#define FLTVEC_GBC __attribute__((cleanup(_free_float_vector)))
+
+#else  /* Portable/strict builds: make it a no-op so code still compiles cleanly. */
+
+/* No cleanup attribute available (or globally disabled by __STDC_NO_GENERIC__). */
+#define FLTVEC_GBC /* no-op: call free_float_vector() manually */
+
+#endif /* feature gate */
 // -------------------------------------------------------------------------------- 
 
 void reverse_float_vector(float_v* vec);

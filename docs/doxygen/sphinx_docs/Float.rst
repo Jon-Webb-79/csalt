@@ -50,6 +50,9 @@ Data Types
 The follwing enums and structs can be found in the ``c_float.h`` file to produce 
 derived data types.
 
+iter_dir enum 
+~~~~~~~~~~~~~
+
 .. code:: c
 
    typedef enum {
@@ -57,10 +60,20 @@ derived data types.
        REVERSE = 1  // visit elements in reverse order 
    } iter_dir;
 
+alloc_t enum 
+~~~~~~~~~~~~
+
+.. code:: c
+
    typedef enum {
        STATIC = 0  // Indicates static memory allocation on the stack 
        DYNAMIC = 1 // Indicates dynamic memory allocation on the heap 
    } alloc_t;
+
+float_v struct 
+~~~~~~~~~~~~~~
+
+.. code:: c
 
    typedef struct {
        float* data;       // Pointer to c-style array of float values
@@ -93,6 +106,18 @@ wrap_float_array
 ~~~~~~~~~~~~~~~~
 
 .. doxygenfunction:: wrap_float_array
+   :project: csalt
+
+free_float_vector
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: free_float_vector
+   :project: csalt
+
+FLTVEC_GBC 
+~~~~~~~~~~
+
+.. doxygendefine:: FLTVEC_GBC
    :project: csalt
 
 Utility Functions 
