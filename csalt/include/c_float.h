@@ -505,6 +505,91 @@ bool push_back_float_vector(float_v* vec, float value);
 bool push_front_float_vector(float_v* vec, float value);
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Insert a value at @p index in a ::float_v, shifting the tail right; grows if needed.
+ *
+ * Inserts @p value at position @p index, where @p index may be anywhere in
+ * `[0, vec->len]`. An @p index equal to `vec->len` is equivalent to append;
+ * `index == 0` is equivalent to a front insert.
+ *
+ * For ::DYNAMIC vectors that are full (`len == alloc`), capacity is increased
+ * using the library’s adaptive policy (see **Growth policy**). Newly added
+ * capacity is zero-initialized. Existing elements in `[index .. len-1]` are
+ * shifted one slot to the right via `memmove`, then the new element is written.
+ *
+ * @param vec    Pointer to a ::float_v (must be non-NULL and have `data != NULL`).
+ * @param value  The @c float value to insert.
+ * @param index  Insertion position in `[0, vec->len]`.
+ *
+ * @return
+ * - `true`  on success (value inserted, length incremented, `vec->error = ::NO_ERROR`)
+ * - `false` on failure (no insert; `vec->error` set and `errno` updated)
+ *
+ * @par Indexing
+ * - Valid indices: `0 .. vec->len`
+ * - `index > vec->len` → failure with ::OUT_OF_BOUNDS.
+ *
+ * @par Growth policy
+ * When `len == alloc` and `alloc_type == ::DYNAMIC`, capacity increases:
+ * - If `alloc < ::VEC_THRESHOLD`, capacity doubles.
+ * - Otherwise, capacity grows by `::VEC_FIXED_AMOUNT`.
+ * Reallocation may change `vec->data`; any saved pointers become invalid.
+ *
+ * @par STATIC vs DYNAMIC
+ * - ::DYNAMIC vectors may grow and reallocate.
+ * - ::STATIC vectors cannot grow. If an insert would exceed `alloc`, the call
+ *   fails with ::INVALID_ARG.
+ *
+ * @par Errors
+ * On failure the function returns `false` and sets `vec->error` (when `vec` is non-NULL)
+ * and `errno` via `set_errno_from_error()`:
+ * - ::NULL_POINTER if `vec` is non-NULL but `vec->data` is `NULL`
+ * - ::OUT_OF_BOUNDS if `index > vec->len`
+ * - ::INVALID_ARG  if `vec` is ::STATIC and `len == alloc`
+ * - ::REALLOC_FAIL if a growth attempt fails
+ * - ::SIZE_MISMATCH if an internal size computation for the shift would overflow
+ * If `vec` is `NULL`, sets `errno = EINVAL` and returns `false`.
+ *
+ * @post
+ * - Success: element placed at `data[index]`; prior elements `[index .. old_len-1]`
+ *   moved to `[index+1 .. old_len]`; `len` increased by 1; `error == ::NO_ERROR`.
+ * - Failure: contents and `len` unchanged; on reallocation failure, the original
+ *   buffer remains valid (strong safety for length + existing data).
+ *
+ * @warning
+ * - Reallocation may invalidate any saved pointers to `vec->data`.
+ * - The shifting operation repositions elements; previously saved element addresses
+ *   may no longer refer to the same logical item even if no reallocation occurs.
+ * - Not thread-safe.
+ *
+ * **complexity**
+ * - O(n - index) for the shift on every successful insert.
+ * - If a growth step occurs: O(n) for reallocation + zero-initialization of new tail.
+ *
+ * @code{.c}
+ * // Example 1: dynamic insert in the middle
+ * float_v* v = init_float_vector(2);
+ * push_back_float_vector(v, 10.0f);         // [10]
+ * push_back_float_vector(v, 30.0f);         // [10, 30]
+ * (void)insert_float_vector(v, 20.0f, 1);   // [10, 20, 30]
+ * free_float_vector(v);
+ *
+ * // Example 2: append via insert at len
+ * float_v* w = init_float_vector(1);
+ * (void)insert_float_vector(w, 1.0f, 0);             // [1]
+ * (void)insert_float_vector(w, 2.0f, float_vector_size(w));        // append -> [1, 2]
+ * free_float_vector(w);
+ *
+ * // Example 3: static vector fails when full
+ * {
+ *     float_v s = init_float_array(1);               // STATIC storage
+ *     (void)insert_float_vector(&s, 42.0f, 0);       // ok
+ *     if (!insert_float_vector(&s, 7.0f, 0)) {       // would exceed capacity
+ *         // s.error == INVALID_ARG; errno set via set_errno_from_error()
+ *     }
+ * } // s.data lifetime ends with the block
+ * @endcode
+ */
 bool insert_float_vector(float_v* vec, float value, size_t index);
 // --------------------------------------------------------------------------------
 

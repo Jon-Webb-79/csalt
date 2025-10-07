@@ -142,6 +142,12 @@ push_front_int_vector
 .. doxygenfunction:: push_front_int_vector
    :project: csalt
 
+insert_int_vector 
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: insert_int_vector
+   :project: csalt
+
 Search Vector 
 -------------
 

@@ -144,6 +144,12 @@ push_front_float_vector
 .. doxygenfunction:: push_front_float_vector
    :project: csalt
 
+insert_float_vector 
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: insert_float_vector
+   :project: csalt
+
 Search Vector 
 -------------
 

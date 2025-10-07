@@ -376,22 +376,23 @@ bool push_front_float_vector(float_v* vec, float value) {
 
 bool insert_float_vector(float_v* vec, float value, size_t index) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return false;
     }
     if (index > vec->len) {
-        errno = ERANGE;
-        return false;
-    }
-    if (vec->len >= SIZE_MAX) {  // Check length overflow
-        errno = ERANGE;
+        vec->error = OUT_OF_BOUNDS;
+        errno = set_errno_from_error(vec->error);
         return false;
     }
    
     // Check if we need to resize
     if (vec->len >= vec->alloc) {
         if (vec->alloc_type == STATIC) {
-            errno = EINVAL;
+            vec->error = INVALID_ARG;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
         size_t new_alloc = vec->alloc == 0 ? 1 : vec->alloc;
@@ -401,15 +402,11 @@ bool insert_float_vector(float_v* vec, float value, size_t index) {
             new_alloc += VEC_FIXED_AMOUNT;
         }
         
-        // Check allocation size overflow
-        if (new_alloc > SIZE_MAX / sizeof(float)) {
-            errno = ERANGE;
-            return false;
-        }
        
         float* new_data = realloc(vec->data, new_alloc * sizeof(float));
         if (!new_data) {
-            errno = ENOMEM;
+            vec->error = REALLOC_FAIL;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
        
@@ -423,7 +420,8 @@ bool insert_float_vector(float_v* vec, float value, size_t index) {
     if (index < vec->len) {  // Only move if not appending
         // Check for size_t overflow in move operation
         if (vec->len - index > SIZE_MAX - 1) {
-            errno = ERANGE;
+            vec->error = SIZE_MISMATCH;
+            errno = set_errno_from_error(vec->error);
             return false;
         }
         memmove(vec->data + index + 1, vec->data + index, 
@@ -432,6 +430,7 @@ bool insert_float_vector(float_v* vec, float value, size_t index) {
     
     vec->data[index] = value;
     vec->len++;
+    vec->error = NO_ERROR;
     return true;
 }
 // -------------------------------------------------------------------------------- 
