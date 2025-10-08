@@ -129,6 +129,12 @@ float_vector_size
 .. doxygenfunction:: float_vector_size
    :project: csalt
 
+float_vector_alloc 
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: float_vector_alloc
+   :project: csalt
+
 get_float_vector_error
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -245,6 +251,12 @@ The following are derived data types used in the implementation of float diction
 
 General Float Functions 
 =======================
+
+swap_float 
+----------
+
+.. doxygenfunction:: swap_float
+   :project: csalt
 
 Generic Macro Overview
 ======================

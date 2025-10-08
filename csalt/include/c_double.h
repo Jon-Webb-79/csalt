@@ -642,7 +642,51 @@ static inline size_t double_vector_size(const double_v* vec) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t double_vector_alloc(const double_v* vec);
+/**
+ * @brief Return the capacity (allocated element slots) of an ::double_v.
+ *
+ * Retrieves the current allocation size (`alloc`) of @p vec, i.e., the maximum
+ * number of elements that can be stored without reallocation. This may differ
+ * from the logical length (`len`); use ::double_vector_size to get the length.
+ * Works for both ::STATIC and ::DYNAMIC vectors. For ::DYNAMIC vectors, the
+ * capacity may change after growth operations; for ::STATIC vectors, it is fixed.
+ *
+ * @param vec  Podoubleer to an ::double_v (must be non-NULL with `data != NULL`).
+ *
+ * @return
+ * - The capacity in elements (`vec->alloc`) on success.
+ * - `SIZE_MAX` on failure (and sets `errno` accordingly).
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` if `vec == NULL` or `vec->data == NULL`.
+ *
+ * @note This accessor does **not** modify `vec->error`. The failure sentinel is
+ * `SIZE_MAX` (from `<stdint.h>`); if you need to disambiguate, check `errno`.
+ *
+ * **thread_safety** Not thread-safe. Synchronize externally if shared.
+ * @complexity O(1).
+ *
+ * @code{.c}
+ * double_v* v = init_double_vector(16);
+ * // length vs capacity
+ * push_back_double_vector(v, 1.0);                 // len = 1
+ * size_t n  = double_vector_size(v);             // -> 1
+ * size_t cap = double_vector_alloc(v);           // -> 16 (initial capacity)
+ *
+ * // invalid input
+ * errno = 0;
+ * size_t bad = double_vector_alloc(NULL);        // -> SIZE_MAX, errno == EINVAL
+ *
+ * free_double_vector(v);
+ * @endcode
+ */
+static inline size_t double_vector_alloc(const double_v* vec) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return SIZE_MAX;
+    }
+    return vec->alloc;
+}
 // --------------------------------------------------------------------------------
 
 /**
@@ -968,7 +1012,48 @@ void _free_double_vector(double_v **pp);
 void reverse_double_vector(double_v* vec);
 // --------------------------------------------------------------------------------
 
-void swap_double(double* a, double* b);
+/**
+ * @brief Swap the values of two @c double variables.
+ *
+ * Exchanges the contents of @p a and @p b using a temporary. If either podoubleer
+ * is @c NULL, the function sets @c errno to @c EINVAL and returns without
+ * modifying any value.
+ *
+ * @param a  Podoubleer to the first @c double to swap (must be non-NULL).
+ * @param b  Podoubleer to the second @c double to swap (must be non-NULL).
+ *
+ * @return Void.
+ *
+ * @par Errors
+ * - Sets @c errno = @c EINVAL and performs no swap if @p a is @c NULL or @p b is @c NULL.
+ *
+ * @note Passing the same address for both parameters is safe and leaves the value unchanged.
+ * @note This function does not modify any error field in container types; it only uses @c errno.
+ *
+ * @thread_safety Not thread-safe if @p a or @p b are shared without synchronization.
+ * @complexity O(1).
+ *
+ * @code
+ * double x = 3.0, y = 7.0;
+ * swap_double(&x, &y);   // x == 7.0, y == 3.0
+ *
+ * // Self-swap: safe, x remains 7
+ * swap_double(&x, &x);
+ *
+ * // Error case: NULL podoubleer
+ * errno = 0;
+ * swap_double(&x, NULL); // no change; errno == EINVAL
+ * @endcode
+ */
+static inline void swap_double(double* a, double* b) {
+    if (!a || !b) {
+        errno = EINVAL;
+        return;
+    }
+    double temp = *a;
+    *a = *b;
+    *b = temp;
+}
 // --------------------------------------------------------------------------------
 
 void sort_double_vector(double_v* vec, iter_dir direction);

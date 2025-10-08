@@ -643,6 +643,44 @@ static inline size_t int_vector_size(const int_v* vec) {
 }
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the capacity (allocated element slots) of an ::int_v.
+ *
+ * Retrieves the current allocation size (`alloc`) of @p vec, i.e., the maximum
+ * number of elements that can be stored without reallocation. This may differ
+ * from the logical length (`len`); use ::int_vector_size to get the length.
+ * Works for both ::STATIC and ::DYNAMIC vectors. For ::DYNAMIC vectors, the
+ * capacity may change after growth operations; for ::STATIC vectors, it is fixed.
+ *
+ * @param vec  Pointer to an ::int_v (must be non-NULL with `data != NULL`).
+ *
+ * @return
+ * - The capacity in elements (`vec->alloc`) on success.
+ * - `SIZE_MAX` on failure (and sets `errno` accordingly).
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` if `vec == NULL` or `vec->data == NULL`.
+ *
+ * @note This accessor does **not** modify `vec->error`. The failure sentinel is
+ * `SIZE_MAX` (from `<stdint.h>`); if you need to disambiguate, check `errno`.
+ *
+ * **thread_safety** Not thread-safe. Synchronize externally if shared.
+ * @complexity O(1).
+ *
+ * @code{.c}
+ * int_v* v = init_int_vector(16);
+ * // length vs capacity
+ * push_back_int_vector(v, 1);                 // len = 1
+ * size_t n  = int_vector_size(v);             // -> 1
+ * size_t cap = int_vector_alloc(v);           // -> 16 (initial capacity)
+ *
+ * // invalid input
+ * errno = 0;
+ * size_t bad = int_vector_alloc(NULL);        // -> SIZE_MAX, errno == EINVAL
+ *
+ * free_int_vector(v);
+ * @endcode
+ */
 static inline size_t int_vector_alloc(const int_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
@@ -975,7 +1013,48 @@ void _free_int_vector(int_v **pp);
 void reverse_int_vector(int_v* vec);
 // --------------------------------------------------------------------------------
 
-void swap_int(int* a, int* b);
+/**
+ * @brief Swap the values of two @c int variables.
+ *
+ * Exchanges the contents of @p a and @p b using a temporary. If either pointer
+ * is @c NULL, the function sets @c errno to @c EINVAL and returns without
+ * modifying any value.
+ *
+ * @param a  Pointer to the first @c int to swap (must be non-NULL).
+ * @param b  Pointer to the second @c int to swap (must be non-NULL).
+ *
+ * @return Void.
+ *
+ * @par Errors
+ * - Sets @c errno = @c EINVAL and performs no swap if @p a is @c NULL or @p b is @c NULL.
+ *
+ * @note Passing the same address for both parameters is safe and leaves the value unchanged.
+ * @note This function does not modify any error field in container types; it only uses @c errno.
+ *
+ * @thread_safety Not thread-safe if @p a or @p b are shared without synchronization.
+ * @complexity O(1).
+ *
+ * @code
+ * int x = 3, y = 7;
+ * swap_int(&x, &y);   // x == 7, y == 3
+ *
+ * // Self-swap: safe, x remains 7
+ * swap_int(&x, &x);
+ *
+ * // Error case: NULL pointer
+ * errno = 0;
+ * swap_int(&x, NULL); // no change; errno == EINVAL
+ * @endcode
+ */
+static inline void swap_int(int* a, int* b) {
+    if (!a || !b) {
+        errno = EINVAL;
+        return;
+    }
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}
 // --------------------------------------------------------------------------------
 
 void sort_int_vector(int_v* vec, iter_dir direction);

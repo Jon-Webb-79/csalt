@@ -536,15 +536,6 @@ float pop_any_float_vector(float_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-size_t float_vector_alloc(const float_v* vec) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return LONG_MAX;
-    }
-    return vec->alloc;
-}
-// --------------------------------------------------------------------------------
-
 void reverse_float_vector(float_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
@@ -567,17 +558,6 @@ void reverse_float_vector(float_v* vec) {
 // ================================================================================
 // ================================================================================ 
 // QUICKSORT
-
-void swap_float(float* a, float* b) {
-    if (!a || !b) {
-        errno = EINVAL;
-        return;
-    }
-    float temp = *a;
-    *a = *b;
-    *b = temp;
-}
-// -------------------------------------------------------------------------------- 
 
 static float* _median_of_three(float* a, float* b, float* c, iter_dir direction) {
     if ((direction == FORWARD && *a < *b) ||

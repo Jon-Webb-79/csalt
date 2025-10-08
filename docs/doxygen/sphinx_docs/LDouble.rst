@@ -128,6 +128,12 @@ ldouble_vector_size
 .. doxygenfunction:: ldouble_vector_size
    :project: csalt
 
+ldouble_vector_alloc 
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: ldouble_vector_alloc
+   :project: csalt
+
 get_ldouble_vector_error
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -244,6 +250,12 @@ The following are derived data types used in the implementation of long double d
 
 General Long Double Functions 
 =============================
+
+swap_ldouble 
+------------
+
+.. doxygenfunction:: swap_ldouble
+   :project: csalt
 
 Generic Macro Overview
 ======================

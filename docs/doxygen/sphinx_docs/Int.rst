@@ -127,6 +127,12 @@ int_vector_size
 .. doxygenfunction:: int_vector_size
    :project: csalt
 
+int_vector_alloc 
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: int_vector_alloc
+   :project: csalt
+
 get_int_vector_error
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -243,6 +249,12 @@ The following are derived data types used in the implementation of int dictionar
 
 General Integer Functions 
 =========================
+
+swap_int 
+--------
+
+.. doxygenfunction:: swap_int
+   :project: csalt
 
 Generic Macro Overview
 ======================

@@ -642,7 +642,51 @@ static inline size_t ldouble_vector_size(const ldouble_v* vec) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t ldouble_vector_alloc(const ldouble_v* vec);
+/**
+ * @brief Return the capacity (allocated element slots) of an ::ldouble_v.
+ *
+ * Retrieves the current allocation size (`alloc`) of @p vec, i.e., the maximum
+ * number of elements that can be stored without reallocation. This may differ
+ * from the logical length (`len`); use ::ldouble_vector_size to get the length.
+ * Works for both ::STATIC and ::DYNAMIC vectors. For ::DYNAMIC vectors, the
+ * capacity may change after growth operations; for ::STATIC vectors, it is fixed.
+ *
+ * @param vec  Poldoubleer to an ::ldouble_v (must be non-NULL with `data != NULL`).
+ *
+ * @return
+ * - The capacity in elements (`vec->alloc`) on success.
+ * - `SIZE_MAX` on failure (and sets `errno` accordingly).
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` if `vec == NULL` or `vec->data == NULL`.
+ *
+ * @note This accessor does **not** modify `vec->error`. The failure sentinel is
+ * `SIZE_MAX` (from `<stdint.h>`); if you need to disambiguate, check `errno`.
+ *
+ * **thread_safety** Not thread-safe. Synchronize externally if shared.
+ * @complexity O(1).
+ *
+ * @code{.c}
+ * ldouble_v* v = init_ldouble_vector(16);
+ * // length vs capacity
+ * push_back_ldouble_vector(v, 1.0);                 // len = 1
+ * size_t n  = ldouble_vector_size(v);             // -> 1
+ * size_t cap = ldouble_vector_alloc(v);           // -> 16 (initial capacity)
+ *
+ * // invalid input
+ * errno = 0;
+ * size_t bad = ldouble_vector_alloc(NULL);        // -> SIZE_MAX, errno == EINVAL
+ *
+ * free_ldouble_vector(v);
+ * @endcode
+ */
+static inline size_t ldouble_vector_alloc(const ldouble_v* vec) {
+    if (!vec || !vec->data) {
+        errno = EINVAL;
+        return SIZE_MAX;
+    }
+    return vec->alloc;
+}
 // --------------------------------------------------------------------------------
 
 /**
@@ -968,7 +1012,48 @@ void _free_ldouble_vector(ldouble_v **pp);
 void reverse_ldouble_vector(ldouble_v* vec);
 // --------------------------------------------------------------------------------
 
-void swap_ldouble(long double* a, long double* b);
+/**
+ * @brief Swap the values of two @c long double variables.
+ *
+ * Exchanges the contents of @p a and @p b using a temporary. If either polong doubleer
+ * is @c NULL, the function sets @c errno to @c EINVAL and returns without
+ * modifying any value.
+ *
+ * @param a  Polong doubleer to the first @c long double to swap (must be non-NULL).
+ * @param b  Polong doubleer to the second @c long double to swap (must be non-NULL).
+ *
+ * @return Void.
+ *
+ * @par Errors
+ * - Sets @c errno = @c EINVAL and performs no swap if @p a is @c NULL or @p b is @c NULL.
+ *
+ * @note Passing the same address for both parameters is safe and leaves the value unchanged.
+ * @note This function does not modify any error field in container types; it only uses @c errno.
+ *
+ * @thread_safety Not thread-safe if @p a or @p b are shared without synchronization.
+ * @complexity O(1).
+ *
+ * @code
+ * long double x = 3.0, y = 7.0;
+ * swap_long double(&x, &y);   // x == 7.0, y == 3.0
+ *
+ * // Self-swap: safe, x remains 7
+ * swap_long double(&x, &x);
+ *
+ * // Error case: NULL polong doubleer
+ * errno = 0;
+ * swap_long double(&x, NULL); // no change; errno == EINVAL
+ * @endcode
+ */
+static inline void swap_ldouble(long double* a, long double* b) {
+    if (!a || !b) {
+        errno = EINVAL;
+        return;
+    }
+    long double temp = *a;
+    *a = *b;
+    *b = temp;
+}
 // --------------------------------------------------------------------------------
 
 void sort_ldouble_vector(ldouble_v* vec, iter_dir direction);

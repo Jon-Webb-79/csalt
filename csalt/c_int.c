@@ -506,17 +506,6 @@ void reverse_int_vector(int_v* vec) {
 // ================================================================================ 
 // QUICKSORT
 
-void swap_int(int* a, int* b) {
-    if (!a || !b) {
-        errno = EINVAL;
-        return;
-    }
-    int temp = *a;
-    *a = *b;
-    *b = temp;
-}
-// -------------------------------------------------------------------------------- 
-
 static int* _median_of_three(int* a, int* b, int* c, iter_dir direction) {
     if ((direction == FORWARD && *a < *b) ||
         (direction == REVERSE && *a > *b)) {

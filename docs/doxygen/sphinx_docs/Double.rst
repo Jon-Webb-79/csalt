@@ -127,6 +127,12 @@ double_vector_size
 .. doxygenfunction:: double_vector_size
    :project: csalt
 
+double_vector_alloc 
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: double_vector_alloc
+   :project: csalt
+
 get_double_vector_error
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -244,6 +250,11 @@ The following are derived data types used in the implementation of double dictio
 General Double Functions 
 ========================
 
+swap_double
+-----------
+
+.. doxygenfunction:: swap_double
+   :project: csalt
 
 Generic Macro Overview
 ======================

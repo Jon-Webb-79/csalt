@@ -529,15 +529,6 @@ double pop_any_double_vector(double_v* vec, size_t index) {
 }
 // --------------------------------------------------------------------------------
 
-size_t double_vector_alloc(const double_v* vec) {
-    if (!vec || !vec->data) {
-        errno = EINVAL;
-        return LONG_MAX;
-    }
-    return vec->alloc;
-}
-// --------------------------------------------------------------------------------
-
 void reverse_double_vector(double_v* vec) {
     if (!vec || !vec->data) {
         errno = EINVAL;
@@ -560,17 +551,6 @@ void reverse_double_vector(double_v* vec) {
 // ================================================================================
 // ================================================================================ 
 // QUICKSORT
-
-void swap_double(double* a, double* b) {
-    if (!a || !b) {
-        errno = EINVAL;
-        return;
-    }
-    double temp = *a;
-    *a = *b;
-    *b = temp;
-}
-// -------------------------------------------------------------------------------- 
 
 static double* _median_of_three(double* a, double* b, double* c, iter_dir direction) {
     if ((direction == FORWARD && *a < *b) ||
