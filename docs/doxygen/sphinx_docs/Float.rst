@@ -180,6 +180,18 @@ pop_any_float_vector
 .. doxygenfunction:: pop_any_float_vector
    :project: csalt
 
+reverse_float_vector
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: reverse_float_vector
+   :project: csalt
+
+sort_float_vector
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: sort_float_vector
+   :project: csalt
+
 Search Vector 
 -------------
 

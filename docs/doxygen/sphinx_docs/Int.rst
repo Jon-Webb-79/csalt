@@ -178,6 +178,18 @@ pop_any_int_vector
 .. doxygenfunction:: pop_any_int_vector
    :project: csalt
 
+reverse_int_vector
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: reverse_int_vector
+   :project: csalt
+
+sort_int_vector
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: sort_int_vector
+   :project: csalt
+
 Search Vector 
 -------------
 

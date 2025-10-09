@@ -485,12 +485,16 @@ int pop_any_int_vector(int_v* vec, size_t index) {
 
 void reverse_int_vector(int_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return;
     }
 
     if (vec->len == 0) {
-        errno = ENODATA;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return;
     }
 
@@ -584,8 +588,11 @@ static void _quicksort_int(int* vec, int low, int high, iter_dir direction) {
 // -------------------------------------------------------------------------------- 
 
 void sort_int_vector(int_v* vec, iter_dir direction) {
-    if (!vec) {
-        errno = EINVAL;
+    if (!vec || !vec->data) {
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return;
     }
     if (vec->len < 2) return;

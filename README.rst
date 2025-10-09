@@ -1,7 +1,8 @@
 *****
 CSalt
 *****
-Working with real and integer values in C presents several challenges in modern software development:
+EADME.rst
+
 
 * Manual memory management for arrays can lead to memory leaks and buffer overflows
 * Static arrays require compile-time size decisions that may not suit runtime needs
@@ -53,7 +54,14 @@ target platform, including:
 Implementation Details
 ######################
 
-The library provides three main container types:
+The library provides five main container types:
+
+String 
+------
+* A dynamically allocated string implementation 
+* Automatically manages memory during string operations 
+* Provides functions for standard string operations 
+* Provides an iterator for access methods
 
 Dynamic Vector
 --------------

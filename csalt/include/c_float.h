@@ -1065,6 +1065,53 @@ void _free_float_vector(float_v **pp);
 #endif /* feature gate */
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Reverse the elements of an ::float_v in place.
+ *
+ * Reorders the vector so that the first element becomes the last and vice versa,
+ * swapping pairs from the ends toward the center (uses ::swap_float). Works for
+ * both ::STATIC and ::DYNAMIC vectors; no reallocation occurs.
+ *
+ * @param vec  Pofloater to an ::float_v (must be non-NULL with `data != NULL`).
+ *
+ * @return Void.
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` and returns if `vec == NULL`
+ * - Sets `vec->error = NULL_POINTER` and `errno == EINVAL` if `vec->data == NULL`
+ * - Sets `vec->error = INVALID_ARG` and `errno = ENODATA` and returns if `vec->len == 0` (empty vector). 
+ *
+ * @post
+ * - On success: `data[k]` becomes the original `data[len-1-k]` for all valid `k`;
+ *   `len` and `alloc` are unchanged.
+ * - On failure: vector contents are unchanged.
+ *
+ * @note In-place, O(1) extra space; stable order is **not** preserved (by definition of reverse).
+ * @warning Not thread-safe. Do not mutate the vector concurrently from other threads.
+ *
+ * **complexity** O(n) time, O(1) additional space.
+ *
+ * @code{.c}
+ * float_v* v = init_float_vector(5);
+ * push_back_float_vector(v, 1.0f);
+ * push_back_float_vector(v, 2.0f);
+ * push_back_float_vector(v, 3.0f);
+ * push_back_float_vector(v, 4.0f);
+ * // v->data = [1.0,2.0,3.0,4.0], len = 4
+ *
+ * reverse_float_vector(v);
+ * // v->data = [4.0,3.0,2.0,1.0], len = 4
+ *
+ * // Error cases
+ * errno = 0;
+ * reverse_float_vector(NULL);    // errno == EINVAL
+ * float_v* w = init_float_vector(1);
+ * // w->len == 0
+ * reverse_float_vector(w);       // errno == ENODATA
+ * free_float_vector(v);
+ * free_float_vector(w);
+ * @endcode
+ */
 void reverse_float_vector(float_v* vec);
 // --------------------------------------------------------------------------------
 
@@ -1112,6 +1159,63 @@ static inline void swap_float(float* a, float* b) {
 }
 // --------------------------------------------------------------------------------
 
+/**
+ * @brief Sort an ::float_v in place in ascending or descending order.
+ *
+ * Orders the elements of @p vec according to @p direction using an in-place
+ * quicksort with median-of-three pivot selection, a small-partition cutoff to
+ * insertion sort (size < 10), and tail-recursion elimination for better stack
+ * usage. Works for both ::STATIC and ::DYNAMIC vectors (no reallocation).
+ *
+ * @param vec        Pofloater to an ::float_v to sort. Must be non-NULL and have
+ *                   `data != NULL`. Vectors with `len < 2` are left unchanged.
+ * @param direction  ::iter_dir sort order: ::FORWARD for ascending, ::REVERSE for
+ *                   descending.
+ *
+ * @return Void.
+ *
+ * @par Algorithm details
+ * - **Pivot:** median-of-three of first/middle/last elements.
+ * - **Partition:** Lomuto-style partitioning around the chosen pivot.
+ * - **Cutover:** when `(high - low) < 10`, uses insertion sort for locality and
+ *   fewer branches on tiny ranges.
+ * - **Tail recursion:** the larger subarray is handled via loop (iterative),
+ *   recursing only on the smaller side to reduce maximum stack depth.
+ *
+ * @par Errors
+ * - Sets `errno = EINVAL` and returns if `vec == NULL`.
+ * - Sets `errno = EINVAL` and `vec->error = NULL_POINTER` and returns if `vec->data = NULL*
+ *
+ * @post
+ * - On success: `vec->data[0..len-1]` is sorted per @p direction; `len` and
+ *   `alloc` are unchanged. Contents are permuted **in place**.
+ *
+ * @note
+ * - The sort is **not stable** (equal elements may change relative order).
+ * - Thread-safety: not thread-safe; do not mutate the vector concurrently.
+ *
+ * **complexity**
+ * - Average: O(n log n); Worst-case: O(n²) (mitigated by median-of-three and
+ *   tail-recursion elimination).
+ *
+ * @code{.c}
+ * // Ascending sort
+ * float_v* v = init_float_vector(8);
+ * push_back_float_vector(v, 5.0f);
+ * push_back_float_vector(v, 2.0f);
+ * push_back_float_vector(v, 9.0f);
+ * push_back_float_vector(v, 2.0f);
+ * sort_float_vector(v, FORWARD);  // v->data: [2.0, 2.0, 5.0, 9.0]
+ *
+ * // Descending sort
+ * sort_float_vector(v, REVERSE);  // v->data: [9.0, 5.0, 2.0, 2.0]
+ * free_float_vector(v);
+ *
+ * // Error case
+ * errno = 0;
+ * sort_float_vector(NULL, FORWARD); // errno == EINVAL
+ * @endcode
+ */
 void sort_float_vector(float_v* vec, iter_dir direction);
 // -------------------------------------------------------------------------------- 
 

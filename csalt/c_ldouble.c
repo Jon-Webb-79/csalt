@@ -328,12 +328,16 @@ long double pop_any_ldouble_vector(ldouble_v* vec, size_t index) {
 
 void reverse_ldouble_vector(ldouble_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return;
     }
 
     if (vec->len == 0) {
-        errno = ENODATA;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return;
     }
 
@@ -427,8 +431,11 @@ static void _quicksort_ldouble(long double* vec, int low, int high, iter_dir dir
 // -------------------------------------------------------------------------------- 
 
 void sort_ldouble_vector(ldouble_v* vec, iter_dir direction) {
-    if (!vec) {
-        errno = EINVAL;
+    if (!vec || !vec->data) {
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return;
     }
     if (vec->len < 2) return;

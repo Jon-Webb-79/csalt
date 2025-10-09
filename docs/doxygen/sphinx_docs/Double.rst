@@ -178,6 +178,18 @@ pop_any_double_vector
 .. doxygenfunction:: pop_any_double_vector
    :project: csalt
 
+reverse_double_vector
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: reverse_double_vector
+   :project: csalt
+
+sort_double_vector
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: sort_double_vector
+   :project: csalt
+
 Search Vector 
 -------------
 

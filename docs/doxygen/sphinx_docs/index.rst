@@ -60,7 +60,14 @@ guard ``#ifdef __cplusplus`` to allow compilation with both C and C++.
 Implementation Details
 ######################
 
-The library provides three main container types:
+The library provides five main container types:
+
+String 
+------
+* A dynamically allocated string implementation 
+* Automatically manages memory during string operations 
+* Provides functions for standard string operations 
+* Provides an iterator for access methods
 
 Dynamic Vector
 --------------
