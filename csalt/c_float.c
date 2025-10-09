@@ -558,6 +558,7 @@ void reverse_float_vector(float_v* vec) {
        i++;
        j--;
     }
+    vec->error = NO_ERROR;
 }
 // ================================================================================
 // ================================================================================ 
@@ -651,36 +652,38 @@ void sort_float_vector(float_v* vec, iter_dir direction) {
     if (vec->len < 2) return;
     
     _quicksort_float(vec->data, 0, vec->len - 1, direction);
+    vec->error = NO_ERROR;
 }
 // -------------------------------------------------------------------------------- 
 
 void trim_float_vector(float_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        if (vec) {
+            vec->error = NULL_POINTER;
+            errno = set_errno_from_error(vec->error);
+        } else errno = EINVAL;
         return;
     }
     
     if (vec->alloc_type == STATIC || vec->len == vec->alloc) {
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return;
     }
    
     if (vec->len == 0) {
-        errno = ENODATA;
-        return;
-    }
-
-    // Check for overflow
-    if (vec->len > SIZE_MAX / sizeof(float)) {
-        errno = ERANGE;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return;
     }
     
     float* ptr = realloc(vec->data, sizeof(float) * vec->len);
     if (ptr == NULL) {
-        errno = ENOMEM;
+        vec->error = REALLOC_FAIL;
+        errno = set_errno_from_error(vec->error);
         return;
     }
-    
+    vec->error = NO_ERROR; 
     vec->data = ptr;
     vec->alloc = vec->len;
 }

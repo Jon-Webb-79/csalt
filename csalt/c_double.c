@@ -551,6 +551,7 @@ void reverse_double_vector(double_v* vec) {
        i++;
        j--;
     }
+    vec->error = NO_ERROR;
 }
 // ================================================================================
 // ================================================================================ 
@@ -644,36 +645,35 @@ void sort_double_vector(double_v* vec, iter_dir direction) {
     if (vec->len < 2) return;
     
     _quicksort_double(vec->data, 0, vec->len - 1, direction);
+    vec->error = NO_ERROR;
 }
 // -------------------------------------------------------------------------------- 
 
 void trim_double_vector(double_v* vec) {
     if (!vec || !vec->data) {
-        errno = EINVAL;
+        vec->error = NULL_POINTER;
+        errno = set_errno_from_error(vec->error);
         return;
     }
     
     if (vec->alloc_type == STATIC || vec->len == vec->alloc) {
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return;
     }
-   
     if (vec->len == 0) {
-        errno = ENODATA;
+        vec->error = INVALID_ARG;
+        errno = set_errno_from_error(vec->error);
         return;
     }
 
-    // Check for overflow
-    if (vec->len > SIZE_MAX / sizeof(double)) {
-        errno = ERANGE;
-        return;
-    }
-    
     double* ptr = realloc(vec->data, sizeof(double) * vec->len);
     if (ptr == NULL) {
-        errno = ENOMEM;
+        vec->error = REALLOC_FAIL;
+        errno = set_errno_from_error(vec->error);
         return;
     }
-    
+    vec->error = NO_ERROR; 
     vec->data = ptr;
     vec->alloc = vec->len;
 }

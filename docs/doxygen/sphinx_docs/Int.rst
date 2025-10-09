@@ -118,6 +118,13 @@ INTVEC_GBC
 .. doxygendefine:: INTVEC_GBC
    :project: csalt
 
+trim_int_vector
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: trim_int_vector
+   :project: csalt
+
+
 Utility Functions 
 -----------------
 

@@ -118,6 +118,12 @@ DBLEVEC_GBC
 .. doxygendefine:: DBLEVEC_GBC
    :project: csalt
 
+trim_double_vector
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: trim_double_vector
+   :project: csalt
+
 Utility Functions 
 -----------------
 

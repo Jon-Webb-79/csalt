@@ -120,6 +120,12 @@ FLTVEC_GBC
 .. doxygendefine:: FLTVEC_GBC
    :project: csalt
 
+trim_float_vector
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: trim_float_vector
+   :project: csalt
+
 Utility Functions 
 -----------------
 

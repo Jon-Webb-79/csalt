@@ -1219,6 +1219,73 @@ static inline void swap_float(float* a, float* b) {
 void sort_float_vector(float_v* vec, iter_dir direction);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Shrink an ::float_v’s capacity to match its current length.
+ *
+ * For ::DYNAMIC vectors with `0 < len < alloc`, this function calls `realloc`
+ * to reduce the backing storage so that `alloc == len`. On success, the data
+ * pofloater may change (reallocation), `len` is unchanged, and `error` is set to
+ * ::NO_ERROR.
+ *
+ * @param vec  Pofloater to an ::float_v.
+ *
+ * @return Void.
+ *
+ * @par Preconditions & behavior
+ * - ::STATIC vectors are not resizable → failure with ::INVALID_ARG.
+ * - If `len == alloc`, trimming is not applicable → failure with ::INVALID_ARG.
+ * - If `len == 0`, trimming to zero is not allowed in this API → failure with ::INVALID_ARG.
+ * - For valid ::DYNAMIC vectors with `0 < len < alloc`, capacity is reduced to `len`.
+ *
+ * @par Errors
+ * On failure the function returns without modifying the vector (except `error`)
+ * and sets:
+ * - ::NULL_POINTER if `vec` is non-NULL but `vec->data` is `NULL`
+ * - ::INVALID_ARG if:
+ *   - `vec->alloc_type == ::STATIC`, or
+ *   - `vec->len == vec->alloc` (already tight), or
+ *   - `vec->len == 0`
+ * - ::REALLOC_FAIL if `realloc` fails
+ *
+ * In each case, `errno` is set via `set_errno_from_error(vec->error)`. If `vec` is
+ * `NULL`, sets `errno = EINVAL` and returns.
+ *
+ * @post
+ * - Success: `alloc == len`; `data` may have changed; `len` unchanged; `error == ::NO_ERROR`.
+ * - Failure: `data`, `len`, and `alloc` unchanged; `error` reflects the cause.
+ *
+ * @warning
+ * - On success, any saved pofloaters floato `vec->data` become invalid if `realloc`
+ *   moves the buffer. Always refresh pofloaters after trimming.
+ * - Not thread-safe. Avoid concurrent mutation.
+ *
+ * **complexity**
+ * - O(n) in the worst case due to potential data movement by `realloc`; O(1) if
+ *   the allocator can shrink in place.
+ *
+ * @code{.c}
+ * // Dynamic vector: trim extra capacity
+ * float_v* v = init_float_vector(16);    // alloc = 16, len = 0
+ * push_back_float_vector(v, 1.0f);
+ * push_back_float_vector(v, 2.0f);        // len = 2
+ * trim_float_vector(v);                // success -> alloc = 2, len = 2
+ * free_float_vector(v);
+ *
+ * // Already tight: reports INVALID_ARG (no-op)
+ * float_v* t = init_float_vector(2);
+ * push_back_float_vector(t, 10.0f);
+ * push_back_float_vector(t, 20.0f);       // len = alloc = 2
+ * trim_float_vector(t);                 // fails: t->error == INVALID_ARG
+ * free_float_vector(t);
+ *
+ * // Static vector: not allowed
+ * {
+ *     float_v s = init_float_array(8);    // STATIC storage
+ *     push_back_float_vector(&s, 5.0f);
+ *     trim_float_vector(&s);            // fails: s.error == INVALID_ARG
+ * }
+ * @endcode
+ */
 void trim_float_vector(float_v* vec);
 // -------------------------------------------------------------------------------- 
 
