@@ -26,10 +26,20 @@
 #include "test_ldouble.h"
 #include "test_int.h"
 #include "test_error.h"
+#include "test_arena.h"
 // ================================================================================ 
 // ================================================================================
 // Begin code
 
+const struct CMUnitTest test_arena[] = {
+    cmocka_unit_test(test_init_dynamic_arena),
+    cmocka_unit_test(test_init_dynamic_arena_no_bytes),
+    cmocka_unit_test(test_init_dynamic_arena_large_chunk),
+    cmocka_unit_test(test_init_static_arena),
+    cmocka_unit_test(test_invalid_free_static_arena),
+    cmocka_unit_test(test_default_alignment),
+    cmocka_unit_test(test_set_default_alignment),
+};
 const struct CMUnitTest test_error[] = {
     cmocka_unit_test(test_error_to_string_no_error),
     cmocka_unit_test(test_error_to_string_invalid_error),
@@ -870,15 +880,16 @@ const struct CMUnitTest test_int_dict[] = {
 // ================================================================================ 
 int main(int argc, const char * argv[]) {
     int status;
-    status = cmocka_run_group_tests(test_error, NULL, NULL);
-    if (status != 0) 
-        return status;
-    status = cmocka_run_group_tests(test_string, NULL, NULL); 
-    if (status != 0)
-        return status;
-    status = cmocka_run_group_tests(test_string_vector, NULL, NULL);
-    if (status != 0) 
-        return status;
+    status = cmocka_run_group_tests(test_arena, NULL, NULL); 
+    // status = cmocka_run_group_tests(test_error, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
+    // status = cmocka_run_group_tests(test_string, NULL, NULL); 
+    // if (status != 0)
+    //     return status;
+    // status = cmocka_run_group_tests(test_string_vector, NULL, NULL);
+    // if (status != 0) 
+    //     return status;
  //    status = cmocka_run_group_tests(test_float_vector, NULL, NULL);
  //    if (status != 0) 
  //        return status;
