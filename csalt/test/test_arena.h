@@ -23,6 +23,7 @@
 #include <cmocka.h>
 // ================================================================================ 
 // ================================================================================ 
+// TEST INIT STATIC AND DYNAMIC ARENASA
 
 void test_init_dynamic_arena(void **state);
 void test_init_dynamic_arena_no_bytes(void **state);
@@ -31,7 +32,17 @@ void test_init_static_arena(void **state);
 void test_invalid_free_static_arena(void **state);
 void test_default_alignment(void **state);
 void test_set_default_alignment(void **state);
+// ================================================================================ 
+// ================================================================================ 
+// TEST ARENA ALLOC FUNCTIONS
 
+void test_alloc_dynamic_arena(void **state);
+void test_alloc_dynamic_arena_zeroed(void **state);
+void test_alloc_dynamic_arena_null_value(void **state);
+void test_alloc_dynamic_arena_zero_input(void **state);
+
+void test_alloc_static_arena(void **state);
+void test_alloc_static_arena_zeroed(void **state);
 // ================================================================================ 
 // ================================================================================ 
 #endif /* test_arena_H */
