@@ -32,6 +32,7 @@ void test_init_static_arena(void **state);
 void test_invalid_free_static_arena(void **state);
 void test_default_alignment(void **state);
 void test_set_default_alignment(void **state);
+void test_arena_double_free(void **state);
 // ================================================================================ 
 // ================================================================================ 
 // TEST ARENA ALLOC FUNCTIONS
@@ -69,6 +70,8 @@ void test_aligned_stricter_no_growth_after_misalignment(void **state);
 void test_aligned_zeroed_memory(void **state);
 void test_aligned_invalid_inputs(void **state);
 void test_aligned_static_arena_within_capacity(void **state);
+// ================================================================================ 
+// ================================================================================ 
 // ================================================================================ 
 // ================================================================================ 
 #endif /* test_arena_H */

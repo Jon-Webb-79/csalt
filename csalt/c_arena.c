@@ -413,12 +413,11 @@ void* alloc_arena_aligned(Arena* arena, size_t bytes, size_t alignment, bool zer
 }
 // -------------------------------------------------------------------------------- 
 
-void free_arena(Arena* arena)
-{
-    if (arena == NULL) { return; }
+void free_arena(Arena* arena) {
+    if (arena == NULL) { errno = EINVAL; return; }
 
     if (arena->mem_type == STATIC) {
-        /* Static arena memory belongs to the caller; nothing to free. */
+        errno = EPERM;
         return;
     }
 
@@ -433,7 +432,6 @@ void free_arena(Arena* arena)
         arena->head->next = NULL;
     }
 
-    /* Finally free the first block by freeing the Arena* (malloc base) */
     free(arena);
 }
 // -------------------------------------------------------------------------------- 

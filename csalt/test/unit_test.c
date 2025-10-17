@@ -39,6 +39,7 @@ const struct CMUnitTest test_arena[] = {
     cmocka_unit_test(test_invalid_free_static_arena),
     cmocka_unit_test(test_default_alignment),
     cmocka_unit_test(test_set_default_alignment),
+    cmocka_unit_test(test_arena_double_free),
 
     cmocka_unit_test(test_alloc_dynamic_arena),
     cmocka_unit_test(test_alloc_dynamic_arena_zeroed),

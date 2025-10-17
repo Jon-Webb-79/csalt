@@ -100,11 +100,11 @@ void test_invalid_free_static_arena(void **state) {
     size_t alloc = arena_alloc(arena);
     size_t total_alloc = total_arena_alloc(arena);
     alloc_t alloc_type = arena_mtype(arena);
-    // assert_int_equal(EINVAL, errno);
-    // assert_int_equal(alloc_type, STATIC);
-    // assert_int_equal(size, 0);
-    // assert_int_equal(alloc, 304);
-    // assert_int_equal(total_alloc, 400);
+    assert_int_equal(EPERM, errno);
+    assert_int_equal(alloc_type, STATIC);
+    assert_int_equal(size, 0);
+    assert_int_equal(alloc, 304);
+    assert_int_equal(total_alloc, 400);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -121,6 +121,15 @@ void test_set_default_alignment(void **state) {
     assert_int_equal(4096, default_arena_alignment());
     reset_default_arena_alignment();
     assert_int_equal(alignof(max_align_t), default_arena_alignment());
+}
+// -------------------------------------------------------------------------------- 
+
+void test_arena_double_free(void **state) {
+    (void) state;
+    Arena* arena = init_dynamic_arena(4097);
+    free_arena(arena);
+    arena = NULL;
+    free_arena(arena);
 }
 // ================================================================================ 
 // ================================================================================ 
