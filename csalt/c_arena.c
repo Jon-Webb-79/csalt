@@ -81,70 +81,111 @@ static inline size_t _align_up_size(size_t x, size_t a) {
     /* a must be power-of-two */
     return (x + (a - 1)) & ~(a - 1);
 }
-// -------------------------------------------------------------------------------- 
 
-static Chunk* _create_memory_chunk(size_t bytes) {
-    if (bytes == 0) { errno = EINVAL; return NULL; }
-
-    Chunk *mc = malloc(sizeof(*mc));
-    if (!mc) { errno = ENOMEM; return NULL; }
-
-    uint8_t *blk = (uint8_t*)malloc(bytes); /* byte granularity */
-    if (!blk) { errno = ENOMEM; free(mc); return NULL; }
-
-    mc->chunk = blk;
-    mc->len   = 0;
-    mc->alloc = bytes;
-    mc->next  = NULL;
-    return mc;
+static inline uintptr_t _align_up_uintptr(uintptr_t p, size_t a) {
+    return (p + (a - 1)) & ~(a - 1);
 }
 // -------------------------------------------------------------------------------- 
 
-Arena* init_dynamic_arena(size_t bytes)
-{
-    /* Policy: round up to minimum + alignment to reduce immediate spillover */
-    size_t const a = default_arena_alignment();
-    if ((a & (a - 1)) != 0 || a == 0) {
-        /* Should never happen if setter validated, but be defensive */
-        errno = EINVAL; 
+static struct Chunk* _chunk_new_ex(size_t data_bytes, size_t data_align) {
+    if ((data_bytes == 0U) || (data_align == 0U) || ((data_align & (data_align - 1U)) != 0U)) {
+        errno = EINVAL;
         return NULL;
     }
 
-    if (bytes < k_min_chunk) bytes = k_min_chunk;
-    bytes = _align_up_size(bytes, a);
+    /* Layout: [Chunk hdr][pad][data_bytes] */
+    size_t const hdr_size = _align_up_size(sizeof(struct Chunk), data_align);
+    size_t const total    = hdr_size + data_bytes;
 
-    /* Guard tot_alloc overflow: bytes + sizeof(Arena)+sizeof(MemChunk) */
-    size_t const overhead = sizeof(struct Arena) + sizeof(Chunk);
-    if (bytes > SIZE_MAX - overhead) {
+    if (total < data_bytes) { /* overflow check */
         errno = ENOMEM;
         return NULL;
     }
 
-    Chunk *mc = _create_memory_chunk(bytes);
-    if (!mc) return NULL;
-
-    struct Arena *arena = (struct Arena*)malloc(sizeof *arena);
-    if (!arena) {
+    struct Chunk* ch = (struct Chunk*)malloc(total);
+    if (ch == NULL) {
         errno = ENOMEM;
-        free(mc->chunk);
-        free(mc);
         return NULL;
     }
 
-    arena->head      = mc;
-    arena->tail      = mc;
-    arena->cur       = mc->chunk;
-    arena->len       = 0;
-    arena->alloc     = bytes;
-    arena->tot_alloc = bytes + overhead;
+    ch->chunk = (uint8_t*)((uint8_t*)ch + hdr_size); /* aligned to data_align */
+    ch->len   = 0U;
+    ch->alloc = data_bytes;
+    ch->next  = NULL;
+    return ch; /* free(ch) later frees both header+data */
+}
+// -------------------------------------------------------------------------------- 
+
+Arena* init_dynamic_arena(size_t bytes) {
+    size_t const a = default_arena_alignment(); /* must be power-of-two */
+    if ((a == 0U) || ((a & (a - 1U)) != 0U)) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* NOTE: If you enforce a minimum (k_min_chunk), that can change total_alloc.
+       If you truly want total_alloc == user 'bytes', either remove the min
+       or document that 'bytes' will be raised to k_min_chunk. */
+    if (bytes < k_min_chunk) {
+        bytes = k_min_chunk;  /* If you prefer exact user total, remove this. */
+    }
+
+    /* Must fit Arena + Chunk inside 'bytes' */
+    if (bytes < (sizeof(struct Arena) + sizeof(struct Chunk))) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    void* base = malloc(bytes);
+    if (base == NULL) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    uintptr_t const base_u = (uintptr_t)base;
+
+    /* Place Arena at malloc base (malloc guarantees max_align_t alignment) */
+    uintptr_t p_arena = base_u;
+    uintptr_t const arena_end = p_arena + (uintptr_t)sizeof(struct Arena);
+    if (arena_end < p_arena) { free(base); errno = ENOMEM; return NULL; }
+
+    /* Place Chunk immediately after Arena, aligned for Chunk */
+    uintptr_t p_chunk = _align_up_uintptr(arena_end, alignof(struct Chunk));
+    uintptr_t const chunk_end = p_chunk + (uintptr_t)sizeof(struct Chunk);
+    if ((chunk_end < p_chunk) || (chunk_end > (base_u + bytes))) {
+        free(base); errno = ENOMEM; return NULL;
+    }
+
+    /* Place data aligned to allocator policy; NO ROUND-UP of total */
+    uintptr_t p_data = _align_up_uintptr(chunk_end, a);
+    if (p_data > (base_u + bytes)) {
+        free(base); errno = EINVAL; return NULL;
+    }
+
+    size_t const usable = (size_t)((base_u + bytes) - p_data);
+    if (usable == 0U) {
+        free(base); errno = EINVAL; return NULL;
+    }
+
+    /* Stitch it together */
+    struct Arena* arena = (struct Arena*)p_arena;
+    struct Chunk* head  = (struct Chunk*)p_chunk;
+
+    head->chunk = (uint8_t*)p_data;
+    head->len   = 0U;
+    head->alloc = usable;
+    head->next  = NULL;
+
+    arena->head      = head;
+    arena->tail      = head;
+    arena->cur       = (uint8_t*)p_data;
+    arena->len       = 0U;
+    arena->alloc     = usable;    /* usable capacity in head chunk */
+    arena->tot_alloc = bytes;     /* EXACTLY what caller asked for */
     arena->mem_type  = DYNAMIC;
 
+    /* Because malloc base == arena pointer, free_arena() must free(arena) */
     return arena;
-}
-// -------------------------------------------------------------------------------- 
-
-static inline uintptr_t align_up_uintptr(uintptr_t p, size_t a) {
-    return (p + (a - 1)) & ~(a - 1);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -163,17 +204,17 @@ Arena* init_static_arena(void* buffer, size_t bytes) {
     }
 
     // Place Arena at buffer start (aligned)
-    uintptr_t p = align_up_uintptr(base, alignof(Arena));
+    uintptr_t p = _align_up_uintptr(base, alignof(Arena));
     uintptr_t arena_end = p + sizeof(Arena);
     if (arena_end < p) { errno = ENOMEM; return NULL; }
 
     // Place Chunk immediately after Arena (aligned)
-    uintptr_t c = align_up_uintptr(arena_end, alignof(struct Chunk));
+    uintptr_t c = _align_up_uintptr(arena_end, alignof(struct Chunk));
     uintptr_t chunk_end = c + sizeof(struct Chunk);
     if (chunk_end < c) { errno = ENOMEM; return NULL; }
 
     // Align data region to arena’s alignment policy
-    uintptr_t data = align_up_uintptr(chunk_end, default_arena_alignment());
+    uintptr_t data = _align_up_uintptr(chunk_end, default_arena_alignment());
 
     if (data > base + bytes) {
         errno = EINVAL;
@@ -208,263 +249,140 @@ Arena* init_static_arena(void* buffer, size_t bytes) {
 }
 // -------------------------------------------------------------------------------- 
 
-static inline size_t align_up_size(size_t x, size_t a) {
-    return (x + (a - 1)) & ~(a - 1);
-}
-// -------------------------------------------------------------------------------- 
-
-static size_t next_chunk_size(size_t prev_alloc, size_t need, size_t align)
-{
-    /* Guard inputs */
-    if (align == 0 || (align & (align - 1)) != 0) return 0;   /* invalid align */
-    if (need == 0) return 0;
-
-    /* Tunables: adjust to taste */
-    const size_t MIN_SLACK = 16u * 1024u;        /* 16 KiB */
-    const size_t MAX_SLACK = 8u  * 1024u * 1024u;/* 8 MiB  */
-
-    /* Heuristic: decide if this is a "big" request relative to current chunk. */
-    int big_request = (prev_alloc == 0) ? 1 : (need >= (prev_alloc * 3) / 4);
-
-    size_t slack;
-    size_t target;
-
-    if (big_request) {
-        /* Allocate exactly what we need, plus bounded slack. */
-        slack = prev_alloc / 2;
-        if (slack < MIN_SLACK) slack = MIN_SLACK;
-        if (slack > MAX_SLACK) slack = MAX_SLACK;
-
-        /* target = need + slack (with overflow clamp) */
-        if (need > SIZE_MAX - slack) target = need; else target = need + slack;
-    } else {
-        /* Geometric growth for small/medium total sizes.
-           Use 2x for very small chunks, 1.5x up to ~16 MiB, then 1.25x. */
-        size_t factor_num, factor_den;
-        if (prev_alloc < (64u * 1024u)) {              /* < 64 KiB */
-            factor_num = 2;  factor_den = 1;           /* 2.0x */
-        } else if (prev_alloc < (16u * 1024u * 1024u)) {
-            factor_num = 3;  factor_den = 2;           /* 1.5x */
-        } else {
-            factor_num = 5;  factor_den = 4;           /* 1.25x */
-        }
-
-        /* candidate = prev_alloc * factor (overflow-safe) */
-        size_t candidate;
-        if (prev_alloc != 0 && prev_alloc > SIZE_MAX / factor_num) candidate = SIZE_MAX;
-        else candidate = (prev_alloc * factor_num) / factor_den;
-
-        /* Ensure we still satisfy the immediate need */
-        if (candidate < need) candidate = need;
-        target = candidate;
-    }
-
-    /* Align up; if it wraps, fall back to need aligned. */
-    size_t aligned = align_up_size(target, align);
-    if (aligned < target) aligned = align_up_size(need, align);
-    return aligned;
-}
-// -------------------------------------------------------------------------------- 
-
 void* alloc_arena(Arena* arena, size_t bytes, bool zeroed) {
-    if (!arena || bytes == 0) { errno = EINVAL; return NULL; }
+    if ((arena == NULL) || (bytes == 0U)) { errno = EINVAL; return NULL; }
 
-    Chunk* c = arena->tail;
-    if (!c) { errno = EINVAL; return NULL; }
+    struct Chunk* tail = arena->tail;
+    size_t const avail = tail->alloc - tail->len;
 
-    /* NB: pick one name and use it everywhere: arena_default_alignment() */
-    size_t const a = default_arena_alignment();
-    if (a == 0 || (a & (a - 1))) { errno = EINVAL; return NULL; }  /* must be pow2 */
-
-    /* Compute how much we need in the CURRENT chunk (pad + bytes) */
-    uintptr_t cur     = (uintptr_t)arena->cur;
-    uintptr_t aligned = align_up_uintptr(cur, a);
-    size_t    pad     = (size_t)(aligned - cur);
-
-    if (pad > SIZE_MAX - bytes) { errno = ENOMEM; return NULL; }
-    size_t need = pad + bytes;
-
-    /* Fast path: fits in current chunk */
-    size_t available = (c->alloc >= c->len) ? (c->alloc - c->len) : 0;
-    if (available >= need) {
-        /* consume padding */
-        arena->cur  = (uint8_t*)aligned;
-        c->len     += pad;
-        arena->len += pad;
-
-        /* allocate */
-        void* p = (void*)arena->cur;
-        arena->cur  += bytes;
-        c->len      += bytes;
-        arena->len  += bytes;
-
-        if (zeroed) memset(p, 0, bytes);
+    if (avail >= bytes) {
+        void* p = arena->cur;
+        arena->cur += bytes;
+        tail->len  += bytes;
+        arena->len += bytes;
+        if (zeroed) { memset(p, 0, bytes); }
         return p;
     }
 
-    /* Need a new chunk */
+    /* For STATIC arenas: cannot grow */
     if (arena->mem_type == STATIC) { errno = EPERM; return NULL; }
 
-    /* Ask policy for the next chunk size. It must be >= need and aligned. */
-    size_t new_size = next_chunk_size(c->alloc, need, a);
-    if (new_size == 0) { errno = EINVAL; return NULL; }
+    /* Grow policy: data_bytes = max(bytes, tail->alloc) */
+    size_t const grow_data = (bytes > tail->alloc) ? bytes : tail->alloc;
+    struct Chunk* nc = _chunk_new_ex(grow_data, default_arena_alignment());
+    if (nc == NULL) { return NULL; }
 
-    /* Guard total-accounting overflow (optional but nice) */
-    if (new_size > SIZE_MAX - sizeof(Chunk)) { errno = ENOMEM; return NULL; }
-    if (arena->alloc > SIZE_MAX - new_size)    { errno = ENOMEM; return NULL; }
-    if (arena->tot_alloc > SIZE_MAX - (new_size + sizeof(Chunk))) {
-        errno = ENOMEM; return NULL;
-    }
+    /* Link new chunk */
+    tail->next   = nc;
+    arena->tail  = nc;
 
-    Chunk* n = _create_memory_chunk(new_size);
-    if (!n) return NULL; /* errno set */
+    /* Account the whole new block footprint into totals:
+       The malloc footprint is (hdr_size + data_bytes).
+       We don’t know hdr_size exactly here (depends on align), but a safe,
+       consistent accounting is to add sizeof(struct Chunk)+grow_data and
+       accept a few bytes of misalignment slop. If you want *exact* bytes,
+       return the total from chunk_new_ex. */
+    arena->alloc     += grow_data;
+    arena->tot_alloc += _align_up_size(sizeof(struct Chunk), default_arena_alignment()) + grow_data;
 
-    /* Link it */
-    c->next     = n;
-    arena->tail = n;
+    /* Allocate from the new chunk */
+    arena->cur  = nc->chunk;
+    nc->len     = bytes;
+    arena->len += bytes;
 
-    /* Align the first allocation inside THIS new chunk */
-    uintptr_t basep    = (uintptr_t)n->chunk;
-    uintptr_t aligned2 = align_up_uintptr(basep, a);
-    size_t    pad2     = (size_t)(aligned2 - basep);
-
-    /* Sanity: we should fit bytes after padding inside this chunk */
-    if (pad2 > n->alloc || (n->alloc - pad2) < bytes) {
-        /* Should not happen if next_chunk_size did its job */
-        errno = ENOMEM;
-        /* unlink to be extra safe */
-        c->next     = NULL;
-        arena->tail = c;
-        free(n->chunk);
-        free(n);
-        return NULL;
-    }
-
-    /* Account for the new chunk */
-    arena->alloc     += n->alloc;
-    arena->tot_alloc += n->alloc + sizeof(Chunk);
-
-    /* Consume the internal padding in the new chunk */
-    n->len      = pad2;
-    arena->len += pad2;
-    arena->cur  = (uint8_t*)aligned2;
-
-    /* Place the object */
-    void* p = (void*)arena->cur;
-    arena->cur  += bytes;
-    n->len      += bytes;
-    arena->len  += bytes;
-
-    if (zeroed) memset(p, 0, bytes);
+    void* p = (void*)nc->chunk;
+    arena->cur = nc->chunk + bytes;
+    if (zeroed) { memset(p, 0, bytes); }
     return p;
 }
 // -------------------------------------------------------------------------------- 
 
-void* alloc_alloc_aligned(Arena* arena, size_t bytes, size_t alignment, bool zeroed) {
-    if (!arena || bytes == 0) { errno = EINVAL; return NULL; }
-    if (alignment == 0 || (alignment & (alignment - 1)) != 0) { errno = EINVAL; return NULL; }
+void* alloc_arena_aligned(Arena* arena, size_t bytes, size_t alignment, bool zeroed)
+{
+    if ((arena == NULL) || (bytes == 0U)) { errno = EINVAL; return NULL; }
+    if ((alignment == 0U) || ((alignment & (alignment - 1U)) != 0U)) {
+        errno = EINVAL; return NULL; /* alignment must be power-of-two */
+    }
 
-    Chunk* c = arena->tail;
-    if (!c) { errno = EINVAL; return NULL; }
+    struct Chunk* tail = arena->tail;
+    if (tail == NULL) { errno = EINVAL; return NULL; }
 
-    /* Compute required space in current chunk: padding + payload */
-    uintptr_t cur     = (uintptr_t)arena->cur;
-    uintptr_t aligned = align_up_uintptr(cur, alignment);
-    size_t    pad     = (size_t)(aligned - cur);
+    /* Fast path: try to satisfy in current tail chunk */
+    uintptr_t const cur     = (uintptr_t)arena->cur;
+    uintptr_t const aligned = _align_up_uintptr(cur, alignment);
+    size_t    const pad     = (size_t)(aligned - cur);
 
-    if (pad > SIZE_MAX - bytes) { errno = ENOMEM; return NULL; }
-    size_t need = pad + bytes;
+    if (pad > (SIZE_MAX - bytes)) { errno = ENOMEM; return NULL; }
+    size_t const need = pad + bytes;
 
-    /* Fast path: fits in current tail chunk */
-    size_t available = (c->alloc >= c->len) ? (c->alloc - c->len) : 0;
-    if (available >= need) {
+    size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0U;
+    if (avail >= need) {
         /* consume padding */
         arena->cur  = (uint8_t*)aligned;
-        c->len     += pad;
+        tail->len  += pad;
         arena->len += pad;
 
         /* place object */
         void* p = (void*)arena->cur;
         arena->cur  += bytes;
-        c->len      += bytes;
-        arena->len  += bytes;
+        tail->len  += bytes;
+        arena->len += bytes;
 
-        if (zeroed) memset(p, 0, bytes);
+        if (zeroed) { (void)memset(p, 0, bytes); }
         return p;
     }
 
-    /* Need a new chunk */
+    /* Grow path: STATIC arenas cannot grow */
     if (arena->mem_type == STATIC) { errno = EPERM; return NULL; }
 
-    size_t new_size = next_chunk_size(c->alloc, need, alignment);
-    if (new_size == 0) { errno = EINVAL; return NULL; }
+    /* Chunk growth policy: enough for this request, or double-ish via your policy */
+    size_t const grow_data = (need > tail->alloc) ? need : tail->alloc;
 
-    /* Global accounting overflow guards (defensive) */
-    if (new_size > SIZE_MAX - sizeof(Chunk)) { errno = ENOMEM; return NULL; }
-    if (arena->alloc > SIZE_MAX - new_size) { errno = ENOMEM; return NULL; }
-    if (arena->tot_alloc > SIZE_MAX - (new_size + sizeof(Chunk))) { errno = ENOMEM; return NULL; }
+    /* Create a new chunk whose data pointer is aligned to 'alignment' */
+    struct Chunk* nc = _chunk_new_ex(grow_data, alignment);
+    if (nc == NULL) { return NULL; } /* errno set */
 
-    Chunk* n = _create_memory_chunk(new_size);
-    if (!n) return NULL; /* errno set by helper */
+    /* Link the new chunk */
+    tail->next   = nc;
+    arena->tail  = nc;
 
-    /* Link new tail */
-    c->next     = n;
-    arena->tail = n;
+    /* Accounting (approximate header footprint; see note below) */
+    arena->alloc     += grow_data;
+    arena->tot_alloc += _align_up_size(sizeof(struct Chunk), alignment) + grow_data;
 
-    /* Align inside the new chunk */
-    uintptr_t basep    = (uintptr_t)n->chunk;
-    uintptr_t aligned2 = align_up_uintptr(basep, alignment);
-    size_t    pad2     = (size_t)(aligned2 - basep);
-
-    /* Sanity: ensure payload fits after pad in the new chunk */
-    if (pad2 > n->alloc || (n->alloc - pad2) < bytes) {
-        /* Shouldn’t happen if next_chunk_size sized correctly */
-        errno = ENOMEM;
-        c->next     = NULL;
-        arena->tail = c;
-        free(n->chunk);
-        free(n);
-        return NULL;
-    }
-
-    /* Update arena accounting for the new chunk */
-    arena->alloc     += n->alloc;
-    arena->tot_alloc += n->alloc + sizeof(Chunk);
-
-    /* Consume padding within new chunk */
-    n->len      = pad2;
-    arena->len += pad2;
-    arena->cur  = (uint8_t*)aligned2;
-
-    /* Place the object */
-    void* p = (void*)arena->cur;
-    arena->cur  += bytes;
-    n->len      += bytes;
+    /* nc->chunk is already aligned to 'alignment' by _chunk_new_ex */
+    nc->len      = bytes;
     arena->len  += bytes;
 
-    if (zeroed) memset(p, 0, bytes);
+    void* p = (void*)nc->chunk;
+    arena->cur   = nc->chunk + bytes;
+
+    if (zeroed) { (void)memset(p, 0, bytes); }
     return p;
 }
 // -------------------------------------------------------------------------------- 
 
-void free_arena(Arena* arena) {
-    if (!arena) return;
+void free_arena(Arena* arena)
+{
+    if (arena == NULL) { return; }
 
     if (arena->mem_type == STATIC) {
-        errno = EINVAL;
+        /* Static arena memory belongs to the caller; nothing to free. */
         return;
     }
 
-    Chunk* cur = arena->head;
-    while (cur) {
-        Chunk* next = cur->next;
-
-        free(cur->chunk);
-        free(cur);
-
-        cur = next;
+    /* Free extra chunks (if any) first */
+    if ((arena->head != NULL) && (arena->head->next != NULL)) {
+        struct Chunk* cur = arena->head->next;
+        while (cur != NULL) {
+            struct Chunk* next = cur->next;
+            free(cur);                  /* single malloc frees header+data */
+            cur = next;
+        }
+        arena->head->next = NULL;
     }
 
+    /* Finally free the first block by freeing the Arena* (malloc base) */
     free(arena);
 }
 // -------------------------------------------------------------------------------- 
