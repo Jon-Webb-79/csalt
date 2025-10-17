@@ -53,7 +53,7 @@ typedef struct {
 // ================================================================================ 
 // FUNCTION PROTOTYPES 
 
-Arena* init_dynamic_arena(size_t bytes);
+Arena* init_dynamic_arena(size_t bytes, bool resize);
 // -------------------------------------------------------------------------------- 
 
 Arena* init_static_arena(void* buffer, size_t bytes);
@@ -135,3 +135,5 @@ size_t arena_chunk_count(const Arena* arena);
 // ================================================================================
 // ================================================================================
 // eof
+//
+// TODO: ADD COP_ARENA

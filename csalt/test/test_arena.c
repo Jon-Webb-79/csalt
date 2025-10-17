@@ -27,7 +27,7 @@ void test_init_dynamic_arena(void **state)
 {
     // Valgrind test to ensure memory is properly created and freed
 	(void) state;
-    Arena* arena = init_dynamic_arena(1000);
+    Arena* arena = init_dynamic_arena(1000, true);
     size_t size = arena_size(arena);
     size_t alloc = arena_alloc(arena);
     size_t total_alloc = total_arena_alloc(arena);
@@ -44,7 +44,7 @@ void test_init_dynamic_arena_no_bytes(void **state) {
     // Verify allocation if user requests 0 bytes
     // Will throw compiler error if user tries to pass a negative number
 	(void) state;
-    Arena* arena = init_dynamic_arena(0);
+    Arena* arena = init_dynamic_arena(0, true);
     size_t size = arena_size(arena);
     size_t alloc = arena_alloc(arena);
     size_t total_alloc = total_arena_alloc(arena);
@@ -61,7 +61,7 @@ void test_init_dynamic_arena_large_chunk(void **state) {
     // - Verify allocation if user requests more than 4096 bytes to ensure 
     //   proper padding is added
 	(void) state;
-    Arena* arena = init_dynamic_arena(4097);
+    Arena* arena = init_dynamic_arena(4097, true);
     size_t size = arena_size(arena);
     size_t alloc = arena_alloc(arena);
     size_t total_alloc = total_arena_alloc(arena);
@@ -126,7 +126,7 @@ void test_set_default_alignment(void **state) {
 
 void test_arena_double_free(void **state) {
     (void) state;
-    Arena* arena = init_dynamic_arena(4097);
+    Arena* arena = init_dynamic_arena(4097, true);
     free_arena(arena);
     arena = NULL;
     free_arena(arena);
@@ -144,7 +144,7 @@ typedef struct {
 
 void test_alloc_dynamic_arena(void **state) {
     (void) state;
-    Arena* arena = init_dynamic_arena(10000);
+    Arena* arena = init_dynamic_arena(10000, true);
     test* struct_val = (test*)alloc_arena(arena, sizeof(test), false);
     int* value = (int*)alloc_arena(arena, sizeof(int), false);
     struct_val->one = 3.4f;
@@ -168,7 +168,7 @@ void test_alloc_dynamic_arena(void **state) {
 void test_alloc_dynamic_arena_zeroed(void **state) {
     (void)state;
 
-    Arena* arena = init_dynamic_arena(10000);
+    Arena* arena = init_dynamic_arena(10000, true);
     assert_non_null(arena);
 
     test* struct_val = alloc_arena(arena, sizeof *struct_val, true);
@@ -204,7 +204,7 @@ void test_alloc_dynamic_arena_null_value(void **state) {
 // -------------------------------------------------------------------------------- 
 
 void test_alloc_dynamic_arena_zero_input(void **state) {
-    Arena* arena = init_dynamic_arena(10000);
+    Arena* arena = init_dynamic_arena(10000, true);
     errno = 0;
     int* value = alloc_arena(arena, 0, true);
     assert_null(value);
@@ -307,7 +307,7 @@ static size_t next_chunk_size_test(size_t prev, size_t need, size_t align) {
 
 int setup_small_arena(void **state) {
     const size_t first_total = 4096u;  /* total_alloc for first block */
-    Arena* a = init_dynamic_arena(first_total);
+    Arena* a = init_dynamic_arena(first_total, true);
     if (!a) return -1;
     *state = a;
     return 0;
@@ -431,7 +431,7 @@ void test_aligned_basic_default_alignment(void **state) {
     (void)state;
 
     const size_t first_total = 8192u;      /* total_alloc for initial block */
-    Arena* a = init_dynamic_arena(first_total);
+    Arena* a = init_dynamic_arena(first_total, true);
     assert_non_null(a);
 
     const size_t def_align = default_arena_alignment();
@@ -459,7 +459,7 @@ void test_aligned_stricter_no_growth_after_misalignment(void **state) {
 
     /* choose a total large enough to keep everything in one chunk */
     const size_t first_total = 16384u;
-    Arena* a = init_dynamic_arena(first_total);
+    Arena* a = init_dynamic_arena(first_total, true);
     assert_non_null(a);
 
     /* disturb natural alignment */
@@ -498,7 +498,7 @@ void test_aligned_zeroed_memory(void **state) {
     (void)state;
 
     const size_t first_total = 8192u;
-    Arena* a = init_dynamic_arena(first_total);
+    Arena* a = init_dynamic_arena(first_total, true);
     assert_non_null(a);
 
     const size_t align = 32u;
@@ -525,7 +525,7 @@ void test_aligned_invalid_inputs(void **state) {
     (void)state;
 
     const size_t first_total = 4096u;
-    Arena* a = init_dynamic_arena(first_total);
+    Arena* a = init_dynamic_arena(first_total, true);
     assert_non_null(a);
 
     /* bytes == 0 */

@@ -27,26 +27,27 @@
 // ================================================================================ 
 
 struct Chunk{
-    uint8_t *chunk;    // Pointer to beginning of memory
-    size_t len;     // Populated length of memory within struct in bytes
-    size_t alloc;   // Allocated length of memory within struct in bytes
+    uint8_t *chunk;     // Pointer to beginning of memory
+    size_t len;         // Populated length of memory within struct in bytes
+    size_t alloc;       // Allocated length of memory within struct in bytes
     struct Chunk* next; // Pointer to next memory chunk
 };
 // -------------------------------------------------------------------------------- 
 
 struct Arena{
-    Chunk* head;   // Pointer to head of memory chunk linked list
-    Chunk* tail;   // Pointer to the tail of memory chunks for the linked list
-    uint8_t *cur;     // A Pointer to the next available memory slot
-    size_t len;       // Total memory used in bytes between all memory chunks
-    size_t alloc;     // Total memory allocated in bytes between all memory chunks
-    size_t tot_alloc; // Total memory allocated to include containers
+    Chunk* head;       // Pointer to head of memory chunk linked list
+    Chunk* tail;       // Pointer to the tail of memory chunks for the linked list
+    uint8_t *cur;      // A Pointer to the next available memory slot
+    size_t len;        // Total memory used in bytes between all memory chunks
+    size_t alloc;      // Total memory allocated in bytes between all memory chunks
+    size_t tot_alloc;  // Total memory allocated to include containers
     alloc_t mem_type;  // Type of memory used
+    bool resize;       // allows resizing if true with mem_type == DYNAMIC
 };
 // -------------------------------------------------------------------------------- 
 
 typedef struct {
-    Chunk* chunk;  // Pointer to saved memory chunk
+    Chunk* chunk;     // Pointer to saved memory chunk
     uint8_t* cur;     // Current pointer position in saved chunk
     size_t len;       // Length of saved chunk
 } ArenaCheckPointRep;
@@ -125,7 +126,7 @@ static struct Chunk* _chunk_new_ex(size_t data_bytes, size_t data_align){
 }
 // -------------------------------------------------------------------------------- 
 
-Arena* init_dynamic_arena(size_t bytes) {
+Arena* init_dynamic_arena(size_t bytes, bool resize) {
     size_t const a = default_arena_alignment(); /* must be power-of-two */
     if ((a == 0U) || ((a & (a - 1U)) != 0U)) {
         errno = EINVAL;
@@ -192,6 +193,7 @@ Arena* init_dynamic_arena(size_t bytes) {
     arena->alloc     = usable;    /* usable capacity in head chunk */
     arena->tot_alloc = bytes;     /* EXACTLY what caller asked for */
     arena->mem_type  = DYNAMIC;
+    arena->resize    = resize;
 
     /* Because malloc base == arena pointer, free_arena() must free(arena) */
     return arena;
@@ -253,6 +255,7 @@ Arena* init_static_arena(void* buffer, size_t bytes) {
     arena->alloc     = usable;
     arena->tot_alloc = bytes;   // total buffer footprint
     arena->mem_type  = STATIC;
+    arena->resize    = false;
 
     return arena;
 }
@@ -318,7 +321,7 @@ void* alloc_arena(Arena* arena, size_t bytes, bool zeroed) {
     }
 
     /* STATIC arenas cannot grow */
-    if (arena->mem_type == STATIC) { errno = EPERM; return NULL; }
+    if (arena->mem_type == STATIC || arena->resize == false) { errno = EPERM; return NULL; }
 
     /* grow with geometric policy; align to allocator policy */
     size_t const a = default_arena_alignment(); /* must be power-of-two */
@@ -385,7 +388,7 @@ void* alloc_arena_aligned(Arena* arena, size_t bytes, size_t alignment, bool zer
     }
 
     /* Grow path: STATIC arenas cannot grow */
-    if (arena->mem_type == STATIC) { errno = EPERM; return NULL; }
+    if (arena->mem_type == STATIC || arena->resize == false) { errno = EPERM; return NULL; }
 
     /* Geometric growth policy (same as unaligned path) */
     size_t const grow_data = _next_chunk_size(tail->alloc, need, alignment);
