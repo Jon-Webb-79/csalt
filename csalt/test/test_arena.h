@@ -45,6 +45,24 @@ void test_alloc_static_arena(void **state);
 void test_alloc_static_arena_zeroed(void **state);
 // ================================================================================ 
 // ================================================================================ 
+// TEST RE-ALLOCATION STRATEGY 
+
+static inline void assert_aligned_ptr(const void* p, size_t a) {
+    assert_non_null(p);
+    assert_true(((uintptr_t)p & (a - 1u)) == 0u);
+}
+
+/* Optional fixtures */
+int setup_small_arena(void **state);
+int teardown_arena(void **state);
+
+/* Tests */
+void test_no_growth_within_capacity(void **state);
+void test_geometric_growth_unaligned(void **state);
+void test_aligned_growth_and_alignment(void **state);
+void test_multiple_geometric_steps(void **state);
+// ================================================================================ 
+// ================================================================================ 
 #endif /* test_arena_H */
 // ================================================================================
 // ================================================================================

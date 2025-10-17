@@ -46,6 +46,11 @@ const struct CMUnitTest test_arena[] = {
     cmocka_unit_test(test_alloc_dynamic_arena_zero_input),
     cmocka_unit_test(test_alloc_static_arena),
     cmocka_unit_test(test_alloc_static_arena_zeroed),
+
+    cmocka_unit_test_setup_teardown(test_no_growth_within_capacity, setup_small_arena, teardown_arena),
+    cmocka_unit_test_setup_teardown(test_geometric_growth_unaligned, setup_small_arena, teardown_arena),
+    cmocka_unit_test_setup_teardown(test_aligned_growth_and_alignment, setup_small_arena, teardown_arena),
+    cmocka_unit_test_setup_teardown(test_multiple_geometric_steps, setup_small_arena, teardown_arena),
 };
 const struct CMUnitTest test_error[] = {
     cmocka_unit_test(test_error_to_string_no_error),
