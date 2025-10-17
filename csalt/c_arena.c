@@ -349,8 +349,7 @@ void* alloc_arena(Arena* arena, size_t bytes, bool zeroed) {
 }
 // -------------------------------------------------------------------------------- 
 
-void* alloc_arena_aligned(Arena* arena, size_t bytes, size_t alignment, bool zeroed)
-{
+void* alloc_arena_aligned(Arena* arena, size_t bytes, size_t alignment, bool zeroed) {
     if ((arena == NULL) || (bytes == 0u)) { errno = EINVAL; return NULL; }
     if ((alignment == 0u) || ((alignment & (alignment - 1u)) != 0u)) {
         errno = EINVAL; return NULL; /* alignment must be power-of-two */
