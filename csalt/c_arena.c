@@ -303,31 +303,38 @@ static size_t _next_chunk_size(size_t prev_data_alloc, size_t need, size_t align
     return grow;
 }
 
+static inline size_t pad_up(uintptr_t p, size_t a) {
+    size_t const mask = a - 1u;                // a is power-of-two
+    return (size_t)(((p + mask) & ~mask) - p);  // 0..a-1
+}
+
 void* alloc_arena(Arena* arena, size_t bytes, bool zeroed) {
     if ((arena == NULL) || (bytes == 0u)) { errno = EINVAL; return NULL; }
+
+    size_t const a = default_arena_alignment();                   // must be pow2
+    if (a == 0u || (a & (a - 1u)) != 0u) { errno = EINVAL; return NULL; }
 
     struct Chunk* tail = arena->tail;
     if (tail == NULL) { errno = EINVAL; return NULL; }
 
+    uintptr_t const cur = (uintptr_t)arena->cur;
+    size_t const pad = pad_up(cur, a);                            // NEW
+    size_t const need = pad + bytes;
+
     /* fast path: current tail has space, no extra pad required here */
     size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0u;
-    if (avail >= bytes) {
-        void* p = (void*)arena->cur;
-        arena->cur += bytes;
-        tail->len  += bytes;
-        arena->len += bytes;
-        if (zeroed) { (void)memset(p, 0, bytes); }
+    if (avail >= need) {
+        uint8_t* p = (uint8_t*)(cur + pad);                       // aligned
+        arena->cur  = p + bytes;
+        tail->len  += need;                                       // count pad+bytes
+        arena->len += need;
+        if (zeroed) memset(p, 0, bytes);
         return p;
     }
 
     /* STATIC arenas cannot grow */
     if (arena->mem_type == STATIC || arena->resize == false) { errno = EPERM; return NULL; }
 
-    /* grow with geometric policy; align to allocator policy */
-    size_t const a = default_arena_alignment(); /* must be power-of-two */
-    if ((a == 0u) || ((a & (a - 1u)) != 0u)) { errno = EINVAL; return NULL; }
-
-    size_t const need      = bytes; /* unaligned path: no pad in current tail */
     size_t const grow_data = _next_chunk_size(tail->alloc, need, a);
 
     struct Chunk* nc = _chunk_new_ex(grow_data, a);
@@ -353,65 +360,61 @@ void* alloc_arena(Arena* arena, size_t bytes, bool zeroed) {
 // -------------------------------------------------------------------------------- 
 
 void* alloc_arena_aligned(Arena* arena, size_t bytes, size_t alignment, bool zeroed) {
-    if ((arena == NULL) || (bytes == 0u)) { errno = EINVAL; return NULL; }
-    if ((alignment == 0u) || ((alignment & (alignment - 1u)) != 0u)) {
-        errno = EINVAL; return NULL; /* alignment must be power-of-two */
+    if (!arena || bytes == 0u) { errno = EINVAL; return NULL; }
+    if (alignment == 0u || (alignment & (alignment - 1u)) != 0u) {
+        errno = EINVAL; return NULL;  // requested alignment must be pow2
     }
-
     struct Chunk* tail = arena->tail;
-    if (tail == NULL) { errno = EINVAL; return NULL; }
+    if (!tail) { errno = EINVAL; return NULL; }
 
-    /* Compute padding needed at current cursor to satisfy 'alignment' */
-    uintptr_t const cur     = (uintptr_t)arena->cur;
-    uintptr_t const aligned = _align_up_uintptr(cur, alignment);
-    size_t    const pad     = (size_t)(aligned - cur);
+    // Effective alignment = max(requested, arena policy)
+    size_t const a_policy = default_arena_alignment();
+    if (a_policy == 0u || (a_policy & (a_policy - 1u)) != 0u) { errno = EINVAL; return NULL; }
+    size_t const eff_a = (alignment > a_policy) ? alignment : a_policy;
 
-    if (pad > (SIZE_MAX - bytes)) { errno = ENOMEM; return NULL; }
+    // Per-allocation padding from current cursor
+    uintptr_t const cur = (uintptr_t)arena->cur;
+    size_t const pad = pad_up(cur, eff_a);
+    if (pad > SIZE_MAX - bytes) { errno = ENOMEM; return NULL; }
     size_t const need = pad + bytes;
 
-    /* Fast path: fits in the current tail chunk */
+    // Available space in tail
     size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0u;
+
+    // Fast path: fits in current chunk
     if (avail >= need) {
-        /* consume padding */
-        arena->cur  = (uint8_t*)aligned;
-        tail->len  += pad;
-        arena->len += pad;
-
-        /* place object */
-        void* p = (void*)arena->cur;
-        arena->cur  += bytes;
-        tail->len  += bytes;
-        arena->len += bytes;
-
-        if (zeroed) { (void)memset(p, 0, bytes); }
+        uint8_t* p = (uint8_t*)(cur + pad);   // eff_a-aligned
+        arena->cur  = p + bytes;
+        tail->len  += need;                   // charge pad+bytes
+        arena->len += need;
+        if (zeroed) memset(p, 0, bytes);
         return p;
     }
 
-    /* Grow path: STATIC arenas cannot grow */
-    if (arena->mem_type == STATIC || arena->resize == false) { errno = EPERM; return NULL; }
+    // Grow path
+    if (arena->mem_type == STATIC || !arena->resize) { errno = EPERM; return NULL; }
 
-    /* Geometric growth policy (same as unaligned path) */
-    size_t const grow_data = _next_chunk_size(tail->alloc, need, alignment);
+    size_t const grow_data = _next_chunk_size(tail->alloc, need, eff_a);
+    struct Chunk* nc = _chunk_new_ex(grow_data, eff_a);  // must return eff_a-aligned data
+    if (!nc) return NULL; // errno set by helper
 
-    /* Single-malloc chunk whose data pointer is aligned to 'alignment' */
-    struct Chunk* nc = _chunk_new_ex(grow_data, alignment);
-    if (nc == NULL) { return NULL; } /* errno set */
+    // Link new chunk
+    tail->next  = nc;
+    arena->tail = nc;
 
-    /* Link the new chunk */
-    tail->next   = nc;
-    arena->tail  = nc;
+    // Accounting
+    size_t const hdr = _align_up_size(sizeof(struct Chunk), eff_a);
+    if (arena->alloc > SIZE_MAX - nc->alloc) { errno = ENOMEM; return NULL; }
+    arena->alloc += nc->alloc;
+    if (arena->tot_alloc > SIZE_MAX - (hdr + nc->alloc)) { errno = ENOMEM; return NULL; }
+    arena->tot_alloc += hdr + nc->alloc;
 
-    /* Accounting: usable capacity and approximate footprint */
-    arena->alloc     += nc->alloc;
-    arena->tot_alloc += _align_up_size(sizeof(struct Chunk), alignment) + nc->alloc;
-
-    /* nc->chunk is already aligned; allocate immediately */
+    // First alloc from fresh chunk: base is eff_a-aligned -> no pad
     void* p = (void*)nc->chunk;
     nc->len     = bytes;
     arena->len += bytes;
     arena->cur  = nc->chunk + bytes;
-
-    if (zeroed) { (void)memset(p, 0, bytes); }
+    if (zeroed) memset(p, 0, bytes);
     return p;
 }
 // -------------------------------------------------------------------------------- 

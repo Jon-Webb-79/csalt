@@ -72,6 +72,14 @@ void test_aligned_invalid_inputs(void **state);
 void test_aligned_static_arena_within_capacity(void **state);
 // ================================================================================ 
 // ================================================================================ 
+// TEST IS_PTR FUNCTIONS 
+
+void test_is_arena_ptr_basic_and_boundaries(void **state);
+void test_is_arena_ptr_sized_exact_and_overrun(void **state);
+void test_is_arena_ptr_cross_chunk_span_fails(void **state);
+void test_is_arena_ptr_with_foreign_pointer(void **state);
+void test_is_arena_ptr_null_inputs(void **state);
+void test_is_arena_ptr_tail_end_exclusive(void **state);
 // ================================================================================ 
 // ================================================================================ 
 #endif /* test_arena_H */

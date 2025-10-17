@@ -58,7 +58,9 @@ const struct CMUnitTest test_arena[] = {
     cmocka_unit_test(test_aligned_zeroed_memory),
     cmocka_unit_test(test_aligned_invalid_inputs),
     cmocka_unit_test(test_aligned_static_arena_within_capacity),
-};
+
+
+ };
 const struct CMUnitTest test_error[] = {
     cmocka_unit_test(test_error_to_string_no_error),
     cmocka_unit_test(test_error_to_string_invalid_error),

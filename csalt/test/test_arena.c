@@ -157,10 +157,10 @@ void test_alloc_dynamic_arena(void **state) {
     size_t alloc = arena_alloc(arena);
     size_t total_alloc = total_arena_alloc(arena);
     size_t left_over = arena_remaining(arena);
-    assert_int_equal(size, 12);
+    assert_int_equal(size, 20);
     assert_int_equal(alloc, 9904);
     assert_int_equal(total_alloc, 10000);
-    assert_int_equal(left_over, 9892);
+    assert_int_equal(left_over, 9884);
     free_arena(arena);
 }
 // -------------------------------------------------------------------------------- 
@@ -229,10 +229,10 @@ void test_alloc_static_arena(void **state) {
     size_t alloc = arena_alloc(arena);
     size_t total_alloc = total_arena_alloc(arena);
     size_t left_over = arena_remaining(arena);
-    assert_int_equal(size, 12);
+    assert_int_equal(size, 20);
     assert_int_equal(alloc, 9904);
     assert_int_equal(total_alloc, 10000);
-    assert_int_equal(left_over, 9892);
+    assert_int_equal(left_over, 9884);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -338,8 +338,7 @@ void test_no_growth_within_capacity(void **state) {
     assert_non_null(alloc_arena(a, n1, true));
     assert_non_null(alloc_arena(a, n2, false));
     assert_non_null(alloc_arena(a, n3, false));
-
-    assert_int_equal(arena_size(a), n1 + n2 + n3);
+    assert_int_equal(arena_size(a), n1 + n2 + n3 + 8);
     assert_int_equal(arena_chunk_count(a), 1u); /* no growth */
 }
 
@@ -584,6 +583,162 @@ void test_aligned_static_arena_within_capacity(void **state) {
     /* pointer sanity in static */
     assert_true(is_arena_ptr(a, p));
     assert_true(is_arena_ptr_sized(a, p, n));
+}
+// ================================================================================ 
+// ================================================================================ 
+// TEST IS_PTR FUNCTIONS 
+
+static void dispose_arena(struct Arena **pa) {
+    if (!pa || !*pa) return;
+    free_arena(*pa);
+    *pa = NULL;
+}
+
+/* Try to allocate exactly 'want' bytes. If it doesn't fit because of alignment
+   padding, decrement until it fits. Returns pointer (or NULL) and writes actual taken. */
+static void *alloc_fit(struct Arena *a, size_t want, size_t *taken, int zeroed) {
+    while (want > 0) {
+        void *p = alloc_arena(a, want, zeroed);
+        if (p) { if (taken) *taken = want; return p; }
+        --want;
+    }
+    if (taken) *taken = 0;
+    return NULL;
+}
+
+void test_is_arena_ptr_basic_and_boundaries(void **state) {
+    (void)state;
+    struct Arena *a = init_dynamic_arena(4096, /*resize=*/true);
+    assert_non_null(a);
+
+    void *p = alloc_arena(a, 64, /*zeroed=*/false);
+    assert_non_null(p);
+
+    uint8_t *b = (uint8_t*)p;
+
+    // inside used range
+    assert_true(is_arena_ptr(a, b));
+    assert_true(is_arena_ptr(a, b + 63));
+
+    // end is exclusive
+    assert_false(is_arena_ptr(a, b + 64));
+
+    dispose_arena(&a);
+    assert_null(a);
+}
+
+void test_is_arena_ptr_sized_exact_and_overrun(void **state) {
+    (void)state;
+    struct Arena *a = init_dynamic_arena(4096, /*resize=*/true);
+    assert_non_null(a);
+
+    void *p = alloc_arena(a, 128, /*zeroed=*/false);
+    assert_non_null(p);
+
+    // exact fit (OK) vs overrun (reject)
+    assert_true(is_arena_ptr_sized(a, p, 128));
+    assert_false(is_arena_ptr_sized(a, p, 129));
+
+    // zero-sized (reject per API)
+    assert_false(is_arena_ptr_sized(a, p, 0));
+
+    dispose_arena(&a);
+    assert_null(a);
+}
+
+void test_is_arena_ptr_cross_chunk_span_fails(void **state) {
+    (void)state;
+    // Small arena to make growth easy
+    struct Arena *a = init_dynamic_arena(1024, /*resize=*/true);
+    assert_non_null(a);
+
+    // 1) Make a small starter allocation so we're in use
+    void *first = alloc_arena(a, 16, false);
+    assert_non_null(first);
+
+    // 2) Fill the remainder of the current tail so the next byte will force growth.
+    size_t rem = arena_remaining(a);
+    assert_true(rem > 0);
+
+    size_t taken = 0;
+    void *edge = alloc_fit(a, rem, &taken, /*zeroed=*/false);
+    assert_non_null(edge);
+    assert_true(taken > 0);
+
+    // Sanity: 'edge' marks the *start* of the last allocation in the tail.
+    // The span [edge, edge + taken) lies fully in the current tail.
+    assert_true(is_arena_ptr(a, edge));
+    assert_true(is_arena_ptr_sized(a, edge, taken));
+
+    // 3) Force a growth: with tail full, allocate 1 byte -> new chunk
+    void *next = alloc_arena(a, 1, false);
+    assert_non_null(next);
+
+    // 4) Any sized query that extends beyond the last allocation's end must fail.
+    //    (It now crosses the chunk boundary into the newly grown chunk.)
+    assert_false(is_arena_ptr_sized(a, edge, taken + 1));
+
+    dispose_arena(&a);
+    assert_null(a);
+}
+
+void test_is_arena_ptr_with_foreign_pointer(void **state) {
+    (void)state;
+    struct Arena *a = init_dynamic_arena(2048, /*resize=*/true);
+    assert_non_null(a);
+
+    void *p = alloc_arena(a, 128, false);
+    assert_non_null(p);
+
+    void *foreign = malloc(64);
+    assert_non_null(foreign);
+
+    assert_false(is_arena_ptr(a, foreign));
+    assert_false(is_arena_ptr_sized(a, foreign, 16));
+
+    free(foreign);
+    dispose_arena(&a);
+    assert_null(a);
+}
+
+void test_is_arena_ptr_null_inputs(void **state) {
+    (void)state;
+    struct Arena *a = init_dynamic_arena(1024, /*resize=*/true);
+    assert_non_null(a);
+
+    void *p = alloc_arena(a, 32, false);
+    assert_non_null(p);
+
+    assert_false(is_arena_ptr(NULL, p));
+    assert_false(is_arena_ptr(a, NULL));
+    assert_false(is_arena_ptr(NULL, NULL));
+
+    assert_false(is_arena_ptr_sized(a, p, 0));  // zero-sized reject
+
+    dispose_arena(&a);
+    assert_null(a);
+}
+
+void test_is_arena_ptr_tail_end_exclusive(void **state) {
+    (void)state;
+    struct Arena *a = init_dynamic_arena(1024, /*resize=*/true);
+    assert_non_null(a);
+
+    // Grab a small block, then another small block to be sure we're at tail
+    void *p1 = alloc_arena(a, 32, false);
+    assert_non_null(p1);
+    void *p2 = alloc_arena(a, 32, false);
+    assert_non_null(p2);
+
+    // For the last allocation (p2, size 32), end is exclusive
+    uint8_t *q = (uint8_t*)p2;
+    assert_true(is_arena_ptr(a, q));
+    assert_true(is_arena_ptr_sized(a, q, 32));
+    assert_false(is_arena_ptr(a, q + 32));
+    assert_false(is_arena_ptr_sized(a, q + 16, 32));  // extends past used end
+
+    dispose_arena(&a);
+    assert_null(a);
 }
 // ================================================================================
 // ================================================================================
