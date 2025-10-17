@@ -740,6 +740,164 @@ void test_is_arena_ptr_tail_end_exclusive(void **state) {
     dispose_arena(&a);
     assert_null(a);
 }
+// ================================================================================ 
+// ================================================================================ 
+// TEST SAVE AND RESTORE 
+
+// static void dispose_arena(struct Arena **pa) {
+//     if (!pa || !*pa) return;
+//     free_arena(*pa);
+//     *pa = NULL;
+// }
+
+/* Try to allocate exactly 'want' bytes. If it doesn't fit (due to padding, etc.),
+ * decrement until it fits. Returns ptr or NULL; writes 'taken' on success. */
+// static void *alloc_fit(struct Arena *a, size_t want, size_t *taken, int zeroed) {
+//     while (want > 0) {
+//         void *p = alloc_arena(a, want, zeroed);
+//         if (p) { if (taken) *taken = want; return p; }
+//         --want;
+//     }
+//     if (taken) *taken = 0;
+//     return NULL;
+// }
+
+/* 1) init_dynamic_arena(..., true) should permit growth */
+void test_dynamic_arena_grows_by_default(void **state) {
+    (void)state;
+    struct Arena *a = init_dynamic_arena(1024, /*resize=*/true);
+    assert_non_null(a);
+
+    /* Make at least one allocation */
+    assert_non_null(alloc_arena(a, 16, /*zeroed=*/false));
+
+    /* Fill the rest of the current tail so the next byte forces growth */
+    size_t rem = arena_remaining(a);
+    assert_true(rem > 0);
+
+    size_t taken = 0;
+    void *edge = alloc_fit(a, rem, &taken, /*zeroed=*/false);
+    assert_non_null(edge);
+    assert_true(taken > 0);
+
+    /* Next allocation should succeed by growing (since resize=true) */
+    errno = 0;
+    void *grown = alloc_arena(a, 1, /*zeroed=*/false);
+    assert_non_null(grown);
+    /* errno unspecified on success; do not assert it */
+
+    dispose_arena(&a);
+    assert_null(a);
+}
+
+/* 2) init_dynamic_arena(..., false) should block growth with EPERM */
+void test_dynamic_arena_resize_false_blocks_growth(void **state) {
+    (void)state;
+    struct Arena *a = init_dynamic_arena(1024, /*resize=*/false);
+    assert_non_null(a);
+
+    /* Make at least one allocation */
+    assert_non_null(alloc_arena(a, 16, /*zeroed=*/false));
+
+    /* Fill the rest of the current tail so the next byte would require growth */
+    size_t rem = arena_remaining(a);
+    assert_true(rem > 0);
+
+    size_t taken = 0;
+    void *edge = alloc_fit(a, rem, &taken, /*zeroed=*/false);
+    assert_non_null(edge);
+    assert_true(taken > 0);
+
+    /* Next allocation should fail (no growth allowed) */
+    errno = 0;
+    void *fail = alloc_arena(a, 1, /*zeroed=*/false);
+    assert_null(fail);
+    assert_int_equal(errno, EPERM);
+
+    dispose_arena(&a);
+    assert_null(a);
+}
+
+/* 3) After checkpoint/restore, growth behavior remains the same (preserved) */
+void test_restore_preserves_growth_policy(void **state) {
+    (void)state;
+
+    /* Part A: resize=true -> growth before & after restore */
+    {
+        struct Arena *a = init_dynamic_arena(1024, /*resize=*/true);
+        assert_non_null(a);
+
+        /* Place a checkpoint early */
+        ArenaCheckPoint cp = save_arena(a);
+
+        /* Fill tail to end */
+        assert_non_null(alloc_arena(a, 16, false));
+        size_t rem = arena_remaining(a);
+        assert_true(rem > 0);
+        size_t taken = 0;
+        assert_non_null(alloc_fit(a, rem, &taken, false));
+
+        /* Growth works pre-restore */
+        errno = 0;
+        assert_non_null(alloc_arena(a, 1, false));
+
+        /* Restore to checkpoint */
+        assert_true(restore_arena(a, cp));
+
+        /* Fill to end again at the restored point */
+        rem = arena_remaining(a);
+        assert_true(rem > 0);
+        taken = 0;
+        assert_non_null(alloc_fit(a, rem, &taken, false));
+
+        /* Growth should STILL work (policy preserved) */
+        errno = 0;
+        void *grown = alloc_arena(a, 1, false);
+        assert_non_null(grown);
+
+        dispose_arena(&a);
+        assert_null(a);
+    }
+
+    /* Part B (optional): resize=false -> no growth before & after restore */
+    {
+        struct Arena *a = init_dynamic_arena(1024, /*resize=*/false);
+        assert_non_null(a);
+
+        ArenaCheckPoint cp = save_arena(a);
+
+        /* Fill tail to end */
+        assert_non_null(alloc_arena(a, 16, false));
+        size_t rem = arena_remaining(a);
+        assert_true(rem > 0);
+        size_t taken = 0;
+        assert_non_null(alloc_fit(a, rem, &taken, false));
+
+        /* Growth blocked pre-restore */
+        errno = 0;
+        void *fail = alloc_arena(a, 1, false);
+        assert_null(fail);
+        assert_int_equal(errno, EPERM);
+
+        /* Restore to checkpoint */
+        assert_true(restore_arena(a, cp));
+
+        /* Fill to end again at restored point */
+        rem = arena_remaining(a);
+        assert_true(rem > 0);
+        taken = 0;
+        assert_non_null(alloc_fit(a, rem, &taken, false));
+
+        /* Growth should STILL be blocked (policy preserved) */
+        errno = 0;
+        fail = alloc_arena(a, 1, false);
+        assert_null(fail);
+        assert_int_equal(errno, EPERM);
+
+        dispose_arena(&a);
+        assert_null(a);
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof

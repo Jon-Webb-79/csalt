@@ -82,6 +82,13 @@ void test_is_arena_ptr_null_inputs(void **state);
 void test_is_arena_ptr_tail_end_exclusive(void **state);
 // ================================================================================ 
 // ================================================================================ 
+// TEST SAVE AND RESTORE 
+
+void test_dynamic_arena_grows_by_default(void **state);
+void test_dynamic_arena_resize_false_blocks_growth(void **state);
+void test_restore_preserves_growth_policy(void **state);
+// ================================================================================ 
+// ================================================================================ 
 #endif /* test_arena_H */
 // ================================================================================
 // ================================================================================

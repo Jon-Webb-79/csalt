@@ -137,3 +137,6 @@ size_t arena_chunk_count(const Arena* arena);
 // eof
 //
 // TODO: ADD COP_ARENA
+// TODO: ADD RESET_MIM_CHUNK 
+// TODO: ADD FUNCTION TO TURN resize on 
+// TODO: ADD FUNCTION TO TURN resize off

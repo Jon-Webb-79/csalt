@@ -591,13 +591,25 @@ static inline void cp_unpack(const ArenaCheckPoint* pub, ArenaCheckPointRep* rep
 }
 // --------------------------------------------------------------------------------
 
+static const Chunk* find_chunk_in_chain(const Arena* a, const Chunk* target, Chunk const** prev_out) {
+    const Chunk* prev = NULL;
+    for (const Chunk* c = a->head; c; c = c->next) {
+        if (c == target) {
+            if (prev_out) *prev_out = prev;
+            return c;
+        }
+        prev = c;
+    }
+    return NULL;
+}
+
 ArenaCheckPoint save_arena(const Arena* arena) {
     ArenaCheckPoint pub = {0};
     ArenaCheckPointRep rep = {0};
     if (arena) {
-        rep.chunk = arena->tail;
-        rep.cur   = arena->cur;
-        rep.len   = arena->len;
+        rep.chunk = arena->tail;   // save tail chunk (point-in-time tail)
+        rep.cur   = arena->cur;    // save cursor within that chunk
+        rep.len   = arena->len;    // optional: total used at save time
     }
     cp_pack(&pub, &rep);
     return pub;
@@ -607,53 +619,71 @@ ArenaCheckPoint save_arena(const Arena* arena) {
 bool restore_arena(Arena* arena, ArenaCheckPoint cp) {
     if (!arena) { errno = EINVAL; return false; }
 
-    ArenaCheckPointRep rep;
+    ArenaCheckPointRep rep = {0};
     cp_unpack(&cp, &rep);
 
-    if (!rep.chunk) return true;                 // restoring to "empty" OK
+    /* Empty checkpoint -> nothing to do */
+    if (!rep.chunk) return true;
 
-    // Validate rep.cur within chunk
+    /* 1) Ensure the checkpoint chunk is in the current chain */
+    const Chunk* prev = NULL;
+    const Chunk* hit  = find_chunk_in_chain(arena, rep.chunk, &prev);
+    if (!hit) { errno = EINVAL; return false; }  // stale checkpoint
+
+    /* 2) Validate rep.cur is within the chunk's capacity */
     if (!rep.chunk->chunk) { errno = EINVAL; return false; }
-    uintptr_t s = (uintptr_t)rep.chunk->chunk;
-    uintptr_t e = s + rep.chunk->alloc;         // end (exclusive)
+    uintptr_t s  = (uintptr_t)rep.chunk->chunk;
     uintptr_t pc = (uintptr_t)rep.cur;
-    if (e < s || pc < s || pc > e) {            // overflow or out of range
-        errno = EINVAL; 
-        return false;
-    }
+    uintptr_t e  = s + rep.chunk->alloc;     // end exclusive
+    if (e < s || pc < s || pc > e) { errno = EINVAL; return false; }
 
-    // If dynamic, free every chunk after the checkpoint chunk
+    /* 3) If dynamic, free every chunk AFTER the checkpoint chunk */
     if (arena->mem_type == DYNAMIC) {
-        Chunk* cur = rep.chunk->next;
-        while (cur) {
-            Chunk* next = cur->next;
-            free(cur->chunk);
-            free(cur);
-            cur = next;
+        Chunk* c = rep.chunk->next;
+        while (c) {
+            Chunk* nxt = c->next;
+            /* single-malloc model: header+data freed by free(c) */
+            free(c);
+            c = nxt;
         }
-        rep.chunk->next = NULL;
+        ((Chunk*)rep.chunk)->next = NULL;  // cast away const to relink
+    } else {
+        /* STATIC: assert there are no chunks beyond rep.chunk, else reject or ignore */
+        // Option A (strict): if (rep.chunk->next) { errno = EPERM; return false; }
+        // Option B (lenient): do nothing
     }
 
-    // Restore pointers and per-chunk used
-    rep.chunk->len = (size_t)(pc - s);          // used bytes in tail chunk
-    arena->tail    = rep.chunk;
-    arena->cur     = rep.cur;
+    /* 4) Set the tail chunk's used length to match the checkpoint cursor */
+    size_t new_tail_len = (size_t)(pc - s);
+    ((Chunk*)rep.chunk)->len = new_tail_len;
 
-    // Restore global used bytes
-    arena->len     = rep.len;
+    /* 5) Re-anchor arena tail & cursor to checkpoint */
+    arena->tail = (Chunk*)rep.chunk;
+    arena->cur  = (uint8_t*)rep.cur;
 
-    // Recompute capacity & footprint from remaining chain (defensive)
-    size_t cap = 0, foot = sizeof(Arena);
-    for (const Chunk* k = arena->head; k; k = k->next) {
-        cap  += k->alloc;
-        foot += sizeof(Chunk) + k->alloc;
+    /* 6) Recompute totals from the remaining chain (authoritative) */
+    size_t a_policy = default_arena_alignment();
+    if (a_policy == 0u || (a_policy & (a_policy - 1u)) != 0u) { errno = EINVAL; return false; }
+
+    size_t total_used = 0, total_cap = 0, total_foot = 0;
+
+    // If your base alloc holds Arena+head in a single allocation, you may
+    // want to start foot with that exact base size you track elsewhere.
+    // Here we recompute conservatively with aligned headers:
+    for (Chunk* k = arena->head; k; k = k->next) {
+        size_t used = k->len;
+        if (used > k->alloc) used = k->alloc;   // defensive clamp
+        total_used += used;
+        total_cap  += k->alloc;
+        total_foot += _align_up_size(sizeof(Chunk), a_policy) + k->alloc;
     }
-    arena->alloc     = cap;
-    arena->tot_alloc = foot;
+
+    arena->len       = total_used;
+    arena->alloc     = total_cap;
+    arena->tot_alloc = _align_up_size(sizeof(Arena), a_policy) + total_foot;
 
     return true;
 }
-
 // -------------------------------------------------------------------------------- 
 
 static bool buf_appendf(char *buffer,

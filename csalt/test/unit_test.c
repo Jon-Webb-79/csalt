@@ -59,7 +59,16 @@ const struct CMUnitTest test_arena[] = {
     cmocka_unit_test(test_aligned_invalid_inputs),
     cmocka_unit_test(test_aligned_static_arena_within_capacity),
 
+    cmocka_unit_test(test_is_arena_ptr_basic_and_boundaries),
+    cmocka_unit_test(test_is_arena_ptr_sized_exact_and_overrun),
+    cmocka_unit_test(test_is_arena_ptr_cross_chunk_span_fails),
+    cmocka_unit_test(test_is_arena_ptr_with_foreign_pointer),
+    cmocka_unit_test(test_is_arena_ptr_null_inputs),
+    cmocka_unit_test(test_is_arena_ptr_tail_end_exclusive),
 
+    cmocka_unit_test(test_dynamic_arena_grows_by_default),
+    cmocka_unit_test(test_dynamic_arena_resize_false_blocks_growth),
+    cmocka_unit_test(test_restore_preserves_growth_policy),
  };
 const struct CMUnitTest test_error[] = {
     cmocka_unit_test(test_error_to_string_no_error),
