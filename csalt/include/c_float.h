@@ -70,8 +70,9 @@ extern "C" {
 #define ALLOC_H 
 
     typedef enum {
-        STATIC = 0,
-        DYNAMIC = 1
+        ALLOC_INVALID = 0,
+        STATIC = 1,
+        DYNAMIC = 2
     } alloc_t;
 
 #endif /*ALLOC_H*/

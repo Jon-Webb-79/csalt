@@ -27,7 +27,7 @@ extern "C" {
 #endif
 // ================================================================================ 
 // ================================================================================ 
-// HIGH-LEVEL DATA STRUCTURS 
+// DATA STRUCTURS 
 
 // Forward declarations for opaque data types
 typedef struct Arena Arena;
@@ -43,56 +43,45 @@ typedef struct {
 #define ALLOC_H 
 
     typedef enum {
-        ALLOC_INVALID = -1,
-        STATIC = 0,
-        DYNAMIC = 1
+        ALLOC_INVALID = 0,
+        STATIC = 1,
+        DYNAMIC = 2
     } alloc_t;
 
 #endif /*ALLOC_H*/
 // ================================================================================ 
 // ================================================================================ 
-// FUNCTION PROTOTYPES 
+// INITIALIZE AND DEALLOCATE FUNCTIONS
 
-Arena* init_dynamic_arena(size_t bytes, bool resize);
+Arena* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t padding_in);
 // -------------------------------------------------------------------------------- 
 
-Arena* init_static_arena(void* buffer, size_t bytes);
+Arena* init_static_arena(void* buffer, size_t bytes, size_t passing_in);
 // -------------------------------------------------------------------------------- 
 
-void set_default_arena_alignment(size_t alignment);
+Arena* init_darena(size_t bytes, bool resize);
 // -------------------------------------------------------------------------------- 
 
-size_t default_arena_alignment(void);
+Arena* init_sarena(void* buffer, size_t bytes);
 // -------------------------------------------------------------------------------- 
 
-void reset_default_arena_alignment(void);
-// -------------------------------------------------------------------------------- 
+void free_arena(Arena* arena);
+// ================================================================================ 
+// ================================================================================ 
+// ALLOCATION FUNCTIONS 
 
 void* alloc_arena(Arena* arena, size_t bytes, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 void* alloc_arena_aligned(Arena* arena, size_t bytes, size_t alignment, bool zeroed);
-// -------------------------------------------------------------------------------- 
-
-void free_arena(Arena* arena);
-// -------------------------------------------------------------------------------- 
+// ================================================================================ 
+// ================================================================================ 
+// UTILITY FUNCTIONS 
 
 bool is_arena_ptr(const Arena* arena, const void *ptr);
 // -------------------------------------------------------------------------------- 
 
 bool is_arena_ptr_sized(const Arena* arena, const void* ptr, size_t size);
-// -------------------------------------------------------------------------------- 
-
-size_t arena_size(const Arena* arena);
-// -------------------------------------------------------------------------------- 
-
-size_t arena_alloc(const Arena* arena);
-// -------------------------------------------------------------------------------- 
-
-size_t total_arena_alloc(const Arena* arena);
-// -------------------------------------------------------------------------------- 
-
-alloc_t arena_mtype(const Arena* arena);
 // -------------------------------------------------------------------------------- 
 
 void reset_arena(Arena* arena, bool trim_extra_chunks);
@@ -104,28 +93,63 @@ ArenaCheckPoint save_arena(const Arena* arena);
 bool restore_arena(Arena *arena, ArenaCheckPoint cp);
 // -------------------------------------------------------------------------------- 
 
-bool arena_stats(const Arena* arena, char* buffer, size_t buffer_size);
-// -------------------------------------------------------------------------------- 
+void toggle_arena_resize(Arena* arena, bool toggle);
+// ================================================================================ 
+// ================================================================================ 
+// GETTER FUNCTIONS 
 
 size_t arena_remaining(const Arena* arena);
 // -------------------------------------------------------------------------------- 
 
 size_t arena_chunk_count(const Arena* arena);
+// -------------------------------------------------------------------------------- 
+
+alloc_t arena_mtype(const Arena* arena);
+// -------------------------------------------------------------------------------- 
+
+size_t arena_size(const Arena* arena);
+// -------------------------------------------------------------------------------- 
+
+size_t arena_alloc(const Arena* arena);
+// -------------------------------------------------------------------------------- 
+
+size_t total_arena_alloc(const Arena* arena);
+// -------------------------------------------------------------------------------- 
+
+size_t arena_alignment(Arena* arena);
+// -------------------------------------------------------------------------------- 
+
+size_t arena_min_chunk_size(Arena* arena);
+// ================================================================================ 
+// ================================================================================ 
+// SETTER FUNCTIONS 
+
+void toggle_arena_resize(Arena* arena, bool toggle);
+// ================================================================================ 
+// ================================================================================ 
+// LOG FUNCTIONS 
+
+bool arena_stats(const Arena* arena, char* buffer, size_t buffer_size);
 // ================================================================================ 
 // ================================================================================ 
 // MACROS 
 
-#define arena_alloc_type(arena, type) \
-    (type*)alloc_arena((arena), sizeof(type), false)
-
-#define arena_alloc_array(arena, type, count) \
-    (type*)alloc_arena((arena), sizeof(type) * (count), false)
-
-#define arena_alloc_type_zeroed(arena, type) \
-    (type*)alloc_arena((arena), sizeof(type), true)
-
-#define arena_alloc_array_zeroed(arena, type, count) \
-    (type*)alloc_arena_zeroed((arena), sizeof(type) * (count), true)
+#if !defined(_NO_GENERICS__)
+    #define arena_alloc_type(arena, type) \
+        (type*)alloc_arena((arena), sizeof(type), false)
+#endif 
+#if !defined(__NO_GENERICS__)  
+    #define arena_alloc_array(arena, type, count) \
+        (type*)alloc_arena((arena), sizeof(type) * (count), false)
+#endif
+#if !defined(__NO_GENERICS__) 
+    #define arena_alloc_type_zeroed(arena, type) \
+        (type*)alloc_arena((arena), sizeof(type), true)
+#endif
+#if !defined(__NO_GENERICS__) 
+    #define arena_alloc_array_zeroed(arena, type, count) \
+        (type*)alloc_arena((arena), sizeof(type) * (count), true)
+#endif 
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -136,7 +160,5 @@ size_t arena_chunk_count(const Arena* arena);
 // ================================================================================
 // eof
 //
-// TODO: ADD COP_ARENA
-// TODO: ADD RESET_MIM_CHUNK 
 // TODO: ADD FUNCTION TO TURN resize on 
 // TODO: ADD FUNCTION TO TURN resize off

@@ -25,7 +25,16 @@
 #include "c_arena.h"
 // ================================================================================ 
 // ================================================================================ 
+// CONSTANTS 
 
+/* Deterministic growth knobs (choose values once for your build) */
+static const size_t k_growth_limit = (size_t)1u << 20; /* 1 MiB: switch from 2x to 1.5x */
+static const size_t k_max_chunk    = (size_t)1u << 24; /* 16 MiB: cap single chunk size */
+// ================================================================================ 
+// ================================================================================ 
+// DATA STRUCTURES 
+
+// 25 bytes
 struct Chunk{
     uint8_t *chunk;     // Pointer to beginning of memory
     size_t len;         // Populated length of memory within struct in bytes
@@ -34,15 +43,21 @@ struct Chunk{
 };
 // -------------------------------------------------------------------------------- 
 
+// 72 bytes
 struct Arena{
+    uint8_t* cur;      // A pointer to the next available memory slot
     Chunk* head;       // Pointer to head of memory chunk linked list
     Chunk* tail;       // Pointer to the tail of memory chunks for the linked list
-    uint8_t *cur;      // A Pointer to the next available memory slot
+
+    size_t alignment;  // alignment in bytes 
     size_t len;        // Total memory used in bytes between all memory chunks
     size_t alloc;      // Total memory allocated in bytes between all memory chunks
     size_t tot_alloc;  // Total memory allocated to include containers
-    alloc_t mem_type;  // Type of memory used
-    bool resize;       // allows resizing if true with mem_type == DYNAMIC
+    size_t min_chunk;  // The minimum chunk size in bytes
+
+    uint8_t mem_type;  // type of memory used
+    uint8_t resize;    // allows resizing if true with mem_type == DYNAMIC
+    uint8_t _pad[6];   // keep 8 byte passing
 };
 // -------------------------------------------------------------------------------- 
 
@@ -53,28 +68,47 @@ typedef struct {
 } ArenaCheckPointRep;
 // ================================================================================ 
 // ================================================================================ 
+// STATIC HELPER FUNCTIONS 
 
-static const size_t k_min_chunk = 4096u;  /* internal default minimum chunk size */
+static bool _buf_appendf(char *buffer,
+                        size_t buffer_size,
+                        size_t *p_offset,
+                        const char *fmt, ...) {
+    if ((buffer == NULL) || (p_offset == NULL) || (fmt == NULL)) {
+        errno = EINVAL;
+        return false;
+    }
 
-/* alignment policy (power-of-two). 0 => use alignof(max_align_t) */
-static _Atomic size_t g_default_alignment = alignof(max_align_t);
+    size_t const offset = *p_offset;
+    if (offset > buffer_size) {      /* defensive: offset should never exceed size */
+        errno = ERANGE;
+        return false;
+    }
 
-// -------------------------------------------------------------------------------- 
+    size_t const remaining = buffer_size - offset;
+    if (remaining == 0U) {
+        errno = ERANGE;
+        return false;
+    }
 
-void set_default_arena_alignment(size_t alignment) {
-    if (alignment == 0) { atomic_store_explicit(&g_default_alignment, alignof(max_align_t), memory_order_release); return; }
-    if ((alignment & (alignment - 1)) != 0) { return; }
-    atomic_store_explicit(&g_default_alignment, alignment, memory_order_release);
-}
-// -------------------------------------------------------------------------------- 
+    va_list args;
+    va_start(args, fmt);
+    int const n = vsnprintf(&buffer[offset], remaining, fmt, args);
+    va_end(args);
 
-size_t default_arena_alignment(void) {
-    return atomic_load_explicit(&g_default_alignment, memory_order_acquire);
-}
-// -------------------------------------------------------------------------------- 
+    if (n < 0) {                     /* encoding/format failure */
+        errno = EINVAL;
+        return false;
+    }
 
-void reset_default_arena_alignment(void) {
-    atomic_store_explicit(&g_default_alignment, alignof(max_align_t), memory_order_relaxed);
+    /* If n >= remaining, output would be truncated */
+    if ((size_t)n >= remaining) {
+        errno = ERANGE;
+        return false;
+    }
+
+    *p_offset = offset + (size_t)n;
+    return true;
 }
 // -------------------------------------------------------------------------------- 
 
@@ -82,6 +116,7 @@ static inline size_t _align_up_size(size_t x, size_t a) {
     /* a must be power-of-two */
     return (x + (a - 1)) & ~(a - 1);
 }
+// -------------------------------------------------------------------------------- 
 
 static inline uintptr_t _align_up_uintptr(uintptr_t p, size_t a) {
     return (p + (a - 1)) & ~(a - 1);
@@ -116,154 +151,19 @@ static struct Chunk* _chunk_new_ex(size_t data_bytes, size_t data_align){
     ch->alloc = data_bytes;            /* usable data capacity */
     ch->next  = NULL;
 
-    /* Optional: exact footprint for tot_alloc (uncomment if you want to use it)
-    if (footprint_out != NULL) {
-        *footprint_out = (size_t)((data_p - base) + (uintptr_t)data_bytes);
-    }
-    */
-
     return ch; /* free(ch) later frees header+pad+data in one go */
 }
 // -------------------------------------------------------------------------------- 
 
-Arena* init_dynamic_arena(size_t bytes, bool resize) {
-    size_t const a = default_arena_alignment(); /* must be power-of-two */
-    if ((a == 0U) || ((a & (a - 1U)) != 0U)) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    /* NOTE: If you enforce a minimum (k_min_chunk), that can change total_alloc.
-       If you truly want total_alloc == user 'bytes', either remove the min
-       or document that 'bytes' will be raised to k_min_chunk. */
-    if (bytes < k_min_chunk) {
-        bytes = k_min_chunk;  /* If you prefer exact user total, remove this. */
-    }
-
-    /* Must fit Arena + Chunk inside 'bytes' */
-    if (bytes < (sizeof(struct Arena) + sizeof(struct Chunk))) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    void* base = malloc(bytes);
-    if (base == NULL) {
-        errno = ENOMEM;
-        return NULL;
-    }
-
-    uintptr_t const base_u = (uintptr_t)base;
-
-    /* Place Arena at malloc base (malloc guarantees max_align_t alignment) */
-    uintptr_t p_arena = base_u;
-    uintptr_t const arena_end = p_arena + (uintptr_t)sizeof(struct Arena);
-    if (arena_end < p_arena) { free(base); errno = ENOMEM; return NULL; }
-
-    /* Place Chunk immediately after Arena, aligned for Chunk */
-    uintptr_t p_chunk = _align_up_uintptr(arena_end, alignof(struct Chunk));
-    uintptr_t const chunk_end = p_chunk + (uintptr_t)sizeof(struct Chunk);
-    if ((chunk_end < p_chunk) || (chunk_end > (base_u + bytes))) {
-        free(base); errno = ENOMEM; return NULL;
-    }
-
-    /* Place data aligned to allocator policy; NO ROUND-UP of total */
-    uintptr_t p_data = _align_up_uintptr(chunk_end, a);
-    if (p_data > (base_u + bytes)) {
-        free(base); errno = EINVAL; return NULL;
-    }
-
-    size_t const usable = (size_t)((base_u + bytes) - p_data);
-    if (usable == 0U) {
-        free(base); errno = EINVAL; return NULL;
-    }
-
-    /* Stitch it together */
-    struct Arena* arena = (struct Arena*)p_arena;
-    struct Chunk* head  = (struct Chunk*)p_chunk;
-
-    head->chunk = (uint8_t*)p_data;
-    head->len   = 0U;
-    head->alloc = usable;
-    head->next  = NULL;
-
-    arena->head      = head;
-    arena->tail      = head;
-    arena->cur       = (uint8_t*)p_data;
-    arena->len       = 0U;
-    arena->alloc     = usable;    /* usable capacity in head chunk */
-    arena->tot_alloc = bytes;     /* EXACTLY what caller asked for */
-    arena->mem_type  = DYNAMIC;
-    arena->resize    = resize;
-
-    /* Because malloc base == arena pointer, free_arena() must free(arena) */
-    return arena;
-}
+static inline int _is_pow2(size_t x){ return x && !(x & (x-1)); }
 // -------------------------------------------------------------------------------- 
 
-Arena* init_static_arena(void* buffer, size_t bytes) {
-    if (!buffer) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    uintptr_t base = (uintptr_t)buffer;
-
-    // Require buffer alignment for max_align_t
-    if ((base & (alignof(max_align_t) - 1)) != 0) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    // Place Arena at buffer start (aligned)
-    uintptr_t p = _align_up_uintptr(base, alignof(Arena));
-    uintptr_t arena_end = p + sizeof(Arena);
-    if (arena_end < p) { errno = ENOMEM; return NULL; }
-
-    // Place Chunk immediately after Arena (aligned)
-    uintptr_t c = _align_up_uintptr(arena_end, alignof(struct Chunk));
-    uintptr_t chunk_end = c + sizeof(struct Chunk);
-    if (chunk_end < c) { errno = ENOMEM; return NULL; }
-
-    // Align data region to arena’s alignment policy
-    uintptr_t data = _align_up_uintptr(chunk_end, default_arena_alignment());
-
-    if (data > base + bytes) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    size_t usable = (size_t)((base + bytes) - data);
-    if (usable == 0) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    Arena* arena = (Arena*)p;
-    struct Chunk* head = (struct Chunk*)c;
-
-    // Initialize Chunk
-    head->chunk = (uint8_t*)data;
-    head->len   = 0;
-    head->alloc = usable;
-    head->next  = NULL;
-
-    // Initialize Arena
-    arena->head      = head;
-    arena->tail      = head;
-    arena->cur       = (uint8_t*)data;
-    arena->len       = 0;
-    arena->alloc     = usable;
-    arena->tot_alloc = bytes;   // total buffer footprint
-    arena->mem_type  = STATIC;
-    arena->resize    = false;
-
-    return arena;
+static inline size_t _next_pow2(size_t x){
+    if (x <= 1) return x ? 1 : 0;
+    if (x > (SIZE_MAX>>1)) return 0;
+    x--; for (size_t s=1; s<8*sizeof(size_t); s<<=1) x|=x>>s; return x+1;
 }
 // -------------------------------------------------------------------------------- 
-
-/* Deterministic growth knobs (choose values once for your build) */
-static const size_t k_growth_limit = (size_t)1u << 20; /* 1 MiB: switch from 2x to 1.5x */
-static const size_t k_max_chunk    = (size_t)1u << 24; /* 16 MiB: cap single chunk size */
 
 static inline size_t _mul_div_ceil(size_t x, size_t mul, size_t div) {
     /* assumes div > 0, caller ensures small constants like 2 or 3 */
@@ -277,9 +177,9 @@ static inline size_t _mul_div_ceil(size_t x, size_t mul, size_t div) {
     if (y < t) { return SIZE_MAX; }
     return y;
 }
+// -------------------------------------------------------------------------------- 
 
-/* Decide data capacity for the *new* chunk (usable bytes, not footprint). */
-static size_t _next_chunk_size(size_t prev_data_alloc, size_t need, size_t align) {
+static size_t _next_chunk_size(size_t prev_data_alloc, size_t need, size_t align, size_t min_chunk) {
     /* meet the request at minimum */
     size_t grow = (need > prev_data_alloc) ? need : prev_data_alloc;
 
@@ -291,7 +191,7 @@ static size_t _next_chunk_size(size_t prev_data_alloc, size_t need, size_t align
     if (target > grow) { grow = target; }
 
     /* clamp to floor/ceiling */
-    if (grow < k_min_chunk) { grow = k_min_chunk; }
+    if (grow < min_chunk) { grow = min_chunk; }
     if (grow > k_max_chunk) { grow = k_max_chunk; }
 
     /* align capacity to alignment to keep chunk->chunk naturally aligned */
@@ -302,120 +202,162 @@ static size_t _next_chunk_size(size_t prev_data_alloc, size_t need, size_t align
 
     return grow;
 }
+// -------------------------------------------------------------------------------- 
 
-static inline size_t pad_up(uintptr_t p, size_t a) {
+static inline size_t _pad_up(uintptr_t p, size_t a) {
     size_t const mask = a - 1u;                // a is power-of-two
     return (size_t)(((p + mask) & ~mask) - p);  // 0..a-1
 }
+// -------------------------------------------------------------------------------- 
 
-void* alloc_arena(Arena* arena, size_t bytes, bool zeroed) {
-    if ((arena == NULL) || (bytes == 0u)) { errno = EINVAL; return NULL; }
+static inline void _cp_pack(ArenaCheckPoint* pub, const ArenaCheckPointRep* rep) {
+    memcpy(pub, rep, sizeof *rep);
+}
+static inline void _cp_unpack(const ArenaCheckPoint* pub, ArenaCheckPointRep* rep) {
+    memcpy(rep, pub, sizeof *rep);
+}
+// --------------------------------------------------------------------------------
 
-    size_t const a = default_arena_alignment();                   // must be pow2
-    if (a == 0u || (a & (a - 1u)) != 0u) { errno = EINVAL; return NULL; }
+static const Chunk* find_chunk_in_chain(const Arena* a, const Chunk* target, Chunk const** prev_out) {
+    const Chunk* prev = NULL;
+    for (const Chunk* c = a->head; c; c = c->next) {
+        if (c == target) {
+            if (prev_out) *prev_out = prev;
+            return c;
+        }
+        prev = c;
+    }
+    return NULL;
+}
+// ================================================================================ 
+// ================================================================================ 
+// INITIALIZE AND DEALLOCATE FUNCTIONS 
 
-    struct Chunk* tail = arena->tail;
-    if (tail == NULL) { errno = EINVAL; return NULL; }
-
-    uintptr_t const cur = (uintptr_t)arena->cur;
-    size_t const pad = pad_up(cur, a);                            // NEW
-    size_t const need = pad + bytes;
-
-    /* fast path: current tail has space, no extra pad required here */
-    size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0u;
-    if (avail >= need) {
-        uint8_t* p = (uint8_t*)(cur + pad);                       // aligned
-        arena->cur  = p + bytes;
-        tail->len  += need;                                       // count pad+bytes
-        arena->len += need;
-        if (zeroed) memset(p, 0, bytes);
-        return p;
+Arena* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t base_align_in) {
+    // Normalize min_chunk (0 allowed)
+    size_t min_chunk = min_chunk_in;
+    if (min_chunk && !_is_pow2(min_chunk)) {
+        min_chunk = _next_pow2(min_chunk);
+        if (!min_chunk) { errno = EINVAL; return NULL; }
     }
 
-    /* STATIC arenas cannot grow */
-    if (arena->mem_type == STATIC || arena->resize == false) { errno = EPERM; return NULL; }
+    // Normalize base alignment; enforce ABI floor
+    size_t base_align = base_align_in ? base_align_in : alignof(max_align_t);
+    if (!_is_pow2(base_align)) {
+        base_align = _next_pow2(base_align);
+        if (!base_align) { errno = EINVAL; return NULL; }
+    }
+    if (base_align < alignof(max_align_t)) base_align = alignof(max_align_t);
 
-    size_t const grow_data = _next_chunk_size(tail->alloc, need, a);
+    // Initial total
+    size_t total = bytes;
+    if (min_chunk && total < min_chunk) total = min_chunk;
+    if (total < (sizeof(Arena) + sizeof(Chunk))) { errno = EINVAL; return NULL; }
 
-    struct Chunk* nc = _chunk_new_ex(grow_data, a);
-    if (nc == NULL) { return NULL; } /* errno set */
+    void* base = malloc(total);
+    if (!base) { errno = ENOMEM; return NULL; }
+    uintptr_t const b = (uintptr_t)base;
 
-    /* link */
-    tail->next   = nc;
-    arena->tail  = nc;
+    uintptr_t p_arena   = b;
+    uintptr_t arena_end = p_arena + sizeof(Arena);
+    if (arena_end < p_arena) { free(base); errno = ENOMEM; return NULL; }
 
-    /* accounting (approximate header footprint; see note below) */
-    arena->alloc     += nc->alloc; /* usable data capacity added */
-    arena->tot_alloc += _align_up_size(sizeof(struct Chunk), a) + nc->alloc;
+    uintptr_t p_chunk   = _align_up_uintptr(arena_end, alignof(Chunk));
+    uintptr_t chunk_end = p_chunk + sizeof(Chunk);
+    if (chunk_end < p_chunk || chunk_end > b + total) { free(base); errno = ENOMEM; return NULL; }
 
-    /* allocate from new chunk */
-    void* p = (void*)nc->chunk;
-    arena->cur  = nc->chunk + bytes;
-    nc->len     = bytes;
-    arena->len += bytes;
+    // Data starts aligned to *base_align* (not default_arena_alignment)
+    uintptr_t p_data    = _align_up_uintptr(chunk_end, base_align);
+    if (p_data > b + total) { free(base); errno = EINVAL; return NULL; }
 
-    if (zeroed) { (void)memset(p, 0, bytes); }
-    return p;
+    size_t usable = (size_t)((b + total) - p_data);
+    if (!usable) { free(base); errno = EINVAL; return NULL; }
+
+    Arena* a = (Arena*)p_arena;
+    Chunk* h = (Chunk*)p_chunk;
+    h->chunk = (uint8_t*)p_data; h->len = 0; h->alloc = usable; h->next = NULL;
+
+    a->head = a->tail = h;
+    a->cur  = (uint8_t*)p_data;
+    a->len = 0; a->alloc = usable; a->tot_alloc = total;
+    a->min_chunk = min_chunk;
+    a->alignment = base_align;
+
+    a->mem_type = (uint8_t)DYNAMIC;          /* was alloc_t; now a byte */
+    a->resize   = (uint8_t)(resize ? 1 : 0);
+
+    return a;
 }
 // -------------------------------------------------------------------------------- 
 
-void* alloc_arena_aligned(Arena* arena, size_t bytes, size_t alignment, bool zeroed) {
-    if (!arena || bytes == 0u) { errno = EINVAL; return NULL; }
-    if (alignment == 0u || (alignment & (alignment - 1u)) != 0u) {
-        errno = EINVAL; return NULL;  // requested alignment must be pow2
+Arena* init_static_arena(void* buffer, size_t bytes, size_t alignment_in) {
+    if (!buffer) { errno = EINVAL; return NULL; }
+
+    /* normalize per-arena base alignment (>= max_align_t) */
+    size_t base_align = alignment_in ? alignment_in : alignof(max_align_t);
+    if (!_is_pow2(base_align)) {
+        base_align = _next_pow2(base_align);
+        if (!base_align) { errno = EINVAL; return NULL; }
     }
-    struct Chunk* tail = arena->tail;
-    if (!tail) { errno = EINVAL; return NULL; }
+    if (base_align < alignof(max_align_t)) base_align = alignof(max_align_t);
 
-    // Effective alignment = max(requested, arena policy)
-    size_t const a_policy = default_arena_alignment();
-    if (a_policy == 0u || (a_policy & (a_policy - 1u)) != 0u) { errno = EINVAL; return NULL; }
-    size_t const eff_a = (alignment > a_policy) ? alignment : a_policy;
+    uintptr_t const b      = (uintptr_t)buffer;
+    uintptr_t const b_end  = b + bytes;
 
-    // Per-allocation padding from current cursor
-    uintptr_t const cur = (uintptr_t)arena->cur;
-    size_t const pad = pad_up(cur, eff_a);
-    if (pad > SIZE_MAX - bytes) { errno = ENOMEM; return NULL; }
-    size_t const need = pad + bytes;
+    /* align Arena header itself */
+    uintptr_t p_arena = _align_up_uintptr(b, alignof(Arena));
+    if (p_arena > b_end) { errno = EINVAL; return NULL; }
 
-    // Available space in tail
-    size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0u;
+    /* must have room for Arena + Chunk at minimum */
+    if ((b_end - p_arena) < (sizeof(Arena) + sizeof(Chunk))) { errno = EINVAL; return NULL; }
 
-    // Fast path: fits in current chunk
-    if (avail >= need) {
-        uint8_t* p = (uint8_t*)(cur + pad);   // eff_a-aligned
-        arena->cur  = p + bytes;
-        tail->len  += need;                   // charge pad+bytes
-        arena->len += need;
-        if (zeroed) memset(p, 0, bytes);
-        return p;
-    }
+    uintptr_t arena_end = p_arena + sizeof(Arena);
+    if (arena_end < p_arena || arena_end > b_end) { errno = EINVAL; return NULL; }
 
-    // Grow path
-    if (arena->mem_type == STATIC || !arena->resize) { errno = EPERM; return NULL; }
+    /* place first Chunk header aligned for Chunk */
+    uintptr_t p_chunk  = _align_up_uintptr(arena_end, alignof(Chunk));
+    uintptr_t chunk_end = p_chunk + sizeof(Chunk);
+    if (chunk_end < p_chunk || chunk_end > b_end) { errno = EINVAL; return NULL; }
 
-    size_t const grow_data = _next_chunk_size(tail->alloc, need, eff_a);
-    struct Chunk* nc = _chunk_new_ex(grow_data, eff_a);  // must return eff_a-aligned data
-    if (!nc) return NULL; // errno set by helper
+    /* place data aligned to per-arena base alignment */
+    uintptr_t p_data = _align_up_uintptr(chunk_end, base_align);
+    if (p_data > b_end) { errno = EINVAL; return NULL; }
 
-    // Link new chunk
-    tail->next  = nc;
-    arena->tail = nc;
+    size_t usable = (size_t)(b_end - p_data);
+    if (!usable) { errno = EINVAL; return NULL; }
 
-    // Accounting
-    size_t const hdr = _align_up_size(sizeof(struct Chunk), eff_a);
-    if (arena->alloc > SIZE_MAX - nc->alloc) { errno = ENOMEM; return NULL; }
-    arena->alloc += nc->alloc;
-    if (arena->tot_alloc > SIZE_MAX - (hdr + nc->alloc)) { errno = ENOMEM; return NULL; }
-    arena->tot_alloc += hdr + nc->alloc;
+    /* stitch in-place */
+    Arena* a = (Arena*)p_arena;
+    Chunk* h = (Chunk*)p_chunk;
 
-    // First alloc from fresh chunk: base is eff_a-aligned -> no pad
-    void* p = (void*)nc->chunk;
-    nc->len     = bytes;
-    arena->len += bytes;
-    arena->cur  = nc->chunk + bytes;
-    if (zeroed) memset(p, 0, bytes);
-    return p;
+    h->chunk = (uint8_t*)p_data;
+    h->len   = 0;
+    h->alloc = usable;
+    h->next  = NULL;
+
+    a->head      = h;
+    a->tail      = h;
+    a->cur       = (uint8_t*)p_data;
+    a->len       = 0;
+    a->alloc     = usable;
+    a->tot_alloc = (size_t)(b_end - b);   /* full caller buffer footprint */
+    a->min_chunk = 0;                     /* not used for STATIC */
+    a->alignment = base_align;            /* per-arena base alignment */
+
+    a->mem_type  = (uint8_t)STATIC;       /* <-- keep STATIC */
+    a->resize    = (uint8_t)0;            /* <-- cannot grow */
+
+    return a;
+}
+// -------------------------------------------------------------------------------- 
+
+Arena* init_darena(size_t bytes, bool resize) {
+    return init_dynamic_arena(bytes, resize, 4096u, alignof(max_align_t));
+}
+// --------------------------------------------------------------------------------
+
+Arena* init_sarena(void* buffer, size_t bytes) {
+    return init_static_arena(buffer, bytes, alignof(max_align_t));
 }
 // -------------------------------------------------------------------------------- 
 
@@ -440,7 +382,63 @@ void free_arena(Arena* arena) {
 
     free(arena);
 }
-// -------------------------------------------------------------------------------- 
+// ================================================================================ 
+// ================================================================================ 
+// ALLOCATION FUNCTIONS
+
+void* alloc_arena(Arena* arena, size_t bytes, bool zeroed) {
+    if (!arena || bytes == 0u) { errno = EINVAL; return NULL; }
+
+    // Use per-arena base alignment (power-of-two)
+    size_t const a = arena->alignment;
+    if (a == 0u || (a & (a - 1u)) != 0u) { errno = EINVAL; return NULL; }
+
+    Chunk* tail = arena->tail;
+    if (!tail) { errno = EINVAL; return NULL; }
+
+    // Per-allocation pad to 'a'
+    uintptr_t const cur  = (uintptr_t)arena->cur;
+    size_t    const pad  = _pad_up(cur, a);
+    size_t    const need = pad + bytes;
+
+    // Fast path: fits in current tail
+    size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0u;
+    if (avail >= need) {
+        uint8_t* p = (uint8_t*)(cur + pad);  // a-aligned
+        arena->cur  = p + bytes;
+        tail->len  += need;                  // charge pad + bytes
+        arena->len += need;
+        if (zeroed) memset(p, 0, bytes);
+        return p;
+    }
+
+    // No space -> grow only when allowed
+    if (arena->mem_type == STATIC || !arena->resize) { errno = EPERM; return NULL; }
+
+    size_t const grow_data = _next_chunk_size(tail->alloc, need, a, arena->min_chunk);
+    Chunk* nc = _chunk_new_ex(grow_data, a);
+    if (!nc) return NULL; // errno set by helper
+
+    // Link
+    tail->next  = nc;
+    arena->tail = nc;
+
+    // Accounting (approximate footprint: header rounded to 'a' + data bytes)
+    arena->alloc     += nc->alloc;                          // usable capacity added
+    arena->tot_alloc += _align_up_size(sizeof(Chunk), a) + nc->alloc;
+
+    // First allocation from fresh chunk: base is a-aligned -> no pad
+    void* p = (void*)nc->chunk;
+    arena->cur  = nc->chunk + bytes;
+    nc->len     = bytes;
+    arena->len += bytes;
+
+    if (zeroed) memset(p, 0, bytes);
+    return p;
+}
+// ================================================================================ 
+// ================================================================================ 
+// UTILITY FUNCTIONS
 
 bool is_arena_ptr(const Arena* arena, const void* ptr) {
     if (!arena || !ptr) return false;
@@ -506,102 +504,65 @@ bool is_arena_ptr_sized(const Arena* arena, const void* ptr, size_t size) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t arena_size(const Arena* arena) {
-    if (!arena) return 0;
-    return arena->len;
-}
-// -------------------------------------------------------------------------------- 
-
-size_t arena_alloc(const Arena* arena) {
-    if (!arena) return 0;
-    return arena->alloc;
-}
-// -------------------------------------------------------------------------------- 
-
-size_t total_arena_alloc(const Arena* arena) {
-    if (!arena) return 0;
-    return arena->tot_alloc;
-}
-// -------------------------------------------------------------------------------- 
-
-alloc_t arena_mtype(const Arena* arena) {
+void reset_arena(Arena *arena, bool trim_extra_chunks) {
     if (!arena) {
         errno = EINVAL;
-        return ALLOC_INVALID;
-    }
-    return arena->mem_type;
-}
-// -------------------------------------------------------------------------------- 
-
-void reset_arena(Arena *arena, bool trim_extra_chunks)
-{
-    if (arena == NULL) {
         return;
     }
 
-    // No chunks: normalize and return
-    if (arena->head == NULL) {
+    if (!arena->head) {
         arena->cur  = NULL;
-        arena->len  = 0U;
-        // leave alloc/tot_alloc unchanged
+        arena->len  = 0u;
         arena->tail = NULL;
         return;
     }
 
-    // Zero usage counters on all chunks
-    for (Chunk *cur = arena->head; cur != NULL; cur = cur->next) {
-        cur->len = 0U;
+    /* Zero usage counters on all chunks */
+    for (Chunk *cur = arena->head; cur; cur = cur->next) {
+        cur->len = 0u;
     }
-    arena->len = 0U;
+    arena->len = 0u;
 
-    if (trim_extra_chunks && arena->mem_type == DYNAMIC) {
-        // Free all chunks after head
+    if (trim_extra_chunks && arena->mem_type == (uint8_t)DYNAMIC) {
+        /* Free all chunks after head (each is a single-malloc block).
+           Adjust tot_alloc by mirroring the addition you did at growth:
+           tot_alloc += align_up(sizeof(Chunk), alignment) + chunk->alloc; */
+        const size_t hdr_rounded = _align_up_size(sizeof(Chunk), arena->alignment);
+
         Chunk *to_free = arena->head->next;
-        while (to_free != NULL) {
+        while (to_free) {
             Chunk *next = to_free->next;
-            free(to_free->chunk);
+
+            /* subtract this chunk's contribution safely */
+            size_t contrib = hdr_rounded + to_free->alloc;
+            if (arena->tot_alloc >= contrib) {
+                arena->tot_alloc -= contrib;
+            } else {
+                arena->tot_alloc = 0; /* defensive clamp */
+            }
+
+            /* IMPORTANT: free the header pointer (owns the whole block),
+               NOT to_free->chunk which is interior. */
             free(to_free);
             to_free = next;
         }
 
-        // Detach and normalize to a single head chunk
+        /* Detach and normalize to a single head chunk */
         arena->head->next = NULL;
         arena->tail       = arena->head;
         arena->cur        = arena->head->chunk;
 
-        // Recompute accounting for one-chunk state
-        arena->alloc     = arena->head->alloc;
-        arena->tot_alloc = arena->head->alloc + sizeof(Arena) + sizeof(Chunk);
+        /* Usable capacity now equals the head's data capacity */
+        arena->alloc = arena->head->alloc;
+        /* tot_alloc already adjusted above; it now equals the initial malloc size */
     } else {
-        // Not trimming (or STATIC arena): keep all chunks allocated.
-        // Ensure cur/tail refer to the SAME chunk to preserve invariants.
-        arena->tail = (arena->tail != NULL) ? arena->tail : arena->head;
-        arena->cur  = (arena->tail->chunk != NULL) ? arena->tail->chunk
-                                                   : arena->head->chunk;
-        // alloc/tot_alloc remain unchanged (capacity retained)
+        /* Keep all chunks allocated: zero usage but preserve capacity/footprint */
+        arena->tail = arena->tail ? arena->tail : arena->head;
+        arena->cur  = arena->tail->chunk ? arena->tail->chunk : arena->head->chunk;
+        /* alloc/tot_alloc unchanged */
     }
 }
 // -------------------------------------------------------------------------------- 
-
-static inline void cp_pack(ArenaCheckPoint* pub, const ArenaCheckPointRep* rep) {
-    memcpy(pub, rep, sizeof *rep);
-}
-static inline void cp_unpack(const ArenaCheckPoint* pub, ArenaCheckPointRep* rep) {
-    memcpy(rep, pub, sizeof *rep);
-}
-// --------------------------------------------------------------------------------
-
-static const Chunk* find_chunk_in_chain(const Arena* a, const Chunk* target, Chunk const** prev_out) {
-    const Chunk* prev = NULL;
-    for (const Chunk* c = a->head; c; c = c->next) {
-        if (c == target) {
-            if (prev_out) *prev_out = prev;
-            return c;
-        }
-        prev = c;
-    }
-    return NULL;
-}
 
 ArenaCheckPoint save_arena(const Arena* arena) {
     ArenaCheckPoint pub = {0};
@@ -611,7 +572,7 @@ ArenaCheckPoint save_arena(const Arena* arena) {
         rep.cur   = arena->cur;    // save cursor within that chunk
         rep.len   = arena->len;    // optional: total used at save time
     }
-    cp_pack(&pub, &rep);
+    _cp_pack(&pub, &rep);
     return pub;
 }
 // -------------------------------------------------------------------------------- 
@@ -620,59 +581,38 @@ bool restore_arena(Arena* arena, ArenaCheckPoint cp) {
     if (!arena) { errno = EINVAL; return false; }
 
     ArenaCheckPointRep rep = {0};
-    cp_unpack(&cp, &rep);
+    _cp_unpack(&cp, &rep);
 
-    /* Empty checkpoint -> nothing to do */
-    if (!rep.chunk) return true;
+    if (!rep.chunk) return true; // empty checkpoint OK
 
-    /* 1) Ensure the checkpoint chunk is in the current chain */
     const Chunk* prev = NULL;
     const Chunk* hit  = find_chunk_in_chain(arena, rep.chunk, &prev);
-    if (!hit) { errno = EINVAL; return false; }  // stale checkpoint
+    if (!hit) { errno = EINVAL; return false; }
 
-    /* 2) Validate rep.cur is within the chunk's capacity */
     if (!rep.chunk->chunk) { errno = EINVAL; return false; }
     uintptr_t s  = (uintptr_t)rep.chunk->chunk;
     uintptr_t pc = (uintptr_t)rep.cur;
-    uintptr_t e  = s + rep.chunk->alloc;     // end exclusive
+    uintptr_t e  = s + rep.chunk->alloc;  // exclusive
     if (e < s || pc < s || pc > e) { errno = EINVAL; return false; }
 
-    /* 3) If dynamic, free every chunk AFTER the checkpoint chunk */
-    if (arena->mem_type == DYNAMIC) {
+    if (arena->mem_type == (uint8_t)DYNAMIC) {
         Chunk* c = rep.chunk->next;
-        while (c) {
-            Chunk* nxt = c->next;
-            /* single-malloc model: header+data freed by free(c) */
-            free(c);
-            c = nxt;
-        }
-        ((Chunk*)rep.chunk)->next = NULL;  // cast away const to relink
-    } else {
-        /* STATIC: assert there are no chunks beyond rep.chunk, else reject or ignore */
-        // Option A (strict): if (rep.chunk->next) { errno = EPERM; return false; }
-        // Option B (lenient): do nothing
+        while (c) { Chunk* nxt = c->next; free(c); c = nxt; }
+        ((Chunk*)rep.chunk)->next = NULL;
     }
 
-    /* 4) Set the tail chunk's used length to match the checkpoint cursor */
-    size_t new_tail_len = (size_t)(pc - s);
-    ((Chunk*)rep.chunk)->len = new_tail_len;
-
-    /* 5) Re-anchor arena tail & cursor to checkpoint */
+    // Set tail chunk's used bytes to the checkpoint cursor
+    ((Chunk*)rep.chunk)->len = (size_t)(pc - s);
     arena->tail = (Chunk*)rep.chunk;
     arena->cur  = (uint8_t*)rep.cur;
 
-    /* 6) Recompute totals from the remaining chain (authoritative) */
-    size_t a_policy = default_arena_alignment();
+    // Recompute accounting under current policy
+    size_t a_policy = arena->alignment;
     if (a_policy == 0u || (a_policy & (a_policy - 1u)) != 0u) { errno = EINVAL; return false; }
 
-    size_t total_used = 0, total_cap = 0, total_foot = 0;
-
-    // If your base alloc holds Arena+head in a single allocation, you may
-    // want to start foot with that exact base size you track elsewhere.
-    // Here we recompute conservatively with aligned headers:
+    size_t total_used = 0, total_cap = 0, total_foot = _align_up_size(sizeof(Arena), a_policy);
     for (Chunk* k = arena->head; k; k = k->next) {
-        size_t used = k->len;
-        if (used > k->alloc) used = k->alloc;   // defensive clamp
+        size_t used = (k->len <= k->alloc) ? k->len : k->alloc;
         total_used += used;
         total_cap  += k->alloc;
         total_foot += _align_up_size(sizeof(Chunk), a_policy) + k->alloc;
@@ -680,125 +620,13 @@ bool restore_arena(Arena* arena, ArenaCheckPoint cp) {
 
     arena->len       = total_used;
     arena->alloc     = total_cap;
-    arena->tot_alloc = _align_up_size(sizeof(Arena), a_policy) + total_foot;
+    arena->tot_alloc = total_foot;
 
     return true;
 }
-// -------------------------------------------------------------------------------- 
-
-static bool buf_appendf(char *buffer,
-                        size_t buffer_size,
-                        size_t *p_offset,
-                        const char *fmt, ...) {
-    if ((buffer == NULL) || (p_offset == NULL) || (fmt == NULL)) {
-        errno = EINVAL;
-        return false;
-    }
-
-    size_t const offset = *p_offset;
-    if (offset > buffer_size) {      /* defensive: offset should never exceed size */
-        errno = ERANGE;
-        return false;
-    }
-
-    size_t const remaining = buffer_size - offset;
-    if (remaining == 0U) {
-        errno = ERANGE;
-        return false;
-    }
-
-    va_list args;
-    va_start(args, fmt);
-    int const n = vsnprintf(&buffer[offset], remaining, fmt, args);
-    va_end(args);
-
-    if (n < 0) {                     /* encoding/format failure */
-        errno = EINVAL;
-        return false;
-    }
-
-    /* If n >= remaining, output would be truncated */
-    if ((size_t)n >= remaining) {
-        errno = ERANGE;
-        return false;
-    }
-
-    *p_offset = offset + (size_t)n;
-    return true;
-}
-
-bool arena_stats(const Arena *arena, char *buffer, size_t buffer_size) {
-    size_t offset = 0U;
-
-    if ((buffer == NULL) || (buffer_size == 0U)) {
-        errno = EINVAL;
-        return false;
-    }
-
-    if (arena == NULL) {
-        (void)buf_appendf(buffer, buffer_size, &offset, "%s", "Arena: NULL\n");
-        return true;
-    }
-
-    if (!buf_appendf(buffer, buffer_size, &offset, "%s", "Arena Statistics:\n")) {
-        return false;
-    }
-
-    if (!buf_appendf(buffer, buffer_size, &offset,
-                     "  Type: %s\n",
-                     (arena->mem_type == STATIC) ? "STATIC" : "DYNAMIC")) {
-        return false;
-    }
-
-    if (!buf_appendf(buffer, buffer_size, &offset,
-                     "  Used: %zu bytes\n", arena->len)) {
-        return false;
-    }
-
-    if (!buf_appendf(buffer, buffer_size, &offset,
-                     "  Capacity: %zu bytes\n", arena->alloc)) {
-        return false;
-    }
-
-    if (!buf_appendf(buffer, buffer_size, &offset,
-                     "  Total (with overhead): %zu bytes\n", arena->tot_alloc)) {
-        return false;
-    }
-
-    /* Utilization with divide-by-zero guard */
-    if (arena->alloc == 0U) {
-        if (!buf_appendf(buffer, buffer_size, &offset,
-                         "%s", "  Utilization: N/A (capacity is 0)\n")) {
-            return false;
-        }
-    } else {
-        double const util = (100.0 * (double)arena->len) / (double)arena->alloc;
-        if (!buf_appendf(buffer, buffer_size, &offset,
-                         "  Utilization: %.1f%%\n", util)) {
-            return false;
-        }
-        /* If you prefer to avoid floating point in MISRA contexts,
-           see the integer alternative below. */
-    }
-
-    /* List chunks */
-    {
-        int chunk_count = 0;
-        Chunk *current = arena->head;
-        while (current != NULL) {
-            chunk_count += 1;
-            if (!buf_appendf(buffer, buffer_size, &offset,
-                             "  Chunk %d: %zu/%zu bytes\n",
-                             chunk_count, current->len, current->alloc)) {
-                return false;
-            }
-            current = current->next;
-        }
-    }
-
-    return true;
-}
-// -------------------------------------------------------------------------------- 
+// ================================================================================ 
+// ================================================================================ 
+// GETTER TUNCTIONS
 
 size_t arena_remaining(const Arena* arena) {
     if (!arena || !arena->tail || !arena->tail->chunk) return 0u;
@@ -818,6 +646,136 @@ size_t arena_chunk_count(const Arena* arena) {
         current = current->next;
     }
     return count;
+}
+// -------------------------------------------------------------------------------- 
+
+alloc_t arena_mtype(const Arena* arena) {
+    if (!arena) {
+        errno = EINVAL;
+        return ALLOC_INVALID;
+    }
+
+    return (alloc_t)arena->mem_type;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t arena_size(const Arena* arena) {
+    if (!arena) return 0;
+    return arena->len;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t arena_alloc(const Arena* arena) {
+    if (!arena) return 0;
+    return arena->alloc;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t total_arena_alloc(const Arena* arena) {
+    if (!arena) return 0;
+    return arena->tot_alloc;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t arena_alignment(Arena* arena) {
+    if (!arena || !arena->head) {
+        errno = EINVAL;
+        return 0;
+    }
+    return arena->alignment;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t arena_min_chunk_size(Arena* arena) {
+    if (!arena || !arena->head) {
+        errno = EINVAL;
+        return 0;
+    }
+    return arena->min_chunk;
+}
+// ================================================================================ 
+// ================================================================================ 
+// SETTER FUNCTIONS 
+
+void toggle_arena_resize(Arena* arena, bool toggle) {
+    if (arena->mem_type == STATIC) {
+        errno = EPERM;
+        return;
+    }
+    arena->resize = (uint8_t)(toggle ? 1 : 0);
+}
+// ================================================================================ 
+// ================================================================================ 
+// LOG FUNCTIONS 
+
+bool arena_stats(const Arena *arena, char *buffer, size_t buffer_size) {
+    size_t offset = 0U;
+
+    if ((buffer == NULL) || (buffer_size == 0U)) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (arena == NULL) {
+        (void)_buf_appendf(buffer, buffer_size, &offset, "%s", "Arena: NULL\n");
+        return true;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset, "%s", "Arena Statistics:\n")) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                     "  Type: %s\n",
+                     (arena->mem_type == STATIC) ? "STATIC" : "DYNAMIC")) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                     "  Used: %zu bytes\n", arena->len)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                     "  Capacity: %zu bytes\n", arena->alloc)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                     "  Total (with overhead): %zu bytes\n", arena->tot_alloc)) {
+        return false;
+    }
+
+    /* Utilization with divide-by-zero guard */
+    if (arena->alloc == 0U) {
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                         "%s", "  Utilization: N/A (capacity is 0)\n")) {
+            return false;
+        }
+    } else {
+        double const util = (100.0 * (double)arena->len) / (double)arena->alloc;
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                         "  Utilization: %.1f%%\n", util)) {
+            return false;
+        }
+    }
+
+    /* List chunks */
+    {
+        int chunk_count = 0;
+        Chunk *current = arena->head;
+        while (current != NULL) {
+            chunk_count += 1;
+            if (!_buf_appendf(buffer, buffer_size, &offset,
+                             "  Chunk %d: %zu/%zu bytes\n",
+                             chunk_count, current->len, current->alloc)) {
+                return false;
+            }
+            current = current->next;
+        }
+    }
+
+    return true;
 }
 // ================================================================================
 // ================================================================================
