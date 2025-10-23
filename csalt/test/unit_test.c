@@ -26,7 +26,7 @@
 #include "test_ldouble.h"
 #include "test_int.h"
 #include "test_error.h"
-#include "test_arena.h"
+#include "test_allocator.h"
 // ================================================================================ 
 // ================================================================================
 // Begin code

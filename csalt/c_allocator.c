@@ -22,7 +22,7 @@
 #include <stddef.h>  // max_align_t
 #include <stdalign.h> // alignof
 #include <stdatomic.h> // _Atomic
-#include "c_arena.h"
+#include "c_allocator.h"
 // ================================================================================ 
 // ================================================================================ 
 // CONSTANTS 

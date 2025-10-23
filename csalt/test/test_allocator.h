@@ -86,16 +86,12 @@ void test_restore_rejects_checkpoint_from_other_arena(void **state);
 void test_restore_accepts_empty_checkpoint_noop(void **state);
 // ================================================================================ 
 // ================================================================================ 
-// TEST TRIM ARENA 
-
-// ================================================================================ 
-// ================================================================================ 
 // TEST MACROS 
 
 #if !defined(__NO_GENERICS__)
-void test_arena_alloc_type_and_type_zeroed(void **state);
-void test_arena_alloc_array_and_array_zeroed(void **state);
-void test_arena_alloc_array_count_zero_is_error(void **state);
+    void test_arena_alloc_type_and_type_zeroed(void **state);
+    void test_arena_alloc_array_and_array_zeroed(void **state);
+    void test_arena_alloc_array_count_zero_is_error(void **state);
 #endif
 // ================================================================================ 
 // ================================================================================ 

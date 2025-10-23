@@ -12,8 +12,8 @@
 // ================================================================================
 // Include modules here
 
-#include "test_arena.h"
-#include "c_arena.h"
+#include "test_allocator.h"
+#include "c_allocator.h"
 
 #include <stdint.h>
 #include <errno.h>
@@ -935,7 +935,7 @@ void test_restore_accepts_empty_checkpoint_noop(void **state) {
 }
 // ================================================================================ 
 // ================================================================================ 
-// TEST TRIM_ARENA
+// TEST MACROS
 
 #if !defined(__NO_GENERICS__)
 /* A composite type to exercise struct alignment/size */
@@ -1021,10 +1021,6 @@ void test_arena_alloc_array_count_zero_is_error(void **state) {
 }
 
 #endif
-// ================================================================================ 
-// ================================================================================ 
-// TEST MACROS 
-
 // ================================================================================
 // ================================================================================
 // eof
