@@ -125,6 +125,7 @@ The following are areas for future improvement in the code base
    :caption: Modules:
 
     error_codes <Error>
+    c_allocator <Allocator>
     c_string <Strings>
     c_ldouble <LDouble>
     c_double <Double>
