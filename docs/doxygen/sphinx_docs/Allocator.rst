@@ -139,24 +139,44 @@ this structure to reconstitute a bump allocator.
 
 Initialization and Memory Management
 ------------------------------------
+The functions in this section can be used to initialize memory for a bump allocator,
+parse that memory to variables and to deallocate the memory.
 
 init_dynamic_arena 
 ~~~~~~~~~~~~~~~~~~
 
+.. doxygenfunction:: init_dynamic_arena
+   :project: csalt
+
 init_static_arena
 ~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_static_arena
+   :project: csalt
 
 init_darena 
 ~~~~~~~~~~~
 
+.. doxygenfunction:: init_darena
+   :project: csalt
+
 init_sarena 
 ~~~~~~~~~~~
+
+.. doxygenfunction:: init_sarena
+   :project: csalt
 
 free_arena
 ~~~~~~~~~~
 
+.. doxygenfunction:: free_arena
+   :project: csalt
+
 alloc_arena 
 ~~~~~~~~~~~
+
+.. doxygenfunction:: alloc_arena
+   :project: csalt
 
 Utility Funcitons 
 -----------------
