@@ -14,12 +14,42 @@
 
 #ifndef arena_H
 #define arena_H
+
+// Compile for static or dynamic memory allocation for MISRA compliance
+#ifndef ARENA_ENABLE_DYNAMIC
+#  ifdef STATIC_ONLY
+#    define ARENA_ENABLE_DYNAMIC 0
+#  else
+#    define ARENA_ENABLE_DYNAMIC 1
+#  endif
+#endif
+
+#if defined(STATIC_ONLY) && defined(ARENA_ENABLE_DYNAMIC) && (ARENA_ENABLE_DYNAMIC+0)!=0
+#  error "STATIC_ONLY set but ARENA_ENABLE_DYNAMIC != 0"
+#endif
+
+/* ================= Convenience macro switch =================
+   Define -DARENA_USE_CONVENIENCE_MACROS=0 (or -DNO_ARENA_MACROS)
+   to prevent these function-like macros from being defined. */
+#ifndef ARENA_USE_CONVENIENCE_MACROS
+#  ifdef NO_ARENA_MACROS
+#    define ARENA_USE_CONVENIENCE_MACROS 0
+#  else
+#    define ARENA_USE_CONVENIENCE_MACROS 1
+#  endif
+#endif
+
+/* Sanity: if someone set both, ensure consistency */
+#if defined(NO_ARENA_MACROS) && (ARENA_USE_CONVENIENCE_MACROS+0)!=0
+#  error "NO_ARENA_MACROS set but ARENA_USE_CONVENIENCE_MACROS != 0"
+#endif
 // ================================================================================ 
 // ================================================================================ 
 
 #include <stdlib.h>  // size_t 
 #include <stdbool.h> // true and false
 #include <stdint.h>  // unit8_t
+#include <errno.h>   // errno
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -53,13 +83,25 @@ typedef struct {
 // ================================================================================ 
 // INITIALIZE AND DEALLOCATE FUNCTIONS
 
+#if ARENA_ENABLE_DYNAMIC
 Arena* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t padding_in);
+#endif
 // -------------------------------------------------------------------------------- 
 
 Arena* init_static_arena(void* buffer, size_t bytes, size_t passing_in);
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 Arena* init_darena(size_t bytes, bool resize);
+#endif
+
+// Stubs to return error values if user calls functions with DYNAMIC MEMORY allocation turned off
+#if !ARENA_ENABLE_DYNAMIC
+Arena* init_dynamic_arena(size_t, bool, size_t, size_t) { errno = ENOTSUP; return NULL; }
+Arena* init_darena(size_t, bool) { errno = ENOTSUP; return NULL; }
+void toggle_arena_resize(Arena*, bool) { errno = ENOTSUP; }
+#endif
+
 // -------------------------------------------------------------------------------- 
 
 Arena* init_sarena(void* buffer, size_t bytes);
@@ -71,9 +113,6 @@ void free_arena(Arena* arena);
 // ALLOCATION FUNCTIONS 
 
 void* alloc_arena(Arena* arena, size_t bytes, bool zeroed);
-// -------------------------------------------------------------------------------- 
-
-void* alloc_arena_aligned(Arena* arena, size_t bytes, size_t alignment, bool zeroed);
 // ================================================================================ 
 // ================================================================================ 
 // UTILITY FUNCTIONS 
@@ -91,9 +130,6 @@ ArenaCheckPoint save_arena(const Arena* arena);
 // -------------------------------------------------------------------------------- 
 
 bool restore_arena(Arena *arena, ArenaCheckPoint cp);
-// -------------------------------------------------------------------------------- 
-
-void toggle_arena_resize(Arena* arena, bool toggle);
 // ================================================================================ 
 // ================================================================================ 
 // GETTER FUNCTIONS 
@@ -116,15 +152,17 @@ size_t arena_alloc(const Arena* arena);
 size_t total_arena_alloc(const Arena* arena);
 // -------------------------------------------------------------------------------- 
 
-size_t arena_alignment(Arena* arena);
+size_t arena_alignment(const Arena* arena);
 // -------------------------------------------------------------------------------- 
 
-size_t arena_min_chunk_size(Arena* arena);
+size_t arena_min_chunk_size(const Arena* arena);
 // ================================================================================ 
 // ================================================================================ 
 // SETTER FUNCTIONS 
 
+#if ARENA_ENABLE_DYNAMIC
 void toggle_arena_resize(Arena* arena, bool toggle);
+#endif
 // ================================================================================ 
 // ================================================================================ 
 // LOG FUNCTIONS 
@@ -134,22 +172,16 @@ bool arena_stats(const Arena* arena, char* buffer, size_t buffer_size);
 // ================================================================================ 
 // MACROS 
 
-#if !defined(_NO_GENERICS__)
+#if ARENA_USE_CONVENIENCE_MACROS
     #define arena_alloc_type(arena, type) \
         (type*)alloc_arena((arena), sizeof(type), false)
-#endif 
-#if !defined(__NO_GENERICS__)  
     #define arena_alloc_array(arena, type, count) \
         (type*)alloc_arena((arena), sizeof(type) * (count), false)
-#endif
-#if !defined(__NO_GENERICS__) 
     #define arena_alloc_type_zeroed(arena, type) \
         (type*)alloc_arena((arena), sizeof(type), true)
-#endif
-#if !defined(__NO_GENERICS__) 
     #define arena_alloc_array_zeroed(arena, type, count) \
         (type*)alloc_arena((arena), sizeof(type) * (count), true)
-#endif 
+#endif
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

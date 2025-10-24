@@ -27,9 +27,11 @@
 // ================================================================================ 
 // CONSTANTS 
 
+#if ARENA_ENABLE_DYNAMIC
 /* Deterministic growth knobs (choose values once for your build) */
 static const size_t k_growth_limit = (size_t)1u << 20; /* 1 MiB: switch from 2x to 1.5x */
 static const size_t k_max_chunk    = (size_t)1u << 24; /* 16 MiB: cap single chunk size */
+#endif
 // ================================================================================ 
 // ================================================================================ 
 // DATA STRUCTURES 
@@ -123,6 +125,7 @@ static inline uintptr_t _align_up_uintptr(uintptr_t p, size_t a) {
 }
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 static struct Chunk* _chunk_new_ex(size_t data_bytes, size_t data_align){
     if ((data_bytes == 0U) || (data_align == 0U) || ((data_align & (data_align - 1U)) != 0U)) {
         errno = EINVAL;
@@ -153,6 +156,7 @@ static struct Chunk* _chunk_new_ex(size_t data_bytes, size_t data_align){
 
     return ch; /* free(ch) later frees header+pad+data in one go */
 }
+#endif
 // -------------------------------------------------------------------------------- 
 
 static inline int _is_pow2(size_t x){ return x && !(x & (x-1)); }
@@ -179,6 +183,7 @@ static inline size_t _mul_div_ceil(size_t x, size_t mul, size_t div) {
 }
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 static size_t _next_chunk_size(size_t prev_data_alloc, size_t need, size_t align, size_t min_chunk) {
     /* meet the request at minimum */
     size_t grow = (need > prev_data_alloc) ? need : prev_data_alloc;
@@ -202,6 +207,7 @@ static size_t _next_chunk_size(size_t prev_data_alloc, size_t need, size_t align
 
     return grow;
 }
+#endif
 // -------------------------------------------------------------------------------- 
 
 static inline size_t _pad_up(uintptr_t p, size_t a) {
@@ -233,6 +239,7 @@ static const Chunk* find_chunk_in_chain(const Arena* a, const Chunk* target, Chu
 // ================================================================================ 
 // INITIALIZE AND DEALLOCATE FUNCTIONS 
 
+#if ARENA_ENABLE_DYNAMIC
 Arena* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t base_align_in) {
     // Normalize min_chunk (0 allowed)
     size_t min_chunk = min_chunk_in;
@@ -288,6 +295,7 @@ Arena* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t
 
     return a;
 }
+#endif
 // -------------------------------------------------------------------------------- 
 
 Arena* init_static_arena(void* buffer, size_t bytes, size_t alignment_in) {
@@ -351,9 +359,11 @@ Arena* init_static_arena(void* buffer, size_t bytes, size_t alignment_in) {
 }
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 Arena* init_darena(size_t bytes, bool resize) {
     return init_dynamic_arena(bytes, resize, 4096u, alignof(max_align_t));
 }
+#endif
 // --------------------------------------------------------------------------------
 
 Arena* init_sarena(void* buffer, size_t bytes) {
@@ -411,7 +421,7 @@ void* alloc_arena(Arena* arena, size_t bytes, bool zeroed) {
         if (zeroed) memset(p, 0, bytes);
         return p;
     }
-
+#if ARENA_ENABLE_DYNAMIC
     // No space -> grow only when allowed
     if (arena->mem_type == STATIC || !arena->resize) { errno = EPERM; return NULL; }
 
@@ -435,6 +445,10 @@ void* alloc_arena(Arena* arena, size_t bytes, bool zeroed) {
 
     if (zeroed) memset(p, 0, bytes);
     return p;
+#else 
+    errno = EPERM;
+    return NULL;
+#endif
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -677,7 +691,7 @@ size_t total_arena_alloc(const Arena* arena) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t arena_alignment(Arena* arena) {
+size_t arena_alignment(const Arena* arena) {
     if (!arena || !arena->head) {
         errno = EINVAL;
         return 0;
@@ -686,7 +700,7 @@ size_t arena_alignment(Arena* arena) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t arena_min_chunk_size(Arena* arena) {
+size_t arena_min_chunk_size(const Arena* arena) {
     if (!arena || !arena->head) {
         errno = EINVAL;
         return 0;
@@ -697,6 +711,7 @@ size_t arena_min_chunk_size(Arena* arena) {
 // ================================================================================ 
 // SETTER FUNCTIONS 
 
+#if ARENA_ENABLE_DYNAMIC
 void toggle_arena_resize(Arena* arena, bool toggle) {
     if (arena->mem_type == STATIC) {
         errno = EPERM;
@@ -704,6 +719,7 @@ void toggle_arena_resize(Arena* arena, bool toggle) {
     }
     arena->resize = (uint8_t)(toggle ? 1 : 0);
 }
+#endif
 // ================================================================================ 
 // ================================================================================ 
 // LOG FUNCTIONS 
