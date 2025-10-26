@@ -184,17 +184,38 @@ Utility Funcitons
 is_arena_ptr
 ~~~~~~~~~~~~
 
-is_arena_ptr_size
-~~~~~~~~~~~~~~~~~
+.. doxygenfunction:: is_arena_ptr
+   :project: csalt
+
+is_arena_ptr_sized
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: is_arena_ptr_sized
+   :project: csalt
 
 reset_arena
 ~~~~~~~~~~~
 
+.. doxygenfunction:: reset_arena
+   :project: csalt
+
 save_arena
 ~~~~~~~~~~
 
+.. doxygenfunction:: save_arena
+   :project: csalt
+
 restore_arena
 ~~~~~~~~~~~~~
+
+.. doxygenfunction:: restore_arena
+   :project: csalt
+
+arena_stats 
+~~~~~~~~~~~
+
+.. doxygenfunction:: arena_stats
+   :project: csalt
 
 Getter and Setter Functions 
 ---------------------------
@@ -202,29 +223,59 @@ Getter and Setter Functions
 arena_remaining
 ~~~~~~~~~~~~~~~
 
+.. doxygenfunction:: arena_remaining
+   :project: csalt
+
+
 arena_chunk_count
 ~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: arena_chunk_count
+   :project: csalt
+
 
 arena_mtype
 ~~~~~~~~~~~
 
+.. doxygenfunction:: arena_mtype
+   :project: csalt
+
+
 arena_size
 ~~~~~~~~~~
+
+.. doxygenfunction:: arena_size
+   :project: csalt
 
 arena_alloc
 ~~~~~~~~~~~
 
-arena_total-alloc
+.. doxygenfunction:: arena_alloc
+   :project: csalt
+
+total_arena_alloc
 ~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: total_arena_alloc
+   :project: csalt
 
 arena_alignment
 ~~~~~~~~~~~~~~~
 
-arena_min_chunk-size
+.. doxygenfunction:: arena_alignment
+   :project: csalt
+
+arena_min_chunk_size
 ~~~~~~~~~~~~~~~~~~~~
 
-arena_toggle_resize 
+.. doxygenfunction:: arena_min_chunk_size
+   :project: csalt
+
+toggle_arena_resize 
 ~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: toggle_arena_resize
+   :project: csalt
 
 Function Like Macros 
 --------------------
@@ -232,14 +283,26 @@ Function Like Macros
 arena_alloc_type
 ~~~~~~~~~~~~~~~~
 
+.. doxygendefine:: arena_alloc_type
+   :project: csalt
+
 arena_alloc_array
 ~~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: arena_alloc_array
+   :project: csalt
 
 arena_alloc_type_zeroed
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+.. doxygendefine:: arena_alloc_type_zeroed
+   :project: csalt
+
 arena_alloc_array_zeroed
 ~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: arena_alloc_array_zeroed
+   :project: csalt
 
 Pool Allocator 
 ==============

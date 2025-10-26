@@ -538,68 +538,671 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
 // ================================================================================ 
 // UTILITY FUNCTIONS 
 
+/**
+ * @brief Check whether a pointer falls inside the *used* region of any chunk in an arena.
+ *
+ * This helper answers: “Does @p ptr point into bytes that have been *allocated* from the
+ * arena (i.e., within the currently used portion of some chunk)?” It first checks the
+ * tail chunk (fast path) and then walks the remaining chunks. For each chunk it treats
+ * the valid range as:
+ *
+ *     [ chunk->chunk , chunk->chunk + chunk->len )
+ *
+ * so only memory that has been handed out (including any leading pad charged to the
+ * chunk) is considered “in-arena.” Memory in the *unused* tail of a chunk is not.
+ *
+ * @param arena  Arena to query (must be a valid, initialized arena).
+ * @param ptr    Pointer to test (may be any address).
+ *
+ * @return @c true if @p ptr lies within the used region of any chunk, otherwise @c false.
+ *
+ * @note This is a *geometric* test against the arena’s current accounting (len/alloc).
+ *       It cannot tell whether @p ptr actually points to the start of a specific
+ *       allocation—only that it falls somewhere inside the used span of a chunk.
+ *
+ * @note Defensive clamping is applied when a chunk appears corrupted
+ *       (e.g., @c len > @c alloc). In that case the check uses @c min(len, alloc).
+ *
+ * @note Overflow guards are used on address arithmetic (e.g., end >= start) and
+ *       the function returns @c false if a suspicious range is detected.
+ *
+ * @warning Not thread-safe against concurrent mutation of the arena without external
+ *          synchronization. If another thread grows/resets the arena while this
+ *          function runs, results are undefined.
+ *
+ * @par Complexity
+ * Average O(1) for the tail fast-path, O(N) worst-case across N chunks.
+ *
+ * @par Example
+ * @code
+ * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * void *p = alloc_arena(a, 128, false);
+ * assert_true(is_arena_ptr(a, p));          // inside used region
+ * uint8_t *q = (uint8_t*)p + 127;
+ * assert_true(is_arena_ptr(a, q));          // still inside the same used span
+ * uint8_t *r = (uint8_t*)p + 128;
+ * assert_false(is_arena_ptr(a, r));         // exactly 1 past -> outside used span
+ * free_arena(a);
+ * @endcode
+ */
 bool is_arena_ptr(const arena_t* arena, const void *ptr);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Check whether a [ptr, ptr+size) range lies fully inside the *used* region of the arena.
+ *
+ * This is a stricter variant of @c is_arena_ptr: it verifies that the entire half-open
+ * interval @c [ptr, ptr+size) is contained within the used portion of exactly one chunk.
+ * It returns @c false if the span crosses a chunk boundary or extends beyond the used
+ * length of a chunk.
+ *
+ * @param arena  Arena to query (must be a valid, initialized arena).
+ * @param ptr    Start of the span to test.
+ * @param size   Length in bytes of the span (must be > 0).
+ *
+ * @return @c true if the full span @c [ptr, ptr+size) is inside a single chunk’s used region,
+ *         otherwise @c false.
+ *
+ * @retval false  if @p arena is NULL, @p ptr is NULL, @p size == 0, or an overflow in
+ *                @c ptr + size is detected.
+ *
+ * @note The test uses per-chunk used lengths (like @c is_arena_ptr) and clamps
+ *       @c used to @c min(len, alloc) for robustness when corruption is suspected.
+ *
+ * @note Cross-chunk spans return @c false even if each byte is “in-arena” individually.
+ *       The function requires containment within a *single* chunk’s used interval.
+ *
+ * @warning Not thread-safe against concurrent mutation (growth/reset) without external
+ *          synchronization.
+ *
+ * @par Complexity
+ * Average O(1) for the tail fast-path, O(N) worst-case across N chunks.
+ *
+ * @par Examples
+ * @code
+ * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * uint8_t *p = (uint8_t*)alloc_arena(a, 128, false);
+ *
+ * // Fully contained span:
+ * assert_true(is_arena_ptr_sized(a, p + 64, 32));      // [p+64, p+96) is within p’s block
+ *
+ * // One-past-the-end is not contained:
+ * assert_false(is_arena_ptr_sized(a, p + 120, 9));     // would extend beyond used region
+ *
+ * // Force a new chunk, then ask for a cross-chunk span:
+ * size_t rem = arena_remaining(a);
+ * (void)alloc_arena(a, rem, false);                    // exhaust tail -> next alloc grows
+ * uint8_t *q = (uint8_t*)alloc_arena(a, 64, false);    // q is in the new chunk
+ *
+ * // Span starting near end of first block that would cross into the gap/new chunk:
+ * assert_false(is_arena_ptr_sized(a, p + 127, 2));
+ *
+ * free_arena(a);
+ * @endcode
+ */
 bool is_arena_ptr_sized(const arena_t* arena, const void* ptr, size_t size);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Reset an arena’s usage counters, with an option to trim extra chunks.
+ *
+ * Rewinds the arena to an “empty” state by zeroing the used-length of every
+ * chunk and resetting global usage counters. Two modes are supported:
+ *
+ * - **Non-trimming reset** (@p trim_extra_chunks == false): all existing chunks
+ *   are retained; capacity and @c tot_alloc are unchanged. The cursor @c cur is
+ *   moved to the start of the current @c tail (or @c head if @c tail is NULL).
+ *
+ * - **Trimming reset** (@p trim_extra_chunks == true, dynamic arenas only):
+ *   frees every growth chunk after the head (each was a single @c malloc),
+ *   detaches the list to a single head chunk, and resets the cursor to the
+ *   head’s data base. Usable capacity becomes exactly the head’s @c alloc.
+ *   @c tot_alloc is reduced to reflect the removal of those extra chunks.
+ *
+ * @param arena             Arena to reset (must be a valid pointer).
+ * @param trim_extra_chunks If @c true and the arena is dynamic, free all chunks
+ *                          after the head; if @c false, keep the current chunk
+ *                          chain and only clear usage.
+ *
+ * @return void (errors are reported via @c errno and early-return)
+ *
+ * @retval (no return), errno=EINVAL
+ *      if @p arena is @c NULL.
+ *
+ * @note STATIC arenas ignore the trim path: their chunk chain is caller-owned
+ *       storage; this function will only clear usage and preserve capacity.
+ *
+ * @note Accounting details when trimming (dynamic only):
+ *       - Each growth chunk contributed
+ *         @c align_up(sizeof(Chunk), alignment) + chunk->alloc
+ *         to @c tot_alloc at link time; this function subtracts the same
+ *         contribution before freeing the chunk header.
+ *       - After trimming, @c alloc == head->alloc and @c tot_alloc reflects
+ *         the initial base allocation footprint.
+ *
+ * @warning Do not call this concurrently with other operations on the same
+ *          arena without external synchronization.
+ *
+ * @par Complexity
+ * O(N) over the number of chunks; when trimming, freeing is also O(N_tail).
+ *
+ * @par Examples
+ * @code
+ * // Non-trimming reset (keeps capacity and all chunks):
+ * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * (void)alloc_arena(a, 1024, false);
+ * reset_arena(a, false);  // capacity retained
+ *
+ * // Trimming reset (drop extra chunks, return to a single head):
+ * // Force growth:
+ * size_t rem = arena_remaining(a);
+ * (void)alloc_arena(a, rem, false);             // exhaust head
+ * (void)alloc_arena(a, 64,  false);             // creates a new tail chunk
+ * reset_arena(a, true);   // frees tail(s), cursor at head
+ *
+ * free_arena(a); // dynamic arena teardown
+ * @endcode
+ */
 void reset_arena(arena_t* arena, bool trim_extra_chunks);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Create a lightweight checkpoint of the arena’s current cursor/tail.
+ *
+ * Captures just enough information to later rewind the arena to the same “point
+ * in time” without copying any payload data. The checkpoint is an opaque,
+ * fixed-size public struct (ABI-stable) that internally records:
+ *
+ * - the current tail chunk pointer,
+ * - the current cursor within that tail,
+ * - the arena’s total used bytes at save time (for diagnostics).
+ *
+ * The checkpoint remains valid only as long as the recorded tail chunk continues
+ * to exist in the arena’s chunk chain. Operations that *remove* or *free* that
+ * tail (e.g., trimming resets) may invalidate previously saved checkpoints.
+ *
+ * @param arena  Arena whose state to capture. If @c NULL, an "empty" checkpoint
+ *               is returned that @c restore_arena() will treat as a no-op.
+ *
+ * @return Opaque @c ArenaCheckPoint value which can be passed to
+ *         @c restore_arena() to rewind to this position.
+ *
+ * @note Checkpoints do not pin memory. They do not keep chunks alive; they
+ *       merely store addresses and counters for later validation/rewind.
+ *
+ * @warning This function is not synchronization-safe: if other threads grow,
+ *          reset, or free the arena while the checkpoint is being saved or
+ *          later restored, behavior is undefined.
+ *
+ * @sa restore_arena(), reset_arena(), alloc_arena()
+ */
 ArenaCheckPoint save_arena(const arena_t* arena);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Rewind an arena to a previously saved checkpoint.
+ *
+ * Attempts to restore the arena’s cursor and tail to the state captured by
+ * @c save_arena(). Validation ensures the checkpoint’s chunk still exists in
+ * the current chain and that its saved cursor lies within that chunk’s capacity.
+ *
+ * Behavior differs by arena type:
+ * - **DYNAMIC**: all chunks *after* the checkpoint chunk are freed (each was a
+ *   single-malloc “growth” block), and the list is relinked so the checkpoint
+ *   chunk becomes the tail. Accounting fields (@c len, @c alloc, @c tot_alloc)
+ *   are recomputed for the remaining chain.
+ * - **STATIC**: no chunks are freed (storage is caller-owned). The cursor and
+ *   tail are rewound; accounting is recomputed. If the checkpoint referred to a
+ *   chunk that no longer exists, the restore fails.
+ *
+ * @param arena  Arena to rewind (must be a valid pointer).
+ * @param cp     Checkpoint previously returned by @c save_arena().
+ *
+ * @return @c true on success; @c false on failure with @c errno set.
+ *
+ * @retval true
+ *      if the checkpoint is empty (no chunk recorded) — treated as a no-op.
+ *
+ * @retval false, errno=EINVAL
+ *      if @p arena is @c NULL, or the checkpoint’s chunk is not found in the
+ *      current chain (stale checkpoint), or the checkpoint cursor is out of
+ *      bounds for that chunk, or the arena alignment is invalid.
+ *
+ * @note After a successful restore, any pointers returned by @c alloc_arena()
+ *       *after* the checkpoint position become invalid (dynamic arenas will
+ *       have freed those growth chunks; static arenas will consider their
+ *       contents “unused” again).
+ *
+ * @note @c tot_alloc is recomputed based on the remaining chain using the
+ *       convention: @c align_up(sizeof(arena_t), alignment) +
+ *       sum( align_up(sizeof(Chunk), alignment) + chunk->alloc ).
+ *
+ * @warning Not thread-safe; external synchronization is required if other
+ *          threads interact with the arena concurrently.
+ *
+ * @sa save_arena(), reset_arena(), alloc_arena(), free_arena()
+ */
 bool restore_arena(arena_t *arena, ArenaCheckPoint cp);
 // ================================================================================ 
 // ================================================================================ 
 // GETTER FUNCTIONS 
 
+/**
+ * @brief Return *immediately usable* bytes remaining in the current tail chunk.
+ *
+ * Computes the free space only in the arena’s @b tail chunk as:
+ *
+ *     tail->alloc - min(tail->len, tail->alloc)
+ *
+ * If the arena is NULL, has no tail, or the tail has no data base, returns 0.
+ *
+ * @param arena  Arena to query (may be NULL).
+ *
+ * @return Number of bytes that can be satisfied from the current tail chunk
+ *         without growth; 0 if none or on invalid input.
+ *
+ * @note This is @b not the total free space across all chunks; it reports
+ *       only the space left in the @e current tail. If you need additional
+ *       capacity (dynamic arenas), @c alloc_arena() may grow the arena.
+ *
+ * @note The value ignores any per-allocation padding that might be required to
+ *       satisfy the arena’s base alignment. A subsequent allocation of @c n
+ *       bytes may require up to @c (alignment-1) extra pad, so an allocation
+ *       of size @c n succeeds from the tail iff @c arena_remaining() >= pad + n.
+ *
+ * @par Example
+ * @code
+ * size_t r = arena_remaining(a);
+ * if (r >= needed + pad_up((uintptr_t)arena_cursor(a), arena_alignment(a))) {
+ *     // fits in current tail without growth
+ * }
+ * @endcode
+ */
 size_t arena_remaining(const arena_t* arena);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Count the number of chunks currently linked in the arena.
+ *
+ * Walks the chunk list from @c head to @c NULL and returns the number of
+ * chunk headers encountered.
+ *
+ * @param arena  Arena to query (may be NULL).
+ *
+ * @return The number of chunks in the arena; 0 if @p arena is NULL.
+ *
+ * @note For a freshly initialized arena there is always at least one chunk
+ *       (the head). After @c reset_arena(..., trim=true) on a dynamic arena,
+ *       the count returns to 1.
+ *
+ * @par Complexity
+ * O(N) where N is the number of chunks.
+ */
 size_t arena_chunk_count(const arena_t* arena);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the arena’s memory type as an @c alloc_t enum.
+ *
+ * Converts the arena’s internal 8-bit storage to the public @c alloc_t
+ * (e.g., @c STATIC or @c DYNAMIC).
+ *
+ * @param arena  Arena to query.
+ *
+ * @return The @c alloc_t value for this arena. If @p arena is NULL, sets
+ *         @c errno to @c EINVAL and returns @c ALLOC_INVALID.
+ *
+ * @retval STATIC   The arena uses caller-supplied storage and cannot grow.
+ * @retval DYNAMIC  The arena was dynamically allocated and may grow (subject
+ *                  to @c resize flag).
+ * @retval ALLOC_INVALID  On NULL input or corrupted state.
+ *
+ * @note The return value reflects configuration time. Whether a dynamic arena
+ *       will actually grow also depends on @c arena->resize (see
+ *       @c toggle_arena_resize when available).
+ */
 alloc_t arena_mtype(const arena_t* arena);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the total bytes currently *consumed* from the arena.
+ *
+ * This is the logical usage counter aggregated across all chunks. It includes
+ * any per-allocation padding that was charged to satisfy alignment, so it may
+ * be larger than the sum of the user-requested sizes.
+ *
+ * @param arena  Arena to query (may be NULL).
+ *
+ * @return Total used bytes (including pad) across the arena; 0 if @p arena is NULL.
+ *
+ * @note This value never exceeds @c arena_alloc(arena).
+ */
 size_t arena_size(const arena_t* arena);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the total *usable capacity* (in bytes) across all chunks.
+ *
+ * This is the sum of @c alloc fields for every chunk currently linked in the
+ * arena. It does not include header or padding bytes and may increase when the
+ * arena grows (dynamic) or decrease when trimmed.
+ *
+ * @param arena  Arena to query (may be NULL).
+ *
+ * @return Total usable capacity; 0 if @p arena is NULL.
+ *
+ * @see total_arena_alloc() for capacity including metadata overhead.
+ */
 size_t arena_alloc(const arena_t* arena);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the arena’s total footprint, including metadata overhead.
+ *
+ * For dynamic arenas, this approximates:
+ *
+ *   align_up(sizeof(arena_t), alignment)
+ *   + Σ over chunks { align_up(sizeof(Chunk), alignment) + chunk->alloc }
+ *
+ * For static arenas initialized over a caller buffer, this typically equals the
+ * full buffer size provided at initialization.
+ *
+ * @param arena  Arena to query (may be NULL).
+ *
+ * @return Total bytes attributed to the arena (data + headers + alignment
+ *         padding as accounted by the implementation); 0 if @p arena is NULL.
+ *
+ * @note This is an accounting value; it is not necessarily the exact number of
+ *       bytes returned by underlying allocation calls in all configurations.
+ */
 size_t total_arena_alloc(const arena_t* arena);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the arena’s base alignment policy in bytes.
+ *
+ * The base alignment is applied to the start of the data region in each chunk,
+ * and to each allocation’s placement within a chunk (for the default allocator).
+ *
+ * @param arena  Arena to query.
+ *
+ * @return The power-of-two alignment (≥ alignof(max_align_t)) used by this arena.
+ *         Returns 0 and sets @c errno=EINVAL if @p arena is NULL or uninitialized.
+ *
+ * @note A nonzero return is guaranteed to be a power-of-two by construction.
+ */
 size_t arena_alignment(const arena_t* arena);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the arena’s minimum growth chunk size (bytes).
+ *
+ * For dynamic arenas, this value (if nonzero) is used as a floor when
+ * computing the size of new growth chunks. For static arenas, this is 0.
+ *
+ * @param arena  Arena to query.
+ *
+ * @return The minimum growth size in bytes; 0 for static arenas or on error.
+ *         Returns 0 and sets @c errno=EINVAL if @p arena is NULL or uninitialized.
+ */
 size_t arena_min_chunk_size(const arena_t* arena);
 // ================================================================================ 
 // ================================================================================ 
 // SETTER FUNCTIONS 
 
 #if ARENA_ENABLE_DYNAMIC
+/**
+ * @brief Enable or disable geometric growth for a dynamic arena at runtime.
+ *
+ * Controls whether @c alloc_arena() is allowed to allocate new “growth” chunks
+ * when the current tail chunk has insufficient free space.
+ *
+ * - When @p toggle is @c true, subsequent allocations that do not fit in the
+ *   current tail may grow the arena (subject to other limits such as
+ *   @c min_chunk).
+ * - When @p toggle is @c false, allocations that do not fit in the current tail
+ *   will fail with @c errno=EPERM (no growth); the arena remains usable for
+ *   allocations that do fit in the existing capacity.
+ *
+ * @param arena   Arena to modify. Must be a valid pointer to a @b dynamic arena.
+ * @param toggle  @c true to allow growth; @c false to forbid growth.
+ *
+ * @return void  (errors reported via @c errno and early return)
+ *
+ * @retval (no return), errno=EPERM
+ *         if @p arena is a STATIC arena (growth is never permitted for static).
+ *
+ * @note This function does not shrink or free existing chunks. To drop extra
+ *       chunks and return to a single head chunk, use @c reset_arena(arena, true).
+ *
+ * @note Has no effect on STATIC arenas; calling it on a STATIC arena sets
+ *       @c errno=EPERM and returns without modifying the arena.
+ *
+ * @warning Not thread-safe; coordinate with other threads that allocate from or
+ *          modify the same arena.
+ *
+ * @par Example
+ * @code
+ * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * // Temporarily freeze growth for a phase that must not allocate extra memory:
+ * toggle_arena_resize(a, false);
+ * void *p = alloc_arena(a, 8192, false); // will fail with EPERM if it doesn't fit
+ * // Re-enable growth:
+ * toggle_arena_resize(a, true);
+ * @endcode
+ */
 void toggle_arena_resize(arena_t* arena, bool toggle);
 #endif
 // ================================================================================ 
 // ================================================================================ 
 // LOG FUNCTIONS 
 
+/**
+ * @brief Render a human-readable snapshot of arena state into a caller buffer.
+ *
+ * Writes a multi-line textual report describing the arena’s configuration and
+ * current usage. The format is stable enough for logs and diagnostics, e.g.:
+ *
+ * @code
+ * Arena Statistics:
+ *   Type: STATIC
+ *   Used: 1024 bytes
+ *   Capacity: 4096 bytes
+ *   Total (with overhead): 8192 bytes
+ *   Utilization: 25.0%
+ *   Chunk 1: 1024/4096 bytes
+ *   Chunk 2: 0/2048 bytes
+ * @endcode
+ *
+ * If @p arena is NULL, the function writes: "Arena: NULL\n" and returns @c true.
+ *
+ * The function guarantees no truncation: it uses a bounded formatter and
+ * returns @c false if the output would exceed @p buffer_size (leaving @c errno
+ * set). On success, the buffer is NUL-terminated.
+ *
+ * @param arena         Arena to describe. May be NULL (prints "Arena: NULL\n").
+ * @param buffer        Destination character buffer for the report. Must not be NULL.
+ * @param buffer_size   Size in bytes of @p buffer, including space for the
+ *                      terminating NUL. Must be > 0.
+ *
+ * @return @c true on success (fully written, NUL-terminated);
+ *         @c false on error with @c errno set.
+ *
+ * @retval false, errno=EINVAL
+ *         if @p buffer is NULL, or @p buffer_size is 0.
+ *
+ * @retval false, errno=EINVAL
+ *         if an internal formatting error is detected.
+ *
+ * @retval false, errno=ERANGE
+ *         if there is not enough space in @p buffer for the full report (the
+ *         function avoids partial/truncated output).
+ *
+ * @note The report includes:
+ *       - Type: "STATIC" or "DYNAMIC" (derived from @c arena->mem_type).
+ *       - Used: @c arena->len (bytes consumed, including per-allocation padding).
+ *       - Capacity: @c arena->alloc (sum of usable data bytes across chunks).
+ *       - Total (with overhead): @c arena->tot_alloc (implementation accounting of
+ *         headers + alignment + data).
+ *       - Utilization: 100*Used/Capacity, or "N/A" if capacity is zero.
+ *       - One line per chunk: "Chunk i: len/alloc bytes".
+ *
+ * @note Thread-safety: the function does not lock the arena; if other threads
+ *       mutate the arena concurrently, the snapshot may be transient or
+ *       inconsistent. Coordinate externally if needed.
+ *
+ * @par Example
+ * @code
+ * char buf[512];
+ * if (!arena_stats(a, buf, sizeof buf)) {
+ *     perror("arena_stats");
+ * } else {
+ *     fputs(buf, stdout);
+ * }
+ * @endcode
+ */
 bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
 // ================================================================================ 
 // ================================================================================ 
 // MACROS 
 
 #if ARENA_USE_CONVENIENCE_MACROS
+/**
+ * @def arena_alloc_type(arena, type)
+ * @brief Allocate one object of @p type from @p arena (uninitialized).
+ *
+ * Expands to:
+ * @code
+ * (type*)alloc_arena((arena), sizeof(type), false)
+ * @endcode
+ *
+ * The returned pointer is aligned to the arena’s base alignment
+ * (see ::arena_alignment()) and points to uninitialized storage of size
+ * @c sizeof(type).
+ *
+ * @param arena  An ::arena_t* previously created with ::init_static_arena()
+ *               or ::init_dynamic_arena().
+ * @param type   The complete object type to allocate (e.g., @c int, @c struct Foo).
+ *
+ * @return @c type* on success; @c NULL on failure with @c errno set by
+ *         ::alloc_arena() (e.g., @c EINVAL, @c EPERM, @c ENOMEM).
+ *
+ * @note This macro only wraps ::alloc_arena(); no additional behavior is added.
+ * @note Do not pass an incomplete type.
+ *
+ * @par Example
+ * @code
+ * typedef struct { float x, y, z; } vec3;
+ * arena_t* a = init_darena(4096, true);
+ * vec3* p = arena_alloc_type(a, vec3);
+ * if (!p) { perror("arena_alloc_type"); }
+ * // ...
+ * free_arena(a);
+ * @endcode
+ */
     #define arena_alloc_type(arena, type) \
         (type*)alloc_arena((arena), sizeof(type), false)
+
+/**
+ * @def arena_alloc_array(arena, type, count)
+ * @brief Allocate an array of @p count objects of @p type from @p arena (uninitialized).
+ *
+ * Expands to:
+ * @code
+ * (type*)alloc_arena((arena), sizeof(type) * (count), false)
+ * @endcode
+ *
+ * The returned pointer is aligned to the arena’s base alignment and provides
+ * uninitialized storage for exactly @p count elements of @p type in a single
+ * contiguous block.
+ *
+ * @param arena  An ::arena_t* previously created with ::init_static_arena()
+ *               or ::init_dynamic_arena().
+ * @param type   The element type (must be complete).
+ * @param count  Number of elements to allocate. Evaluated exactly once.
+ *
+ * @return @c type* on success; @c NULL on failure with @c errno set by ::alloc_arena().
+ *
+ * @warning Very large @p count values can overflow the size computation
+ *          @c sizeof(type) * (count), causing ::alloc_arena() to fail.
+ * @warning Avoid side effects in @p count (e.g., do not pass @c i++).
+ *
+ * @par Example
+ * @code
+ * arena_t* a = init_darena(4096, true);
+ * double* samples = arena_alloc_array(a, double, 1024);
+ * if (!samples) { perror("arena_alloc_array"); }
+ * // ...
+ * free_arena(a);
+ * @endcode
+ */
     #define arena_alloc_array(arena, type, count) \
         (type*)alloc_arena((arena), sizeof(type) * (count), false)
+
+/**
+ * @def arena_alloc_type_zeroed(arena, type)
+ * @brief Allocate one object of @p type from @p arena and zero-initialize it.
+ *
+ * Expands to:
+ * @code
+ * (type*)alloc_arena((arena), sizeof(type), true)
+ * @endcode
+ *
+ * The returned pointer is aligned to the arena’s base alignment and the
+ * @c sizeof(type) bytes are set to zero.
+ *
+ * @param arena  An ::arena_t* previously created with ::init_static_arena()
+ *               or ::init_dynamic_arena().
+ * @param type   The complete object type to allocate and zero.
+ *
+ * @return @c type* on success; @c NULL on failure with @c errno set by ::alloc_arena().
+ *
+ * @note Zero-initialization uses @c memset(ptr, 0, sizeof(type)).
+ *
+ * @par Example
+ * @code
+ * typedef struct { int id; char name[32]; } user;
+ * arena_t* a = init_darena(4096, true);
+ * user* u = arena_alloc_type_zeroed(a, user);  // all fields = 0
+ * if (!u) { perror("arena_alloc_type_zeroed"); }
+ * // ...
+ * free_arena(a);
+ * @endcode
+ */
     #define arena_alloc_type_zeroed(arena, type) \
         (type*)alloc_arena((arena), sizeof(type), true)
+
+/**
+ * @def arena_alloc_array_zeroed(arena, type, count)
+ * @brief Allocate an array of @p count objects of @p type and zero-initialize the block.
+ *
+ * Expands to:
+ * @code
+ * (type*)alloc_arena((arena), sizeof(type) * (count), true)
+ * @endcode
+ *
+ * The returned pointer is aligned to the arena’s base alignment and the entire
+ * allocation ( @c sizeof(type) * @p count bytes ) is set to zero.
+ *
+ * @param arena  An ::arena_t* previously created with ::init_static_arena()
+ *               or ::init_dynamic_arena().
+ * @param type   Element type (must be complete).
+ * @param count  Number of elements to allocate. Evaluated exactly once.
+ *
+ * @return @c type* on success; @c NULL on failure with @c errno set by ::alloc_arena().
+ *
+ * @warning Very large @p count values can overflow the size computation.
+ * @warning Avoid side effects in @p count (e.g., do not pass @c i++).
+ *
+ * @par Example
+ * @code
+ * arena_t* a = init_darena(8192, true);
+ * uint8_t* buf = arena_alloc_array_zeroed(a, uint8_t, 512); // 512 zeroed bytes
+ * if (!buf) { perror("arena_alloc_array_zeroed"); }
+ * // ...
+ * free_arena(a);
+ * @endcode
+ */
     #define arena_alloc_array_zeroed(arena, type, count) \
         (type*)alloc_arena((arena), sizeof(type) * (count), true)
 #endif
