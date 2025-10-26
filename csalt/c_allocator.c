@@ -239,8 +239,8 @@ static const Chunk* find_chunk_in_chain(const arena_t* a, const Chunk* target, C
 // ================================================================================ 
 // INITIALIZE AND DEALLOCATE FUNCTIONS 
 
-#if ARENA_ENABLE_DYNAMIC
 arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t base_align_in) {
+#if ARENA_ENABLE_DYNAMIC
     // Normalize min_chunk (0 allowed)
     size_t min_chunk = min_chunk_in;
     if (min_chunk && !_is_pow2(min_chunk)) {
@@ -294,8 +294,11 @@ arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size
     a->resize   = (uint8_t)(resize ? 1 : 0);
 
     return a;
-}
+#else 
+    errno = ENOTSUP;
+    return NULL;
 #endif
+}
 // -------------------------------------------------------------------------------- 
 
 arena_t* init_static_arena(void* buffer, size_t bytes, size_t alignment_in) {
@@ -592,49 +595,115 @@ ArenaCheckPoint save_arena(const arena_t* arena) {
 // -------------------------------------------------------------------------------- 
 
 bool restore_arena(arena_t* arena, ArenaCheckPoint cp) {
-    if (!arena) { errno = EINVAL; return false; }
+    if (!arena) { 
+        errno = EINVAL; 
+        return false; 
+    }
 
+    // Unpack the checkpoint
     ArenaCheckPointRep rep = {0};
     _cp_unpack(&cp, &rep);
 
-    if (!rep.chunk) return true; // empty checkpoint OK
-
-    const Chunk* prev = NULL;
-    const Chunk* hit  = find_chunk_in_chain(arena, rep.chunk, &prev);
-    if (!hit) { errno = EINVAL; return false; }
-
-    if (!rep.chunk->chunk) { errno = EINVAL; return false; }
-    uintptr_t s  = (uintptr_t)rep.chunk->chunk;
-    uintptr_t pc = (uintptr_t)rep.cur;
-    uintptr_t e  = s + rep.chunk->alloc;  // exclusive
-    if (e < s || pc < s || pc > e) { errno = EINVAL; return false; }
-
-    if (arena->mem_type == (uint8_t)DYNAMIC) {
-        Chunk* c = rep.chunk->next;
-        while (c) { Chunk* nxt = c->next; free(c); c = nxt; }
-        ((Chunk*)rep.chunk)->next = NULL;
+    // Empty checkpoint is a no-op (success)
+    if (!rep.chunk) {
+        return true;
     }
 
-    // Set tail chunk's used bytes to the checkpoint cursor
-    ((Chunk*)rep.chunk)->len = (size_t)(pc - s);
+    // Validate that the checkpoint's chunk still exists in the chain
+    const Chunk* prev = NULL;
+    const Chunk* hit  = find_chunk_in_chain(arena, rep.chunk, &prev);
+    if (!hit) { 
+        errno = EINVAL; 
+        return false; 
+    }
+
+    // Validate the chunk has a valid data region
+    if (!rep.chunk->chunk) { 
+        errno = EINVAL; 
+        return false; 
+    }
+
+    // Validate the checkpoint cursor is within bounds
+    uintptr_t chunk_start = (uintptr_t)rep.chunk->chunk;
+    uintptr_t cursor_pos  = (uintptr_t)rep.cur;
+    uintptr_t chunk_end   = chunk_start + rep.chunk->alloc;  // exclusive
+    
+    // Check for overflow and valid cursor position
+    if (chunk_end < chunk_start || cursor_pos < chunk_start || cursor_pos > chunk_end) { 
+        errno = EINVAL; 
+        return false; 
+    }
+
+    // For DYNAMIC arenas: free all chunks after the checkpoint chunk
+    if (arena->mem_type == (uint8_t)DYNAMIC) {
+        const size_t hdr_rounded = _align_up_size(sizeof(Chunk), arena->alignment);
+        
+        Chunk* to_free = rep.chunk->next;
+        while (to_free) {
+            Chunk* next = to_free->next;
+            
+            // Subtract this chunk's contribution from tot_alloc
+            // (mirrors what was added during growth)
+            size_t contrib = hdr_rounded + to_free->alloc;
+            if (arena->tot_alloc >= contrib) {
+                arena->tot_alloc -= contrib;
+            } else {
+                arena->tot_alloc = 0;  // defensive clamp
+            }
+            
+            free(to_free);  // Free the chunk header (owns the entire block)
+            to_free = next;
+        }
+        
+        // Detach the freed chunks from the list
+        ((Chunk*)rep.chunk)->next = NULL;
+    }
+    // For STATIC arenas: we can't free chunks, just validate they still exist
+    // (the validation already happened via find_chunk_in_chain above)
+
+    // Update the tail chunk's used length to match the checkpoint cursor
+    ((Chunk*)rep.chunk)->len = (size_t)(cursor_pos - chunk_start);
+    
+    // Update arena state
     arena->tail = (Chunk*)rep.chunk;
     arena->cur  = (uint8_t*)rep.cur;
 
-    // Recompute accounting under current policy
-    size_t a_policy = arena->alignment;
-    if (a_policy == 0u || (a_policy & (a_policy - 1u)) != 0u) { errno = EINVAL; return false; }
-
-    size_t total_used = 0, total_cap = 0, total_foot = _align_up_size(sizeof(arena_t), a_policy);
-    for (Chunk* k = arena->head; k; k = k->next) {
-        size_t used = (k->len <= k->alloc) ? k->len : k->alloc;
-        total_used += used;
-        total_cap  += k->alloc;
-        total_foot += _align_up_size(sizeof(Chunk), a_policy) + k->alloc;
+    // Recompute accounting for the remaining chain
+    size_t alignment = arena->alignment;
+    
+    // Validate alignment is a power of two
+    if (alignment == 0u || (alignment & (alignment - 1u)) != 0u) { 
+        errno = EINVAL; 
+        return false; 
     }
 
-    arena->len       = total_used;
-    arena->alloc     = total_cap;
-    arena->tot_alloc = total_foot;
+    // Walk the chain and recompute totals
+    size_t total_used = 0;
+    size_t total_cap  = 0;
+    size_t total_foot = _align_up_size(sizeof(arena_t), alignment);
+    
+    for (Chunk* k = arena->head; k; k = k->next) {
+        // Clamp used to allocation (defensive)
+        size_t used = (k->len <= k->alloc) ? k->len : k->alloc;
+        
+        total_used += used;
+        total_cap  += k->alloc;
+        
+        // Add this chunk's overhead + data to footprint
+        total_foot += _align_up_size(sizeof(Chunk), alignment) + k->alloc;
+    }
+
+    arena->len   = total_used;
+    arena->alloc = total_cap;
+    
+    // Only recompute tot_alloc for STATIC arenas
+    // (DYNAMIC already adjusted it during the freeing loop)
+    if (arena->mem_type == (uint8_t)STATIC) {
+        arena->tot_alloc = total_foot;
+    }
+    // For DYNAMIC, tot_alloc was incrementally adjusted during chunk freeing,
+    // so we keep that value (it should match total_foot, but the incremental
+    // approach is more precise if there were any rounding differences)
 
     return true;
 }
@@ -711,15 +780,19 @@ size_t arena_min_chunk_size(const arena_t* arena) {
 // ================================================================================ 
 // SETTER FUNCTIONS 
 
-#if ARENA_ENABLE_DYNAMIC
 void toggle_arena_resize(arena_t* arena, bool toggle) {
+#if ARENA_ENABLE_DYNAMIC
     if (arena->mem_type == STATIC) {
         errno = EPERM;
         return;
     }
     arena->resize = (uint8_t)(toggle ? 1 : 0);
-}
+    return;
+#else 
+    errno = ENOTSUP;
+    return;
 #endif
+}
 // ================================================================================ 
 // ================================================================================ 
 // LOG FUNCTIONS 
