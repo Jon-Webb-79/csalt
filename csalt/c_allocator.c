@@ -37,12 +37,12 @@ static const size_t k_max_chunk    = (size_t)1u << 24; /* 16 MiB: cap single chu
 // DATA STRUCTURES 
 
 // 25 bytes
-struct Chunk{
+typedef struct Chunk{
     uint8_t *chunk;     // Pointer to beginning of memory
     size_t len;         // Populated length of memory within struct in bytes
     size_t alloc;       // Allocated length of memory within struct in bytes
     struct Chunk* next; // Pointer to next memory chunk
-};
+} Chunk;
 // -------------------------------------------------------------------------------- 
 
 // 72 bytes

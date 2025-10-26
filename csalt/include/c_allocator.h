@@ -61,7 +61,6 @@ extern "C" {
 
 // Forward declarations for opaque data types
 typedef struct arena_t arena_t;
-typedef struct Chunk Chunk;
 // -------------------------------------------------------------------------------- 
 
 typedef struct {
