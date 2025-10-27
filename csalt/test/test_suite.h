@@ -1,0 +1,55 @@
+// ================================================================================
+// ================================================================================
+// - File:    test_suite.h
+// - Purpose: Test suite declarations for arena allocator
+//
+// Source Metadata
+// - Author:  Jonathan A. Webb
+// - Date:    October 26, 2025
+// - Version: 1.0
+// - Copyright: Copyright 2025, Jon Webb Inc.
+// ================================================================================
+// ================================================================================
+
+#ifndef TEST_SUITE_H
+#define TEST_SUITE_H
+
+#include <stdarg.h>  // va_list (needed by cmocka)
+#include <setjmp.h>  // jmp_buf (needed by cmocka)
+#include <stddef.h>  // size_t
+#include <cmocka.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// ================================================================================
+// ================================================================================
+// ARENA ALLOCATOR TEST SUITE
+
+/**
+ * @brief Test suite for arena allocator functionality
+ * 
+ * Covers:
+ * - Dynamic and static arena initialization
+ * - Memory allocation and deallocation
+ * - Growth and resize strategies
+ * - Pointer validation functions
+ * - Reset and checkpoint/restore operations
+ * - Convenience macros
+ */
+extern const struct CMUnitTest test_arena[];
+extern const size_t test_arena_count;
+
+// ================================================================================
+// ================================================================================
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* TEST_SUITE_H */
+
+// ================================================================================
+// ================================================================================
+// eof

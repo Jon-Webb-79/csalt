@@ -88,7 +88,7 @@ void test_restore_accepts_empty_checkpoint_noop(void **state);
 // ================================================================================ 
 // TEST MACROS 
 
-#if !defined(__NO_GENERICS__)
+#if !defined(NO_FUNCTION_MACROS)
     void test_arena_alloc_type_and_type_zeroed(void **state);
     void test_arena_alloc_array_and_array_zeroed(void **state);
     void test_arena_alloc_array_count_zero_is_error(void **state);

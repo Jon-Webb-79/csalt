@@ -14,12 +14,6 @@
 # Create the test executable using unit_test.c and test_hello.c
 add_executable(unit_tests
 	unit_test.c
-	test_string.c
-    test_float.c
-    test_double.c
-    test_ldouble.c
-    test_int.c
-    test_error.c
     test_allocator.c
 )
 

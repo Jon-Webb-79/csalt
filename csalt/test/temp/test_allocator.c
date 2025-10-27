@@ -12,21 +12,14 @@
 // ================================================================================
 // Include modules here
 
+#include "test_allocator.h"
 #include "c_allocator.h"
-#include "test_suite.h"
 
 #include <stdint.h>
 #include <errno.h>
 #include <stdalign.h>
 #include <stddef.h>
 #include <string.h>
-
-#include <stdio.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <stdint.h>
-#include <cmocka.h>
 // ================================================================================ 
 // ================================================================================ 
 // TEST INIT DYNAMIC AND STATIC ARENAS
@@ -43,7 +36,7 @@ static int ptr_is_aligned(const void* p, size_t a) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_dyn_min_chunk_rounds_up_and_changes_capacity(void **state) {
+void test_dyn_min_chunk_rounds_up_and_changes_capacity(void **state) {
     (void)state;
 
     /* Case A: small min_chunk (4KiB) */
@@ -65,7 +58,7 @@ static void test_dyn_min_chunk_rounds_up_and_changes_capacity(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_dyn_min_chunk_equivalence_6000_vs_8192(void **state) {
+void test_dyn_min_chunk_equivalence_6000_vs_8192(void **state) {
     (void)state;
 
     struct arena_t *aA = init_dynamic_arena(/*bytes*/1000, /*resize*/false,
@@ -87,7 +80,7 @@ static void test_dyn_min_chunk_equivalence_6000_vs_8192(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_dyn_alignment_rounds_up_and_floors_to_maxalign(void **state) {
+void test_dyn_alignment_rounds_up_and_floors_to_maxalign(void **state) {
     (void)state;
 
     /* Round up (24 -> 32) */
@@ -113,7 +106,7 @@ static void test_dyn_alignment_rounds_up_and_floors_to_maxalign(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_static_alignment_honored_even_with_unaligned_buffer(void **state) {
+void test_static_alignment_honored_even_with_unaligned_buffer(void **state) {
     (void)state;
 
     const size_t BUF = 16384 + 64;  /* plenty of space */
@@ -161,7 +154,7 @@ static void test_static_alignment_honored_even_with_unaligned_buffer(void **stat
 // ================================================================================ 
 // TEST INIT SARENA AND DARENA FUNCTIONS
 
-static void test_init_darena(void **state) {
+void test_init_darena(void **state) {
     // Valgrind test to ensure memory is properly created and freed
 	(void) state;
     arena_t* arena = init_darena(1000, true);
@@ -177,7 +170,7 @@ static void test_init_darena(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_init_darena_no_bytes(void **state) {
+void test_init_darena_no_bytes(void **state) {
     // Verify allocation if user requests 0 bytes
     // Will throw compiler error if user tries to pass a negative number
 	(void) state;
@@ -194,7 +187,7 @@ static void test_init_darena_no_bytes(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_init_darena_large_chunk(void **state) {
+void test_init_darena_large_chunk(void **state) {
     // - Verify allocation if user requests more than 4096 bytes to ensure 
     //   proper padding is added
 	(void) state;
@@ -211,7 +204,7 @@ static void test_init_darena_large_chunk(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_init_sarena(void **state) {
+void test_init_sarena(void **state) {
     // Test for proper initialization of a static arena
     (void) state;
     uint8_t buffer[4097];
@@ -227,7 +220,7 @@ static void test_init_sarena(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_invalid_free_sarena(void **state) {
+void test_invalid_free_sarena(void **state) {
     // Test behavior when an attempt is made to free a static arena
     (void) state;
     uint8_t buffer[400];
@@ -245,7 +238,7 @@ static void test_invalid_free_sarena(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_arena_double_free(void **state) {
+void test_arena_double_free(void **state) {
     (void) state;
     arena_t* arena = init_darena(4097, true);
     free_arena(arena);
@@ -263,7 +256,7 @@ typedef struct {
 } test;
 // -------------------------------------------------------------------------------- 
 
-static void test_alloc_darena(void **state) {
+void test_alloc_darena(void **state) {
     (void) state;
     arena_t* arena = init_darena(10000, true);
     test* struct_val = (test*)alloc_arena(arena, sizeof(test), false);
@@ -286,7 +279,7 @@ static void test_alloc_darena(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_alloc_darena_zeroed(void **state) {
+void test_alloc_darena_zeroed(void **state) {
     (void)state;
 
     arena_t* arena = init_darena(10000, true);
@@ -316,7 +309,7 @@ static void test_alloc_darena_zeroed(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_alloc_darena_null_value(void **state) {
+void test_alloc_darena_null_value(void **state) {
     (void) state;
     int* value = alloc_arena(NULL, sizeof(*value), true);
     assert_null(value);
@@ -324,7 +317,7 @@ static void test_alloc_darena_null_value(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_alloc_darena_zero_input(void **state) {
+void test_alloc_darena_zero_input(void **state) {
     arena_t* arena = init_darena(10000, true);
     errno = 0;
     int* value = alloc_arena(arena, 0, true);
@@ -334,7 +327,7 @@ static void test_alloc_darena_zero_input(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_alloc_sarena(void **state) {
+void test_alloc_sarena(void **state) {
     (void) state;
     uint8_t buffer[10000];
     arena_t* arena = init_sarena(buffer, 10000);
@@ -357,7 +350,7 @@ static void test_alloc_sarena(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_alloc_sarena_zeroed(void **state) {
+void test_alloc_sarena_zeroed(void **state) {
     (void)state;
 
     uint8_t buffer[10000];
@@ -398,7 +391,7 @@ static void* alloc_fit(struct arena_t *a, size_t want, size_t *taken) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_realloc_grows_when_allowed(void **state) {
+void test_realloc_grows_when_allowed(void **state) {
     (void)state;
 
     struct arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize*/true,
@@ -431,7 +424,7 @@ static void test_realloc_grows_when_allowed(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_realloc_fails_when_resize_false(void **state) {
+void test_realloc_fails_when_resize_false(void **state) {
     (void)state;
 
     struct arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize*/false,
@@ -456,7 +449,7 @@ static void test_realloc_fails_when_resize_false(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_realloc_fails_in_static_arena(void **state) {
+void test_realloc_fails_in_static_arena(void **state) {
     (void)state;
 
     /* Provide a caller buffer (aligned enough) */
@@ -487,7 +480,7 @@ static void test_realloc_fails_in_static_arena(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_realloc_first_alloc_in_new_chunk_is_aligned_and_no_pad(void **state) {
+void test_realloc_first_alloc_in_new_chunk_is_aligned_and_no_pad(void **state) {
     (void)state;
 
     const size_t base_align = 64; /* strong alignment to observe easily */
@@ -522,7 +515,7 @@ static void test_realloc_first_alloc_in_new_chunk_is_aligned_and_no_pad(void **s
 // ================================================================================ 
 // TEST IS_PTR FUNCTIONS 
 
-static void test_is_arena_ptr_basic_hits_and_misses(void **state) {
+void test_is_arena_ptr_basic_hits_and_misses(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
@@ -548,7 +541,7 @@ static void test_is_arena_ptr_basic_hits_and_misses(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_is_arena_ptr_tail_fastpath(void **state) {
+void test_is_arena_ptr_tail_fastpath(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(4096, /*resize=*/false, 4096, alignof(max_align_t));
@@ -566,7 +559,7 @@ static void test_is_arena_ptr_tail_fastpath(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_is_arena_ptr_sized_boundaries(void **state) {
+void test_is_arena_ptr_sized_boundaries(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(4096, /*resize=*/false, 4096, alignof(max_align_t));
@@ -588,7 +581,7 @@ static void test_is_arena_ptr_sized_boundaries(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_is_arena_ptr_multichunk(void **state) {
+void test_is_arena_ptr_multichunk(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
@@ -627,7 +620,7 @@ static void test_is_arena_ptr_multichunk(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_is_arena_ptr_sized_cross_chunk_fails(void **state) {
+void test_is_arena_ptr_sized_cross_chunk_fails(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
@@ -654,7 +647,7 @@ static void test_is_arena_ptr_sized_cross_chunk_fails(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_is_arena_ptr_null_and_zero_size_guards(void **state) {
+void test_is_arena_ptr_null_and_zero_size_guards(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(4096, /*resize=*/false, 4096, alignof(max_align_t));
@@ -678,7 +671,7 @@ static void test_is_arena_ptr_null_and_zero_size_guards(void **state) {
 // ================================================================================ 
 // TEST RESET ARENA
 
-static void test_reset_dynamic_trim_true_frees_extra_chunks_and_resets_usage(void **state) {
+void test_reset_dynamic_trim_true_frees_extra_chunks_and_resets_usage(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
@@ -720,7 +713,7 @@ static void test_reset_dynamic_trim_true_frees_extra_chunks_and_resets_usage(voi
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_reset_dynamic_keep_chunks_preserves_capacity(void **state) {
+void test_reset_dynamic_keep_chunks_preserves_capacity(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
@@ -755,7 +748,7 @@ static void test_reset_dynamic_keep_chunks_preserves_capacity(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_reset_static_zeroes_usage_ignores_trim(void **state) {
+void test_reset_static_zeroes_usage_ignores_trim(void **state) {
     (void)state;
 
     /* Build a static arena over caller-owned buffer */
@@ -794,7 +787,7 @@ static void test_reset_static_zeroes_usage_ignores_trim(void **state) {
 // ================================================================================ 
 // TEST SAVE AND RESTORE 
 
-static void test_save_restore_same_chunk_pointer_roundtrip(void **state) {
+void test_save_restore_same_chunk_pointer_roundtrip(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
@@ -825,7 +818,7 @@ static void test_save_restore_same_chunk_pointer_roundtrip(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_save_restore_second_chunk_trims_and_replays_allocation(void **state) {
+void test_save_restore_second_chunk_trims_and_replays_allocation(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
@@ -866,7 +859,7 @@ static void test_save_restore_second_chunk_trims_and_replays_allocation(void **s
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_save_restore_static_rewinds_cursor(void **state) {
+void test_save_restore_static_rewinds_cursor(void **state) {
     (void)state;
 
     enum { BUF = 8192 };
@@ -901,7 +894,7 @@ static void test_save_restore_static_rewinds_cursor(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_restore_rejects_checkpoint_from_other_arena(void **state) {
+void test_restore_rejects_checkpoint_from_other_arena(void **state) {
     (void)state;
 
     arena_t *a1 = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
@@ -923,7 +916,7 @@ static void test_restore_rejects_checkpoint_from_other_arena(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_restore_accepts_empty_checkpoint_noop(void **state) {
+void test_restore_accepts_empty_checkpoint_noop(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(4096, false, 4096, alignof(max_align_t));
@@ -944,6 +937,7 @@ static void test_restore_accepts_empty_checkpoint_noop(void **state) {
 // ================================================================================ 
 // TEST MACROS
 
+#if !defined(__NO_GENERICS__)
 /* A composite type to exercise struct alignment/size */
 typedef struct {
     int    x;
@@ -951,7 +945,7 @@ typedef struct {
 } Demo;
 // -------------------------------------------------------------------------------- 
 
-static void test_arena_alloc_type_and_type_zeroed(void **state) {
+void test_arena_alloc_type_and_type_zeroed(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
@@ -978,7 +972,7 @@ static void test_arena_alloc_type_and_type_zeroed(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_arena_alloc_array_and_array_zeroed(void **state) {
+void test_arena_alloc_array_and_array_zeroed(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
@@ -1006,7 +1000,7 @@ static void test_arena_alloc_array_and_array_zeroed(void **state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_arena_alloc_array_count_zero_is_error(void **state) {
+void test_arena_alloc_array_count_zero_is_error(void **state) {
     (void)state;
 
     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
@@ -1025,59 +1019,8 @@ static void test_arena_alloc_array_count_zero_is_error(void **state) {
 
     dispose_arena(&a);
 }
-// ================================================================================ 
-// ================================================================================ 
 
-const struct CMUnitTest test_arena[] = {
-    cmocka_unit_test(test_dyn_min_chunk_rounds_up_and_changes_capacity),
-    cmocka_unit_test(test_dyn_min_chunk_equivalence_6000_vs_8192),
-    cmocka_unit_test(test_dyn_alignment_rounds_up_and_floors_to_maxalign),
-    cmocka_unit_test(test_static_alignment_honored_even_with_unaligned_buffer),
-    
-    cmocka_unit_test(test_init_darena),
-    cmocka_unit_test(test_init_darena_no_bytes),
-    cmocka_unit_test(test_init_darena_large_chunk),
-    cmocka_unit_test(test_init_sarena),
-    cmocka_unit_test(test_invalid_free_sarena),
-    cmocka_unit_test(test_arena_double_free),
-    
-    cmocka_unit_test(test_alloc_darena),
-    cmocka_unit_test(test_alloc_darena_zeroed),
-    cmocka_unit_test(test_alloc_darena_null_value),
-    cmocka_unit_test(test_alloc_darena_zero_input),
-    cmocka_unit_test(test_alloc_sarena),
-    cmocka_unit_test(test_alloc_sarena_zeroed),
-
-    cmocka_unit_test(test_realloc_grows_when_allowed),
-    cmocka_unit_test(test_realloc_fails_when_resize_false),
-    cmocka_unit_test(test_realloc_fails_in_static_arena),
-    cmocka_unit_test(test_realloc_first_alloc_in_new_chunk_is_aligned_and_no_pad),
-
-    cmocka_unit_test(test_is_arena_ptr_basic_hits_and_misses),
-    cmocka_unit_test(test_is_arena_ptr_tail_fastpath),
-    cmocka_unit_test(test_is_arena_ptr_sized_boundaries),
-    cmocka_unit_test(test_is_arena_ptr_multichunk),
-    cmocka_unit_test(test_is_arena_ptr_sized_cross_chunk_fails),
-    cmocka_unit_test(test_is_arena_ptr_null_and_zero_size_guards),
-  
-    cmocka_unit_test(test_reset_dynamic_trim_true_frees_extra_chunks_and_resets_usage),
-    cmocka_unit_test(test_reset_dynamic_keep_chunks_preserves_capacity),
-    cmocka_unit_test(test_reset_static_zeroes_usage_ignores_trim),
-    
-    cmocka_unit_test(test_save_restore_same_chunk_pointer_roundtrip),
-    cmocka_unit_test(test_save_restore_second_chunk_trims_and_replays_allocation),
-    cmocka_unit_test(test_save_restore_static_rewinds_cursor),
-    cmocka_unit_test(test_restore_rejects_checkpoint_from_other_arena),
-    cmocka_unit_test(test_restore_accepts_empty_checkpoint_noop), 
-
-    #if ARENA_USE_CONVENIENCE_MACROS
-        cmocka_unit_test(test_arena_alloc_type_and_type_zeroed),
-        cmocka_unit_test(test_arena_alloc_array_and_array_zeroed),
-        cmocka_unit_test(test_arena_alloc_array_count_zero_is_error),
-    #endif
-};
-
-const size_t test_arena_count = sizeof(test_arena) / sizeof(test_arena[0]);
+#endif
 // ================================================================================
 // ================================================================================
 // eof

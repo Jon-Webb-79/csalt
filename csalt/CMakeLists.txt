@@ -49,12 +49,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 # Sources / Headers
 # --------------------------------------------------------------------
 set(CSALT_SOURCES
-  c_string.c
-  c_float.c
-  c_double.c
-  c_ldouble.c
-  c_int.c
-  c_error.c
   c_allocator.c
 )
 
