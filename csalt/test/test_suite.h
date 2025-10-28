@@ -40,7 +40,19 @@ extern "C" {
  */
 extern const struct CMUnitTest test_arena[];
 extern const size_t test_arena_count;
+// ================================================================================ 
+// ================================================================================ 
 
+/**
+ * @brief Test suite for error code functionality
+ * 
+ * Covers:
+ * - error code initialization
+ * - error code to errno mapping
+ * - error code mapping to logging messages
+ */
+extern const struct CMUnitTest test_error[];
+extern const size_t test_error_count;
 // ================================================================================
 // ================================================================================
 

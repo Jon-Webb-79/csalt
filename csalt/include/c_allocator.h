@@ -262,7 +262,6 @@ arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size
 arena_t* init_static_arena(void* buffer, size_t bytes, size_t passing_in);
 // -------------------------------------------------------------------------------- 
 
-#if ARENA_ENABLE_DYNAMIC
 /**
  * @brief Convenience initializer for a dynamic arena with common defaults.
  *
@@ -308,15 +307,6 @@ arena_t* init_static_arena(void* buffer, size_t bytes, size_t passing_in);
  * @sa init_dynamic_arena(), init_static_arena(), free_arena()
  */
 arena_t* init_darena(size_t bytes, bool resize);
-#endif
-
-// Stubs to return error values if user calls functions with DYNAMIC MEMORY allocation turned off
-#if !ARENA_ENABLE_DYNAMIC
-Arena* init_dynamic_arena(size_t, bool, size_t, size_t) { errno = ENOTSUP; return NULL; }
-Arena* init_darena(size_t, bool) { errno = ENOTSUP; return NULL; }
-void toggle_arena_resize(Arena*, bool) { errno = ENOTSUP; }
-#endif
-
 // -------------------------------------------------------------------------------- 
 
 /**
