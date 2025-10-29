@@ -583,6 +583,11 @@ void reset_arena(arena_t *arena, bool trim_extra_chunks) {
 
 ArenaCheckPoint save_arena(const arena_t* arena) {
     ArenaCheckPoint pub = {0};
+    if (!arena) {
+        errno = EINVAL;
+        return pub;
+    }
+    ArenaCheckPoint pub = {0};
     ArenaCheckPointRep rep = {0};
     if (arena) {
         rep.chunk = arena->tail;   // save tail chunk (point-in-time tail)
@@ -712,6 +717,10 @@ bool restore_arena(arena_t* arena, ArenaCheckPoint cp) {
 // GETTER TUNCTIONS
 
 size_t arena_remaining(const arena_t* arena) {
+    if (!arena) {
+        errno = EINVAL;
+        return 0u;
+    }
     if (!arena || !arena->tail || !arena->tail->chunk) return 0u;
     size_t used = arena->tail->len;
     if (used > arena->tail->alloc) used = arena->tail->alloc;  // clamp
@@ -720,7 +729,10 @@ size_t arena_remaining(const arena_t* arena) {
 // -------------------------------------------------------------------------------- 
 
 size_t arena_chunk_count(const arena_t* arena) {
-    if (!arena) return 0u;
+    if (!arena) {
+        errno = EINVAL;
+        return 0u;
+    }
     
     size_t count = 0u;
     Chunk* current = arena->head;
@@ -743,19 +755,28 @@ alloc_t arena_mtype(const arena_t* arena) {
 // -------------------------------------------------------------------------------- 
 
 size_t arena_size(const arena_t* arena) {
-    if (!arena) return 0;
+    if (!arena) {
+        errno = EINVAL;
+        return 0;
+    }
     return arena->len;
 }
 // -------------------------------------------------------------------------------- 
 
 size_t arena_alloc(const arena_t* arena) {
-    if (!arena) return 0;
+    if (!arena) {
+        errno = EINVAL;
+        return 0;
+    }
     return arena->alloc;
 }
 // -------------------------------------------------------------------------------- 
 
 size_t total_arena_alloc(const arena_t* arena) {
-    if (!arena) return 0;
+    if (!arena) {
+        errno = EINVAL;
+        return 0;
+    }
     return arena->tot_alloc;
 }
 // -------------------------------------------------------------------------------- 
@@ -781,6 +802,10 @@ size_t arena_min_chunk_size(const arena_t* arena) {
 // SETTER FUNCTIONS 
 
 void toggle_arena_resize(arena_t* arena, bool toggle) {
+    if (!arena) {
+        errno = EINVAL;
+        return;
+    }
 #if ARENA_ENABLE_DYNAMIC
     if (arena->mem_type == STATIC) {
         errno = EPERM;
