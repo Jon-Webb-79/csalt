@@ -1078,6 +1078,197 @@ const struct CMUnitTest test_arena[] = {
 };
 
 const size_t test_arena_count = sizeof(test_arena) / sizeof(test_arena[0]);
+// ================================================================================ 
+// ================================================================================ 
+// TEST POOL 
+
+// Helper functions
+static arena_t* make_dynamic_arena(size_t seed_bytes) {
+    // resize=true, min_chunk=64 KiB, base_align = max_align_t
+    return init_dynamic_arena(seed_bytes, /*resize=*/true, /*min_chunk_in=*/1u<<16, /*base_align_in=*/alignof(max_align_t));
+}
+
+static arena_t* make_tiny_dynamic_arena(size_t seed_bytes) {
+    // Small seed & no min_chunk; we want a tiny usable region to trigger ENOMEM on pool header alloc
+    return init_dynamic_arena(seed_bytes, /*resize=*/false, /*min_chunk_in=*/0, /*base_align_in=*/alignof(max_align_t));
+}
+// Helper: create a dynamic arena that cannot grow and leave only `leave_bytes` free.
+static arena_t* make_exhausted_dynamic_arena(size_t seed_bytes, size_t leave_bytes) {
+    // resize = false, min_chunk = 0, base_align = max_align_t
+    arena_t* a = init_dynamic_arena(seed_bytes, /*resize=*/false, /*min_chunk_in=*/0,
+                                    /*base_align_in=*/alignof(max_align_t));
+    assert_non_null(a);
+
+    // Consume all but `leave_bytes` from the current tail.
+    // Assumes you expose arena_remaining(...) and alloc_arena(...).
+    size_t rem = arena_remaining(a);
+    if (rem > leave_bytes) {
+        void* eaten = alloc_arena(a, rem - leave_bytes, /*zeroed=*/false);
+        assert_non_null(eaten);
+    }
+    return a;
+}
+
+// Optional small convenience to snapshot+restore errno around calls
+#define SAVE_ERRNO int saved_errno = errno
+#define RESTORE_ERRNO do { errno = saved_errno; } while(0)
+// ================================================================================ 
+// ================================================================================ 
+// TEST INIT WITH ARENA
+
+static void test_init_pool_invalid_args(void **state) {
+    (void)state;
+
+    errno = 0;
+    pool_t* p = init_pool_with_arena(NULL, /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/16, /*prewarm=*/false);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    errno = 0;
+    p = init_pool_with_arena(a, /*block_size=*/0, /*alignment=*/0, /*blocks_per_chunk=*/16, /*prewarm=*/false);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+
+    errno = 0;
+    p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/0, /*prewarm=*/false);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_pool_header_lives_in_arena(void **state) {
+    (void)state;
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/32, /*prewarm=*/false);
+    assert_non_null(p);
+
+    // The pool header was allocated from the arena; verify with your helper
+    assert_true(is_arena_ptr(a, (const void*)p));
+
+    // Basic invariants
+    assert_int_equal(pool_block_size(p), 64);
+    assert_true(pool_stride(p) >= 64);
+    assert_true(pool_stride(p) % alignof(void*) == 0);
+    assert_int_equal(pool_total_blocks(p), 0);
+    assert_int_equal(pool_free_blocks(p), 0);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_pool_alignment_and_stride_rules(void **state) {
+    (void)state;
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    // Tiny block size to force stride >= sizeof(void*)
+    pool_t* p = init_pool_with_arena(a, /*block_size=*/1, /*alignment=*/0, /*blocks_per_chunk=*/8, /*prewarm=*/false);
+    assert_non_null(p);
+
+    size_t stride = pool_stride(p);
+    assert_true(stride >= sizeof(void*));
+    assert_true(stride % alignof(void*) == 0);
+
+    // Stronger requested alignment should be honored
+    size_t req_align = 64;
+    pool_t* q = init_pool_with_arena(a, /*block_size=*/48, /*alignment=*/req_align, /*blocks_per_chunk=*/8, /*prewarm=*/false);
+    assert_non_null(q);
+
+    size_t qstride = pool_stride(q);
+    assert_true(qstride >= 48);
+    assert_true(qstride % req_align == 0);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_pool_prewarm_sets_blocks(void **state) {
+    (void)state;
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    const size_t blocks_per_chunk = 16;
+    pool_t* p = init_pool_with_arena(a, /*block_size=*/32, /*alignment=*/0, blocks_per_chunk, /*prewarm=*/true);
+    assert_non_null(p);
+
+    // After prewarm, the pool has made one chunk available
+    assert_int_equal(pool_total_blocks(p), blocks_per_chunk);
+    assert_int_equal(pool_free_blocks(p), 0);
+
+    // First allocations should succeed and come from the current slice (free_list still empty)
+    void* x = alloc_pool(p);
+    assert_non_null(x);
+    void* y = alloc_pool(p);
+    assert_non_null(y);
+
+    // Free one and ensure LIFO via intrusive list
+    return_pool_element(p, x);
+    assert_int_equal(pool_free_blocks(p), 1);
+    void* z = alloc_pool(p);
+    assert_ptr_equal(z, x);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_pool_fails_when_no_room_for_header(void **state) {
+    (void)state;
+
+    // Make a valid arena, but leave only a few bytes so the pool header can't fit.
+    arena_t* a = make_exhausted_dynamic_arena(4096, /*leave_bytes=*/8);
+    assert_non_null(a);
+    
+    errno = 0;
+    pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0,
+                                     /*blocks_per_chunk=*/8, /*prewarm=*/false);
+    
+    // Header allocation should fail because the arena cannot grow (resize=false)
+    assert_null(p);
+    assert_int_equal(errno, ENOMEM);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_reset_semantics(void **state) {
+    (void)state;
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/8, /*prewarm=*/true);
+    assert_non_null(p);
+
+    void* b0 = alloc_pool(p);
+    void* b1 = alloc_pool(p);
+    assert_non_null(b0);
+    assert_non_null(b1);
+
+    return_pool_element(p, b0);
+    assert_int_equal(pool_free_blocks(p), 1);
+
+    // Reset pool: clears its bookkeeping (free list, slice window, counters)
+    reset_pool(p);
+    assert_int_equal(pool_total_blocks(p), 0);
+    assert_int_equal(pool_free_blocks(p), 0);
+
+    // Alloc should still work after reset (pool will grow again)
+    void* b2 = alloc_pool(p);
+    assert_non_null(b2);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+const struct CMUnitTest test_pool[] = {
+    cmocka_unit_test(test_init_pool_invalid_args),
+    cmocka_unit_test(test_init_pool_header_lives_in_arena),
+    cmocka_unit_test(test_init_pool_alignment_and_stride_rules),
+    cmocka_unit_test(test_init_pool_prewarm_sets_blocks),
+    cmocka_unit_test(test_init_pool_fails_when_no_room_for_header ),
+    cmocka_unit_test(test_pool_reset_semantics),
+};
+
+const size_t test_pool_count = sizeof(test_pool) / sizeof(test_pool[0]);
 // ================================================================================
 // ================================================================================
 // eof

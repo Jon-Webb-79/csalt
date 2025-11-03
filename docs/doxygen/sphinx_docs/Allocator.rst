@@ -178,6 +178,12 @@ alloc_arena
 .. doxygenfunction:: alloc_arena
    :project: csalt
 
+alloc_arena_aligned
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: alloc_arena_aligned
+   :project: csalt
+
 Utility Funcitons 
 -----------------
 

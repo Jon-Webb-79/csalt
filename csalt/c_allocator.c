@@ -36,7 +36,7 @@ static const size_t k_max_chunk    = (size_t)1u << 24; /* 16 MiB: cap single chu
 // ================================================================================ 
 // DATA STRUCTURES 
 
-// 25 bytes
+// 32 bytes with padding
 typedef struct Chunk{
     uint8_t *chunk;     // Pointer to beginning of memory
     size_t len;         // Populated length of memory within struct in bytes
@@ -112,6 +112,9 @@ static bool _buf_appendf(char *buffer,
     *p_offset = offset + (size_t)n;
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline size_t max_size(size_t a, size_t b) { return a > b ? a : b; }
 // -------------------------------------------------------------------------------- 
 
 static inline size_t _align_up_size(size_t x, size_t a) {
@@ -453,6 +456,68 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed) {
     return NULL;
 #endif
 }
+// -------------------------------------------------------------------------------- 
+
+void* alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool zeroed) {
+    if (!arena || bytes == 0u) { errno = EINVAL; return NULL; }
+
+    // Choose effective alignment: at least the arena base alignment.
+    size_t a_req = (alignment ? alignment : arena->alignment);
+    // Must be power-of-two; clamp to arena base if smaller.
+    if (a_req == 0u || (a_req & (a_req - 1u)) != 0u) { errno = EINVAL; return NULL; }
+    size_t const a = (a_req < arena->alignment) ? arena->alignment : a_req;
+
+    Chunk* tail = arena->tail;
+    if (!tail) { errno = EINVAL; return NULL; }
+
+    // Pad current cursor up to 'a'
+    uintptr_t const cur  = (uintptr_t)arena->cur;
+    size_t    const pad  = _pad_up(cur, a);
+    size_t    const need = pad + bytes;
+
+    // Fast path: fits in current tail
+    size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0u;
+    if (avail >= need) {
+        uint8_t* p = (uint8_t*)(cur + pad);   // a-aligned
+        arena->cur  = p + bytes;
+        tail->len  += need;                   // charge pad + bytes
+        arena->len += need;
+        if (zeroed) memset(p, 0, bytes);
+        return p;
+    }
+
+#if ARENA_ENABLE_DYNAMIC
+    // No space -> grow only when allowed
+    if (arena->mem_type == STATIC || !arena->resize) { errno = EPERM; return NULL; }
+
+    // Ask for a new chunk whose data region is aligned to 'a'.
+    // For a fresh chunk, first allocation will have zero pad.
+    size_t const grow_data = _next_chunk_size(tail->alloc, /*need=*/bytes, /*align=*/a, arena->min_chunk);
+    Chunk* nc = _chunk_new_ex(grow_data, a);
+    if (!nc) return NULL; // helper sets errno
+
+    // Link new chunk
+    tail->next  = nc;
+    arena->tail = nc;
+
+    // Accounting: usable capacity (alloc) is nc->alloc; footprint adds aligned header + data.
+    arena->alloc     += nc->alloc;
+    arena->tot_alloc += _align_up_size(sizeof(Chunk), a) + nc->alloc;
+
+    // First allocation from fresh chunk: nc->chunk is already a-aligned.
+    void* p = (void*)nc->chunk;
+    arena->cur  = nc->chunk + bytes;
+    nc->len     = bytes;
+    arena->len += bytes;
+
+    if (zeroed) memset(p, 0, bytes);
+    return p;
+#else
+    errno = EPERM;
+    return NULL;
+#endif
+}
+
 // ================================================================================ 
 // ================================================================================ 
 // UTILITY FUNCTIONS
@@ -587,7 +652,6 @@ ArenaCheckPoint save_arena(const arena_t* arena) {
         errno = EINVAL;
         return pub;
     }
-    ArenaCheckPoint pub = {0};
     ArenaCheckPointRep rep = {0};
     if (arena) {
         rep.chunk = arena->tail;   // save tail chunk (point-in-time tail)
@@ -890,6 +954,222 @@ bool arena_stats(const arena_t *arena, char *buffer, size_t buffer_size) {
     }
 
     return true;
+}
+// ================================================================================ 
+// ================================================================================ 
+// POOL ALLOCATORS 
+
+#ifdef DEBUG
+typedef struct pool_slice {
+    uint8_t* start;
+    uint8_t* end;
+    struct pool_slice* next;
+} pool_slice_t;
+#endif
+
+struct pool_t {
+    arena_t* arena;          // backing store (owned or borrowed)
+    bool     owns_arena;
+
+    // Allocation geometry
+    size_t   block_size;     // user-visible block size
+    size_t   stride;         // block_size rounded up to alignment
+    size_t   blocks_per_chunk;
+
+    // Bump pointer for current chunk
+    uint8_t* cur;
+    uint8_t* end;
+
+    // Free-list head; points to a block whose first sizeof(void*) bytes store next
+    void*    free_list;
+
+    // (Optional) stats
+    size_t   total_blocks;
+    size_t   free_blocks;
+
+#ifdef DEBUG
+    pool_slice_t* slices;  // head of slice list
+#endif
+};
+// ================================================================================ 
+// ================================================================================ 
+// POOL STATIC FUNCTIONS 
+
+static bool pool_grow(pool_t* p) {
+    const size_t bytes = p->stride * p->blocks_per_chunk;
+    uint8_t* base = (uint8_t*)alloc_arena_aligned(p->arena, bytes, p->stride, false);
+    if (!base) { errno = ENOMEM; return false; }
+    p->cur = base;
+    p->end = base + bytes;
+    p->total_blocks += p->blocks_per_chunk;
+
+#ifdef DEBUG
+    // record this slice; allocate node from arena to avoid malloc
+    pool_slice_t* s = (pool_slice_t*)arena_alloc_aligned(p->arena, sizeof *s, alignof(pool_slice_t));
+    if (!s) { errno = ENOMEM; return false; } // extremely unlikely
+    s->start = base;
+    s->end   = base + bytes;
+    s->next  = p->slices;
+    p->slices = s;
+#endif
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline void* pool_pop_free(pool_t* p) {
+    void* blk = p->free_list;
+    if (blk) {
+        p->free_list = *(void**)blk;
+        p->free_blocks--;
+    }
+    return blk;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline void pool_push_free(pool_t* p, void* blk) {
+#ifdef DEBUG
+    // 1) Pointer must be inside arena’s used bytes
+    assert(is_arena_ptr_sized(p->arena, ptr, p->block_size));
+
+    // 2) Stride-aligned for this pool
+    assert(((uintptr_t)ptr % p->stride) == 0);
+
+    // 3) Belongs to one of *this pool’s* slices
+    bool in_pool = false;
+    for (pool_slice_t* s = p->slices; s; s = s->next) {
+        if ((uint8_t*)ptr >= s->start && (uint8_t*)ptr < s->end) { in_pool = true; break; }
+    }
+    assert(in_pool && "free(): pointer not from this pool");
+#endif
+
+    *(void**)blk = p->free_list;
+    p->free_list = blk;
+    p->free_blocks++;
+}
+// ================================================================================ 
+// ================================================================================ 
+// INITIALIZE AND DEALLOCATE FUNCTIONS 
+
+pool_t* init_pool_with_arena(arena_t* arena,
+                             size_t   block_size,
+                             size_t   alignment,
+                             size_t   blocks_per_chunk,
+                             bool     prewarm_one_chunk) {
+    if (!arena || block_size == 0 || blocks_per_chunk == 0) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Effective alignment must be at least alignof(void*) for the intrusive next*
+    size_t eff_align = alignment ? alignment : alignof(max_align_t);
+    // Round alignment to a power-of-two if your project requires; at minimum, clamp:
+    if (eff_align < alignof(void*)) eff_align = alignof(void*);
+
+    // Compute stride; ensure a freed block can hold a pointer
+    size_t stride = _align_up_size(block_size, eff_align);
+    if (stride < sizeof(void*)) stride = sizeof(void*);
+
+    // Allocate the pool header from the arena so there’s no external malloc
+    pool_t* p = (pool_t*)alloc_arena_aligned(arena, sizeof *p, alignof(pool_t), false);
+    if (!p) { errno = ENOMEM; return NULL; }
+
+    p->arena           = arena;
+    p->owns_arena      = false;
+    p->block_size      = block_size;
+    p->stride          = stride;
+    p->blocks_per_chunk= blocks_per_chunk;
+    p->cur             = NULL;
+    p->end             = NULL;
+    p->free_list       = NULL;
+    p->total_blocks    = 0;
+    p->free_blocks     = 0;
+
+    // Optional “prewarm” so the first allocation is O(1)
+    if (prewarm_one_chunk) {
+        if (!pool_grow(p)) return NULL; // errno set by pool_grow
+    }
+    return p;
+}
+// -------------------------------------------------------------------------------- 
+
+void* alloc_pool(pool_t* pool) {
+    if (!pool) { errno = EINVAL; return NULL; }
+
+    // 1) Reuse from free list if available
+    void* blk = pool_pop_free(pool);
+    if (blk) return blk;
+
+    // 2) Carve from the current slice; grow if necessary
+    if (pool->cur == pool->end) {
+        if (!pool_grow(pool)) return NULL; // errno set
+    }
+    blk  = pool->cur;
+    pool->cur += pool->stride;
+    return blk;
+}
+// -------------------------------------------------------------------------------- 
+
+void return_pool_element(pool_t* pool, void* ptr) {
+    if (!pool || !ptr) return;
+    pool_push_free(pool, ptr);
+}
+// -------------------------------------------------------------------------------- 
+
+void reset_pool(pool_t* pool) {
+    if (!pool) return;
+    pool->free_list = NULL;
+    pool->cur = pool->end = NULL;
+    pool->free_blocks = 0;
+    pool->total_blocks = 0;
+#ifdef DEBUG
+    pool->slices = NULL; // slice nodes live in arena; a later arena_reset reclaims them
+#endif
+}
+// -------------------------------------------------------------------------------- 
+
+void free_pool(pool_t* pool) {
+    if (!pool || !pool->owns_arena) {
+        errno = EINVAL;
+        return;
+    }
+    free_arena(pool->arena);
+}
+// -------------------------------------------------------------------------------- 
+
+size_t pool_block_size(pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return 0;
+    }
+    return pool->block_size;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t pool_stride(pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return 0;
+    }
+    return pool->stride;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t pool_total_blocks(pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return 0;
+    }
+    return pool->total_blocks;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t pool_free_blocks(pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return 0;
+    }
+    return pool->free_blocks;
 }
 // ================================================================================
 // ================================================================================

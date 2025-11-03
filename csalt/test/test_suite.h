@@ -53,6 +53,17 @@ extern const size_t test_arena_count;
  */
 extern const struct CMUnitTest test_error[];
 extern const size_t test_error_count;
+// ================================================================================ 
+// ================================================================================ 
+
+/**
+ * @brief Test suite for pool allocator functionality
+ * 
+ * Covers:
+ * - Test of pool initialization with an non owned arena
+ */
+extern const struct CMUnitTest test_pool[];
+extern const size_t test_pool_count;
 // ================================================================================
 // ================================================================================
 

@@ -59,7 +59,7 @@ extern "C" {
 // ================================================================================ 
 // DATA STRUCTURS 
 
-// Forward declarations for opaque data types
+// Forward declarations for opaque arena_t data type
 typedef struct arena_t arena_t;
 // -------------------------------------------------------------------------------- 
 
@@ -82,7 +82,6 @@ typedef struct {
 // ================================================================================ 
 // INITIALIZE AND DEALLOCATE FUNCTIONS
 
-#if ARENA_ENABLE_DYNAMIC
 /**
  * @brief Allocate a single-malloc growth Chunk with its data region aligned to @p data_align.
  *
@@ -158,7 +157,6 @@ typedef struct {
  * @endcode
  */
 arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t padding_in);
-#endif
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -523,6 +521,92 @@ void free_arena(arena_t* arena);
  * @endcode
  */
 void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Allocate a block from an arena with a caller-specified alignment.
+ *
+ * Performs a bump allocation from the arena’s current tail chunk, returning a
+ * pointer aligned to @p alignment. The effective alignment is the maximum of
+ * the requested @p alignment and the arena’s base alignment (see
+ * @c arena->alignment). If @p alignment is zero, the arena’s base alignment is
+ * used. The requested alignment must be a non-zero power-of-two (or zero to
+ * request the arena default).
+ *
+ * If there is insufficient space in the current tail chunk:
+ * - In **STATIC** arenas or when growth is disabled, the call fails.
+ * - In **DYNAMIC** arenas with growth enabled, a new chunk is allocated with
+ *   data naturally aligned to the effective alignment; the block is carved
+ *   from that fresh chunk with no leading pad.
+ *
+ * @param arena      Arena to allocate from (must be a valid pointer).
+ * @param bytes      Requested payload size in bytes (must be > 0).
+ * @param alignment  Desired alignment in bytes (0 => use arena->alignment).
+ *                   Must be a power-of-two if non-zero.
+ * @param zeroed     If @c true, the returned block is zero-initialized via
+ *                   @c memset; otherwise it is left uninitialized.
+ *
+ * @return Pointer to an @p alignment-aligned (or better) block of @p bytes on
+ *         success; @c NULL on failure with @c errno set.
+ *
+ * @retval NULL, errno=EINVAL
+ *      if @p arena is NULL, or @p bytes == 0, or @p alignment is non-zero and
+ *      not a power-of-two, or if the arena’s base alignment is zero or not a
+ *      power-of-two, or if the arena tail state is invalid.
+ * @retval NULL, errno=EPERM
+ *      if there is insufficient space in the current chunk and either the
+ *      arena is @c STATIC or growth is disabled (@c arena->resize == 0).
+ * @retval NULL, errno=ENOMEM
+ *      (dynamic builds only) if growth is allowed but allocating a new chunk
+ *      fails; propagated from the internal chunk initialization helper.
+ *
+ * @note The arena charges both the returned payload and any leading padding
+ *       required to reach the alignment. That is, the internal usage counters
+ *       (@c tail->len and @c arena->len) increase by @c pad + @p bytes where
+ *       @c pad ∈ [0, effective_alignment-1].
+ *
+ * @note On the first allocation from a freshly grown chunk, no leading padding
+ *       is required because the chunk’s data pointer is itself created aligned
+ *       to the effective alignment; the delta in remaining capacity equals
+ *       exactly @p bytes.
+ *
+ * @warning The returned pointer must not be freed with @c free(). Memory is
+ *          reclaimed only when the entire arena is reset via @c reset_arena()
+ *          or destroyed via @c free_arena() (for dynamic arenas).
+ *
+ * @pre  @p arena points to a properly initialized arena.
+ * @pre  @p alignment is zero (use arena default) or a non-zero power-of-two.
+ * @post On success:
+ *       - The returned pointer is aligned to @c max(alignment, arena->alignment).
+ *       - @c arena->cur advances by @p bytes (plus any pad in the prior chunk).
+ *       - @c tail->len and @c arena->len are updated to include pad+bytes.
+ *
+ * @sa   alloc_arena(), init_static_arena(), init_dynamic_arena(),
+ *       reset_arena(), free_arena()
+ *
+ * @par Example: Requesting a stricter alignment than the arena’s default
+ * @code
+ * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ *
+ * // Request 64-byte alignment for SIMD data
+ * void *p = alloc_arena_aligned(a, 128, 64, false);
+ * assert(((uintptr_t)p % 64) == 0);
+ *
+ * free_arena(a);
+ * @endcode
+ *
+ * @par Example: Falling back to arena base alignment
+ * @code
+ * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ *
+ * // Zero alignment means "use arena->alignment"
+ * void *p = alloc_arena_aligned(a, 64, 0, true);
+ * assert(((uintptr_t)p % alignof(max_align_t)) == 0);
+ *
+ * free_arena(a);
+ * @endcode
+ */
+void* alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool zeroed);
 // ================================================================================ 
 // ================================================================================ 
 // UTILITY FUNCTIONS 
@@ -1195,6 +1279,45 @@ bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
     #define arena_alloc_array_zeroed(arena, type, count) \
         (type*)alloc_arena((arena), sizeof(type) * (count), true)
 #endif
+// ================================================================================ 
+// ================================================================================ 
+// POOL ALLOCATOR 
+
+// Forward declarations for opaque pool_t data type
+typedef struct pool_t pool_t;
+// ================================================================================ 
+// ================================================================================ 
+// INITIALIZE AND DEALLOCATE FUNCTIONS
+
+pool_t* init_pool_with_arena(arena_t* arena,
+                             size_t   block_size,
+                             size_t   alignment,
+                             size_t   blocks_per_chunk,
+                             bool     prewarm_one_chunk);
+// -------------------------------------------------------------------------------- 
+
+void* alloc_pool(pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+void return_pool_element(pool_t* pool, void* ptr);
+// -------------------------------------------------------------------------------- 
+
+void reset_pool(pool_t* pool); 
+// -------------------------------------------------------------------------------- 
+
+void free_pool(pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+size_t pool_block_size(pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+size_t pool_stride(pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+size_t pool_total_blocks(pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+size_t pool_free_blocks(pool_t* pool);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
