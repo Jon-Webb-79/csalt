@@ -1120,7 +1120,9 @@ static void test_init_pool_invalid_args(void **state) {
     (void)state;
 
     errno = 0;
-    pool_t* p = init_pool_with_arena(NULL, /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/16, /*prewarm=*/false);
+    pool_t* p = init_pool_with_arena(NULL, /*block_size=*/64, /*alignment=*/0, 
+                                    /*blocks_per_chunk=*/16, /*prewarm=*/false,
+                                    /*enable reallocations*/ true);
     assert_null(p);
     assert_int_equal(errno, EINVAL);
 
@@ -1128,12 +1130,16 @@ static void test_init_pool_invalid_args(void **state) {
     assert_non_null(a);
 
     errno = 0;
-    p = init_pool_with_arena(a, /*block_size=*/0, /*alignment=*/0, /*blocks_per_chunk=*/16, /*prewarm=*/false);
+    p = init_pool_with_arena(a, /*block_size=*/0, /*alignment=*/0, 
+                            /*blocks_per_chunk=*/16, /*prewarm=*/false,
+                            /*enable reallocations*/ true);
     assert_null(p);
     assert_int_equal(errno, EINVAL);
 
     errno = 0;
-    p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/0, /*prewarm=*/false);
+    p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
+                             /*blocks_per_chunk=*/0, /*prewarm=*/false,
+                             /*enable reallocations*/ true);
     assert_null(p);
     assert_int_equal(errno, EINVAL);
 }
@@ -1145,7 +1151,9 @@ static void test_init_pool_header_lives_in_arena(void **state) {
     arena_t* a = make_dynamic_arena(1<<20);
     assert_non_null(a);
 
-    pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/32, /*prewarm=*/false);
+    pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
+                                    /*blocks_per_chunk=*/32, /*prewarm=*/false,
+                                    /*enable reallocations*/ true);
     assert_non_null(p);
 
     // The pool header was allocated from the arena; verify with your helper
@@ -1167,7 +1175,9 @@ static void test_init_pool_alignment_and_stride_rules(void **state) {
     assert_non_null(a);
 
     // Tiny block size to force stride >= sizeof(void*)
-    pool_t* p = init_pool_with_arena(a, /*block_size=*/1, /*alignment=*/0, /*blocks_per_chunk=*/8, /*prewarm=*/false);
+    pool_t* p = init_pool_with_arena(a, /*block_size=*/1, /*alignment=*/0, 
+                                     /*blocks_per_chunk=*/8, /*prewarm=*/false,
+                                     /*enable reallocations*/ true);
     assert_non_null(p);
 
     size_t stride = pool_stride(p);
@@ -1176,7 +1186,9 @@ static void test_init_pool_alignment_and_stride_rules(void **state) {
 
     // Stronger requested alignment should be honored
     size_t req_align = 64;
-    pool_t* q = init_pool_with_arena(a, /*block_size=*/48, /*alignment=*/req_align, /*blocks_per_chunk=*/8, /*prewarm=*/false);
+    pool_t* q = init_pool_with_arena(a, /*block_size=*/48, /*alignment=*/req_align, 
+                                     /*blocks_per_chunk=*/8, /*prewarm=*/false,
+                                     /*enable reallocations*/ true);
     assert_non_null(q);
 
     size_t qstride = pool_stride(q);
@@ -1192,7 +1204,9 @@ static void test_init_pool_prewarm_sets_blocks(void **state) {
     assert_non_null(a);
 
     const size_t blocks_per_chunk = 16;
-    pool_t* p = init_pool_with_arena(a, /*block_size=*/32, /*alignment=*/0, blocks_per_chunk, /*prewarm=*/true);
+    pool_t* p = init_pool_with_arena(a, /*block_size=*/32, /*alignment=*/0, 
+                                     blocks_per_chunk, /*prewarm=*/true,
+                                     /*enable reallocations*/ true);
     assert_non_null(p);
 
     // After prewarm, the pool has made one chunk available
@@ -1222,7 +1236,8 @@ static void test_init_pool_fails_when_no_room_for_header(void **state) {
     
     errno = 0;
     pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0,
-                                     /*blocks_per_chunk=*/8, /*prewarm=*/false);
+                                     /*blocks_per_chunk=*/8, /*prewarm=*/false,
+                                     /*enable reallocations*/ true);
     
     // Header allocation should fail because the arena cannot grow (resize=false)
     assert_null(p);
@@ -1236,7 +1251,9 @@ static void test_pool_reset_semantics(void **state) {
     arena_t* a = make_dynamic_arena(1<<20);
     assert_non_null(a);
 
-    pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/8, /*prewarm=*/true);
+    pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
+                                     /*blocks_per_chunk=*/8, /*prewarm=*/true,
+                                     /*enable reallocations*/ true);
     assert_non_null(p);
 
     void* b0 = alloc_pool(p);

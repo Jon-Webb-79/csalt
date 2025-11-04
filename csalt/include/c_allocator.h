@@ -1289,33 +1289,466 @@ typedef struct pool_t pool_t;
 // ================================================================================ 
 // INITIALIZE AND DEALLOCATE FUNCTIONS
 
+/**
+ * @brief Initialize a fixed-size memory pool backed by an existing arena.
+ *
+ * Creates a pool allocator that dispenses fixed-size blocks from @p arena.
+ * The pool performs bump allocation from arena slices, optionally reuses freed
+ * blocks via an intrusive free list, and can operate in fixed-capacity or 
+ * grow-on-demand mode.
+ *
+ * The pool header itself is allocated from the provided arena; there is no
+ * external @c malloc.
+ *
+ * @param arena             Existing arena to supply memory (must be valid).
+ * @param block_size        Requested user payload size in bytes (> 0).
+ * @param alignment         Desired block alignment (0 => arena default).
+ *                          Must be a power-of-two if nonzero. The effective
+ *                          alignment is @c max(alignment, alignof(void*)),
+ *                          ensuring freed blocks can store a next-pointer.
+ * @param blocks_per_chunk  Number of blocks to allocate per arena slice.
+ *                          Must be > 0.
+ * @param prewarm_one_chunk If @c true, the pool eagerly acquires one slice
+ *                          during initialization so the first allocation is O(1).
+ * @param grow_enabled      If @c true, the pool may request additional slices
+ *                          from the arena when exhausted; otherwise the pool
+ *                          has fixed capacity and further allocations fail once
+ *                          that capacity is consumed.
+ *
+ * @return
+ *   Pointer to a newly initialized pool object on success,
+ *   or @c NULL with @c errno set on failure.
+ *
+ * @retval NULL, errno=EINVAL
+ *      If @p arena is NULL, @p block_size == 0, @p blocks_per_chunk == 0,
+ *      or @p alignment is non-power-of-two.
+ * @retval NULL, errno=ENOMEM
+ *      If the pool header could not be allocated from @p arena.
+ * @retval NULL, errno=EPERM
+ *      If @p prewarm_one_chunk or a later grow request is attempted but the
+ *      arena cannot grow (STATIC arena or resize disabled).
+ *
+ * @note Freed blocks are returned to an intrusive free list and reused in LIFO
+ *       order. The caller must only return blocks obtained from this pool.
+ *
+ * @note Memory is reclaimed only when the underlying arena is reset or destroyed.
+ *       Individual blocks must not be freed with @c free().
+ *
+ * @pre  @p arena is initialized via @c init_static_arena or @c init_dynamic_arena.
+ * @post On success:
+ *       - The pool header resides inside @p arena.
+ *       - If @p prewarm_one_chunk is true, @c pool_total_blocks() equals
+ *         @p blocks_per_chunk.
+ *
+ * @sa alloc_pool(), return_pool_element(), reset_pool(), free_arena()
+ *
+ * @par Example: Fixed-capacity pool inside a static arena
+ * @code{.c}
+ * enum { BUF = 64 * 1024 };  // 64 KiB backing buffer
+ * void *buf = aligned_alloc(alignof(max_align_t), BUF);
+ * arena_t *a = init_static_arena(buf, BUF, alignof(max_align_t));
+ *
+ * // Each block holds 64 bytes, 128 blocks per slice, no arena growth allowed
+ * pool_t *p = init_pool_with_arena(a,
+ *                                  64,
+ *                                  0,
+ *                                  128,
+ *                                  true,
+ *                                  false);
+ * assert(p);
+ *
+ * void *x = alloc_pool(p);        // ok
+ * void *y = alloc_pool(p);        // ok
+ * return_pool_element(p, x);      // block reclaimed for reuse
+ *
+ * // After 128 successful allocs, subsequent calls fail with errno=EPERM:
+ * for (int i = 0; i < 128; ++i) assert(alloc_pool(p));
+ * assert(!alloc_pool(p) && errno == EPERM);
+ *
+ * reset_pool(p);   // pool bookkeeping reset (arena storage not reclaimed here)
+ * free(buf);       // static arena buffer was caller-owned
+ * @endcode
+ *
+ * @par Example: Grow-on-demand pool inside a dynamic arena
+ * @code
+ * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ *
+ * pool_t *p = init_pool_with_arena(a,
+ *                                  32,
+ *                                  16,
+ *                                  64,
+ *                                  false,
+ *                                  true);
+ *
+ * void *b = alloc_pool(p);   // first call triggers one chunk allocation
+ * return_pool_element(p, b); // returned to free list
+ *
+ * free_arena(a); // destroys pool header and all chunks
+ * @endcode
+ */
 pool_t* init_pool_with_arena(arena_t* arena,
                              size_t   block_size,
                              size_t   alignment,
                              size_t   blocks_per_chunk,
-                             bool     prewarm_one_chunk);
+                             bool     prewarm_one_chunk,
+                             bool     grow_enabled);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Allocate one fixed-size block from a pool.
+ *
+ * Obtains a block from the pool in O(1) time. If the pool has previously freed
+ * blocks, they are returned first via an intrusive free-list. Otherwise the
+ * allocation is carved from the current arena slice (bump pointer). If the
+ * current slice is exhausted and pool growth is enabled, a new slice is
+ * requested from the backing arena.
+ *
+ * The returned pointer is aligned to the pool’s effective alignment, and the
+ * block size is equal to @c pool->block_size bytes. The internal stride
+ * (possibly larger than @c block_size) ensures proper alignment and space for
+ * the free-list pointer on returned blocks.
+ *
+ * @param pool  Pool to allocate from (must be a valid pointer).
+ *
+ * @return Pointer to a block on success, or @c NULL on failure with @c errno set.
+ *
+ * @retval NULL, errno=EINVAL
+ *      If @p pool is @c NULL.
+ * @retval NULL, errno=EPERM
+ *      If the pool is exhausted and @c grow_enabled == false, or if the backing
+ *      arena is STATIC or otherwise cannot grow.
+ * @retval NULL, errno=ENOMEM
+ *      If growth is permitted but the underlying arena could not allocate a new
+ *      slice (propagated from @c alloc_arena_aligned).
+ *
+ * @note Returned pointers must be released with
+ *       @c return_pool_element(pool, ptr), not @c free().
+ *
+ * @note When @c grow_enabled == false and the pool becomes full, all subsequent
+ *       calls fail until @c reset_pool() is called.
+ *
+ * @pre  @p pool was initialized via @c init_pool_with_arena().
+ * @post On success:
+ *       - The returned pointer is suitably aligned and points to a block of
+ *         size @c pool->block_size bytes.
+ *       - If carved from the current slice, @c pool->cur advances by @c stride.
+ *       - If from the free-list, @c pool->free_blocks decreases by 1.
+ *
+ * @sa return_pool_element(), reset_pool(), init_pool_with_arena()
+ *
+ * @par Example
+ * @code{.c}
+ * arena_t* arena = init_dynamic_arena(8192, true, 8192, alignof(max_align_t));
+ *
+ * pool_t* pool = init_pool_with_arena(arena,
+ *                                     64,
+ *                                     0,
+ *                                     32,
+ *                                     true,
+ *                                     true);
+ *
+ * void* a = alloc_pool(pool);   // OK
+ * void* b = alloc_pool(pool);   // OK
+ *
+ * return_pool_element(pool, a); // returns 'a' to free-list
+ *
+ * void* c = alloc_pool(pool);   // likely returns 'a' again (LIFO reuse)
+ *
+ * free_arena(arena);            // releases pool header + all slices
+ * @endcode
+ */
 void* alloc_pool(pool_t* pool);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return a previously allocated block to the pool’s free list.
+ *
+ * Places @p ptr onto the pool’s intrusive LIFO free list in O(1) time.
+ * The block must have been obtained from the same @p pool via
+ * @c alloc_pool() and must not already be on the free list (no double free).
+ *
+ * In debug builds, the internal helper validates that @p ptr:
+ *  - lies within the backing arena’s used region,
+ *  - is aligned to the pool’s @c stride,
+ *  - belongs to one of this pool’s recorded slices.
+ * Failing any of these conditions triggers an assertion.
+ *
+ * @param pool  Target pool (may be NULL; treated as a no-op).
+ * @param ptr   Pointer previously returned by @c alloc_pool() (may be NULL; no-op).
+ *
+ * @return void
+ *
+ * @note This function does not set @c errno and never allocates.
+ * @note The free list is *intrusive*: the first @c sizeof(void*) bytes of a
+ *       freed block are repurposed to store the next pointer until reallocated.
+ *
+ * @warning Passing a pointer not obtained from this pool, a pointer belonging
+ *          to another pool, or double-freeing a block is undefined behavior in
+ *          release builds and will corrupt the free list. Debug builds attempt
+ *          to catch these errors via assertions.
+ *
+ * @pre  @p pool was initialized via @c init_pool_with_arena().
+ * @pre  @p ptr is either NULL or a live block from @p pool.
+ * @post The block is available for immediate reuse by @c alloc_pool() and
+ *       will typically be the next block returned (LIFO behavior).
+ *
+ * @sa alloc_pool(), reset_pool(), init_pool_with_arena()
+ *
+ * @par Example
+ * @code{.c}
+ * arena_t* a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * pool_t*  p = init_pool_with_arena(a, 64, 0, 32, true, true);
+ *
+ * void* x = alloc_pool(p);
+ * void* y = alloc_pool(p);
+ *
+ * return_pool_element(p, x);      // x goes to the head of the free list
+ * void* z = alloc_pool(p);        // z == x (LIFO reuse)
+ *
+ * free_arena(a); // destroys all pool memory
+ * @endcode
+ */
 void return_pool_element(pool_t* pool, void* ptr);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Reset a pool to its initial empty state without releasing arena memory.
+ *
+ * Clears the pool’s internal bookkeeping — including its free list, bump
+ * pointer state, and block counters — effectively returning the pool to a
+ * freshly-initialized state *without reclaiming any memory from the underlying
+ * arena*. The arena-owned slices previously used by the pool remain reserved
+ * until the arena is reset or destroyed.
+ *
+ * After @c reset_pool(), subsequent calls to @c alloc_pool() behave as if no
+ * blocks have been allocated yet: if the pool was prewarmed or previously
+ * grew, the first allocation after reset will trigger growth again unless the
+ * initial slice is still present and @c cur!=end.
+ *
+ * In debug builds, per-slice debug metadata is cleared; the slice headers
+ * themselves remain in arena memory and will be reclaimed if and when the
+ * arena is reset or freed.
+ *
+ * @param pool  Pool to reset (may be @c NULL; treated as a no-op).
+ *
+ * @note This does not free or reuse arena storage. It only resets the pool’s
+ *       bookkeeping. Call @c reset_arena() or @c free_arena() to reclaim
+ *       memory globally.
+ *
+ * @warning Any outstanding blocks obtained from @c alloc_pool() become invalid
+ *          after @c reset_pool(). Using them after reset is undefined behavior.
+ *
+ * @post
+ *   - @c pool_free_blocks(pool) == 0
+ *   - @c pool_total_blocks(pool) == 0
+ *   - Free list is empty
+ *   - Bump state is cleared (@c cur == @c end == NULL)
+ *
+ * @sa alloc_pool(), return_pool_element(), init_pool_with_arena(),
+ *     reset_arena(), free_arena()
+ *
+ * @par Example
+ * @code{.c}
+ * arena_t* a = init_dynamic_arena(16 * 1024, true, 4096, alignof(max_align_t));
+ * pool_t*  p = init_pool_with_arena(a,
+ *                                   64,
+ *                                   0,
+ *                                   64,
+ *                                   true,
+ *                                   true);
+ *
+ * void* x = alloc_pool(p);
+ * void* y = alloc_pool(p);
+ *
+ * return_pool_element(p, x);
+ * assert(pool_free_blocks(p) == 1);
+ *
+ * reset_pool(p);   // invalidate x, y, and all other outstanding blocks
+ *
+ * assert(pool_free_blocks(p) == 0);
+ * assert(pool_total_blocks(p) == 0);
+ *
+ * void* z = alloc_pool(p);  // triggers a fresh slice allocation if needed
+ *
+ * free_arena(a); // pool header + slices reclaimed
+ * @endcode
+ */
 void reset_pool(pool_t* pool); 
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Destroy a pool and release its resources.
+ *
+ * Frees the memory associated with a pool allocator. If the pool owns its
+ * backing arena (created via a convenience constructor that allocates the
+ * arena), then this function will call @c free_arena() and all memory for the
+ * pool and its slices is reclaimed.
+ *
+ * If the pool does *not* own the arena (i.e., the arena was supplied by the
+ * caller), the pool object is invalidated but the arena is left untouched.
+ * This allows a pool to be used as a transient allocator layered on top of a
+ * longer-lived arena.
+ *
+ * After calling @c free_pool(), the @p pool pointer must not be used again.
+ *
+ * @param pool  Pool to destroy (may be @c NULL, treated as no-op).
+ *
+ * @note This function never sets @c errno.
+ *
+ * @warning Outstanding allocations obtained from @c alloc_pool() become invalid
+ *          after @c free_pool(). Accessing them is undefined behavior.
+ *
+ * @warning When a pool does not own its arena, this function does *not*
+ *          return arena memory to the system. Use @c reset_pool() to reuse the
+ *          arena space, or @c reset_arena() / @c free_arena() when the arena
+ *          itself should be reclaimed.
+ *
+ * @pre  @p pool was initialized via @c init_pool_with_arena() or a
+ *       pool creation helper.
+ * @post If @c pool->owns_arena == true, its arena and slices are freed.
+ * @post If @c pool->owns_arena == false, pool metadata is invalidated but the
+ *       arena remains usable for other allocators.
+ *
+ * @sa init_pool_with_arena(), alloc_pool(), return_pool_element(),
+ *     reset_pool(), reset_arena(), free_arena()
+ *
+ * @par Example: Borrowed arena
+ * @code{.c}
+ * arena_t* a = init_dynamic_arena(8192, true, 4096, alignof(max_align_t));
+ * pool_t*  p = init_pool_with_arena(a, 64, 0, 32, false, false);
+ *
+ * void* x = alloc_pool(p);
+ * return_pool_element(p, x);
+ *
+ * free_pool(p);    // pool invalid, arena 'a' still valid
+ *
+ * void* y = alloc_arena(a, 128, false);  // still works
+ * free_arena(a);
+ * @endcode
+ *
+ * @par Example: Pool owns arena
+ * @code
+ * pool_t* p = init_pool_dynamic(8192,
+ *                               64,
+ *                               0,
+ *                               32,
+ *                               true);
+ *
+ * void* x = alloc_pool(p);
+ *
+ * free_pool(p);   // frees arena and pool header
+ * // p is now invalid
+ * @endcode
+ */
 void free_pool(pool_t* pool);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the user-visible block size for a pool.
+ *
+ * Reports the size in bytes of the usable payload of each block returned by
+ * @c alloc_pool(). This is the value originally passed as @c block_size to
+ * @c init_pool_with_arena().
+ *
+ * Note that the actual internal footprint of each block may be larger than
+ * @c block_size due to alignment and intrusive free-list requirements; see
+ * @c pool_stride() for the full internal size.
+ *
+ * @param pool  Pool to query (must be non-NULL).
+ *
+ * @return The payload size in bytes, or @c 0 if @p pool is @c NULL (and
+ *         @c errno is set to @c EINVAL).
+ *
+ * @sa pool_stride(), alloc_pool(), return_pool_element(),
+ *     init_pool_with_arena(), pool_total_blocks(), pool_free_blocks()
+ *
+ * @par Example
+ * @code{.c}
+ * size_t user_size = pool_block_size(p);
+ * printf("Pool block payload size: %zu bytes\n", user_size);
+ * @endcode
+ */
 size_t pool_block_size(pool_t* pool);
 // -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Obtain the stride (internal block size) of a pool.
+ *
+ * Returns the number of bytes consumed by each allocation made from the pool,
+ * including any padding required to satisfy the pool’s alignment guarantee and
+ * to hold the intrusive next-pointer when blocks are returned to the free list.
+ * This value may be larger than the user-requested @c block_size.
+ *
+ * @param pool  Pool to query (must be non-NULL).
+ *
+ * @return The stride in bytes, or @c 0 if @p pool is @c NULL (and @c errno is
+ *         set to @c EINVAL).
+ *
+ * @note The stride is @c max(block_size, sizeof(void*)), rounded up to the
+ *       pool’s effective alignment.
+ *
+ * @sa init_pool_with_arena(), alloc_pool(), return_pool_element(),
+ *     pool_total_blocks(), pool_free_blocks()
+ *
+ * @par Example
+ * @code{.c}
+ * size_t stride = pool_stride(p);
+ * printf("Each pool block consumes %zu bytes\n", stride);
+ * @endcode
+ */
 
 size_t pool_stride(pool_t* pool);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the total number of blocks ever made available by the pool.
+ *
+ * Counts all blocks that have been provisioned from arena slices, regardless of
+ * whether they are currently allocated or returned to the free list. This value
+ * increases when the pool prewarms or grows, and is reset to zero by
+ * @c reset_pool().
+ *
+ * @param pool  Pool to query (must be non-NULL).
+ *
+ * @return Total number of blocks the pool has made available, or @c 0 if
+ *         @p pool is @c NULL (and @c errno is set to @c EINVAL).
+ *
+ * @note This does not necessarily equal the number of currently usable blocks
+ *       if @c reset_pool() was called without resetting the backing arena.
+ *
+ * @sa alloc_pool(), return_pool_element(), reset_pool(),
+ *     pool_free_blocks(), pool_stride()
+ *
+ * @par Example
+ * @code{.c}
+ * printf("Blocks created so far: %zu\n", pool_total_blocks(p));
+ * @endcode
+ */
+
 size_t pool_total_blocks(pool_t* pool);
 // -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the number of blocks currently available for reuse.
+ *
+ * Counts the number of blocks on the pool’s intrusive free list. Each call to
+ * @c return_pool_element() increments this value, and each call to
+ * @c alloc_pool() that reuses a freed block decrements it. This counter is
+ * reset to zero by @c reset_pool().
+ *
+ * @param pool  Pool to query (must be non-NULL).
+ *
+ * @return Number of free blocks, or @c 0 if @p pool is @c NULL (and @c errno is
+ *         set to @c EINVAL).
+ *
+ * @sa alloc_pool(), return_pool_element(), reset_pool(),
+ *     pool_total_blocks(), pool_stride()
+ *
+ * @par Example
+ * @code{.c}
+ * printf("Currently free blocks: %zu\n", pool_free_blocks(p));
+ * @endcode
+ */
 
 size_t pool_free_blocks(pool_t* pool);
 // ================================================================================ 

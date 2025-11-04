@@ -315,12 +315,98 @@ Pool Allocator
 
 Data Types 
 ----------
+The following data types are used in the implementation of the ``pool_t``
+data type.
+
+pool_t 
+~~~~~~~
+``pool_t`` is an opaque data structure that can not be directly accessed by a user.
+This structure contains all of the metadata associated with a pool allocator in 
+additon, this structure also contains a pointer to the ``arena_t`` structures 
+which contain all memory allocations.  Metadata within this struct can be accessed 
+through getter functions.
+
+.. code-block:: c
+
+   struct pool_t {
+       arena_t* arena;          // Backing arena supplying memory (owned or borrowed)
+       bool     owns_arena;     // true if this pool allocated and must destroy the arena
+       size_t   block_size;     // User-requested block payload size (bytes)
+       size_t   stride;         // Actual block size = block_size rounded up to required alignment
+       size_t   blocks_per_chunk; // Number of blocks to allocate in each arena slice (growth granularity)
+       uint8_t* cur;            // Pointer to next free byte in current arena slice (bump pointer)
+       uint8_t* end;            // End of current arena slice (cur == end means next grow needed)
+       void*    free_list;      // Head of intrusive free list (pointer stored in first word of freed blocks)
+       size_t   total_blocks;   // Total number of blocks ever made available to this pool (including freed)
+       size_t   free_blocks;    // Number of blocks currently in free_list (available to reuse)
+       bool     grow_enabled;   // If false, pool cannot request new slices from arena (fixed-size mode)
+   #ifdef DEBUG
+       pool_slice_t* slices;    // Linked list of all memory slices obtained from arena (for debug verification)
+   #endif
+   };
 
 Initialization and Memory Management 
 ------------------------------------
+The following functions can be used to initialize a pool allocator 
+
+init_pool_with_arena 
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_pool_with_arena
+   :project: csalt
+
+alloc_pool 
+~~~~~~~~~~
+
+.. doxygenfunction:: alloc_pool
+   :project: csalt
+
+return_pool_element 
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: return_pool_element
+   :project: csalt
+
+reset_pool 
+~~~~~~~~~~
+
+.. doxygenfunction:: reset_pool
+   :project: csalt
+
+free_pool 
+~~~~~~~~~
+
+.. doxygenfunction:: free_pool
+   :project: csalt
 
 Gett and Setter Functions 
 -------------------------
+The following functions can be used to access attributes of the 
+``pool_t`` data structure.
+
+pool_block_size 
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_block_size
+   :project: csalt
+
+pool_stride
+~~~~~~~~~~~
+
+.. doxygenfunction:: pool_stride
+   :project: csalt
+
+pool_total_blocks 
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_total_blocks
+   :project: csalt
+
+pool_free_blocks 
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_free_blocks
+   :project: csalt
 
 Function Like Macros 
 --------------------

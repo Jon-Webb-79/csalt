@@ -968,27 +968,19 @@ typedef struct pool_slice {
 #endif
 
 struct pool_t {
-    arena_t* arena;          // backing store (owned or borrowed)
-    bool     owns_arena;
-
-    // Allocation geometry
-    size_t   block_size;     // user-visible block size
-    size_t   stride;         // block_size rounded up to alignment
-    size_t   blocks_per_chunk;
-
-    // Bump pointer for current chunk
-    uint8_t* cur;
-    uint8_t* end;
-
-    // Free-list head; points to a block whose first sizeof(void*) bytes store next
-    void*    free_list;
-
-    // (Optional) stats
-    size_t   total_blocks;
-    size_t   free_blocks;
-
+    arena_t* arena;          // Backing arena supplying memory (owned or borrowed)
+    bool     owns_arena;     // true if this pool allocated and must destroy the arena
+    size_t   block_size;     // User-requested block payload size (bytes)
+    size_t   stride;         // Actual block size = block_size rounded up to required alignment
+    size_t   blocks_per_chunk; // Number of blocks to allocate in each arena slice (growth granularity)
+    uint8_t* cur;            // Pointer to next free byte in current arena slice (bump pointer)
+    uint8_t* end;            // End of current arena slice (cur == end means next grow needed)
+    void*    free_list;      // Head of intrusive free list (pointer stored in first word of freed blocks)
+    size_t   total_blocks;   // Total number of blocks ever made available to this pool (including freed)
+    size_t   free_blocks;    // Number of blocks currently in free_list (available to reuse)
+    bool     grow_enabled;   // If false, pool cannot request new slices from arena (fixed-size mode)
 #ifdef DEBUG
-    pool_slice_t* slices;  // head of slice list
+    pool_slice_t* slices;    // Linked list of all memory slices obtained from arena (for debug verification)
 #endif
 };
 // ================================================================================ 
@@ -996,6 +988,7 @@ struct pool_t {
 // POOL STATIC FUNCTIONS 
 
 static bool pool_grow(pool_t* p) {
+    if (!p->grow_enabled) { errno = EPERM; return false; }
     const size_t bytes = p->stride * p->blocks_per_chunk;
     uint8_t* base = (uint8_t*)alloc_arena_aligned(p->arena, bytes, p->stride, false);
     if (!base) { errno = ENOMEM; return false; }
@@ -1029,20 +1022,14 @@ static inline void* pool_pop_free(pool_t* p) {
 
 static inline void pool_push_free(pool_t* p, void* blk) {
 #ifdef DEBUG
-    // 1) Pointer must be inside arena’s used bytes
-    assert(is_arena_ptr_sized(p->arena, ptr, p->block_size));
-
-    // 2) Stride-aligned for this pool
-    assert(((uintptr_t)ptr % p->stride) == 0);
-
-    // 3) Belongs to one of *this pool’s* slices
+    assert(is_arena_ptr_sized(p->arena, blk, p->block_size));
+    assert(((uintptr_t)blk % p->stride) == 0);
     bool in_pool = false;
     for (pool_slice_t* s = p->slices; s; s = s->next) {
-        if ((uint8_t*)ptr >= s->start && (uint8_t*)ptr < s->end) { in_pool = true; break; }
+        if ((uint8_t*)blk >= s->start && (uint8_t*)blk < s->end) { in_pool = true; break; }
     }
     assert(in_pool && "free(): pointer not from this pool");
 #endif
-
     *(void**)blk = p->free_list;
     p->free_list = blk;
     p->free_blocks++;
@@ -1055,7 +1042,8 @@ pool_t* init_pool_with_arena(arena_t* arena,
                              size_t   block_size,
                              size_t   alignment,
                              size_t   blocks_per_chunk,
-                             bool     prewarm_one_chunk) {
+                             bool     prewarm_one_chunk,
+                             bool     grow_enabled) {
     if (!arena || block_size == 0 || blocks_per_chunk == 0) {
         errno = EINVAL;
         return NULL;
@@ -1085,6 +1073,7 @@ pool_t* init_pool_with_arena(arena_t* arena,
     p->total_blocks    = 0;
     p->free_blocks     = 0;
 
+    p->grow_enabled    = grow_enabled;
     // Optional “prewarm” so the first allocation is O(1)
     if (prewarm_one_chunk) {
         if (!pool_grow(p)) return NULL; // errno set by pool_grow
@@ -1129,11 +1118,27 @@ void reset_pool(pool_t* pool) {
 // -------------------------------------------------------------------------------- 
 
 void free_pool(pool_t* pool) {
-    if (!pool || !pool->owns_arena) {
-        errno = EINVAL;
+    if (!pool) return;
+
+    if (pool->owns_arena) {
+        // The pool header lives inside the arena; free_arena will release it
+        free_arena(pool->arena);
         return;
     }
-    free_arena(pool->arena);
+
+    // Borrowed arena case: pool header is inside arena memory,
+    // so we cannot free it directly — we only null it out so
+    // accidental reuse fails loudly.
+    pool->arena = NULL;
+    pool->cur   = NULL;
+    pool->end   = NULL;
+    pool->free_list = NULL;
+    pool->total_blocks = 0;
+    pool->free_blocks  = 0;
+
+#ifdef DEBUG
+    pool->slices = NULL;
+#endif
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1145,7 +1150,6 @@ size_t pool_block_size(pool_t* pool) {
     return pool->block_size;
 }
 // -------------------------------------------------------------------------------- 
-
 size_t pool_stride(pool_t* pool) {
     if (!pool) {
         errno = EINVAL;
