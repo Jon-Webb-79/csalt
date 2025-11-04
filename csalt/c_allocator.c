@@ -1074,11 +1074,116 @@ pool_t* init_pool_with_arena(arena_t* arena,
     p->free_blocks     = 0;
 
     p->grow_enabled    = grow_enabled;
+
+#ifdef DEBUG
+    p->slices           = NULL;
+#endif
     // Optional “prewarm” so the first allocation is O(1)
     if (prewarm_one_chunk) {
         if (!pool_grow(p)) return NULL; // errno set by pool_grow
     }
     return p;
+}
+// -------------------------------------------------------------------------------- 
+
+pool_t* init_dynamic_pool(size_t block_size,
+                          size_t alignment,
+                          size_t blocks_per_chunk,
+                          size_t arena_seed_bytes,
+                          size_t min_chunk_bytes,
+                          bool   grow_enabled,
+                          bool   prewarm_one_chunk) {
+#if !ARENA_ENABLE_DYNAMIC
+    errno = ENOTSUP;
+    return NULL;
+#else
+    // -------- argument validation
+    if (block_size == 0 || blocks_per_chunk == 0 || arena_seed_bytes == 0) {
+        errno = EINVAL; return NULL;
+    }
+
+    // -------- compute effective alignment and stride
+    // Pool/block alignment: at least alignof(void*) so a freed block can store next*
+    size_t eff_align = alignment ? alignment : alignof(max_align_t);
+    // If you require power-of-two strictly, normalize here with your helper:
+    // if (!_is_pow2(eff_align)) eff_align = _next_pow2(eff_align);
+    if (eff_align < alignof(void*)) eff_align = alignof(void*);
+
+    size_t stride = _align_up_size(block_size, eff_align);
+    if (stride < sizeof(void*)) stride = sizeof(void*);
+
+    // Overflow guard: bytes = stride * blocks_per_chunk
+    if (blocks_per_chunk > SIZE_MAX / stride) {
+        errno = EOVERFLOW; return NULL;
+    }
+    const size_t slice_bytes = stride * blocks_per_chunk;
+
+    // Arena base alignment should never be less than max_align_t
+    size_t arena_base_align = eff_align;
+    if (arena_base_align < alignof(max_align_t)) arena_base_align = alignof(max_align_t);
+
+    // -------- create the owned arena
+    arena_t* arena = init_dynamic_arena(/*bytes=*/arena_seed_bytes,
+                                        /*resize=*/grow_enabled,
+                                        /*min_chunk_in=*/min_chunk_bytes,
+                                        /*base_align_in=*/arena_base_align);
+    if (!arena) {
+        // errno set by init_dynamic_arena
+        return NULL;
+    }
+
+    // -------- allocate pool header inside arena (no external malloc)
+    pool_t* p = (pool_t*)alloc_arena_aligned(arena, sizeof *p, alignof(pool_t), /*zeroed=*/false);
+    if (!p) {
+        // Not enough room even for header in the seed -> bail
+        free_arena(arena);
+        // errno already set by alloc_arena_aligned (ENOMEM/EPERM)
+        return NULL;
+    }
+
+    // -------- initialize pool fields
+    p->arena            = arena;
+    p->owns_arena       = true;
+    p->block_size       = block_size;
+    p->stride           = stride;
+    p->blocks_per_chunk = blocks_per_chunk;
+    p->cur = p->end     = NULL;
+    p->free_list        = NULL;
+    p->total_blocks     = 0;
+    p->free_blocks      = 0;
+    p->grow_enabled     = grow_enabled;
+#ifdef DEBUG
+    p->slices           = NULL;
+#endif
+
+    // -------- prewarm behavior
+    // Prewarm means: carve the first slice NOW, regardless of grow policy.
+    if (prewarm_one_chunk) {
+        uint8_t* base = (uint8_t*)alloc_arena_aligned(arena, slice_bytes, stride, /*zeroed=*/false);
+        if (!base) {
+            // If prewarm was requested and cannot be satisfied, fail early.
+            free_arena(arena);
+            // errno already set (ENOMEM for out-of-space; EPERM if arena cannot grow)
+            return NULL;
+        }
+
+        p->cur = base;
+        p->end = base + slice_bytes;
+        p->total_blocks += blocks_per_chunk;
+
+#ifdef DEBUG
+        // Track slice for debug-time ownership checks
+        pool_slice_t* s = (pool_slice_t*)alloc_arena_aligned(arena, sizeof *s, alignof(pool_slice_t), false);
+        if (s) { s->start = base; s->end = base + slice_bytes; s->next = p->slices; p->slices = s; }
+#endif
+    } else {
+        // If growth is disabled and we did not prewarm, the pool starts empty.
+        // First alloc will fail with EPERM by design; document this in the header.
+        // (You could enforce prewarm when !grow_enabled by returning EINVAL here instead.)
+    }
+
+    return p;
+#endif // ARENA_ENABLE_DYNAMIC
 }
 // -------------------------------------------------------------------------------- 
 

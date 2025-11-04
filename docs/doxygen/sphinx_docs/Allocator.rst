@@ -355,6 +355,12 @@ init_pool_with_arena
 .. doxygenfunction:: init_pool_with_arena
    :project: csalt
 
+init_dynamic_pool
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_dynamic_pool
+   :project: csalt
+
 alloc_pool 
 ~~~~~~~~~~
 

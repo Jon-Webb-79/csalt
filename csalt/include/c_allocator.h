@@ -83,80 +83,79 @@ typedef struct {
 // INITIALIZE AND DEALLOCATE FUNCTIONS
 
 /**
- * @brief Allocate a single-malloc growth Chunk with its data region aligned to @p data_align.
+ * @brief Initialize a dynamically growing arena allocator.
  *
- * This **internal** helper allocates one contiguous block laid out as:
+ * Allocates an arena that obtains its initial storage via @c malloc() and, if
+ * permitted by @p resize, may grow by allocating new chunks on demand. The
+ * arena header, first chunk header, and initial data region are all placed
+ * contiguously in the first allocation. Additional chunks (if growth is
+ * enabled) are allocated separately and linked into the arena.
  *
- *     [ struct Chunk header | padding (0..data_align-1) | data_bytes ]
+ * @param bytes          Requested initial total size in bytes. This is the
+ *                       minimum storage footprint to allocate. If @p bytes is
+ *                       smaller than @p min_chunk_in (when non-zero), the
+ *                       larger value is used instead.
+ * @param resize         Whether the arena may grow when out of space.
+ *                       If @c false, the arena behaves like a static arena that
+ *                       simply lives in heap memory.
+ * @param min_chunk_in   Minimum data chunk size to allocate on growth
+ *                       (0 allowed). If non-zero and not a power-of-two, it is
+ *                       rounded up to the next power-of-two. When growing, the
+ *                       arena will allocate at least this many bytes.
+ * @param base_align_in  Required minimum base alignment for all allocations
+ *                       within the arena (0 => use @c alignof(max_align_t)).
+ *                       Rounded up to the next power-of-two if needed and
+ *                       never less than @c alignof(max_align_t).
  *
- * The returned pointer is the base of the allocation (@c struct Chunk*). The
- * @c chunk->chunk member points to the aligned start of the data region and is
- * guaranteed to satisfy @p data_align (power-of-two). The usable data capacity
- * is exactly @p data_bytes (not including header or pad).
- *
- * @param data_bytes  Usable data capacity for this chunk (must be > 0).
- * @param data_align  Alignment for the chunk's data region; must be a nonzero power-of-two.
- *
- * @return Pointer to a newly allocated @c struct Chunk on success; @c NULL on failure
+ * @return Pointer to a new dynamic arena on success, or @c NULL on failure
  *         with @c errno set.
  *
  * @retval NULL, errno=EINVAL
- *      if @p data_bytes == 0, or @p data_align == 0, or @p data_align is not
- *      a power-of-two, or if the computed total size would overflow @c size_t.
+ *      If @p bytes is too small to contain the arena header and first chunk
+ *      header, if @p base_align_in or @p min_chunk_in has an invalid value that
+ *      cannot be normalized, or alignment calculations fail.
  * @retval NULL, errno=ENOMEM
- *      if the underlying allocation fails.
+ *      If memory allocation fails or arithmetic overflow is detected during
+ *      pointer computations.
+ * @retval NULL, errno=ENOTSUP
+ *      If dynamic arenas are disabled at compile time
+ *      (@c ARENA_ENABLE_DYNAMIC == 0).
  *
- * **ERRORS:**
- * Sets @c errno to EINVAL or ENOMEM as described above.
+ * @note The returned arena’s first chunk is fully initialized and ready for
+ *       allocation via @c alloc_arena() or @c alloc_arena_aligned().
  *
- * @note  **Total footprint (growth chunks)** allocated by this function is:
- *        @c sizeof(struct Chunk) + (data_align - 1) + data_bytes,
- *        where the @c (data_align - 1) term accounts for worst-case padding
- *        to reach an aligned data base.
+ * @note The initial data region begins at an address aligned to
+ *       @c max(base_align_in, alignof(max_align_t)).
  *
- * @note  **Initial base allocation** (performed by @c init_dynamic_arena) is
- *        different: it places @c Arena + first @c Chunk + pad + data in a single
- *        block. That base footprint is approximately:
- *        @c sizeof(Arena) + sizeof(struct Chunk) + (base_align - 1) + first_data_bytes.
- *        Subsequent growth uses @_chunk_new_ex() and therefore does **not**
- *        include an @c Arena header in its footprint.
+ * @warning The returned arena must be released with @c free_arena(). Individual
+ *          allocations from the arena must not be freed with @c free().
  *
- * @note  if compiled with the DSTATIC_ONLY flag this function will return NULL and set the 
- *        errno = ENOTSUP flag
+ * @pre  @c ARENA_ENABLE_DYNAMIC must be enabled.
+ * @post @c arena->mem_type == DYNAMIC and @c arena->resize == (resize ? 1 : 0).
+ * @post @c arena->head == arena->tail and @c arena->cur begins at the start of
+ *       the aligned initial data region.
  *
- * @warning This is an internal function. Callers must never free individual
- *          chunks or @c chunk->chunk. Use the public API @c free_arena() to
- *          release the entire Arena and all of its chunks. Internally, the owner
- *          of the chunk header is freed with @c free(ch).
+ * @sa init_static_arena(), free_arena(), alloc_arena(), alloc_arena_aligned(),
+ *     reset_arena(), arena_remaining()
  *
- * @pre ARENA_ENABLE_DYNAMIC == 1.
- * @pre @p data_align is a nonzero power-of-two.
- * @post On success: @c ch->chunk is @p data_align-aligned, @c ch->alloc == @p data_bytes,
- *       @c ch->len == 0, @c ch->next == NULL.
+ * @par Example
+ * @code{.c}
+ * // Create a dynamic arena with 4 KiB initial storage,
+ * // allow future growth, minimum chunk of 4 KiB, default alignment.
+ * arena_t* a = init_dynamic_arena(4096,        // initial bytes
+ *                                 true,        // resize enabled
+ *                                 4096,        // minimum chunk size for growth
+ *                                 alignof(max_align_t));
  *
- * @sa alloc_arena(), free_arena(), init_static_arena()
+ * void* p = alloc_arena(a, 128, true);   // allocate 128 zeroed bytes
+ * assert(p != NULL);
  *
- * @par Example: User code (dynamic build) that triggers growth
- * @code
- * // Dynamic build:
- * Arena* a = init_dynamic_arena(4096,true,4096, alignof(max_align_t));
- * void* p1 = alloc_arena(a, 4000, false);   // ok in first (head) chunk
- * void* p2 = alloc_arena(a, 2000, false);   // not enough space -> growth
- *                                           // internally calls: _chunk_new_ex(need, alignment)
- * // ...
- * free_arena(a);                            // frees base + all growth chunks
- * @endcode
+ * // ... use arena allocations ...
  *
- * @par Example: Build with a 2 page minimum chunk allocation (8192 bytes)
- * Arena* a = init_dynamic_arena(4096,true, 8192, alignof(max_align_t));
- * void* p1 = alloc_arena(a, 4000, false);   // ok in first (head) chunk
- * void* p2 = alloc_arena(a, 2000, false);   // not enough space -> growth
- *                                           // internally calls: _chunk_new_ex(need, alignment)
- * // ...
- * free_arena(a);                            // frees base + all growth chunks*
+ * free_arena(a);  // releases all chunks and the arena header itself
  * @endcode
  */
-arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t padding_in);
+arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t base_align_in);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1392,6 +1391,118 @@ pool_t* init_pool_with_arena(arena_t* arena,
                              size_t   blocks_per_chunk,
                              bool     prewarm_one_chunk,
                              bool     grow_enabled);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Create a pool allocator that owns its own dynamically allocated arena.
+ *
+ * This function constructs a @c pool_t backed by a newly allocated dynamic
+ * arena. The pool header is allocated inside the arena itself (no
+ * external @c malloc for pool metadata), and the pool may optionally
+ * reserve its first slice of memory immediately (“prewarm”).
+ *
+ * The pool supports two operation modes:
+ * - **Grow mode** (@p grow_enabled = true): additional slices are carved from
+ *   the arena on demand. If the arena runs out of backing memory, it may
+ *   allocate new chunks (subject to @p min_chunk_bytes).
+ * - **Fixed-capacity mode** (@p grow_enabled = false): no new slices may be
+ *   allocated after initialization. If @p prewarm_one_chunk = false, the first
+ *   call to @c alloc_pool() will fail immediately with @c EPERM.
+ *
+ * @param block_size        User-visible block payload size in bytes (must be > 0).
+ * @param alignment         Requested alignment for returned blocks. If 0,
+ *                          @c alignof(max_align_t) is used. Rounded up to at
+ *                          least @c alignof(void*) to support the intrusive
+ *                          free-list pointer.
+ * @param blocks_per_chunk  Number of blocks to allocate per pool slice. Must be > 0.
+ * @param arena_seed_bytes  Initial arena allocation size in bytes. Must be > 0.
+ *                          Must be large enough to hold the pool header and,
+ *                          if @p prewarm_one_chunk is true, at least one slice.
+ * @param min_chunk_bytes   Minimum data bytes per arena expansion when growing
+ *                          (0 allowed; normalized upward if needed).
+ * @param grow_enabled      Whether the pool may request additional slices after
+ *                          initialization.
+ * @param prewarm_one_chunk Whether to allocate the first slice immediately.
+ *                          If @c true and insufficient space is available,
+ *                          initialization fails.
+ *
+ * @return A pointer to a fully initialized pool on success, or @c NULL on
+ *         failure with @c errno set.
+ *
+ * @retval NULL, errno=EINVAL
+ *      If any argument is invalid (@p block_size == 0,
+ *      @p blocks_per_chunk == 0, @p arena_seed_bytes == 0).
+ * @retval NULL, errno=EOVERFLOW
+ *      If @c block_size * blocks_per_chunk would overflow @c size_t.
+ * @retval NULL, errno=ENOMEM
+ *      If memory for the arena or pool header cannot be allocated, or if
+ *      @p prewarm_one_chunk is true and the slice cannot be carved.
+ * @retval NULL, errno=EPERM
+ *      If @p grow_enabled is false, the arena has insufficient initial space,
+ *      and @p prewarm_one_chunk is false (first allocation would fail).
+ * @retval NULL, errno=ENOTSUP
+ *      If dynamic arenas are disabled via compile-time configuration.
+ *
+ * @note The pool takes ownership of the created arena. Call @c free_pool()
+ *       (not @c free_arena()) to destroy it.
+ *
+ * @note Returned blocks have at least @c alignment alignment and are at least
+ *       @c sizeof(void*) bytes to support the intrusive free list.
+ *
+ * @warning In fixed-capacity mode (@p grow_enabled = false), failure to
+ *          prewarm results in a pool that cannot allocate any blocks until
+ *          reset.
+ *
+ * @pre @c ARENA_ENABLE_DYNAMIC must be enabled at compile time.
+ * @post On success, the pool owns a dynamic arena and can allocate blocks.
+ *
+ * @sa init_pool_with_arena(), alloc_pool(), return_pool_element(),
+ *     reset_pool(), free_pool(), init_dynamic_arena()
+ *
+ * @par Example: Grow-enabled pool
+ * @code{.c}
+ * pool_t* p = init_dynamic_pool(
+ *     64,                   // block_size
+ *     0,                    // alignment (default)
+ *     32,                   // blocks_per_chunk
+ *     8192,                 // arena_seed_bytes
+ *     4096,                 // min_chunk_bytes
+ *     true,                 // grow_enabled
+ *     true                  // prewarm_one_chunk
+ * );
+ *
+ * void* b1 = alloc_pool(p);  // OK
+ * void* b2 = alloc_pool(p);  // Grows when necessary
+ *
+ * free_pool(p);             // Frees arena and pool
+ * @endcode
+ *
+ * @par Example: Fixed-capacity pool
+ * @code{.c}
+ * pool_t* p = init_dynamic_pool(
+ *     128,                  // block_size
+ *     0,                    // default alignment
+ *     16,                   // blocks_per_chunk
+ *     4096,                 // arena_seed_bytes
+ *     0,                    // min_chunk_bytes (not used, no growth)
+ *     false,                // grow_enabled = false
+ *     true                  // prewarm_one_chunk (allocate first slice now)
+ * );
+ *
+ * // Exactly 16 allocations succeed:
+ * for (int i = 0; i < 16; i++) assert(alloc_pool(p) != NULL);
+ * assert(alloc_pool(p) == NULL); // EPERM (fixed size reached)
+ *
+ * free_pool(p);
+ * @endcode
+ */
+pool_t* init_dynamic_pool(size_t block_size,
+                          size_t alignment,
+                          size_t blocks_per_chunk,
+                          size_t arena_seed_bytes,
+                          size_t min_chunk_bytes,
+                          bool   grow_enabled,
+                          bool   prewarm_one_chunk);
 // -------------------------------------------------------------------------------- 
 
 /**

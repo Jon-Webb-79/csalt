@@ -1110,8 +1110,8 @@ static arena_t* make_exhausted_dynamic_arena(size_t seed_bytes, size_t leave_byt
 }
 
 // Optional small convenience to snapshot+restore errno around calls
-#define SAVE_ERRNO int saved_errno = errno
-#define RESTORE_ERRNO do { errno = saved_errno; } while(0)
+#define SAVE_ERRNO(name)    int name = errno
+#define RESTORE_ERRNO(name) do { errno = name; } while (0)
 // ================================================================================ 
 // ================================================================================ 
 // TEST INIT WITH ARENA
@@ -1276,6 +1276,144 @@ static void test_pool_reset_semantics(void **state) {
 // ================================================================================ 
 // ================================================================================ 
 
+static void test_init_dynamic_pool_invalid_args(void **state) {
+    (void)state;
+
+    SAVE_ERRNO(e0); errno = 0;
+    pool_t *p = init_dynamic_pool(0, 0, 32, 8192, 4096, true, true);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+    RESTORE_ERRNO(e0);
+
+    SAVE_ERRNO(e1); errno = 0;
+    p = init_dynamic_pool(64, 0, 0, 8192, 4096, true, true);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+    RESTORE_ERRNO(e1);
+
+    SAVE_ERRNO(e2); errno = 0;
+    p = init_dynamic_pool(64, 0, 32, 0, 4096, true, true);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+    RESTORE_ERRNO(e2);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_overflow_guard(void **state) {
+    (void)state;
+
+    size_t too_many = (SIZE_MAX / sizeof(void*)) + 1;
+
+    SAVE_ERRNO(e); errno = 0;
+    pool_t *p = init_dynamic_pool(8, 0, too_many, 8192, 4096, true, false);
+    assert_null(p);
+    assert_int_equal(errno, EOVERFLOW);
+    RESTORE_ERRNO(e);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_alignment_and_stride(void **state) {
+    (void)state;
+
+    pool_t *p = init_dynamic_pool(48, 64, 8, 8192, 4096, true, false);
+    assert_non_null(p);
+
+    assert_int_equal(pool_block_size(p), 48);
+    size_t stride = pool_stride(p);
+
+    assert_true(stride >= 48);
+    assert_true(stride % 64 == 0);
+    assert_true(stride >= sizeof(void*));
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_fixed_prewarm_exact(void **state) {
+    (void)state;
+
+    const size_t blocks = 16;
+    pool_t *p = init_dynamic_pool(64, 0, blocks, 8192, 0, false, true);
+    assert_non_null(p);
+
+    assert_int_equal(pool_total_blocks(p), blocks);
+
+    for (size_t i = 0; i < blocks; i++)
+        assert_non_null(alloc_pool(p));
+
+    SAVE_ERRNO(e); errno = 0;
+    assert_null(alloc_pool(p));
+    assert_int_equal(errno, EPERM);
+    RESTORE_ERRNO(e);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_fixed_no_prewarm_first_alloc_fails(void **state) {
+    (void)state;
+
+    pool_t *p = init_dynamic_pool(64, 0, 8, 4096, 0, false, false);
+    assert_non_null(p);
+
+    SAVE_ERRNO(e); errno = 0;
+    assert_null(alloc_pool(p));
+    assert_int_equal(errno, EPERM);
+    RESTORE_ERRNO(e);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_grow_prewarm_and_reuse(void **state) {
+    (void)state;
+
+    pool_t *p = init_dynamic_pool(32, 16, 8, 8192, 4096, true, true);
+    assert_non_null(p);
+
+    void *a = alloc_pool(p);
+    void *b = alloc_pool(p);
+    assert_non_null(a);
+    assert_non_null(b);
+
+    return_pool_element(p, a);
+    assert_int_equal(pool_free_blocks(p), 1);
+
+    void *c = alloc_pool(p);
+    assert_ptr_equal(c, a);
+    assert_int_equal(pool_free_blocks(p), 0);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_grow_lazy_first_alloc(void **state) {
+    (void)state;
+
+    pool_t *p = init_dynamic_pool(64, 0, 4, 4096, 2048, true, false);
+    assert_non_null(p);
+
+    assert_int_equal(pool_total_blocks(p), 0);
+
+    assert_non_null(alloc_pool(p));
+    assert_int_equal(pool_total_blocks(p), 4);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_tiny_seed_fails(void **state) {
+    (void)state;
+
+    SAVE_ERRNO(e); errno = 0;
+    pool_t *p = init_dynamic_pool(64, 0, 8, 32, 0, true, false);
+    assert_null(p);
+    assert_true(errno == EINVAL || errno == ENOMEM);
+    RESTORE_ERRNO(e);
+}
+// ================================================================================ 
+// ================================================================================ 
+
 const struct CMUnitTest test_pool[] = {
     cmocka_unit_test(test_init_pool_invalid_args),
     cmocka_unit_test(test_init_pool_header_lives_in_arena),
@@ -1283,6 +1421,15 @@ const struct CMUnitTest test_pool[] = {
     cmocka_unit_test(test_init_pool_prewarm_sets_blocks),
     cmocka_unit_test(test_init_pool_fails_when_no_room_for_header ),
     cmocka_unit_test(test_pool_reset_semantics),
+
+    cmocka_unit_test(test_init_dynamic_pool_invalid_args),
+    cmocka_unit_test(test_init_dynamic_pool_overflow_guard),
+    cmocka_unit_test(test_init_dynamic_pool_alignment_and_stride),
+    cmocka_unit_test(test_init_dynamic_pool_fixed_prewarm_exact),
+    cmocka_unit_test(test_init_dynamic_pool_fixed_no_prewarm_first_alloc_fails),
+    cmocka_unit_test(test_init_dynamic_pool_grow_prewarm_and_reuse),
+    cmocka_unit_test(test_init_dynamic_pool_grow_lazy_first_alloc),
+    cmocka_unit_test(test_init_dynamic_pool_tiny_seed_fails),
 };
 
 const size_t test_pool_count = sizeof(test_pool) / sizeof(test_pool[0]);
