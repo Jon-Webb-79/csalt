@@ -1866,7 +1866,7 @@ void free_pool(pool_t* pool);
  * printf("Pool block payload size: %zu bytes\n", user_size);
  * @endcode
  */
-size_t pool_block_size(pool_t* pool);
+size_t pool_block_size(const pool_t* pool);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1895,7 +1895,7 @@ size_t pool_block_size(pool_t* pool);
  * @endcode
  */
 
-size_t pool_stride(pool_t* pool);
+size_t pool_stride(const pool_t* pool);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1923,7 +1923,7 @@ size_t pool_stride(pool_t* pool);
  * @endcode
  */
 
-size_t pool_total_blocks(pool_t* pool);
+size_t pool_total_blocks(const pool_t* pool);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1947,8 +1947,148 @@ size_t pool_total_blocks(pool_t* pool);
  * printf("Currently free blocks: %zu\n", pool_free_blocks(p));
  * @endcode
  */
+size_t pool_free_blocks(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
 
-size_t pool_free_blocks(pool_t* pool);
+/**
+ * @brief Return the effective alignment used for blocks in this pool.
+ *
+ * Returns the alignment value applied when allocating blocks from the pool.
+ * This is derived from the pool's requested alignment and the minimum
+ * required alignment for storing an intrusive free-list pointer.
+ *
+ * @param pool  Valid pool handle.
+ *
+ * @return The pool's alignment in bytes on success.
+ * @retval 0 and @c errno=EINVAL if @p pool is NULL or has no arena.
+ *
+ * @note The returned alignment is always >= alignof(void*).
+ * @note Does not modify errno on success.
+ *
+ * @sa pool_block_size(), pool_stride()
+ */
+size_t pool_alignment(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the number of blocks still available in the active bump slice.
+ *
+ * Computes how many blocks remain before the pool must grow (dynamic pools),
+ * or before further allocation fails (static pools).
+ *
+ * @param pool  Valid pool handle.
+ *
+ * @return Remaining blocks available in the current slice.
+ * @retval 0 and @c errno=EINVAL if @p pool is NULL or has no arena.
+ *
+ * @note This value counts *only* unused bump-region blocks. Additional free
+ *       blocks may exist on the free list; see @c pool_free_blocks().
+ * @note Does not trigger any growth; this is a pure query.
+ *
+ * @sa alloc_pool(), pool_free_blocks(), pool_total_blocks()
+ */
+size_t pool_bump_remaining_blocks(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the number of blocks currently in use (not on the free list).
+ *
+ * @param pool  Valid pool handle.
+ *
+ * @return Number of allocated (live) blocks owned by the caller.
+ * @retval 0 and @c errno=EINVAL if @p pool is NULL or has no arena.
+ *
+ * @note Computed as:
+ *       @code
+ *       pool_in_use = pool_total_blocks(pool) - pool_free_blocks(pool)
+ *       @endcode
+ *
+ * @sa pool_total_blocks(), pool_free_blocks()
+ */
+size_t pool_in_use_blocks(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return whether this pool owns the underlying arena.
+ *
+ * @param pool  Valid pool handle.
+ *
+ * @return @c true if the pool owns its arena (created via init_dynamic_pool()
+ *         or init_static_pool()), @c false otherwise.
+ *
+ * @warning When @c false, destroying the pool must *not* deallocate the arena.
+ *          The caller remains responsible for arena lifetime management.
+ *
+ * @sa init_dynamic_pool(), init_static_pool(), free_pool()
+ */
+bool pool_owns_arena(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Query whether the pool is currently allowed to grow.
+ *
+ * @param pool  Valid pool handle.
+ *
+ * @return @c true if the pool may allocate new slices from the arena.
+ * @return @c false if the pool is fixed-capacity.
+ *
+ * @note Growth may still fail at runtime if the arena is exhausted or
+ *       if its internal resize policy disallows expansion.
+ *
+ * @sa toggle_pool_growth(), alloc_pool()
+ */
+bool pool_grow_enabled(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the memory type of the underlying arena.
+ *
+ * Indicates whether the arena backing the pool uses STATIC or DYNAMIC
+ * allocation semantics, matching @c alloc_t from the arena API.
+ *
+ * @param pool  Valid pool handle.
+ *
+ * @return @c STATIC or @c DYNAMIC depending on the arena's memory type.
+ * @retval a valid @c alloc_t value.
+ *
+ * @note Does not set errno. If @p pool is NULL, behavior is implementation-defined;
+ *       you may choose to return @c STATIC as a safe default or assert in debug builds.
+ *
+ * @sa init_static_pool(), init_dynamic_pool(), arena_mtype()
+ */
+alloc_t pool_mtype(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Enable or disable the pool's ability to grow.
+ *
+ * Controls whether @c alloc_pool() may request new slices from the backing arena.
+ * This function does not allocate memory; it only updates policy.
+ *
+ * Rules:
+ *  - Disabling growth (@p toggle=false) always succeeds.
+ *  - Enabling growth (@p toggle=true) requires:
+ *       * Dynamic builds (ARENA_ENABLE_DYNAMIC),
+ *       * A valid arena,
+ *       * The arena must be @c DYNAMIC,
+ *       * The arena's internal resize flag must be enabled (@c arena->resize != 0).
+ *
+ * On violation, the pool's growth policy remains unchanged and @c errno is set.
+ *
+ * @param pool   Valid pool handle.
+ * @param toggle @c true to enable pool growth, @c false to disable.
+ *
+ * @retval void On success; on failure, @c errno is set to one of:
+ *         - @c EINVAL  if @p pool or arena is NULL,
+ *         - @c ENOTSUP if dynamic allocation support is disabled at build time,
+ *         - @c EPERM   if the arena is static or its own growth is disabled.
+ *
+ * @post If enabling growth succeeds, future @c alloc_pool() calls may trigger
+ *       @c pool_grow().
+ *
+ * @sa pool_grow_enabled(), alloc_pool(), init_dynamic_pool(), toggle_arena_resize()
+ */
+void toggle_pool_growth(pool_t* pool, bool toggle);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

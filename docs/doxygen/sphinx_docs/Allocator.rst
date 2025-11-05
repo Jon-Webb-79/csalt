@@ -420,5 +420,42 @@ pool_free_blocks
 .. doxygenfunction:: pool_free_blocks
    :project: csalt
 
+pool_alignment
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_alignment
+   :project: csalt
+
+pool_bump_remaining_blocks
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_bump_remaining_blocks
+   :project: csalt
+
+pool_in_use_blocks 
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_in_use_blocks
+   :project: csalt
+
+pool_owns_arena 
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_owns_arena 
+   :project: csalt
+
+pool_grow_enabled 
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_grow_enabled
+   :project: csalt
+
+pool_mtype 
+~~~~~~~~~~
+
+.. doxygenfunction:: pool_mtype
+   :project: csalt
+
+
 Function Like Macros 
 --------------------

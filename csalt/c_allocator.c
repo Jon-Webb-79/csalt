@@ -808,7 +808,7 @@ size_t arena_chunk_count(const arena_t* arena) {
 }
 // -------------------------------------------------------------------------------- 
 
-alloc_t arena_mtype(const arena_t* arena) {
+inline alloc_t arena_mtype(const arena_t* arena) {
     if (!arena) {
         errno = EINVAL;
         return ALLOC_INVALID;
@@ -818,7 +818,7 @@ alloc_t arena_mtype(const arena_t* arena) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t arena_size(const arena_t* arena) {
+inline size_t arena_size(const arena_t* arena) {
     if (!arena) {
         errno = EINVAL;
         return 0;
@@ -827,7 +827,7 @@ size_t arena_size(const arena_t* arena) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t arena_alloc(const arena_t* arena) {
+inline size_t arena_alloc(const arena_t* arena) {
     if (!arena) {
         errno = EINVAL;
         return 0;
@@ -836,7 +836,7 @@ size_t arena_alloc(const arena_t* arena) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t total_arena_alloc(const arena_t* arena) {
+inline size_t total_arena_alloc(const arena_t* arena) {
     if (!arena) {
         errno = EINVAL;
         return 0;
@@ -845,7 +845,7 @@ size_t total_arena_alloc(const arena_t* arena) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t arena_alignment(const arena_t* arena) {
+inline size_t arena_alignment(const arena_t* arena) {
     if (!arena || !arena->head) {
         errno = EINVAL;
         return 0;
@@ -854,7 +854,7 @@ size_t arena_alignment(const arena_t* arena) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t arena_min_chunk_size(const arena_t* arena) {
+inline size_t arena_min_chunk_size(const arena_t* arena) {
     if (!arena || !arena->head) {
         errno = EINVAL;
         return 0;
@@ -865,7 +865,7 @@ size_t arena_min_chunk_size(const arena_t* arena) {
 // ================================================================================ 
 // SETTER FUNCTIONS 
 
-void toggle_arena_resize(arena_t* arena, bool toggle) {
+inline void toggle_arena_resize(arena_t* arena, bool toggle) {
     if (!arena) {
         errno = EINVAL;
         return;
@@ -1321,7 +1321,7 @@ void free_pool(pool_t* pool) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t pool_block_size(pool_t* pool) {
+inline size_t pool_block_size(const pool_t* pool) {
     if (!pool) {
         errno = EINVAL;
         return 0;
@@ -1329,7 +1329,8 @@ size_t pool_block_size(pool_t* pool) {
     return pool->block_size;
 }
 // -------------------------------------------------------------------------------- 
-size_t pool_stride(pool_t* pool) {
+
+inline size_t pool_stride(const pool_t* pool) {
     if (!pool) {
         errno = EINVAL;
         return 0;
@@ -1338,8 +1339,8 @@ size_t pool_stride(pool_t* pool) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t pool_total_blocks(pool_t* pool) {
-    if (!pool) {
+inline size_t pool_total_blocks(const pool_t* pool) {
+    if (!pool || !pool->arena) {
         errno = EINVAL;
         return 0;
     }
@@ -1347,12 +1348,77 @@ size_t pool_total_blocks(pool_t* pool) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_t pool_free_blocks(pool_t* pool) {
-    if (!pool) {
+inline size_t pool_free_blocks(const pool_t* pool) {
+    if (!pool || !pool->arena) {
         errno = EINVAL;
         return 0;
     }
     return pool->free_blocks;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t pool_alignment(const pool_t* pool) {
+    if (!pool || !pool->arena) {
+        errno = EINVAL;
+        return 0;
+    }
+    return pool->arena->alignment;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t pool_bump_remaining_blocks(const pool_t* pool) {
+    if (!pool || !pool->arena) {
+        errno = EINVAL;
+        return 0;
+    }
+    // Defensive guards: stride must be non-zero and the slice must exist.
+    if (pool->stride == 0 || pool->cur == NULL || pool->end == NULL) {
+        return 0; // no active slice or misconfigured; treat as empty
+    }
+
+    // Compute remaining bytes, guarding against pointer wrap (shouldn’t happen).
+    const uintptr_t cur = (uintptr_t)pool->cur;
+    const uintptr_t end = (uintptr_t)pool->end;
+    if (end <= cur) return 0;
+
+    const size_t rem_bytes = (size_t)(end - cur);
+    return rem_bytes / pool->stride;  // floor division
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t pool_in_use_blocks(const pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return 0;
+    }
+    return pool->total_blocks - pool->free_blocks;
+}
+// -------------------------------------------------------------------------------- 
+
+inline bool pool_owns_arena(const pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return false;
+    }
+    return pool->owns_arena;
+}
+// -------------------------------------------------------------------------------- 
+
+inline bool pool_grow_enabled(const pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return false;
+    }
+    return pool->grow_enabled;
+}
+// -------------------------------------------------------------------------------- 
+
+inline alloc_t pool_mtype(const pool_t* pool) {
+    if (!pool || !pool->arena) {
+        errno = EINVAL;
+        return ALLOC_INVALID;
+    }
+    return arena_mtype(pool->arena);
 }
 // ================================================================================
 // ================================================================================
