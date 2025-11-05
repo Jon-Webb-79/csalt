@@ -2096,6 +2096,68 @@ alloc_t pool_mtype(const pool_t* pool);
  */
 
 void toggle_pool_growth(pool_t* pool, bool toggle);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Format a human-readable summary of a pool into @p buffer.
+ *
+ * Mirrors arena_stats() style and errno behavior:
+ * - On invalid arguments (NULL buffer or size==0) => false, errno=EINVAL.
+ * - If @p pool is NULL, writes "Pool: NULL\n" and returns true.
+ * - All formatting uses the internal _buf_appendf() which protects against
+ *   truncation and sets errno accordingly (ERANGE, EINVAL).
+ *
+ * The report includes:
+ *  - Kind (STATIC/DYNAMIC) from underlying arena
+ *  - Ownership (whether pool owns the arena object)
+ *  - Growth policy (enabled/disabled)
+ *  - Block size, stride, and effective alignment
+ *  - Totals: total/free/in-use/bump-remaining blocks
+ *  - Derived utilization (in-use / total)
+ *  - Optional: slice list with [start,end) when DEBUG and slices are tracked
+ */
+bool pool_stats(const pool_t *pool, char *buffer, size_t buffer_size);
+// ================================================================================ 
+// ================================================================================ 
+// POOL MACROS 
+
+#if ARENA_USE_CONVENIENCE_MACROS
+/**
+ * \def alloc_pool_type(T, pool)
+ * @brief Allocate one object of type `T` from a memory pool.
+ *
+ * This macro wraps ::alloc_pool and casts the result to `T*`, improving
+ * readability and reducing repetitive casting in caller code.
+ *
+ * - Obtains one block from `pool` via `alloc_pool(pool)`.
+ * - Casts the result to `T*`.
+ * - Returns `NULL` on failure; `errno` is set by the allocator.
+ *
+ * @note
+ * - Caller must initialize the returned object.
+ * - Memory must be returned with ::return_pool_element.
+ * - Only valid when the pool's block size ≥ `sizeof(T)`.
+ *
+ * @param T     The C type to allocate (e.g., `MyStruct`)
+ * @param pool  Pointer to an initialized `pool_t` allocator
+ *
+ * @return `T*` on success, or `NULL` on failure.
+ *
+ * @code{.c}
+ * typedef struct { float x, y, z; } vec3;
+ *
+ * pool_t* p = init_dynamic_pool(sizeof(vec3), 0, 64, 8192, 4096, true, true);
+ * vec3* v = alloc_pool_type(vec3, p);
+ * if (!v) { perror("alloc_pool_type"); exit(EXIT_FAILURE); }
+ *
+ * v->x = 1; v->y = 2; v->z = 3;
+ *
+ * return_pool_element(p, v);
+ * free_pool(p);
+ * @endcode
+ */
+#define alloc_pool_type(T, pool) ((T*)alloc_pool(pool))
+#endif
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

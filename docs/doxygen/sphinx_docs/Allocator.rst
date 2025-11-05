@@ -391,6 +391,12 @@ free_pool
 .. doxygenfunction:: free_pool
    :project: csalt
 
+pool_stats 
+~~~~~~~~~~
+
+.. doxygenfunction:: pool_stats
+   :project: csalt
+
 Gett and Setter Functions 
 -------------------------
 The following functions can be used to access attributes of the 
@@ -459,3 +465,9 @@ pool_mtype
 
 Function Like Macros 
 --------------------
+
+alloc_pool_type
+~~~~~~~~~~~~~~~
+
+.. doxygendefine:: alloc_pool_type
+   :project: csalt

@@ -1447,6 +1447,125 @@ inline void toggle_pool_growth(pool_t* pool, bool toggle) {
     return;
 #endif
 }
+// -------------------------------------------------------------------------------- 
+
+bool pool_stats(const pool_t *pool, char *buffer, size_t buffer_size) {
+    size_t offset = 0U;
+
+    if (!buffer || buffer_size == 0U) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (!pool) {
+        (void)_buf_appendf(buffer, buffer_size, &offset, "%s", "Pool: NULL\n");
+        return true;
+    }
+
+    // Gather fields via getters so we preserve opacity and any validation
+    const bool   owns  = pool_owns_arena(pool);
+    const bool   grow  = pool_grow_enabled(pool);
+    const size_t bsz   = pool_block_size(pool);
+    const size_t stride= pool_stride(pool);
+    const size_t align = pool_alignment(pool);
+    const size_t total = pool_total_blocks(pool);
+    const size_t freeb = pool_free_blocks(pool);
+    const size_t bump  = pool_bump_remaining_blocks(pool);
+    const size_t inuse = pool_in_use_blocks(pool);
+    const alloc_t mt   = pool_mtype(pool);
+
+    // Header
+    if (!_buf_appendf(buffer, buffer_size, &offset, "%s", "Pool Statistics:\n")) {
+        return false;
+    }
+
+    // Kind / ownership / growth
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Kind: %s\n", (mt == STATIC) ? "STATIC" : "DYNAMIC")) {
+        return false;
+    }
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Owns arena: %s\n", owns ? "yes" : "no")) {
+        return false;
+    }
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Growth enabled: %s\n", grow ? "yes" : "no")) {
+        return false;
+    }
+
+    // Geometry
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Block size: %zu bytes\n", bsz)) {
+        return false;
+    }
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Stride: %zu bytes\n", stride)) {
+        return false;
+    }
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Alignment: %zu bytes\n", align)) {
+        return false;
+    }
+
+    // Capacity (in blocks)
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Total blocks: %zu\n", total)) {
+        return false;
+    }
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Free-list blocks: %zu\n", freeb)) {
+        return false;
+    }
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Bump-remaining blocks: %zu\n", bump)) {
+        return false;
+    }
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  In-use blocks: %zu\n", inuse)) {
+        return false;
+    }
+
+    // Utilization (in-use / total)
+    if (total == 0U) {
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "%s", "  Utilization: N/A (total is 0)\n")) {
+            return false;
+        }
+    } else {
+        double util = (100.0 * (double)inuse) / (double)total;
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Utilization: %.1f%%\n", util)) {
+            return false;
+        }
+    }
+
+#ifdef DEBUG
+    // Slice list (only when tracked)
+    {
+        size_t idx = 0;
+        if (!_buf_appendf(buffer, buffer_size, &offset, "%s", "  Slices:\n")) {
+            return false;
+        }
+        for (const pool_slice_t *s = pool->slices; s; s = s->next) {
+            ++idx;
+            if (!_buf_appendf(buffer, buffer_size, &offset,
+                              "    [%zu] %p .. %p  (%zu bytes)\n",
+                              idx, (void*)s->start, (void*)s->end,
+                              (size_t)(s->end - s->start))) {
+                return false;
+            }
+        }
+        if (idx == 0) {
+            if (!_buf_appendf(buffer, buffer_size, &offset, "%s", "    (none)\n")) {
+                return false;
+            }
+        }
+    }
+#endif
+
+    return true;
+}
+
 // ================================================================================
 // ================================================================================
 // eof
