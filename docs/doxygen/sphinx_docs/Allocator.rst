@@ -361,6 +361,12 @@ init_dynamic_pool
 .. doxygenfunction:: init_dynamic_pool
    :project: csalt
 
+init_static_pool
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_static_pool
+   :project: csalt
+
 alloc_pool 
 ~~~~~~~~~~
 

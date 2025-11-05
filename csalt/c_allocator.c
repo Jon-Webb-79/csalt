@@ -1092,7 +1092,8 @@ pool_t* init_dynamic_pool(size_t block_size,
                           size_t arena_seed_bytes,
                           size_t min_chunk_bytes,
                           bool   grow_enabled,
-                          bool   prewarm_one_chunk) {
+                          bool   prewarm_one_chunk)
+{
 #if !ARENA_ENABLE_DYNAMIC
     errno = ENOTSUP;
     return NULL;
@@ -1102,10 +1103,13 @@ pool_t* init_dynamic_pool(size_t block_size,
         errno = EINVAL; return NULL;
     }
 
+    // NEW: fixed-capacity pools must be prewarmed, otherwise they’d be unusable
+    if (!grow_enabled && !prewarm_one_chunk) {
+        errno = EINVAL; return NULL;
+    }
+
     // -------- compute effective alignment and stride
-    // Pool/block alignment: at least alignof(void*) so a freed block can store next*
     size_t eff_align = alignment ? alignment : alignof(max_align_t);
-    // If you require power-of-two strictly, normalize here with your helper:
     // if (!_is_pow2(eff_align)) eff_align = _next_pow2(eff_align);
     if (eff_align < alignof(void*)) eff_align = alignof(void*);
 
@@ -1128,16 +1132,13 @@ pool_t* init_dynamic_pool(size_t block_size,
                                         /*min_chunk_in=*/min_chunk_bytes,
                                         /*base_align_in=*/arena_base_align);
     if (!arena) {
-        // errno set by init_dynamic_arena
-        return NULL;
+        return NULL; // errno set by init_dynamic_arena
     }
 
     // -------- allocate pool header inside arena (no external malloc)
     pool_t* p = (pool_t*)alloc_arena_aligned(arena, sizeof *p, alignof(pool_t), /*zeroed=*/false);
     if (!p) {
-        // Not enough room even for header in the seed -> bail
-        free_arena(arena);
-        // errno already set by alloc_arena_aligned (ENOMEM/EPERM)
+        free_arena(arena); // errno set by alloc_arena_aligned
         return NULL;
     }
 
@@ -1157,33 +1158,106 @@ pool_t* init_dynamic_pool(size_t block_size,
 #endif
 
     // -------- prewarm behavior
-    // Prewarm means: carve the first slice NOW, regardless of grow policy.
     if (prewarm_one_chunk) {
         uint8_t* base = (uint8_t*)alloc_arena_aligned(arena, slice_bytes, stride, /*zeroed=*/false);
         if (!base) {
-            // If prewarm was requested and cannot be satisfied, fail early.
-            free_arena(arena);
-            // errno already set (ENOMEM for out-of-space; EPERM if arena cannot grow)
+            free_arena(arena); // errno already set (ENOMEM / EPERM)
             return NULL;
         }
-
         p->cur = base;
         p->end = base + slice_bytes;
         p->total_blocks += blocks_per_chunk;
 
 #ifdef DEBUG
-        // Track slice for debug-time ownership checks
         pool_slice_t* s = (pool_slice_t*)alloc_arena_aligned(arena, sizeof *s, alignof(pool_slice_t), false);
         if (s) { s->start = base; s->end = base + slice_bytes; s->next = p->slices; p->slices = s; }
 #endif
-    } else {
-        // If growth is disabled and we did not prewarm, the pool starts empty.
-        // First alloc will fail with EPERM by design; document this in the header.
-        // (You could enforce prewarm when !grow_enabled by returning EINVAL here instead.)
     }
 
     return p;
 #endif // ARENA_ENABLE_DYNAMIC
+}
+
+// -------------------------------------------------------------------------------- 
+
+pool_t* init_static_pool(void*  buffer,
+                         size_t buffer_bytes,
+                         size_t block_size,
+                         size_t alignment) {
+    // ---- validate inputs
+    if (!buffer || buffer_bytes == 0 || block_size == 0) {
+        errno = EINVAL; return NULL;
+    }
+
+    // ---- compute effective block alignment and stride
+    size_t eff_align = alignment ? alignment : alignof(max_align_t);
+    // If your project enforces power-of-two, normalize with your helpers:
+    // if (!_is_pow2(eff_align)) eff_align = _next_pow2(eff_align);
+    if (eff_align < alignof(void*)) eff_align = alignof(void*);
+
+    size_t stride = _align_up_size(block_size, eff_align);
+    if (stride < sizeof(void*)) stride = sizeof(void*);
+
+    // Arena base alignment should be >= max_align_t (and >= eff_align)
+    size_t arena_base_align = eff_align;
+    if (arena_base_align < alignof(max_align_t)) arena_base_align = alignof(max_align_t);
+
+    // ---- create the owned static arena (header lives in caller buffer)
+    arena_t* arena = init_static_arena(buffer, buffer_bytes, arena_base_align);
+    if (!arena) {
+        // errno set by init_static_arena
+        return NULL;
+    }
+
+    // ---- allocate pool header inside the arena (no external malloc)
+    pool_t* p = (pool_t*)alloc_arena_aligned(arena, sizeof *p, alignof(pool_t), /*zeroed=*/false);
+    if (!p) {
+        // Not enough room even for the pool header within the caller buffer
+        free_arena(arena);
+        // errno set by alloc_arena_aligned (likely ENOMEM)
+        return NULL;
+    }
+
+    // ---- compute capacity from remaining tail space
+    size_t rem = arena_remaining(arena);             // usable bytes after header
+    size_t blocks = rem / stride;                    // floor to integral blocks
+    if (blocks == 0) {
+        // No space to hold even one block at requested alignment/stride
+        free_arena(arena);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Carve the single (and only) slice now (prewarm is required by policy)
+    size_t slice_bytes = blocks * stride;
+    uint8_t* base = (uint8_t*)alloc_arena_aligned(arena, slice_bytes, stride, /*zeroed=*/false);
+    if (!base) {
+        // Alignment could reduce usable capacity below our estimate
+        free_arena(arena);
+        // errno set by alloc_arena_aligned
+        return NULL;
+    }
+
+    // ---- initialize pool fields (fixed-capacity)
+    p->arena            = arena;
+    p->owns_arena       = true;     // owns arena object; caller still owns raw buffer per your static-arena contract
+    p->block_size       = block_size;
+    p->stride           = stride;
+    p->blocks_per_chunk = 0;        // not used in static pools
+    p->cur              = base;
+    p->end              = base + slice_bytes;
+    p->free_list        = NULL;
+    p->total_blocks     = blocks;
+    p->free_blocks      = 0;
+    p->grow_enabled     = false;    // static pools never grow
+#ifdef DEBUG
+    p->slices           = NULL;
+    // Track the single slice for debug-time ownership checks
+    pool_slice_t* s = (pool_slice_t*)alloc_arena_aligned(arena, sizeof *s, alignof(pool_slice_t), false);
+    if (s) { s->start = base; s->end = base + slice_bytes; s->next = p->slices; p->slices = s; }
+#endif
+
+    return p;
 }
 // -------------------------------------------------------------------------------- 
 

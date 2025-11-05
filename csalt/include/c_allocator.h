@@ -1506,6 +1506,93 @@ pool_t* init_dynamic_pool(size_t block_size,
 // -------------------------------------------------------------------------------- 
 
 /**
+ * @brief Initialize a fixed-capacity memory pool over a caller-supplied buffer.
+ *
+ * This function creates a @c pool_t allocator backed by a static arena built
+ * inside @p buffer. The pool metadata and the backing slice are allocated from
+ * the caller-provided memory region—no heap allocations are performed. The
+ * pool eagerly carves a single contiguous slice of memory and divides it into
+ * fixed-size blocks. Its capacity is therefore
+ *
+ *     floor( (buffer_bytes - header_overhead) / stride )
+ *
+ * where @c stride is @p block_size rounded up to the chosen alignment, and
+ * at least @c sizeof(void*) to support the intrusive free list.
+ *
+ * @p alignment controls the required alignment of each returned element.
+ * If zero, @c alignof(max_align_t) is used. The effective alignment is clamped
+ * to be at least @c alignof(void*) so freed blocks can store a next-pointer.
+ *
+ * The caller retains ownership of @p buffer itself; @c free_pool() only tears
+ * down the pool and arena metadata and does not free @p buffer.
+ *
+ * @param buffer        Pointer to caller-owned memory region used for the pool
+ *                      and its arena bookkeeping. Must be non-NULL.
+ * @param buffer_bytes  Size of @p buffer in bytes. Must be > 0.
+ * @param block_size    Size of each allocated block (payload bytes). Must be > 0.
+ * @param alignment     Desired alignment for returned blocks (0 → default =
+ *                      @c alignof(max_align_t)). The effective alignment will
+ *                      be @c max(alignment, alignof(void*)) rounded up by the
+ *                      implementation if power-of-two alignment is required.
+ *
+ * @return A pointer to an initialized fixed-capacity @c pool_t on success, or
+ *         @c NULL on failure with @c errno set.
+ *
+ * @retval NULL, errno=EINVAL
+ *      If @p buffer is NULL, or @p buffer_bytes == 0, or @p block_size == 0.
+ * @retval NULL, errno=ENOMEM
+ *      If the static arena cannot reserve space for the pool header, or if the
+ *      remaining capacity cannot fit at least one stride-aligned block.
+ *
+ * @note This pool never grows. After initialization,
+ *       @c grow_enabled == false and @c total_blocks is fixed.
+ *       When all blocks are in use, @c alloc_pool() returns NULL with
+ *       @c errno == EPERM.
+ *
+ * @note @c return_pool_element() returns blocks to the pool’s free list.
+ *       Returned blocks are reused in LIFO order.
+ *
+ * @warning Returned memory must not be passed to @c free(). Only @c free_pool()
+ *          may be used to destroy the pool metadata. The caller remains
+ *          responsible for @p buffer.
+ *
+ * @sa init_dynamic_pool(), init_pool_with_arena(), init_static_arena(),
+ *     alloc_pool(), return_pool_element(), free_pool(), pool_total_blocks(),
+ *     pool_stride()
+ *
+ * @par Example
+ * @code{.c}
+ * // Statically allocate backing storage
+ * enum { BUF = 64 * 1024 };
+ * static unsigned char buf[BUF] __attribute__((aligned(64)));
+ *
+ * // Create a pool of 64-byte blocks inside caller-owned memory
+ * pool_t* p = init_static_pool(buf, BUF, 64,  64);
+ * assert(p != NULL);
+ *
+ * size_t cap = pool_total_blocks(p);
+ *
+ * // Allocate all blocks
+ * for (size_t i = 0; i < cap; ++i) {
+ *     void *b = alloc_pool(p);
+ *     assert(b != NULL);
+ * }
+ *
+ * // Pool is exhausted
+ * errno = 0;
+ * void *x = alloc_pool(p);
+ * assert(x == NULL && errno == EPERM);
+ *
+ * free_pool(p); // does NOT free 'buf'
+ * @endcode
+ */
+pool_t* init_static_pool(void*  buffer,
+                         size_t buffer_bytes,
+                         size_t block_size,
+                         size_t alignment);
+// -------------------------------------------------------------------------------- 
+
+/**
  * @brief Allocate one fixed-size block from a pool.
  *
  * Obtains a block from the pool in O(1) time. If the pool has previously freed
