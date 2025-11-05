@@ -1391,7 +1391,14 @@ inline size_t pool_in_use_blocks(const pool_t* pool) {
         errno = EINVAL;
         return 0;
     }
-    return pool->total_blocks - pool->free_blocks;
+
+    const size_t total = pool->total_blocks;
+    const size_t free  = pool->free_blocks;
+    const size_t bump  = pool_bump_remaining_blocks(pool);
+
+    // Guard against any accidental underflow if counters drift.
+    if (total <= free + bump) return 0;
+    return total - free - bump;
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1419,6 +1426,26 @@ inline alloc_t pool_mtype(const pool_t* pool) {
         return ALLOC_INVALID;
     }
     return arena_mtype(pool->arena);
+}
+// -------------------------------------------------------------------------------- 
+
+inline void toggle_pool_growth(pool_t* pool, bool toggle) {
+    if (!pool || !pool->arena) {
+        errno = EINVAL;
+        return;
+    }
+    
+#if !ARENA_ENABLE_DYNAMIC
+    errno = ENOTSUP;
+    return;
+#else
+    if (pool->arena->mem_type == STATIC) {
+        errno = EPERM;
+        return;
+    }
+    pool->grow_enabled = toggle;
+    return;
+#endif
 }
 // ================================================================================
 // ================================================================================

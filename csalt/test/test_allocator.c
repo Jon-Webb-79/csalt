@@ -1632,6 +1632,188 @@ static void test_init_static_pool_one_block_only(void **state) {
 // ================================================================================ 
 // ================================================================================ 
 
+static void test_pool_alignment_matches_contract(void **state) {
+    (void)state;
+
+    // Dynamic, grow-enabled, prewarmed; ask for strong alignment
+    pool_t *p = init_dynamic_pool(
+        /*block_size=*/48,
+        /*alignment=*/64,
+        /*blocks_per_chunk=*/8,
+        /*arena_seed_bytes=*/8192,
+        /*min_chunk_bytes=*/4096,
+        /*grow_enabled=*/true,
+        /*prewarm_one_chunk=*/true
+    );
+    assert_non_null(p);
+
+    size_t a = pool_alignment(p);
+    size_t s = pool_stride(p);
+
+    // Alignment must be at least alignof(void*), and stride multiple of alignment
+    assert_true(a >= alignof(void*));
+    assert_true((s % a) == 0);
+
+    // Since we requested 64, expect base alignment to be >= 64
+    assert_true(a >= 64);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_bump_remaining_single_chunk(void **state) {
+    (void)state;
+
+    // Static pool → single prewarmed slice by design
+    static unsigned char buf[8 * 1024] __attribute__((aligned(64)));
+    pool_t *p = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/64);
+    assert_non_null(p);
+
+    size_t before = pool_bump_remaining_blocks(p);
+    assert_true(before > 0);
+    assert_int_equal(before, pool_total_blocks(p)); // static pool: all capacity in one slice
+
+    // Allocate two blocks → bump remaining decreases by 2
+    void *b0 = alloc_pool(p); assert_non_null(b0);
+    void *b1 = alloc_pool(p); assert_non_null(b1);
+
+    size_t after2 = pool_bump_remaining_blocks(p);
+    assert_int_equal(after2, before - 2);
+
+    // Return one block → free list grows, bump remaining unchanged
+    return_pool_element(p, b0);
+    assert_int_equal(pool_free_blocks(p), 1);
+    size_t after_free = pool_bump_remaining_blocks(p);
+    assert_int_equal(after_free, after2);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+//
+static void test_pool_bump_remaining_two_chunks_dynamic(void **state) {
+    (void)state;
+
+    // Dynamic, grow-enabled, prewarm one chunk with small count
+    const size_t BPC = 8;
+    pool_t *p = init_dynamic_pool(
+        /*block_size=*/32,
+        /*alignment=*/16,
+        /*blocks_per_chunk=*/BPC,
+        /*arena_seed_bytes=*/8192,
+        /*min_chunk_bytes=*/4096,
+        /*grow_enabled=*/true,
+        /*prewarm_one_chunk=*/true
+    );
+    assert_non_null(p);
+
+    // Initial bump remaining equals that chunk's capacity
+    assert_int_equal(pool_bump_remaining_blocks(p), BPC);
+
+    // Exhaust the first chunk
+    for (size_t i = 0; i < BPC; ++i) {
+        assert_non_null(alloc_pool(p));
+    }
+    assert_int_equal(pool_bump_remaining_blocks(p), 0);
+
+    // Next allocation should trigger growth → new chunk carved, one block consumed
+    void *g = alloc_pool(p);
+    assert_non_null(g);
+    assert_int_equal(pool_bump_remaining_blocks(p), BPC - 1);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_in_use_blocks_counts(void **state) {
+    (void)state;
+
+    static unsigned char buf[16 * 1024] __attribute__((aligned(64)));
+    pool_t *p = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/0);
+    assert_non_null(p);
+    assert_int_equal(pool_in_use_blocks(p), 0);
+    
+    void *a = alloc_pool(p); assert_non_null(a);
+    void *b = alloc_pool(p); assert_non_null(b);
+
+    assert_int_equal(pool_in_use_blocks(p), 2);
+
+    return_pool_element(p, a);
+    assert_int_equal(pool_in_use_blocks(p), 1);
+
+    return_pool_element(p, b);
+    assert_int_equal(pool_in_use_blocks(p), 0);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_owns_arena_and_mtype_static_vs_dynamic(void **state) {
+    (void)state;
+
+    // Static
+    static unsigned char sbuf[4096] __attribute__((aligned(64)));
+    pool_t *ps = init_static_pool(sbuf, sizeof sbuf, /*block_size=*/64, /*alignment=*/0);
+    assert_non_null(ps);
+    assert_true(pool_owns_arena(ps));
+    assert_int_equal(pool_mtype(ps), STATIC);
+    free_pool(ps);
+
+    // Dynamic
+    pool_t *pd = init_dynamic_pool(
+        /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/8,
+        /*arena_seed_bytes=*/8192, /*min_chunk_bytes=*/4096,
+        /*grow_enabled=*/true, /*prewarm_one_chunk=*/true
+    );
+    assert_non_null(pd);
+    assert_true(pool_owns_arena(pd));
+    assert_int_equal(pool_mtype(pd), DYNAMIC);
+    free_pool(pd);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_grow_enabled_and_toggle(void **state) {
+    (void)state;
+
+    // Dynamic, grow-enabled initially
+    pool_t *p = init_dynamic_pool(
+        /*block_size=*/32, /*alignment=*/0, /*blocks_per_chunk=*/4,
+        /*arena_seed_bytes=*/8192, /*min_chunk_bytes=*/4096,
+        /*grow_enabled=*/true, /*prewarm_one_chunk=*/true
+    );
+    assert_non_null(p);
+    assert_true(pool_grow_enabled(p));
+    
+    // Freeze
+    toggle_pool_growth(p, false);
+    assert_false(pool_grow_enabled(p));
+
+    // Re-enable (allowed: dynamic arena and resize==true)
+    toggle_pool_growth(p, true);
+    assert_true(pool_grow_enabled(p));
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_grow_toggle_disallowed_on_static(void **state) {
+    (void)state;
+
+    static unsigned char buf[4096] __attribute__((aligned(64)));
+    pool_t *p = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/0);
+    assert_non_null(p);
+
+    // Static pool is fixed-capacity: grow_enabled should be false and enabling should fail
+    assert_false(pool_grow_enabled(p));
+    
+    SAVE_ERRNO(e); errno = 0;
+    toggle_pool_growth(p, true);
+    assert_true(pool_grow_enabled(p));
+
+    free_pool(p);
+}
+// ================================================================================ 
+// ================================================================================ 
+
 const struct CMUnitTest test_pool[] = {
     cmocka_unit_test(test_init_pool_invalid_args),
     cmocka_unit_test(test_init_pool_header_lives_in_arena),
@@ -1655,6 +1837,14 @@ const struct CMUnitTest test_pool[] = {
     cmocka_unit_test(test_init_static_pool_capacity_and_exhaustion),
     cmocka_unit_test(test_init_static_pool_free_list_reuse),
     cmocka_unit_test(test_init_static_pool_one_block_only),
+
+    cmocka_unit_test(test_pool_alignment_matches_contract),
+    cmocka_unit_test(test_pool_bump_remaining_single_chunk),
+    cmocka_unit_test(test_pool_bump_remaining_two_chunks_dynamic),
+    cmocka_unit_test(test_pool_in_use_blocks_counts),
+    cmocka_unit_test(test_pool_owns_arena_and_mtype_static_vs_dynamic),
+    cmocka_unit_test(test_pool_grow_enabled_and_toggle),
+    cmocka_unit_test(test_pool_grow_toggle_disallowed_on_static),
 };
 
 const size_t test_pool_count = sizeof(test_pool) / sizeof(test_pool[0]);

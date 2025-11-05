@@ -219,7 +219,7 @@ arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size
  * @sa   alloc_arena(), reset_arena(), arena_remaining(), arena_stats()
  *
  * @par Example: Aligned caller buffer (typical case)
- * @code
+ * @code{.c}
  
  * arena_t *a = init_static_arena(buf, 16 * 24, alignof(max_align_t));
  * assert(a != NULL);
@@ -236,7 +236,7 @@ arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size
  * @endcode
  *
  * @par Example: Intentionally unaligned buffer
- * @code
+ * @code{.c}
  * enum { RAW = 16384 + 1 };
  * void *raw = malloc(RAW);
  * assert(raw != NULL);
@@ -341,7 +341,7 @@ arena_t* init_darena(size_t bytes, bool resize);
  * @sa    init_static_arena(), alloc_arena(), reset_arena(), arena_remaining()
  *
  * @par Example: Typical usage with caller-managed storage
- * @code
+ * @code{.c}
  * enum { BUF = 16 * 1024 };
  * void *buf = aligned_alloc(alignof(max_align_t), BUF);
  * assert(buf != NULL);
@@ -361,7 +361,7 @@ arena_t* init_darena(size_t bytes, bool resize);
  * @endcode
  *
  * @par Example: If you need a different base alignment
- * @code
+ * @code{.c}
  * // Prefer an explicit 64-byte base alignment for the data region:
  * arena_t *a = init_static_arena(buf, BUF, 64);
  * @endcode
@@ -415,7 +415,7 @@ arena_t* init_sarena(void* buffer, size_t bytes);
  *   with @c errno = EPERM.
  *
  * @par Example (dynamic arena)
- * @code
+ * @code{.c}
  * arena_t *a = init_darena(4096, true);
  * void *p1 = alloc_arena(a, 1024, false);
  * // ... use p1 ...
@@ -424,7 +424,7 @@ arena_t* init_sarena(void* buffer, size_t bytes);
  * @endcode
  *
  * @par Example (static arena)
- * @code
+ * @code{.c}
  * enum { BUF = 8192 };
  * void *buf = aligned_alloc(alignof(max_align_t), BUF);
  * arena_t *a = init_sarena(buf, BUF);
@@ -494,7 +494,7 @@ void free_arena(arena_t* arena);
  * @sa   init_static_arena(), init_dynamic_arena(), reset_arena(), free_arena()
  *
  * @par Example: Allocating from a STATIC arena (no growth)
- * @code
+ * @code{.c}
  * enum { BUF = 8192 };
  * void *buf = aligned_alloc(alignof(max_align_t), BUF);
  * arena_t *a = init_static_arena(buf, BUF, alignof(max_align_t));
@@ -508,7 +508,7 @@ void free_arena(arena_t* arena);
  * @endcode
  *
  * @par Example: Allocating from a DYNAMIC arena (growth allowed)
- * @code
+ * @code{.c}
  * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
  *
  * // Fill current chunk, then one more byte to trigger growth:
@@ -584,7 +584,7 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
  *       reset_arena(), free_arena()
  *
  * @par Example: Requesting a stricter alignment than the arena’s default
- * @code
+ * @code{.c}
  * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
  *
  * // Request 64-byte alignment for SIMD data
@@ -595,7 +595,7 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
  * @endcode
  *
  * @par Example: Falling back to arena base alignment
- * @code
+ * @code{.c}
  * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
  *
  * // Zero alignment means "use arena->alignment"
@@ -646,7 +646,7 @@ void* alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool z
  * Average O(1) for the tail fast-path, O(N) worst-case across N chunks.
  *
  * @par Example
- * @code
+ * @code{.c}
  * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
  * void *p = alloc_arena(a, 128, false);
  * assert_true(is_arena_ptr(a, p));          // inside used region
@@ -691,7 +691,7 @@ bool is_arena_ptr(const arena_t* arena, const void *ptr);
  * Average O(1) for the tail fast-path, O(N) worst-case across N chunks.
  *
  * @par Examples
- * @code
+ * @code{.c}
  * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
  * uint8_t *p = (uint8_t*)alloc_arena(a, 128, false);
  *
@@ -759,7 +759,7 @@ bool is_arena_ptr_sized(const arena_t* arena, const void* ptr, size_t size);
  * O(N) over the number of chunks; when trimming, freeing is also O(N_tail).
  *
  * @par Examples
- * @code
+ * @code{.c}
  * // Non-trimming reset (keeps capacity and all chunks):
  * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
  * (void)alloc_arena(a, 1024, false);
@@ -883,7 +883,7 @@ bool restore_arena(arena_t *arena, ArenaCheckPoint cp);
  *       of size @c n succeeds from the tail iff @c arena_remaining() >= pad + n.
  *
  * @par Example
- * @code
+ * @code{.c}
  * size_t r = arena_remaining(a);
  * if (r >= needed + pad_up((uintptr_t)arena_cursor(a), arena_alignment(a))) {
  *     // fits in current tail without growth
@@ -1054,7 +1054,7 @@ size_t arena_min_chunk_size(const arena_t* arena);
  *          modify the same arena.
  *
  * @par Example
- * @code
+ * @code{.c}
  * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
  * // Temporarily freeze growth for a phase that must not allocate extra memory:
  * toggle_arena_resize(a, false);
@@ -1124,7 +1124,7 @@ void toggle_arena_resize(arena_t* arena, bool toggle);
  *       inconsistent. Coordinate externally if needed.
  *
  * @par Example
- * @code
+ * @code{.c}
  * char buf[512];
  * if (!arena_stats(a, buf, sizeof buf)) {
  *     perror("arena_stats");
@@ -1163,7 +1163,7 @@ bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
  * @note Do not pass an incomplete type.
  *
  * @par Example
- * @code
+ * @code{.c}
  * typedef struct { float x, y, z; } vec3;
  * arena_t* a = init_darena(4096, true);
  * vec3* p = arena_alloc_type(a, vec3);
@@ -1200,7 +1200,7 @@ bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
  * @warning Avoid side effects in @p count (e.g., do not pass @c i++).
  *
  * @par Example
- * @code
+ * @code{.c}
  * arena_t* a = init_darena(4096, true);
  * double* samples = arena_alloc_array(a, double, 1024);
  * if (!samples) { perror("arena_alloc_array"); }
@@ -1232,7 +1232,7 @@ bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
  * @note Zero-initialization uses @c memset(ptr, 0, sizeof(type)).
  *
  * @par Example
- * @code
+ * @code{.c}
  * typedef struct { int id; char name[32]; } user;
  * arena_t* a = init_darena(4096, true);
  * user* u = arena_alloc_type_zeroed(a, user);  // all fields = 0
@@ -1267,7 +1267,7 @@ bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
  * @warning Avoid side effects in @p count (e.g., do not pass @c i++).
  *
  * @par Example
- * @code
+ * @code{.c}
  * arena_t* a = init_darena(8192, true);
  * uint8_t* buf = arena_alloc_array_zeroed(a, uint8_t, 512); // 512 zeroed bytes
  * if (!buf) { perror("arena_alloc_array_zeroed"); }
@@ -1369,7 +1369,7 @@ typedef struct pool_t pool_t;
  * @endcode
  *
  * @par Example: Grow-on-demand pool inside a dynamic arena
- * @code
+ * @code{.c}
  * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
  *
  * pool_t *p = init_pool_with_arena(a,
@@ -2060,34 +2060,41 @@ alloc_t pool_mtype(const pool_t* pool);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Enable or disable the pool's ability to grow.
+ * @brief Enable or disable pool growth (dynamic slice allocation).
  *
- * Controls whether @c alloc_pool() may request new slices from the backing arena.
- * This function does not allocate memory; it only updates policy.
+ * Controls whether future @c alloc_pool() calls may request additional slices
+ * from the underlying arena. This function only updates policy; it does not
+ * allocate memory itself.
  *
- * Rules:
+ * Behavior:
  *  - Disabling growth (@p toggle=false) always succeeds.
- *  - Enabling growth (@p toggle=true) requires:
- *       * Dynamic builds (ARENA_ENABLE_DYNAMIC),
- *       * A valid arena,
- *       * The arena must be @c DYNAMIC,
- *       * The arena's internal resize flag must be enabled (@c arena->resize != 0).
+ *  - Enabling growth (@p toggle=true) succeeds only if:
+ *        * Dynamic allocation support is enabled (ARENA_ENABLE_DYNAMIC),
+ *        * The pool's arena is @c DYNAMIC,
+ *        * The arena's own resize flag is enabled (@c arena->resize != 0).
+ *    Otherwise, the pool remains non-growing and @c errno is set.
  *
- * On violation, the pool's growth policy remains unchanged and @c errno is set.
+ * @param pool   Pointer to a valid pool instance.
+ * @param toggle @c true to enable pool growth, @c false to disable it.
  *
- * @param pool   Valid pool handle.
- * @param toggle @c true to enable pool growth, @c false to disable.
+ * @retval void  On success or no-op condition.
  *
- * @retval void On success; on failure, @c errno is set to one of:
- *         - @c EINVAL  if @p pool or arena is NULL,
- *         - @c ENOTSUP if dynamic allocation support is disabled at build time,
- *         - @c EPERM   if the arena is static or its own growth is disabled.
+ * @note On failure, the pool growth setting remains unchanged.
  *
- * @post If enabling growth succeeds, future @c alloc_pool() calls may trigger
- *       @c pool_grow().
+ * @par Errors
+ * @c errno is set to:
+ *   - @c EINVAL if @p pool or @c pool->arena is NULL.
+ *   - @c ENOTSUP if the library was built without dynamic arena support.
+ *   - @c EPERM if enabling growth on a static arena or on a dynamic arena
+ *              whose own resize flag is disabled.
  *
- * @sa pool_grow_enabled(), alloc_pool(), init_dynamic_pool(), toggle_arena_resize()
+ * @warning Enabling growth does not guarantee future allocations will succeed;
+ *          it only permits @c alloc_pool() to request more memory. Allocation
+ *          may still fail due to arena exhaustion or system allocation failure.
+ *
+ * @sa pool_grow_enabled(), alloc_pool(), init_dynamic_pool(), init_static_pool()
  */
+
 void toggle_pool_growth(pool_t* pool, bool toggle);
 // ================================================================================ 
 // ================================================================================ 
