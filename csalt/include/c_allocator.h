@@ -2228,6 +2228,64 @@ PoolCheckPoint save_pool(const pool_t* pool);
  * @endcode
  */
 bool restore_pool(pool_t* pool, PoolCheckPoint cp);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Get the total number of bytes currently in use.
+ *
+ * Returns the sum of all block payload bytes that are allocated
+ * and not on the free list. This does NOT include:
+ * - Alignment padding between blocks (stride - block_size)
+ * - Blocks available in the bump region
+ * - Blocks on the free list
+ *
+ * @param[in] pool  Pointer to the pool to query.
+ *
+ * @return Number of payload bytes in use, or 0 on error with errno set.
+ *
+ * @retval 0, errno=EINVAL  if @p pool is NULL
+ */
+size_t pool_size(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Get the total pool capacity in bytes.
+ *
+ * Returns the sum of all block payload bytes that have been made
+ * available to this pool (including in-use, free, and bump regions).
+ * This represents the usable capacity, NOT the total memory footprint.
+ *
+ * To get the actual memory footprint including alignment padding:
+ * @code
+ * size_t footprint = pool_total_blocks(pool) * pool_stride(pool);
+ * @endcode
+ *
+ * @param[in] pool  Pointer to the pool to query.
+ *
+ * @return Total capacity in payload bytes, or 0 on error with errno set.
+ *
+ * @retval 0, errno=EINVAL  if @p pool is NULL
+ */
+size_t pool_alloc(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Get the total memory footprint of the pool in bytes.
+ *
+ * Returns the total bytes consumed by all pool blocks, including
+ * alignment padding. This is the actual memory taken from the arena.
+ *
+ * Formula: total_blocks × stride
+ *
+ * Compare with pool_alloc() which returns only usable payload bytes.
+ *
+ * @param[in] pool  Pointer to the pool to query.
+ *
+ * @return Total memory footprint in bytes, or 0 on error with errno set.
+ *
+ * @retval 0, errno=EINVAL  if @p pool is NULL
+ */
+size_t pool_footprint(const pool_t* pool);
 // ================================================================================ 
 // ================================================================================ 
 // POOL MACROS 
@@ -2279,7 +2337,6 @@ bool restore_pool(pool_t* pool, PoolCheckPoint cp);
 // ================================================================================
 // eof
 //
-// TODO: ADD POOL_SIZE FUNCTION 
-// TODO: ADD POLL_ALLOC FUNCTION
+// TODO: ADD IS_POOL_PTR FUNCTION
 // TODO: ADD REALLOC_ARENA FUNCTION 
 // TODO: ADD REALLOC_POOL FUNCTION

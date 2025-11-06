@@ -495,6 +495,24 @@ pool_mtype
 .. doxygenfunction:: pool_mtype
    :project: csalt
 
+pool_size 
+~~~~~~~~~
+
+.. doxygenfunction:: pool_size
+   :project: csalt
+
+pool_alloc
+~~~~~~~~~~
+
+.. doxygenfunction:: pool_alloc
+   :project: csalt
+
+pool_footprint
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_footprint
+   :project: csalt
+
 Function Like Macros 
 --------------------
 

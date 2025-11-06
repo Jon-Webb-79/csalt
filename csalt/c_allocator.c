@@ -1697,6 +1697,34 @@ bool restore_pool(pool_t* pool, PoolCheckPoint cp) {
     
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+inline size_t pool_size(const pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return 0;
+    }
+    size_t blocks = pool_in_use_blocks(pool);
+    return blocks * pool->block_size;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t pool_alloc(const pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return 0;
+    }
+    return pool->total_blocks;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t pool_footprint(const pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return 0;
+    }
+    return pool->total_blocks * pool->stride;
+}
 // ================================================================================
 // ================================================================================
 // eof
