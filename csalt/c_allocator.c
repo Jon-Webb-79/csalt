@@ -983,6 +983,33 @@ struct pool_t {
     pool_slice_t* slices;    // Linked list of all memory slices obtained from arena (for debug verification)
 #endif
 };
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    void*    free_list;      // Head of free list at checkpoint time
+    size_t   free_blocks;    // Number of blocks in free list
+    uint8_t* cur;            // Bump pointer position in current slice
+    uint8_t* end;            // End of current slice at checkpoint time
+    size_t   total_blocks;   // Total blocks available at checkpoint time
+#ifdef DEBUG
+    pool_slice_t* slices;    // First slice at checkpoint time (for validation)
+#endif
+} PoolCheckpointRep;
+// ================================================================================ 
+// ================================================================================ 
+// STATIC HELPER FUNCTIONS 
+
+static inline void _cp_pack_pool(PoolCheckPoint* pub, const PoolCheckpointRep* rep) {
+    // Ensure internal representation fits in public opaque storage
+    _Static_assert(sizeof(PoolCheckpointRep) <= sizeof(pub->_priv),
+                   "PoolCheckpointRep too large for PoolCheckpoint");
+    memcpy(pub, rep, sizeof *rep);
+}
+// -------------------------------------------------------------------------------- 
+
+static inline void _cp_unpack_pool(const PoolCheckPoint* pub, PoolCheckpointRep* rep) {
+    memcpy(rep, pub, sizeof *rep);
+}
 // ================================================================================ 
 // ================================================================================ 
 // POOL STATIC FUNCTIONS 
@@ -1287,7 +1314,7 @@ void return_pool_element(pool_t* pool, void* ptr) {
 void reset_pool(pool_t* pool) {
     if (!pool) return;
     pool->free_list = NULL;
-    pool->cur = pool->end = NULL;
+    //pool->cur = pool->end = NULL;
     pool->free_blocks = 0;
     pool->total_blocks = 0;
 #ifdef DEBUG
@@ -1565,7 +1592,111 @@ bool pool_stats(const pool_t *pool, char *buffer, size_t buffer_size) {
 
     return true;
 }
+// -------------------------------------------------------------------------------- 
 
+PoolCheckPoint save_pool(const pool_t* pool) {
+    PoolCheckPoint pub = {0};
+    
+    if (!pool) {
+        return pub;
+    }
+    
+    PoolCheckpointRep rep = {0};
+    rep.free_list    = pool->free_list;
+    rep.free_blocks  = pool->free_blocks;
+    rep.cur          = pool->cur;
+    rep.end          = pool->end;
+    rep.total_blocks = pool->total_blocks;
+    
+#ifdef DEBUG
+    rep.slices = pool->slices;  // Capture slice list head for validation
+#endif
+    
+    _cp_pack_pool(&pub, &rep);
+    return pub;
+}
+// -------------------------------------------------------------------------------- 
+
+bool restore_pool(pool_t* pool, PoolCheckPoint cp) {
+    if (!pool) {
+        errno = EINVAL;
+        return false;
+    }
+    
+    PoolCheckpointRep rep = {0};
+    _cp_unpack_pool(&cp, &rep);
+    
+    // Empty checkpoint is a successful no-op
+    if (!rep.cur && !rep.end && rep.total_blocks == 0) {
+        return true;
+    }
+    
+    // ---- Validation: detect if pool was reset ----
+    
+    // If checkpoint has pointers but pool is completely reset, reject
+    if (rep.cur && rep.end) {
+        // Pool was reset if both cur and end are NULL
+        if (!pool->cur && !pool->end && pool->total_blocks == 0) {
+            errno = EINVAL;  // Pool was reset since checkpoint
+            return false;
+        }
+        
+        // Basic sanity checks
+        if (rep.cur > rep.end) {
+            errno = EINVAL;
+            return false;
+        }
+        
+        // Verify the checkpoint's slice is within our arena's memory
+        if (!is_arena_ptr(pool->arena, rep.cur) || 
+            !is_arena_ptr(pool->arena, rep.end - 1)) {
+            errno = EINVAL;
+            return false;
+        }
+    }
+    
+#ifdef DEBUG
+    // Debug build: check if slice tracking was reset
+    if (rep.slices && !pool->slices) {
+        errno = EINVAL;  // Pool was reset (slice list cleared)
+        return false;
+    }
+    
+    // Verify the checkpoint's slice still exists in current list
+    if (rep.slices) {
+        bool found = false;
+        for (pool_slice_t* s = pool->slices; s; s = s->next) {
+            if (s == rep.slices) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            errno = EINVAL;
+            return false;
+        }
+    }
+#endif
+    
+    // ---- Additional check: pool state consistency ----
+    
+    // If checkpoint thinks pool had blocks, but current pool has zero total_blocks,
+    // it likely was reset
+    if (rep.total_blocks > 0 && pool->total_blocks == 0) {
+        errno = EINVAL;  // Pool state incompatible with checkpoint
+        return false;
+    }
+    
+    // ---- Restore pool state ----
+    
+    pool->cur          = rep.cur;
+    pool->end          = rep.end;
+    pool->free_list    = rep.free_list;
+    pool->free_blocks  = rep.free_blocks;
+    pool->total_blocks = rep.total_blocks;
+    
+    return true;
+}
 // ================================================================================
 // ================================================================================
 // eof

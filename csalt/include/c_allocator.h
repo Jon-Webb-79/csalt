@@ -68,6 +68,11 @@ typedef struct {
 } ArenaCheckPoint;
 // -------------------------------------------------------------------------------- 
 
+typedef struct {
+    uintptr_t _priv[6];
+} PoolCheckPoint;
+// -------------------------------------------------------------------------------- 
+
 #ifndef ALLOC_H 
 #define ALLOC_H 
 
@@ -2117,6 +2122,117 @@ void toggle_pool_growth(pool_t* pool, bool toggle);
  *  - Optional: slice list with [start,end) when DEBUG and slices are tracked
  */
 bool pool_stats(const pool_t *pool, char *buffer, size_t buffer_size);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Capture the current state of a pool for later restoration.
+ *
+ * Creates a lightweight checkpoint of the pool's allocation state. The
+ * checkpoint can later be passed to restore_pool() to rewind allocations
+ * to this point in time.
+ *
+ * @param[in] pool  Pointer to the pool to checkpoint. May be NULL.
+ *
+ * @return Opaque PoolCheckpoint value. If @p pool is NULL, returns an
+ *         empty checkpoint that restore_pool() will treat as a no-op.
+ *
+ * @note Checkpoints do not pin memory. They store only metadata (pointers
+ *       and counters) for later validation and restoration.
+ *
+ * @note After restoring to a checkpoint, any pointers returned by
+ *       alloc_pool() after the save point become invalid and must not
+ *       be used.
+ *
+ * @warning Not thread-safe. If multiple threads access the pool while
+ *          a checkpoint is being saved or restored, behavior is undefined.
+ *
+ * @sa restore_pool()
+ *
+ * @par Example: Transactional allocation
+ * @code{.c}
+ * pool_t* pool = init_dynamic_pool(64, 8, 128, 4096, 4096, true, true);
+ * 
+ * PoolCheckpoint cp = save_pool(pool);
+ * 
+ * // Allocate some objects for a transaction
+ * void* obj1 = alloc_pool(pool);
+ * void* obj2 = alloc_pool(pool);
+ * 
+ * if (!try_operation(obj1, obj2)) {
+ *     // Operation failed - restore to checkpoint
+ *     restore_pool(pool, cp);
+ *     // obj1 and obj2 are now invalid
+ * } else {
+ *     // Success - keep the allocations
+ * }
+ * 
+ * free_pool(pool);
+ * @endcode
+ */
+PoolCheckPoint save_pool(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Restore a pool to a previously saved checkpoint state.
+ *
+ * Rewinds the pool's allocation state to the point captured by
+ * save_pool(). Any blocks allocated after the checkpoint become
+ * available for reuse (returned to the bump pointer region or
+ * free list, depending on implementation).
+ *
+ * @param[in,out] pool  Pointer to the pool to restore. Must not be NULL.
+ * @param[in]     cp    Checkpoint previously returned by save_pool().
+ *
+ * @return true on success, false on failure with errno set.
+ *
+ * @retval true  Pool successfully restored to checkpoint state.
+ * @retval false Restoration failed (see errno).
+ *
+ * @retval false, errno=EINVAL
+ *      - @p pool is NULL
+ *      - Checkpoint is invalid or corrupted
+ *      - Checkpoint's bump pointer is out of bounds
+ *      - Pool has been reset or freed since checkpoint was saved
+ *
+ * @note After successful restoration:
+ *       - All blocks allocated after the checkpoint are reclaimed
+ *       - Pointers obtained after save_pool() must not be used
+ *       - The free list may contain blocks that existed at save time
+ *       - Statistics (total_blocks, free_blocks) are updated
+ *
+ * @note Empty checkpoints (from save_pool(NULL)) are treated as
+ *       successful no-ops.
+ *
+ * @warning This function does NOT free memory back to the arena in
+ *          dynamic pools. Slices allocated after the checkpoint remain
+ *          allocated but become available for bump allocation.
+ *
+ * @warning Not thread-safe. External synchronization required if
+ *          multiple threads access the pool.
+ *
+ * @sa save_pool()
+ *
+ * @par Example: Nested checkpoints
+ * @code{.c}
+ * pool_t* pool = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true);
+ * 
+ * PoolCheckpoint cp1 = save_pool(pool);
+ * void* a = alloc_pool(pool);
+ * 
+ * PoolCheckpoint cp2 = save_pool(pool);
+ * void* b = alloc_pool(pool);
+ * void* c = alloc_pool(pool);
+ * 
+ * // Restore to cp2: only 'a' remains allocated
+ * restore_pool(pool, cp2);
+ * 
+ * // Restore to cp1: all allocations reclaimed
+ * restore_pool(pool, cp1);
+ * 
+ * free_pool(pool);
+ * @endcode
+ */
+bool restore_pool(pool_t* pool, PoolCheckPoint cp);
 // ================================================================================ 
 // ================================================================================ 
 // POOL MACROS 

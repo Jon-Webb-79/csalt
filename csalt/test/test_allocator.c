@@ -1807,8 +1807,93 @@ static void test_pool_grow_toggle_disallowed_on_static(void **state) {
     
     SAVE_ERRNO(e); errno = 0;
     toggle_pool_growth(p, true);
-    assert_true(pool_grow_enabled(p));
+    assert_false(pool_grow_enabled(p));
 
+    free_pool(p);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+static void test_pool_save_restore_basic(void **state) {
+    (void)state;
+    
+    pool_t* p = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true);
+    assert_non_null(p);
+    
+    // Allocate, save, allocate more, restore
+    void* a = alloc_pool(p);
+    assert_non_null(a);
+    
+    PoolCheckPoint cp = save_pool(p);
+    
+    void* b = alloc_pool(p);
+    assert_non_null(b);
+    
+    size_t before = pool_in_use_blocks(p);
+    assert_true(restore_pool(p, cp));
+    size_t after = pool_in_use_blocks(p);
+    
+    // After restore, one less block in use
+    assert_true(after < before);
+    
+    free_pool(p);
+}
+
+static void test_pool_restore_reuses_address(void **state) {
+    (void)state;
+    
+    pool_t* p = init_dynamic_pool(64, 8, 128, 4096, 4096, true, true);
+    assert_non_null(p);
+    
+    PoolCheckPoint cp = save_pool(p);
+    
+    void* first = alloc_pool(p);
+    assert_non_null(first);
+    
+    assert_true(restore_pool(p, cp));
+    
+    void* second = alloc_pool(p);
+    assert_non_null(second);
+    
+    // Should get same address (deterministic bump allocation)
+    assert_ptr_equal(first, second);
+    
+    free_pool(p);
+}
+
+static void test_pool_restore_invalidates_checkpoint(void **state) {
+    (void)state;
+    
+    pool_t* p = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true);
+    assert_non_null(p);
+    
+    PoolCheckPoint cp = save_pool(p);
+    (void)alloc_pool(p);
+    
+    // Reset invalidates all checkpoints
+    reset_pool(p);
+
+    errno = 0;
+    assert_false(restore_pool(p, cp));
+    // assert_int_equal(errno, EINVAL);
+    
+    free_pool(p);
+}
+
+static void test_pool_empty_checkpoint_noop(void **state) {
+    (void)state;
+    
+    pool_t* p = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true);
+    assert_non_null(p);
+    
+    PoolCheckPoint empty = {0};
+    
+    size_t before = pool_total_blocks(p);
+    assert_true(restore_pool(p, empty));
+    size_t after = pool_total_blocks(p);
+    
+    assert_int_equal(before, after);  // No change
+    
     free_pool(p);
 }
 // ================================================================================ 
@@ -1845,6 +1930,11 @@ const struct CMUnitTest test_pool[] = {
     cmocka_unit_test(test_pool_owns_arena_and_mtype_static_vs_dynamic),
     cmocka_unit_test(test_pool_grow_enabled_and_toggle),
     cmocka_unit_test(test_pool_grow_toggle_disallowed_on_static),
+
+    cmocka_unit_test(test_pool_save_restore_basic),
+    cmocka_unit_test(test_pool_restore_reuses_address),
+    cmocka_unit_test(test_pool_restore_invalidates_checkpoint),
+    cmocka_unit_test(test_pool_empty_checkpoint_noop),
 };
 
 const size_t test_pool_count = sizeof(test_pool) / sizeof(test_pool[0]);

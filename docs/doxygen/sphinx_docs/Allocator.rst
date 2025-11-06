@@ -391,6 +391,18 @@ free_pool
 .. doxygenfunction:: free_pool
    :project: csalt
 
+save_pool 
+~~~~~~~~~
+
+.. doxygenfunction:: save_pool
+   :project: csalt
+
+restore_pool 
+~~~~~~~~~~~~
+
+.. doxygenfunction:: restore_pool
+   :project: csalt
+
 pool_stats 
 ~~~~~~~~~~
 
@@ -461,7 +473,6 @@ pool_mtype
 
 .. doxygenfunction:: pool_mtype
    :project: csalt
-
 
 Function Like Macros 
 --------------------
