@@ -135,7 +135,7 @@ typedef struct {
  * @warning The returned arena must be released with @c free_arena(). Individual
  *          allocations from the arena must not be freed with @c free().
  *
- * @pre  @c ARENA_ENABLE_DYNAMIC must be enabled.
+ * @pre  @c ARENA_ENABLE_DYNAMIC must be enabled.  This occurs by default compilation process
  * @post @c arena->mem_type == DYNAMIC and @c arena->resize == (resize ? 1 : 0).
  * @post @c arena->head == arena->tail and @c arena->cur begins at the start of
  *       the aligned initial data region.
@@ -225,7 +225,7 @@ arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size
  *
  * @par Example: Aligned caller buffer (typical case)
  * @code{.c}
- 
+ * uint8_t buf[16 * 24];  
  * arena_t *a = init_static_arena(buf, 16 * 24, alignof(max_align_t));
  * assert(a != NULL);
  *
@@ -341,14 +341,15 @@ arena_t* init_darena(size_t bytes, bool resize);
  *
  * @note  Ownership: the arena does **not** own @p buffer. Do not expect @c free_arena()
  *        to free @p buffer in STATIC mode. The caller is responsible for releasing @p buffer
- *        after the arena is no longer used.
+ *        after the arena is no longer used.  Although the user is encouraged to use stack 
+ *        memory buffers for this function which are freed when the scope ends.
  *
  * @sa    init_static_arena(), alloc_arena(), reset_arena(), arena_remaining()
  *
  * @par Example: Typical usage with caller-managed storage
  * @code{.c}
  * enum { BUF = 16 * 1024 };
- * void *buf = aligned_alloc(alignof(max_align_t), BUF);
+ * uint8_t* buf[16 * 24];
  * assert(buf != NULL);
  *
  * arena_t *a = init_sarena(buf, BUF);
@@ -364,18 +365,12 @@ arena_t* init_darena(size_t bytes, bool resize);
  * // free_arena(a) should not free 'buf' in STATIC mode.
  * free(buf);
  * @endcode
- *
- * @par Example: If you need a different base alignment
- * @code{.c}
- * // Prefer an explicit 64-byte base alignment for the data region:
- * arena_t *a = init_static_arena(buf, BUF, 64);
- * @endcode
  */
 arena_t* init_sarena(void* buffer, size_t bytes);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Destroy a dynamically allocated arena and free all of its heap memory.
+ * @brief Destroy a dynamically allocated arena and frees all of its heap memory.
  *
  * This function releases the entire allocation associated with a **dynamic**
  * arena created by @c init_dynamic_arena() / @c init_darena(). It walks and
@@ -431,7 +426,7 @@ arena_t* init_sarena(void* buffer, size_t bytes);
  * @par Example (static arena)
  * @code{.c}
  * enum { BUF = 8192 };
- * void *buf = aligned_alloc(alignof(max_align_t), BUF);
+ * void *buf = malloc(alignof(max_align_t));
  * arena_t *a = init_sarena(buf, BUF);
  *
  * // Later:
@@ -2284,5 +2279,7 @@ bool restore_pool(pool_t* pool, PoolCheckPoint cp);
 // ================================================================================
 // eof
 //
-// TODO: ADD FUNCTION TO TURN resize on 
-// TODO: ADD FUNCTION TO TURN resize off
+// TODO: ADD POOL_SIZE FUNCTION 
+// TODO: ADD POLL_ALLOC FUNCTION
+// TODO: ADD REALLOC_ARENA FUNCTION 
+// TODO: ADD REALLOC_POOL FUNCTION

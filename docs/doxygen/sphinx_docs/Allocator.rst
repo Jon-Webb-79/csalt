@@ -79,7 +79,7 @@ high-performance workloads, simply by selecting different build flags.
 Data Types 
 ----------
 The following are data structures and derived data types used in the ``c_allocator.h``
-and ``c_allocator.c`` files.
+and ``c_allocator.c`` files to support the ``arena_t`` data type.
 
 Chunk 
 ~~~~~
@@ -126,8 +126,9 @@ through getter functions.
 ArenaCheckPoint 
 ~~~~~~~~~~~~~~~
 ``ArenaCheckPoint`` is an opaque data structure that is used to store data 
-related to a bump allocator.  The XX function can extract the data from 
-this structure to reconstitute a bump allocator.
+related to a bump allocator.  ``The restore_arena`` function can extract the data from 
+this structure to reconstitute a bump allocator.  This struct is defined as 
+``ArenaCheckPoint`` in the .c file and ``ArenaCheckPointRep`` in the .h file.
 
 .. code-block:: c 
 
@@ -344,6 +345,26 @@ through getter functions.
        pool_slice_t* slices;    // Linked list of all memory slices obtained from arena (for debug verification)
    #endif
    };
+
+PoolCheckPoint 
+~~~~~~~~~~~~~~
+``PoolCheckPoint`` is an opaque data structure that is used to store data 
+related to a bump allocator.  The ``restore_pool`` function can extract the data from 
+this structure to reconstitute a bump allocator.  This struct is defined as 
+``PoolCheckPoint`` in the .c file and ``PoolCheckPointRep`` in the .h file.
+
+.. code-block:: c 
+
+   typedef struct {
+       void*    free_list;      // Head of free list at checkpoint time
+       size_t   free_blocks;    // Number of blocks in free list
+       uint8_t* cur;            // Bump pointer position in current slice
+       uint8_t* end;            // End of current slice at checkpoint time
+       size_t   total_blocks;   // Total blocks available at checkpoint time
+   #ifdef DEBUG
+       pool_slice_t* slices;    // First slice at checkpoint time (for validation)
+   #endif
+   } PoolCheckpointRep;
 
 Initialization and Memory Management 
 ------------------------------------
