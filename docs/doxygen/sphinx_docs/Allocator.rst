@@ -513,6 +513,12 @@ pool_footprint
 .. doxygenfunction:: pool_footprint
    :project: csalt
 
+is_pool_ptr 
+~~~~~~~~~~~
+
+.. doxygenfunction:: is_pool_ptr
+   :project: csalt
+
 Function Like Macros 
 --------------------
 

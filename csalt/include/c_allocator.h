@@ -2286,6 +2286,28 @@ size_t pool_alloc(const pool_t* pool);
  * @retval 0, errno=EINVAL  if @p pool is NULL
  */
 size_t pool_footprint(const pool_t* pool);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Verify whether a pointer belongs to a given pool.
+ *
+ * Determines if @p ptr falls within memory currently owned by @p pool.
+ * In debug builds, this check validates against the pool’s tracked slices.
+ * In release builds, it falls back to an arena-level containment check.
+ *
+ * @param pool  Pointer to a valid pool_t.
+ * @param ptr   Pointer to check.
+ *
+ * @retval true  If @p ptr lies within the pool’s managed memory.
+ * @retval false If @p ptr is outside the pool or invalid.
+ *
+ * @note In release builds, this function cannot distinguish between two pools
+ *       sharing the same arena; it only verifies arena-level containment.
+ *
+ * @warning This does not validate alignment or active allocation state; it only
+ *          checks spatial containment.
+ */
+bool is_pool_ptr(const pool_t* pool, const void* ptr);
 // ================================================================================ 
 // ================================================================================ 
 // POOL MACROS 
