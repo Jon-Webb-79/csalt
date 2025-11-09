@@ -402,7 +402,7 @@ void free_arena(arena_t* arena) {
 // ================================================================================ 
 // ALLOCATION FUNCTIONS
 
-void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed) {
+inline void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed) {
     if (!arena || bytes == 0u) { errno = EINVAL; return NULL; }
 
     // Use per-arena base alignment (power-of-two)
@@ -455,6 +455,39 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed) {
     errno = EPERM;
     return NULL;
 #endif
+}
+// -------------------------------------------------------------------------------- 
+
+void* realloc_arena(arena_t* arena,
+                    void*   variable,
+                    size_t  var_size,
+                    size_t  realloc_size,
+                    bool    zeroed)
+{
+    if (!arena || !variable) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // No-op on shrink or same size; keeps arena space.
+    if (realloc_size <= var_size) {
+        return variable;
+    }
+
+    // Allocate new block (no zeroing; we’ll zero only the tail if requested).
+    void* ptr = arena_alloc(arena, realloc_size, /*zeroed=*/false);
+    if (!ptr) {
+        // errno set by arena_alloc
+        return NULL;
+    }
+
+    memcpy(ptr, variable, var_size);
+
+    if (zeroed) {
+        memset((uint8_t*)ptr + var_size, 0, realloc_size - var_size);
+    }
+
+    return ptr;
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1288,7 +1321,7 @@ pool_t* init_static_pool(void*  buffer,
 }
 // -------------------------------------------------------------------------------- 
 
-void* alloc_pool(pool_t* pool) {
+inline void* alloc_pool(pool_t* pool) {
     if (!pool) { errno = EINVAL; return NULL; }
 
     // 1) Reuse from free list if available
@@ -1305,7 +1338,7 @@ void* alloc_pool(pool_t* pool) {
 }
 // -------------------------------------------------------------------------------- 
 
-void return_pool_element(pool_t* pool, void* ptr) {
+inline void return_pool_element(pool_t* pool, void* ptr) {
     if (!pool || !ptr) return;
     pool_push_free(pool, ptr);
 }

@@ -523,6 +523,108 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
+ * @brief Reallocate an object within an arena allocator.
+ *
+ * The arena allocator does not support in-place reallocation. This function
+ * provides a `realloc`-like interface by allocating a new block from the arena,
+ * copying the original object into it, and returning the new pointer. The
+ * original memory remains in the arena until the arena is reset; it cannot be
+ * individually freed.
+ *
+ * If @p realloc_size is less than or equal to @p var_size, this function
+ * performs a no-op and simply returns @p variable, avoiding unnecessary arena
+ * consumption.
+ *
+ * If @p zeroed is true and a new block is allocated, only the newly added tail
+ * region (bytes [var_size, realloc_size)) will be zero-initialized. The first
+ * @p var_size bytes preserve their original contents.
+ *
+ * @param arena
+ *     Pointer to an initialized ::arena_t instance. Must not be NULL.
+ *
+ * @param variable
+ *     Pointer to the existing object previously allocated from @p arena. Must
+ *     not be NULL. Passing memory not allocated by the arena results in
+ *     undefined behavior.
+ *
+ * @param var_size
+ *     Size in bytes of the existing object. Must match the size originally
+ *     allocated for @p variable.
+ *
+ * @param realloc_size
+ *     New allocation size in bytes. If greater than @p var_size, a new block
+ *     is allocated and the contents copied. If less than or equal to
+ *     @p var_size, the function returns @p variable.
+ *
+ * @param zeroed
+ *     If true, the newly added tail region is zero-filled. If false, the tail
+ *     contains uninitialized memory.
+ *
+ * @return
+ *     - On success, a pointer to a valid memory block:
+ *         - The original pointer if no growth was required.
+ *         - A new pointer if a larger block was allocated.
+ *     - On failure, NULL is returned and `errno` is set to:
+ *         - `EINVAL` if @p arena or @p variable is NULL.
+ *         - Any error code raised by ::arena_alloc during allocation.
+ *
+ * @note
+ *     - This function never frees memory; old blocks accumulate until the
+ *       arena is reset.
+ *     - Alignment of the new block follows ::arena_alloc rules.
+ *     - Not thread-safe unless externally synchronized.
+ *
+ * @code{.c}
+ * // Example: growing an integer array inside an arena
+ * arena_t* arena = init_dynamic_arena(4096);
+ * if (!arena) {
+ *     perror("Arena initialization failed");
+ *     exit(EXIT_FAILURE);
+ * }
+ *
+ * size_t n = 4;
+ * int* arr = arena_alloc(arena, n * sizeof(int), true);
+ * if (!arr) {
+ *     perror("Initial allocation failed");
+ *     exit(EXIT_FAILURE);
+ * }
+ *
+ * // Populate initial values
+ * for (size_t i = 0; i < n; ++i)
+ *     arr[i] = (int)i;
+ *
+ * // Grow the array to 8 integers
+ * size_t new_n = 8;
+ * int* new_arr = realloc_arena(arena, arr,
+ *                              n * sizeof(int),
+ *                              new_n * sizeof(int),
+ *                              true);  // zero-fill the new region
+ *
+ * if (!new_arr) {
+ *     perror("Arena reallocation failed");
+ *     exit(EXIT_FAILURE);
+ * }
+ *
+ * // new_arr now contains: [0, 1, 2, 3, 0, 0, 0, 0]
+ *
+ * // Use the new space
+ * for (size_t i = n; i < new_n; ++i)
+ *     new_arr[i] = (int)(i * 10);
+ *
+ * // When done:
+ * reset_arena(arena);  // frees all arena memory at once
+ * free_arena(arena);   // destroys the allocator
+ * @endcode
+ *
+ * @see arena_alloc
+ * @see reset_arena
+ */
+
+void* realloc_arena(arena_t* arena, void* variable, size_t var_size, size_t realloc_size,
+                    bool zeroed);
+// -------------------------------------------------------------------------------- 
+
+/**
  * @brief Allocate a block from an arena with a caller-specified alignment.
  *
  * Performs a bump allocation from the arena’s current tail chunk, returning a
@@ -606,6 +708,116 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
  * @endcode
  */
 void* alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool zeroed);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Reallocate an object within an arena allocator with a specified alignment.
+ *
+ * This function behaves like a `realloc` operation adapted for arena semantics:
+ * arenas cannot grow an allocation in place, so reallocation is implemented as:
+ *
+ *      1. Allocate a new block of @p realloc_size bytes with the requested
+ *         alignment @p aligned using ::arena_alloc_aligned.
+ *      2. Copy the first @p var_size bytes from @p variable into the new block.
+ *      3. Optionally zero-fill the new tail region (bytes [var_size, realloc_size)).
+ *      4. Return the new pointer.
+ *
+ * The old memory is not freed and remains part of the arena until a call to
+ * ::reset_arena() or until its parent chunk is discarded.
+ *
+ * If @p realloc_size is less than or equal to @p var_size, the function performs
+ * a no-op and returns @p variable unchanged. This avoids unnecessary arena
+ * consumption and matches typical arena semantics.
+ *
+ * @param arena
+ *     Pointer to an initialized ::arena_t. Must not be NULL.
+ *
+ * @param variable
+ *     Pointer to the existing object previously allocated from @p arena.
+ *     Must not be NULL. The function does not validate arena ownership.
+ *
+ * @param var_size
+ *     Size of the existing object in bytes. Must be the exact size originally
+ *     allocated. Passing an incorrect size results in undefined behavior.
+ *
+ * @param realloc_size
+ *     New size in bytes for the reallocated object. If greater than @p var_size,
+ *     a new block is allocated with alignment @p aligned. Otherwise, this
+ *     function returns @p variable unchanged.
+ *
+ * @param zeroed
+ *     If true, the newly added tail region is zero-filled. The initial
+ *     @p var_size bytes are always preserved exactly.
+ *
+ * @param aligned
+ *     Required alignment for the new allocation. Must be a power of two and
+ *     supported by ::arena_alloc_aligned. The returned pointer will satisfy:
+ *
+ *         (uintptr_t)ptr % aligned == 0
+ *
+ * @return
+ *     - The original @p variable if no growth is required.
+ *     - A newly allocated, aligned pointer if growth is required.
+ *     - NULL on failure, with `errno` set to:
+ *         - `EINVAL` if @p arena or @p variable is NULL.
+ *         - Errors propagated from ::arena_alloc_aligned when allocation fails.
+ *
+ * @note
+ *     - Alignment of the returned block *may differ from* the original block.
+ *     - This function never frees memory; the old block persists.
+ *     - Misaligned @p aligned values (non-power-of-two) result in undefined behavior.
+ *     - Not thread-safe unless the arena is externally synchronized.
+ *
+ * @code
+ * // Example: aligned growth of a struct inside an arena
+ * typedef struct {
+ *     float x, y, z;
+ * } vec3;
+ *
+ * arena_t* arena = init_dynamic_arena(8192);
+ *
+ * // Allocate a vec3 with 16-byte alignment
+ * vec3* v = arena_alloc_aligned(arena, sizeof(vec3), 16, true);
+ * if (!v) {
+ *     perror("aligned allocation failed");
+ *     exit(EXIT_FAILURE);
+ * }
+ *
+ * v->x = 1.0f;
+ * v->y = 2.0f;
+ * v->z = 3.0f;
+ *
+ * // Reallocate with 32-byte alignment and additional trailing space
+ * size_t old_size = sizeof(vec3);
+ * size_t new_size = sizeof(vec3) + 32;
+ *
+ * vec3* v2 = realloc_arena_aligned(arena, v,
+ *                                  old_size,
+ *                                  new_size,
+ *                                  true,   // zero the new region
+ *                                  32);    // new alignment requirement
+ *
+ * if (!v2) {
+ *     perror("aligned realloc failed");
+ *     exit(EXIT_FAILURE);
+ * }
+ *
+ * // v2 preserves the vec3 values and now has a zeroed 32-byte tail.
+ * // The returned pointer satisfies (uintptr_t)v2 % 32 == 0.
+ *
+ * // Old object v is still in the arena; it is not freed.
+ *
+ * reset_arena(arena);   // Free all arena memory at once
+ * free_arena(arena);
+ * @endcode
+ *
+ * @see arena_alloc_aligned
+ * @see arena_alloc
+ * @see reset_arena
+ */
+
+void* realloc_arena_aligned(arena_t* arena, void* variable, size_t var_size, size_t realloc_size,
+                            bool zeroed, size_t alignment);
 // ================================================================================ 
 // ================================================================================ 
 // UTILITY FUNCTIONS 
