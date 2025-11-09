@@ -311,8 +311,73 @@ arena_alloc_array_zeroed
 .. doxygendefine:: arena_alloc_array_zeroed
    :project: csalt
 
-Pool Allocator 
-==============
+Pool Allocator Overview
+=======================
+
+The ``pool_t`` allocator implements a *fixed-size block* allocation model.
+Each pool manages memory divided into uniformly sized blocks, enabling
+extremely fast allocation and deallocation of objects of the same size.
+Pools may be backed by either static or dynamic arenas, and may optionally
+grow by acquiring additional slices of memory from a dynamic arena.
+
+This model is ideal when:
+
+* many objects of identical size are frequently allocated and freed
+* allocation and deallocation must be deterministic and extremely fast
+* fragmentation must be minimized or eliminated
+* objects may be recycled using an intrusive free-list
+
+Examples include:
+
+* ECS (entity–component–system) component storage
+* job-system nodes, task descriptors, or scheduler queues
+* physics or graphics engine object caches
+* network packet or frame metadata
+* high-frequency scientific workloads with uniform object shapes
+
+Benefits
+--------
+
+* **Constant-time allocation and free** via an intrusive LIFO free-list
+* **No fragmentation**, since all blocks share the same size and alignment
+* **High locality**, as blocks are carved contiguously from arena slices
+* **Optional reuse of memory** via ``return_pool_element()``
+* **Optional growth** when backed by a dynamic arena
+* **No external malloc/free** — all pool metadata resides inside the arena
+
+Limitations
+-----------
+
+* Block size is fixed at initialization; allocations must fit within ``block_size``
+* Pools do not support resizing of individual allocations
+* Dynamically growing pools require a dynamic arena with adequate space
+* Static pools have fixed capacity and cannot grow
+* Individual blocks cannot be freed to the system; reclamation occurs only when
+  the entire pool is destroyed via ``free_pool()``
+
+Static vs. Dynamic Pools
+------------------------
+
+Pools may be constructed in one of two modes:
+
+* **Static pool** — backed by an ``arena_t`` created with ``init_static_arena()``.
+  Capacity is determined entirely by the caller-provided buffer. Growth is
+  permanently disabled, and the pool always prewarms a single contiguous slice
+  during initialization.
+
+* **Dynamic pool** — backed by an ``arena_t`` created with ``init_dynamic_arena()``.
+  Additional slices may be allocated on demand as long as the arena’s growth
+  policy allows it. Growth can be toggled at runtime using
+  ``toggle_pool_growth()``.
+
+Both pool types share the same opaque ``pool_t`` structure and the same API.
+When the build is configured with ``STATIC_ONLY``, dynamic features are omitted
+completely, ensuring compliance with safety-critical environments that forbid
+hidden heap allocation paths.
+
+``pool_t`` provides deterministic, high-performance allocation patterns well
+suited to real-time and cache-sensitive applications, especially when paired
+with ``arena_t`` for higher-level memory partitioning.
 
 Data Types 
 ----------
