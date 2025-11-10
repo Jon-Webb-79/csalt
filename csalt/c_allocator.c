@@ -475,7 +475,7 @@ void* realloc_arena(arena_t* arena,
     }
 
     // Allocate new block (no zeroing; we’ll zero only the tail if requested).
-    void* ptr = arena_alloc(arena, realloc_size, /*zeroed=*/false);
+    void* ptr = alloc_arena(arena, realloc_size, false);
     if (!ptr) {
         // errno set by arena_alloc
         return NULL;
@@ -550,7 +550,39 @@ void* alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool z
     return NULL;
 #endif
 }
+// -------------------------------------------------------------------------------- 
 
+void* realloc_arena_aligned(arena_t* arena,
+                            void*   variable,
+                            size_t  var_size,
+                            size_t  realloc_size,
+                            bool    zeroed,
+                            size_t  algined) {
+    if (!arena || !variable) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // No-op on shrink or same size; keeps arena space.
+    if (realloc_size <= var_size) {
+        return variable;
+    }
+
+    // Allocate new block (no zeroing; we’ll zero only the tail if requested).
+    void* ptr = alloc_arena_aligned(arena, realloc_size, algined, false);
+    if (!ptr) {
+        // errno set by arena_alloc
+        return NULL;
+    }
+
+    memcpy(ptr, variable, var_size);
+
+    if (zeroed) {
+        memset((uint8_t*)ptr + var_size, 0, realloc_size - var_size);
+    }
+
+    return ptr;
+}
 // ================================================================================ 
 // ================================================================================ 
 // UTILITY FUNCTIONS

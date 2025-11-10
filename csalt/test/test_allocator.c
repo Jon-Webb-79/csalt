@@ -31,6 +31,10 @@
 // ================================================================================ 
 // TEST INIT DYNAMIC AND STATIC ARENAS
 
+static inline int is_aligned(const void* p, size_t a) {
+    return (((uintptr_t)p) & (a - 1u)) == 0u;
+}
+
 /* Helpers */
 static void dispose_arena(struct arena_t **pa) {
     if (!pa || !*pa) return;
@@ -1025,6 +1029,108 @@ static void test_arena_alloc_array_count_zero_is_error(void **state) {
 
     dispose_arena(&a);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_grow_copies_and_zeroes_tail(void **state) {
+    (void)state;
+
+    arena_t* a = init_dynamic_arena(/*bytes*/4096, /*resize*/true, /*min_chunk*/0, /*base_align*/alignof(max_align_t));
+    assert_non_null(a);
+
+    const size_t old_sz = 8;
+    uint8_t* oldp = (uint8_t*)alloc_arena(a, old_sz, /*zeroed*/false);
+    assert_non_null(oldp);
+
+    // Fill original with a pattern
+    for (size_t i = 0; i < old_sz; ++i) oldp[i] = (uint8_t)(0xA0u + (uint8_t)i);
+
+    const size_t new_sz = 32;
+    uint8_t* newp = (uint8_t*)realloc_arena(a, oldp, old_sz, new_sz, /*zeroed*/true);
+    assert_non_null(newp);
+
+    // First old_sz bytes must match original
+    assert_memory_equal(newp, oldp, old_sz);
+
+    // Tail must be zeroed
+    for (size_t i = old_sz; i < new_sz; ++i) {
+        assert_int_equal(newp[i], 0);
+    }
+
+    // Cleanup arena (base pointer is the arena itself)
+    free(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_shrink_is_noop(void **state) {
+    (void)state;
+
+    arena_t* a = init_dynamic_arena(2048, true, 0, alignof(max_align_t));
+    assert_non_null(a);
+
+    const size_t old_sz = 32;
+    uint8_t* p = (uint8_t*)alloc_arena(a, old_sz, false);
+    assert_non_null(p);
+
+    // Write sentinel values
+    for (size_t i = 0; i < old_sz; ++i) p[i] = (uint8_t)(0xC0u + (uint8_t)i);
+
+    // Shrink
+    void* q = realloc_arena(a, p, old_sz, /*realloc_size*/16, /*zeroed*/false);
+    assert_ptr_equal(q, p);
+
+    // Same size
+    void* r = realloc_arena(a, p, old_sz, /*realloc_size*/32, /*zeroed*/false);
+    assert_ptr_equal(r, p);
+
+    free(a);
+}
+// -------------------------------------------------------------------------------
+
+static void test_realloc_fails_when_insufficient_space(void **state) {
+    (void)state;
+
+    // Keep this pretty small so a large realloc will fail.
+    arena_t* a = init_dynamic_arena(512, /*resize*/false, /*min_chunk*/0, /*base_align*/alignof(max_align_t));
+    assert_non_null(a);
+
+    // Consume most space
+    const size_t old_sz = 400;
+    void* p = alloc_arena(a, old_sz, false);
+    assert_non_null(p);
+
+    // Request something larger than likely remains
+    errno = 0;
+    void* q = realloc_arena(a, p, old_sz, /*realloc_size*/500, /*zeroed*/false);
+    assert_null(q);
+    // errno is set inside arena_alloc; don’t assert a specific value to avoid coupling
+
+    free(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_aligned_alignment_and_copy(void **state) {
+    (void)state;
+
+    arena_t* a = init_dynamic_arena(4096, true, 0, alignof(max_align_t));
+    assert_non_null(a);
+
+    const size_t old_sz = 16;
+    uint8_t* p = (uint8_t*)alloc_arena(a, old_sz, false);
+    assert_non_null(p);
+    for (size_t i = 0; i < old_sz; ++i) p[i] = (uint8_t)(0x11u * (uint8_t)i);
+
+    const size_t want = 64;
+    const size_t align = 64;
+
+    uint8_t* q = (uint8_t*)realloc_arena_aligned(a, p, old_sz, want, /*zeroed*/false, align);
+    assert_non_null(q);
+    assert_true(is_aligned(q, align));
+
+    // Prefix preserved
+    assert_memory_equal(q, p, old_sz);
+
+    free(a);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1075,6 +1181,11 @@ const struct CMUnitTest test_arena[] = {
         cmocka_unit_test(test_arena_alloc_array_and_array_zeroed),
         cmocka_unit_test(test_arena_alloc_array_count_zero_is_error),
     #endif
+
+    cmocka_unit_test(test_realloc_grow_copies_and_zeroes_tail),
+    cmocka_unit_test(test_realloc_shrink_is_noop),
+    cmocka_unit_test(test_realloc_fails_when_insufficient_space),
+    cmocka_unit_test(test_realloc_aligned_alignment_and_copy),
 };
 
 const size_t test_arena_count = sizeof(test_arena) / sizeof(test_arena[0]);
