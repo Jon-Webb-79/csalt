@@ -2351,6 +2351,358 @@ static void test_alloc_iarena_einval_cases(void **state) {
 
     free_arena(arena);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_iarena_aligned_inherit(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    /* Make subarena with base align = 32 for easy checks */
+    const size_t BASE = 32u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    void* p = alloc_iarena_aligned(ia, 64, /*align*/0u, /*zeroed*/false);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % BASE, 0);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_iarena_aligned_stronger_than_base(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE = 16u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    void* p = alloc_iarena_aligned(ia, 128, /*align*/64u, /*zeroed*/false);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % 64u, 0);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_iarena_aligned_weaker_than_base(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE = 64u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    /* ask for 8, but base is 64 => expect 64 */
+    void* p = alloc_iarena_aligned(ia, 32, /*align*/8u, /*zeroed*/false);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % BASE, 0);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_iarena_aligned_bad_align_arg(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 16u);
+    assert_non_null(ia);
+
+    errno = 0;
+    void* p = alloc_iarena_aligned(ia, 32, /*align*/24u, /*zeroed*/false); /* 24 not power-of-two */
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_iarena_aligned_padding_charged(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE = 16u;      // subarena base alignment
+    const size_t REQ  = 64u;      // per-call requested alignment
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    /* First: 1 byte at BASE alignment; pad == 0 for the very first bump */
+    uint8_t* p1 = (uint8_t*)alloc_iarena_aligned(ia, 1, /*align*/0u, /*zeroed*/false);
+    assert_non_null(p1);
+    assert_int_equal(((uintptr_t)p1) % BASE, 0);
+    assert_int_equal(iarena_size(ia), 1);
+
+    /* Compute expected pad dynamically from the actual current cursor */
+    uint8_t* cur_before = p1 + 1;                         // after first alloc
+    size_t rem = (size_t)((uintptr_t)cur_before % REQ);
+    size_t pad = rem ? (REQ - rem) : 0;
+    size_t expected_delta = pad + 1;                      // pad + payload
+
+    size_t used_before = iarena_size(ia);
+    void* p2 = alloc_iarena_aligned(ia, 1, /*align*/REQ, /*zeroed*/false);
+    assert_non_null(p2);
+
+    size_t used_after = iarena_size(ia);
+    assert_int_equal(used_after - used_before, expected_delta);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_iarena_aligned_exact_fit_then_enomem(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE = 32u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    const size_t cap = iarena_alloc(ia);
+    assert_true(cap > 0);
+
+    /* exactly fill using align==0 (inherits BASE) */
+    void* p = alloc_iarena_aligned(ia, cap, /*align*/0u, /*zeroed*/false);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % BASE, 0);
+    assert_int_equal(iarena_remaining(ia), 0);
+
+    errno = 0;
+    void* q = alloc_iarena_aligned(ia, 1, /*align*/0u, /*zeroed*/false);
+    assert_null(q);
+    assert_int_equal(errno, ENOMEM);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_iarena_aligned_enomem_immediate(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    const size_t cap = iarena_alloc(ia);
+    errno = 0;
+    void* p = alloc_iarena_aligned(ia, cap + 1u, /*align*/0u, /*zeroed*/false);
+    assert_null(p);
+    assert_int_equal(errno, ENOMEM);
+    assert_int_equal(iarena_size(ia), 0);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_iarena_aligned_zeroed_flag(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, alignof(max_align_t));
+    assert_non_null(ia);
+
+    const size_t N = 128;
+    uint8_t* p = (uint8_t*)alloc_iarena_aligned(ia, N, /*align*/64u, /*zeroed*/true);
+    assert_non_null(p);
+    for (size_t i = 0; i < N; ++i) {
+        assert_int_equal(p[i], 0);
+    }
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_iarena_aligned_einval_cases(void **state) {
+    (void)state;
+
+    errno = 0;
+    void* p = alloc_iarena_aligned(NULL, 16, /*align*/16u, /*zeroed*/false);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 16u);
+    assert_non_null(ia);
+
+    errno = 0;
+    void* q = alloc_iarena_aligned(ia, 0u, /*align*/16u, /*zeroed*/false);
+    assert_null(q);
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_iarena_ptr_null_and_boundaries(void **state) {
+    (void)state;
+
+    /* NULL args */
+    errno = 0;
+    assert_false(is_iarena_ptr(NULL, (void*)0x1));
+    assert_int_equal(errno, EINVAL);
+
+    errno = 0;
+    assert_false(is_iarena_ptr((iarena_t*)0x1, NULL));
+    assert_int_equal(errno, EINVAL);
+
+    /* Build a 4 KiB subarena with 64B alignment for deterministic base alignment */
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+    const size_t A = 64u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, A);
+    assert_non_null(ia);
+
+    /* First 1-byte alloc; this returns the subarena base pointer (64-aligned) */
+    uint8_t* base = (uint8_t*)alloc_iarena_aligned(ia, 1, /*align*/0u, /*zeroed*/false);
+    assert_non_null(base);
+    assert_int_equal(((uintptr_t)base) % A, 0);
+
+    /* Capacity and end pointer */
+    const size_t cap = iarena_alloc(ia);
+    assert_true(cap > 0);
+    uint8_t* end = base + cap;
+
+    /* In-bounds pointers */
+    assert_true(is_iarena_ptr(ia, base));           /* begin is valid (inclusive) */
+    assert_true(is_iarena_ptr(ia, base + 1));
+    assert_true(is_iarena_ptr(ia, base + (cap > 1 ? cap - 1 : 0)));
+
+    /* Out-of-bounds pointers */
+    assert_false(is_iarena_ptr(ia, base - 1));      /* just before begin */
+    assert_false(is_iarena_ptr(ia, end));           /* end is exclusive */
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_iarena_ptr_sized_inside_and_crossing(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    /* Subarena with 32B base alignment */
+    const size_t A = 32u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, A);
+    assert_non_null(ia);
+
+    /* Get base pointer via first allocation */
+    uint8_t* base = (uint8_t*)alloc_iarena(ia, 1, /*zeroed*/false);
+    assert_non_null(base);
+    const size_t cap = iarena_alloc(ia);
+    uint8_t* end = base + cap;
+
+    /* Region wholly inside: start at base + 16, size 32 (assuming capacity allows) */
+    const size_t off = 16u;
+    const size_t sz  = 32u;
+    assert_true(cap > off + sz);
+    assert_true(is_iarena_ptr_sized(ia, base + off, sz));
+
+    /* Crossing end boundary: choose size so it spills just past end */
+    size_t spill_size = (size_t)(end - (base + off)) + 1u;
+    assert_false(is_iarena_ptr_sized(ia, base + off, spill_size));
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_iarena_ptr_sized_zero_length_inside(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, alignof(max_align_t));
+    assert_non_null(ia);
+
+    uint8_t* base = (uint8_t*)alloc_iarena(ia, 1, /*zeroed*/false);
+    assert_non_null(base);
+
+    /* size==0: treat [p,p) inside if p is inside */
+    assert_true(is_iarena_ptr_sized(ia, base, 0u));
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_iarena_ptr_sized_overflow_guard(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    uint8_t* p = (uint8_t*)alloc_iarena(ia, 1, /*zeroed*/false);
+    assert_non_null(p);
+
+    /* Ask for an absurdly large size that would overflow p + size */
+    size_t huge = (size_t)~(size_t)0; /* SIZE_MAX */
+    assert_false(is_iarena_ptr_sized(ia, p, huge));
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_iarena_ptr_sized_einval_cases(void **state) {
+    (void)state;
+
+    errno = 0;
+    assert_false(is_iarena_ptr_sized(NULL, (void*)0x1, 1));
+    assert_int_equal(errno, EINVAL);
+
+    errno = 0;
+    assert_false(is_iarena_ptr_sized((iarena_t*)0x1, NULL, 1));
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_iarena_ptr_after_multiple_allocs(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 32u);
+    assert_non_null(ia);
+
+    /* Grab the base; then allocate a second block to move cur forward further */
+    uint8_t* base = (uint8_t*)alloc_iarena(ia, 64, /*zeroed*/false);
+    assert_non_null(base);
+
+    uint8_t* blk2 = (uint8_t*)alloc_iarena_aligned(ia, 128, /*align*/64u, /*zeroed*/false);
+    assert_non_null(blk2);
+
+    /* Interior pointer from block2 should be inside */
+    assert_true(is_iarena_ptr(ia, blk2 + 64));
+
+    /* end pointer is exclusive */
+    const size_t cap = iarena_alloc(ia);
+    assert_true(cap > 0);
+    uint8_t* end = base + cap;
+    assert_false(is_iarena_ptr(ia, end));
+
+    free_arena(arena);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -2369,6 +2721,23 @@ const struct CMUnitTest test_iarena[] = {
     cmocka_unit_test(test_alloc_iarena_zeroed_flag),
     cmocka_unit_test(test_alloc_iarena_enomem_immediate),
     cmocka_unit_test(test_alloc_iarena_einval_cases),
+
+    cmocka_unit_test(test_alloc_iarena_aligned_inherit),
+    cmocka_unit_test(test_alloc_iarena_aligned_stronger_than_base),
+    cmocka_unit_test(test_alloc_iarena_aligned_weaker_than_base),
+    cmocka_unit_test(test_alloc_iarena_aligned_bad_align_arg),
+    cmocka_unit_test(test_alloc_iarena_aligned_padding_charged),
+    cmocka_unit_test(test_alloc_iarena_aligned_exact_fit_then_enomem),
+    cmocka_unit_test(test_alloc_iarena_aligned_enomem_immediate),
+    cmocka_unit_test(test_alloc_iarena_aligned_zeroed_flag),
+    cmocka_unit_test(test_alloc_iarena_aligned_einval_cases),
+
+    cmocka_unit_test(test_is_iarena_ptr_null_and_boundaries),
+    cmocka_unit_test(test_is_iarena_ptr_sized_inside_and_crossing),
+    cmocka_unit_test(test_is_iarena_ptr_sized_zero_length_inside),
+    cmocka_unit_test(test_is_iarena_ptr_sized_overflow_guard),
+    cmocka_unit_test(test_is_iarena_ptr_sized_einval_cases),
+    cmocka_unit_test(test_is_iarena_ptr_after_multiple_allocs),
 };
 
 const size_t test_iarena_count = sizeof(test_iarena) / sizeof(test_iarena[0]);

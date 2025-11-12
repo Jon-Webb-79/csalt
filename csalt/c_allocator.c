@@ -1931,6 +1931,35 @@ inline void* alloc_iarena_aligned(iarena_t* ia,
 }
 // -------------------------------------------------------------------------------- 
 
+bool is_iarena_ptr(const iarena_t* ia, const void *ptr) {
+    if (!ia || !ptr) {
+        errno = EINVAL;
+        return false;
+    }
+
+    const uint8_t* p = (const uint8_t*)ptr;
+    return (p >= ia->begin && p < ia->end);
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_iarena_ptr_sized(const iarena_t* ia, const void* ptr, size_t size) {
+    if (!ia || !ptr) {
+        errno = EINVAL;
+        return false;
+    }
+
+    const uintptr_t p = (uintptr_t)ptr;
+    const uintptr_t b = (uintptr_t)ia->begin;
+    const uintptr_t e = (uintptr_t)ia->end;
+
+    // overflow-safe check: p + size must not wrap around
+    if (size > (uintptr_t)(-1) - p) return false;  // overflow => false
+
+    const uintptr_t p_end = p + size;
+    return (p >= b && p_end <= e);
+}
+// -------------------------------------------------------------------------------- 
+
 inline size_t iarena_remaining(const iarena_t* ia) {
     if (!ia) { errno = EINVAL; return 0; }
     if (ia->cur > ia->end) { errno = EFAULT; return 0; }  // invariant guard

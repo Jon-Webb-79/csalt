@@ -2595,14 +2595,14 @@ void* alloc_iarena_aligned(iarena_t* ia,
 //                             size_t buffer_size,
 //                             bool zeroed,
 //                             size_t alignment);
-// // -------------------------------------------------------------------------------- 
-//
-// bool is_iarena_ptr(const iarena_t* arena, const void *ptr);
-// // -------------------------------------------------------------------------------- 
-//
-// bool is_iarena_ptr_sized(const iarena_t* arena, const void* ptr, size_t size);
-// // -------------------------------------------------------------------------------- 
-//
+// -------------------------------------------------------------------------------- 
+
+bool is_iarena_ptr(const iarena_t* ia, const void *ptr);
+// -------------------------------------------------------------------------------- 
+
+bool is_iarena_ptr_sized(const iarena_t* ia, const void* ptr, size_t size);
+// -------------------------------------------------------------------------------- 
+
 // void reset_iarena(iarena_t* arena, bool trim_extra_chunks);
 // // -------------------------------------------------------------------------------- 
 //
