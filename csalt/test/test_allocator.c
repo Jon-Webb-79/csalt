@@ -1246,7 +1246,7 @@ static void test_init_pool_invalid_args(void **state) {
                             /*enable reallocations*/ true);
     assert_null(p);
     assert_int_equal(errno, EINVAL);
-
+    free_arena(a);
     errno = 0;
     p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
                              /*blocks_per_chunk=*/0, /*prewarm=*/false,
@@ -1276,6 +1276,7 @@ static void test_init_pool_header_lives_in_arena(void **state) {
     assert_true(pool_stride(p) % alignof(void*) == 0);
     assert_int_equal(pool_total_blocks(p), 0);
     assert_int_equal(pool_free_blocks(p), 0);
+    free_arena(a);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1305,6 +1306,7 @@ static void test_init_pool_alignment_and_stride_rules(void **state) {
     size_t qstride = pool_stride(q);
     assert_true(qstride >= 48);
     assert_true(qstride % req_align == 0);
+    free_arena(a);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1335,6 +1337,7 @@ static void test_init_pool_prewarm_sets_blocks(void **state) {
     assert_int_equal(pool_free_blocks(p), 1);
     void* z = alloc_pool(p);
     assert_ptr_equal(z, x);
+    free_arena(a);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1353,6 +1356,7 @@ static void test_init_pool_fails_when_no_room_for_header(void **state) {
     // Header allocation should fail because the arena cannot grow (resize=false)
     assert_null(p);
     assert_int_equal(errno, ENOMEM);
+    free_arena(a);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1383,6 +1387,7 @@ static void test_pool_reset_semantics(void **state) {
     // Alloc should still work after reset (pool will grow again)
     void* b2 = alloc_pool(p);
     assert_non_null(b2);
+    free_arena(a);
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -1407,6 +1412,7 @@ static void test_init_dynamic_pool_invalid_args(void **state) {
     assert_null(p);
     assert_int_equal(errno, EINVAL);
     RESTORE_ERRNO(e2);
+    free_pool(p);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1420,6 +1426,7 @@ static void test_init_dynamic_pool_overflow_guard(void **state) {
     assert_null(p);
     assert_int_equal(errno, EOVERFLOW);
     RESTORE_ERRNO(e);
+    free_pool(p);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1565,6 +1572,7 @@ static void test_init_dynamic_pool_tiny_seed_fails(void **state) {
     assert_null(p);
     assert_true(errno == EINVAL || errno == ENOMEM);
     RESTORE_ERRNO(e);
+    free_pool(p);
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -1636,8 +1644,6 @@ static void test_init_static_pool_alignment_and_stride(void **state) {
     assert_true(st >= sizeof(void*));
     assert_true(st % 64 == 0);                      // requested alignment honored
     assert_true(st % alignof(void*) == 0);          // intrusive free-list
-
-    free_pool(p);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1651,8 +1657,6 @@ static void test_init_static_pool_stride_minimum(void **state) {
     size_t st = pool_stride(p);
     assert_true(st >= sizeof(void*));
     assert_true(st % alignof(void*) == 0);
-
-    free_pool(p);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1681,8 +1685,6 @@ static void test_init_static_pool_capacity_and_exhaustion(void **state) {
     assert_null(extra);
     assert_int_equal(errno, EPERM);
     RESTORE_ERRNO(e0);
-
-    free_pool(p);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1709,8 +1711,6 @@ static void test_init_static_pool_free_list_reuse(void **state) {
     void* c = alloc_pool(p);
     assert_ptr_equal(c, a);
     assert_int_equal(pool_free_blocks(p), 0);
-
-    free_pool(p);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -1737,8 +1737,6 @@ static void test_init_static_pool_one_block_only(void **state) {
     assert_null(z);
     assert_int_equal(errno, EPERM);
     RESTORE_ERRNO(e);
-
-    free_pool(p);
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -2017,7 +2015,7 @@ const struct CMUnitTest test_pool[] = {
     cmocka_unit_test(test_init_pool_prewarm_sets_blocks),
     cmocka_unit_test(test_init_pool_fails_when_no_room_for_header ),
     cmocka_unit_test(test_pool_reset_semantics),
-
+    
     cmocka_unit_test(test_init_dynamic_pool_invalid_args),
     cmocka_unit_test(test_init_dynamic_pool_overflow_guard),
     cmocka_unit_test(test_init_dynamic_pool_alignment_and_stride),
@@ -2049,6 +2047,35 @@ const struct CMUnitTest test_pool[] = {
 };
 
 const size_t test_pool_count = sizeof(test_pool) / sizeof(test_pool[0]);
+// ================================================================================ 
+// ================================================================================ 
+// TEST IARENA 
+
+static void test_init_iarena_normal(void **state) {
+    (void)state;
+
+    /* Case A: small min_chunk (4KiB) */
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    assert_int_equal(arena_size(arena), 0);
+    assert_int_equal(arena_alloc(arena), 8080);
+    assert_int_equal(total_arena_alloc(arena), 8192);
+    iarena_t* iarena = init_iarena_with_arena(arena, 4096, alignof(max_align_t));
+
+    assert_int_equal(iarena_size(iarena), 0);
+    assert_int_equal(iarena_alloc(iarena), 4032);
+    assert_int_equal(total_iarena_alloc(iarena), 4096);
+    free_arena(arena);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+const struct CMUnitTest test_iarena[] = {
+    cmocka_unit_test(test_init_iarena_normal),
+};
+
+const size_t test_iarena_count = sizeof(test_iarena) / sizeof(test_iarena[0]);
 // ================================================================================
 // ================================================================================
 // eof

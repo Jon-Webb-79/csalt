@@ -2563,6 +2563,78 @@ bool is_pool_ptr(const pool_t* pool, const void* ptr);
 #endif
 // ================================================================================ 
 // ================================================================================ 
+// INTERNAL ARENA 
+
+typedef struct iarena_t iarena_t;
+// -------------------------------------------------------------------------------- 
+
+iarena_t* init_iarena_with_arena(arena_t* parent,
+                                 size_t bytes,
+                                 size_t alignment);
+// -------------------------------------------------------------------------------- 
+
+void* alloc_iarena(iarena_t* ia, size_t bytes, bool zeroed);
+// -------------------------------------------------------------------------------- 
+
+void* alloc_iarena_aligned(iarena_t* ia,
+                           size_t bytes,
+                           size_t align,
+                           bool zeroed);
+// -------------------------------------------------------------------------------- 
+
+// void* realloc_iarena(iarena_t* ia,
+//                      void* var,
+//                      size_t var_size,
+//                      size_t buffer_size,
+//                      bool zeroed);
+// // -------------------------------------------------------------------------------- 
+//
+// void* ralloc_iarena_aligned(iarena_t* ia,
+//                             void* var,
+//                             size_t var_size,
+//                             size_t buffer_size,
+//                             bool zeroed,
+//                             size_t alignment);
+// // -------------------------------------------------------------------------------- 
+//
+// bool is_iarena_ptr(const iarena_t* arena, const void *ptr);
+// // -------------------------------------------------------------------------------- 
+//
+// bool is_iarena_ptr_sized(const iarena_t* arena, const void* ptr, size_t size);
+// // -------------------------------------------------------------------------------- 
+//
+// void reset_iarena(iarena_t* arena, bool trim_extra_chunks);
+// // -------------------------------------------------------------------------------- 
+//
+// ArenaCheckPoint save_iarena(const iarena_t* arena);
+// // -------------------------------------------------------------------------------- 
+//
+// bool restore_iarena(iarena_t *arena, ArenaCheckPoint cp);
+// // -------------------------------------------------------------------------------- 
+//
+size_t iarena_remaining(const iarena_t* ia);
+// -------------------------------------------------------------------------------- 
+
+alloc_t iarena_mtype(const iarena_t* ia);
+// -------------------------------------------------------------------------------- 
+
+size_t iarena_size(const iarena_t* ia);
+// -------------------------------------------------------------------------------- 
+
+size_t iarena_alloc(const iarena_t* ia);
+// -------------------------------------------------------------------------------- 
+//
+size_t total_iarena_alloc(const iarena_t* ia);
+// -------------------------------------------------------------------------------- 
+
+size_t iarena_alignment(const iarena_t* ia);
+// -------------------------------------------------------------------------------- 
+
+// bool iarena_stats(const iarena_t* arena, char* buffer, size_t buffer_size);
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================ 
+// ================================================================================ 
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
@@ -2571,6 +2643,8 @@ bool is_pool_ptr(const pool_t* pool, const void* ptr);
 // ================================================================================
 // eof
 //
-// TODO: ADD IS_POOL_PTR FUNCTION
-// TODO: ADD REALLOC_ARENA FUNCTION 
-// TODO: ADD REALLOC_POOL FUNCTION
+// TODO: Consider moving arena macros below iarena
+// TODO: ADD iarena_t data type with functions 
+// TODO ADD riarena_t data type with functions
+// TODO: ADD segregated fit allocator 
+// TODO: Add Slab allocator

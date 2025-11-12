@@ -40,6 +40,7 @@ int main(void) {
     const TestSuite suites[] = {
         {"Arena Allocator", test_arena, test_arena_count},
         {"Pool Allocator", test_pool, test_pool_count},
+        {"IArena Allocator", test_iarena, test_iarena_count},
         {"Error Handling",  test_error, test_error_count},
     };
     

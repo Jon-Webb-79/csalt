@@ -1790,6 +1790,197 @@ inline size_t pool_footprint(const pool_t* pool) {
     }
     return pool->total_blocks * pool->stride;
 }
+// ================================================================================ 
+// ================================================================================ 
+// INTERNAL ARENA 
+
+struct iarena_t {
+    // Hot path
+    uint8_t* cur;      // next write
+    uint8_t* end;      // bump limit (exclusive)
+    uint8_t* begin;    // base for stats/reset
+
+    // Parent ref
+    arena_t* arena;
+
+    // Accounting
+    size_t len;        // charged pad+bytes total
+    size_t alloc;      // usable payload capacity (end - begin)
+    size_t tot_alloc;  // total reserved from parent (header + padding + payload)
+
+    size_t alignment;  // effective payload alignment for this subarena
+};
+// -------------------------------------------------------------------------------- 
+
+iarena_t* init_iarena_with_arena(arena_t* parent,
+                                 size_t bytes,
+                                 size_t alignment) {
+    if (!parent || bytes == 0u) { errno = EINVAL; return NULL; }
+
+    const size_t parent_align = parent->alignment;
+    if ((parent_align & (parent_align - 1u)) != 0u) { errno = EINVAL; return NULL; }
+    if (alignment && ((alignment & (alignment - 1u)) != 0u)) { errno = EINVAL; return NULL; }
+
+    // Effective payload & base (header) alignment
+    const size_t eff_payload_align = alignment ? (alignment > parent_align ? alignment : parent_align)
+                                               : parent_align;
+    const size_t hdr_align  = alignof(iarena_t);
+    const size_t base_align = (eff_payload_align > hdr_align) ? eff_payload_align : hdr_align;
+
+    // --- Preflight like init_dynamic_arena does before malloc ---
+    // Worst-case pad after header to reach payload alignment
+    const size_t worst_pad = eff_payload_align - 1u;
+    // Need at least header + worst_pad + 1 byte of payload
+    if (bytes <= sizeof(iarena_t) + worst_pad) {
+        errno = EINVAL;          // not enough total for any payload
+        return NULL;
+    }
+    // ------------------------------------------------------------
+
+    // Carve total slice from parent; base is aligned to base_align
+    uint8_t* base = (uint8_t*)alloc_arena_aligned(parent, bytes, base_align, /*zero=*/false);
+    if (!base) { errno = ENOMEM; return NULL; }
+
+    iarena_t* ia = (iarena_t*)base;
+
+    uint8_t* raw_after_hdr = base + sizeof(iarena_t);
+    uint8_t* begin = (uint8_t*)_align_up_uintptr((uintptr_t)raw_after_hdr, eff_payload_align);
+    uint8_t* end   = base + bytes;
+
+    if (begin >= end) { errno = ENOMEM; return NULL; }
+
+    ia->arena     = parent;
+    ia->begin     = begin;
+    ia->cur       = begin;
+    ia->end       = end;
+    ia->len       = 0;
+    ia->alloc     = (size_t)(end - begin); // usable payload capacity
+    ia->tot_alloc = bytes;                 // total reserved (header + padding + payload)
+    ia->alignment = eff_payload_align;
+    return ia;
+}
+// -------------------------------------------------------------------------------- 
+
+inline void* alloc_iarena(iarena_t* ia, size_t bytes, bool zeroed) {
+    if (!ia || bytes == 0u) { errno = EINVAL; return NULL; }
+
+    const size_t A = ia->alignment;
+    if (A == 0u || (A & (A - 1u)) != 0u) { errno = EINVAL; return NULL; }
+
+    uintptr_t cur  = (uintptr_t)ia->cur;
+    uintptr_t p    = _align_up_uintptr(cur, A);
+    uintptr_t next = p + (uintptr_t)bytes;
+
+    if (next > (uintptr_t)ia->end) {
+        errno = ENOMEM; // fixed-size slice; no growth
+        return NULL;
+    }
+
+    ia->cur  = (uint8_t*)next;
+    ia->len += (size_t)(next - cur); // charge pad + bytes
+
+    void* out = (void*)p;
+    if (zeroed) memset(out, 0, bytes);
+    return out;
+}
+// -------------------------------------------------------------------------------- 
+
+inline void* alloc_iarena_aligned(iarena_t* ia,
+                                  size_t bytes,
+                                  size_t align,
+                                  bool zeroed) {
+    if (!ia || bytes == 0u) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Validate alignment argument
+    const size_t base_align = ia->alignment;
+    if (base_align == 0u || (base_align & (base_align - 1u)) != 0u) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Normalize requested alignment
+    if (align == 0u) {
+        align = base_align;
+    } else if (align & (align - 1u)) { // must be power of two
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Effective alignment = max(requested, subarena base)
+    const size_t A = (align > base_align) ? align : base_align;
+
+    uintptr_t cur  = (uintptr_t)ia->cur;
+    uintptr_t p    = _align_up_uintptr(cur, A);
+    uintptr_t next = p + (uintptr_t)bytes;
+
+    // Capacity check
+    if (next > (uintptr_t)ia->end) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    ia->cur  = (uint8_t*)next;
+    ia->len += (size_t)(next - cur); // track pad + payload
+
+    void* out = (void*)p;
+    if (zeroed) memset(out, 0, bytes);
+    return out;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t iarena_remaining(const iarena_t* ia) {
+    if (!ia) { errno = EINVAL; return 0; }
+    if (ia->cur > ia->end) { errno = EFAULT; return 0; }  // invariant guard
+    return (size_t)(ia->end - ia->cur);
+}
+// -------------------------------------------------------------------------------- 
+
+inline alloc_t iarena_mtype(const iarena_t* ia) {
+    if (!ia || !ia->arena) {
+        errno = EINVAL;
+        return ALLOC_INVALID;
+    }
+    return arena_mtype(ia->arena);
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t iarena_size(const iarena_t* ia) {
+    if (!ia) {
+        errno = EINVAL;
+        return 0;
+    }
+    return ia->len;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t iarena_alloc(const iarena_t* ia) {
+    if (!ia) {
+        errno = EINVAL;
+        return 0;
+    }
+    return ia->alloc;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t total_iarena_alloc(const iarena_t* ia) {
+    if (!ia) {
+        errno = EINVAL;
+        return 0;
+    }
+    return ia->tot_alloc;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t iarena_alignment(const iarena_t* ia) {
+    if (!ia) {
+        errno = EINVAL;
+        return 0;
+    }
+    return ia->alignment;
+}
 // ================================================================================
 // ================================================================================
 // eof
