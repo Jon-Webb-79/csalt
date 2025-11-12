@@ -2606,12 +2606,20 @@ bool is_iarena_ptr_sized(const iarena_t* ia, const void* ptr, size_t size);
 void reset_iarena(iarena_t* ia);
 // -------------------------------------------------------------------------------- 
 
-// ArenaCheckPoint save_iarena(const iarena_t* arena);
-// // -------------------------------------------------------------------------------- 
-//
-// bool restore_iarena(iarena_t *arena, ArenaCheckPoint cp);
-// // -------------------------------------------------------------------------------- 
-//
+typedef struct {
+    const void* owner;     /* identity of the subarena (opaque pointer to iarena_t) */
+    size_t      used;      /* bytes used at save (cur - begin) */
+    size_t      capacity;  /* total usable capacity at save (end - begin) */
+    size_t      alignment; /* effective alignment at save */
+    uint32_t    magic;     /* guard for basic corruption detection */
+} iArenaCheckPoint;
+
+iArenaCheckPoint save_iarena(const iarena_t* ia);
+// -------------------------------------------------------------------------------- 
+
+bool restore_iarena(iarena_t *ia, iArenaCheckPoint cp);
+// -------------------------------------------------------------------------------- 
+
 size_t iarena_remaining(const iarena_t* ia);
 // -------------------------------------------------------------------------------- 
 

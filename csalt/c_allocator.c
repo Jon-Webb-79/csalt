@@ -1977,6 +1977,48 @@ void reset_iarena(iarena_t* ia) {
 }
 // -------------------------------------------------------------------------------- 
 
+#define IARENA_CP_MAGIC ((uint32_t)0x49415243u)
+
+iArenaCheckPoint save_iarena(const iarena_t* ia) {
+    iArenaCheckPoint cp = {0};  /* zero-init → invalid by default */
+    if (!ia) { errno = EINVAL; return cp; }
+
+    /* In your allocator, len is charged as (next - cur) each bump, so len == (cur - begin). */
+    const size_t used     = (size_t)(ia->cur - ia->begin);
+    const size_t capacity = (size_t)(ia->end - ia->begin);
+
+    cp.owner     = (const void*)ia;
+    cp.used      = used;
+    cp.capacity  = capacity;       /* sticky for validation */
+    cp.alignment = ia->alignment;  /* sticky for validation */
+    cp.magic     = IARENA_CP_MAGIC;
+    return cp;
+}
+// -------------------------------------------------------------------------------- 
+
+bool restore_iarena(iarena_t *ia, iArenaCheckPoint cp) {
+    if (!ia) { errno = EINVAL; return false; }
+
+    /* Basic checkpoint sanity */
+    if (cp.magic != IARENA_CP_MAGIC) { errno = EINVAL; return false; }
+    if (cp.owner != (const void*)ia) { errno = EINVAL; return false; }
+
+    /* Current capacity/alignment must match the saved view (fixed-slice design) */
+    const size_t cur_capacity = (size_t)(ia->end - ia->begin);
+    if (cp.capacity != cur_capacity) { errno = EINVAL; return false; }
+    if (cp.alignment != ia->alignment) { errno = EINVAL; return false; }
+
+    /* Bounds check: used ≤ capacity */
+    if (cp.used > cur_capacity) { errno = EINVAL; return false; }
+
+    /* Restore cursor and accounting */
+    ia->cur = ia->begin + cp.used;
+    ia->len = cp.used;  /* equals cur - begin given your charging policy */
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
 inline alloc_t iarena_mtype(const iarena_t* ia) {
     if (!ia || !ia->arena) {
         errno = EINVAL;

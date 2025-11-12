@@ -2842,6 +2842,245 @@ static void test_reset_iarena_does_not_zero(void **state) {
 
     free_arena(arena);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_iarena_restore_round_trip(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    /* First allocation to establish baseline */
+    assert_non_null(alloc_iarena(ia, 128, false));
+    iArenaCheckPoint cp = save_iarena(ia);
+
+    /* Advance further */
+    assert_non_null(alloc_iarena(ia, 256, false));
+    assert_true(iarena_size(ia) > cp.used);
+
+    /* Restore back to cp */
+    bool ok = restore_iarena(ia, cp);
+    assert_true(ok);
+    assert_int_equal(iarena_size(ia), (int)cp.used);
+    assert_int_equal(iarena_remaining(ia), (int)(cp.capacity - cp.used));
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_iarena_restore_multiple_checkpoints(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 32u);
+    assert_non_null(ia);
+
+    assert_non_null(alloc_iarena(ia, 64, false));
+    iArenaCheckPoint cp1 = save_iarena(ia);
+
+    assert_non_null(alloc_iarena(ia, 100, false));
+    iArenaCheckPoint cp2 = save_iarena(ia);
+
+    assert_non_null(alloc_iarena(ia, 50, false));
+    size_t size_now = iarena_size(ia);
+    assert_true(size_now > cp2.used);
+
+    /* Restore to cp2, then cp1 */
+    assert_true(restore_iarena(ia, cp2));
+    assert_int_equal(iarena_size(ia), (int)cp2.used);
+
+    assert_true(restore_iarena(ia, cp1));
+    assert_int_equal(iarena_size(ia), (int)cp1.used);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_iarena_restore_invalid_magic(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    assert_non_null(alloc_iarena(ia, 16, false));
+    iArenaCheckPoint cp = save_iarena(ia);
+
+    size_t before = iarena_size(ia);
+    cp.magic ^= 0xFFFFFFFFu; /* corrupt */
+    errno = 0;
+    assert_false(restore_iarena(ia, cp));
+    assert_int_equal(errno, EINVAL);
+    assert_int_equal(iarena_size(ia), (int)before); /* unchanged */
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_iarena_restore_wrong_owner(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(16384, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia1 = init_iarena_with_arena(arena, 4096, 32u);
+    iarena_t* ia2 = init_iarena_with_arena(arena, 4096, 32u);
+    assert_non_null(ia1);
+    assert_non_null(ia2);
+
+    assert_non_null(alloc_iarena(ia1, 32, false));
+    iArenaCheckPoint cp = save_iarena(ia1);
+
+    errno = 0;
+    assert_false(restore_iarena(ia2, cp));
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_iarena_restore_capacity_mismatch(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    iArenaCheckPoint cp = save_iarena(ia);
+    cp.capacity += 1; /* corrupt capacity */
+
+    errno = 0;
+    assert_false(restore_iarena(ia, cp));
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_iarena_restore_alignment_mismatch(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 32u);
+    assert_non_null(ia);
+
+    iArenaCheckPoint cp = save_iarena(ia);
+    cp.alignment *= 2; /* corrupt alignment */
+
+    errno = 0;
+    assert_false(restore_iarena(ia, cp));
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_iarena_restore_used_overflow(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    iArenaCheckPoint cp = save_iarena(ia);
+    cp.used = cp.capacity + 1; /* invalid */
+
+    errno = 0;
+    assert_false(restore_iarena(ia, cp));
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_iarena_restore_null_ia(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, alignof(max_align_t));
+    assert_non_null(ia);
+
+    iArenaCheckPoint cp = save_iarena(ia);
+
+    errno = 0;
+    assert_false(restore_iarena(NULL, cp));
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_iarena_restore_same_address_when_saved_before_alloc(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    // Force 64B payload alignment to keep things neat
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    // Save BEFORE first allocation so restoring returns cursor to start of p
+    iArenaCheckPoint cp0 = save_iarena(ia);
+
+    // Allocate and write marker
+    uint8_t* p = (uint8_t*)alloc_iarena(ia, 64, false);
+    assert_non_null(p);
+    for (size_t i = 0; i < 64; ++i) p[i] = (uint8_t)(0xA0 + i);
+
+    // Allocate more to move cur forward
+    assert_non_null(alloc_iarena(ia, 128, false));
+
+    // Restore to pre-allocation checkpoint -> next alloc should return *same* address
+    assert_true(restore_iarena(ia, cp0));
+    uint8_t* q = (uint8_t*)alloc_iarena(ia, 64, false);
+    assert_non_null(q);
+    assert_ptr_equal(q, p);                  // same address
+    for (size_t i = 0; i < 64; ++i) {        // data persisted (reset/restore doesn't zero)
+        assert_int_equal(q[i], (uint8_t)(0xA0 + i));
+    }
+
+    free_arena(arena);
+}
+
+static void test_iarena_restore_after_alloc_gives_next_block(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    // First allocation
+    uint8_t* p = (uint8_t*)alloc_iarena(ia, 64, false);
+    assert_non_null(p);
+
+    // Save AFTER first allocation (used == 64 now)
+    iArenaCheckPoint cp_after = save_iarena(ia);
+
+    // Move cursor forward a bit more
+    assert_non_null(alloc_iarena(ia, 32, false));
+
+    // Restore to "after p" -> next 64B allocation should NOT be p
+    assert_true(restore_iarena(ia, cp_after));
+    uint8_t* q = (uint8_t*)alloc_iarena(ia, 64, false);
+    assert_non_null(q);
+    assert_false(q == p);   // documents the expected behavior
+
+    free_arena(arena);
+}
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -2883,6 +3122,17 @@ const struct CMUnitTest test_iarena[] = {
     cmocka_unit_test(test_reset_iarena_multiple_resets),
     cmocka_unit_test(test_reset_iarena_null),
     cmocka_unit_test(test_reset_iarena_does_not_zero),
+
+    cmocka_unit_test(test_iarena_restore_round_trip),
+    cmocka_unit_test(test_iarena_restore_multiple_checkpoints),
+    cmocka_unit_test(test_iarena_restore_invalid_magic),
+    cmocka_unit_test(test_iarena_restore_wrong_owner),
+    cmocka_unit_test(test_iarena_restore_capacity_mismatch),
+    cmocka_unit_test(test_iarena_restore_alignment_mismatch),
+    cmocka_unit_test(test_iarena_restore_used_overflow),
+    cmocka_unit_test(test_iarena_restore_null_ia),
+    cmocka_unit_test(test_iarena_restore_same_address_when_saved_before_alloc),
+    cmocka_unit_test(test_iarena_restore_after_alloc_gives_next_block),
 };
 
 const size_t test_iarena_count = sizeof(test_iarena) / sizeof(test_iarena[0]);
