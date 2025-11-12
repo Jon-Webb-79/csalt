@@ -2068,11 +2068,149 @@ static void test_init_iarena_normal(void **state) {
     assert_int_equal(total_iarena_alloc(iarena), 4096);
     free_arena(arena);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_init_iarena_too_small_total(void **state) {
+    (void)state;
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    errno = 0;
+    /* Worst-case pad for payload alignment == alignof(max_align_t)-1 */
+    const size_t worst_pad = alignof(max_align_t) - 1u;
+    const size_t too_small = 1 + worst_pad;  /* no room for payload */
+    iarena_t* ia = init_iarena_with_arena(arena, too_small, alignof(max_align_t));
+    assert_null(ia);
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_iarena_bad_alignment(void **state) {
+    (void)state;
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    errno = 0;
+    /* 24 is not a power-of-two */
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 24u);
+    assert_null(ia);
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_iarena_null_parent(void **state) {
+    (void)state;
+    errno = 0;
+    iarena_t* ia = init_iarena_with_arena(NULL, 4096, alignof(max_align_t));
+    assert_null(ia);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_iarena_zero_bytes(void **state) {
+    (void)state;
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    errno = 0;
+    iarena_t* ia = init_iarena_with_arena(arena, 0u, alignof(max_align_t));
+    assert_null(ia);
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_iarena_insufficient_parent_capacity(void **state) {
+    (void)state;
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    /* From your normal test: arena_alloc(arena) == 8080 usable */
+    assert_int_equal(arena_alloc(arena), 8080);
+
+    errno = 0;
+    iarena_t* ia = init_iarena_with_arena(arena, /*bytes*/ 8200, alignof(max_align_t));
+    assert_null(ia);
+    assert_int_equal(errno, ENOMEM);
+
+    /* Parent should still be usable after the failed carve */
+    errno = 0;
+    iarena_t* ok = init_iarena_with_arena(arena, 4096, alignof(max_align_t));
+    assert_non_null(ok);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_iarena_inherit_alignment_and_alloc(void **state) {
+    (void)state;
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    /* alignment=0 => inherit parent alignment */
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, /*alignment*/0u);
+    assert_non_null(ia);
+
+    /* First small allocation should be aligned to parent/base (alignof(max_align_t)) */
+    void* p = alloc_iarena(ia, 1u, /*zeroed=*/false);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % alignof(max_align_t), 0);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_iarena_zeroed_payload(void **state) {
+    (void)state;
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, alignof(max_align_t));
+    assert_non_null(ia);
+
+    /* Allocate N bytes and confirm they read back as zero */
+    const size_t N = 128;
+    uint8_t* p = (uint8_t*)alloc_iarena(ia, N, /*zeroed=*/false);
+    assert_non_null(p);
+    for (size_t i = 0; i < N; ++i) {
+        assert_int_equal(p[i], 0);
+    }
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_iarena_stronger_alignment_than_parent(void **state) {
+    (void)state;
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t)); // parent base align
+    assert_non_null(arena);
+
+    /* Request a stronger payload alignment (e.g., 64) */
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    void* p = alloc_iarena(ia, 1u, /*zeroed=*/false);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % 64u, 0);
+
+    free_arena(arena);
+}
 // ================================================================================ 
 // ================================================================================ 
 
 const struct CMUnitTest test_iarena[] = {
     cmocka_unit_test(test_init_iarena_normal),
+    cmocka_unit_test(test_init_iarena_too_small_total),
+    cmocka_unit_test(test_init_iarena_bad_alignment),
+    cmocka_unit_test(test_init_iarena_null_parent),
+    cmocka_unit_test(test_init_iarena_insufficient_parent_capacity),
+    cmocka_unit_test(test_init_iarena_inherit_alignment_and_alloc),
+    cmocka_unit_test(test_init_iarena_stronger_alignment_than_parent), 
 };
 
 const size_t test_iarena_count = sizeof(test_iarena) / sizeof(test_iarena[0]);
