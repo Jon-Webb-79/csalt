@@ -1967,6 +1967,16 @@ inline size_t iarena_remaining(const iarena_t* ia) {
 }
 // -------------------------------------------------------------------------------- 
 
+void reset_iarena(iarena_t* ia) {
+    if (!ia) {
+        errno = EINVAL;
+        return;
+    }
+    ia->cur = ia->begin;
+    ia->len = 0;
+}
+// -------------------------------------------------------------------------------- 
+
 inline alloc_t iarena_mtype(const iarena_t* ia) {
     if (!ia || !ia->arena) {
         errno = EINVAL;

@@ -2603,9 +2603,9 @@ bool is_iarena_ptr(const iarena_t* ia, const void *ptr);
 bool is_iarena_ptr_sized(const iarena_t* ia, const void* ptr, size_t size);
 // -------------------------------------------------------------------------------- 
 
-// void reset_iarena(iarena_t* arena, bool trim_extra_chunks);
-// // -------------------------------------------------------------------------------- 
-//
+void reset_iarena(iarena_t* ia);
+// -------------------------------------------------------------------------------- 
+
 // ArenaCheckPoint save_iarena(const iarena_t* arena);
 // // -------------------------------------------------------------------------------- 
 //

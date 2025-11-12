@@ -2703,6 +2703,145 @@ static void test_is_iarena_ptr_after_multiple_allocs(void **state) {
 
     free_arena(arena);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_iarena_basic(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t A = 64u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, A);
+    assert_non_null(ia);
+
+    const size_t cap_before = iarena_alloc(ia);
+    const size_t tot_before = total_iarena_alloc(ia);
+
+    /* first allocation */
+    uint8_t* p = (uint8_t*)alloc_iarena(ia, 128, /*zeroed=*/false);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % A, 0);
+    /* write a pattern to confirm reset doesn't zero */
+    memset(p, 0xAB, 128);
+    assert_true(iarena_size(ia) >= 128);
+
+    /* reset should drop usage to zero and keep capacity/metadata */
+    reset_iarena(ia);
+    assert_int_equal(iarena_size(ia), 0);
+    assert_int_equal(iarena_remaining(ia), cap_before);
+    assert_int_equal(iarena_alloc(ia), cap_before);
+    assert_int_equal(total_iarena_alloc(ia), tot_before);
+
+    /* next allocation should return same address; contents persist (not zeroed by reset) */
+    uint8_t* p2 = (uint8_t*)alloc_iarena(ia, 128, /*zeroed=*/false);
+    assert_non_null(p2);
+    assert_ptr_equal(p2, p);
+    for (size_t i = 0; i < 128; ++i) {
+        assert_int_equal(p2[i], 0xAB);
+    }
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_iarena_alignment_preserved(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE = 32u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    /* consume a few bytes to move cur off alignment, then reset */
+    assert_non_null(alloc_iarena(ia, 3, /*zeroed=*/false));
+    reset_iarena(ia);
+
+    /* Default alloc respects base alignment */
+    void* p = alloc_iarena(ia, 16, /*zeroed=*/false);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % BASE, 0);
+
+    /* Per-call stronger alignment works after reset too */
+    void* q = alloc_iarena_aligned(ia, 16, /*align*/64u, /*zeroed=*/false);
+    assert_non_null(q);
+    assert_int_equal(((uintptr_t)q) % 64u, 0);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_iarena_multiple_resets(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, 64u);
+    assert_non_null(ia);
+
+    const size_t cap = iarena_alloc(ia);
+
+    /* Fill exactly once */
+    assert_non_null(alloc_iarena(ia, cap, /*zeroed=*/false));
+    assert_int_equal(iarena_remaining(ia), 0);
+
+    /* One more should fail */
+    errno = 0;
+    assert_null(alloc_iarena(ia, 1, /*zeroed=*/false));
+    assert_int_equal(errno, ENOMEM);
+
+    /* Reset -> should be able to fill exactly again */
+    reset_iarena(ia);
+    assert_int_equal(iarena_size(ia), 0);
+    assert_non_null(alloc_iarena(ia, cap, /*zeroed=*/false));
+    assert_int_equal(iarena_remaining(ia), 0);
+
+    /* Reset twice in a row is fine */
+    reset_iarena(ia);
+    reset_iarena(ia);
+    assert_int_equal(iarena_size(ia), 0);
+    assert_int_equal(iarena_alloc(ia), cap);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_iarena_null(void **state) {
+    (void)state;
+    errno = 0;
+    reset_iarena(NULL);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_iarena_does_not_zero(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096 * 2, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, alignof(max_align_t));
+    assert_non_null(ia);
+
+    uint8_t* p = (uint8_t*)alloc_iarena(ia, 64, /*zeroed=*/false);
+    assert_non_null(p);
+    for (size_t i = 0; i < 64; ++i) p[i] = (uint8_t)i;
+
+    reset_iarena(ia);
+
+    /* Re-allocate same size; expect same address and bytes preserved */
+    uint8_t* q = (uint8_t*)alloc_iarena(ia, 64, /*zeroed=*/false);
+    assert_non_null(q);
+    assert_ptr_equal(q, p);
+    for (size_t i = 0; i < 64; ++i) {
+        assert_int_equal(q[i], (uint8_t)i);
+    }
+
+    free_arena(arena);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -2738,6 +2877,12 @@ const struct CMUnitTest test_iarena[] = {
     cmocka_unit_test(test_is_iarena_ptr_sized_overflow_guard),
     cmocka_unit_test(test_is_iarena_ptr_sized_einval_cases),
     cmocka_unit_test(test_is_iarena_ptr_after_multiple_allocs),
+
+    cmocka_unit_test(test_reset_iarena_basic),
+    cmocka_unit_test(test_reset_iarena_alignment_preserved),
+    cmocka_unit_test(test_reset_iarena_multiple_resets),
+    cmocka_unit_test(test_reset_iarena_null),
+    cmocka_unit_test(test_reset_iarena_does_not_zero),
 };
 
 const size_t test_iarena_count = sizeof(test_iarena) / sizeof(test_iarena[0]);
