@@ -2638,7 +2638,7 @@ size_t total_iarena_alloc(const iarena_t* ia);
 size_t iarena_alignment(const iarena_t* ia);
 // -------------------------------------------------------------------------------- 
 
-// bool iarena_stats(const iarena_t* arena, char* buffer, size_t buffer_size);
+bool iarena_stats(const iarena_t* arena, char* buffer, size_t buffer_size);
 // -------------------------------------------------------------------------------- 
 
 // ================================================================================ 

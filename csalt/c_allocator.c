@@ -2062,6 +2062,74 @@ inline size_t iarena_alignment(const iarena_t* ia) {
     }
     return ia->alignment;
 }
+// -------------------------------------------------------------------------------- 
+
+bool iarena_stats(const iarena_t *ia, char *buffer, size_t buffer_size) {
+    size_t offset = 0u;
+
+    if (!buffer || buffer_size == 0u) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (!ia) {
+        (void)_buf_appendf(buffer, buffer_size, &offset, "%s", "iArena: NULL\n");
+        return true;
+    }
+
+    /* Derive quantities (begin/end/cur are uint8_t*) */
+    const size_t used      = (size_t)(ia->cur   - ia->begin);
+    const size_t capacity  = (size_t)(ia->end   - ia->begin);  /* should match ia->alloc */
+    const size_t remaining = (size_t)(ia->end   - ia->cur);
+    const size_t alignment = ia->alignment;
+    const char*  parent    = ia->arena ? "Yes" : "No";
+
+    if (!_buf_appendf(buffer, buffer_size, &offset, "%s", "iArena Statistics:\n")) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset, "  Parent: %s\n", parent)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset, "  Used: %zu bytes\n", used)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset, "  Capacity: %zu bytes\n", capacity)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Total (with overhead): %zu bytes\n", ia->tot_alloc)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset, "  Remaining: %zu bytes\n", remaining)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset, "  Alignment: %zu bytes\n", alignment)) {
+        return false;
+    }
+
+    /* Utilization with divide-by-zero guard (mirror arena_stats behavior) */
+    if (capacity == 0u) {
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "%s", "  Utilization: N/A (capacity is 0)\n")) {
+            return false;
+        }
+    } else {
+        double const util = (100.0 * (double)used) / (double)capacity;
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Utilization: %.1f%%\n", util)) {
+            return false;
+        }
+    }
+
+    /* iArena is a single contiguous slice; no chunk list */
+    return true;
+}
 // ================================================================================
 // ================================================================================
 // eof
