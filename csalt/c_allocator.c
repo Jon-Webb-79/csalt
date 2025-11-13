@@ -1963,7 +1963,7 @@ void* realloc_iarena(iarena_t* ia,
 }
 // -------------------------------------------------------------------------------- 
 
-void* ralloc_iarena_aligned(iarena_t* ia,
+void* realloc_iarena_aligned(iarena_t* ia,
                             void* var,
                             size_t old_size,
                             size_t new_size,

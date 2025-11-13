@@ -252,13 +252,11 @@ arena_chunk_count
 .. doxygenfunction:: arena_chunk_count
    :project: csalt
 
-
 arena_mtype
 ~~~~~~~~~~~
 
 .. doxygenfunction:: arena_mtype
    :project: csalt
-
 
 arena_size
 ~~~~~~~~~~
@@ -632,7 +630,7 @@ Benefits
 * **Fast allocation performance** (constant time)
 * **No fragmentation**
 * **High data locality**
-* **Complete reset in constant time** using ``reset_arena()``
+* **Complete reset in constant time** using ``reset_iarena()``
 
 Limitations
 -----------
@@ -697,17 +695,32 @@ parse that memory to variables and to deallocate the memory.
 init_iarena_with_arena
 ~~~~~~~~~~~~~~~~~~~~~~
 
+.. doxygenfunction:: init_iarena_with_arena
+   :project: csalt
+
 alloc_iarena 
-~~~~~~~~~~~
+~~~~~~~~~~~~
+
+.. doxygenfunction:: alloc_iarena
+   :project: csalt
 
 realloc_iarena
 ~~~~~~~~~~~~~~
 
+.. doxygenfunction:: realloc_iarena
+   :project: csalt
+
 alloc_iarena_aligned
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: alloc_iarena_aligned
+   :project: csalt
 
 realloc_iarena_aligned
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: realloc_iarena_aligned
+   :project: csalt
 
 Utility Funcitons 
 -----------------
@@ -715,47 +728,79 @@ Utility Funcitons
 is_iarena_ptr
 ~~~~~~~~~~~~~
 
+.. doxygenfunction:: is_iarena_ptr
+   :project: csalt
+
 is_iarena_ptr_sized
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: is_iarena_ptr_sized
+   :project: csalt
 
 reset_iarena
-~~~~~~~~~~~
+~~~~~~~~~~~~
+
+.. doxygenfunction:: reset_iarena
+   :project: csalt
 
 save_iarena
 ~~~~~~~~~~~
 
+.. doxygenfunction:: save_iarena
+   :project: csalt
+
+
 restore_iarena
-~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: restore_iarena
+   :project: csalt
+
 
 iarena_stats 
 ~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_stats
+   :project: csalt
 
 Getter and Setter Functions 
 ---------------------------
 
 iarena_remaining
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_remaining
+   :project: csalt
 
 iarena_mtype
 ~~~~~~~~~~~~
 
+.. doxygenfunction:: iarena_mtype
+   :project: csalt
+
 iarena_size
 ~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_size
+   :project: csalt
 
 iarena_alloc
 ~~~~~~~~~~~~
 
+.. doxygenfunction:: iarena_alloc
+   :project: csalt
+
 total_iarena_alloc
 ~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: total_iarena_alloc
+   :project: csalt
 
 iarena_alignment
 ~~~~~~~~~~~~~~~~
 
-iarena_min_chunk_size
-~~~~~~~~~~~~~~~~~~~~~
-
-toggle_iarena_resize 
-~~~~~~~~~~~~~~~~~~~~
+.. doxygenfunction:: iarena_alignment
+   :project: csalt
 
 Function Like Macros 
 --------------------
@@ -763,12 +808,24 @@ Function Like Macros
 iarena_alloc_type
 ~~~~~~~~~~~~~~~~~
 
+.. doxygendefine:: iarena_alloc_type
+   :project: csalt
+
 iarena_alloc_array
 ~~~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: iarena_alloc_array
+   :project: csalt
 
 iarena_alloc_type_zeroed
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. doxygendefine:: iarena_alloc_type_zeroed
+   :project: csalt
+
 iarena_alloc_array_zeroed
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: iarena_alloc_array_zeroed
+   :project: csalt
 
