@@ -2641,6 +2641,19 @@ size_t iarena_alignment(const iarena_t* ia);
 bool iarena_stats(const iarena_t* arena, char* buffer, size_t buffer_size);
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_USE_CONVENIENCE_MACROS
+    #define iarena_alloc_type(arena, type) \
+        (type*)alloc_iarena((arena), sizeof(type), false)
+
+    #define iarena_alloc_array(arena, type, count) \
+        (type*)alloc_iarena((arena), sizeof(type) * (count), false)
+
+    #define iarena_alloc_type_zeroed(arena, type) \
+        (type*)alloc_iarena((arena), sizeof(type), true)
+
+    #define iarena_alloc_array_zeroed(arena, type, count) \
+        (type*)alloc_iarena((arena), sizeof(type) * (count), true)
+#endif
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

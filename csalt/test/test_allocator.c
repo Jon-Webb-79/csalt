@@ -3080,7 +3080,117 @@ static void test_iarena_restore_after_alloc_gives_next_block(void **state) {
 
     free_arena(arena);
 }
+// -------------------------------------------------------------------------------- 
 
+typedef struct {
+    int    a;
+    double b;
+} Foo;
+
+static void test_macro_iarena_alloc_type(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE = 64u; /* make alignment checks clear */
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    size_t used_before = iarena_size(ia);
+    Foo* p = iarena_alloc_type(ia, Foo);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % BASE, 0);
+
+    /* first allocation from a fresh subarena: pad==0, so delta == sizeof(Foo) */
+    size_t used_after = iarena_size(ia);
+    assert_int_equal(used_after - used_before, sizeof(Foo));
+
+    /* sanity: we can write to it */
+    p->a = 7; p->b = 3.14;
+    assert_int_equal(p->a, 7);
+    assert_true(p->b > 3.0 && p->b < 3.2);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_macro_iarena_alloc_array(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE = 32u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    size_t used_before = iarena_size(ia);
+    const size_t N = 10;
+    Foo* arr = iarena_alloc_array(ia, Foo, N);
+    assert_non_null(arr);
+    assert_int_equal(((uintptr_t)arr) % BASE, 0);
+
+    size_t used_after = iarena_size(ia);
+    assert_int_equal(used_after - used_before, sizeof(Foo) * N);
+
+    /* write to first and last element */
+    arr[0].a = 1; arr[0].b = 1.0;
+    arr[N-1].a = 99; arr[N-1].b = 9.9;
+    assert_int_equal(arr[0].a, 1);
+    assert_int_equal(arr[N-1].a, 99);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_macro_iarena_alloc_type_zeroed(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE = 64u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    Foo* p = iarena_alloc_type_zeroed(ia, Foo);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % BASE, 0);
+
+    /* Verify zeroed bytewise */
+    uint8_t* bytes = (uint8_t*)p;
+    for (size_t i = 0; i < sizeof(Foo); ++i) {
+        assert_int_equal(bytes[i], 0);
+    }
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_macro_iarena_alloc_array_zeroed(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE = 32u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE);
+    assert_non_null(ia);
+
+    const size_t N = 8;
+    Foo* arr = iarena_alloc_array_zeroed(ia, Foo, N);
+    assert_non_null(arr);
+    assert_int_equal(((uintptr_t)arr) % BASE, 0);
+
+    /* Every byte of the array should be zero */
+    uint8_t* b = (uint8_t*)arr;
+    for (size_t i = 0; i < sizeof(Foo) * N; ++i) {
+        assert_int_equal(b[i], 0);
+    }
+
+    free_arena(arena);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -3133,6 +3243,11 @@ const struct CMUnitTest test_iarena[] = {
     cmocka_unit_test(test_iarena_restore_null_ia),
     cmocka_unit_test(test_iarena_restore_same_address_when_saved_before_alloc),
     cmocka_unit_test(test_iarena_restore_after_alloc_gives_next_block),
+
+    cmocka_unit_test(test_macro_iarena_alloc_type),
+    cmocka_unit_test(test_macro_iarena_alloc_array),
+    cmocka_unit_test(test_macro_iarena_alloc_type_zeroed),
+    cmocka_unit_test(test_macro_iarena_alloc_array_zeroed),
 };
 
 const size_t test_iarena_count = sizeof(test_iarena) / sizeof(test_iarena[0]);
