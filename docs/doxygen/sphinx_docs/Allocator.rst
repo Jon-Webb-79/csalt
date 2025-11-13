@@ -604,3 +604,171 @@ alloc_pool_type
 
 .. doxygendefine:: alloc_pool_type
    :project: csalt
+
+Internal Arena Overview 
+=======================
+The ``iarena_t`` allocator implements a *bump-pointer* memory allocation model that 
+manages a smaller chunk of a ``arena_t`` data structure.
+Memory is acquired in a single block, and each allocation advances an internal
+write cursor. All allocated memory may be reclaimed simultaneously, rather
+than individually.
+
+This model is ideal when:
+
+* a group of allocations share the same lifetime
+* memory may be cleared in a single operation
+* peak memory needs are known in advance or bounded
+
+Examples include:
+
+* parsing and temporary string generation
+* construction of intermediate data structures
+* frame-based game engine or graphical workloads
+* scratch space for iterative scientific computations
+
+Benefits
+--------
+
+* **Fast allocation performance** (constant time)
+* **No fragmentation**
+* **High data locality**
+* **Complete reset in constant time** using ``reset_arena()``
+
+Limitations
+-----------
+
+* Individual objects cannot be freed
+* Memory usage may not exceed initial memory allocation
+* Best used in controlled phases of execution
+
+
+Data Types 
+----------
+The following are data structures and derived data types used in the ``c_allocator.h``
+and ``c_allocator.c`` files to support the ``iarena_t`` data type.
+
+iarena_t 
+~~~~~~~~
+``iarena_t`` is an opaque data structure that can not be directly accessed by a user.
+This structure contains all of the metadata associated with a bump allocator.
+The memory is allocated as a single contiguous array that can not be dynamically grown.
+
+.. code-block:: c
+
+   typedef struct {
+       // Hot path
+       uint8_t* cur;      // next write
+       uint8_t* end;      // bump limit (exclusive)
+       uint8_t* begin;    // base for stats/reset
+
+       // Parent ref
+       arena_t* arena;    // Pointer to an arena not owned by this truct
+
+       // Accounting
+       size_t len;        // charged pad+bytes total
+       size_t alloc;      // usable payload capacity (end - begin)
+       size_t tot_alloc;  // total reserved from parent (header + padding + payload)
+
+       size_t alignment;  // effective payload alignment for this subarena
+   } iarena_t;
+
+Internal ArenaCheckPoint 
+~~~~~~~~~~~~~~~~~~~~~~~~
+``iArenaCheckPoint`` is an opaque data structure that is used to store data 
+related to a bump allocator.  ``The restore_arena`` function can extract the data from 
+this structure to reconstitute a bump allocator.  This struct is defined as 
+``iArenaCheckPoint`` in the .h file
+
+.. code-block:: c 
+
+   typedef struct {
+       const void* owner;     /* identity of the subarena (opaque pointer to iarena_t) */
+       size_t      used;      /* bytes used at save (cur - begin) */
+       size_t      capacity;  /* total usable capacity at save (end - begin) */
+       size_t      alignment; /* effective alignment at save */
+       uint32_t    magic;     /* guard for basic corruption detection */
+   } iArenaCheckPoint;
+
+Initialization and Memory Management
+------------------------------------
+The functions in this section can be used to initialize memory for a bump allocator,
+parse that memory to variables and to deallocate the memory.
+
+init_iarena_with_arena
+~~~~~~~~~~~~~~~~~~~~~~
+
+alloc_iarena 
+~~~~~~~~~~~
+
+realloc_iarena
+~~~~~~~~~~~~~~
+
+alloc_iarena_aligned
+~~~~~~~~~~~~~~~~~~~
+
+realloc_iarena_aligned
+~~~~~~~~~~~~~~~~~~~~~
+
+Utility Funcitons 
+-----------------
+
+is_iarena_ptr
+~~~~~~~~~~~~~
+
+is_iarena_ptr_sized
+~~~~~~~~~~~~~~~~~~
+
+reset_iarena
+~~~~~~~~~~~
+
+save_iarena
+~~~~~~~~~~~
+
+restore_iarena
+~~~~~~~~~~~~~
+
+iarena_stats 
+~~~~~~~~~~~~
+
+Getter and Setter Functions 
+---------------------------
+
+iarena_remaining
+~~~~~~~~~~~~~~~
+
+iarena_mtype
+~~~~~~~~~~~~
+
+iarena_size
+~~~~~~~~~~~
+
+iarena_alloc
+~~~~~~~~~~~~
+
+total_iarena_alloc
+~~~~~~~~~~~~~~~~~~
+
+iarena_alignment
+~~~~~~~~~~~~~~~~
+
+iarena_min_chunk_size
+~~~~~~~~~~~~~~~~~~~~~
+
+toggle_iarena_resize 
+~~~~~~~~~~~~~~~~~~~~
+
+Function Like Macros 
+--------------------
+
+iarena_alloc_type
+~~~~~~~~~~~~~~~~~
+
+iarena_alloc_array
+~~~~~~~~~~~~~~~~~~
+
+iarena_alloc_type_zeroed
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+iarena_alloc_array_zeroed
+~~~~~~~~~~~~~~~~~~~~~~~~~
+

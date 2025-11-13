@@ -3191,6 +3191,335 @@ static void test_macro_iarena_alloc_array_zeroed(void **state) {
 
     free_arena(arena);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_iarena_null_ia(void **state) {
+    (void)state;
+
+    int dummy = 0;
+    errno = 0;
+    void* p = realloc_iarena(NULL, &dummy, sizeof(dummy), sizeof(dummy) * 2, false);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_iarena_malloc_semantics(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 2048, alignof(max_align_t));
+    assert_non_null(ia);
+
+    size_t used_before = iarena_size(ia);
+    size_t cap         = iarena_alloc(ia);
+
+    assert_true(cap >= sizeof(Foo));
+
+    Foo* p = (Foo*)realloc_iarena(ia, NULL, 0, sizeof(Foo), true);
+    assert_non_null(p);
+
+    /* Should have charged exactly sizeof(Foo) for the first allocation (no pad) */
+    size_t used_after = iarena_size(ia);
+    assert_int_equal(used_after - used_before, sizeof(Foo));
+
+    /* Should be zeroed */
+    uint8_t* bytes = (uint8_t*)p;
+    for (size_t i = 0; i < sizeof(Foo); ++i) {
+        assert_int_equal(bytes[i], 0);
+    }
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_iarena_grow_preserves_prefix(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t ALIGN = alignof(max_align_t);
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, ALIGN);
+    assert_non_null(ia);
+
+    const size_t old_size = 64;   /* multiple of ALIGN for pad=0 next time */
+    const size_t new_size = 128;
+
+    uint8_t* old = (uint8_t*)alloc_iarena(ia, old_size, false);
+    assert_non_null(old);
+
+    for (size_t i = 0; i < old_size; ++i) {
+        old[i] = (uint8_t)(0x10 + i);
+    }
+
+    size_t used_before = iarena_size(ia);
+
+    uint8_t* newer = (uint8_t*)realloc_iarena(ia, old, old_size, new_size, false);
+    assert_non_null(newer);
+
+    /* Prefix preserved up to old_size */
+    for (size_t i = 0; i < old_size; ++i) {
+        assert_int_equal(newer[i], (uint8_t)(0x10 + i));
+    }
+
+    /* Used should have grown by at least new_size (plus any pad), but we
+       don't assert the exact delta to avoid tying tests to padding details. */
+    size_t used_after = iarena_size(ia);
+    assert_true(used_after > used_before);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_iarena_shrink_truncates(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, alignof(max_align_t));
+    assert_non_null(ia);
+
+    const size_t old_size = 64;
+    const size_t new_size = 16;
+
+    uint8_t* old = (uint8_t*)alloc_iarena(ia, old_size, false);
+    assert_non_null(old);
+
+    for (size_t i = 0; i < old_size; ++i) {
+        old[i] = (uint8_t)i;
+    }
+
+    uint8_t* newer = (uint8_t*)realloc_iarena(ia, old, old_size, new_size, false);
+    assert_non_null(newer);
+
+    for (size_t i = 0; i < new_size; ++i) {
+        assert_int_equal(newer[i], (uint8_t)i);
+    }
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_iarena_invalid_pointer(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 2048, alignof(max_align_t));
+    assert_non_null(ia);
+
+    int stack_var = 123;
+    errno = 0;
+    void* p = realloc_iarena(ia, &stack_var, sizeof(stack_var), sizeof(stack_var) * 2, false);
+    assert_null(p);
+    assert_int_equal(errno, EPERM);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_iarena_enomem(void **state) {
+    (void)state;
+
+    /* Big enough parent that we can carve a decent iarena slice */
+    arena_t *arena = init_dynamic_arena(2 * 4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    /* Sub-arena slice of 4096 bytes; this should succeed */
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, alignof(max_align_t));
+    assert_non_null(ia);
+
+    const size_t cap = iarena_alloc(ia);   /* usable payload capacity */
+    assert_true(cap > 0);
+
+    /* Allocate an “old” block that uses half the capacity */
+    const size_t old_size = cap / 2;
+    uint8_t* old = (uint8_t*)alloc_iarena(ia, old_size, false);
+    assert_non_null(old);
+
+    /* Fill old block with a pattern */
+    for (size_t i = 0; i < old_size; ++i) {
+        old[i] = (uint8_t)0xAA;
+    }
+
+    /* Compute remaining space; request new_size strictly greater than remaining
+       so alloc_iarena() inside realloc_iarena is guaranteed to fail. */
+    const size_t remaining = iarena_remaining(ia);
+    assert_true(remaining > 0);
+
+    const size_t new_size = remaining + 1u;
+
+    errno = 0;
+    uint8_t* newer = (uint8_t*)realloc_iarena(ia, old, old_size, new_size, false);
+    assert_null(newer);
+    assert_int_equal(errno, ENOMEM);
+
+    /* Old block should still contain the pattern (no overwrite on failure) */
+    for (size_t i = 0; i < old_size; ++i) {
+        assert_int_equal(old[i], (uint8_t)0xAA);
+    }
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_ralloc_iarena_aligned_null_ia(void **state) {
+    (void)state;
+    int dummy = 0;
+    errno = 0;
+    void* p = ralloc_iarena_aligned(NULL, &dummy, sizeof(dummy), sizeof(dummy) * 2,
+                                    false, 16u);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_ralloc_iarena_aligned_malloc_semantics(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 2048, alignof(max_align_t));
+    assert_non_null(ia);
+
+    const size_t ALIGN = 64u;
+    uint8_t* p = (uint8_t*)ralloc_iarena_aligned(ia, NULL, 0, 128, true, ALIGN);
+    assert_non_null(p);
+    assert_int_equal(((uintptr_t)p) % ALIGN, 0);
+
+    /* zeroed */
+    for (size_t i = 0; i < 128; ++i) {
+        assert_int_equal(p[i], 0);
+    }
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_ralloc_iarena_aligned_grow_and_align(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(8192, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    const size_t BASE_ALIGN = 32u;
+    iarena_t* ia = init_iarena_with_arena(arena, 4096, BASE_ALIGN);
+    assert_non_null(ia);
+
+    const size_t old_size = 64;
+    const size_t new_size = 128;
+
+    /* initial block with some alignment (32) */
+    uint8_t* old = (uint8_t*)alloc_iarena_aligned(ia, old_size, BASE_ALIGN, false);
+    assert_non_null(old);
+    assert_int_equal(((uintptr_t)old) % BASE_ALIGN, 0);
+
+    for (size_t i = 0; i < old_size; ++i) {
+        old[i] = (uint8_t)(0x55 + i);
+    }
+
+    /* request stronger alignment 64 */
+    const size_t REQ_ALIGN = 64u;
+    uint8_t* newer = (uint8_t*)ralloc_iarena_aligned(ia, old, old_size, new_size,
+                                                     false, REQ_ALIGN);
+    assert_non_null(newer);
+    assert_int_equal(((uintptr_t)newer) % REQ_ALIGN, 0);
+
+    for (size_t i = 0; i < old_size; ++i) {
+        assert_int_equal(newer[i], (uint8_t)(0x55 + i));
+    }
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_ralloc_iarena_aligned_bad_alignment(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 2048, alignof(max_align_t));
+    assert_non_null(ia);
+
+    uint8_t* old = (uint8_t*)alloc_iarena(ia, 32, false);
+    assert_non_null(old);
+
+    /* 24 is not a power-of-two */
+    errno = 0;
+    uint8_t* newer = (uint8_t*)ralloc_iarena_aligned(ia, old, 32, 64, false, 24u);
+    assert_null(newer);
+    assert_int_equal(errno, EINVAL);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_ralloc_iarena_aligned_invalid_pointer(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(4096, false, 4096, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 2048, alignof(max_align_t));
+    assert_non_null(ia);
+
+    int stack_var = 42;
+    errno = 0;
+    void* p = ralloc_iarena_aligned(ia, &stack_var, sizeof(stack_var),
+                                    sizeof(stack_var) * 2, false, 16u);
+    assert_null(p);
+    assert_int_equal(errno, EPERM);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_ralloc_iarena_aligned_enomem(void **state) {
+    (void)state;
+
+    arena_t *arena = init_dynamic_arena(2 * 1024, false, 1024, alignof(max_align_t));
+    assert_non_null(arena);
+
+    iarena_t* ia = init_iarena_with_arena(arena, 1024, alignof(max_align_t));
+    assert_non_null(ia);
+
+    size_t cap = iarena_alloc(ia);
+    assert_true(cap > 0);
+
+    const size_t old_size = cap / 2;
+    const size_t new_size = cap;  /* likely too big given old allocation */
+
+    uint8_t* old = (uint8_t*)alloc_iarena(ia, old_size, false);
+    assert_non_null(old);
+
+    for (size_t i = 0; i < old_size; ++i) {
+        old[i] = (uint8_t)0xCC;
+    }
+
+    errno = 0;
+    uint8_t* newer = (uint8_t*)ralloc_iarena_aligned(ia, old, old_size,
+                                                     new_size, false, alignof(max_align_t));
+
+    if (!newer) {
+        assert_int_equal(errno, ENOMEM);
+        for (size_t i = 0; i < old_size; ++i) {
+            assert_int_equal(old[i], (uint8_t)0xCC);
+        }
+    } else {
+        for (size_t i = 0; i < old_size; ++i) {
+            assert_int_equal(newer[i], (uint8_t)0xCC);
+        }
+    }
+
+    free_arena(arena);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -3248,6 +3577,20 @@ const struct CMUnitTest test_iarena[] = {
     cmocka_unit_test(test_macro_iarena_alloc_array),
     cmocka_unit_test(test_macro_iarena_alloc_type_zeroed),
     cmocka_unit_test(test_macro_iarena_alloc_array_zeroed),
+
+    cmocka_unit_test(test_realloc_iarena_null_ia),
+    cmocka_unit_test(test_realloc_iarena_malloc_semantics),
+    cmocka_unit_test(test_realloc_iarena_grow_preserves_prefix),
+    cmocka_unit_test(test_realloc_iarena_shrink_truncates),
+    cmocka_unit_test(test_realloc_iarena_invalid_pointer),
+    cmocka_unit_test(test_realloc_iarena_enomem),
+
+    cmocka_unit_test(test_ralloc_iarena_aligned_null_ia),
+    cmocka_unit_test(test_ralloc_iarena_aligned_malloc_semantics),
+    cmocka_unit_test(test_ralloc_iarena_aligned_grow_and_align),
+    cmocka_unit_test(test_ralloc_iarena_aligned_bad_alignment),
+    cmocka_unit_test(test_ralloc_iarena_aligned_invalid_pointer),
+    cmocka_unit_test(test_ralloc_iarena_aligned_enomem),
 };
 
 const size_t test_iarena_count = sizeof(test_iarena) / sizeof(test_iarena[0]);

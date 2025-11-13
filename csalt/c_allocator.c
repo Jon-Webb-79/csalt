@@ -1801,7 +1801,7 @@ struct iarena_t {
     uint8_t* begin;    // base for stats/reset
 
     // Parent ref
-    arena_t* arena;
+    arena_t* arena;    // Pointer to an arena not owned by this truct
 
     // Accounting
     size_t len;        // charged pad+bytes total
@@ -1928,6 +1928,80 @@ inline void* alloc_iarena_aligned(iarena_t* ia,
     void* out = (void*)p;
     if (zeroed) memset(out, 0, bytes);
     return out;
+}
+// -------------------------------------------------------------------------------- 
+
+void* realloc_iarena(iarena_t* ia,
+                     void* var,
+                     size_t old_size,
+                     size_t new_size,
+                     bool zeroed) {
+    if (!ia) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (!var) {
+        return alloc_iarena(ia, new_size, zeroed);
+    }
+
+    if (!is_iarena_ptr_sized(ia, var, old_size)) {
+        errno = EPERM;      /* or EINVAL if you prefer */
+        return NULL;
+    }
+
+    void* new_ptr = alloc_iarena(ia, new_size, zeroed);
+    if (!new_ptr) {
+        /* alloc_iarena already set errno (likely ENOMEM or EPERM) */
+        return NULL;
+    }
+
+    size_t copy_size = (old_size < new_size) ? old_size : new_size;
+    memcpy(new_ptr, var, copy_size);
+
+    return new_ptr;  /* caller updates their variable */
+}
+// -------------------------------------------------------------------------------- 
+
+void* ralloc_iarena_aligned(iarena_t* ia,
+                            void* var,
+                            size_t old_size,
+                            size_t new_size,
+                            bool zeroed,
+                            size_t alignment) {
+    if (!ia) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (!var) {
+        return alloc_iarena_aligned(ia, new_size, alignment, zeroed);
+    }
+
+    if (!is_iarena_ptr_sized(ia, var, old_size)) {
+        errno = EPERM;  /* does not belong to this iarena */
+        return NULL;
+    }
+
+    size_t base_align = ia->alignment;
+    size_t A = (alignment == 0 ? base_align :
+                (alignment > base_align ? alignment : base_align));
+
+    if (A == 0 || (A & (A - 1u))) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    void* new_ptr = alloc_iarena_aligned(ia, new_size, A, zeroed);
+    if (!new_ptr) {
+        return NULL;
+    }
+
+    /* Copy only the overlapping portion */
+    size_t copy_size = (old_size < new_size) ? old_size : new_size;
+    memcpy(new_ptr, var, copy_size);
+
+    return new_ptr; 
 }
 // -------------------------------------------------------------------------------- 
 

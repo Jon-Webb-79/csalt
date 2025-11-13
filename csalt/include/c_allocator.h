@@ -2582,19 +2582,19 @@ void* alloc_iarena_aligned(iarena_t* ia,
                            bool zeroed);
 // -------------------------------------------------------------------------------- 
 
-// void* realloc_iarena(iarena_t* ia,
-//                      void* var,
-//                      size_t var_size,
-//                      size_t buffer_size,
-//                      bool zeroed);
-// // -------------------------------------------------------------------------------- 
-//
-// void* ralloc_iarena_aligned(iarena_t* ia,
-//                             void* var,
-//                             size_t var_size,
-//                             size_t buffer_size,
-//                             bool zeroed,
-//                             size_t alignment);
+void* realloc_iarena(iarena_t* ia,
+                     void* var,
+                     size_t old_size,
+                     size_t new_size,
+                     bool zeroed);
+// -------------------------------------------------------------------------------- 
+
+void* ralloc_iarena_aligned(iarena_t* ia,
+                            void* var,
+                            size_t old_size,
+                            size_t new_size,
+                            bool zeroed,
+                            size_t alignment);
 // -------------------------------------------------------------------------------- 
 
 bool is_iarena_ptr(const iarena_t* ia, const void *ptr);
