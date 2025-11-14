@@ -1327,15 +1327,15 @@ static void test_init_pool_prewarm_sets_blocks(void **state) {
     assert_int_equal(pool_free_blocks(p), 0);
 
     // First allocations should succeed and come from the current slice (free_list still empty)
-    void* x = alloc_pool(p);
+    void* x = alloc_pool(p, false);
     assert_non_null(x);
-    void* y = alloc_pool(p);
+    void* y = alloc_pool(p, false);
     assert_non_null(y);
 
     // Free one and ensure LIFO via intrusive list
     return_pool_element(p, x);
     assert_int_equal(pool_free_blocks(p), 1);
-    void* z = alloc_pool(p);
+    void* z = alloc_pool(p, false);
     assert_ptr_equal(z, x);
     free_arena(a);
 }
@@ -1371,8 +1371,8 @@ static void test_pool_reset_semantics(void **state) {
                                      /*enable reallocations*/ true);
     assert_non_null(p);
 
-    void* b0 = alloc_pool(p);
-    void* b1 = alloc_pool(p);
+    void* b0 = alloc_pool(p, false);
+    void* b1 = alloc_pool(p, false);
     assert_non_null(b0);
     assert_non_null(b1);
 
@@ -1385,7 +1385,7 @@ static void test_pool_reset_semantics(void **state) {
     assert_int_equal(pool_free_blocks(p), 0);
 
     // Alloc should still work after reset (pool will grow again)
-    void* b2 = alloc_pool(p);
+    void* b2 = alloc_pool(p, false);
     assert_non_null(b2);
     free_arena(a);
 }
@@ -1477,7 +1477,7 @@ static void test_init_dynamic_pool_fixed_prewarm_exact(void **state) {
     // Allocate exactly 'blocks' items successfully
     void* saved[16] = {0};
     for (size_t i = 0; i < blocks; ++i) {
-        saved[i] = alloc_pool(p);
+        saved[i] = alloc_pool(p, false);
         assert_non_null(saved[i]);
         // Optional: check alignment of returned block
         assert_true(((uintptr_t)saved[i] % stride) == 0);
@@ -1485,7 +1485,7 @@ static void test_init_dynamic_pool_fixed_prewarm_exact(void **state) {
 
     // Next allocation should fail with EPERM (fixed-capacity exhausted)
     SAVE_ERRNO(e0); errno = 0;
-    void *extra = alloc_pool(p);
+    void *extra = alloc_pool(p, false);
     assert_null(extra);
     assert_int_equal(errno, EPERM);
     RESTORE_ERRNO(e0);
@@ -1496,14 +1496,14 @@ static void test_init_dynamic_pool_fixed_prewarm_exact(void **state) {
     assert_int_equal(pool_total_blocks(p), blocks); // capacity unchanged
 
     // Re-allocate and confirm LIFO reuse (likely returns the same pointer)
-    void *r = alloc_pool(p);
+    void *r = alloc_pool(p, false);
     assert_non_null(r);
     assert_ptr_equal(r, saved[0]);
     assert_int_equal(pool_free_blocks(p), 0);
 
     // Capacity is still fixed; next extra allocation still fails
     SAVE_ERRNO(e1); errno = 0;
-    extra = alloc_pool(p);
+    extra = alloc_pool(p, false);
     assert_null(extra);
     assert_int_equal(errno, EPERM);
     RESTORE_ERRNO(e1);
@@ -1533,15 +1533,15 @@ static void test_init_dynamic_pool_grow_prewarm_and_reuse(void **state) {
     pool_t *p = init_dynamic_pool(32, 16, 8, 8192, 4096, true, true);
     assert_non_null(p);
 
-    void *a = alloc_pool(p);
-    void *b = alloc_pool(p);
+    void *a = alloc_pool(p, false);
+    void *b = alloc_pool(p, false);
     assert_non_null(a);
     assert_non_null(b);
 
     return_pool_element(p, a);
     assert_int_equal(pool_free_blocks(p), 1);
 
-    void *c = alloc_pool(p);
+    void *c = alloc_pool(p, false);
     assert_ptr_equal(c, a);
     assert_int_equal(pool_free_blocks(p), 0);
 
@@ -1557,7 +1557,7 @@ static void test_init_dynamic_pool_grow_lazy_first_alloc(void **state) {
 
     assert_int_equal(pool_total_blocks(p), 0);
 
-    assert_non_null(alloc_pool(p));
+    assert_non_null(alloc_pool(p, false));
     assert_int_equal(pool_total_blocks(p), 4);
 
     free_pool(p);
@@ -1673,7 +1673,7 @@ static void test_init_static_pool_capacity_and_exhaustion(void **state) {
 
     // Allocate exactly 'cap' blocks
     for (size_t i = 0; i < cap; ++i) {
-        void* b = alloc_pool(p);
+        void* b = alloc_pool(p, false);
         assert_non_null(b);
         // Returned pointer alignment (relative to stride)
         assert_true(((uintptr_t)b % pool_stride(p)) == 0);
@@ -1681,7 +1681,7 @@ static void test_init_static_pool_capacity_and_exhaustion(void **state) {
 
     // Next allocation must fail with EPERM
     SAVE_ERRNO(e0); errno = 0;
-    void* extra = alloc_pool(p);
+    void* extra = alloc_pool(p, false);
     assert_null(extra);
     assert_int_equal(errno, EPERM);
     RESTORE_ERRNO(e0);
@@ -1698,8 +1698,8 @@ static void test_init_static_pool_free_list_reuse(void **state) {
     size_t cap = pool_total_blocks(p);
     assert_true(cap > 2); // ensure we can do a few operations
 
-    void* a = alloc_pool(p);
-    void* b = alloc_pool(p);
+    void* a = alloc_pool(p, false);
+    void* b = alloc_pool(p, false);
     assert_non_null(a);
     assert_non_null(b);
     assert_int_equal(pool_free_blocks(p), 0);
@@ -1708,7 +1708,7 @@ static void test_init_static_pool_free_list_reuse(void **state) {
     return_pool_element(p, a);
     assert_int_equal(pool_free_blocks(p), 1);
 
-    void* c = alloc_pool(p);
+    void* c = alloc_pool(p, false);
     assert_ptr_equal(c, a);
     assert_int_equal(pool_free_blocks(p), 0);
 }
@@ -1728,12 +1728,12 @@ static void test_init_static_pool_one_block_only(void **state) {
 
     // Allocate all capacity
     for (size_t i = 0; i < cap; ++i) {
-        assert_non_null(alloc_pool(p));
+        assert_non_null(alloc_pool(p, false));
     }
 
     // Next allocation must fail
     SAVE_ERRNO(e); errno = 0;
-    void* z = alloc_pool(p);
+    void* z = alloc_pool(p, false);
     assert_null(z);
     assert_int_equal(errno, EPERM);
     RESTORE_ERRNO(e);
@@ -1783,8 +1783,8 @@ static void test_pool_bump_remaining_single_chunk(void **state) {
     assert_int_equal(before, pool_total_blocks(p)); // static pool: all capacity in one slice
 
     // Allocate two blocks → bump remaining decreases by 2
-    void *b0 = alloc_pool(p); assert_non_null(b0);
-    void *b1 = alloc_pool(p); assert_non_null(b1);
+    void *b0 = alloc_pool(p, false); assert_non_null(b0);
+    void *b1 = alloc_pool(p, false); assert_non_null(b1);
 
     size_t after2 = pool_bump_remaining_blocks(p);
     assert_int_equal(after2, before - 2);
@@ -1820,12 +1820,12 @@ static void test_pool_bump_remaining_two_chunks_dynamic(void **state) {
 
     // Exhaust the first chunk
     for (size_t i = 0; i < BPC; ++i) {
-        assert_non_null(alloc_pool(p));
+        assert_non_null(alloc_pool(p, false));
     }
     assert_int_equal(pool_bump_remaining_blocks(p), 0);
 
     // Next allocation should trigger growth → new chunk carved, one block consumed
-    void *g = alloc_pool(p);
+    void *g = alloc_pool(p, false);
     assert_non_null(g);
     assert_int_equal(pool_bump_remaining_blocks(p), BPC - 1);
 
@@ -1841,8 +1841,8 @@ static void test_pool_in_use_blocks_counts(void **state) {
     assert_non_null(p);
     assert_int_equal(pool_in_use_blocks(p), 0);
     
-    void *a = alloc_pool(p); assert_non_null(a);
-    void *b = alloc_pool(p); assert_non_null(b);
+    void *a = alloc_pool(p, false); assert_non_null(a);
+    void *b = alloc_pool(p, false); assert_non_null(b);
 
     assert_int_equal(pool_in_use_blocks(p), 2);
 
@@ -1930,12 +1930,12 @@ static void test_pool_save_restore_basic(void **state) {
     assert_non_null(p);
     
     // Allocate, save, allocate more, restore
-    void* a = alloc_pool(p);
+    void* a = alloc_pool(p, false);
     assert_non_null(a);
     
     PoolCheckPoint cp = save_pool(p);
     
-    void* b = alloc_pool(p);
+    void* b = alloc_pool(p, false);
     assert_non_null(b);
     
     size_t before = pool_in_use_blocks(p);
@@ -1956,12 +1956,12 @@ static void test_pool_restore_reuses_address(void **state) {
     
     PoolCheckPoint cp = save_pool(p);
     
-    void* first = alloc_pool(p);
+    void* first = alloc_pool(p, false);
     assert_non_null(first);
     
     assert_true(restore_pool(p, cp));
     
-    void* second = alloc_pool(p);
+    void* second = alloc_pool(p, false);
     assert_non_null(second);
     
     // Should get same address (deterministic bump allocation)
@@ -1977,7 +1977,7 @@ static void test_pool_restore_invalidates_checkpoint(void **state) {
     assert_non_null(p);
     
     PoolCheckPoint cp = save_pool(p);
-    (void)alloc_pool(p);
+    (void)alloc_pool(p, false);
     
     // Reset invalidates all checkpoints
     reset_pool(p);

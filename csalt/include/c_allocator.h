@@ -1819,6 +1819,7 @@ pool_t* init_static_pool(void*  buffer,
  * the free-list pointer on returned blocks.
  *
  * @param pool  Pool to allocate from (must be a valid pointer).
+ * @param zeroed true if element is to be zeroed
  *
  * @return Pointer to a block on success, or @c NULL on failure with @c errno set.
  *
@@ -1857,17 +1858,17 @@ pool_t* init_static_pool(void*  buffer,
  *                                     true,
  *                                     true);
  *
- * void* a = alloc_pool(pool);   // OK
- * void* b = alloc_pool(pool);   // OK
+ * void* a = alloc_pool(pool, false);   // OK
+ * void* b = alloc_pool(pool, false);   // OK
  *
  * return_pool_element(pool, a); // returns 'a' to free-list
  *
- * void* c = alloc_pool(pool);   // likely returns 'a' again (LIFO reuse)
+ * void* c = alloc_pool(pool, true);   // likely returns 'a' again (LIFO reuse)
  *
  * free_arena(arena);            // releases pool header + all slices
  * @endcode
  */
-void* alloc_pool(pool_t* pool);
+void* alloc_pool(pool_t* pool, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1909,11 +1910,11 @@ void* alloc_pool(pool_t* pool);
  * arena_t* a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
  * pool_t*  p = init_pool_with_arena(a, 64, 0, 32, true, true);
  *
- * void* x = alloc_pool(p);
- * void* y = alloc_pool(p);
+ * void* x = alloc_pool(p, false);
+ * void* y = alloc_pool(p, false);
  *
  * return_pool_element(p, x);      // x goes to the head of the free list
- * void* z = alloc_pool(p);        // z == x (LIFO reuse)
+ * void* z = alloc_pool(p, false);        // z == x (LIFO reuse)
  *
  * free_arena(a); // destroys all pool memory
  * @endcode
@@ -1967,8 +1968,8 @@ void return_pool_element(pool_t* pool, void* ptr);
  *                                   true,
  *                                   true);
  *
- * void* x = alloc_pool(p);
- * void* y = alloc_pool(p);
+ * void* x = alloc_pool(p, false);
+ * void* y = alloc_pool(p, false);
  *
  * return_pool_element(p, x);
  * assert(pool_free_blocks(p) == 1);
@@ -2027,7 +2028,7 @@ void reset_pool(pool_t* pool);
  * arena_t* a = init_dynamic_arena(8192, true, 4096, alignof(max_align_t));
  * pool_t*  p = init_pool_with_arena(a, 64, 0, 32, false, false);
  *
- * void* x = alloc_pool(p);
+ * void* x = alloc_pool(p, false);
  * return_pool_element(p, x);
  *
  * free_pool(p);    // pool invalid, arena 'a' still valid
@@ -2044,7 +2045,7 @@ void reset_pool(pool_t* pool);
  *                               32,
  *                               true);
  *
- * void* x = alloc_pool(p);
+ * void* x = alloc_pool(p, true);
  *
  * free_pool(p);   // frees arena and pool header
  * // p is now invalid
@@ -2362,8 +2363,8 @@ bool pool_stats(const pool_t *pool, char *buffer, size_t buffer_size);
  * PoolCheckpoint cp = save_pool(pool);
  * 
  * // Allocate some objects for a transaction
- * void* obj1 = alloc_pool(pool);
- * void* obj2 = alloc_pool(pool);
+ * void* obj1 = alloc_pool(pool, false);
+ * void* obj2 = alloc_pool(pool, false);
  * 
  * if (!try_operation(obj1, obj2)) {
  *     // Operation failed - restore to checkpoint
@@ -2424,11 +2425,11 @@ PoolCheckPoint save_pool(const pool_t* pool);
  * pool_t* pool = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true);
  * 
  * PoolCheckpoint cp1 = save_pool(pool);
- * void* a = alloc_pool(pool);
+ * void* a = alloc_pool(pool, false);
  * 
  * PoolCheckpoint cp2 = save_pool(pool);
- * void* b = alloc_pool(pool);
- * void* c = alloc_pool(pool);
+ * void* b = alloc_pool(pool, false);
+ * void* c = alloc_pool(pool, false);
  * 
  * // Restore to cp2: only 'a' remains allocated
  * restore_pool(pool, cp2);
@@ -2559,7 +2560,7 @@ bool is_pool_ptr(const pool_t* pool, const void* ptr);
  * free_pool(p);
  * @endcode
  */
-#define alloc_pool_type(T, pool) ((T*)alloc_pool(pool))
+#define alloc_pool_type(T, pool) ((T*)alloc_pool(pool, false))
 #endif
 // ================================================================================ 
 // ================================================================================ 

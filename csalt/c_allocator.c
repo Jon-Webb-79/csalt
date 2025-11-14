@@ -1353,7 +1353,7 @@ pool_t* init_static_pool(void*  buffer,
 }
 // -------------------------------------------------------------------------------- 
 
-inline void* alloc_pool(pool_t* pool) {
+inline void* alloc_pool(pool_t* pool, bool zeroed) {
     if (!pool) { errno = EINVAL; return NULL; }
 
     // 1) Reuse from free list if available
@@ -1366,6 +1366,7 @@ inline void* alloc_pool(pool_t* pool) {
     }
     blk  = pool->cur;
     pool->cur += pool->stride;
+    if (zeroed) memset(blk, 0, pool->block_size);
     return blk;
 }
 // -------------------------------------------------------------------------------- 
