@@ -321,6 +321,59 @@ arena_alloc_array_zeroed
 .. doxygendefine:: arena_alloc_array_zeroed
    :project: csalt
 
+Arena Context Functions
+-----------------------
+
+The following functions provide the arena-backed implementation of the
+allocator vtable interface. They adapt an ``arena_t`` instance to the generic
+allocator API by exposing allocation, reallocation, and bulk deallocation
+operations in a consistent form.
+
+Each function corresponds to one of the prototypes defined in the
+allocator context system (see :ref:`context`), and is used
+internally by the ``arena_allocator()`` helper to construct a fully
+configured ``allocator_vtable_t`` for arena-based allocation.
+
+These functions are not intended to be called directly by user code;
+instead, they are used through the generic allocator interface.
+
+arena_v_alloc
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: arena_v_alloc
+   :project: csalt
+
+arena_v_alloc_aligned
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: arena_v_alloc_aligned
+   :project: csalt
+
+arena_v_realloc
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: arena_v_realloc
+   :project: csalt
+
+arena_v_realloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: arena_v_realloc_aligned
+   :project: csalt
+
+arena_v_return
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: arena_v_return
+   :project: csalt
+
+arena_v_free
+~~~~~~~~~~~~
+
+.. doxygenfunction:: arena_v_free
+   :project: csalt
+
+
 Pool Allocator Overview
 =======================
 
