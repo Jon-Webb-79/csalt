@@ -1007,3 +1007,68 @@ free_prototype
 
 .. doxygentypedef:: free_prototype
    :project: csalt
+
+Arena Context Functions
+-----------------------
+
+The following functions provide the immutable-arena-backed (``iarena_t``)
+implementation of the allocator vtable interface. They adapt an ``iarena_t``
+instance to the generic allocator API by exposing allocation and reallocation
+operations in a consistent form.
+
+Unlike regular arenas, immutable arenas do not support returning or freeing
+individual blocks. Instead, memory is typically reclaimed only when the
+entire ``iarena_t`` object is destroyed or reset by the user. As a result,
+the ``return_element`` and ``deallocate`` operations are implemented as
+no-ops, aside from validating the context pointer.
+
+Each function corresponds to one of the prototypes defined in the allocator
+context system (see :ref:`context`), and is used internally by the
+``iarena_allocator()`` helper to construct a fully configured
+``allocator_vtable_t`` for immutable arena–based allocation.
+
+These functions are not intended to be called directly by user code;
+instead, they are consumed through the generic allocator interface.
+
+iarena_v_alloc
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_alloc
+   :project: csalt
+
+iarena_v_alloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_alloc_aligned
+   :project: csalt
+
+iarena_v_realloc
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_realloc
+   :project: csalt
+
+iarena_v_realloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_realloc_aligned
+   :project: csalt
+
+iarena_v_return
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_return
+   :project: csalt
+
+iarena_v_free
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_free
+   :project: csalt
+
+iarena_allocator
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_allocator
+   :project: csalt
+

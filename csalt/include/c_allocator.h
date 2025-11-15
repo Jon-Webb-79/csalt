@@ -4200,6 +4200,228 @@ bool iarena_stats(const iarena_t* arena, char* buffer, size_t buffer_size);
     #define iarena_alloc_array_zeroed(arena, type, count) \
         (type*)alloc_iarena((arena), sizeof(type) * (count), true)
 #endif
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for immutable arena (iarena) allocation.
+ *
+ * Allocates a block of memory of size @p size from the immutable arena
+ * referenced by @p ctx. If @p zeroed is true, the returned memory will be
+ * zero-initialized according to the semantics of alloc_iarena().
+ *
+ * On error, errno is set (typically to EINVAL or ENOMEM) and NULL is returned.
+ *
+ * This function implements the @ref alloc_prototype interface for
+ * iarena-backed allocators.
+ *
+ * @param ctx    Pointer to an iarena_t instance.
+ * @param size   Number of bytes to allocate.
+ * @param zeroed Whether the memory should be zero-initialized.
+ *
+ * @retval void* Pointer to a block of at least @p size bytes.
+ * @retval NULL  On failure, with errno set.
+ */
+static inline void* iarena_v_alloc(void* ctx, size_t size, bool zeroed) {
+    iarena_t* iarena = (iarena_t*)ctx;
+    if (!iarena) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return alloc_iarena(iarena, size, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for aligned immutable arena (iarena) allocation.
+ *
+ * Allocates a block of memory of size @p size from the immutable arena
+ * referenced by @p ctx, with a minimum alignment of @p align. The alignment
+ * must be a power of two. If @p zeroed is true, the returned memory will be
+ * zero-initialized.
+ *
+ * On error, errno is set and NULL is returned.
+ *
+ * This function implements the @ref alloc_aligned_prototype interface
+ * for iarena-backed allocators.
+ *
+ * @param ctx    Pointer to an iarena_t instance.
+ * @param size   Number of bytes to allocate.
+ * @param align  Required alignment (power of two).
+ * @param zeroed Whether the memory should be zero-initialized.
+ *
+ * @retval void* Pointer to an aligned block of at least @p size bytes.
+ * @retval NULL  On failure, with errno set.
+ */
+static inline void* iarena_v_alloc_aligned(void* ctx, size_t size, size_t align,
+                                           bool zeroed) {
+    iarena_t* iarena = (iarena_t*)ctx;
+    if (!iarena) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return alloc_iarena_aligned(iarena, size, align, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for immutable arena (iarena) reallocation.
+ *
+ * Resizes a block of memory previously allocated from the immutable arena
+ * referenced by @p ctx. The block is identified by @p old_ptr and its
+ * previous size @p old_size; the new requested size is @p new_size.
+ *
+ * The contents are preserved up to min(@p old_size, @p new_size). If
+ * @p zeroed is true and the allocation grows, any newly added region must
+ * be zero-initialized according to the semantics of realloc_iarena().
+ *
+ * On error, errno is set and NULL is returned. In that case, the caller
+ * must continue to use @p old_ptr unchanged.
+ *
+ * This function implements the @ref realloc_prototype interface for
+ * iarena-backed allocators.
+ *
+ * @param ctx       Pointer to an iarena_t instance.
+ * @param old_ptr   Pointer to the existing allocation (may be NULL).
+ * @param old_size  Size of the existing allocation.
+ * @param new_size  Requested new size.
+ * @param zeroed    Whether any expanded portion must be zero-initialized.
+ *
+ * @retval void* New pointer to the resized allocation on success.
+ * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ */
+static inline void* iarena_v_realloc(void* ctx, void* old_ptr,
+                                     size_t old_size, size_t new_size,
+                                     bool zeroed) {
+    iarena_t* iarena = (iarena_t*)ctx;
+    if (!iarena) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return realloc_iarena(iarena, old_ptr, old_size, new_size, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for aligned immutable arena (iarena) reallocation.
+ *
+ * Resizes a block of memory previously allocated from the immutable arena
+ * referenced by @p ctx, enforcing a minimum alignment of @p align for the
+ * resulting block. The previous allocation is described by @p old_ptr and
+ * @p old_size; the new requested size is @p new_size.
+ *
+ * The contents are preserved up to min(@p old_size, @p new_size). If
+ * @p zeroed is true and the allocation grows, any newly added bytes must
+ * be zero-initialized according to the semantics of realloc_iarena_aligned().
+ *
+ * On error, errno is set and NULL is returned. In that case, the caller
+ * must continue to use @p old_ptr unchanged.
+ *
+ * This function implements the @ref realloc_aligned_prototype interface for
+ * iarena-backed allocators.
+ *
+ * @param ctx       Pointer to an iarena_t instance.
+ * @param old_ptr   Pointer to the existing allocation.
+ * @param old_size  Size of the existing allocation.
+ * @param new_size  Requested new size.
+ * @param zeroed    Whether any expanded portion must be zero-initialized.
+ * @param align     Required alignment (power of two).
+ *
+ * @retval void* Pointer to the resized, aligned allocation on success.
+ * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ */
+static inline void* iarena_v_realloc_aligned(void* ctx, void* old_ptr,
+                                             size_t old_size, size_t new_size,
+                                             bool zeroed, size_t align) {
+    iarena_t* iarena = (iarena_t*)ctx;
+    if (!iarena) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return realloc_iarena_aligned(iarena, old_ptr, old_size,
+                                  new_size, zeroed, align);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for returning an element to an immutable arena.
+ *
+ * Immutable arenas do not support returning individual blocks to the
+ * allocator; memory is typically reclaimed only when the entire arena
+ * is reset or destroyed. As a result, this function is effectively a
+ * no-op for valid contexts.
+ *
+ * If @p ctx is NULL, errno is set to EINVAL and the function returns.
+ * The @p ptr parameter is otherwise ignored.
+ *
+ * This function implements the @ref return_prototype interface for
+ * iarena-backed allocators.
+ *
+ * @param ctx Pointer to an iarena_t instance.
+ * @param ptr Pointer to an allocated block (ignored).
+ */
+static inline void iarena_v_return(void* ctx, void* ptr) {
+    (void)ptr;  // arenas don’t support returning individual blocks
+    iarena_t* iarena = (iarena_t*)ctx;
+    if (!iarena) {
+        errno = EINVAL;
+        return;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for freeing an immutable arena.
+ *
+ * Immutable arenas are often stack-allocated or externally managed,
+ * and may not own their backing storage in a way that allows this
+ * interface to release it. In this implementation, @p ctx is validated
+ * and the function performs no further action.
+ *
+ * If @p ctx is NULL, errno is set to EINVAL and the function returns.
+ *
+ * This function implements the @ref free_prototype interface for
+ * iarena-backed allocators, but is currently a no-op for valid contexts.
+ *
+ * @param ctx Pointer to an iarena_t instance.
+ */
+static inline void iarena_v_free(void* ctx) {
+    iarena_t* iarena = (iarena_t*)ctx;
+    if (!iarena) {
+        errno = EINVAL;
+        return;
+    }
+    // NO OP
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Constructs an allocator_vtable_t for a given immutable arena.
+ *
+ * This helper initializes an allocator_vtable_t that exposes an
+ * iarena_t instance through the generic allocator interface. All
+ * operations (allocate, reallocate, etc.) are forwarded to the
+ * corresponding iarena-backed vtable adapter functions.
+ *
+ * The returned vtable is typically used to parameterize components that
+ * depend on the generic allocator API, without requiring direct knowledge
+ * of the underlying iarena_t implementation.
+ *
+ * @param a Pointer to an iarena_t instance to use as the allocator backend.
+ *
+ * @return A fully initialized allocator_vtable_t bound to @p a.
+ */
+static inline allocator_vtable_t iarena_allocator(iarena_t* a) {
+    allocator_vtable_t v = {
+        .allocate           = iarena_v_alloc,
+        .allocate_aligned   = iarena_v_alloc_aligned,
+        .reallocate         = iarena_v_realloc,
+        .reallocate_aligned = iarena_v_realloc_aligned,
+        .return_element     = iarena_v_return,
+        .deallocate         = iarena_v_free,
+        .ctx                = a
+    };
+    return v;
+}
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
