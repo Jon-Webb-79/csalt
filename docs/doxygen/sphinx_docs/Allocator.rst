@@ -603,6 +603,58 @@ alloc_pool_type
 .. doxygendefine:: alloc_pool_type
    :project: csalt
 
+Pool Context Functions
+----------------------
+
+The following functions provide the pool-backed implementation of the
+allocator vtable interface. They adapt a ``pool_t`` instance to the generic
+allocator API by exposing allocation, deallocation, and element-return
+operations in a consistent form.
+
+Each function corresponds to one of the prototypes defined in the
+allocator context system (see :ref:`context`), and is used
+internally by the ``pool_allocator()`` helper to construct a fully
+configured ``allocator_vtable_t`` for pool-based allocation.
+
+These functions are not intended to be called directly by user code;
+instead, they are used through the generic allocator interface.
+
+pool_v_alloc
+~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_v_alloc
+   :project: csalt
+
+pool_v_alloc_aligned
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_v_alloc_aligned
+   :project: csalt
+
+pool_v_realloc
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_v_realloc
+   :project: csalt
+
+pool_v_realloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_v_realloc_aligned
+   :project: csalt
+
+pool_v_return
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_v_return
+   :project: csalt
+
+pool_v_free
+~~~~~~~~~~~
+
+.. doxygenfunction:: pool_v_free
+   :project: csalt
+
 Internal Arena Overview 
 =======================
 The ``iarena_t`` allocator implements a *bump-pointer* memory allocation model that 
@@ -829,3 +881,76 @@ iarena_alloc_array_zeroed
 .. doxygendefine:: iarena_alloc_array_zeroed
    :project: csalt
 
+.. _context:
+
+Context Function Pointers
+=========================
+
+The CSALT allocator framework supports multiple allocation backends
+(arena, pool, dynamic arena, system heap, etc.).  
+To provide a uniform, "drop-in" interface for all allocator types,
+the library defines a generic context-based dispatch table.  
+This table contains function pointers corresponding to the fundamental
+operations that any allocator must implement.
+
+These function pointers are grouped into a single structure,
+``allocator_vtable_t``, which acts as a virtual method table (vtable)
+for memory management. Each allocator fills in the appropriate
+function pointers and provides an opaque ``ctx`` pointer referencing
+its internal state (arena instance, pool instance, system-heap adapter,
+and so on).
+
+.. code-block:: c
+
+   typedef struct {
+       alloc_prototype           allocate;
+       alloc_aligned_prototype   allocate_aligned;
+       realloc_prototype         reallocate;
+       realloc_aligned_prototype reallocate_aligned;
+       return_prototype          return_element;
+       free_prototype            deallocate;
+       void*                     ctx;      // backing arena, pool, system heap, etc.
+   } allocator_vtable_t;
+
+The following sections document each function-pointer type in detail.
+
+alloc_prototype
+---------------
+
+.. doxygentypedef:: alloc_prototype
+   :project: csalt
+
+
+alloc_aligned_prototype
+-----------------------
+
+.. doxygentypedef:: alloc_aligned_prototype
+   :project: csalt
+
+
+realloc_prototype
+-----------------
+
+.. doxygentypedef:: realloc_prototype
+   :project: csalt
+
+
+realloc_aligned_prototype
+-------------------------
+
+.. doxygentypedef:: realloc_aligned_prototype
+   :project: csalt
+
+
+return_prototype
+----------------
+
+.. doxygentypedef:: return_prototype
+   :project: csalt
+
+
+free_prototype
+--------------
+
+.. doxygentypedef:: free_prototype
+   :project: csalt

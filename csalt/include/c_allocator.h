@@ -83,6 +83,129 @@ typedef struct {
     } alloc_t;
 
 #endif /*ALLOC_H*/
+// -------------------------------------------------------------------------------- 
+// CONTEXT POINTER STRUCT
+
+/**
+ * @typedef alloc_prototype
+ * @brief Prototype for allocating a block of memory.
+ *
+ * This function allocates `size` bytes using the allocator identified
+ * by `ctx`. If `zeroed` is true, the returned memory must be
+ * zero-initialized. If allocation fails, the implementation should set
+ * errno (typically to ENOMEM) and return NULL.
+ *
+ * @param ctx     Allocator context (arena, pool, heap wrapper, etc.)
+ * @param size    Number of bytes to allocate
+ * @param zeroed  If true, memory must be zero-initialized
+ *
+ * @return Pointer to a block of at least `size` bytes, or NULL on failure.
+ */
+typedef void* (*alloc_prototype)(void* ctx, size_t size, bool zeroed);
+
+/**
+ * @typedef alloc_aligned_prototype
+ * @brief Prototype for aligned allocation.
+ *
+ * This function allocates `size` bytes with at least `align` alignment.
+ * Alignment must be a power of two. If `zeroed` is true, the returned
+ * memory must be zero-initialized. On failure, errno must be set and
+ * NULL returned.
+ *
+ * @param ctx     Allocator context
+ * @param size    Number of bytes to allocate
+ * @param align   Required alignment (power of two)
+ * @param zeroed  Whether the returned memory must be zero-initialized
+ *
+ * @return Pointer to an aligned memory block, or NULL on failure.
+ */
+typedef void* (*alloc_aligned_prototype)(void* ctx, size_t size, size_t align, bool zeroed);
+
+/**
+ * @typedef realloc_prototype
+ * @brief Prototype for resizing an existing allocation.
+ *
+ * This function resizes a previously allocated block. Implementations
+ * may move the allocation; if they do, the old contents up to
+ * `min(old_size, new_size)` must remain intact. If `zeroed` is true and
+ * `new_size > old_size`, the newly added region must be zeroed.
+ *
+ * If reallocation fails, errno must be set and NULL returned. In that
+ * case, the caller must retain `old_ptr` unchanged.
+ *
+ * @param ctx       Allocator context
+ * @param old_ptr   Pointer to existing allocation (may be NULL)
+ * @param old_size  Previously allocated size
+ * @param new_size  Requested new size
+ * @param zeroed    Whether any expanded memory must be zero-initialized
+ *
+ * @return New pointer on success, or NULL on failure (caller must keep old_ptr).
+ */
+typedef void* (*realloc_prototype)(void* ctx, void* old_ptr,
+                                   size_t old_size, size_t new_size, bool zeroed);
+
+/**
+ * @typedef realloc_aligned_prototype
+ * @brief Prototype for aligned reallocation.
+ *
+ * This function behaves like realloc_prototype but also enforces a
+ * minimum alignment requirement for the resulting allocation.
+ * `align` must be a power of two. If expanded, new memory must be zeroed
+ * when `zeroed` is true.
+ *
+ * On failure, errno must be set and NULL returned, and the caller must
+ * continue to use the original block (`old_ptr`).
+ *
+ * @param ctx       Allocator context
+ * @param old_ptr   Pointer to an existing allocation
+ * @param old_size  Previous allocation size
+ * @param new_size  Requested new size
+ * @param zeroed    Whether expanded memory must be zero-initialized
+ * @param align     Required alignment (power of two)
+ *
+ * @return Pointer to a resized & aligned block, or NULL on failure.
+ */
+typedef void* (*realloc_aligned_prototype)(void* ctx, void* old_ptr,
+                                           size_t old_size, size_t new_size,
+                                           bool zeroed, size_t align);
+
+/**
+ * @typedef return_prototype
+ * @brief Prototype for returning (or releasing) memory back to the allocator.
+ *
+ * Some allocators may support returning individual blocks for reuse
+ * (e.g., free lists, object pools). Others may ignore this operation.
+ *
+ * This function must not free the memory using the system allocator
+ * unless that is appropriate for the backing implementation.
+ *
+ * @param ctx  Allocator context
+ * @param ptr  Memory block previously allocated by this allocator
+ */
+typedef void  (*return_prototype)(void* ctx, void* ptr);
+
+/**
+ * @typedef free_prototype
+ * @brief Prototype for tearing down or freeing an allocator.
+ *
+ * This function releases any resources held by the allocator identified
+ * by `ctx`. For arena- or pool-style allocators, this typically frees
+ * all chunks in bulk. After this call, the allocator context must no
+ * longer be used.
+ *
+ * @param ctx  Allocator context to destroy
+ */
+typedef void (*free_prototype)(void* ctx);
+
+typedef struct {
+    alloc_prototype           allocate;
+    alloc_aligned_prototype   allocate_aligned;
+    realloc_prototype         reallocate;
+    realloc_aligned_prototype reallocate_aligned;
+    return_prototype          return_element;
+    free_prototype            deallocate;
+    void*                     ctx;      // backing arena, pool, system heap, etc.
+} allocator_vtable_t;
 // ================================================================================ 
 // ================================================================================ 
 // INITIALIZE AND DEALLOCATE FUNCTIONS
@@ -2562,6 +2685,174 @@ bool is_pool_ptr(const pool_t* pool, const void* ptr);
  */
 #define alloc_pool_type(T, pool) ((T*)alloc_pool(pool, false))
 #endif
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for pool allocation.
+ *
+ * Allocates a single fixed-size element from the pool referenced by @p ctx.
+ * Pool allocators do not support variable-sized allocation; therefore
+ * @p size is validated only to ensure it does not exceed the pool's block size.
+ *
+ * If @p zeroed is true, the returned block will be zero-initialized.
+ *
+ * @param ctx   Pointer to a pool_t instance.
+ * @param size  Requested size (must be <= pool_block_size()).
+ * @param zeroed Whether the element should be zero-initialized.
+ *
+ * @retval void* Pointer to the allocated pool element.
+ * @retval NULL  On error (errno set to EINVAL).
+ */
+static inline void* pool_v_alloc(void* ctx, size_t size, bool zeroed) {
+    (void) size;
+    pool_t* pool = (pool_t*)ctx;
+    if (!pool) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (size > pool_block_size(pool)) {
+        errno = EINVAL;   // requested more than a pool block can hold
+        return NULL;
+    }
+    return alloc_pool(pool, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for aligned pool allocation.
+ *
+ * Pool allocators inherently provide alignment guarantees based on the
+ * block size and internal structure, and do not support arbitrary alignment
+ * requests. Therefore, @p align is ignored.
+ *
+ * If @p zeroed is true, the returned block will be zero-initialized.
+ *
+ * @param ctx     Pointer to a pool_t instance.
+ * @param size    Requested size (ignored except for compatibility).
+ * @param align   Requested alignment (ignored).
+ * @param zeroed  Whether the element should be zero-initialized.
+ *
+ * @return Pointer to a pool element, or NULL on error.
+ */
+static inline void* pool_v_alloc_aligned(void* ctx, size_t size,
+                                         size_t align, bool zeroed) {
+    (void) size;
+    (void) align;
+    pool_t* pool = (pool_t*)ctx;
+    return alloc_pool(pool, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for pool reallocation.
+ *
+ * Reallocation is not supported by pool allocators because block sizes
+ * are fixed. This function simply returns @p old_ptr unchanged.
+ *
+ * @param ctx       Pointer to a pool_t instance (unused).
+ * @param old_ptr   The previously allocated block.
+ * @param old_size  Previous allocation size (ignored).
+ * @param new_size  Requested new size (ignored).
+ * @param zeroed    Whether to zero-init expanded memory (ignored).
+ *
+ * @return Always returns @p old_ptr.
+ */
+static inline void* pool_v_realloc(void* ctx, void* old_ptr,
+                                   size_t old_size, size_t new_size,
+                                   bool zeroed) {
+    (void)ctx; (void)old_size; (void)new_size; (void)zeroed;
+    return old_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for aligned pool reallocation.
+ *
+ * Like pool_v_realloc(), pool allocators do not support resizing or
+ * alignment-based reallocation. The function simply returns @p old_ptr.
+ *
+ * @param ctx       Pointer to a pool_t instance (unused).
+ * @param old_ptr   Previously allocated pool element.
+ * @param old_size  Previous size (ignored).
+ * @param new_size  Requested size (ignored).
+ * @param zeroed    Zero-initialize flag (ignored).
+ * @param align     Alignment (ignored).
+ *
+ * @return Always returns @p old_ptr.
+ */
+static inline void* pool_v_realloc_aligned(void* ctx, void* old_ptr,
+                                           size_t old_size, size_t new_size,
+                                           bool zeroed, size_t align) {
+    (void)ctx; (void)old_size; (void)new_size; (void)zeroed; (void)align;
+    return old_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Returns a previously allocated pool element to the pool.
+ *
+ * Pool allocators support element-level return operations. This returns
+ * @p ptr to the pool referenced by @p ctx for reuse.
+ *
+ * If either @p ctx or @p ptr is NULL, errno is set to EINVAL and the
+ * function has no effect.
+ *
+ * @param ctx  Pointer to a pool_t instance.
+ * @param ptr  Pool element previously returned by alloc_pool().
+ */
+static inline void pool_v_return(void* ctx, void* ptr) {
+    pool_t* pool = (pool_t*)ctx;
+    if (!pool || !ptr) {
+        errno = EINVAL;
+        return;
+    }
+    return_pool_element(pool, ptr);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Frees all memory owned by the pool allocator.
+ *
+ * Destroys the pool referenced by @p ctx, releasing all associated
+ * memory back to the system. After this call, the pool must not be used.
+ *
+ * If @p ctx is NULL, errno is set to EINVAL.
+ *
+ * @param ctx Pointer to a pool_t instance.
+ */
+static inline void pool_v_free(void* ctx) {
+    pool_t* pool = (pool_t*)ctx;
+    if (!pool) {
+        errno = EINVAL;
+        return;
+    }
+    free_pool(pool);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Constructs an allocator_vtable_t for a given pool.
+ *
+ * This helper initializes a vtable that exposes the pool allocator
+ * through the generic allocator interface. All allocation operations
+ * forward to pool-compatible functions.
+ *
+ * @param p Pointer to a pool_t instance used as the allocator backend.
+ *
+ * @return A fully initialized allocator_vtable_t referring to @p p.
+ */
+static inline allocator_vtable_t pool_allocator(pool_t* p) {
+    allocator_vtable_t v = {
+        .allocate          = pool_v_alloc,
+        .allocate_aligned  = pool_v_alloc_aligned,
+        .reallocate        = pool_v_realloc,
+        .reallocate_aligned= pool_v_realloc_aligned,
+        .return_element    = pool_v_return,
+        .deallocate        = pool_v_free,
+        .ctx               = p
+    };
+    return v;
+}
 // ================================================================================ 
 // ================================================================================ 
 // INTERNAL ARENA 
