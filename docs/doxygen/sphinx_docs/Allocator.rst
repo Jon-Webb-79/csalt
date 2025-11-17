@@ -26,6 +26,8 @@ These features make the allocator suitable for environments requiring strict
 determinism and safety analysis, such as embedded and real-time systems or projects 
 that require compliance to MISRA C standards.
 
+.. _arena_overview:
+
 Arena Overview 
 ==============
 The ``arena_t`` allocator implements a *bump-pointer* memory allocation model.
@@ -936,6 +938,231 @@ iarena_alloc_array_zeroed
 
 .. _context:
 
+Freelist Overview
+=================
+
+The ``freelist_t`` allocator implements a *returnable-block* allocation model.
+Unlike the :ref:`arena_t <arena_overview>` bump allocator—where memory is
+only reclaimed via a full reset—the freelist supports **individual frees**
+while still maintaining high performance and predictable behavior.
+
+Memory is managed as a contiguous region divided into variable-sized blocks.
+Each block is either:
+
+* **allocated**, containing a header that records its total size and internal
+  alignment offset, or
+* **free**, tracked in a singly linked free list ordered by address.
+
+This layout allows the allocator to return memory to the free list and
+efficiently coalesce adjacent free blocks, reducing external fragmentation.
+
+When to Use a Freelist
+----------------------
+
+The freelist allocator is ideal when:
+
+* allocations and deallocations are intermixed
+* memory reuse is essential
+* predictable fragmentation behavior is required
+* you want deterministic, bounded allocation times without relying on ``malloc``
+
+Common use cases:
+
+* transient or reusable object pools  
+* high-frequency allocation patterns in game or simulation engines  
+* embedded systems needing predictable memory footprints  
+* dynamic buffers inside larger memory arenas  
+
+Benefits
+--------
+
+* **Individual deallocation** — Unlike an arena, objects can be returned and reused.
+* **Predictable performance** — First-fit allocation runs in bounded linear time.
+* **Coalescing** — Adjacent free blocks automatically merge, limiting external fragmentation.
+* **Contiguous memory region** — No per-allocation heap calls, no hidden system overhead.
+* **Compatible with arenas** — Freelist can be layered atop an ``arena_t`` for full stack control.
+
+Limitations
+-----------
+
+* **Potential fragmentation**  
+  The freelist updates internal block boundaries dynamically. Fragmentation may occur, though automatic coalescing keeps it bounded.
+
+* **Internal fragmentation**  
+  Every allocation includes a small header that stores:
+  
+  * total block size  
+  * user pointer offset (for alignment)  
+
+  This means each allocation consumes slightly more memory than requested.
+  Alignments > struct alignment may increase padding.
+
+* **External fragmentation**  
+  When free blocks cannot be merged—because allocated blocks lie between them—the available space becomes split across multiple regions. This is inherent to any free-list allocator.
+
+* **More overhead than an arena**  
+  Allocation is slower than bump allocation, though significantly faster than ``malloc``.
+
+Static vs. Dynamic Freelist
+---------------------------
+
+Two initialization paths exist:
+
+* **Static freelist** — wraps a user-provided buffer  
+* **Dynamic freelist** — allocates its own backing ``arena_t``
+
+Dynamic freelists are available only when the build is compiled with:
+
+.. code-block:: c
+
+   ARENA_ENABLE_DYNAMIC = 1
+
+This ensures MISRA-compliant builds (``STATIC_ONLY``) completely exclude heap usage.
+
+Reset Behavior
+--------------
+
+Calling ``reset_freelist(fl)`` restores the allocator to its initial state:
+
+* all blocks become free  
+* the free list is replaced by one large free block  
+* accounting returns to zero  
+
+This mirrors the arena’s ``reset_arena()``, but the freelist preserves its
+ability to perform individual allocations afterward.
+
+Data Types 
+----------
+The following are data structures and derived data types used in the ``c_allocator.h``
+and ``c_allocator.c`` files to support the ``freelist_t`` data type.
+
+freelist_t 
+~~~~~~~~~~
+The ``freelist_t`` data type is the fundamental structure that enables the 
+freelist allocator.
+
+.. code-block:: c 
+
+   struct freelist_t {
+       free_block_t* head;     // Head of free list - accessed first in alloc
+       uint8_t*      cur;      // High-water mark - updated on alloc
+       size_t        len;      // Current usage - updated on alloc/free
+       size_t        alignment;// Checked on every alloc
+       void*         memory;   // Start of memory region (for reset/bounds checking)
+       size_t        alloc;    // Total usable memory
+       size_t        tot_alloc;// Total including overhead
+       arena_t*      parent_arena;  // Parent arena reference
+       bool          owns_memory;   // Ownership flag
+       uint8_t       _pad[7];       // Explicit padding to 8-byte boundary
+   };
+
+freelist_header_t 
+~~~~~~~~~~~~~~~~~
+The ``freelist_header_t`` structure provides data at the beginning of an 
+allocated memory block that enables variable alignment per allocation.
+
+.. code-block:: c
+
+   typedef struct freelist_header {
+       size_t block_size;  // total size of the allocated block (from block_start)
+       size_t offset;      // (uint8_t*)user_ptr - (uint8_t*)block_start
+   } freelist_header_t;
+
+free_block_t 
+~~~~~~~~~~~~
+The ``free_block_t`` data structure is the basis for a non-intrusive pointer 
+that enables a link list to tracked returned memory.
+
+.. code-block:: c 
+
+   typedef struct free_block {
+       size_t size;
+       struct free_block* next;
+   } free_block_t;
+
+Initialization and Memory Management
+------------------------------------
+The functions in this section can be used to initialize memory for a free list allocator,
+parse that memory to variables and to deallocate the memory.
+
+init_freelist_with_arena 
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_freelist_with_arena
+   :project: csalt
+
+init_static_freelist
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_static_freelist
+   :project: csalt
+
+init_dynamic_freelist
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_dynamic_freelist
+   :project: csalt
+
+free_freelist
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: free_freelist
+   :project: csalt
+
+alloc_freelist
+~~~~~~~~~~~~~~
+
+realloc_freelist
+~~~~~~~~~~~~~~~~
+
+alloc_freelist_aligned
+~~~~~~~~~~~~~~~~~~~~~~
+
+realloc_freelist_aligned
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Utility Funcitons 
+-----------------
+
+is_freelist_ptr
+~~~~~~~~~~~~~~~
+
+is_freelist_ptr_sized
+~~~~~~~~~~~~~~~~~~~~~
+
+reset_freelist
+~~~~~~~~~~~~~~
+
+freelist_stats 
+~~~~~~~~~~~~~~
+
+Getter and Setter Functions 
+---------------------------
+
+freelist_remaining
+~~~~~~~~~~~~~~~~~~
+
+freelist_mtype
+~~~~~~~~~~~~~~
+
+freelist_size
+~~~~~~~~~~~~~
+
+freelist_alloc
+~~~~~~~~~~~~~~
+
+total_freelist_alloc
+~~~~~~~~~~~~~~~~~~~~
+
+freelist_alignment
+~~~~~~~~~~~~~~~~~~
+
+min_freelist_alloc
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: min_freelist_alloc
+   :project: csalt
+
 Context Function Pointers
 =========================
 
@@ -1071,4 +1298,3 @@ iarena_allocator
 
 .. doxygenfunction:: iarena_allocator
    :project: csalt
-

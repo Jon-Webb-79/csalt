@@ -4429,16 +4429,311 @@ static inline allocator_vtable_t iarena_allocator(iarena_t* a) {
 typedef struct freelist_t freelist_t;
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Initialize a freelist allocator using memory obtained from an existing arena.
+ *
+ * This function creates a `freelist_t` inside the caller-provided `arena_t`.
+ * The freelist itself does not own the memory; the arena remains responsible
+ * for its lifetime. All allocations made through the freelist draw from a
+ * single contiguous region carved out of the arena via a single `alloc_arena()`
+ * call.
+ *
+ * The freelist memory layout consists of:
+ *
+ *     [ freelist_t struct | aligned user memory region ]
+ *
+ * Within the memory region, allocations are managed using variable-sized
+ * blocks. Returned blocks are coalesced whenever possible to limit external
+ * fragmentation.
+ *
+ * @param arena
+ *        Pointer to an initialized `arena_t`. The freelist is allocated
+ *        directly from this arena. Must not be NULL.
+ *
+ * @param size
+ *        Requested number of usable bytes for the freelist (not including
+ *        internal metadata). Must be at least `freelist_min_request`. If the
+ *        region rounds up to an alignment boundary, the actual usable size may
+ *        be slightly larger than requested.
+ *
+ * @param alignment
+ *        Desired alignment for both the freelist structure and its internal
+ *        memory region. If zero, `alignof(max_align_t)` is used. Non–power-of-two
+ *        values are rounded up. The final alignment is always at least
+ *        `alignof(max_align_t)`.
+ *
+ * @return
+ *        Pointer to a fully initialized `freelist_t` on success, or NULL on
+ *        error. In case of failure, `errno` is set to:
+ *
+ *        - `EINVAL`  if inputs are invalid  
+ *        - `ENOMEM`  if the arena does not have enough space  
+ *
+ * @note
+ *        The freelist does not grow. Its capacity is fully determined by the
+ *        initial `size` request and available arena space.
+ *
+ * @note
+ *        The returned freelist shares the arena's lifetime. When the arena is
+ *        reset or destroyed, all freelist allocations become invalid.
+ *
+ * @par Example
+ * Creating a freelist inside an arena:
+ *
+ * @code{.c}
+ * #include "arena.h"
+ * #include "freelist.h"
+ *
+ * int main(void) {
+ *     uint8_t buffer[2048];
+ *
+ *     // Create a static arena over a fixed buffer.
+ *     arena_t* arena =
+ *         init_static_arena(buffer, sizeof buffer, alignof(max_align_t));
+ *     if (!arena) return 1;
+ *
+ *     // Create a freelist that uses 1024 bytes from the arena.
+ *     freelist_t* fl = init_freelist_with_arena(arena, 1024, 0);
+ *     if (!fl) return 1;
+ *
+ *     // Allocate memory from the freelist
+ *     const size_t N = 64;
+ *     void* p = alloc_freelist(fl, N, true);
+ *
+ *     // ... use p ...
+ *
+ *     // Free the memory back to the freelist
+ *     return_freelist_element(fl, p);
+ *
+ *     // Freelist is automatically invalidated when the arena is reset/destroyed
+ *     reset_arena(arena);
+ *     return 0;
+ * }
+ * @endcode
+ */
 freelist_t* init_freelist_with_arena(arena_t* arena, 
                                      size_t size, 
                                      size_t alignment);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Create a dynamically backed freelist allocator.
+ *
+ * This function allocates a new `arena_t` and constructs a `freelist_t` inside
+ * it. The freelist *owns* the arena and will release it when
+ * `free_freelist()` is called. All memory used by the freelist—including the
+ * freelist structure itself and all future allocations—resides inside this
+ * dedicated arena.
+ *
+ * The caller specifies a desired usable payload size (`bytes`). The allocator
+ * then calculates the minimum total memory required to store:
+ *
+ *   - an aligned `freelist_t` structure  
+ *   - at least one free block (`free_block_t`)  
+ *   - the requested usable region  
+ *
+ * The underlying dynamic arena may provide more than the requested minimum;
+ * any extra space is incorporated into the freelist.
+ *
+ * @param bytes
+ *        Requested minimum usable payload size (not counting internal
+ *        metadata). Must be at least `freelist_min_request`. If the value is
+ *        too small to hold control structures, initialization fails and
+ *        `errno` is set to `EINVAL`.
+ *
+ * @param alignment
+ *        Desired alignment for the freelist header and all internal
+ *        allocations. If zero, `alignof(max_align_t)` is used. Non–power-of-two
+ *        values are rounded up. The resulting alignment is guaranteed to be at
+ *        least `alignof(max_align_t)`.
+ *
+ * @param resize
+ *        Whether the underlying dynamic arena is permitted to grow. In the
+ *        current freelist design, the freelist itself remains *fixed-size* once
+ *        constructed, but future versions may allow growth when this flag is
+ *        enabled. Passing `false` ensures a strictly fixed-size allocator.
+ *
+ * @return
+ *        A pointer to a fully initialized `freelist_t` on success, or NULL on
+ *        failure. In case of error, `errno` is set to:
+ *
+ *        - `EINVAL`  — invalid arguments or size too small  
+ *        - `ENOMEM`  — underlying arena could not allocate sufficient space  
+ *        - `ENOTSUP` — dynamic arenas disabled (`ARENA_ENABLE_DYNAMIC = 0`)  
+ *
+ * @note
+ *        The freelist takes ownership of the newly created `arena_t`. Call
+ *        `free_freelist()` to release all memory associated with the freelist.
+ *
+ * @note
+ *        The actual usable size (`freelist_alloc(fl)`) may be larger than
+ *        requested, depending on how the underlying dynamic arena chooses its
+ *        chunk sizes.
+ *
+ * @par Example
+ * Creating a standalone freelist with dynamic allocation:
+ *
+ * @code{.c}
+ * #include "arena.h"
+ * #include "freelist.h"
+ *
+ * int main(void) {
+ *     // Request at least 4096 bytes of usable space
+ *     freelist_t* fl = init_dynamic_freelist(4096, 0, false);
+ *     if (!fl) {
+ *         fprintf(stderr, "Freelist init failed: %s\n", strerror(errno));
+ *         return 1;
+ *     }
+ *
+ *     // Allocate memory from the freelist
+ *     void* p = alloc_freelist(fl, 128, true);
+ *     if (!p) return 1;
+ *
+ *     // Use memory...
+ *
+ *     // Free the element back to the freelist
+ *     return_freelist_element(fl, p);
+ *
+ *     // Destroy the freelist and its arena
+ *     free_freelist(fl);
+ *     return 0;
+ * }
+ * @endcode
+ */
 freelist_t* init_dynamic_freelist(size_t bytes, size_t alignment, bool resize);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Initialize a freelist allocator over a user-supplied static buffer.
+ *
+ * This function constructs a `freelist_t` using memory provided entirely by the
+ * caller. No heap allocation occurs. The freelist does **not** take ownership
+ * of the buffer; the caller retains responsibility for ensuring that the buffer
+ * remains valid for the freelist’s lifetime.
+ *
+ * A static freelist is ideal for embedded systems, scratch buffers, fixed-size
+ * workspaces, or any environment where dynamic allocation is restricted.
+ *
+ * The memory layout inside the buffer is:
+ *
+ *     [ aligned freelist_t | aligned free region for allocations ]
+ *
+ * The free region is placed immediately after the freelist header and begins as
+ * one large free block. All allocations and frees operate within this region.
+ *
+ * @param buffer
+ *        Pointer to the start of the user-supplied memory region. This buffer
+ *        must be at least `min_freelist_alloc()` bytes *plus* enough space for
+ *        a `freelist_t` header. Must not be NULL.
+ *
+ * @param bytes
+ *        Total size of the buffer. Must be large enough to contain:
+ *
+ *            sizeof(freelist_t) + sizeof(free_block_t)
+ *
+ *        and preferably more, to provide usable allocation space. If `bytes` is
+ *        smaller than the minimum required size, initialization fails with
+ *        `errno = EINVAL`.
+ *
+ * @param alignment
+ *        Required alignment for the freelist header and all internal blocks.
+ *        If zero, `alignof(max_align_t)` is used. Non–power-of-two values are
+ *        rounded up. The final alignment always satisfies:
+ *
+ *            alignment >= alignof(max_align_t)
+ *
+ * @return
+ *        Pointer to an initialized `freelist_t` on success, or NULL on failure.
+ *        In case of failure:
+ *
+ *        - `EINVAL`  — invalid buffer, size too small, or bad alignment  
+ *        - `ENOMEM`  — unexpected allocation failure inside arena creation  
+ *
+ * @note
+ *        The freelist *does not* own the memory region. Destroying the freelist
+ *        does not free the buffer.
+ *
+ * @note
+ *        The `arena_t` created internally wraps the caller’s buffer and is also
+ *        non-owning. The freelist simply carves out its own region from that
+ *        static arena.
+ *
+ * @par Example
+ * Creating a freelist over a static buffer:
+ *
+ * @code{.c}
+ * #include "arena.h"
+ * #include "freelist.h"
+ *
+ * int main(void) {
+ *     // Allocate a static buffer
+ *     uint8_t buffer[2048];
+ *
+ *     // Create a freelist using the buffer
+ *     freelist_t* fl = init_static_freelist(buffer, sizeof buffer, 0);
+ *     if (!fl) {
+ *         fprintf(stderr, "Static freelist init failed: %s\n", strerror(errno));
+ *         return 1;
+ *     }
+ *
+ *     // Allocate memory from the freelist
+ *     void* p = alloc_freelist(fl, 128, true);
+ *     if (!p) return 1;
+ *
+ *     // Use memory...
+ *
+ *     // Return memory to freelist
+ *     return_freelist_element(fl, p);
+ *
+ *     // Because the freelist is static, no destruction call is required.
+ *     // The caller owns the buffer and may reuse or discard it at will.
+ *
+ *     return 0;
+ * }
+ * @endcode
+ */
 freelist_t* init_static_freelist(void* buffer, size_t bytes, size_t alignment);
 // -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Destroy a dynamically allocated freelist and its underlying arena.
+ *
+ * This function frees a freelist created with `init_dynamic_freelist()`.  
+ * Only dynamic freelists own their underlying memory; static freelists do not.
+ *
+ * After calling this function:
+ *   - All memory allocated from the freelist becomes invalid.
+ *   - The `freelist_t` object itself is invalid, because it lives inside
+ *     the freed arena.
+ *
+ * Static freelists (those created with `init_freelist_with_arena()` or
+ * `init_static_freelist()`) must not be passed to this function.
+ *
+ * @param fl
+ *        Pointer to a freelist. Must refer to a dynamically allocated freelist.
+ *
+ * @retval void
+ *         The function does not return a value. On failure it sets errno:
+ *
+ *         - `EINVAL` : `fl` is NULL or its parent arena pointer is NULL  
+ *         - `EPERM`  : freelist does not own its memory (i.e., static freelist)
+ *
+ * @note
+ *        This function only applies to freelists that own their arena.
+ *        Attempting to free a static freelist does nothing and sets errno.
+ *
+ * @code{.c}
+ * freelist_t* fl = init_dynamic_freelist(2048, 0, false);
+ * if (!fl) return 1;
+ *
+ * void* p = alloc_freelist(fl, 128, false);
+ * if (!p) return 1;
+ *
+ *
+ * free_freelist(fl);
+ *
+ * @endcode
+ */
 
 void free_freelist(freelist_t* fl);
 // -------------------------------------------------------------------------------- 
@@ -4496,6 +4791,44 @@ size_t freelist_alignment(const freelist_t* fl);
 bool freelist_owns_arena(const freelist_t* fl);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the minimum usable allocation size required to construct a freelist.
+ *
+ * A freelist requires that its initial usable memory region be large enough to
+ * hold at least one `free_block_t` structure. This represents the smallest
+ * possible free block that the allocator can manage.
+ *
+ * This function exposes that minimum requirement so callers can query it when:
+ *
+ *  - allocating static buffers for `init_static_freelist()`
+ *  - determining whether a requested freelist size is valid
+ *  - performing compile-time or runtime capacity checks
+ *
+ * The value returned is constant for the lifetime of the program and is
+ * typically:
+ *
+ *     sizeof(free_block_t)
+ *
+ * @return
+ *     The minimum number of usable bytes (`size_t`) required to initialize a
+ *     freelist. Any attempt to construct a freelist with a smaller size will
+ *     fail with `errno = EINVAL`.
+ *
+ * @par Example
+ * @code{.c}
+ * size_t min_bytes = min_freelist_alloc();
+ *
+ * // Create a static buffer large enough for the freelist and its metadata.
+ * uint8_t buffer[1024];
+ *
+ * // Safe: 1024 >= min_bytes
+ * freelist_t* fl = init_static_freelist(buffer, sizeof buffer, 0);
+ *
+ * if (!fl) {
+ *     fprintf(stderr, "Freelist creation failed: %s\n", strerror(errno));
+ * }
+ * @endcode
+ */
 size_t min_freelist_alloc();
 // ================================================================================ 
 // ================================================================================ 
