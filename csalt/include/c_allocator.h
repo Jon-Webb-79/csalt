@@ -4424,6 +4424,81 @@ static inline allocator_vtable_t iarena_allocator(iarena_t* a) {
 }
 // ================================================================================ 
 // ================================================================================ 
+// FREE LIST IMPLEMENTATION 
+
+typedef struct freelist_t freelist_t;
+// -------------------------------------------------------------------------------- 
+
+freelist_t* init_freelist_with_arena(arena_t* arena, 
+                                     size_t size, 
+                                     size_t alignment);
+// -------------------------------------------------------------------------------- 
+
+freelist_t* init_dynamic_freelist(size_t bytes, size_t alignment, bool resize);
+// -------------------------------------------------------------------------------- 
+
+freelist_t* init_static_freelist(void* buffer, size_t bytes, size_t alignment);
+// -------------------------------------------------------------------------------- 
+
+void free_freelist(freelist_t* fl);
+// -------------------------------------------------------------------------------- 
+
+void* alloc_freelist(freelist_t* fl, size_t size, bool zero);
+// -------------------------------------------------------------------------------- 
+
+void* alloc_freelist_aligned(freelist_t* fl,
+                             size_t      bytes,
+                             size_t      alignment,
+                             bool        zeroed);
+// -------------------------------------------------------------------------------- 
+
+void* realloc_freelist(freelist_t* fl, void* variable, size_t old_size, size_t new_size, bool zeroed);
+// -------------------------------------------------------------------------------- 
+
+void* realloc_freelist_aligned(freelist_t* fl,
+                               void*       ptr,
+                               size_t      old_size,
+                               size_t      new_size,
+                               bool        zeroed,
+                               size_t      alignment);
+// -------------------------------------------------------------------------------- 
+
+void return_freelist_element(freelist_t* fl, void* ptr);
+// -------------------------------------------------------------------------------- 
+
+void reset_freelist(freelist_t* fl);
+// -------------------------------------------------------------------------------- 
+
+bool is_freelist_ptr(const freelist_t* fl, const void* ptr);
+// -------------------------------------------------------------------------------- 
+
+bool is_freelist_ptr_sized(const freelist_t* fl, const void* ptr, size_t size);
+// -------------------------------------------------------------------------------- 
+
+size_t freelist_remaining(const freelist_t* fl);
+// -------------------------------------------------------------------------------- 
+
+alloc_t freelist_mtype(const freelist_t* fl);
+// -------------------------------------------------------------------------------- 
+
+size_t freelist_size(const freelist_t* fl);
+// -------------------------------------------------------------------------------- 
+
+size_t freelist_alloc(const freelist_t* fl);
+// -------------------------------------------------------------------------------- 
+
+size_t total_freelist_alloc(const freelist_t* fl);
+// -------------------------------------------------------------------------------- 
+
+size_t freelist_alignment(const freelist_t* fl);
+// -------------------------------------------------------------------------------- 
+
+bool freelist_owns_arena(const freelist_t* fl);
+// -------------------------------------------------------------------------------- 
+
+size_t min_freelist_alloc();
+// ================================================================================ 
+// ================================================================================ 
 #ifdef __cplusplus
 }
 #endif /* cplusplus */
@@ -4432,8 +4507,8 @@ static inline allocator_vtable_t iarena_allocator(iarena_t* a) {
 // ================================================================================
 // eof
 //
-// TODO: Consider moving arena macros below iarena
-// TODO: ADD iarena_t data type with functions 
-// TODO ADD riarena_t data type with functions
-// TODO: ADD segregated fit allocator 
-// TODO: Add Slab allocator
+// TODO: Look at changes necessary for multi-core and multi-processing systems
+// TODO: ADD free_list allocator 
+// TODO: Add Buddy Allocator 
+// TODO: Add Slab allocator 
+// TODO: ADD two level segregated fit allocator 

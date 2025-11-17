@@ -2205,6 +2205,801 @@ bool iarena_stats(const iarena_t *ia, char *buffer, size_t buffer_size) {
     /* iArena is a single contiguous slice; no chunk list */
     return true;
 }
+// ================================================================================ 
+// ================================================================================ 
+// FREE LIST IMPLEMENTATION 
+
+static size_t FREELIST_DEFAULT_MIN_ALLOC = 16;
+
+typedef struct free_block {
+    size_t size;
+    struct free_block* next;
+} free_block_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct freelist_header {
+    size_t block_size;  // total size of the allocated block (from block_start)
+    size_t offset;      // (uint8_t*)user_ptr - (uint8_t*)block_start
+} freelist_header_t;
+// -------------------------------------------------------------------------------- 
+
+struct freelist_t {
+    free_block_t* head;     // Head of free list - accessed first in alloc
+    uint8_t*      cur;      // High-water mark - updated on alloc
+    size_t        len;      // Current usage - updated on alloc/free
+    size_t        alignment;// Checked on every alloc
+    void*         memory;   // Start of memory region (for reset/bounds checking)
+    size_t        alloc;    // Total usable memory
+    size_t        tot_alloc;// Total including overhead
+    arena_t*      parent_arena;  // Parent arena reference
+    bool          owns_memory;   // Ownership flag
+    uint8_t       _pad[7];       // Explicit padding to 8-byte boundary
+};
+// -------------------------------------------------------------------------------- 
+
+static size_t  freelist_min_request = sizeof(free_block_t);
+// -------------------------------------------------------------------------------- 
+
+freelist_t* init_freelist_with_arena(arena_t* arena,
+                                     size_t  size,
+                                     size_t  alignment)
+{
+    if (!arena) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (size < freelist_min_request) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Normalize alignment (0 => at least max_align_t, power of two)
+    if (alignment == 0) alignment = alignof(max_align_t);
+    if (!_is_pow2(alignment)) {
+        alignment = _next_pow2(alignment);
+        if (!alignment) { errno = EINVAL; return NULL; }
+    }
+    if (alignment < alignof(max_align_t)) {
+        alignment = alignof(max_align_t);
+    }
+
+    // Calculate total allocation: freelist_t struct + usable memory
+    size_t struct_size = _align_up_size(sizeof(freelist_t), alignment);
+    size_t usable_size = _align_up_size(size, alignment);
+    size_t total_alloc = struct_size + usable_size;
+
+    // Ensure usable_size is at least large enough for free_block_t
+    if (usable_size < sizeof(free_block_t)) {
+        usable_size = sizeof(free_block_t);
+        total_alloc = struct_size + usable_size;
+    }
+
+    // Single allocation from arena for everything
+    void* base = alloc_arena(arena, total_alloc, false);
+    if (!base) {
+        // alloc_arena is responsible for setting errno
+        return NULL;
+    }
+
+    // freelist_t struct at the beginning
+    freelist_t* fl = (freelist_t*)base;
+    memset(fl, 0, sizeof *fl);
+
+    // Usable memory starts after the struct (aligned)
+    void* memory = (uint8_t*)base + struct_size;
+
+    // Initialize the freelist structure
+    fl->memory       = memory;
+    fl->cur          = (uint8_t*)memory;    // Next available slot (initially at start)
+    fl->len          = 0;
+    fl->alloc        = usable_size;
+    fl->tot_alloc    = total_alloc;
+    fl->alignment    = alignment;
+    fl->owns_memory  = false;               // Underlying arena is owned by caller
+    fl->parent_arena = arena;
+
+    // Initialize with one large free block
+    fl->head         = (free_block_t*)memory;
+    fl->head->size   = usable_size;
+    fl->head->next   = NULL;
+
+    return fl;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t min_freelist_alloc() {
+    return freelist_min_request;
+}
+// -------------------------------------------------------------------------------- 
+
+freelist_t* init_dynamic_freelist(size_t bytes, size_t alignment, bool resize) {
+#if ARENA_ENABLE_DYNAMIC
+    /* Treat `bytes` as the desired minimum usable payload. */
+    if (bytes < freelist_min_request) {
+        errno = EINVAL;
+        return NULL;
+    } 
+
+    if (bytes == 0) {
+        bytes = FREELIST_DEFAULT_MIN_ALLOC;
+    }
+
+    /* Normalize alignment (0 => at least max_align_t, power of two). */
+    if (alignment == 0) alignment = alignof(max_align_t);
+    if (!_is_pow2(alignment)) {
+        alignment = _next_pow2(alignment);
+        if (!alignment) {
+            errno = EINVAL;
+            return NULL;
+        }
+    }
+    if (alignment < alignof(max_align_t)) {
+        alignment = alignof(max_align_t);
+    }
+
+    /* We know we at least need space for:
+       - aligned freelist_t
+       - at least one free_block_t
+       - and hopefully `bytes` worth of payload.
+
+       We'll ask the arena for a bit more than that to give it room
+       for its own internal bookkeeping. The arena may round this up
+       or down; we'll query the actual available bytes afterward. */
+    size_t struct_size_aligned = _align_up_size(sizeof(freelist_t), alignment);
+    size_t min_free_region     = sizeof(free_block_t);
+    size_t requested_payload   = bytes;
+
+    /* Guard against overflow in the sums. */
+    if (struct_size_aligned > SIZE_MAX - min_free_region ||
+        struct_size_aligned + min_free_region > SIZE_MAX - requested_payload) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t min_total_user = struct_size_aligned + min_free_region + requested_payload;
+
+    /* Ask the arena to manage at least min_total_user bytes of user space.
+       Let it decide the actual chunk size; we will adapt to the real
+       arena_remaining() afterward. */
+    bool   arena_resize = resize;     /* currently we still treat freelist as fixed-size;
+                                         you can keep this false if you prefer */
+    size_t min_chunk    = 0;          /* or some policy if you plan to grow later */
+
+    arena_t* arena = init_dynamic_arena(min_total_user,
+                                        arena_resize,
+                                        min_chunk,
+                                        alignment);
+    if (!arena) {
+        /* errno set by init_dynamic_arena */
+        return NULL;
+    }
+
+    /* Now ask the arena how many bytes it actually exposes as usable. */
+    size_t available = arena_remaining(arena);
+    if (available < struct_size_aligned + min_free_region) {
+        /* Not enough room even for control structures. */
+        free_arena(arena);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    /* Carve `available` bytes from the arena in one shot. */
+    void* base = alloc_arena(arena, available, false);
+    if (!base) {
+        /* errno set by alloc_arena */
+        free_arena(arena);
+        return NULL;
+    }
+
+    /* freelist_t at the beginning (aligned by construction). */
+    freelist_t* fl = (freelist_t*)base;
+    memset(fl, 0, sizeof *fl);
+
+    /* Usable memory starts after the aligned freelist_t. */
+    void*  memory     = (uint8_t*)base + struct_size_aligned;
+    size_t usable_sz  = available - struct_size_aligned;
+
+    /* Initialize freelist */
+    fl->memory       = memory;
+    fl->cur          = (uint8_t*)memory;
+    fl->len          = 0;
+    fl->alloc        = usable_sz;      /* actual usable region we got */
+    fl->tot_alloc    = available;      /* total bytes carved from arena */
+    fl->alignment    = alignment;
+    fl->parent_arena = arena;
+    fl->owns_memory  = true;
+
+    /* One large free block spans the entire usable region. */
+    fl->head       = (free_block_t*)memory;
+    fl->head->size = usable_sz;
+    fl->head->next = NULL;
+
+    return fl;
+#else
+    errno = ENOTSUP;
+    return NULL;
+#endif
+}
+// -------------------------------------------------------------------------------- 
+
+freelist_t* init_static_freelist(void* buffer, size_t bytes, size_t alignment) {
+    if (bytes < freelist_min_request) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (bytes == 0) {
+        bytes = FREELIST_DEFAULT_MIN_ALLOC;  // or treat as error
+    }
+
+    // Early obvious minimum: struct + at least one free block
+    {
+        size_t min_needed_raw = sizeof(freelist_t) + sizeof(free_block_t);
+        if (bytes < min_needed_raw) {
+            errno = EINVAL;
+            return NULL;
+        }
+    }
+
+    // Normalize alignment (0 => at least max_align_t, power of two)
+    if (alignment == 0) alignment = alignof(max_align_t);
+    if (!_is_pow2(alignment)) {
+        alignment = _next_pow2(alignment);
+        if (!alignment) { errno = EINVAL; return NULL; }
+    }
+    if (alignment < alignof(max_align_t)) {
+        alignment = alignof(max_align_t);
+    }
+
+    // Create the underlying static arena over the user buffer
+    arena_t* arena = init_static_arena(buffer, bytes, alignment);
+    if (!arena) {
+        // errno set by init_static_arena
+        return NULL;
+    }
+
+    // Calculate space needed for freelist struct (aligned)
+    size_t freelist_size = _align_up_size(sizeof(freelist_t), alignment);
+
+    // Check if we have enough space for at least freelist + one free block
+    size_t arena_bytes = arena_alloc(arena);  // or arena->alloc if that's your API
+
+    size_t min_needed = freelist_size + sizeof(free_block_t);
+    if (arena_bytes < min_needed) {
+        errno = EINVAL;
+        return NULL;  // arena is too small for freelist + first block
+    }
+
+    // Usable space is what remains after the freelist header
+    size_t usable_size  = arena_bytes - freelist_size;
+    size_t total_needed = freelist_size + usable_size;
+
+    // Single allocation from arena for freelist struct + usable memory
+    void* base = alloc_arena(arena, total_needed, false);
+    if (!base) {
+        // errno set by alloc_arena
+        return NULL;
+    }
+
+    // freelist_t at the beginning
+    freelist_t* fl = (freelist_t*)base;
+    memset(fl, 0, sizeof *fl);
+
+    // Usable memory starts after the struct (already aligned)
+    void* memory = (uint8_t*)base + freelist_size;
+
+    // Initialize freelist
+    fl->memory       = memory;              // Start of memory region
+    fl->cur          = (uint8_t*)memory;    // Next available slot
+    fl->len          = 0;
+    fl->alloc        = usable_size;
+    fl->tot_alloc    = total_needed;
+    fl->alignment    = alignment;
+    fl->parent_arena = arena;
+    fl->owns_memory  = false;               // user owns the static buffer
+
+    // One large initial free block
+    fl->head         = (free_block_t*)memory;
+    fl->head->size   = usable_size;
+    fl->head->next   = NULL;
+
+    return fl;
+}
+// -------------------------------------------------------------------------------- 
+
+void free_freelist(freelist_t* fl) {
+    if (fl == NULL) { 
+        errno = EINVAL; 
+        return; 
+    }
+    
+    // Check if we own the memory (dynamic) or not (static)
+    if (!fl->owns_memory || freelist_mtype(fl) == STATIC) {
+        errno = EPERM;
+        return;
+    }
+    
+    if (fl->parent_arena == NULL) {
+        errno = EINVAL;
+        return;
+    }
+    
+    free_arena(fl->parent_arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void* alloc_freelist_internal(freelist_t* fl,
+                                     size_t      bytes,
+                                     size_t      eff_align,
+                                     bool        zeroed) {
+    if (!fl || bytes == 0) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    const size_t header_size = sizeof(freelist_header_t);
+
+    if (bytes > SIZE_MAX - header_size - (eff_align - 1u)) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    free_block_t** current = &fl->head;
+
+    while (*current) {
+        free_block_t* block      = *current;
+        uintptr_t     block_addr = (uintptr_t)block;
+        uintptr_t     block_end  = block_addr + block->size;
+
+        uintptr_t after_header = block_addr + header_size;
+        uintptr_t user_addr    = _align_up_uintptr(after_header, eff_align);
+        uintptr_t user_end     = user_addr + bytes;
+
+        if (user_end > block_end) {
+            current = &block->next;
+            continue;
+        }
+
+        size_t offset    = (size_t)(user_addr - block_addr);
+        size_t used_size = (size_t)(user_end - block_addr);
+        size_t remaining = block->size - used_size;
+
+        size_t block_size_for_hdr;
+
+        if (remaining >= sizeof(free_block_t)) {
+            // Split: front portion used for this allocation
+            free_block_t* new_block =
+                (free_block_t*)((uint8_t*)block + used_size);
+            new_block->size = remaining;
+            new_block->next = block->next;
+
+            block->size = used_size;
+            *current    = new_block;
+
+            block_size_for_hdr = used_size;
+        } else {
+            // Use entire block
+            block_size_for_hdr = block->size;
+            user_end           = block_addr + block_size_for_hdr;
+            *current           = block->next;
+        }
+
+        uint8_t*           user_ptr = (uint8_t*)user_addr;
+        freelist_header_t* hdr =
+            (freelist_header_t*)(user_ptr - header_size);
+
+        hdr->block_size = block_size_for_hdr;
+        hdr->offset     = offset;
+
+        // IMPORTANT: count full block, not just user bytes
+        fl->len += block_size_for_hdr;
+
+        uint8_t* block_used_end = (uint8_t*)block + block_size_for_hdr;
+        if (block_used_end > fl->cur) {
+            fl->cur = block_used_end;
+        }
+
+        if (zeroed) {
+            memset(user_ptr, 0, bytes);
+        }
+
+        return user_ptr;
+    }
+
+    errno = ENOMEM;
+    return NULL;
+}
+// -------------------------------------------------------------------------------- 
+
+void* alloc_freelist(freelist_t* fl, size_t bytes, bool zeroed) {
+    if (!fl) { errno = EINVAL; return NULL; }
+    return alloc_freelist_internal(fl, bytes, fl->alignment, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+void* alloc_freelist_aligned(freelist_t* fl,
+                             size_t      bytes,
+                             size_t      alignment,
+                             bool        zeroed) {
+    if (!fl) { errno = EINVAL; return NULL; }
+    if (bytes == 0) { errno = EINVAL; return NULL; }
+
+    if (alignment == 0) alignment = fl->alignment;
+    if (!_is_pow2(alignment)) {
+        alignment = _next_pow2(alignment);
+        if (!alignment) { errno = EINVAL; return NULL; }
+    }
+    if (alignment < fl->alignment) {
+        alignment = fl->alignment;
+    }
+
+    return alloc_freelist_internal(fl, bytes, alignment, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+void return_freelist_element(freelist_t* fl, void* ptr) {
+    if (!fl || !ptr) {
+        errno = EINVAL;
+        return;
+    }
+
+    const size_t header_size = sizeof(freelist_header_t);
+
+    uint8_t* user_ptr   = (uint8_t*)ptr;
+    uint8_t* mem_start8 = (uint8_t*)fl->memory;
+    uint8_t* mem_end8   = mem_start8 + fl->alloc;
+
+    // Basic bounds: user pointer must be inside region and leave room for header
+    if (user_ptr < mem_start8 + header_size || user_ptr > mem_end8) {
+        errno = EINVAL;
+        return;
+    }
+
+    // Header sits immediately before user pointer
+    freelist_header_t* hdr =
+        (freelist_header_t*)(user_ptr - header_size);
+
+    size_t   block_size = hdr->block_size;
+    size_t   offset     = hdr->offset;
+
+    // Reconstruct block start
+    uint8_t* block_start = user_ptr - offset;
+
+    uintptr_t block_addr = (uintptr_t)block_start;
+    uintptr_t mem_start  = (uintptr_t)fl->memory;
+    uintptr_t mem_end    = mem_start + fl->alloc;
+
+    // Sanity checks on block size and bounds
+    if (block_size < sizeof(free_block_t) || block_size > fl->alloc) {
+        errno = EINVAL;
+        return;
+    }
+    if (block_addr < mem_start || block_addr + block_size > mem_end) {
+        errno = EINVAL;
+        return;
+    }
+
+    // Also ensure offset is sane (block_size must cover offset + header at least)
+    if (offset > block_size) {
+        errno = EINVAL;
+        return;
+    }
+
+    // Accounting: we charged block_size on alloc, so undo exactly that
+    if (fl->len < block_size) {
+        errno = EINVAL;
+        return;
+    }
+    fl->len -= block_size;
+
+    // Turn region back into a free block
+    free_block_t* block = (free_block_t*)block_start;
+    block->size = block_size;
+
+    // Insert into free list in address order
+    free_block_t* prev = NULL;
+    free_block_t* curr = fl->head;
+
+    while (curr && curr < block) {
+        prev = curr;
+        curr = curr->next;
+    }
+
+    block->next = curr;
+    if (prev) {
+        prev->next = block;
+    } else {
+        fl->head = block;
+    }
+
+    // Coalesce with next block if adjacent
+    if (block->next) {
+        uint8_t* block_end = (uint8_t*)block + block->size;
+        if (block_end == (uint8_t*)block->next) {
+            block->size += block->next->size;
+            block->next  = block->next->next;
+        }
+    }
+
+    // Coalesce with previous block if adjacent
+    if (prev) {
+        uint8_t* prev_end = (uint8_t*)prev + prev->size;
+        if (prev_end == (uint8_t*)block) {
+            prev->size += block->size;
+            prev->next  = block->next;
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void* realloc_freelist(freelist_t* fl,
+                       void*       ptr,
+                       size_t      old_size,
+                       size_t      new_size,
+                       bool        zeroed) {
+    if (!fl) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // NULL ptr behaves like alloc
+    if (!ptr) {
+        return alloc_freelist(fl, new_size, zeroed);
+    }
+
+    // Shrink or same size: keep pointer
+    if (new_size <= old_size) {
+        return ptr;
+    }
+
+    // Need to grow
+    void* new_ptr = alloc_freelist(fl, new_size, false);
+    if (!new_ptr) {
+        return NULL;    // errno set by alloc_freelist
+    }
+
+    memcpy(new_ptr, ptr, old_size);
+
+    if (zeroed) {
+        memset((uint8_t*)new_ptr + old_size, 0, new_size - old_size);
+    }
+
+    return_freelist_element(fl, ptr);
+    return new_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+void* realloc_freelist_aligned(freelist_t* fl,
+                               void*       ptr,
+                               size_t      old_size,
+                               size_t      new_size,
+                               bool        zeroed,
+                               size_t      alignment) {
+    if (!fl) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // NULL ptr behaves like aligned alloc
+    if (!ptr) {
+        return alloc_freelist_aligned(fl, new_size, alignment, zeroed);
+    }
+
+    // Shrink or same size: keep pointer
+    if (new_size <= old_size) {
+        return ptr;
+    }
+
+    // Need to grow with requested alignment
+    void* new_ptr = alloc_freelist_aligned(fl, new_size, alignment, false);
+    if (!new_ptr) {
+        return NULL;    // errno set by alloc_freelist_aligned
+    }
+
+    memcpy(new_ptr, ptr, old_size);
+
+    if (zeroed) {
+        memset((uint8_t*)new_ptr + old_size, 0, new_size - old_size);
+    }
+
+    return_freelist_element(fl, ptr);
+    return new_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+inline void reset_freelist(freelist_t* fl)
+{
+    if (!fl) {
+        errno = EINVAL;
+        return;
+    }
+
+    if (!fl->memory || fl->alloc == 0) {
+        // Freelist not properly initialized or already torn down
+        errno = EINVAL;
+        return;
+    }
+
+    // Reset accounting
+    fl->cur = (uint8_t*)fl->memory;
+    fl->len = 0;
+
+    // Recreate a single large free block covering the entire region
+    free_block_t* head = (free_block_t*)fl->memory;
+    head->size = fl->alloc;
+    head->next = NULL;
+
+    fl->head = head;
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_freelist_ptr(const freelist_t* fl, const void* ptr) {
+    if (!fl || !ptr) {
+        return false;
+    }
+
+    const size_t header_size = sizeof(freelist_header_t);
+
+    uintptr_t mem_start = (uintptr_t)fl->memory;
+    uintptr_t mem_end   = mem_start + fl->alloc;
+
+    uintptr_t ptr_addr  = (uintptr_t)ptr;
+
+    // Pointer must be within the managed region and leave room for the header
+    if (ptr_addr < mem_start + header_size || ptr_addr > mem_end) {
+        return false;
+    }
+
+    // Header sits immediately before the user pointer
+    const uint8_t*        user_ptr = (const uint8_t*)ptr;
+    const freelist_header_t* hdr =
+        (const freelist_header_t*)(user_ptr - header_size);
+
+    size_t block_size = hdr->block_size;
+    size_t offset     = hdr->offset;
+
+    // Reconstruct block start
+    const uint8_t* block_start = user_ptr - offset;
+    uintptr_t      block_addr  = (uintptr_t)block_start;
+
+    // Basic sanity on offset and size
+    // block_size must be large enough to cover the offset and at least a free_block_t
+    if (offset > block_size) {
+        return false;
+    }
+    if (block_size < sizeof(free_block_t) || block_size > fl->alloc) {
+        return false;
+    }
+
+    // block_start must be within the freelist region
+    if (block_addr < mem_start || block_addr >= mem_end) {
+        return false;
+    }
+
+    // Check that the full block fits within the region, overflow-safe:
+    // block_addr + block_size <= mem_end  <=>  block_size <= mem_end - block_addr
+    if (block_size > (size_t)(mem_end - block_addr)) {
+        return false;
+    }
+
+    // Also check that ptr lies within [block_start, block_start + block_size)
+    if (ptr_addr < block_addr || ptr_addr >= block_addr + block_size) {
+        return false;
+    }
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_freelist_ptr_sized(const freelist_t* fl, const void* ptr, size_t size) {
+    if (!fl || !ptr || size == 0) {
+        return false;
+    }
+
+    // First check if it's at least a plausible freelist pointer
+    if (!is_freelist_ptr(fl, ptr)) {
+        return false;
+    }
+
+    const size_t header_size = sizeof(freelist_header_t);
+    const uint8_t* user_ptr  = (const uint8_t*)ptr;
+
+    const freelist_header_t* hdr =
+        (const freelist_header_t*)(user_ptr - header_size);
+
+    size_t block_size = hdr->block_size;
+    size_t offset     = hdr->offset;
+
+    if (offset > block_size) {
+        return false;
+    }
+
+    // User data size = block_size - offset
+    size_t user_data_size = block_size - offset;
+
+    // Requested size must fit within the user data region
+    if (size > user_data_size) {
+        return false;
+    }
+
+    // Also verify that ptr + size doesn't run off the freelist region
+    uintptr_t ptr_addr  = (uintptr_t)ptr;
+    uintptr_t mem_start = (uintptr_t)fl->memory;
+    uintptr_t mem_end   = mem_start + fl->alloc;
+
+    // Overflow-safe: ptr_addr + size <= mem_end  <=>  size <= mem_end - ptr_addr
+    if (size > (size_t)(mem_end - ptr_addr)) {
+        return false;
+    }
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t freelist_remaining(const freelist_t* fl) {
+    if (!fl) {
+        errno = EINVAL;
+        return 0;
+    }
+    
+    // Calculate remaining as total usable minus currently used
+    return fl->alloc - fl->len;
+}
+// -------------------------------------------------------------------------------- 
+
+inline alloc_t freelist_mtype(const freelist_t* fl) {
+    if (!fl) {
+        errno = EINVAL;
+        return ALLOC_INVALID;
+    }
+    return arena_mtype(fl->parent_arena);
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t freelist_size(const freelist_t* fl) {
+    if (!fl) {
+        errno = EINVAL;
+        return 0;
+    }
+    return fl->len;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t freelist_alloc(const freelist_t* fl) {
+    if (!fl) {
+        errno = EINVAL;
+        return 0;
+    }
+    return fl->alloc;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t total_freelist_alloc(const freelist_t* fl) {
+    if (!fl) {
+        errno = EINVAL;
+        return 0;
+    }
+    return fl->tot_alloc;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t freelist_alignment(const freelist_t* fl) {
+    if (!fl) {
+        errno = EINVAL;
+        return 0;
+    }
+    return fl->alignment;
+}
+// -------------------------------------------------------------------------------- 
+
+bool freelist_owns_arena(const freelist_t* fl) {
+    if (!fl) {
+        errno = EINVAL;
+        return false;
+    }
+    return fl->owns_memory;
+}
 // ================================================================================
 // ================================================================================
 // eof

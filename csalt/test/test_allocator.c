@@ -3594,6 +3594,913 @@ const struct CMUnitTest test_iarena[] = {
 };
 
 const size_t test_iarena_count = sizeof(test_iarena) / sizeof(test_iarena[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+static int is_power_of_two(size_t x) {
+    return x != 0 && (x & (x - 1)) == 0;
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_freelist_with_arena_null_arena(void **state) {
+    (void)state;
+
+    errno = 0;
+    freelist_t *fl = init_freelist_with_arena(NULL, 128u, 0u);
+
+    assert_null(fl);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_freelist_with_arena_basic(void **state) {
+    (void)state;
+
+    uint8_t buffer[4096];
+    errno = 0;
+
+    arena_t *arena = init_static_arena(buffer, sizeof buffer,
+                                       alignof(max_align_t));
+    assert_non_null(arena);
+
+    freelist_t *fl = init_freelist_with_arena(arena, 512u, 0u);
+    assert_non_null(fl);
+
+    /* Alignment must be power-of-two and >= max_align_t */
+    size_t fl_align = freelist_alignment(fl);
+    assert_true(is_power_of_two(fl_align));
+    assert_true(fl_align >= alignof(max_align_t));
+
+    /* Initial accounting */
+    size_t alloc_bytes   = freelist_alloc(fl);
+    size_t size_bytes    = freelist_size(fl);
+    size_t remaining_now = freelist_remaining(fl);
+
+    assert_true(alloc_bytes >= 512u);   /* must be at least requested size */
+    assert_int_equal(size_bytes, 0u);   /* nothing allocated yet */
+    assert_int_equal(remaining_now, alloc_bytes);
+    assert_int_equal(size_bytes + remaining_now, alloc_bytes);
+
+    /* Allocate a small block */
+    errno = 0;
+    const size_t request = 128u;
+    void *p = alloc_freelist(fl, request, false);
+    assert_non_null(p);
+
+    /* Pointer should belong to this freelist and be properly aligned */
+    assert_true(is_freelist_ptr(fl, p));
+    assert_true(is_freelist_ptr_sized(fl, p, request));
+    assert_int_equal((uintptr_t)p % fl_align, 0u);
+
+    /* Accounting after allocation:
+       - size_after is total *block* bytes consumed (user + header + padding)
+       - remaining_after is alloc_bytes - size_after
+       - size_after must be at least the requested user size */
+    size_t size_after      = freelist_size(fl);
+    size_t remaining_after = freelist_remaining(fl);
+
+    assert_true(size_after >= request);
+    assert_true(size_after <= alloc_bytes);          /* can't exceed total */
+    assert_int_equal(size_after + remaining_after, alloc_bytes);
+
+    /* Free and make sure accounting returns to original values */
+    return_freelist_element(fl, p);
+
+    size_t size_final      = freelist_size(fl);
+    size_t remaining_final = freelist_remaining(fl);
+    assert_int_equal(size_final, 0u);
+    assert_int_equal(remaining_final, alloc_bytes);
+    assert_int_equal(size_final + remaining_final, alloc_bytes);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_freelist_with_arena_alignment_normalization(void **state) {
+    (void)state;
+
+    uint8_t buffer[4096];
+    errno = 0;
+
+    arena_t *arena = init_static_arena(buffer, sizeof buffer,
+                                       alignof(max_align_t));
+    assert_non_null(arena);
+
+    /* Intentionally non-power-of-two alignment request */
+    size_t requested_alignment = 24u;
+
+    freelist_t *fl = init_freelist_with_arena(arena, 256u, requested_alignment);
+    assert_non_null(fl);
+
+    size_t fl_align = freelist_alignment(fl);
+
+    /* Must be power-of-two and >= both max_align_t and requested_alignment */
+    assert_true(is_power_of_two(fl_align));
+    assert_true(fl_align >= alignof(max_align_t));
+    assert_true(fl_align >= requested_alignment);
+
+    /* An allocation from this freelist must respect that alignment */
+    void *p = alloc_freelist(fl, 64u, false);
+    assert_non_null(p);
+    assert_int_equal((uintptr_t)p % fl_align, 0u);
+    assert_true(is_freelist_ptr_sized(fl, p, 64u));
+
+    return_freelist_element(fl, p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_freelist_with_arena_insufficient_arena_space(void **state) {
+    (void)state;
+
+    uint8_t buffer[128]; /* small buffer on purpose */
+    errno = 0;
+
+    arena_t *arena = init_static_arena(buffer, sizeof buffer,
+                                       alignof(max_align_t));
+    assert_non_null(arena);
+
+    size_t avail = arena_remaining(arena);
+
+    /* Request more bytes than the arena has. Since init_freelist_with_arena
+       internally needs space for freelist_t plus usable memory, asking for
+       > avail guarantees alloc_arena() fails. */
+    freelist_t *fl = init_freelist_with_arena(arena, avail + 1u, 0u);
+
+    assert_null(fl);
+    /* alloc_arena should have set errno appropriately; ENOMEM is typical.
+       Adjust this if your arena uses a different errno. */
+    assert_int_equal(errno, EPERM);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_freelist_basic(void **state) {
+    (void)state;
+
+    errno = 0;
+    freelist_t *fl = init_dynamic_freelist(512u, 0u, false);
+    assert_non_null(fl);
+
+    /* Alignment must be power-of-two and >= max_align_t */
+    size_t fl_align = freelist_alignment(fl);
+    assert_true(is_power_of_two(fl_align));
+    assert_true(fl_align >= alignof(max_align_t));
+
+    /* Initial accounting */
+    size_t alloc_bytes   = freelist_alloc(fl);
+    size_t size_bytes    = freelist_size(fl);
+    size_t remaining_now = freelist_remaining(fl);
+    assert_true(alloc_bytes >= 416u);        /* at least requested */
+    assert_int_equal(size_bytes, 0u);        /* nothing used yet */
+    assert_int_equal(remaining_now, alloc_bytes);
+    assert_int_equal(size_bytes + remaining_now, alloc_bytes);
+
+    /* Allocate a small block */
+    const size_t request = 128u;
+    errno = 0;
+    void *p = alloc_freelist(fl, request, false);
+    assert_non_null(p);
+
+    /* Pointer should belong to this freelist and be properly aligned */
+    assert_true(is_freelist_ptr(fl, p));
+    assert_true(is_freelist_ptr_sized(fl, p, request));
+    assert_int_equal((uintptr_t)p % fl_align, 0u);
+
+    /* After allocation:
+       - freelist_size counts full block bytes (header + padding + user)
+       - remaining = alloc_bytes - freelist_size */
+    size_t size_after      = freelist_size(fl);
+    size_t remaining_after = freelist_remaining(fl);
+
+    assert_true(size_after >= request);
+    assert_true(size_after <= alloc_bytes);
+    assert_int_equal(size_after + remaining_after, alloc_bytes);
+
+    /* Free and make sure accounting returns to original values */
+    return_freelist_element(fl, p);
+
+    size_t size_final      = freelist_size(fl);
+    size_t remaining_final = freelist_remaining(fl);
+
+    assert_int_equal(size_final, 0u);
+    assert_int_equal(remaining_final, alloc_bytes);
+    assert_int_equal(size_final + remaining_final, alloc_bytes);
+
+    /* Cleanup dynamic freelist (it owns its arena) */
+    free_freelist(fl);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_freelist_size_zero_uses_default(void **state) {
+    (void)state;
+
+    errno = 0;
+    freelist_t *fl = init_dynamic_freelist(0u, 0u, false);
+    assert_null(fl);
+    assert_int_equal(errno, EINVAL);
+    freelist_t *nfl = init_dynamic_freelist(6u, 0u, false);
+    assert_null(nfl);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_freelist_alignment_normalization(void **state) {
+    (void)state;
+
+    errno = 0;
+    size_t requested_alignment = 24u;  /* intentionally non power-of-two */
+
+    freelist_t *fl = init_dynamic_freelist(256u, requested_alignment, false);
+    assert_non_null(fl);
+
+    size_t fl_align = freelist_alignment(fl);
+
+    /* Must be power-of-two and >= both max_align_t and requested_alignment */
+    assert_true(is_power_of_two(fl_align));
+    assert_true(fl_align >= alignof(max_align_t));
+    assert_true(fl_align >= requested_alignment);
+
+    /* An allocation should respect that alignment */
+    const size_t request = 64u;
+    void *p = alloc_freelist(fl, request, false);
+    assert_non_null(p);
+    assert_true(is_freelist_ptr_sized(fl, p, request));
+    assert_int_equal((uintptr_t)p % fl_align, 0u);
+
+    return_freelist_element(fl, p);
+    free_freelist(fl);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_freelist_basic(void **state) {
+    (void)state;
+
+    uint8_t buffer[1024];
+    errno = 0;
+
+    /* alignment = 0 -> normalize to >= alignof(max_align_t) */
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    /* Alignment must be power-of-two and >= max_align_t */
+    size_t fl_align = freelist_alignment(fl);
+    assert_true(is_power_of_two(fl_align));
+    assert_true(fl_align >= alignof(max_align_t));
+
+    /* Initial accounting */
+    size_t alloc_bytes   = freelist_alloc(fl);
+    size_t size_bytes    = freelist_size(fl);
+    size_t remaining_now = freelist_remaining(fl);
+
+    assert_true(alloc_bytes > 0u);
+    assert_true(alloc_bytes <= sizeof buffer);
+    assert_int_equal(size_bytes, 0u);
+    assert_int_equal(remaining_now, alloc_bytes);
+    assert_int_equal(size_bytes + remaining_now, alloc_bytes);
+
+    /* Allocate a small block */
+    const size_t request = 128u;
+    errno = 0;
+    void *p = alloc_freelist(fl, request, false);
+    assert_non_null(p);
+
+    /* Pointer should belong to this freelist and be properly aligned */
+    assert_true(is_freelist_ptr(fl, p));
+    assert_true(is_freelist_ptr_sized(fl, p, request));
+    assert_int_equal((uintptr_t)p % fl_align, 0u);
+
+    /* After allocation: freelist_size counts full block bytes */
+    size_t size_after      = freelist_size(fl);
+    size_t remaining_after = freelist_remaining(fl);
+
+    assert_true(size_after >= request);
+    assert_true(size_after <= alloc_bytes);
+    assert_int_equal(size_after + remaining_after, alloc_bytes);
+
+    /* Free and make sure accounting returns to original values */
+    return_freelist_element(fl, p);
+
+    size_t size_final      = freelist_size(fl);
+    size_t remaining_final = freelist_remaining(fl);
+
+    assert_int_equal(size_final, 0u);
+    assert_int_equal(remaining_final, alloc_bytes);
+    assert_int_equal(size_final + remaining_final, alloc_bytes);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_freelist_zero_bytes_invalid(void **state) {
+    (void)state;
+
+    uint8_t buffer[1];
+    errno = 0;
+
+    freelist_t *fl = init_static_freelist(buffer, 0u, 0u);
+    assert_null(fl);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_freelist_too_small_buffer(void **state) {
+    (void)state;
+
+    uint8_t buffer[8];   /* almost certainly < freelist_min_request */
+    errno = 0;
+
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_null(fl);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_freelist_alignment_normalization(void **state) {
+    (void)state;
+
+    uint8_t buffer[2048];
+    errno = 0;
+
+    size_t requested_alignment = 24u;  /* intentionally non–power-of-two */
+
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer,
+                                          requested_alignment);
+    assert_non_null(fl);
+
+    size_t fl_align = freelist_alignment(fl);
+
+    /* Must be power-of-two and >= both max_align_t and requested_alignment */
+    assert_true(is_power_of_two(fl_align));
+    assert_true(fl_align >= alignof(max_align_t));
+    assert_true(fl_align >= requested_alignment);
+
+    /* Allocation should respect that alignment */
+    const size_t request = 64u;
+    void *p = alloc_freelist(fl, request, false);
+    assert_non_null(p);
+    assert_true(is_freelist_ptr_sized(fl, p, request));
+    assert_int_equal((uintptr_t)p % fl_align, 0u);
+
+    return_freelist_element(fl, p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_freelist_aligned_basic(void **state) {
+    (void)state;
+
+    uint8_t buffer[4096];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    size_t fl_align = freelist_alignment(fl);
+    assert_true(is_power_of_two(fl_align));
+
+    size_t alloc_bytes = freelist_alloc(fl);
+    assert_true(alloc_bytes > 0u);
+
+    const size_t req_align = 64u;
+    const size_t req_bytes = 128u;
+
+    void *p = alloc_freelist_aligned(fl, req_bytes, req_align, false);
+    assert_non_null(p);
+
+    /* Ownership checks */
+    assert_true(is_freelist_ptr(fl, p));
+    assert_true(is_freelist_ptr_sized(fl, p, req_bytes));
+
+    /* Alignment checks */
+    assert_int_equal(((uintptr_t)p) % req_align, 0u);
+    assert_int_equal(((uintptr_t)p) % fl_align, 0u);
+
+    /* Accounting */
+    size_t size_after = freelist_size(fl);
+    size_t remaining_after = freelist_remaining(fl);
+    assert_true(size_after >= req_bytes);
+    assert_true(size_after <= alloc_bytes);
+    assert_int_equal(size_after + remaining_after, alloc_bytes);
+
+    /* Round-trip free */
+    return_freelist_element(fl, p);
+    assert_int_equal(freelist_size(fl), 0u);
+    assert_int_equal(freelist_remaining(fl), alloc_bytes);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_freelist_aligned_zero_alignment_uses_base(void **state) {
+    (void)state;
+
+    uint8_t buffer[4096];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    size_t fl_align = freelist_alignment(fl);
+
+    const size_t req_bytes = 96u;
+
+    void *p = alloc_freelist_aligned(fl, req_bytes, 0u, false);
+    assert_non_null(p);
+
+    assert_true(is_freelist_ptr(fl, p));
+    assert_true(is_freelist_ptr_sized(fl, p, req_bytes));
+
+    /* Should be aligned to freelist's base alignment */
+    assert_int_equal(((uintptr_t)p) % fl_align, 0u);
+
+    return_freelist_element(fl, p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_freelist_aligned_non_power_of_two_align(void **state) {
+    (void)state;
+
+    uint8_t buffer[4096];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    size_t fl_align = freelist_alignment(fl);
+
+    size_t requested_alignment = 24u;  /* not power-of-two */
+    size_t req_bytes = 64u;
+
+    void *p = alloc_freelist_aligned(fl, req_bytes, requested_alignment, false);
+    assert_non_null(p);
+
+    assert_true(is_freelist_ptr(fl, p));
+    assert_true(is_freelist_ptr_sized(fl, p, req_bytes));
+
+    /* We know normalized alignment ≥ fl_align */
+    assert_int_equal(((uintptr_t)p) % fl_align, 0u);
+
+    return_freelist_element(fl, p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_freelist_aligned_zeroed(void **state) {
+    (void)state;
+
+    uint8_t buffer[4096];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    const size_t req_bytes = 64u;
+    const size_t req_align = 32u;
+
+    void *p = alloc_freelist_aligned(fl, req_bytes, req_align, true);
+    assert_non_null(p);
+
+    /* Entire user region must be zero */
+    uint8_t *u = (uint8_t *)p;
+    for (size_t i = 0; i < req_bytes; ++i) {
+        assert_int_equal(u[i], 0u);
+    }
+
+    return_freelist_element(fl, p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_freelist_aligned_null_freelist(void **state) {
+    (void)state;
+
+    errno = 0;
+    void *p = alloc_freelist_aligned(NULL, 16u, 16u, false);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_freelist_aligned_zero_bytes(void **state) {
+    (void)state;
+
+    uint8_t buffer[512];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    errno = 0;
+    void *p = alloc_freelist_aligned(fl, 0u, 16u, false);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_freelist_null_freelist(void **state) {
+    (void)state;
+
+    errno = 0;
+    void *p = realloc_freelist(NULL, NULL, 0u, 16u, false);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_freelist_null_ptr_allocates_and_zeroes(void **state) {
+    (void)state;
+
+    uint8_t buffer[1024];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    const size_t new_size = 64u;
+
+    errno = 0;
+    void *p = realloc_freelist(fl, NULL, 0u, new_size, true);
+    assert_non_null(p);
+    assert_true(is_freelist_ptr_sized(fl, p, new_size));
+
+    /* Newly allocated memory should be zeroed */
+    uint8_t *u = (uint8_t *)p;
+    for (size_t i = 0; i < new_size; ++i) {
+        assert_int_equal(u[i], 0u);
+    }
+
+    return_freelist_element(fl, p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_freelist_shrink_keeps_pointer(void **state) {
+    (void)state;
+
+    uint8_t buffer[1024];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    const size_t old_size = 64u;
+    const size_t new_size = 32u;  /* shrinking */
+
+    uint8_t pattern = 0xAB;
+
+    void *p = alloc_freelist(fl, old_size, false);
+    assert_non_null(p);
+
+    memset(p, pattern, old_size);
+    size_t size_before      = freelist_size(fl);
+    size_t remaining_before = freelist_remaining(fl);
+
+    void *p2 = realloc_freelist(fl, p, old_size, new_size, true);
+    assert_ptr_equal(p2, p);  /* must return same pointer */
+
+    /* No accounting changes for shrink */
+    size_t size_after      = freelist_size(fl);
+    size_t remaining_after = freelist_remaining(fl);
+    assert_int_equal(size_before,      size_after);
+    assert_int_equal(remaining_before, remaining_after);
+
+    /* Data must be preserved at least new_size bytes */
+    uint8_t *u = (uint8_t *)p2;
+    for (size_t i = 0; i < new_size; ++i) {
+        assert_int_equal(u[i], pattern);
+    }
+
+    return_freelist_element(fl, p2);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_freelist_grow_moves_and_zeroes_tail(void **state) {
+    (void)state;
+
+    uint8_t buffer[2048];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    const size_t old_size = 64u;
+    const size_t new_size = 160u;  /* larger than old_size */
+
+    /* Allocate original block and fill with pattern */
+    void *p = alloc_freelist(fl, old_size, false);
+    assert_non_null(p);
+
+    uint8_t *u_old = (uint8_t *)p;
+    for (size_t i = 0; i < old_size; ++i) {
+        u_old[i] = (uint8_t)(i & 0xFF);
+    }
+
+    size_t size_before      = freelist_size(fl);
+    size_t remaining_before = freelist_remaining(fl);
+
+    /* Grow with zeroed tail */
+    void *p2 = realloc_freelist(fl, p, old_size, new_size, true);
+    assert_non_null(p2);
+    assert_true(is_freelist_ptr_sized(fl, p2, new_size));
+
+    /* Expect a move in most implementations; don't require it, but
+       it's strongly expected. If you want to enforce it: */
+    assert_ptr_not_equal(p2, p);
+
+    uint8_t *u_new = (uint8_t *)p2;
+
+    /* Old data preserved */
+    for (size_t i = 0; i < old_size; ++i) {
+        assert_int_equal(u_new[i], (uint8_t)(i & 0xFF));
+    }
+
+    /* Tail must be zeroed */
+    for (size_t i = old_size; i < new_size; ++i) {
+        assert_int_equal(u_new[i], 0u);
+    }
+
+    /* Accounting should still be consistent */
+    size_t size_after      = freelist_size(fl);
+    size_t remaining_after = freelist_remaining(fl);
+    assert_true(size_after >= new_size);
+    assert_int_equal(size_after + remaining_after, freelist_alloc(fl));
+
+    return_freelist_element(fl, p2);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_freelist_aligned_null_freelist(void **state) {
+    (void)state;
+
+    errno = 0;
+    void *p = realloc_freelist_aligned(NULL, NULL, 0u, 32u, false, 32u);
+    assert_null(p);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_freelist_aligned_null_ptr_allocates(void **state) {
+    (void)state;
+
+    uint8_t buffer[2048];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    size_t fl_align = freelist_alignment(fl);
+    assert_true(is_power_of_two(fl_align));
+
+    const size_t new_size  = 96u;
+    const size_t req_align = 64u;
+
+    void *p = realloc_freelist_aligned(fl, NULL, 0u, new_size, true, req_align);
+    assert_non_null(p);
+    assert_true(is_freelist_ptr_sized(fl, p, new_size));
+
+    /* Should be aligned at least to req_align and fl_align */
+    assert_int_equal(((uintptr_t)p) % req_align, 0u);
+    assert_int_equal(((uintptr_t)p) % fl_align, 0u);
+
+    /* Zeroing check */
+    uint8_t *u = (uint8_t *)p;
+    for (size_t i = 0; i < new_size; ++i) {
+        assert_int_equal(u[i], 0u);
+    }
+
+    return_freelist_element(fl, p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_freelist_aligned_shrink_keeps_pointer(void **state) {
+    (void)state;
+
+    uint8_t buffer[2048];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    const size_t old_size  = 128u;
+    const size_t new_size  = 64u;
+    const size_t req_align = 32u;
+
+    void *p = alloc_freelist_aligned(fl, old_size, req_align, false);
+    assert_non_null(p);
+
+    uint8_t *u_old = (uint8_t *)p;
+    for (size_t i = 0; i < old_size; ++i) {
+        u_old[i] = (uint8_t)(0xC0 + (i & 0x3F));
+    }
+
+    size_t size_before      = freelist_size(fl);
+    size_t remaining_before = freelist_remaining(fl);
+
+    void *p2 = realloc_freelist_aligned(fl, p, old_size, new_size, true, req_align);
+    assert_ptr_equal(p2, p);
+
+    /* No accounting change */
+    size_t size_after      = freelist_size(fl);
+    size_t remaining_after = freelist_remaining(fl);
+    assert_int_equal(size_before,      size_after);
+    assert_int_equal(remaining_before, remaining_after);
+
+    uint8_t *u_new = (uint8_t *)p2;
+    for (size_t i = 0; i < new_size; ++i) {
+        assert_int_equal(u_new[i], (uint8_t)(0xC0 + (i & 0x3F)));
+    }
+
+    return_freelist_element(fl, p2);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_freelist_aligned_grow_preserves_data_and_alignment(void **state) {
+    (void)state;
+
+    uint8_t buffer[4096];
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    size_t fl_align = freelist_alignment(fl);
+    assert_true(is_power_of_two(fl_align));
+
+    const size_t old_size  = 80u;
+    const size_t new_size  = 200u;
+    const size_t req_align = 64u;
+
+    void *p = alloc_freelist_aligned(fl, old_size, req_align, false);
+    assert_non_null(p);
+
+    uint8_t *u_old = (uint8_t *)p;
+    for (size_t i = 0; i < old_size; ++i) {
+        u_old[i] = (uint8_t)(i ^ 0x5A);
+    }
+
+    size_t size_before      = freelist_size(fl);
+    size_t remaining_before = freelist_remaining(fl);
+
+    void *p2 = realloc_freelist_aligned(fl, p, old_size, new_size, true, req_align);
+    assert_non_null(p2);
+    assert_true(is_freelist_ptr_sized(fl, p2, new_size));
+    assert_ptr_not_equal(p2, p);
+
+    /* Alignment: at least req_align and fl_align */
+    assert_int_equal(((uintptr_t)p2) % req_align, 0u);
+    assert_int_equal(((uintptr_t)p2) % fl_align, 0u);
+
+    uint8_t *u_new = (uint8_t *)p2;
+
+    /* Old data preserved */
+    for (size_t i = 0; i < old_size; ++i) {
+        assert_int_equal(u_new[i], (uint8_t)(i ^ 0x5A));
+    }
+
+    /* Tail zeroed */
+    for (size_t i = old_size; i < new_size; ++i) {
+        assert_int_equal(u_new[i], 0u);
+    }
+
+    size_t size_after      = freelist_size(fl);
+    size_t remaining_after = freelist_remaining(fl);
+    assert_true(size_after >= new_size);
+    assert_int_equal(size_after + remaining_after, freelist_alloc(fl));
+
+    return_freelist_element(fl, p2);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_freelist_null(void **state) {
+    (void)state;
+
+    errno = 0;
+    reset_freelist(NULL);
+    assert_int_equal(errno, EINVAL);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_freelist_basic_static(void **state) {
+    (void)state;
+
+    uint8_t buffer[4096];
+    errno = 0;
+
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+
+    /* Basic sanity */
+    size_t fl_align = freelist_alignment(fl);
+    assert_true(is_power_of_two(fl_align));
+    assert_true(fl_align >= alignof(max_align_t));
+
+    size_t alloc_bytes   = freelist_alloc(fl);
+    size_t size_bytes    = freelist_size(fl);
+    size_t remaining_now = freelist_remaining(fl);
+
+    assert_true(alloc_bytes > 0u);
+    assert_int_equal(size_bytes, 0u);
+    assert_int_equal(remaining_now, alloc_bytes);
+    assert_int_equal(size_bytes + remaining_now, alloc_bytes);
+
+    /* Allocate one block */
+    const size_t request = 128u;
+    void *p = alloc_freelist(fl, request, false);
+    assert_non_null(p);
+    assert_true(is_freelist_ptr_sized(fl, p, request));
+    assert_int_equal(((uintptr_t)p) % fl_align, 0u);
+
+    size_t size_after      = freelist_size(fl);
+    size_t remaining_after = freelist_remaining(fl);
+    assert_true(size_after >= request);
+    assert_true(size_after <= alloc_bytes);
+    assert_int_equal(size_after + remaining_after, alloc_bytes);
+
+    /* Now reset */
+    errno = 0;
+    reset_freelist(fl);
+    assert_int_equal(errno, 0);
+
+    /* After reset, accounting should look like a fresh freelist */
+    size_t size_reset      = freelist_size(fl);
+    size_t remaining_reset = freelist_remaining(fl);
+
+    assert_int_equal(size_reset, 0u);
+    assert_int_equal(remaining_reset, alloc_bytes);
+    assert_int_equal(size_reset + remaining_reset, alloc_bytes);
+
+    /* And we should be able to allocate again as if new */
+    void *p2 = alloc_freelist(fl, request, true);
+    assert_non_null(p2);
+    assert_true(is_freelist_ptr_sized(fl, p2, request));
+    assert_int_equal(((uintptr_t)p2) % fl_align, 0u);
+
+    /* Clean up logically (not strictly needed for static freelist) */
+    return_freelist_element(fl, p2);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_freelist_after_fragmentation(void **state) {
+    (void)state;
+
+    uint8_t buffer[4096];
+    errno = 0;
+
+    freelist_t *fl = init_static_freelist(buffer, sizeof buffer, 0u);
+    assert_non_null(fl);
+    assert_int_equal(STATIC, freelist_mtype(fl));
+
+    size_t alloc_bytes_initial = freelist_alloc(fl);
+    assert_true(alloc_bytes_initial > 0u);
+
+    /* Allocate three blocks */
+    const size_t a_size = 128u;
+    const size_t b_size = 256u;
+    const size_t c_size = 64u;
+
+    void *a = alloc_freelist(fl, a_size, false);
+    void *b = alloc_freelist(fl, b_size, false);
+    void *c = alloc_freelist(fl, c_size, false);
+
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_non_null(c);
+
+    /* Free the middle block to create fragmentation */
+    return_freelist_element(fl, b);
+
+    /* At this point, accounting shows some usage */
+    size_t size_before_reset      = freelist_size(fl);
+    size_t remaining_before_reset = freelist_remaining(fl);
+    assert_true(size_before_reset > 0u);
+    assert_int_equal(size_before_reset + remaining_before_reset,
+                     alloc_bytes_initial);
+
+    /* Now reset everything */
+    errno = 0;
+    reset_freelist(fl);
+    assert_int_equal(errno, 0);
+
+    size_t size_after_reset      = freelist_size(fl);
+    size_t remaining_after_reset = freelist_remaining(fl);
+
+    /* After reset, must look like fresh freelist again */
+    assert_int_equal(size_after_reset, 0u);
+    assert_int_equal(remaining_after_reset, alloc_bytes_initial);
+    assert_int_equal(size_after_reset + remaining_after_reset,
+                     alloc_bytes_initial);
+
+    /* We should be able to allocate a relatively large block now
+       (e.g., about half of total capacity). */
+    const size_t big_request = alloc_bytes_initial / 2u;
+    void *big = alloc_freelist(fl, big_request, false);
+    assert_non_null(big);
+    assert_true(is_freelist_ptr_sized(fl, big, big_request));
+
+    return_freelist_element(fl, big);
+}
+// -------------------------------------------------------------------------------- 
+
+const struct CMUnitTest test_freelist[] = {
+    cmocka_unit_test(test_init_freelist_with_arena_null_arena),
+    cmocka_unit_test(test_init_freelist_with_arena_basic),
+    cmocka_unit_test(test_init_freelist_with_arena_alignment_normalization),
+    cmocka_unit_test(test_init_freelist_with_arena_insufficient_arena_space),
+    cmocka_unit_test(test_init_dynamic_freelist_basic),
+    cmocka_unit_test(test_init_dynamic_freelist_size_zero_uses_default),
+    cmocka_unit_test(test_init_dynamic_freelist_alignment_normalization),
+    cmocka_unit_test(test_init_static_freelist_basic),
+    cmocka_unit_test(test_init_static_freelist_zero_bytes_invalid),
+    cmocka_unit_test(test_init_static_freelist_too_small_buffer),
+    cmocka_unit_test(test_init_static_freelist_alignment_normalization),
+    cmocka_unit_test(test_alloc_freelist_aligned_basic),
+    cmocka_unit_test(test_alloc_freelist_aligned_zero_alignment_uses_base),
+    cmocka_unit_test(test_alloc_freelist_aligned_non_power_of_two_align),
+    cmocka_unit_test(test_alloc_freelist_aligned_zeroed),
+    cmocka_unit_test(test_alloc_freelist_aligned_null_freelist),
+    cmocka_unit_test(test_alloc_freelist_aligned_zero_bytes),
+    cmocka_unit_test(test_realloc_freelist_null_freelist),
+    cmocka_unit_test(test_realloc_freelist_null_ptr_allocates_and_zeroes),
+    cmocka_unit_test(test_realloc_freelist_shrink_keeps_pointer),
+    cmocka_unit_test(test_realloc_freelist_grow_moves_and_zeroes_tail),
+    cmocka_unit_test(test_realloc_freelist_aligned_null_freelist),
+    cmocka_unit_test(test_realloc_freelist_aligned_null_ptr_allocates),
+    cmocka_unit_test(test_realloc_freelist_aligned_shrink_keeps_pointer),
+    cmocka_unit_test(test_realloc_freelist_aligned_grow_preserves_data_and_alignment),
+    cmocka_unit_test(test_reset_freelist_null),
+    cmocka_unit_test(test_reset_freelist_basic_static),
+    cmocka_unit_test(test_reset_freelist_after_fragmentation),
+};
+
+
+const size_t test_freelist_count = sizeof(test_freelist) / sizeof(test_freelist[0]);
 // ================================================================================
 // ================================================================================
 // eof
