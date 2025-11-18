@@ -2808,8 +2808,7 @@ void* realloc_freelist_aligned(freelist_t* fl,
 }
 // -------------------------------------------------------------------------------- 
 
-inline void reset_freelist(freelist_t* fl)
-{
+inline void reset_freelist(freelist_t* fl) {
     if (!fl) {
         errno = EINVAL;
         return;
@@ -3000,6 +2999,128 @@ bool freelist_owns_arena(const freelist_t* fl) {
     }
     return fl->owns_memory;
 }
+// -------------------------------------------------------------------------------- 
+
+bool freelist_stats(const freelist_t *fl, char *buffer, size_t buffer_size) {
+    size_t offset = 0u;
+
+    if ((buffer == NULL) || (buffer_size == 0u)) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (fl == NULL) {
+        (void)_buf_appendf(buffer, buffer_size, &offset, "%s", "Freelist: NULL\n");
+        return true;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "%s", "Freelist Statistics:\n")) {
+        return false;
+    }
+
+    /* Type / ownership information */
+    {
+        alloc_t mtype = freelist_mtype(fl);
+        const char *type_str = "UNKNOWN";
+        switch (mtype) {
+            case STATIC:  type_str = "STATIC";  break;
+            case DYNAMIC: type_str = "DYNAMIC"; break;
+            default:      type_str = "UNKNOWN"; break;
+        }
+
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Type: %s\n", type_str)) {
+            return false;
+        }
+
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Owns arena: %s\n",
+                          freelist_owns_arena(fl) ? "yes" : "no")) {
+            return false;
+        }
+    }
+
+    /* Basic accounting */
+    {
+        size_t used      = freelist_size(fl);        /* fl->len */
+        size_t capacity  = freelist_alloc(fl);       /* fl->alloc */
+        size_t total     = total_freelist_alloc(fl); /* fl->tot_alloc */
+        size_t remaining = freelist_remaining(fl);   /* alloc - len */
+
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Used (accounted): %zu bytes\n", used)) {
+            return false;
+        }
+
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Remaining: %zu bytes\n", remaining)) {
+            return false;
+        }
+
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Capacity (usable region): %zu bytes\n", capacity)) {
+            return false;
+        }
+
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Total (with header/overhead): %zu bytes\n", total)) {
+            return false;
+        }
+
+        /* Utilization of the usable freelist region */
+        if (capacity == 0u) {
+            if (!_buf_appendf(buffer, buffer_size, &offset,
+                              "%s", "  Utilization: N/A (capacity is 0)\n")) {
+                return false;
+            }
+        } else {
+            double util = (100.0 * (double)used) / (double)capacity;
+            if (!_buf_appendf(buffer, buffer_size, &offset,
+                              "  Utilization: %.1f%%\n", util)) {
+                return false;
+            }
+        }
+
+        /* Alignment info */
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Base alignment: %zu bytes\n",
+                          freelist_alignment(fl))) {
+            return false;
+        }
+    }
+
+    /* Free list layout */
+    {
+        const free_block_t *current = fl->head;
+        int   block_count           = 0;
+        size_t free_bytes           = 0u;
+
+        while (current != NULL) {
+            block_count += 1;
+            free_bytes  += current->size;
+
+            if (!_buf_appendf(buffer, buffer_size, &offset,
+                              "  Free block %d: %p, %zu bytes\n",
+                              block_count,
+                              (const void *)current,
+                              current->size)) {
+                return false;
+            }
+
+            current = current->next;
+        }
+
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Free blocks: %d, total free bytes (raw): %zu\n",
+                          block_count, free_bytes)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 // ================================================================================
 // ================================================================================
 // eof

@@ -375,7 +375,6 @@ arena_v_free
 .. doxygenfunction:: arena_v_free
    :project: csalt
 
-
 Pool Allocator Overview
 =======================
 
@@ -938,6 +937,70 @@ iarena_alloc_array_zeroed
 
 .. _context:
 
+Internal Arena Context Functions
+--------------------------------
+
+The following functions provide the immutable-arena-backed (``iarena_t``)
+implementation of the allocator vtable interface. They adapt an ``iarena_t``
+instance to the generic allocator API by exposing allocation and reallocation
+operations in a consistent form.
+
+Unlike regular arenas, immutable arenas do not support returning or freeing
+individual blocks. Instead, memory is typically reclaimed only when the
+entire ``iarena_t`` object is destroyed or reset by the user. As a result,
+the ``return_element`` and ``deallocate`` operations are implemented as
+no-ops, aside from validating the context pointer.
+
+Each function corresponds to one of the prototypes defined in the allocator
+context system (see :ref:`context`), and is used internally by the
+``iarena_allocator()`` helper to construct a fully configured
+``allocator_vtable_t`` for immutable arena–based allocation.
+
+These functions are not intended to be called directly by user code;
+instead, they are consumed through the generic allocator interface.
+
+iarena_v_alloc
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_alloc
+   :project: csalt
+
+iarena_v_alloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_alloc_aligned
+   :project: csalt
+
+iarena_v_realloc
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_realloc
+   :project: csalt
+
+iarena_v_realloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_realloc_aligned
+   :project: csalt
+
+iarena_v_return
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_return
+   :project: csalt
+
+iarena_v_free
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_v_free
+   :project: csalt
+
+iarena_allocator
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: iarena_allocator
+   :project: csalt
+
 Freelist Overview
 =================
 
@@ -1112,14 +1175,38 @@ free_freelist
 alloc_freelist
 ~~~~~~~~~~~~~~
 
+.. doxygenfunction:: alloc_freelist
+   :project: csalt
+
 realloc_freelist
 ~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: realloc_freelist
+   :project: csalt
 
 alloc_freelist_aligned
 ~~~~~~~~~~~~~~~~~~~~~~
 
+.. doxygenfunction:: alloc_freelist_aligned
+   :project: csalt
+
 realloc_freelist_aligned
 ~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: realloc_freelist_aligned
+   :project: csalt 
+
+return_freelist
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: reset_freelist
+   :project: csalt
+
+return_freelist_element
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: return_freelist_element
+   :project: csalt
 
 Utility Funcitons 
 -----------------
@@ -1127,14 +1214,20 @@ Utility Funcitons
 is_freelist_ptr
 ~~~~~~~~~~~~~~~
 
+.. doxygenfunction:: is_freelist_ptr
+   :project: csalt
+
 is_freelist_ptr_sized
 ~~~~~~~~~~~~~~~~~~~~~
 
-reset_freelist
-~~~~~~~~~~~~~~
+.. doxygenfunction:: is_freelist_ptr_sized
+   :project: csalt
 
 freelist_stats 
 ~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_stats
+   :project: csalt
 
 Getter and Setter Functions 
 ---------------------------
@@ -1142,20 +1235,38 @@ Getter and Setter Functions
 freelist_remaining
 ~~~~~~~~~~~~~~~~~~
 
+.. doxygenfunction:: freelist_remaining
+   :project: csalt
+
 freelist_mtype
 ~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_mtype
+   :project: csalt
 
 freelist_size
 ~~~~~~~~~~~~~
 
+.. doxygenfunction:: freelist_size
+   :project: csalt
+
 freelist_alloc
 ~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_alloc
+   :project: csalt
 
 total_freelist_alloc
 ~~~~~~~~~~~~~~~~~~~~
 
+.. doxygenfunction:: total_freelist_alloc
+   :project: csalt
+
 freelist_alignment
 ~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_alignment
+   :project: csalt
 
 min_freelist_alloc
 ~~~~~~~~~~~~~~~~~~
@@ -1200,13 +1311,11 @@ alloc_prototype
 .. doxygentypedef:: alloc_prototype
    :project: csalt
 
-
 alloc_aligned_prototype
 -----------------------
 
 .. doxygentypedef:: alloc_aligned_prototype
    :project: csalt
-
 
 realloc_prototype
 -----------------
@@ -1214,13 +1323,11 @@ realloc_prototype
 .. doxygentypedef:: realloc_prototype
    :project: csalt
 
-
 realloc_aligned_prototype
 -------------------------
 
 .. doxygentypedef:: realloc_aligned_prototype
    :project: csalt
-
 
 return_prototype
 ----------------
@@ -1228,73 +1335,56 @@ return_prototype
 .. doxygentypedef:: return_prototype
    :project: csalt
 
-
 free_prototype
 --------------
 
 .. doxygentypedef:: free_prototype
    :project: csalt
 
-Arena Context Functions
------------------------
+Standard Allocator Implementation 
+---------------------------------
+The ``allocator_vtable_t`` type is meant for robust custom allocators but it 
+can also be used for standard ``malloc``, ``realloc`` and ``free`` functions that 
+are part of the standard C library.
 
-The following functions provide the immutable-arena-backed (``iarena_t``)
-implementation of the allocator vtable interface. They adapt an ``iarena_t``
-instance to the generic allocator API by exposing allocation and reallocation
-operations in a consistent form.
+v_alloc 
+~~~~~~~
 
-Unlike regular arenas, immutable arenas do not support returning or freeing
-individual blocks. Instead, memory is typically reclaimed only when the
-entire ``iarena_t`` object is destroyed or reset by the user. As a result,
-the ``return_element`` and ``deallocate`` operations are implemented as
-no-ops, aside from validating the context pointer.
-
-Each function corresponds to one of the prototypes defined in the allocator
-context system (see :ref:`context`), and is used internally by the
-``iarena_allocator()`` helper to construct a fully configured
-``allocator_vtable_t`` for immutable arena–based allocation.
-
-These functions are not intended to be called directly by user code;
-instead, they are consumed through the generic allocator interface.
-
-iarena_v_alloc
-~~~~~~~~~~~~~~
-
-.. doxygenfunction:: iarena_v_alloc
+.. doxygenfunction:: v_alloc
    :project: csalt
 
-iarena_v_alloc_aligned
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: iarena_v_alloc_aligned
-   :project: csalt
-
-iarena_v_realloc
-~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: iarena_v_realloc
-   :project: csalt
-
-iarena_v_realloc_aligned
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: iarena_v_realloc_aligned
-   :project: csalt
-
-iarena_v_return
+v_alloc_aligned 
 ~~~~~~~~~~~~~~~
 
-.. doxygenfunction:: iarena_v_return
+.. doxygenfunction:: v_alloc_aligned
    :project: csalt
 
-iarena_v_free
-~~~~~~~~~~~~~
+v_realloc 
+~~~~~~~~~
 
-.. doxygenfunction:: iarena_v_free
+.. doxygenfunction:: v_realloc
    :project: csalt
 
-iarena_allocator
+v_realloc_aligned 
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: v_realloc_aligned
+   :project: csalt
+
+v_return 
+~~~~~~~~
+
+.. doxygenfunction:: v_return
+   :project: csalt
+
+v_free 
+~~~~~~
+
+.. doxygenfunction:: v_free
+   :project: csalt
+
+malloc_allocator 
 ~~~~~~~~~~~~~~~~
 
-.. doxygenfunction:: iarena_allocator
+.. doxygenfunction:: malloc_allocator
    :project: csalt
