@@ -211,10 +211,6 @@ typedef struct {
 } allocator_vtable_t;
 // ================================================================================ 
 // ================================================================================ 
-
-
-// ================================================================================ 
-// ================================================================================ 
 // INITIALIZE AND DEALLOCATE FUNCTIONS
 
 /**
@@ -392,6 +388,59 @@ arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size
  * @endcode
  */
 arena_t* init_static_arena(void* buffer, size_t bytes, size_t passing_in);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Create a sub-arena carved from a parent arena with single allocation.
+ *
+ * Allocates a contiguous region from @p parent and constructs an arena header,
+ * chunk header, and data region within it (single alloc_arena call). The 
+ * sub-arena is fixed-capacity (cannot grow) and does NOT own its backing memory.
+ *
+ * Memory layout: [ arena_t | padding | Chunk | padding | usable data ]
+ *
+ * @param[in,out] parent    Parent arena to allocate from (must not be NULL).
+ * @param[in]     bytes     Total bytes to carve from parent (including headers).
+ * @param[in]     alignment Base alignment for sub-arena data allocations.
+ *
+ * @return Pointer to new arena_t on success; NULL on failure with errno set.
+ *
+ * @retval NULL, errno=EINVAL
+ *      - parent is NULL
+ *      - bytes too small for headers + at least 1 byte of data
+ *      - alignment is invalid
+ *
+ * @retval NULL, errno=ENOMEM
+ *      - parent cannot satisfy the request
+ *
+ * @note The sub-arena has:
+ *       - owns_memory = false (parent owns the backing region)
+ *       - resize = false (fixed capacity, cannot grow)
+ *       - mem_type inherited from parent
+ *
+ * @note Calling free_arena() on the sub-arena only nulls it out (no actual free).
+ *       The backing memory is released when the parent is freed/reset.
+ *
+ * @warning If parent is reset or freed, all sub-arenas become invalid.
+ *
+ * @par Example: Scoped temporary allocations
+ * @code{.c}
+ * arena_t* main = init_darena(1024*1024, true);
+ * 
+ * // Carve 8KB sub-arena (includes headers)
+ * arena_t* temp = init_arena_with_arena(main, 8192, alignof(max_align_t));
+ * assert_non_null(temp);
+ * 
+ * void* data = alloc_arena(temp, 1024, false);  // Same API as main arena
+ * // ... use data ...
+ * 
+ * free_arena(temp);   // Only nulls it out
+ * free_arena(main);   // Frees everything including temp's region
+ * @endcode
+ */
+arena_t* init_arena_with_arena(arena_t* parent,
+                                size_t bytes,
+                                size_t alignment_in);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1476,6 +1525,88 @@ void toggle_arena_resize(arena_t* arena, bool toggle);
  * @endcode
  */
 bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Check whether an arena owns its backing memory.
+ *
+ * Determines the ownership model of the arena's memory allocation:
+ * - **true**: Arena owns its memory and free_arena() will release it
+ * - **false**: Arena borrows memory from another source (parent arena or caller buffer)
+ *
+ * This is useful for understanding memory lifetime and determining safe
+ * operations on an arena.
+ *
+ * @param[in] arena  Pointer to the arena to query. May be NULL.
+ *
+ * @return true if the arena owns its backing memory; false otherwise.
+ *
+ * @retval false, errno=EINVAL  if @p arena is NULL
+ * @retval true   Arena created with init_darena() or init_dynamic_arena()
+ *                (owns its dynamically allocated memory)
+ * @retval true   Arena created with init_sarena() or init_static_arena()
+ *                (owns the arena header but NOT the caller's buffer)
+ * @retval false  Arena created with init_arena_with_arena()
+ *                (sub-arena borrowing from parent, owns nothing)
+ *
+ * @note For static arenas, owns_memory=true means the arena owns its header
+ *       structure, but the caller still owns the buffer itself. This is why
+ *       free_arena() returns EPERM for static arenas.
+ *
+ * @note This function is useful for:
+ *       - Determining if toggle_arena_resize() is allowed (requires owns_memory=true)
+ *       - Understanding cleanup responsibilities
+ *       - Validating arena relationships before operations
+ *
+ * @par Example: Checking ownership before operations
+ * @code{.c}
+ * arena_t* parent = init_darena(64*1024, true);
+ * arena_t* sub = init_arena_with_arena(parent, 8192, 8);
+ * 
+ * if (arena_owns_memory(parent)) {
+ *     printf("Parent owns its memory\n");          // Prints
+ * }
+ * 
+ * if (!arena_owns_memory(sub)) {
+ *     printf("Sub-arena borrows from parent\n");   // Prints
+ * }
+ * 
+ * // Only owned arenas can have resize toggled
+ * if (arena_owns_memory(parent)) {
+ *     toggle_arena_resize(parent, false);  // OK
+ * }
+ * 
+ * if (!arena_owns_memory(sub)) {
+ *     // toggle_arena_resize(sub, true);  // Would fail with EPERM
+ * }
+ * 
+ * free_arena(parent);
+ * @endcode
+ *
+ * @par Example: Ownership by arena type
+ * @code{.c}
+ * // Dynamic arena: owns memory
+ * arena_t* dyn = init_darena(4096, true);
+ * assert_true(arena_owns_memory(dyn));
+ * free_arena(dyn);  // Frees all memory
+ * 
+ * // Static arena: owns header, caller owns buffer
+ * uint8_t buf[8192];
+ * arena_t* sta = init_sarena(buf, sizeof(buf));
+ * assert_true(arena_owns_memory(sta));
+ * free_arena(sta);  // Returns EPERM (caller must manage buf)
+ * 
+ * // Sub-arena: owns nothing
+ * arena_t* parent = init_darena(64*1024, true);
+ * arena_t* sub = init_arena_with_arena(parent, 8192, 8);
+ * assert_false(arena_owns_memory(sub));
+ * free_arena(sub);     // Just nulls it out
+ * free_arena(parent);  // Frees everything including sub's region
+ * @endcode
+ *
+ * @sa init_arena_with_arena(), toggle_arena_resize(), free_arena()
+ */
+bool arena_owns_memory(const arena_t* arena);
 // ================================================================================ 
 // ================================================================================ 
 // MACROS 
@@ -2874,6 +3005,51 @@ size_t pool_footprint(const pool_t* pool);
  *          checks spatial containment.
  */
 bool is_pool_ptr(const pool_t* pool, const void* ptr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Query whether a pool owns the underlying arena memory.
+ *
+ * A pool may either:
+ * - **Own its arena** — as in the case of `init_dynamic_pool()` or
+ *   `init_static_pool()` where the pool internally creates or embeds
+ *   an `arena_t`, *or*
+ * - **Borrow an arena** — as in `init_pool_with_arena()`, where the
+ *   caller provides an existing arena to carve the pool header and
+ *   slices from.
+ *
+ * This function distinguishes those cases:
+ *
+ * - If the pool **owns** its arena, calling `free_pool(pool)` will free the arena
+ *   and all memory associated with the pool.
+ * - If the pool **borrows** its arena, calling `free_pool(pool)` will *not*
+ *   free the arena; the pool header is invalidated, but the caller remains
+ *   responsible for destroying the arena.
+ *
+ * @param pool
+ *     Pointer to a valid `pool_t` instance.
+ *
+ * @return `true` if the pool owns its arena;  
+ *         `false` if it borrows an external arena or if `pool == NULL`.
+ *
+ * @retval false, errno = EINVAL  
+ *     If `pool` is `NULL`.
+ *
+ * @code{.c}
+ * // Example:
+ * pool_t *p1 = init_dynamic_pool(64, 0, 16, 8192, 4096, true, true);
+ * assert(pool_owns_memory(p1) == true);   // owns arena
+ *
+ * arena_t *a = init_dynamic_arena(8192, true, 4096, 0);
+ * pool_t *p2 = init_pool_with_arena(a, 64, 0, 16, true, true);
+ * assert(pool_owns_memory(p2) == false);  // borrows arena
+ *
+ * free_pool(p1);
+ * free_pool(p2);   // does NOT free 'a'
+ * free_arena(a);
+ * @endcode
+ */
+bool pool_owns_memory(const pool_t* pool);
 // ================================================================================ 
 // ================================================================================ 
 // POOL MACROS 

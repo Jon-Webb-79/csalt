@@ -59,7 +59,8 @@ struct arena_t{
 
     uint8_t mem_type;  // type of memory used
     uint8_t resize;    // allows resizing if true with mem_type == DYNAMIC
-    uint8_t _pad[6];   // keep 8 byte passing
+    uint8_t owns_memory; // true if struct owns memory false otherwise
+    uint8_t _pad[5];   // keep 8 byte passing
 };
 // -------------------------------------------------------------------------------- 
 
@@ -295,6 +296,7 @@ arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size
 
     a->mem_type = (uint8_t)DYNAMIC;          /* was alloc_t; now a byte */
     a->resize   = (uint8_t)(resize ? 1 : 0);
+    a->owns_memory = (uint8_t)1;
 
     return a;
 #else 
@@ -360,6 +362,90 @@ arena_t* init_static_arena(void* buffer, size_t bytes, size_t alignment_in) {
 
     a->mem_type  = (uint8_t)STATIC;       /* <-- keep STATIC */
     a->resize    = (uint8_t)0;            /* <-- cannot grow */
+    a->owns_memory = (uint8_t)1;
+
+    return a;
+}
+// -------------------------------------------------------------------------------- 
+
+arena_t* init_arena_with_arena(arena_t* parent, size_t bytes, size_t alignment_in) {
+    if (!parent || bytes == 0) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Normalize per-arena base alignment (>= max_align_t)
+    size_t base_align = alignment_in ? alignment_in : alignof(max_align_t);
+    if (!_is_pow2(base_align)) {
+        base_align = _next_pow2(base_align);
+        if (!base_align) { errno = EINVAL; return NULL; }
+    }
+    if (base_align < alignof(max_align_t)) base_align = alignof(max_align_t);
+
+    // Single allocation from parent for entire sub-arena (header + chunk + data)
+    void* buffer = alloc_arena(parent, bytes, false);
+    if (!buffer) {
+        // errno set by alloc_arena (ENOMEM or EPERM)
+        return NULL;
+    }
+
+    // Now construct the sub-arena in-place within the allocated region
+    uintptr_t const b     = (uintptr_t)buffer;
+    uintptr_t const b_end = b + bytes;
+
+    // Align arena_t header
+    uintptr_t p_arena = _align_up_uintptr(b, alignof(arena_t));
+    if (p_arena > b_end) { errno = EINVAL; return NULL; }
+
+    // Must have room for arena_t + Chunk at minimum
+    if ((b_end - p_arena) < (sizeof(arena_t) + sizeof(Chunk))) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    uintptr_t arena_end = p_arena + sizeof(arena_t);
+    if (arena_end < p_arena || arena_end > b_end) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Place Chunk header aligned for Chunk
+    uintptr_t p_chunk  = _align_up_uintptr(arena_end, alignof(Chunk));
+    uintptr_t chunk_end = p_chunk + sizeof(Chunk);
+    if (chunk_end < p_chunk || chunk_end > b_end) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Place data aligned to per-arena base alignment
+    uintptr_t p_data = _align_up_uintptr(chunk_end, base_align);
+    if (p_data > b_end) { errno = EINVAL; return NULL; }
+
+    size_t usable = (size_t)(b_end - p_data);
+    if (!usable) { errno = EINVAL; return NULL; }
+
+    // Stitch in-place
+    arena_t* a = (arena_t*)p_arena;
+    Chunk* h = (Chunk*)p_chunk;
+
+    h->chunk = (uint8_t*)p_data;
+    h->len   = 0;
+    h->alloc = usable;
+    h->next  = NULL;
+
+    a->head      = h;
+    a->tail      = h;
+    a->cur       = (uint8_t*)p_data;
+    a->len       = 0;
+    a->alloc     = usable;
+    a->tot_alloc = (size_t)(b_end - b);  // Full region footprint
+    a->min_chunk = 0;                    // Not used (no growth)
+    a->alignment = base_align;
+
+    // Key differences from init_static_arena:
+    a->mem_type    = parent->mem_type;   // Inherit from parent
+    a->resize      = (uint8_t)0;         // Fixed capacity, cannot grow
+    a->owns_memory = (uint8_t)0;         // Does NOT own backing memory
 
     return a;
 }
@@ -379,6 +465,19 @@ arena_t* init_sarena(void* buffer, size_t bytes) {
 
 void free_arena(arena_t* arena) {
     if (arena == NULL) { errno = EINVAL; return; }
+
+    if (!arena->owns_memory) {
+        // Null out pointers to prevent use-after-free
+        arena->cur   = NULL;
+        arena->head  = NULL;
+        arena->tail  = NULL;
+        arena->alloc = 0;
+        arena->len   = 0;
+        arena->tot_alloc = 0;
+        // Note: We cannot free the arena header itself because it lives
+        // in the parent's memory. The parent will reclaim it.
+        return;
+    }
 
     if (arena->mem_type == STATIC) {
         errno = EPERM;
@@ -926,6 +1025,15 @@ inline size_t arena_min_chunk_size(const arena_t* arena) {
     }
     return arena->min_chunk;
 }
+// -------------------------------------------------------------------------------- 
+
+inline bool arena_owns_memory(const arena_t* arena) {
+    if (!arena) {
+        errno = EINVAL;
+        return false;
+    }
+    return (bool)arena->owns_memory;
+}
 // ================================================================================ 
 // ================================================================================ 
 // SETTER FUNCTIONS 
@@ -935,14 +1043,27 @@ inline void toggle_arena_resize(arena_t* arena, bool toggle) {
         errno = EINVAL;
         return;
     }
+
 #if ARENA_ENABLE_DYNAMIC
+    // Cannot toggle resize for static arenas
     if (arena->mem_type == STATIC) {
         errno = EPERM;
         return;
     }
+    
+    // Cannot toggle resize for sub-arenas (borrowed memory)
+    // Sub-arenas are always fixed-size by design
+    if (!arena->owns_memory) {
+        errno = EPERM;
+        return;
+    }
+    
+    // Only dynamic arenas that own their memory can have resize toggled
     arena->resize = (uint8_t)(toggle ? 1 : 0);
     return;
+    
 #else 
+    (void)toggle;  // Suppress unused parameter warning
     errno = ENOTSUP;
     return;
 #endif
@@ -1790,6 +1911,15 @@ inline size_t pool_footprint(const pool_t* pool) {
         return 0;
     }
     return pool->total_blocks * pool->stride;
+}
+// -------------------------------------------------------------------------------- 
+
+inline bool pool_owns_memory(const pool_t* pool) {
+    if (!pool) {
+        errno = EINVAL;
+        return false;
+    }
+    return pool->owns_arena;
 }
 // ================================================================================ 
 // ================================================================================ 

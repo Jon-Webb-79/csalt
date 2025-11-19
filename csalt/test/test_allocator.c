@@ -1131,6 +1131,474 @@ static void test_realloc_aligned_alignment_and_copy(void **state) {
 
     free(a);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_init_arena_with_arena_basic(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(64 * 1024, true);
+    assert_non_null(parent);
+    
+    arena_t* sub = init_arena_with_arena(parent, 8 * 1024, alignof(max_align_t));
+    assert_non_null(sub);
+    
+    // Verify sub-arena properties using public API
+    assert_false(arena_owns_memory(sub));
+    assert_int_equal(arena_mtype(sub), arena_mtype(parent));  // Inherits type
+    
+    // Verify we can allocate from sub
+    void* p = alloc_arena(sub, 256, false);
+    assert_non_null(p);
+    
+    // Verify pointer is within parent's memory
+    assert_true(is_arena_ptr(parent, sub));  // Sub header in parent
+    assert_true(is_arena_ptr(parent, p));    // Sub's allocation in parent
+    
+    free_arena(sub);
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_init_arena_with_arena_null_parent(void **state) {
+    (void)state;
+    
+    errno = 0;
+    arena_t* sub = init_arena_with_arena(NULL, 4096, 8);
+    assert_null(sub);
+    assert_int_equal(errno, EINVAL);
+}
+// --------------------------------------------------------------------------------
+
+static void test_init_arena_with_arena_zero_bytes(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(16 * 1024, true);
+    assert_non_null(parent);
+    
+    errno = 0;
+    arena_t* sub = init_arena_with_arena(parent, 0, 8);
+    assert_null(sub);
+    assert_int_equal(errno, EINVAL);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_init_arena_with_arena_too_small_for_headers(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(16 * 1024, true);
+    assert_non_null(parent);
+    
+    // Request very small size (likely too small for headers + data)
+    errno = 0;
+    arena_t* sub = init_arena_with_arena(parent, 64, 8);
+    // May succeed on some platforms if 64 bytes is enough, or fail
+    // We just verify no crash and proper error handling if it fails
+    if (!sub) {
+        assert_int_equal(errno, EINVAL);
+    } else {
+        free_arena(sub);
+    }
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_init_arena_with_arena_exhausts_parent(void **state) {
+    (void)state;
+    
+    // Create small parent with no resize
+    arena_t* parent = init_darena(1024, false);
+    assert_non_null(parent);
+    
+    // Try to create sub-arena larger than parent capacity
+    errno = 0;
+    arena_t* sub = init_arena_with_arena(parent, 64 * 1024, 8);
+    assert_null(sub);
+    // errno should be ENOMEM or EPERM from alloc_arena
+    assert_true(errno == ENOMEM || errno == EPERM);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_init_arena_with_arena_multiple_subs(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(128 * 1024, true);
+    assert_non_null(parent);
+    
+    // Create multiple sub-arenas
+    arena_t* sub1 = init_arena_with_arena(parent, 8 * 1024, 8);
+    arena_t* sub2 = init_arena_with_arena(parent, 16 * 1024, 16);
+    arena_t* sub3 = init_arena_with_arena(parent, 32 * 1024, 32);
+    
+    assert_non_null(sub1);
+    assert_non_null(sub2);
+    assert_non_null(sub3);
+    
+    // All should be sub-arenas (don't own memory)
+    assert_false(arena_owns_memory(sub1));
+    assert_false(arena_owns_memory(sub2));
+    assert_false(arena_owns_memory(sub3));
+    
+    // Allocate from each
+    void* p1 = alloc_arena(sub1, 128, false);
+    void* p2 = alloc_arena(sub2, 256, false);
+    void* p3 = alloc_arena(sub3, 512, false);
+    
+    assert_non_null(p1);
+    assert_non_null(p2);
+    assert_non_null(p3);
+    
+    // All allocations should be in parent
+    assert_true(is_arena_ptr(parent, p1));
+    assert_true(is_arena_ptr(parent, p2));
+    assert_true(is_arena_ptr(parent, p3));
+    
+    // Free in any order (just nulls out)
+    free_arena(sub2);
+    free_arena(sub1);
+    free_arena(sub3);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_init_arena_with_arena_nested_subs(void **state) {
+    (void)state;
+    
+    arena_t* main = init_darena(256 * 1024, true);
+    assert_non_null(main);
+    
+    // Create level 1 sub-arena
+    arena_t* level1 = init_arena_with_arena(main, 64 * 1024, 16);
+    assert_non_null(level1);
+    assert_false(arena_owns_memory(level1));
+    
+    // Create level 2 sub-arena from level 1
+    arena_t* level2 = init_arena_with_arena(level1, 16 * 1024, 8);
+    assert_non_null(level2);
+    assert_false(arena_owns_memory(level2));
+    
+    // Create level 3 sub-arena from level 2
+    arena_t* level3 = init_arena_with_arena(level2, 4 * 1024, 8);
+    assert_non_null(level3);
+    assert_false(arena_owns_memory(level3));
+    
+    // Allocate from deepest level
+    void* p = alloc_arena(level3, 256, false);
+    assert_non_null(p);
+    
+    // Should be in main's memory
+    assert_true(is_arena_ptr(main, p));
+    
+    // Free in reverse order (safest, but not required)
+    free_arena(level3);
+    free_arena(level2);
+    free_arena(level1);
+    free_arena(main);
+}
+// --------------------------------------------------------------------------------
+
+static void test_sub_arena_cannot_grow(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(64 * 1024, true);
+    assert_non_null(parent);
+    
+    arena_t* sub = init_arena_with_arena(parent, 2048, 8);
+    assert_non_null(sub);
+    
+    // Exhaust sub-arena
+    size_t rem = arena_remaining(sub);
+    void* p1 = alloc_arena(sub, rem, false);
+    assert_non_null(p1);
+    
+    // Next allocation should fail (no growth)
+    errno = 0;
+    void* p2 = alloc_arena(sub, 1, false);
+    assert_null(p2);
+    assert_int_equal(errno, EPERM);
+    
+    // Parent can still allocate (it has capacity)
+    void* p3 = alloc_arena(parent, 1024, false);
+    assert_non_null(p3);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_sub_arena_inherits_alignment(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(64 * 1024, true);
+    assert_non_null(parent);
+    
+    // Create sub with specific alignment
+    arena_t* sub = init_arena_with_arena(parent, 8192, 64);
+    assert_non_null(sub);
+    
+    // Sub should have requested alignment
+    assert_int_equal(arena_alignment(sub), 64);
+    
+    // Allocation should respect this alignment
+    void* p = alloc_arena(sub, 1, false);
+    assert_non_null(p);
+    assert_true(((uintptr_t)p % 64) == 0);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_sub_arena_from_static_parent(void **state) {
+    (void)state;
+    
+    uint8_t buffer[32 * 1024];
+    arena_t* parent = init_sarena(buffer, sizeof(buffer));
+    assert_non_null(parent);
+    
+    // Create sub-arena from static parent
+    arena_t* sub = init_arena_with_arena(parent, 8192, 8);
+    assert_non_null(sub);
+    assert_false(arena_owns_memory(sub));
+    assert_int_equal(arena_mtype(sub), STATIC);  // Inherits STATIC type
+    
+    void* p = alloc_arena(sub, 256, false);
+    assert_non_null(p);
+    
+    // Sub-arena free just nulls out
+    free_arena(sub);
+    
+    // Parent free should fail (STATIC)
+    errno = 0;
+    free_arena(parent);
+    assert_int_equal(errno, EPERM);
+    
+    // Caller owns buffer (stack allocated in this case)
+}
+// --------------------------------------------------------------------------------
+
+static void test_free_sub_arena_nulls_state(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(64 * 1024, true);
+    assert_non_null(parent);
+    
+    arena_t* sub = init_arena_with_arena(parent, 8192, 8);
+    assert_non_null(sub);
+    
+    void* p = alloc_arena(sub, 128, false);
+    assert_non_null(p);
+    
+    // Before free - should have capacity and size
+    size_t alloc_before = arena_alloc(sub);
+    size_t size_before = arena_size(sub);
+    assert_true(alloc_before > 0);
+    assert_true(size_before > 0);
+    
+    // Free sub-arena
+    free_arena(sub);
+    
+    // After free - should be zeroed/nulled
+    size_t alloc_after = arena_alloc(sub);
+    size_t size_after = arena_size(sub);
+    assert_int_equal(alloc_after, 0);
+    assert_int_equal(size_after, 0);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_sub_arena_double_free_safe(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(64 * 1024, true);
+    arena_t* sub = init_arena_with_arena(parent, 8192, 8);
+    
+    // First free
+    free_arena(sub);
+    assert_int_equal(arena_alloc(sub), 0);
+    
+    // Second free should be safe (idempotent)
+    free_arena(sub);
+    assert_int_equal(arena_alloc(sub), 0);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_cannot_toggle_resize_on_sub_arena(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(64 * 1024, true);
+    arena_t* sub = init_arena_with_arena(parent, 8192, 8);
+    
+    assert_false(arena_owns_memory(sub));
+    
+    // Try to enable resize - should fail
+    errno = 0;
+    toggle_arena_resize(sub, true);
+    assert_int_equal(errno, EPERM);
+    
+    // Verify sub still can't grow by trying to over-allocate
+    size_t rem = arena_remaining(sub);
+    (void)alloc_arena(sub, rem, false);  // Exhaust
+    
+    errno = 0;
+    void* p = alloc_arena(sub, 1, false);
+    assert_null(p);
+    assert_int_equal(errno, EPERM);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_arena_owns_memory_dynamic(void **state) {
+    (void)state;
+    
+    arena_t* a = init_darena(4096, true);
+    assert_non_null(a);
+    assert_true(arena_owns_memory(a));
+    
+    free_arena(a);
+}
+// --------------------------------------------------------------------------------
+
+static void test_arena_owns_memory_static(void **state) {
+    (void)state;
+    
+    uint8_t buffer[8192];
+    arena_t* a = init_sarena(buffer, sizeof(buffer));
+    assert_non_null(a);
+    
+    // Static arena owns its header (but not the buffer)
+    assert_true(arena_owns_memory(a));
+    
+    errno = 0;
+    free_arena(a);
+    assert_int_equal(errno, EPERM);
+}
+// --------------------------------------------------------------------------------
+
+static void test_arena_owns_memory_sub_arena(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(64 * 1024, true);
+    arena_t* sub = init_arena_with_arena(parent, 8192, 8);
+    
+    // Parent owns, sub doesn't
+    assert_true(arena_owns_memory(parent));
+    assert_false(arena_owns_memory(sub));
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_arena_owns_memory_null(void **state) {
+    (void)state;
+    
+    errno = 0;
+    bool result = arena_owns_memory(NULL);
+    assert_false(result);
+    assert_int_equal(errno, EINVAL);
+}
+// --------------------------------------------------------------------------------
+
+static void test_sub_arena_stats(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(128 * 1024, true);
+    arena_t* sub = init_arena_with_arena(parent, 16 * 1024, 8);
+    
+    // Allocate some memory
+    void* p1 = alloc_arena(sub, 1024, false);
+    void* p2 = alloc_arena(sub, 2048, false);
+    assert_non_null(p1);
+    assert_non_null(p2);
+    
+    // Check stats using public API
+    size_t used = arena_size(sub);
+    size_t capacity = arena_alloc(sub);
+    size_t remaining = arena_remaining(sub);
+    
+    assert_true(used >= 3072);  // At least 1024 + 2048
+    assert_true(capacity > used);
+    assert_true(remaining > 0);
+    assert_int_equal(used + remaining, capacity);  // Basic consistency
+    
+    // Print stats for verification
+    char stats[1024];
+    bool ok = arena_stats(sub, stats, sizeof(stats));
+    assert_true(ok);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_sub_arena_checkpoint_restore(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(128 * 1024, true);
+    arena_t* sub = init_arena_with_arena(parent, 16 * 1024, 8);
+    
+    // Allocate some memory
+    void* p1 = alloc_arena(sub, 512, false);
+    assert_non_null(p1);
+    
+    // Save checkpoint
+    ArenaCheckPoint cp = save_arena(sub);
+    
+    // Allocate more
+    void* p2 = alloc_arena(sub, 1024, false);
+    assert_non_null(p2);
+    
+    size_t size_before = arena_size(sub);
+    
+    // Restore to checkpoint
+    assert_true(restore_arena(sub, cp));
+    
+    size_t size_after = arena_size(sub);
+    
+    // Size should be less after restore
+    assert_true(size_after < size_before);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_sub_arena_independent_allocations(void **state) {
+    (void)state;
+    
+    arena_t* parent = init_darena(128 * 1024, true);
+    
+    // Create two independent sub-arenas
+    arena_t* sub1 = init_arena_with_arena(parent, 16 * 1024, 8);
+    arena_t* sub2 = init_arena_with_arena(parent, 16 * 1024, 8);
+    
+    assert_non_null(sub1);
+    assert_non_null(sub2);
+    
+    // Allocate from sub1
+    void* p1 = alloc_arena(sub1, 1024, false);
+    assert_non_null(p1);
+    size_t size1 = arena_size(sub1);
+    size_t size2_before = arena_size(sub2);
+    
+    // Allocate from sub2
+    void* p2 = alloc_arena(sub2, 2048, false);
+    assert_non_null(p2);
+    size_t size2_after = arena_size(sub2);
+    
+    // sub1 should be unchanged
+    assert_int_equal(arena_size(sub1), size1);
+    
+    // sub2 should have grown
+    assert_true(size2_after > size2_before);
+    
+    free_arena(parent);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1186,6 +1654,27 @@ const struct CMUnitTest test_arena[] = {
     cmocka_unit_test(test_realloc_shrink_is_noop),
     cmocka_unit_test(test_realloc_fails_when_insufficient_space),
     cmocka_unit_test(test_realloc_aligned_alignment_and_copy),
+
+    cmocka_unit_test(test_init_arena_with_arena_basic),
+    cmocka_unit_test(test_init_arena_with_arena_null_parent),
+    cmocka_unit_test(test_init_arena_with_arena_zero_bytes),
+    cmocka_unit_test(test_init_arena_with_arena_too_small_for_headers),
+    cmocka_unit_test(test_init_arena_with_arena_exhausts_parent),
+    cmocka_unit_test(test_init_arena_with_arena_multiple_subs),
+    cmocka_unit_test(test_init_arena_with_arena_nested_subs),
+    cmocka_unit_test(test_sub_arena_cannot_grow),
+    cmocka_unit_test(test_sub_arena_inherits_alignment),
+    cmocka_unit_test(test_sub_arena_from_static_parent),
+    cmocka_unit_test(test_free_sub_arena_nulls_state),
+    cmocka_unit_test(test_sub_arena_double_free_safe),
+    cmocka_unit_test(test_cannot_toggle_resize_on_sub_arena),
+    cmocka_unit_test(test_arena_owns_memory_dynamic),
+    cmocka_unit_test(test_arena_owns_memory_static),
+    cmocka_unit_test(test_arena_owns_memory_sub_arena),
+    cmocka_unit_test(test_arena_owns_memory_null),
+    cmocka_unit_test(test_sub_arena_stats),
+    cmocka_unit_test(test_sub_arena_checkpoint_restore),
+    cmocka_unit_test(test_sub_arena_independent_allocations),
 };
 
 const size_t test_arena_count = sizeof(test_arena) / sizeof(test_arena[0]);

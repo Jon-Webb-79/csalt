@@ -122,7 +122,8 @@ through getter functions.
 
        uint8_t mem_type;  // type of memory used
        uint8_t resize;    // allows resizing if true with mem_type == DYNAMIC
-       uint8_t _pad[6];   // keep 8 byte passing
+       uint8_t owns_memory; // 0 if structure does not own memory, 1 otherwise
+       uint8_t _pad[5];   // keep 8 byte passing
    } arena_t;
 
 ArenaCheckPoint 
@@ -167,6 +168,12 @@ init_sarena
 ~~~~~~~~~~~
 
 .. doxygenfunction:: init_sarena
+   :project: csalt
+
+init_arena_with_arena
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_arena_with_arena
    :project: csalt
 
 free_arena
@@ -288,6 +295,12 @@ arena_min_chunk_size
 ~~~~~~~~~~~~~~~~~~~~
 
 .. doxygenfunction:: arena_min_chunk_size
+   :project: csalt
+
+arena_owns_memory 
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: arena_owns_memory
    :project: csalt
 
 toggle_arena_resize 
@@ -646,6 +659,12 @@ is_pool_ptr
 ~~~~~~~~~~~
 
 .. doxygenfunction:: is_pool_ptr
+   :project: csalt
+
+pool_owns_memory 
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pool_owns_memory
    :project: csalt
 
 Function Like Macros 
