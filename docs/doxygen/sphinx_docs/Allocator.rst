@@ -1003,6 +1003,274 @@ min_freelist_alloc
 
 .. _context:
 
+Buddy Allocator Overview
+========================
+
+The ``buddy_t`` allocator implements a classic *binary buddy allocation* scheme.
+Memory is acquired as a single, power-of-two–sized pool, and all allocations are
+satisfied by recursively subdividing blocks into halves ("buddies") until the
+smallest usable block size is reached. Freed blocks are efficiently coalesced
+with their buddies to restore larger contiguous blocks.
+
+This model provides a balance between **fast allocation**, **bounded
+fragmentation**, and the ability to **free individual blocks**, while retaining
+predictable block sizes and layout.
+
+The buddy system is ideal when:
+
+* the allocator must handle **arbitrary allocation and free patterns**
+* **fragmentation control** is important
+* memory needs can vary dynamically within a bounded pool
+* allocations benefit from **power-of-two block sizing** and **alignment guarantees**
+* the application requires **deterministic performance** for alloc/free
+
+Examples include:
+
+* custom memory managers in real-time or embedded software
+* scratch allocators for physics engines, audio engines, or network buffers
+* fixed-size arenas that must support both allocation and deallocation
+* game engines and simulation systems where fragmentation must remain bounded
+* OS kernels (many use buddy systems internally for page-frame allocation)
+
+Benefits
+--------
+
+* **Fast allocation and deallocation**  
+  Typically O(log N), often near O(1) due to shallow free lists.
+
+* **Automatic coalescing**  
+  When a block is freed, its buddy is detected and merged, restoring larger
+  blocks and reducing fragmentation.
+
+* **Bounded fragmentation**  
+  Fragmentation is limited to internal power-of-two rounding, rather than the
+  arbitrary fragmentation of general-purpose heaps.
+
+* **Predictable memory layout**  
+  Block sizes and boundaries follow a binary tree structure, enabling more
+  deterministic and cache-friendly memory usage.
+
+* **Strong alignment guarantees**  
+  Power-of-two block sizes combined with ``base_align`` ensure that returned
+  pointers meet strict alignment requirements.
+
+Limitations
+-----------
+
+* **Internal fragmentation**  
+  Each allocation is rounded up to the next power of two.
+
+* **Fixed pool size**  
+  The buddy allocator does not grow once created; the pool size is fixed.
+
+* **Overhead for many small allocations**  
+  Very small objects may occupy larger blocks depending on ``min_block_size``.
+
+* **More complex than an arena allocator**  
+  Allocation and freeing may be logarithmic and require block splitting and
+  coalescing.
+
+* **Not ideal for large numbers of long-lived objects**  
+  Internal fragmentation can accumulate if most allocations hover near
+  power-of-two boundaries.
+
+Data Types 
+----------
+The following are data structures and derived data types used in the ``c_allocator.h``
+and ``c_allocator.c`` files to support the ``buddy_t`` data type.
+
+buddy_t
+~~~~~~~
+``buddy_t`` is an opaque data structure that is not visibile to the user.  This struct 
+contains metadata on a chunk of allocated memory.
+
+.. code-block:: c
+
+   struct buddy_t {
+       void           *base;         /* Base address of the OS-allocated pool */
+       buddy_block_t **free_lists;   /* Array of free-list heads (one per order level) */
+       size_t          pool_size;    /* Total pool size in bytes (power of two) */
+       size_t          len;          /* Total bytes currently consumed (block sizes) */
+       size_t          alloc;        /* Total usable pool bytes (== pool_size) */
+       size_t          total_alloc;  /* Total memory including pool + metadata overhead */
+       size_t          base_align;   /* Required alignment for returned user pointers */
+       size_t          user_offset;  /* Byte offset from block start to aligned user data */
+       uint32_t        min_order;    /* log2(minimum block size) */
+       uint32_t        max_order;    /* log2(pool size) */
+       uint32_t        num_levels;   /* Number of free-list levels (block orders) */
+       uint8_t         _pad[4];      /* Pad struct to maintain 8-byte alignment */
+   };
+
+The ``buddy_t`` data type uses the following structs.
+
+.. code-block:: c 
+
+   typedef struct buddy_block {
+       struct buddy_block *next;
+   } buddy_block_t;
+
+   typedef struct buddy_header {
+       uint32_t order;   /* log2(block_size) */
+       size_t   block_offset;
+   } buddy_header_t;
+
+Initialization and Memory Management
+------------------------------------
+The functions in this section can be used to initialize memory for a bump allocator,
+parse that memory to variables and to deallocate the memory.
+
+init_buddy_allocator
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_buddy_allocator
+   :project: csalt
+
+free_buddy
+~~~~~~~~~~
+
+.. doxygenfunction:: free_buddy
+   :project: csalt
+
+alloc_buddy
+~~~~~~~~~~~
+
+.. doxygenfunction:: alloc_buddy
+   :project: csalt
+
+realloc_buddy
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: realloc_buddy
+   :project: csalt
+
+return_buddy_element 
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: return_buddy_element
+   :project: csalt
+
+alloc_buddy_aligned
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: alloc_buddy_aligned
+   :project: csalt
+
+reset_buddy
+~~~~~~~~~~~
+
+.. doxygenfunction:: reset_buddy
+   :project: csalt
+
+realloc_buddy_aligned
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: realloc_buddy_aligned
+   :project: csalt
+
+Utility Funcitons 
+-----------------
+
+is_buddy_ptr
+~~~~~~~~~~~~
+
+.. doxygenfunction:: is_buddy_ptr
+   :project: csalt
+
+is_buddy_ptr_sized
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: is_buddy_ptr_sized
+   :project: csalt
+
+buddy_stats
+~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_stats
+   :project: csalt
+
+Getter and Setter Functions 
+---------------------------
+
+buddy_remaining
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_remaining
+   :project: csalt
+
+buddy_size
+~~~~~~~~~~
+
+.. doxygenfunction:: buddy_size
+   :project: csalt
+
+buddy_alloc
+~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_alloc
+   :project: csalt
+
+total_buddy_alloc
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: total_buddy_alloc
+   :project: csalt
+
+buddy_alignment
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_alignment
+   :project: csalt
+
+buddy_largest_block
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_largest_block
+   :project: csalt
+
+Buddy Context Functions
+-----------------------
+
+The following functions provide the arena-backed implementation of the
+allocator vtable interface. They adapt an ``buddy_t`` instance to the generic
+allocator API by exposing allocation, reallocation, and bulk deallocation
+operations in a consistent form.
+
+buddy_v_alloc
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_v_alloc
+   :project: csalt
+
+buddy_v_alloc_aligned
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_v_alloc_aligned
+   :project: csalt
+
+buddy_v_realloc
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_v_realloc
+   :project: csalt
+
+buddy_v_realloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_v_realloc_aligned
+   :project: csalt
+
+buddy_v_return
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_v_return
+   :project: csalt
+
+buddy_v_free
+~~~~~~~~~~~~
+
+.. doxygenfunction:: buddy_v_free
+   :project: csalt
+
 Context Function Pointers
 =========================
 
@@ -1117,3 +1385,4 @@ malloc_allocator
 
 .. doxygenfunction:: malloc_allocator
    :project: csalt
+

@@ -4655,27 +4655,635 @@ typedef struct buddy_t buddy_t;
 // ================================================================================ 
 // ================================================================================ 
 
+/**
+ * @brief Initialize a buddy allocator with a fixed-size memory pool.
+ *
+ * This function constructs a new ::buddy_t allocator backed by a
+ * power-of-two–sized memory pool obtained from the OS using
+ * `buddy_os_alloc()` (typically `mmap` on POSIX or `VirtualAlloc` on Windows).
+ *
+ * The allocator divides the pool into blocks whose sizes are powers of two,
+ * ranging from @p min_block_size up to @p pool_size. All allocation requests
+ * are rounded upward to the nearest block size that can hold:
+ *
+ *   - the internal allocation header (`buddy_header_t`), and  
+ *   - the requested user payload aligned to @p base_align.
+ *
+ * The following normalization rules apply:
+ *
+ *   - If @p base_align is `0`, it defaults to `alignof(max_align_t)`.
+ *   - If @p base_align is not a power of two, it is rounded up to the next
+ *     power of two.
+ *   - If @p min_block_size is too small to hold the header plus alignment
+ *     padding, it is increased to the minimum size that can.
+ *   - Both @p pool_size and @p min_block_size are rounded up to powers of two.
+ *   - @p min_block_size must not exceed the (adjusted) @p pool_size.
+ *
+ * The top-level free list is initialized with a single block representing the
+ * entire pool.
+ *
+ * @param pool_size
+ *     Requested total pool size in bytes. Must be non-zero. Will be rounded
+ *     upward to the next power of two.
+ *
+ * @param min_block_size
+ *     Minimum block size in bytes. Must be non-zero. Will be rounded upward to
+ *     the next power of two *after* being raised (if necessary) to accommodate
+ *     the internal header + alignment padding.
+ *
+ * @param base_align
+ *     Required alignment for returned user pointers. May be zero to indicate
+ *     natural alignment (`alignof(max_align_t)`). Must be a power of two, or it
+ *     will be rounded up to one.
+ *
+ * @return
+ *     A newly allocated ::buddy_t instance on success, or `NULL` on failure.
+ *
+ * @retval NULL
+ *     The function returns `NULL` and sets @c errno under these conditions:
+ *
+ *     - `EINVAL`  
+ *         - @p pool_size is zero  
+ *         - @p min_block_size is zero  
+ *         - @p min_block_size exceeds @p pool_size after normalization  
+ *         - @p base_align cannot be normalized (overflow in `_next_pow2()`)  
+ *         - Power-of-two order computation fails (invalid values)
+ *
+ *     - `ENOMEM`  
+ *         - System memory for the control structure or free-list array cannot be allocated  
+ *         - The OS-level allocation (`buddy_os_alloc`) for the backing pool fails
+ *
+ * @note
+ *     The resulting allocator is *not* resizable; its pool size is fixed for
+ *     the lifetime of the object. Use ::free_buddy to destroy it.
+ *
+ * @warning
+ *     Returned pointers must be freed only via ::return_buddy(); using `free()`
+ *     on them is undefined behavior.
+ *
+ * @code{.c}
+ * #include "buddy.h"
+ * #include <stdio.h>
+ * #include <errno.h>
+ *
+ * int main(void) {
+ *     size_t pool      = 4096;                 // 4 KiB requested
+ *     size_t min_block = 64;                   // smallest allocation is 64 bytes
+ *     size_t align     = 32;                   // user pointers aligned to 32 bytes
+ *
+ *     buddy_t *buddy = init_buddy_allocator(pool, min_block, align);
+ *     if (!buddy) {
+ *         perror("init_buddy_allocator");
+ *         return 1;
+ *     }
+ *
+ *     // Allocate 100 bytes (rounded to next block size)
+ *     void *ptr = alloc_buddy(buddy, 100, false);
+ *     if (!ptr) {
+ *         perror("alloc_buddy");
+ *         free_buddy(buddy);
+ *         return 1;
+ *     }
+ *
+ *     // Use memory ...
+ *
+ *     // Return memory
+ *     return_buddy(buddy, ptr);
+ *
+ *     // Release the entire buddy allocator
+ *     free_buddy(buddy);
+ *     return 0;
+ * }
+ * @endcode
+ */
 buddy_t *init_buddy_allocator(size_t pool_size, size_t min_block_size, size_t base_align);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Destroy a buddy allocator and release all associated resources.
+ *
+ * This function frees the OS-backed memory pool created by
+ * ::init_buddy_allocator(), releases internal metadata such as the free-list
+ * array, clears the allocator structure, and finally frees the ::buddy_t
+ * object itself.
+ *
+ * All memory allocated through this buddy allocator becomes invalid after this
+ * call. Accessing pointers returned by ::alloc_buddy(), ::alloc_buddy_aligned(),
+ * ::realloc_buddy(), or ::realloc_buddy_aligned() after invoking
+ * ::free_buddy() results in undefined behavior.
+ *
+ * The function is safe to call with a NULL pointer, in which case it performs
+ * no action.
+ *
+ * @param b
+ *     Pointer to a ::buddy_t instance previously created by
+ *     ::init_buddy_allocator(). May be NULL.
+ *
+ * @note
+ *     This call implicitly frees *all* blocks allocated from @p b, regardless
+ *     of whether they were returned via ::return_buddy(). Users do not need to
+ *     free individual allocations before calling this function.
+ *
+ * @warning
+ *     After calling ::free_buddy(), the pointer @p b must not be reused.
+ *     The function clears the contents of the structure before freeing it.
+ *
+ * @code{.c}
+ * buddy_t *buddy = init_buddy_allocator(4096, 64, 32);
+ * if (!buddy) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * void *p = alloc_buddy(buddy, 128, false);
+ * // ... use p ... 
+ *
+ * free_buddy(buddy);   // releases pool + metadata + allocator itself
+ * @endcode
+ */
 void free_buddy(buddy_t *b);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Allocate a block of memory from a buddy allocator.
+ *
+ * This function allocates @p size bytes from the buddy allocator @p b.
+ * The request is rounded upward to accommodate the internal
+ * ::buddy_header_t followed by power-of-two block sizing. The returned
+ * user pointer refers to the memory *after* the allocation header.
+ *
+ * The allocation proceeds as follows:
+ *
+ *   1. The user size is increased by the size of ::buddy_header_t.
+ *   2. The result is rounded up to at least the minimum block size
+ *      (``2^min_order``).
+ *   3. The total size is rounded to the next power of two.
+ *   4. A suitable free block is located; if necessary, larger blocks are
+ *      repeatedly split into buddies until the target order is reached.
+ *   5. A header is written at the start of the block, recording the
+ *      block's order and pool offset.
+ *   6. If @p zeroed is true, the user portion of the block is cleared.
+ *
+ * The returned pointer is always at least ``sizeof(buddy_header_t)`` bytes
+ * into the allocated block. Use ::alloc_buddy_aligned if strict alignment
+ * beyond this implicit header offset is required.
+ *
+ * @param b
+ *     Pointer to a valid ::buddy_t allocator created by
+ *     ::init_buddy_allocator(). Must not be NULL.
+ *
+ * @param size
+ *     Requested number of user bytes. Must be non-zero.
+ *
+ * @param zeroed
+ *     If true, the user portion of the block will be filled with zeros.
+ *     The internal header is never zeroed.
+ *
+ * @return
+ *     A pointer to the user portion of the allocated block, or NULL on
+ *     failure.
+ *
+ * @retval NULL
+ *     The function returns NULL and sets @c errno if:
+ *
+ *       - @c EINVAL  
+ *         - @p b is NULL  
+ *         - @p size is zero  
+ *
+ *       - @c ENOMEM  
+ *         - no block of adequate size exists  
+ *         - the allocation would exceed the total pool size
+ *
+ * @note
+ *     Returned blocks must be released using ::return_buddy(). Calling
+ *     ``free()`` on a pointer returned by this function is undefined
+ *     behavior.
+ *
+ * @note
+ *     This function guarantees only the minimum alignment implied by the
+ *     block size and header placement. Use ::alloc_buddy_aligned() when
+ *     explicit user-defined alignment is required.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * if (!b) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * // Allocate 100 bytes (rounded to next power-of-two block)
+ * void *ptr = alloc_buddy(b, 100, true);
+ * if (!ptr) {
+ *     perror("alloc_buddy");
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * // Use memory...
+ *
+ * return_buddy(b, ptr);   // free block back to buddy system
+ * free_buddy(b);          // destroy allocator
+ * @endcode
+ */
 void *alloc_buddy(buddy_t *b, size_t size, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Allocate an aligned memory block from a buddy allocator.
+ *
+ * This function allocates @p size bytes from the buddy allocator @p b,
+ * guaranteeing that the returned user pointer is aligned to @p align bytes.
+ *
+ * The request is expanded to accommodate:
+ *
+ *   - the internal ::buddy_header_t (stored immediately before the user
+ *     pointer),
+ *   - the requested user payload,
+ *   - extra padding required to achieve the requested alignment.
+ *
+ * Allocation proceeds similarly to ::alloc_buddy(), but with additional
+ * alignment logic:
+ *
+ *   1. If @p align is zero, it defaults to `alignof(max_align_t)`.
+ *   2. If @p align is not a power of two, it is rounded up to the next power
+ *      of two.
+ *   3. The total required bytes (header + payload + alignment padding) are
+ *      rounded up to at least the minimum buddy block size, then to the next
+ *      power of two.
+ *   4. A sufficiently large block is selected; larger blocks are split until
+ *      the target order is reached.
+ *   5. An aligned user pointer is chosen within the block. The internal header
+ *      is written immediately before this aligned pointer.
+ *   6. If @p zeroed is true, the entire usable payload region behind the user
+ *      pointer is cleared.
+ *
+ * @param b
+ *     Pointer to a valid ::buddy_t allocator created by
+ *     ::init_buddy_allocator(). Must not be NULL.
+ *
+ * @param size
+ *     Number of user bytes requested. Must be non-zero.
+ *
+ * @param align
+ *     Required alignment for the returned user pointer.  
+ *     Must be a power of two, or will be rounded upward to the next power of
+ *     two. A value of zero is interpreted as `alignof(max_align_t)`.
+ *
+ * @param zeroed
+ *     If true, the allocated user portion of the block is filled with zeros.
+ *
+ * @return
+ *     A pointer to the aligned user memory, or NULL on failure.
+ *
+ * @retval NULL
+ *     The function returns NULL and sets @c errno under these conditions:
+ *
+ *       - @c EINVAL  
+ *         - @p b is NULL  
+ *         - @p size is zero  
+ *         - @p align cannot be normalized to a valid power of two  
+ *
+ *       - @c ENOMEM  
+ *         - no suitable block is available  
+ *         - alignment padding exceeds block boundaries  
+ *         - @p size cannot fit in the pool (after rounding and header overhead)
+ *
+ * @note
+ *     Returned pointers must be freed with ::return_buddy(). Calling `free()`
+ *     on memory allocated by this function results in undefined behavior.
+ *
+ * @note
+ *     Alignment is guaranteed only for the *user* pointer; the internal header
+ *     may be unaligned and should not be accessed by user code.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * if (!b) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * // Allocate 128 bytes aligned to 64 bytes.
+ * void *ptr = alloc_buddy_aligned(b, 128, 64, true);
+ * if (!ptr) {
+ *     perror("alloc_buddy_aligned");
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * // ptr is now 64-byte aligned and zero-initialized
+ *
+ * return_buddy(b, ptr);  // free the block
+ * free_buddy(b);         // destroy allocator
+ * @endcode
+ */
 void *alloc_buddy_aligned(buddy_t *b,
                           size_t  size,
                           size_t  align,
                           bool    zeroed);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return a previously allocated block to the buddy allocator.
+ *
+ * This function frees a block allocated by ::alloc_buddy(),
+ * ::alloc_buddy_aligned(), ::realloc_buddy(), or
+ * ::realloc_buddy_aligned(), restoring it to the buddy system's free lists.
+ * After freeing, the block may be coalesced with its buddy if the adjacent
+ * block of the same order is also free.
+ *
+ * The user pointer @p ptr must be one returned by one of the allocation
+ * functions of this buddy allocator. The corresponding block header
+ * (::buddy_header_t) is assumed to reside immediately before the user
+ * pointer.
+ *
+ * Freeing proceeds as follows:
+ *
+ *   1. If @p b is NULL, the function fails with @c errno = EINVAL.
+ *   2. If @p ptr is NULL, the call is treated as a no-op (like `free(NULL)`).
+ *   3. The block header is read to determine the block's order and offset.
+ *   4. The allocator’s accounting value ``len`` is decreased by the block size.
+ *   5. If the buddy block (same order, XOR offset) is free, the two blocks are
+ *      coalesced into a larger block, repeating until no further buddy merge
+ *      is possible.
+ *   6. The resulting block is inserted into the appropriate free list.
+ *
+ * @param b
+ *     Pointer to a ::buddy_t allocator previously created by
+ *     ::init_buddy_allocator(). Must not be NULL.
+ *
+ * @param ptr
+ *     A user pointer returned by the buddy allocator's allocation functions.
+ *     May be NULL, in which case the function succeeds without action.
+ *
+ * @return
+ *     `true` on success, or `false` on failure.
+ *
+ * @retval false
+ *     The function returns `false` and sets @c errno under these conditions:
+ *
+ *       - @c EINVAL  
+ *         - @p b is NULL  
+ *         - The header preceding @p ptr is invalid  
+ *         - The block order is outside the range [`min_order`, `max_order`]  
+ *         - The recorded block offset/size lies outside the allocator’s pool  
+ *
+ * @note
+ *     After this operation, @p ptr and any derived pointers become invalid.
+ *
+ * @warning
+ *     Passing a pointer that was not allocated by this allocator, or one that
+ *     was already freed, results in undefined behavior.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * void *p = alloc_buddy(b, 200, false);
+ *
+ * if (!p) {
+ *     perror("alloc_buddy");
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * // ... use p ...
+ *
+ * if (!return_buddy_element(b, p)) {
+ *     perror("return_buddy_element");
+ * }
+ *
+ * free_buddy(b);
+ * @endcode
+ */
 bool return_buddy_element(buddy_t *b, void *ptr);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Resize a buddy allocation, preserving existing data when possible.
+ *
+ * This function adjusts the size of a block previously allocated from the
+ * buddy allocator @p buddy. It follows the familiar `realloc`-style semantics:
+ *
+ *   - `realloc_buddy(buddy, NULL, 0, new_size, zeroed)` behaves like
+ *     ::alloc_buddy(buddy, new_size, zeroed).
+ *   - `realloc_buddy(buddy, old_ptr, old_size, 0, zeroed)` frees @p old_ptr and
+ *     returns NULL.
+ *   - If @p new_size is less than or equal to the usable space in the existing
+ *     block, the block is reused in place and the original pointer is returned.
+ *   - Otherwise, a new block is allocated, up to `new_size` bytes are copied,
+ *     and the old block is returned to the allocator.
+ *
+ * The usable capacity of the old block is derived from the internal
+ * ::buddy_header_t stored immediately before @p old_ptr. The capacity is:
+ *
+ *   `usable_old = block_size - sizeof(buddy_header_t)`
+ *
+ * where @c block_size is the power-of-two size of the underlying buddy block.
+ *
+ * If @p zeroed is true and the reallocation occurs in place (i.e., the same
+ * block is reused) and @p new_size is greater than @p old_size, the newly
+ * exposed tail region `[old_size, new_size)` is zero-initialized.
+ *
+ * @param buddy
+ *     Pointer to a ::buddy_t allocator previously created by
+ *     ::init_buddy_allocator(). Must not be NULL.
+ *
+ * @param old_ptr
+ *     Pointer to a block previously allocated from @p buddy, or NULL.
+ *
+ * @param old_size
+ *     Logical size of the existing allocation (in bytes) as understood by the
+ *     caller. Must be non-zero if @p old_ptr is non-NULL.
+ *
+ * @param new_size
+ *     Requested new size in bytes. May be zero to indicate free.
+ *
+ * @param zeroed
+ *     If true, any newly added bytes (in the in-place grow case) or the entire
+ *     freshly allocated block (when moving) will be zero-initialized.
+ *
+ * @return
+ *     A pointer to the resized allocation, which may be the same as @p old_ptr,
+ *     or NULL on failure or when @p new_size is zero.
+ *
+ * @retval NULL
+ *     The function returns NULL and sets @c errno under these conditions:
+ *
+ *       - @c EINVAL  
+ *         - @p buddy is NULL  
+ *         - @p old_ptr is non-NULL but @p old_size is zero  
+ *
+ *       - @c ENOMEM  
+ *         - A larger block is required and ::alloc_buddy fails.
+ *           In this case, @p old_ptr remains valid and unchanged.
+ *
+ *     When @p old_ptr is NULL and @p new_size is zero, the function returns
+ *     NULL without setting @c errno (no-op case).
+ *
+ * @note
+ *     On success, if a new block is allocated, exactly
+ *     `min(old_size, usable_old)` bytes are copied from the old block to the
+ *     new block. The old block is then freed via ::return_buddy_element().
+ *
+ * @warning
+ *     Passing a pointer not obtained from ::alloc_buddy(),
+ *     ::alloc_buddy_aligned(), ::realloc_buddy(), or ::realloc_buddy_aligned()
+ *     on the same allocator instance results in undefined behavior.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * if (!b) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * size_t size = 128;
+ * void *p = alloc_buddy(b, size, false);
+ * if (!p) {
+ *     perror("alloc_buddy");
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * // Grow to 256 bytes, zero-initializing the new tail. 
+ * void *p2 = realloc_buddy(b, p, size, 256, true);
+ * if (!p2) {
+ *     perror("realloc_buddy");
+ *     // p is still valid on failure 
+ *     return_buddy_element(b, p);
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * // Use p2 ... 
+ *
+ * return_buddy_element(b, p2);
+ * free_buddy(b);
+ * @endcode
+ */
 void* realloc_buddy(buddy_t* buddy, void* old_ptr, size_t old_size, size_t new_size, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Resize an aligned buddy allocation, preserving alignment and data.
+ *
+ * This function resizes a block previously allocated from @p b, enforcing a
+ * specified alignment requirement on the resulting pointer. It combines the
+ * semantics of ::realloc_buddy() and ::alloc_buddy_aligned():
+ *
+ *   - `realloc_buddy_aligned(b, NULL, 0, new_size, align, zeroed)` behaves like
+ *     ::alloc_buddy_aligned(b, new_size, align, zeroed).
+ *   - `realloc_buddy_aligned(b, old_ptr, old_size, 0, align, zeroed)` frees
+ *     @p old_ptr and returns NULL.
+ *   - If @p new_size fits within the existing block's usable capacity and
+ *     @p old_ptr already satisfies the (normalized) alignment requirement,
+ *     the block is reused in place and @p old_ptr is returned.
+ *   - Otherwise, a new aligned block is allocated, up to
+ *     `min(old_size, usable_old)` bytes are copied, and the old block is
+ *     returned to the allocator.
+ *
+ * Alignment handling:
+ *
+ *   - If @p align is zero, it defaults to `alignof(max_align_t)`.
+ *   - If @p align is not a power of two, it is rounded up to the next power
+ *     of two.
+ *   - The in-place reuse path is taken only if the existing @p old_ptr
+ *     satisfies the normalized alignment.
+ *
+ * The usable capacity of the old block is conservatively taken as:
+ *
+ *   `usable_old = block_size - sizeof(buddy_header_t)`
+ *
+ * where @c block_size is the power-of-two size of the underlying buddy block.
+ *
+ * If @p zeroed is true and the reallocation occurs in place and @p new_size is
+ * greater than @p old_size, the newly exposed tail `[old_size, new_size)` is
+ * zero-initialized. When moving to a new block, zeroing semantics follow
+ * ::alloc_buddy_aligned().
+ *
+ * @param b
+ *     Pointer to a ::buddy_t allocator. Must not be NULL.
+ *
+ * @param old_ptr
+ *     Pointer to a previously allocated aligned block, or NULL.
+ *
+ * @param old_size
+ *     Logical size of the existing allocation (in bytes) as understood by the
+ *     caller. Must be non-zero if @p old_ptr is non-NULL.
+ *
+ * @param new_size
+ *     Requested new size in bytes. May be zero to indicate free.
+ *
+ * @param align
+ *     Required alignment for the resulting user pointer. May be zero to
+ *     indicate natural alignment (`alignof(max_align_t)`). If not a power of
+ *     two, it is rounded up to the next power of two.
+ *
+ * @param zeroed
+ *     If true, any newly added bytes (in-place grow) or the newly allocated
+ *     block (when moving) will be zero-initialized.
+ *
+ * @return
+ *     A pointer to the resized, properly aligned allocation, which may be the
+ *     same as @p old_ptr, or NULL on failure or when @p new_size is zero.
+ *
+ * @retval NULL
+ *     The function returns NULL and sets @c errno under these conditions:
+ *
+ *       - @c EINVAL  
+ *         - @p b is NULL  
+ *         - @p old_ptr is non-NULL but @p old_size is zero  
+ *         - @p align cannot be normalized (overflow in `_next_pow2`)  
+ *
+ *       - @c ENOMEM  
+ *         - A larger aligned block is required and
+ *           ::alloc_buddy_aligned() fails. In this case, @p old_ptr remains
+ *           valid and unchanged.
+ *
+ *     When @p old_ptr is NULL and @p new_size is zero, the function returns
+ *     NULL without setting @c errno (no-op case).
+ *
+ * @note
+ *     On successful move, exactly `min(old_size, usable_old)` bytes are copied
+ *     from the old block to the new block before the old block is freed via
+ *     ::return_buddy_element().
+ *
+ * @warning
+ *     Passing a pointer not obtained from the buddy allocator, or reusing a
+ *     pointer after it has been freed, results in undefined behavior.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(8192, 64, 32);
+ * if (!b) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * size_t size  = 128;
+ * size_t align = 64;
+ *
+ * void *p = alloc_buddy_aligned(b, size, align, false);
+ * if (!p) {
+ *     perror("alloc_buddy_aligned");
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * // Grow to 512 bytes, maintaining 64-byte alignment and zeroing new tail.
+ * void *p2 = realloc_buddy_aligned(b, p, size, 512, align, true);
+ * if (!p2) {
+ *     perror("realloc_buddy_aligned");
+ *     // p is still valid on failure
+ *     return_buddy_element(b, p);
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * // Use p2 ...
+ *
+ * return_buddy_element(b, p2);
+ * free_buddy(b);
+ * @endcode
+ */
 void *realloc_buddy_aligned(buddy_t *b,
                             void   *old_ptr,
                             size_t  old_size,
@@ -4684,28 +5292,807 @@ void *realloc_buddy_aligned(buddy_t *b,
                             bool    zeroed);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Validate that a pointer comes from a specific buddy allocator.
+ *
+ * This function performs a series of structural checks to determine whether
+ * @p ptr is a valid user pointer for the buddy allocator @p b. It does not
+ * check whether the pointer currently refers to an allocated or freed block;
+ * it only verifies that the pointer is *structurally consistent* with the
+ * allocator’s layout and header conventions.
+ *
+ * The validation steps are:
+ *
+ *   1. @p b and @p ptr must be non-NULL.
+ *   2. The internal ::buddy_header_t must reside immediately before @p ptr.
+ *   3. The header's @c order must be within [`min_order`, `max_order`].
+ *   4. The header's @c block_offset plus the block size must lie within the
+ *      allocator's pool size.
+ *   5. The block offset must be correctly aligned for the block size
+ *      (i.e., multiple of `2^order`).
+ *   6. The user pointer @p ptr must point inside the block, at or after the
+ *      header and strictly before the block end.
+ *
+ * If all checks succeed, the function returns `true` and leaves @c errno
+ * unchanged. On failure it returns `false` and sets @c errno.
+ *
+ * @param b
+ *     Pointer to a ::buddy_t allocator. Must not be NULL.
+ *
+ * @param ptr
+ *     Candidate user pointer to validate. Must not be NULL.
+ *
+ * @return
+ *     `true` if @p ptr is structurally valid for @p b, `false` otherwise.
+ *
+ * @retval false
+ *     The function returns `false` and sets @c errno under these conditions:
+ *
+ *       - @c EINVAL  
+ *         - @p b is NULL  
+ *         - @p ptr is NULL  
+ *         - The header is not located immediately before @p ptr  
+ *         - The header @c order is outside the valid range  
+ *         - The header @c block_offset plus block size exceeds the pool  
+ *         - The block offset is not properly aligned for its size  
+ *         - @p ptr does not lie within the computed block range
+ *
+ * @note
+ *     This function does *not* track allocation state; it cannot distinguish
+ *     between allocated and freed blocks. It only verifies that @p ptr looks
+ *     like a pointer produced by this allocator instance.
+ *
+ * @warning
+ *     Passing arbitrary pointers (e.g., stack addresses or pointers from
+ *     another allocator) is safe but will cause the function to return
+ *     `false` with @c errno = EINVAL. Misuse of the buddy allocator API
+ *     (such as double frees) may still result in undefined behavior elsewhere.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * void *p    = alloc_buddy(b, 128, false);
+ *
+ * if (!p) {
+ *     perror("alloc_buddy");
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * if (!is_buddy_ptr(b, p)) {
+ *     fprintf(stderr, "Pointer p is not a valid buddy pointer!\n");
+ * }
+ *
+ * int local = 42;
+ * if (!is_buddy_ptr(b, &local)) {
+ *     // expected to fail: &local is not from buddy allocator
+ * }
+ *
+ * return_buddy_element(b, p);
+ * free_buddy(b);
+ * @endcode
+ */
 bool is_buddy_ptr(const buddy_t *b, const void *ptr);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Validate that a pointer and size fit within a buddy block.
+ *
+ * This function extends ::is_buddy_ptr() by additionally checking that a
+ * requested size @p size can be safely stored within the underlying buddy
+ * block corresponding to @p ptr.
+ *
+ * The following conditions are required for success:
+ *
+ *   1. ::is_buddy_ptr(@p b, @p ptr) must succeed (i.e., @p ptr must be a
+ *      structurally valid buddy pointer for @p b).
+ *   2. The user-visible size @p size must be less than or equal to the
+ *      usable capacity of the block, defined as:
+ *
+ *         `usable = block_size - sizeof(buddy_header_t)`
+ *
+ *      where @c block_size is `2^order` derived from the internal header.
+ *
+ * If both conditions hold, the function returns `true`. Otherwise, it returns
+ * `false` and sets @c errno appropriately.
+ *
+ * @param b
+ *     Pointer to a ::buddy_t allocator. Must not be NULL.
+ *
+ * @param ptr
+ *     Candidate user pointer to validate. Must not be NULL and must satisfy
+ *     ::is_buddy_ptr(@p b, @p ptr).
+ *
+ * @param size
+ *     Requested logical size in bytes. Must fit within the usable region of
+ *     the block.
+ *
+ * @return
+ *     `true` if @p ptr is a valid buddy pointer for @p b and @p size fits
+ *     within the underlying block; `false` otherwise.
+ *
+ * @retval false
+ *     The function returns `false` and sets @c errno under these conditions:
+ *
+ *       - @c EINVAL  
+ *         - ::is_buddy_ptr(@p b, @p ptr) fails (invalid pointer or allocator)  
+ *
+ *       - @c ERANGE  
+ *         - @p size is larger than the usable capacity of the underlying block
+ *
+ * @note
+ *     This function is particularly useful for debug assertions and defensive
+ *     checks in higher-level code built on top of the buddy allocator, such as
+ *     verifying that a client-provided size is consistent with an allocated
+ *     block's capacity.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * void *p    = alloc_buddy(b, 128, false);
+ *
+ * if (!p) {
+ *     perror("alloc_buddy");
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * // This should succeed: we requested 128 bytes.
+ * if (!is_buddy_ptr_sized(b, p, 128)) {
+ *     perror("is_buddy_ptr_sized");
+ * }
+ *
+ * // This should fail with ERANGE if 4096 exceeds the block capacity.
+ * if (!is_buddy_ptr_sized(b, p, 4096)) {
+ *     if (errno == ERANGE) {
+ *         fprintf(stderr, "Requested size is larger than block capacity.\n");
+ *     }
+ * }
+ *
+ * return_buddy_element(b, p);
+ * free_buddy(b);
+ * @endcode
+ */
 bool is_buddy_ptr_sized(const buddy_t *b, const void *ptr, size_t size);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Reset a buddy allocator to its initial empty state.
+ *
+ * This function restores the buddy allocator @p b to the same effective
+ * state it had immediately after ::init_buddy_allocator(), without releasing
+ * or reallocating the underlying OS-backed memory pool. All outstanding
+ * allocations are logically discarded, all free lists are cleared, and the
+ * allocator is rebuilt with a single large free block covering the entire
+ * pool.
+ *
+ * This is analogous to a “phase reset” or “arena-style clear” operation:
+ * the allocator retains its pool, metadata arrays, alignment configuration,
+ * and block-order structure, but *all allocated blocks become invalid*.
+ *
+ * The reset process performs the following steps:
+ *
+ *   1. Validate the allocator structure (non-NULL fields, non-zero pool size,
+ *      valid order range).
+ *   2. Clear all free lists.
+ *   3. Insert one free block spanning the entire pool at the highest order.
+ *   4. Reset `b->len` to 0, indicating no bytes are currently in use.
+ *
+ * After this call, all previously returned user pointers become invalid and
+ * must not be dereferenced or passed to ::return_buddy_element().
+ *
+ * @param b
+ *     Pointer to a ::buddy_t allocator to reset. Must not be NULL.
+ *
+ * @return
+ *     `true` on success, or `false` on failure.
+ *
+ * @retval false
+ *     The function returns `false` and sets @c errno under the following
+ *     conditions:
+ *
+ *       - @c EINVAL  
+ *         - @p b is NULL  
+ *         - The allocator structure has an invalid state  
+ *           (e.g., missing pool, zero pool size, invalid min/max order values,
+ *            or zero free-list levels)
+ *
+ * @note
+ *     This operation does **not** release or reallocate OS memory; the pool is
+ *     preserved as-is. Use ::free_buddy() to fully destroy the allocator and
+ *     release all associated resources.
+ *
+ * @note
+ *     Unlike ::return_buddy_element(), this function frees *all* allocations at
+ *     once, regardless of their order or lifetime.
+ *
+ * @warning
+ *     Calling ::return_buddy_element() on any pointer obtained before the
+ *     reset is undefined behavior.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * void *p1 = alloc_buddy(b, 100, false);
+ * void *p2 = alloc_buddy(b, 128, false);
+ *
+ * // Use memory ...
+ *
+ * // Completely discard all state and restore allocator to fresh condition 
+ * if (!reset_buddy(b)) {
+ *     perror("reset_buddy");
+ *     free_buddy(b);
+ *     return 1;
+ * }
+ *
+ * // Now the pool is empty and alloc_buddy() can be used again.
+ * void *p3 = alloc_buddy(b, 200, true);
+ *
+ * return_buddy_element(b, p3);
+ * free_buddy(b);
+ * @endcode
+ */
 bool reset_buddy(buddy_t *b);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the total number of bytes currently consumed from the buddy pool.
+ *
+ * This function returns the allocator’s internal accounting value `b->len`,
+ * which represents the sum of the *full block sizes* (power-of-two blocks)
+ * of all active allocations. This value includes internal fragmentation and
+ * header overhead.
+ *
+ * This function does not compute logical user-requested bytes; it reflects
+ * raw pool consumption.
+ *
+ * @param b
+ *     Pointer to a ::buddy_t allocator. Must not be NULL.
+ *
+ * @return
+ *     The total number of bytes consumed from the pool, or `0` on error.
+ *
+ * @retval 0
+ *     Returned when @p b is NULL, with @c errno set to @c EINVAL.
+ *
+ * @note
+ *     This is analogous to "arena used" or "pool used" metrics in other
+ *     allocators.
+ *
+ * @code{.c}
+ * size_t used = buddy_alloc(b);
+ * printf("Bytes currently consumed: %zu\n", used);
+ * @endcode
+ */
 size_t buddy_alloc(const buddy_t *b);
 // -------------------------------------------------------------------------------- 
 
-size_t buddy_alloc_total(const buddy_t *b);
+/**
+ * @brief Return the total memory footprint of the buddy allocator including overhead.
+ *
+ * This function returns `b->total_alloc`, which includes:
+ *
+ *   - the OS-backed pool (`pool_size`),
+ *   - the free-lists array,
+ *   - the ::buddy_t struct itself,
+ *
+ * All of these represent the full memory cost of the allocator’s existence.
+ *
+ * @param b
+ *     Pointer to a ::buddy_t allocator. Must not be NULL.
+ *
+ * @return
+ *     The total footprint in bytes, or `0` on error.
+ *
+ * @retval 0
+ *     Returned if @p b is NULL, with @c errno set to @c EINVAL.
+ *
+ * @note
+ *     This value does *not* change during normal allocation or free
+ *     operations; it only changes if the allocator’s metadata layout changes.
+ *
+ * @code{.c}
+ * printf("Allocator footprint (bytes): %zu\n", buddy_alloc_total(b));
+ * @endcode
+ */
+size_t total_buddy_alloc(const buddy_t *b);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the overall memory size occupied by the buddy allocator.
+ *
+ * This function simply returns the same value as ::buddy_alloc_total().
+ * It exists to provide a naming parallel to `arena_size()` and similar
+ * conventions in other allocators.
+ *
+ * @param b
+ *     Pointer to a ::buddy_t allocator. Must not be NULL.
+ *
+ * @return
+ *     Total size in bytes, or `0` on error.
+ *
+ * @retval 0
+ *     Returned if @p b is NULL, with @c errno set to @c EINVAL.
+ *
+ * @note
+ *     Equivalent to calling ::buddy_alloc_total().
+ *
+ * @code{.c}
+ * printf("Buddy allocator size: %zu\n", buddy_size(b));
+ * @endcode
+ */
 size_t buddy_size(const buddy_t *b);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the total amount of free memory remaining in the buddy pool.
+ *
+ * This function reports how many bytes of the underlying buddy allocator's
+ * memory pool are still unconsumed, regardless of fragmentation. The value is
+ * computed as:
+ *
+ *      remaining = pool_size - len
+ *
+ * where:
+ *   - `pool_size` is the total allocatable memory in the buddy pool.
+ *   - `len` is the sum of the *full block sizes* of all active allocations.
+ *
+ * Because `len` tracks block sizes (powers of two) rather than user-requested
+ * sizes, the returned value may differ from the sum of user-visible free space,
+ * but accurately reflects physical pool consumption.
+ *
+ * @warning
+ *     This value does **not** guarantee that a single allocation of the same
+ *     size can succeed. Fragmentation may prevent large contiguous blocks from
+ *     being available. To determine the largest contiguous block currently
+ *     allocatable, use ::buddy_largest_block().
+ *
+ * @param b
+ *     Pointer to a valid ::buddy_t allocator. Must not be NULL.
+ *
+ * @return
+ *     The number of free bytes remaining in the pool, or `0` on error.
+ *
+ * @retval 0
+ *     Returned if @p b is NULL, with @c errno set to @c EINVAL.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * if (!b) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * size_t free_bytes = buddy_remaining(b);
+ * printf("Remaining free memory: %zu bytes\n", free_bytes);
+ *
+ * free_buddy(b);
+ * @endcode
+ */
 size_t buddy_remaining(const buddy_t *b);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return the size (in bytes) of the largest contiguous free block.
+ *
+ * This function scans the buddy allocator's free lists from the highest
+ * order (largest blocks) down to the lowest order, and returns the size of
+ * the largest block that is currently available for allocation. The size
+ * returned is a power of two and represents the maximum contiguous memory
+ * block that can be allocated *without* triggering a split or coalescing
+ * operation.
+ *
+ * Unlike ::buddy_remaining(), which returns total free memory regardless of
+ * fragmentation, this function measures how large a single allocation may
+ * be in the allocator’s current state. If all free memory is fragmented into
+ * small blocks, this function will return a small value even if the total
+ * free memory is large.
+ *
+ * @param b
+ *     Pointer to a valid ::buddy_t allocator. Must not be NULL.
+ *
+ * @return
+ *     The size in bytes of the largest free block, or `0` if no free blocks
+ *     exist, or on error.
+ *
+ * @retval 0
+ *     Returned if:
+ *       - @p b is NULL (with @c errno set to @c EINVAL)
+ *       - All free lists are empty (allocator fully consumed)
+ *
+ * @note
+ *     A return value of `0` does not always mean the allocator is out of
+ *     memory—it may simply be completely fragmented into blocks smaller than
+ *     any requested size.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * if (!b) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * void *p1 = alloc_buddy(b, 2000, false);  // Splits large blocks
+ * size_t largest = buddy_largest_block(b);
+ * printf("Largest free block: %zu bytes\n", largest);
+ *
+ * return_buddy_element(b, p1);
+ * free_buddy(b);
+ * @endcode
+ */
 size_t buddy_largest_block(const buddy_t *b);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Format human-readable statistics for a buddy allocator.
+ *
+ * This function writes a textual summary of the state of @p buddy into
+ * @p buffer, up to @p buffer_size bytes. The output is suitable for logging,
+ * debugging, or interactive diagnostics and mirrors the style of
+ * ::arena_stats().
+ *
+ * When @p buddy is non-NULL, the report includes:
+ *
+ *   - Total pool size in bytes.
+ *   - Minimum and maximum block sizes (in bytes).
+ *   - Bytes currently “used” (sum of allocated block sizes).
+ *   - Remaining bytes (pool size minus used).
+ *   - Total memory including allocator overhead (`total_alloc`).
+ *   - The size of the largest free block.
+ *   - Utilization percentage (`used / pool_size * 100`).
+ *   - Per-level free list details:
+ *       - level index
+ *       - block order and size
+ *       - number of free blocks
+ *       - total free bytes at that level
+ *   - A summary line of the total free bytes across all free lists.
+ *
+ * If @p buddy is NULL, the function writes the line:
+ *
+ *   `"Buddy: NULL\n"`
+ *
+ * and returns `true` as long as there is enough space in @p buffer.
+ *
+ * @param buddy
+ *     Pointer to the ::buddy_t allocator to inspect, or NULL. If NULL, a
+ *     minimal `"Buddy: NULL\n"` message is written.
+ *
+ * @param buffer
+ *     Destination character buffer for the formatted statistics. Must not
+ *     be NULL.
+ *
+ * @param buffer_size
+ *     Size of @p buffer in bytes. Must be greater than zero.
+ *
+ * @return
+ *     `true` if all output was successfully written to @p buffer, `false`
+ *     if an error occurred (including insufficient buffer space).
+ *
+ * @retval false
+ *     The function returns `false` and sets @c errno under these conditions:
+ *
+ *       - @c EINVAL  
+ *         - @p buffer is NULL  
+ *         - @p buffer_size is zero
+ *
+ *     If ::_buf_appendf() fails (e.g., due to insufficient buffer capacity),
+ *     this function returns `false`. In that case, @c errno is not directly
+ *     modified here; consult ::_buf_appendf()’s behavior if needed.
+ *
+ * @note
+ *     The function uses ::buddy_largest_block() to compute the largest free
+ *     block and iterates each free list to derive per-level statistics.
+ *
+ * @note
+ *     The string written into @p buffer is **not** null-terminated if the
+ *     underlying ::_buf_appendf() helper does not ensure this or if the
+ *     buffer is exactly filled. Ensure @p buffer has sufficient size for
+ *     typical diagnostic output.
+ *
+ * @code{.c}
+ * char buf[1024];
+ *
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * if (!b) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * // Perform some allocations
+ * void *p1 = alloc_buddy(b, 128, false);
+ * void *p2 = alloc_buddy(b, 256, false);
+ *
+ * if (!buddy_stats(b, buf, sizeof(buf))) {
+ *     perror("buddy_stats");
+ * } else {
+ *     fputs(buf, stdout);
+ * }
+ *
+ * return_buddy_element(b, p1);
+ * return_buddy_element(b, p2);
+ * free_buddy(b);
+ * @endcode
+ */
+bool buddy_stats(const buddy_t *buddy, char *buffer, size_t buffer_size);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the default alignment used by the buddy allocator.
+ *
+ * This function returns the per-allocator base alignment value that was
+ * specified (or normalized) during ::init_buddy_allocator(). This alignment
+ * represents the minimum guarantee for all user pointers returned by
+ * ::alloc_buddy() and ::alloc_buddy_aligned().
+ *
+ * The returned value is always a power of two, and is never less than
+ * `alignof(max_align_t)`. For strictly aligned allocations beyond this
+ * default, use ::alloc_buddy_aligned() or ::realloc_buddy_aligned().
+ *
+ * @param buddy
+ *     Pointer to a valid ::buddy_t allocator. Must not be NULL.
+ *
+ * @return
+ *     The allocator’s default alignment in bytes, or `0` on error.
+ *
+ * @retval 0
+ *     Returned when @p buddy is NULL, with @c errno set to @c EINVAL.
+ *
+ * @note
+ *     The default alignment applies to normal allocations made via
+ *     ::alloc_buddy(). Aligned allocations may request larger alignment
+ *     values.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096, 64, 32);
+ * if (!b) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * size_t a = buddy_alignment(b);
+ * printf("Buddy allocator default alignment: %zu bytes\n", a);
+ *
+ * free_buddy(b);
+ * @endcode
+ */
+size_t buddy_alignment(const buddy_t* buddy);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for buddy allocation.
+ *
+ * Allocates a block of memory of size @p size from the buddy allocator
+ * referenced by @p ctx. If @p zeroed is true, the returned memory will be
+ * zero-initialized according to the semantics of ::alloc_buddy().
+ *
+ * On error, errno is set (typically to ENOMEM or EINVAL) and NULL is
+ * returned.
+ *
+ * This function implements the @ref alloc_prototype interface for
+ * buddy-backed allocators.
+ *
+ * @param ctx    Pointer to a buddy_t instance.
+ * @param size   Number of bytes to allocate.
+ * @param zeroed Whether the memory should be zero-initialized.
+ *
+ * @retval void* Pointer to a block of at least @p size bytes.
+ * @retval NULL  On failure, with errno set.
+ */
+static inline void* buddy_v_alloc(void* ctx, size_t size, bool zeroed) {
+    buddy_t* buddy = (buddy_t*)ctx;
+    if (!buddy) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return alloc_buddy(buddy, size, zeroed);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Vtable adapter for aligned buddy allocation.
+ *
+ * Allocates a block of memory of size @p size from the buddy allocator
+ * referenced by @p ctx, with a minimum alignment of @p align. The alignment
+ * must be a power of two (or it will be rounded up to the next power of two)
+ * according to the semantics of ::alloc_buddy_aligned(). If @p zeroed is true,
+ * the returned memory will be zero-initialized.
+ *
+ * On error, errno is set (typically to ENOMEM or EINVAL) and NULL is
+ * returned.
+ *
+ * This function implements the @ref alloc_aligned_prototype interface
+ * for buddy-backed allocators.
+ *
+ * @param ctx    Pointer to a buddy_t instance.
+ * @param size   Number of bytes to allocate.
+ * @param align  Required alignment (power of two, or 0 for natural alignment).
+ * @param zeroed Whether the memory should be zero-initialized.
+ *
+ * @retval void* Pointer to an aligned block of at least @p size bytes.
+ * @retval NULL  On failure, with errno set.
+ */
+static inline void* buddy_v_alloc_aligned(void* ctx, size_t size,
+                                          size_t align, bool zeroed) {
+    buddy_t* buddy = (buddy_t*)ctx;
+    if (!buddy) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return alloc_buddy_aligned(buddy, size, align, zeroed);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Vtable adapter for buddy reallocation.
+ *
+ * Resizes a block of memory previously allocated from the buddy allocator
+ * referenced by @p ctx. The block is identified by @p old_ptr and its
+ * previous size @p old_size. The new requested size is @p new_size.
+ *
+ * Semantics follow ::realloc_buddy():
+ *
+ *  - `realloc_buddy(b, NULL, 0, new_size, zeroed)` behaves like
+ *    ::alloc_buddy().
+ *  - `realloc_buddy(b, old_ptr, old_size, 0, zeroed)` frees @p old_ptr and
+ *    returns NULL.
+ *  - If the new size fits in the existing block, the pointer is reused in
+ *    place.
+ *  - Otherwise, a new block is allocated, data is copied, and the old block
+ *    is returned to the allocator.
+ *
+ * On error, errno is set and NULL is returned. In that case, the caller must
+ * continue to use @p old_ptr unchanged.
+ *
+ * This function implements the @ref realloc_prototype interface for
+ * buddy-backed allocators.
+ *
+ * @param ctx       Pointer to a buddy_t instance.
+ * @param old_ptr   Pointer to the existing allocation (may be NULL).
+ * @param old_size  Size of the existing allocation.
+ * @param new_size  Requested new size.
+ * @param zeroed    Whether any expanded portion must be zero-initialized.
+ *
+ * @retval void* New pointer to the resized allocation on success.
+ * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ */
+static inline void* buddy_v_realloc(void* ctx, void* old_ptr,
+                                    size_t old_size, size_t new_size,
+                                    bool zeroed) {
+    buddy_t* buddy = (buddy_t*)ctx;
+    if (!buddy) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return realloc_buddy(buddy, old_ptr, old_size, new_size, zeroed);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Vtable adapter for aligned buddy reallocation.
+ *
+ * Resizes a block of memory previously allocated from the buddy allocator
+ * referenced by @p ctx, enforcing a minimum alignment of @p align for the
+ * resulting block. The previous allocation is described by @p old_ptr and
+ * @p old_size; the new requested size is @p new_size.
+ *
+ * Semantics follow ::realloc_buddy_aligned():
+ *
+ *  - `realloc_buddy_aligned(b, NULL, 0, new_size, align, zeroed)` behaves
+ *    like ::alloc_buddy_aligned().
+ *  - `realloc_buddy_aligned(b, old_ptr, old_size, 0, align, zeroed)` frees
+ *    @p old_ptr and returns NULL.
+ *  - If the new size fits in the existing block and the pointer already
+ *    satisfies the requested alignment, the pointer is reused in place.
+ *  - Otherwise, a new aligned block is allocated, data is copied, and the
+ *    old block is returned to the allocator.
+ *
+ * On error, errno is set and NULL is returned. In that case, the caller must
+ * continue to use @p old_ptr unchanged.
+ *
+ * This function implements the @ref realloc_aligned_prototype interface for
+ * buddy-backed allocators.
+ *
+ * @param ctx       Pointer to a buddy_t instance.
+ * @param old_ptr   Pointer to the existing allocation (may be NULL).
+ * @param old_size  Size of the existing allocation.
+ * @param new_size  Requested new size.
+ * @param zeroed    Whether any expanded portion must be zero-initialized.
+ * @param align     Required alignment (power of two, or 0 for natural).
+ *
+ * @retval void* Pointer to the resized, aligned allocation on success.
+ * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ */
+static inline void* buddy_v_realloc_aligned(void* ctx, void* old_ptr,
+                                            size_t old_size, size_t new_size,
+                                            bool zeroed, size_t align) {
+    buddy_t* buddy = (buddy_t*)ctx;
+    if (!buddy) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return realloc_buddy_aligned(buddy, old_ptr, old_size,
+                                 new_size, align, zeroed);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Vtable adapter for returning an element to a buddy allocator.
+ *
+ * Returns a block previously allocated from the buddy allocator referenced
+ * by @p ctx back to the allocator. This is a thin adapter over
+ * ::return_buddy_element().
+ *
+ * If @p ctx is NULL, errno is set to EINVAL and the function returns without
+ * performing any deallocation. If @p ptr is NULL, the call is treated as
+ * a no-op (like `free(NULL)`).
+ *
+ * This function implements the @ref return_prototype interface for
+ * buddy-backed allocators.
+ *
+ * @param ctx Pointer to a buddy_t instance.
+ * @param ptr Pointer to an allocated block (may be NULL).
+ */
+static inline void buddy_v_return(void* ctx, void* ptr) {
+    buddy_t* buddy = (buddy_t*)ctx;
+    if (!buddy) {
+        errno = EINVAL;
+        return;
+    }
+    (void)return_buddy_element(buddy, ptr);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Vtable adapter for freeing a buddy allocator.
+ *
+ * Releases all memory owned by the buddy allocator referenced by @p ctx,
+ * including the OS-backed pool and all internal metadata. After this call,
+ * the allocator must not be used again.
+ *
+ * If @p ctx is NULL, errno is set to EINVAL and the function returns
+ * without performing any action.
+ *
+ * This function implements the @ref free_prototype interface for
+ * buddy-backed allocators.
+ *
+ * @param ctx Pointer to a buddy_t instance.
+ */
+static inline void buddy_v_free(void* ctx) {
+    buddy_t* buddy = (buddy_t*)ctx;
+    if (!buddy) {
+        errno = EINVAL;
+        return;
+    }
+    free_buddy(buddy);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Constructs an allocator_vtable_t for a given buddy allocator.
+ *
+ * This helper initializes an allocator_vtable_t that exposes a ::buddy_t
+ * instance through the generic allocator interface. All operations
+ * (allocate, reallocate, deallocate, etc.) are forwarded to the
+ * buddy-backed vtable adapter functions.
+ *
+ * The returned vtable is typically used to parameterize other components
+ * that depend on the generic allocator API rather than directly on
+ * ::buddy_t.
+ *
+ * @param b Pointer to a buddy_t instance to use as the allocator backend.
+ *
+ * @return A fully initialized allocator_vtable_t bound to @p b.
+ */
+static inline allocator_vtable_t buddy_allocator(buddy_t* b) {
+    allocator_vtable_t v = {
+        .allocate           = buddy_v_alloc,
+        .allocate_aligned   = buddy_v_alloc_aligned,
+        .reallocate         = buddy_v_realloc,
+        .reallocate_aligned = buddy_v_realloc_aligned,
+        .return_element     = buddy_v_return,
+        .deallocate         = buddy_v_free,
+        .ctx                = b
+    };
+    return v;
+}
+
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

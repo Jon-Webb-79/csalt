@@ -2922,13 +2922,6 @@ struct buddy_t {
 #endif
 // -------------------------------------------------------------------------------- 
 
-// static inline size_t _next_pow2(size_t x){
-//     if (x <= 1) return x ? 1 : 0;
-//     if (x > (SIZE_MAX>>1)) return 0;
-//     x--; for (size_t s=1; s<8*sizeof(size_t); s<<=1) x|=x>>s; return x+1;
-// }
-// -------------------------------------------------------------------------------- 
-
 static uint32_t _ilog2_size(size_t x) {
     uint32_t r = 0;
     while (x > 1) {
@@ -3642,7 +3635,7 @@ inline size_t buddy_alloc(const buddy_t *b) {
 }
 // -------------------------------------------------------------------------------- 
 
-inline size_t buddy_alloc_total(const buddy_t *b) {
+inline size_t total_buddy_alloc(const buddy_t *b) {
     if (!b) {
         errno = EINVAL;
         return 0;
@@ -3689,6 +3682,134 @@ inline size_t buddy_largest_block(const buddy_t *b) {
     }
 
     return 0;
+}
+// -------------------------------------------------------------------------------- 
+
+bool buddy_stats(const buddy_t *buddy, char *buffer, size_t buffer_size) {
+    size_t offset = 0U;
+
+    if ((buffer == NULL) || (buffer_size == 0U)) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (buddy == NULL) {
+        (void)_buf_appendf(buffer, buffer_size, &offset, "%s", "Buddy: NULL\n");
+        return true;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "%s", "Buddy Statistics:\n")) {
+        return false;
+    }
+
+    /* Basic capacity / usage numbers */
+    size_t const pool_size      = buddy->pool_size;
+    size_t const used           = buddy->len;
+    size_t const remaining      = (pool_size > used) ? (pool_size - used) : 0U;
+    size_t const total_overhead = buddy->total_alloc;
+
+    size_t const min_block_size = (size_t)1u << buddy->min_order;
+    size_t const max_block_size = (size_t)1u << buddy->max_order;
+    size_t const largest_block  = buddy_largest_block(buddy);
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Pool size: %zu bytes\n", pool_size)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Min block size: %zu bytes\n", min_block_size)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Max block size: %zu bytes\n", max_block_size)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Used: %zu bytes\n", used)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Remaining: %zu bytes\n", remaining)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Total (with overhead): %zu bytes\n", total_overhead)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Largest free block: %zu bytes\n", largest_block)) {
+        return false;
+    }
+
+    /* Utilization with divide-by-zero guard */
+    if (pool_size == 0U) {
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "%s", "  Utilization: N/A (pool size is 0)\n")) {
+            return false;
+        }
+    } else {
+        double const util = (100.0 * (double)used) / (double)pool_size;
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Utilization: %.1f%%\n", util)) {
+            return false;
+        }
+    }
+
+    /* Per-level free list stats */
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "%s", "  Free lists by level:\n")) {
+        return false;
+    }
+
+    size_t total_free_bytes_from_lists = 0U;
+
+    for (uint32_t level = 0U; level < buddy->num_levels; ++level) {
+        uint32_t const order      = buddy->min_order + level;
+        size_t   const block_size = (size_t)1u << order;
+
+        size_t count = 0U;
+        for (buddy_block_t *blk = buddy->free_lists[level];
+             blk != NULL;
+             blk = blk->next) {
+            count++;
+        }
+
+        size_t level_free_bytes = count * block_size;
+        total_free_bytes_from_lists += level_free_bytes;
+
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "    Level %u (order %u, block %zu bytes): "
+                          "%zu blocks, %zu bytes free\n",
+                          level, order, block_size,
+                          count, level_free_bytes)) {
+            return false;
+        }
+    }
+
+    /* Optional cross-check of free bytes vs remaining */
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Free bytes (sum of free lists): %zu bytes\n",
+                      total_free_bytes_from_lists)) {
+        return false;
+    }
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t buddy_alignment(const buddy_t* buddy) {
+    if (!buddy) {
+        errno = EINVAL;
+        return 0;
+    }
+    return buddy->base_align;
 }
 // ================================================================================
 // ================================================================================

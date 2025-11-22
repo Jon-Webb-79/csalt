@@ -3530,7 +3530,7 @@ static void test_init_buddy_rounding(void **state) {
     assert_int_equal(buddy_largest_block(b), expected_pool);
 
     /* Total alloc must be >= expected_pool */
-    assert_true(buddy_alloc_total(b) >= expected_pool);
+    assert_true(total_buddy_alloc(b) >= expected_pool);
 
     free_buddy(b);
 }
