@@ -22,6 +22,9 @@
 #include <stddef.h>  // max_align_t
 #include <stdalign.h> // alignof
 #include <stdatomic.h> // _Atomic
+#define _GNU_SOURCE
+#include <sys/mman.h>
+#include <unistd.h>
 #include "c_allocator.h"
 // ================================================================================ 
 // ================================================================================ 
@@ -1923,420 +1926,6 @@ inline bool pool_owns_memory(const pool_t* pool) {
 }
 // ================================================================================ 
 // ================================================================================ 
-// INTERNAL ARENA 
-
-struct iarena_t {
-    // Hot path
-    uint8_t* cur;      // next write
-    uint8_t* end;      // bump limit (exclusive)
-    uint8_t* begin;    // base for stats/reset
-
-    // Parent ref
-    arena_t* arena;    // Pointer to an arena not owned by this truct
-
-    // Accounting
-    size_t len;        // charged pad+bytes total
-    size_t alloc;      // usable payload capacity (end - begin)
-    size_t tot_alloc;  // total reserved from parent (header + padding + payload)
-
-    size_t alignment;  // effective payload alignment for this subarena
-};
-// -------------------------------------------------------------------------------- 
-
-iarena_t* init_iarena_with_arena(arena_t* parent,
-                                 size_t bytes,
-                                 size_t alignment) {
-    if (!parent || bytes == 0u) { errno = EINVAL; return NULL; }
-
-    const size_t parent_align = parent->alignment;
-    if ((parent_align & (parent_align - 1u)) != 0u) { errno = EINVAL; return NULL; }
-    if (alignment && ((alignment & (alignment - 1u)) != 0u)) { errno = EINVAL; return NULL; }
-
-    // Effective payload & base (header) alignment
-    const size_t eff_payload_align = alignment ? (alignment > parent_align ? alignment : parent_align)
-                                               : parent_align;
-    const size_t hdr_align  = alignof(iarena_t);
-    const size_t base_align = (eff_payload_align > hdr_align) ? eff_payload_align : hdr_align;
-
-    // --- Preflight like init_dynamic_arena does before malloc ---
-    // Worst-case pad after header to reach payload alignment
-    const size_t worst_pad = eff_payload_align - 1u;
-    // Need at least header + worst_pad + 1 byte of payload
-    if (bytes <= sizeof(iarena_t) + worst_pad) {
-        errno = EINVAL;          // not enough total for any payload
-        return NULL;
-    }
-    // ------------------------------------------------------------
-
-    // Carve total slice from parent; base is aligned to base_align
-    uint8_t* base = (uint8_t*)alloc_arena_aligned(parent, bytes, base_align, /*zero=*/false);
-    if (!base) { errno = ENOMEM; return NULL; }
-
-    iarena_t* ia = (iarena_t*)base;
-
-    uint8_t* raw_after_hdr = base + sizeof(iarena_t);
-    uint8_t* begin = (uint8_t*)_align_up_uintptr((uintptr_t)raw_after_hdr, eff_payload_align);
-    uint8_t* end   = base + bytes;
-
-    if (begin >= end) { errno = ENOMEM; return NULL; }
-
-    ia->arena     = parent;
-    ia->begin     = begin;
-    ia->cur       = begin;
-    ia->end       = end;
-    ia->len       = 0;
-    ia->alloc     = (size_t)(end - begin); // usable payload capacity
-    ia->tot_alloc = bytes;                 // total reserved (header + padding + payload)
-    ia->alignment = eff_payload_align;
-    return ia;
-}
-// -------------------------------------------------------------------------------- 
-
-inline void* alloc_iarena(iarena_t* ia, size_t bytes, bool zeroed) {
-    if (!ia || bytes == 0u) { errno = EINVAL; return NULL; }
-
-    const size_t A = ia->alignment;
-    if (A == 0u || (A & (A - 1u)) != 0u) { errno = EINVAL; return NULL; }
-
-    uintptr_t cur  = (uintptr_t)ia->cur;
-    uintptr_t p    = _align_up_uintptr(cur, A);
-    uintptr_t next = p + (uintptr_t)bytes;
-
-    if (next > (uintptr_t)ia->end) {
-        errno = ENOMEM; // fixed-size slice; no growth
-        return NULL;
-    }
-
-    ia->cur  = (uint8_t*)next;
-    ia->len += (size_t)(next - cur); // charge pad + bytes
-
-    void* out = (void*)p;
-    if (zeroed) memset(out, 0, bytes);
-    return out;
-}
-// -------------------------------------------------------------------------------- 
-
-inline void* alloc_iarena_aligned(iarena_t* ia,
-                                  size_t bytes,
-                                  size_t align,
-                                  bool zeroed) {
-    if (!ia || bytes == 0u) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    // Validate alignment argument
-    const size_t base_align = ia->alignment;
-    if (base_align == 0u || (base_align & (base_align - 1u)) != 0u) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    // Normalize requested alignment
-    if (align == 0u) {
-        align = base_align;
-    } else if (align & (align - 1u)) { // must be power of two
-        errno = EINVAL;
-        return NULL;
-    }
-
-    // Effective alignment = max(requested, subarena base)
-    const size_t A = (align > base_align) ? align : base_align;
-
-    uintptr_t cur  = (uintptr_t)ia->cur;
-    uintptr_t p    = _align_up_uintptr(cur, A);
-    uintptr_t next = p + (uintptr_t)bytes;
-
-    // Capacity check
-    if (next > (uintptr_t)ia->end) {
-        errno = ENOMEM;
-        return NULL;
-    }
-
-    ia->cur  = (uint8_t*)next;
-    ia->len += (size_t)(next - cur); // track pad + payload
-
-    void* out = (void*)p;
-    if (zeroed) memset(out, 0, bytes);
-    return out;
-}
-// -------------------------------------------------------------------------------- 
-
-void* realloc_iarena(iarena_t* ia,
-                     void* var,
-                     size_t old_size,
-                     size_t new_size,
-                     bool zeroed) {
-    if (!ia) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    if (!var) {
-        return alloc_iarena(ia, new_size, zeroed);
-    }
-
-    if (!is_iarena_ptr_sized(ia, var, old_size)) {
-        errno = EPERM;      /* or EINVAL if you prefer */
-        return NULL;
-    }
-
-    void* new_ptr = alloc_iarena(ia, new_size, zeroed);
-    if (!new_ptr) {
-        /* alloc_iarena already set errno (likely ENOMEM or EPERM) */
-        return NULL;
-    }
-
-    size_t copy_size = (old_size < new_size) ? old_size : new_size;
-    memcpy(new_ptr, var, copy_size);
-
-    return new_ptr;  /* caller updates their variable */
-}
-// -------------------------------------------------------------------------------- 
-
-void* realloc_iarena_aligned(iarena_t* ia,
-                            void* var,
-                            size_t old_size,
-                            size_t new_size,
-                            bool zeroed,
-                            size_t alignment) {
-    if (!ia) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    if (!var) {
-        return alloc_iarena_aligned(ia, new_size, alignment, zeroed);
-    }
-
-    if (!is_iarena_ptr_sized(ia, var, old_size)) {
-        errno = EPERM;  /* does not belong to this iarena */
-        return NULL;
-    }
-
-    size_t base_align = ia->alignment;
-    size_t A = (alignment == 0 ? base_align :
-                (alignment > base_align ? alignment : base_align));
-
-    if (A == 0 || (A & (A - 1u))) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    void* new_ptr = alloc_iarena_aligned(ia, new_size, A, zeroed);
-    if (!new_ptr) {
-        return NULL;
-    }
-
-    /* Copy only the overlapping portion */
-    size_t copy_size = (old_size < new_size) ? old_size : new_size;
-    memcpy(new_ptr, var, copy_size);
-
-    return new_ptr; 
-}
-// -------------------------------------------------------------------------------- 
-
-bool is_iarena_ptr(const iarena_t* ia, const void *ptr) {
-    if (!ia || !ptr) {
-        errno = EINVAL;
-        return false;
-    }
-
-    const uint8_t* p = (const uint8_t*)ptr;
-    return (p >= ia->begin && p < ia->end);
-}
-// -------------------------------------------------------------------------------- 
-
-bool is_iarena_ptr_sized(const iarena_t* ia, const void* ptr, size_t size) {
-    if (!ia || !ptr) {
-        errno = EINVAL;
-        return false;
-    }
-
-    const uintptr_t p = (uintptr_t)ptr;
-    const uintptr_t b = (uintptr_t)ia->begin;
-    const uintptr_t e = (uintptr_t)ia->end;
-
-    // overflow-safe check: p + size must not wrap around
-    if (size > (uintptr_t)(-1) - p) return false;  // overflow => false
-
-    const uintptr_t p_end = p + size;
-    return (p >= b && p_end <= e);
-}
-// -------------------------------------------------------------------------------- 
-
-inline size_t iarena_remaining(const iarena_t* ia) {
-    if (!ia) { errno = EINVAL; return 0; }
-    if (ia->cur > ia->end) { errno = EFAULT; return 0; }  // invariant guard
-    return (size_t)(ia->end - ia->cur);
-}
-// -------------------------------------------------------------------------------- 
-
-void reset_iarena(iarena_t* ia) {
-    if (!ia) {
-        errno = EINVAL;
-        return;
-    }
-    ia->cur = ia->begin;
-    ia->len = 0;
-}
-// -------------------------------------------------------------------------------- 
-
-#define IARENA_CP_MAGIC ((uint32_t)0x49415243u)
-
-iArenaCheckPoint save_iarena(const iarena_t* ia) {
-    iArenaCheckPoint cp = {0};  /* zero-init → invalid by default */
-    if (!ia) { errno = EINVAL; return cp; }
-
-    /* In your allocator, len is charged as (next - cur) each bump, so len == (cur - begin). */
-    const size_t used     = (size_t)(ia->cur - ia->begin);
-    const size_t capacity = (size_t)(ia->end - ia->begin);
-
-    cp.owner     = (const void*)ia;
-    cp.used      = used;
-    cp.capacity  = capacity;       /* sticky for validation */
-    cp.alignment = ia->alignment;  /* sticky for validation */
-    cp.magic     = IARENA_CP_MAGIC;
-    return cp;
-}
-// -------------------------------------------------------------------------------- 
-
-bool restore_iarena(iarena_t *ia, iArenaCheckPoint cp) {
-    if (!ia) { errno = EINVAL; return false; }
-
-    /* Basic checkpoint sanity */
-    if (cp.magic != IARENA_CP_MAGIC) { errno = EINVAL; return false; }
-    if (cp.owner != (const void*)ia) { errno = EINVAL; return false; }
-
-    /* Current capacity/alignment must match the saved view (fixed-slice design) */
-    const size_t cur_capacity = (size_t)(ia->end - ia->begin);
-    if (cp.capacity != cur_capacity) { errno = EINVAL; return false; }
-    if (cp.alignment != ia->alignment) { errno = EINVAL; return false; }
-
-    /* Bounds check: used ≤ capacity */
-    if (cp.used > cur_capacity) { errno = EINVAL; return false; }
-
-    /* Restore cursor and accounting */
-    ia->cur = ia->begin + cp.used;
-    ia->len = cp.used;  /* equals cur - begin given your charging policy */
-
-    return true;
-}
-// -------------------------------------------------------------------------------- 
-
-inline alloc_t iarena_mtype(const iarena_t* ia) {
-    if (!ia || !ia->arena) {
-        errno = EINVAL;
-        return ALLOC_INVALID;
-    }
-    return arena_mtype(ia->arena);
-}
-// -------------------------------------------------------------------------------- 
-
-inline size_t iarena_size(const iarena_t* ia) {
-    if (!ia) {
-        errno = EINVAL;
-        return 0;
-    }
-    return ia->len;
-}
-// -------------------------------------------------------------------------------- 
-
-inline size_t iarena_alloc(const iarena_t* ia) {
-    if (!ia) {
-        errno = EINVAL;
-        return 0;
-    }
-    return ia->alloc;
-}
-// -------------------------------------------------------------------------------- 
-
-inline size_t total_iarena_alloc(const iarena_t* ia) {
-    if (!ia) {
-        errno = EINVAL;
-        return 0;
-    }
-    return ia->tot_alloc;
-}
-// -------------------------------------------------------------------------------- 
-
-inline size_t iarena_alignment(const iarena_t* ia) {
-    if (!ia) {
-        errno = EINVAL;
-        return 0;
-    }
-    return ia->alignment;
-}
-// -------------------------------------------------------------------------------- 
-
-bool iarena_stats(const iarena_t *ia, char *buffer, size_t buffer_size) {
-    size_t offset = 0u;
-
-    if (!buffer || buffer_size == 0u) {
-        errno = EINVAL;
-        return false;
-    }
-
-    if (!ia) {
-        (void)_buf_appendf(buffer, buffer_size, &offset, "%s", "iArena: NULL\n");
-        return true;
-    }
-
-    /* Derive quantities (begin/end/cur are uint8_t*) */
-    const size_t used      = (size_t)(ia->cur   - ia->begin);
-    const size_t capacity  = (size_t)(ia->end   - ia->begin);  /* should match ia->alloc */
-    const size_t remaining = (size_t)(ia->end   - ia->cur);
-    const size_t alignment = ia->alignment;
-    const char*  parent    = ia->arena ? "Yes" : "No";
-
-    if (!_buf_appendf(buffer, buffer_size, &offset, "%s", "iArena Statistics:\n")) {
-        return false;
-    }
-
-    if (!_buf_appendf(buffer, buffer_size, &offset, "  Parent: %s\n", parent)) {
-        return false;
-    }
-
-    if (!_buf_appendf(buffer, buffer_size, &offset, "  Used: %zu bytes\n", used)) {
-        return false;
-    }
-
-    if (!_buf_appendf(buffer, buffer_size, &offset, "  Capacity: %zu bytes\n", capacity)) {
-        return false;
-    }
-
-    if (!_buf_appendf(buffer, buffer_size, &offset,
-                      "  Total (with overhead): %zu bytes\n", ia->tot_alloc)) {
-        return false;
-    }
-
-    if (!_buf_appendf(buffer, buffer_size, &offset, "  Remaining: %zu bytes\n", remaining)) {
-        return false;
-    }
-
-    if (!_buf_appendf(buffer, buffer_size, &offset, "  Alignment: %zu bytes\n", alignment)) {
-        return false;
-    }
-
-    /* Utilization with divide-by-zero guard (mirror arena_stats behavior) */
-    if (capacity == 0u) {
-        if (!_buf_appendf(buffer, buffer_size, &offset,
-                          "%s", "  Utilization: N/A (capacity is 0)\n")) {
-            return false;
-        }
-    } else {
-        double const util = (100.0 * (double)used) / (double)capacity;
-        if (!_buf_appendf(buffer, buffer_size, &offset,
-                          "  Utilization: %.1f%%\n", util)) {
-            return false;
-        }
-    }
-
-    /* iArena is a single contiguous slice; no chunk list */
-    return true;
-}
-// ================================================================================ 
-// ================================================================================ 
 // FREE LIST IMPLEMENTATION 
 
 static size_t FREELIST_DEFAULT_MIN_ALLOC = 16;
@@ -3250,7 +2839,857 @@ bool freelist_stats(const freelist_t *fl, char *buffer, size_t buffer_size) {
 
     return true;
 }
+// ================================================================================ 
+// ================================================================================ 
+// BUDDY ALLOCATOR 
 
+/* Free block node (stored in the block memory itself when free). */
+typedef struct buddy_block {
+    struct buddy_block *next;
+} buddy_block_t;
+
+/* Per-block header (stored at the start of every allocated block). */
+typedef struct buddy_header {
+    uint32_t order;   /* log2(block_size) */
+    size_t   block_offset;
+} buddy_header_t;
+
+/* Internal definition of buddy_t (opaque to users). */ 
+struct buddy_t {
+    /* Hot-ish fields used in most operations */
+    void           *base;
+    buddy_block_t **free_lists;
+
+    /* Usage / capacity */
+    size_t          pool_size;
+    size_t          len;
+    size_t          alloc;
+    size_t          total_alloc;
+
+    /* Alignment policy */
+    size_t          base_align;   /* per-allocator minimum alignment  */
+    size_t          user_offset;  /* offset from block start to user  */
+
+    /* Small integers / counts */
+    uint32_t        min_order;
+    uint32_t        max_order;
+    uint32_t        num_levels;
+    uint8_t         _pad[4];      /* keep sizeof(buddy_t) % 8 == 0    */
+};
+// -------------------------------------------------------------------------------- 
+
+/* --- OS abstraction layer: get/release a big contiguous region --- */
+
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+
+    static void *buddy_os_alloc(size_t size) {
+        /* Round to page size if you want to be strict; VirtualAlloc
+           already works in page granularity. */
+        return VirtualAlloc(NULL, size,
+                            MEM_RESERVE | MEM_COMMIT,
+                            PAGE_READWRITE);
+    }
+
+    static void buddy_os_free(void *ptr, size_t size) {
+        (void)size; /* not needed for MEM_RELEASE */
+        if (ptr) {
+            VirtualFree(ptr, 0, MEM_RELEASE);
+        }
+    }
+
+#else  /* POSIX: Linux, BSD, macOS, etc. */
+
+    #define _GNU_SOURCE
+    #include <sys/mman.h>
+    #include <unistd.h>
+
+    static void *buddy_os_alloc(size_t size) {
+        void *p = mmap(NULL, size,
+                       PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANONYMOUS,
+                       -1, 0);
+        return (p == MAP_FAILED) ? NULL : p;
+    }
+
+    static void buddy_os_free(void *ptr, size_t size) {
+        if (ptr && size) {
+            (void)munmap(ptr, size);
+        }
+    }
+
+#endif
+// -------------------------------------------------------------------------------- 
+
+// static inline size_t _next_pow2(size_t x){
+//     if (x <= 1) return x ? 1 : 0;
+//     if (x > (SIZE_MAX>>1)) return 0;
+//     x--; for (size_t s=1; s<8*sizeof(size_t); s<<=1) x|=x>>s; return x+1;
+// }
+// -------------------------------------------------------------------------------- 
+
+static uint32_t _ilog2_size(size_t x) {
+    uint32_t r = 0;
+    while (x > 1) {
+        x >>= 1;
+        r++;
+    }
+    return r;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline uint32_t _order_to_level(const buddy_t *b, uint32_t order) {
+    return order - b->min_order;
+}
+// -------------------------------------------------------------------------------- 
+
+static int32_t _find_nonempty_level(const buddy_t *b, uint32_t desired_level) {
+    for (uint32_t lvl = desired_level; lvl < b->num_levels; ++lvl) {
+        if (b->free_lists[lvl] != NULL) {
+            return (int32_t)lvl;
+        }
+    }
+    return -1; /* none available */
+}
+// -------------------------------------------------------------------------------- 
+
+static void _freelist_push(buddy_block_t **head, buddy_block_t *blk) {
+    blk->next = *head;
+    *head = blk;
+}
+// -------------------------------------------------------------------------------- 
+
+static bool _freelist_remove(buddy_block_t **head, buddy_block_t *blk) {
+    buddy_block_t *prev = NULL;
+    buddy_block_t *cur  = *head;
+    while (cur) {
+        if (cur == blk) {
+            if (prev) prev->next = cur->next;
+            else      *head = cur->next;
+            return true;
+        }
+        prev = cur;
+        cur  = cur->next;
+    }
+    return false;
+}
+// -------------------------------------------------------------------------------- 
+
+static buddy_block_t *_freelist_find(buddy_block_t *head, void *addr) {
+    while (head) {
+        if ((void *)head == addr) return head;
+        head = head->next;
+    }
+    return NULL;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline uint32_t _level_to_order(const buddy_t *b, uint32_t level) {
+    return b->min_order + level;
+}
+// -------------------------------------------------------------------------------- 
+
+buddy_t *init_buddy_allocator(size_t pool_size,
+                              size_t min_block_size,
+                              size_t base_align) {
+    if (pool_size == 0 || min_block_size == 0) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    buddy_t *b = calloc(1, sizeof(*b));
+    if (!b) { errno = ENOMEM; return NULL; }
+
+    /* 1) Normalize base alignment */
+    if (base_align == 0) {
+        base_align = alignof(max_align_t);
+    }
+    if ((base_align & (base_align - 1u)) != 0u) {
+        base_align = _next_pow2(base_align);
+        if (!base_align) { free(b); errno = EINVAL; return NULL; }
+    }
+
+    /* 2) Compute header-aligned user offset */
+    size_t header_size = sizeof(buddy_header_t);
+
+    /* Align the user pointer to base_align relative to block start */
+    size_t user_offset = (header_size + (base_align - 1u)) & ~(base_align - 1u);
+
+    /* 3) Ensure min_block_size is at least big enough to hold header+alignment */
+    if (min_block_size < user_offset) {
+        min_block_size = user_offset;
+    }
+
+    /* 4) Round min_block_size and pool_size up to powers of two */
+    size_t min_blk = _next_pow2(min_block_size);
+    size_t pool    = _next_pow2(pool_size);
+
+    if (min_blk > pool) {
+        errno = EINVAL;
+        free(b);
+        return NULL;
+    }
+
+    uint32_t min_order  = _ilog2_size(min_blk);
+    uint32_t max_order  = _ilog2_size(pool);
+    uint32_t num_levels = max_order - min_order + 1;
+
+    if (num_levels == 0) {
+        errno = EINVAL;
+        free(b);
+        return NULL;
+    }
+
+    void *base = buddy_os_alloc(pool);
+    if (!base) {
+        errno = ENOMEM;
+        free(b);
+        return NULL;
+    }
+
+    buddy_block_t **free_lists =
+        calloc(num_levels, sizeof(buddy_block_t *));
+    if (!free_lists) {
+        buddy_os_free(base, pool);
+        free(b);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    b->base       = base;
+    b->pool_size  = pool;
+    b->min_order  = min_order;
+    b->max_order  = max_order;
+    b->num_levels = num_levels;
+    b->free_lists = free_lists;
+
+    b->alloc       = pool;
+    b->len         = 0;
+    b->total_alloc = pool
+                   + num_levels * sizeof(buddy_block_t *)
+                   + sizeof(*b);
+
+    b->base_align  = base_align;
+    b->user_offset = user_offset;
+
+    buddy_block_t *initial_block = (buddy_block_t *)base;
+    initial_block->next = NULL;
+
+    uint32_t top_level = _order_to_level(b, max_order);
+    b->free_lists[top_level] = initial_block;
+
+    return b;
+}
+// -------------------------------------------------------------------------------- 
+
+void free_buddy(buddy_t *b) {
+    if (!b) return;
+
+    if (b->base && b->pool_size) {
+        buddy_os_free(b->base, b->pool_size);
+    }
+
+    free(b->free_lists);
+    memset(b, 0, sizeof(*b));
+    free(b);
+}
+// -------------------------------------------------------------------------------- 
+
+void *alloc_buddy(buddy_t *b, size_t size, bool zeroed) {
+    if (!b || size == 0) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* Include header overhead. */
+    size_t total = size + sizeof(buddy_header_t);
+
+    /* Ensure at least min block size. */
+    size_t min_block = (size_t)1u << b->min_order;
+    if (total < min_block) {
+        total = min_block;
+    } else {
+        total = _next_pow2(total);
+    }
+
+    if (total > b->pool_size) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    uint32_t order = _ilog2_size(total);
+    if (order < b->min_order) order = b->min_order;
+    if (order > b->max_order) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    uint32_t desired_level = _order_to_level(b, order);
+    int32_t  lvl           = _find_nonempty_level(b, desired_level);
+
+    if (lvl < 0) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    /* Take a block from level 'lvl'. */
+    buddy_block_t *block = b->free_lists[lvl];
+    b->free_lists[lvl]   = block->next;
+    block->next          = NULL;
+
+    uint32_t current_order = _level_to_order(b, (uint32_t)lvl);
+    size_t   current_size  = (size_t)1u << current_order;
+
+    /* Split down until we reach the desired order. */
+    while (current_order > order) {
+        current_order--;
+        current_size >>= 1;
+
+        buddy_block_t *split_block =
+            (buddy_block_t *)((uint8_t *)block + current_size);
+        split_block->next = NULL;
+
+        uint32_t split_level = _order_to_level(b, current_order);
+        _freelist_push(&b->free_lists[split_level], split_block);
+    }
+
+    /* Now 'block' is the final block of size 2^order. */
+    uint8_t *block_bytes = (uint8_t *)block;
+
+    /* Header lives at block start in the unaligned case. */
+    buddy_header_t *hdr = (buddy_header_t *)block_bytes;
+    hdr->order        = order;
+    hdr->block_offset = (size_t)(block_bytes - (uint8_t *)b->base);
+
+    size_t block_size = (size_t)1u << order;
+    b->len += block_size;
+
+    /* User pointer is just after the header. */
+    uint8_t *user_ptr = block_bytes + sizeof(buddy_header_t);
+
+    if (zeroed) {
+        memset(user_ptr, 0, block_size - sizeof(buddy_header_t));
+    }
+
+    return (void *)user_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+void *alloc_buddy_aligned(buddy_t *b,
+                          size_t  size,
+                          size_t  align,
+                          bool    zeroed) {
+    if (!b || size == 0) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (align == 0) {
+        /* Treat 0 as "natural" alignment. */
+        align = alignof(max_align_t);
+    }
+
+    /* Require power-of-two alignment. */
+    if (align & (align - 1u)) {
+        align = _next_pow2(align);
+        if (!align) { errno = EINVAL; return NULL; }
+    }
+
+    /* We need room for:
+       - header
+       - requested payload
+       - worst-case alignment padding (align-1)
+    */
+    size_t total = size + sizeof(buddy_header_t) + (align - 1u);
+
+    size_t min_block = (size_t)1u << b->min_order;
+    if (total < min_block) {
+        total = min_block;
+    } else {
+        total = _next_pow2(total);
+    }
+
+    if (total > b->pool_size) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    uint32_t order = _ilog2_size(total);
+    if (order < b->min_order) order = b->min_order;
+    if (order > b->max_order) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    uint32_t desired_level = _order_to_level(b, order);
+    int32_t  lvl           = _find_nonempty_level(b, desired_level);
+
+    if (lvl < 0) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    /* Take a block from level 'lvl'. */
+    buddy_block_t *block = b->free_lists[lvl];
+    b->free_lists[lvl]   = block->next;
+    block->next          = NULL;
+
+    uint32_t current_order = _level_to_order(b, (uint32_t)lvl);
+    size_t   current_size  = (size_t)1u << current_order;
+
+    /* Split down until we reach the desired order. */
+    while (current_order > order) {
+        current_order--;
+        current_size >>= 1;
+
+        buddy_block_t *split_block =
+            (buddy_block_t *)((uint8_t *)block + current_size);
+        split_block->next = NULL;
+
+        uint32_t split_level = _order_to_level(b, current_order);
+        _freelist_push(&b->free_lists[split_level], split_block);
+    }
+
+    size_t   block_size  = (size_t)1u << order;
+    uint8_t *block_bytes = (uint8_t *)block;
+
+    /* Find an aligned user pointer inside this block.
+       We want user_ptr aligned to 'align', with enough room
+       immediately before it for the header.
+    */
+
+    uintptr_t block_addr = (uintptr_t)block_bytes;
+
+    /* Minimal place we can put the user pointer: after header. */
+    uintptr_t min_user = block_addr + sizeof(buddy_header_t);
+
+    /* Candidate aligned user pointer. */
+    uintptr_t aligned_user =
+        (min_user + (align - 1u)) & ~(uintptr_t)(align - 1u);
+
+    /* Ensure the header + payload fit inside this block. */
+    if (aligned_user + size > block_addr + block_size) {
+        /* In theory this shouldn't happen because we over-allocated with +align-1,
+           but be defensive: treat as ENOMEM. */
+        errno = ENOMEM;
+        /* Return block to free list. */
+        uint32_t lvl_final = _order_to_level(b, order);
+        _freelist_push(&b->free_lists[lvl_final], block);
+        return NULL;
+    }
+
+    uint8_t *user_ptr = (uint8_t *)aligned_user;
+
+    /* Header lives immediately before user_ptr. */
+    buddy_header_t *hdr =
+        (buddy_header_t *)(user_ptr - sizeof(buddy_header_t));
+    hdr->order        = order;
+    hdr->block_offset = (size_t)(block_bytes - (uint8_t *)b->base);
+
+    b->len += block_size;
+
+    if (zeroed) {
+        /* Zero the entire usable payload region behind user_ptr.
+           You could also just zero [0, size) if you prefer.
+         */
+        size_t payload_bytes =
+            (block_bytes + block_size) - user_ptr;
+        memset(user_ptr, 0, payload_bytes);
+    }
+
+    return (void *)user_ptr;
+}
+
+// --------------------------------------------------------------------------------
+
+bool return_buddy_element(buddy_t *b, void *ptr) {
+    if (!b) {
+        errno = EINVAL;
+        return false;
+    }
+    if (!ptr) {
+        /* Like free(NULL): no-op, success. */
+        return true;
+    }
+
+    uint8_t *user = (uint8_t *)ptr;
+
+    /* Header is immediately before the user pointer. */
+    buddy_header_t *hdr =
+        (buddy_header_t *)(user - sizeof(buddy_header_t));
+
+    uint32_t order = hdr->order;
+    if (order < b->min_order || order > b->max_order) {
+        errno = EINVAL;
+        return false;
+    }
+
+    size_t block_size = (size_t)1u << order;
+
+    /* Block start is base + block_offset. */
+    uint8_t *base  = (uint8_t *)b->base;
+    size_t   off   = hdr->block_offset;
+    if (off + block_size > b->pool_size) {
+        errno = EINVAL;
+        return false;
+    }
+
+    buddy_block_t *block = (buddy_block_t *)(base + off);
+
+    /* ---- accounting: undo the allocation ---- */
+    if (b->len >= block_size) {
+        b->len -= block_size;
+    } else {
+        /* should never happen, but be defensive */
+        b->len = 0;
+    }
+
+    /* ---- coalesce as usual ---- */
+    size_t cur_off = off;
+    uint32_t cur_order = order;
+
+    while (cur_order < b->max_order) {
+        size_t buddy_off  = cur_off ^ ((size_t)1u << cur_order);
+        uint8_t *buddy_addr = base + buddy_off;
+
+        uint32_t lvl = _order_to_level(b, cur_order);
+
+        buddy_block_t *buddy_in_list =
+            _freelist_find(b->free_lists[lvl], (void *)buddy_addr);
+
+        if (!buddy_in_list) {
+            break;
+        }
+
+        /* Remove buddy from free list. */
+        _freelist_remove(&b->free_lists[lvl], buddy_in_list);
+
+        /* New merged block starts at the lower address. */
+        if (buddy_off < cur_off) {
+            cur_off = buddy_off;
+            block   = (buddy_block_t *)(base + cur_off);
+        }
+
+        cur_order++;
+    }
+
+    uint32_t final_level = _order_to_level(b, cur_order);
+    _freelist_push(&b->free_lists[final_level], block);
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+void* realloc_buddy(buddy_t* buddy,
+                    void*    old_ptr,
+                    size_t   old_size,
+                    size_t   new_size,
+                    bool     zeroed) {
+    if (!buddy) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* realloc(NULL, n) => malloc-like behavior */
+    if (!old_ptr) {
+        if (new_size == 0) {
+            /* realloc(NULL, 0) is allowed to return NULL. */
+            return NULL;
+        }
+        return alloc_buddy(buddy, new_size, zeroed);
+    }
+
+    /* realloc(ptr, 0) => free(ptr), return NULL */
+    if (new_size == 0) {
+        (void)return_buddy_element(buddy, old_ptr);
+        return NULL;
+    }
+
+    if (old_size == 0) {
+        /* Caller claims old_size is 0 but passed a non-NULL pointer.
+           Treat as programmer error. */
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* Determine how much usable space is actually behind old_ptr. */
+    buddy_header_t *hdr =
+        (buddy_header_t *)((uint8_t *)old_ptr - sizeof(buddy_header_t));
+    uint32_t order      = hdr->order;
+    size_t   block_size = (size_t)1u << order;
+    size_t   usable_old = block_size - sizeof(buddy_header_t);
+
+    /* If new_size fits in the existing block, no need to move. */
+    if (new_size <= usable_old) {
+        /* Optionally, if zeroed == true and new_size > old_size,
+           you can zero the extension region. */
+        if (zeroed && new_size > old_size) {
+            size_t extra = new_size - old_size;
+            memset((uint8_t *)old_ptr + old_size, 0, extra);
+        }
+        return old_ptr;
+    }
+
+    /* Need a bigger block. */
+    void *new_ptr = alloc_buddy(buddy, new_size, zeroed);
+    if (!new_ptr) {
+        /* errno set by alloc_buddy; old_ptr is still valid. */
+        return NULL;
+    }
+
+    /* Copy min(logical old size, usable old capacity). */
+    size_t copy_bytes = old_size < usable_old ? old_size : usable_old;
+    memcpy(new_ptr, old_ptr, copy_bytes);
+
+    /* Return the old block. */
+    (void)return_buddy_element(buddy, old_ptr);
+
+    return new_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+void *realloc_buddy_aligned(buddy_t *b,
+                            void   *old_ptr,
+                            size_t  old_size,
+                            size_t  new_size,
+                            size_t  align,
+                            bool    zeroed) {
+    if (!b) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* realloc(NULL, n) => alloc */
+    if (!old_ptr) {
+        if (new_size == 0) {
+            return NULL;
+        }
+        return alloc_buddy_aligned(b, new_size, align, zeroed);
+    }
+
+    /* realloc(p, 0) => free(p), return NULL */
+    if (new_size == 0) {
+        (void)return_buddy_element(b, old_ptr);
+        return NULL;
+    }
+
+    if (old_size == 0) {
+        /* Caller passed non-NULL ptr but claims size 0. Treat as error. */
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (align == 0) {
+        align = alignof(max_align_t);
+    }
+    if (align & (align - 1u)) {
+        align = _next_pow2(align);
+        if (!align) { errno = EINVAL; return NULL; }
+    }
+
+    /* Introspect old block. */
+    buddy_header_t *hdr =
+        (buddy_header_t *)((uint8_t *)old_ptr - sizeof(buddy_header_t));
+    uint32_t order      = hdr->order;
+    size_t   block_size = (size_t)1u << order;
+
+    size_t usable_old =
+        block_size - ((size_t)((uint8_t *)old_ptr - (uint8_t *)b->base) - hdr->block_offset)
+        - sizeof(buddy_header_t);
+
+    /* Simpler & safer: just treat usable_old as block_size - sizeof(header)
+       for both unaligned and aligned allocations. We know user_ptr is always
+       within the block and header sits immediately before it. So:
+    */
+    usable_old = block_size - sizeof(buddy_header_t);
+
+    /* If it fits and alignment is already OK, reuse in place. */
+    if (new_size <= usable_old &&
+        (((uintptr_t)old_ptr & (align - 1u)) == 0u)) {
+
+        if (zeroed && new_size > old_size) {
+            size_t extra = new_size - old_size;
+            memset((uint8_t *)old_ptr + old_size, 0, extra);
+        }
+        return old_ptr;
+    }
+
+    /* Need a new block. */
+    void *new_ptr = alloc_buddy_aligned(b, new_size, align, zeroed);
+    if (!new_ptr) {
+        /* errno set by alloc_buddy_aligned; old_ptr is still valid. */
+        return NULL;
+    }
+
+    size_t copy_bytes = (old_size < usable_old) ? old_size : usable_old;
+    memcpy(new_ptr, old_ptr, copy_bytes);
+
+    (void)return_buddy_element(b, old_ptr);
+
+    return new_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
+    if (!b || !ptr) {
+        errno = EINVAL;
+        return false;
+    }
+
+    const uint8_t *p = (const uint8_t *)ptr;
+
+    /* Step 1: Header must be directly before user pointer */
+    if (p < (uint8_t *)b->base + sizeof(buddy_header_t)) {
+        errno = EINVAL;
+        return false;
+    }
+
+    const buddy_header_t *hdr =
+        (const buddy_header_t *)(p - sizeof(buddy_header_t));
+
+    /* Step 2: order must be valid */
+    if (hdr->order < b->min_order || hdr->order > b->max_order) {
+        errno = EINVAL;
+        return false;
+    }
+
+    size_t block_size = (size_t)1u << hdr->order;
+
+    /* Step 3: block_offset must be within pool */
+    if (hdr->block_offset + block_size > b->pool_size) {
+        errno = EINVAL;
+        return false;
+    }
+
+    /* Step 4: the block must be aligned correctly */
+    if (hdr->block_offset & (block_size - 1u)) {
+        errno = EINVAL;
+        return false;
+    }
+
+    /* Step 5: user pointer must lie inside the block */
+    const uint8_t *block_start = (const uint8_t *)b->base + hdr->block_offset;
+    const uint8_t *block_end   = block_start + block_size;
+
+    if (p < block_start + sizeof(buddy_header_t) || p >= block_end) {
+        errno = EINVAL;
+        return false;
+    }
+
+    /* Everything checks out */
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_buddy_ptr_sized(const buddy_t *b, const void *ptr, size_t size) {
+    if (!is_buddy_ptr(b, ptr)) {
+        return false;  /* errno already set */
+    }
+
+    const buddy_header_t *hdr =
+        (const buddy_header_t *)((const uint8_t *)ptr - sizeof(buddy_header_t));
+    size_t block_size = (size_t)1u << hdr->order;
+
+    size_t usable = block_size - sizeof(buddy_header_t);
+
+    if (size > usable) {
+        errno = ERANGE; /* size does not fit in underlying block */
+        return false;
+    }
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool reset_buddy(buddy_t *b) {
+    if (!b) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (!b->base || b->pool_size == 0 ||
+        b->num_levels == 0 ||
+        b->max_order < b->min_order) {
+        errno = EINVAL;
+        return false;
+    }
+
+    /* Clear all free lists. */
+    memset(b->free_lists, 0, b->num_levels * sizeof(buddy_block_t*));
+
+    /* Single big free block spanning the whole pool. */
+    buddy_block_t *initial_block = (buddy_block_t *)b->base;
+    initial_block->next = NULL;
+
+    uint32_t top_level = _order_to_level(b, b->max_order);
+    b->free_lists[top_level] = initial_block;
+
+    /* No bytes “in use” from the pool any more. */
+    b->len = 0;
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t buddy_alloc(const buddy_t *b) {
+    if (!b) {
+        errno = EINVAL;
+        return 0;
+    }
+    /* b->len counts actual bytes consumed from the pool. */
+    return b->len;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t buddy_alloc_total(const buddy_t *b) {
+    if (!b) {
+        errno = EINVAL;
+        return 0;
+    }
+    /* b->total_alloc = pool_size + metadata */
+    return b->total_alloc;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t buddy_size(const buddy_t *b) {
+    if (!b) {
+        errno = EINVAL;
+        return 0;
+    }
+    /* Current footprint of the entire allocator in memory. */
+    return b->total_alloc;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t buddy_remaining(const buddy_t *b) {
+    if (!b) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    /* Total free memory in the pool, even if fragmented */
+    return (b->pool_size > b->len) ? (b->pool_size - b->len) : 0;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t buddy_largest_block(const buddy_t *b) {
+    if (!b) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    /* Scan from highest order (largest blocks) down to smallest. */
+    for (int32_t lvl = (int32_t)b->num_levels - 1; lvl >= 0; --lvl) {
+        if (b->free_lists[lvl] != NULL) {
+            /* This level has at least one free block. */
+            uint32_t order = b->min_order + (uint32_t)lvl;
+            return (size_t)1u << order;
+        }
+    }
+
+    return 0;
+}
 // ================================================================================
 // ================================================================================
 // eof

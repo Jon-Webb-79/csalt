@@ -41,8 +41,8 @@ int main(void) {
         {"Error Handling",  test_error, test_error_count},
         {"Arena Allocator", test_arena, test_arena_count},
         {"Pool Allocator", test_pool, test_pool_count},
-        {"IArena Allocator", test_iarena, test_iarena_count},
         {"Freelist Allocator",  test_freelist, test_freelist_count},
+        {"Buddy Allocator",  test_buddy_allocator, test_buddy_allocator_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);

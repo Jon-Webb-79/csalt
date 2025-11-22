@@ -64,17 +64,6 @@ extern const size_t test_error_count;
  */
 extern const struct CMUnitTest test_pool[];
 extern const size_t test_pool_count;
-// ================================================================================
-// ================================================================================
-
-/**
- * @brief Test suite for iarena allocator functionality
- * 
- * Covers:
- * - Test of pool initialization with an non owned arena
- */
-extern const struct CMUnitTest test_iarena[];
-extern const size_t test_iarena_count;
 // ================================================================================ 
 // ================================================================================ 
 
@@ -86,6 +75,17 @@ extern const size_t test_iarena_count;
  */
 extern const struct CMUnitTest test_freelist[];
 extern const size_t test_freelist_count;
+// ================================================================================ 
+// ================================================================================ 
+
+/**
+ * @brief Test suite for free list allocator functionality
+ * 
+ * Covers:
+ * - Test of buddy allocation initialization with an non owned arena
+ */
+extern const struct CMUnitTest test_buddy_allocator[];
+extern const size_t test_buddy_allocator_count;
 // ================================================================================
 // ================================================================================
 
