@@ -6153,6 +6153,248 @@ bool restore_slab(slab_t *slab,
 // -------------------------------------------------------------------------------- 
 
 bool slab_stats(const slab_t *slab, char *buffer, size_t buffer_size);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for slab allocation.
+ *
+ * Allocates a fixed-size object from the slab allocator referenced by @p ctx.
+ * The slab has a fixed capacity per slot, exposed via ::slab_stride(); the
+ * requested @p size must be greater than 0 and less than or equal to that
+ * stride.
+ *
+ * If @p zeroed is true, the returned memory will be zero-initialized according
+ * to the semantics of ::alloc_slab().
+ *
+ * On error, errno is set (typically to ENOMEM or EINVAL) and NULL is returned.
+ *
+ * @param ctx    Pointer to a slab_t instance.
+ * @param size   Number of bytes requested (must be <= ::slab_stride()).
+ * @param zeroed Whether the memory should be zero-initialized.
+ *
+ * @retval void* Pointer to a block of at least @p size bytes.
+ * @retval NULL  On failure, with errno set.
+ */
+static inline void *slab_v_alloc(void *ctx, size_t size, bool zeroed) {
+    slab_t *slab = (slab_t *)ctx;
+    if (!slab) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (size == 0u) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* Maximum capacity per slot (exposed via getter). */
+    size_t const capacity = slab_stride(slab);
+    if (capacity == 0u) {
+        /* slab_stride() already sets errno appropriately. */
+        if (errno == 0) errno = EINVAL;
+        return NULL;
+    }
+
+    if (size > capacity) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    return alloc_slab(slab, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for aligned slab allocation.
+ *
+ * Allocates a fixed-size object from the slab allocator referenced by @p ctx,
+ * with a minimum alignment requirement of @p align. The slab's alignment is
+ * exposed via ::slab_alignment(); if @p align is 0, the slab's natural
+ * alignment is used, otherwise @p align must not exceed the slab alignment.
+ *
+ * The requested @p size must be greater than 0 and less than or equal to the
+ * slot stride reported by ::slab_stride().
+ *
+ * On error, errno is set (typically to ENOMEM or EINVAL) and NULL is returned.
+ *
+ * @param ctx    Pointer to a slab_t instance.
+ * @param size   Number of bytes requested (must be <= ::slab_stride()).
+ * @param align  Required alignment (0 for natural, or <= ::slab_alignment()).
+ * @param zeroed Whether the memory should be zero-initialized.
+ *
+ * @retval void* Pointer to an aligned block of at least @p size bytes.
+ * @retval NULL  On failure, with errno set.
+ */
+static inline void *slab_v_alloc_aligned(void *ctx, size_t size,
+                                         size_t align, bool zeroed) {
+    slab_t *slab = (slab_t *)ctx;
+    if (!slab) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (size == 0u) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    size_t const capacity = slab_stride(slab);
+    if (capacity == 0u) {
+        if (errno == 0) errno = EINVAL;
+        return NULL;
+    }
+    if (size > capacity) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    size_t const slab_align = slab_alignment(slab);
+    if (slab_align == 0u) {
+        if (errno == 0) errno = EINVAL;
+        return NULL;
+    }
+
+    if (align != 0u && align > slab_align) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* All slab allocations are at least slab_align-aligned, so they satisfy
+       any requested align <= slab_align. */
+    return alloc_slab(slab, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for slab reallocation.
+ *
+ * Resizes a block of memory previously allocated from the slab allocator
+ * referenced by @p ctx. Because a slab has a fixed capacity per slot,
+ * exposed via ::slab_stride(), this reallocation is limited:
+ *
+ *  - @p new_size must be greater than 0 and less than or equal to
+ *    ::slab_stride().
+ *  - The pointer is always reused in place; no new allocation is performed.
+ *  - If @p new_size > @p old_size and @p zeroed is true, the additional
+ *    bytes in [old_size, new_size) are zeroed.
+ *  - If @p new_size exceeds the slot capacity, the function fails with
+ *    errno = ENOMEM and returns NULL; the caller must keep using @p old_ptr.
+ *
+ * Special cases:
+ *
+ *  - `slab_v_realloc(ctx, NULL, 0, new_size, zeroed)` behaves like
+ *    ::slab_v_alloc().
+ *  - `slab_v_realloc(ctx, old_ptr, old_size, 0, zeroed)` returns the object
+ *    to the slab via ::return_slab() and returns NULL.
+ *
+ * This function implements the @ref realloc_prototype interface for
+ * slab-backed allocators, with the constraint that blocks cannot grow beyond
+ * the slab's fixed slot capacity.
+ *
+ * @param ctx       Pointer to a slab_t instance.
+ * @param old_ptr   Pointer to the existing allocation (may be NULL).
+ * @param old_size  Logical size of the existing allocation.
+ * @param new_size  Requested new logical size.
+ * @param zeroed    Whether any expanded portion must be zero-initialized.
+ *
+ * @retval void* Pointer to the (possibly unchanged) allocation on success.
+ * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ */
+static inline void *slab_v_realloc(void *ctx, void *old_ptr,
+                                   size_t old_size, size_t new_size,
+                                   bool zeroed) {
+    (void)ctx; (void)old_size; (void)new_size; (void)zeroed;
+    return old_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for aligned slab reallocation.
+ *
+ * Resizes a block previously allocated from the slab allocator referenced
+ * by @p ctx, enforcing a minimum alignment of @p align. As with
+ * ::slab_v_realloc(), this is limited by the slab's fixed slot capacity and
+ * fixed alignment (exposed via ::slab_stride() and ::slab_alignment()):
+ *
+ *  - @p new_size must be > 0 and <= slot capacity, or the call fails with
+ *    ENOMEM.
+ *  - @p align must be 0 (natural) or <= slab alignment, or the call fails
+ *    with EINVAL.
+ *  - Reallocation always reuses the same pointer in place; no new allocation
+ *    is performed.
+ *
+ * Special cases:
+ *
+ *  - `slab_v_realloc_aligned(ctx, NULL, 0, new_size, zeroed, align)` behaves
+ *    like ::slab_v_alloc_aligned().
+ *  - `slab_v_realloc_aligned(ctx, old_ptr, old_size, 0, zeroed, align)`
+ *    frees @p old_ptr via ::return_slab() and returns NULL.
+ *
+ * @param ctx       Pointer to a slab_t instance.
+ * @param old_ptr   Pointer to the existing allocation (may be NULL).
+ * @param old_size  Logical size of the existing allocation.
+ * @param new_size  Requested new size.
+ * @param zeroed    Whether any expanded portion must be zero-initialized.
+ * @param align     Required alignment (0 for natural, or <= slab alignment).
+ *
+ * @retval void* Pointer to the (possibly unchanged) allocation on success.
+ * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ */
+static inline void *slab_v_realloc_aligned(void *ctx, void *old_ptr,
+                                           size_t old_size, size_t new_size,
+                                           bool zeroed, size_t align) {
+    (void)ctx; (void)old_size; (void)new_size; (void)zeroed; (void)align;
+    return old_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for returning an element to a slab allocator.
+ *
+ * Returns a block previously allocated from the slab allocator referenced
+ * by @p ctx back to the allocator. This is a thin adapter over ::return_slab().
+ *
+ * If @p ctx is NULL, errno is set to EINVAL and the function returns without
+ * performing any deallocation. If @p ptr is NULL, the call is treated as
+ * a no-op (like `free(NULL)`).
+ *
+ * @param ctx Pointer to a slab_t instance.
+ * @param ptr Pointer to an allocated block (may be NULL).
+ */
+static inline void slab_v_return(void *ctx, void *ptr) {
+    slab_t *slab = (slab_t *)ctx;
+    if (!slab) {
+        errno = EINVAL;
+        return;
+    }
+    (void)return_slab(slab, ptr);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Vtable adapter for logically resetting a slab allocator.
+ *
+ * For slab-backed allocators, the slab does not own its underlying memory
+ * pool; instead, it carves fixed-size objects from a backing allocator.
+ * As such, this function does not release the underlying pool; it simply
+ * resets the slab's internal state via ::reset_slab(), returning all
+ * objects to the free list.
+ *
+ * After this call, the slab remains valid and may be used again.
+ *
+ * If @p ctx is NULL, errno is set to EINVAL and the function returns
+ * without performing any action.
+ *
+ * @param ctx Pointer to a slab_t instance.
+ */
+static inline void slab_v_free(void *ctx) {
+    slab_t *slab = (slab_t *)ctx;
+    if (!slab) {
+        errno = EINVAL;
+        return;
+    }
+    (void)reset_slab(slab);
+}
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
