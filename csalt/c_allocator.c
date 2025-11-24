@@ -3811,6 +3811,760 @@ size_t buddy_alignment(const buddy_t* buddy) {
     }
     return buddy->base_align;
 }
+// ================================================================================ 
+// ================================================================================ 
+// SLAB ALLOCATOR 
+
+/* Intrusive free-list node stored in each free slot. */
+typedef struct slab_slot {
+    struct slab_slot *next;
+} slab_slot_t;
+// -------------------------------------------------------------------------------- 
+
+/* Per-page header, stored at the beginning of each slab page. */
+typedef struct slab_page {
+    struct slab_page *next;
+    /* You could add free-count, etc., here later if you want. */
+} slab_page_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct slab_t {
+    buddy_t *buddy;        /* backing buddy allocator */
+
+    size_t   obj_size;     /* user-visible object size */
+    size_t   slot_size;    /* internal slot size (>= obj_size and >= sizeof(slab_slot_t)) */
+    size_t   align;        /* slot alignment (power of two) */
+
+    size_t   slab_bytes;   /* total bytes in each slab page (buddy allocation size we carve up) */
+    size_t   page_hdr_bytes;/* bytes reserved for slab_page header (aligned) */
+    size_t   objs_per_slab;/* slots per page */
+
+    size_t   len;          /* bytes currently in-use by this slab (obj_size * live objects) */
+
+    slab_page_t *pages;    /* linked list of pages (headers sit at page base) */
+    slab_slot_t *free_list;/* global free-list of free slots */
+} slab_t;
+// -------------------------------------------------------------------------------- 
+
+/* helper: align x up to a (a must be power of two) */
+static inline size_t _slab_align_up(size_t x, size_t a) {
+    return (x + (a - 1u)) & ~(a - 1u);
+}
+// -------------------------------------------------------------------------------- 
+
+static bool _slab_grow(slab_t *slab) {
+    if (!slab || !slab->buddy) {
+        errno = EINVAL;
+        return false;
+    }
+
+    /* Allocate one slab page from the buddy allocator. */
+    void *mem = alloc_buddy_aligned(slab->buddy,
+                                    slab->slab_bytes,
+                                    slab->align,
+                                    false);
+    if (!mem) {
+        /* errno set by alloc_buddy_aligned */
+        return false;
+    }
+
+    uint8_t    *raw  = (uint8_t *)mem;
+    slab_page_t *page = (slab_page_t *)raw;
+
+    /* Link page into page list. */
+    page->next = slab->pages;
+    slab->pages = page;
+
+    /* Slots start after the (aligned) page header. */
+    uint8_t *slots_base = raw + slab->page_hdr_bytes;
+
+    /* Carve page into slots and push them on the global free-list. */
+    uint8_t *p = slots_base;
+    for (size_t i = 0; i < slab->objs_per_slab; ++i) {
+        slab_slot_t *slot = (slab_slot_t *)p;
+        slot->next = slab->free_list;
+        slab->free_list = slot;
+
+        p += slab->slot_size;
+    }
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static slab_page_t *_slab_find_page(slab_t *slab, void *ptr) {
+    if (!slab || !ptr) return NULL;
+
+    uint8_t *p = (uint8_t *)ptr;
+
+    for (slab_page_t *page = slab->pages; page != NULL; page = page->next) {
+        uint8_t *base = (uint8_t *)page;                  /* page starts at header */
+        uint8_t *end  = base + slab->slab_bytes;          /* we only use slab_bytes */
+
+        if (p >= base && p < end) {
+            return page;
+        }
+    }
+    return NULL;
+}
+// -------------------------------------------------------------------------------- 
+
+static size_t _slab_snapshot_size(const slab_t *slab) {
+    size_t page_count = 0;
+
+    for (const slab_page_t *p = slab->pages; p != NULL; p = p->next) {
+        ++page_count;
+    }
+
+    /* slab_t struct + all pages */
+    return sizeof(*slab) + page_count * slab->slab_bytes;
+}
+// -------------------------------------------------------------------------------- 
+
+/* Uses _next_pow2(size_t) from your buddy code. */
+slab_t *init_slab_allocator(buddy_t *buddy,
+                            size_t   obj_size,
+                            size_t   align,
+                            size_t   slab_bytes_hint) {
+    if (!buddy || obj_size == 0u) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* Normalize alignment. */
+    if (align == 0u) {
+        align = alignof(max_align_t);
+    }
+    if (align & (align - 1u)) {
+        align = _next_pow2(align);
+        if (!align) {
+            errno = EINVAL;
+            return NULL;
+        }
+    }
+
+    /* Allocate the slab_t itself from the buddy allocator. */
+    size_t   slab_struct_bytes = _slab_align_up(sizeof(slab_t), alignof(max_align_t));
+    slab_t *slab = (slab_t *)alloc_buddy_aligned(buddy,
+                                                 slab_struct_bytes,
+                                                 alignof(max_align_t),
+                                                 true /* zeroed */);
+    if (!slab) {
+        /* errno set by alloc_buddy_aligned */
+        return NULL;
+    }
+
+    slab->buddy = buddy;
+    slab->obj_size = obj_size;
+    slab->align    = align;
+
+    /* Determine slot size: must hold object and slab_slot_t linkage. */
+    size_t slot_size = _slab_align_up(obj_size, align);
+    if (slot_size < sizeof(slab_slot_t)) {
+        slot_size = _slab_align_up(sizeof(slab_slot_t), align);
+    }
+    slab->slot_size = slot_size;
+
+    /* Determine page header bytes (aligned). */
+    size_t page_hdr_bytes = _slab_align_up(sizeof(slab_page_t), align);
+    slab->page_hdr_bytes  = page_hdr_bytes;
+
+    /* Choose slab page size. */
+    size_t slab_bytes = slab_bytes_hint;
+
+    if (slab_bytes == 0u) {
+        /* Default: at least 4 KiB or enough for 64 objects, plus header. */
+        size_t min_slots_bytes = slot_size * 64u;
+        size_t min_total       = page_hdr_bytes + min_slots_bytes;
+        size_t default_min     = 4096u;
+
+        if (min_total < default_min) {
+            min_total = default_min;
+        }
+        slab_bytes = min_total;
+    }
+
+    /* Ensure we can fit at least one slot. */
+    if (slab_bytes < page_hdr_bytes + slot_size) {
+        slab_bytes = page_hdr_bytes + slot_size;
+    }
+
+    /* Make slab_bytes a multiple of slot_size after header, so no tail fragment. */
+    size_t usable_for_slots = slab_bytes - page_hdr_bytes;
+    size_t objs_per_slab    = usable_for_slots / slot_size;
+    if (objs_per_slab == 0u) {
+        objs_per_slab       = 1u;
+        usable_for_slots    = slot_size;
+        slab_bytes          = page_hdr_bytes + usable_for_slots;
+    } else {
+        usable_for_slots    = objs_per_slab * slot_size;
+        slab_bytes          = page_hdr_bytes + usable_for_slots;
+    }
+
+    slab->slab_bytes    = slab_bytes;
+    slab->objs_per_slab = objs_per_slab;
+
+    slab->len       = 0u;
+    slab->pages     = NULL;
+    slab->free_list = NULL;
+
+    return slab;
+}
+// -------------------------------------------------------------------------------- 
+
+void *alloc_slab(slab_t *slab, bool zeroed) {
+    if (!slab) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* Grow if no free slots. */
+    if (!slab->free_list) {
+        if (!_slab_grow(slab)) {
+            /* errno set by _slab_grow/buddy allocator */
+            return NULL;
+        }
+    }
+
+    /* Pop from global free list. */
+    slab_slot_t *slot = slab->free_list;
+    slab->free_list   = slot->next;
+
+    void *user_ptr = (void *)slot;
+
+    if (zeroed) {
+        memset(user_ptr, 0, slab->obj_size);
+    }
+
+    /* Track payload bytes currently in use. */
+    slab->len += slab->obj_size;
+
+    return user_ptr;
+}
+// -------------------------------------------------------------------------------- 
+
+bool return_slab(slab_t *slab, void *ptr) {
+    if (!slab) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (!ptr) {
+        /* Like free(NULL): no-op, success. */
+        return true;
+    }
+
+    slab_page_t *page = _slab_find_page(slab, ptr);
+    if (!page) {
+        /* Pointer not from this slab allocator. */
+        errno = EINVAL;
+        return false;
+    }
+
+    uint8_t *page_base   = (uint8_t *)page;  /* header is at base */
+    uint8_t *slots_start = page_base + slab->page_hdr_bytes;
+    uint8_t *slots_end   = page_base + slab->slab_bytes;
+
+    uint8_t *p = (uint8_t *)ptr;
+
+    /* Must be within the slots region. */
+    if (p < slots_start || p >= slots_end) {
+        errno = EINVAL;
+        return false;
+    }
+
+    size_t offset = (size_t)(p - slots_start);
+
+    /* Must be aligned on a slot boundary. */
+    if ((offset % slab->slot_size) != 0u) {
+        errno = EINVAL;
+        return false;
+    }
+
+    /* Return to free list. */
+    slab_slot_t *slot = (slab_slot_t *)ptr;
+    slot->next        = slab->free_list;
+    slab->free_list   = slot;
+
+    if (slab->len >= slab->obj_size) {
+        slab->len -= slab->obj_size;
+    } else {
+        slab->len = 0u; /* defensive */
+    }
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t slab_alloc(const slab_t *slab) {
+    if (!slab) {
+        errno = EINVAL;
+        return 0;
+    }
+    return slab->len;   /* logical bytes in use */
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t slab_size(const slab_t *slab) {
+    if (!slab) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    size_t total = 0;
+    for (slab_page_t *p = slab->pages; p != NULL; p = p->next) {
+        total += slab->slab_bytes;
+    }
+
+    return total;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t total_slab_alloc(const slab_t *slab) {
+    if (!slab) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    /* Start with the slab_t struct itself */
+    size_t total = _slab_align_up(sizeof(slab_t), alignof(max_align_t));
+
+    /* Add each page */
+    for (slab_page_t *p = slab->pages; p != NULL; p = p->next) {
+        total += slab->slab_bytes;
+    }
+
+    return total;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t slab_stride(const slab_t *slab) {
+    if (!slab) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    /* Internal slot stride, may be >= obj_size to hold free-list linkage. */
+    return slab->slot_size;
+}
+// --------------------------------------------------------------------------------
+
+inline size_t slab_total_blocks(const slab_t *slab) {
+    if (!slab) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    /* Count pages and multiply by objs_per_slab: total capacity in slots. */
+    size_t page_count = 0;
+    for (const slab_page_t *p = slab->pages; p != NULL; p = p->next) {
+        ++page_count;
+    }
+
+    return page_count * slab->objs_per_slab;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t slab_free_blocks(const slab_t *slab) {
+    if (!slab) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    size_t count = 0;
+    const slab_slot_t *slot = slab->free_list;
+
+    while (slot) {
+        ++count;
+        slot = slot->next;
+    }
+
+    return count;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t slab_alignment(const slab_t *slab) {
+    if (!slab) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    return slab->align;
+}
+// -------------------------------------------------------------------------------- 
+
+inline size_t slab_in_use_blocks(const slab_t *slab) {
+    if (!slab) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    if (slab->obj_size == 0) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    return slab->len / slab->obj_size;
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_slab_ptr(const slab_t *slab, const void *ptr) {
+    if (!slab || !ptr) {
+        errno = EINVAL;
+        return false;
+    }
+
+    uint8_t *p = (uint8_t *)ptr;
+
+    /* Step 1: find which page this pointer belongs to */
+    for (slab_page_t *page = slab->pages; page != NULL; page = page->next) {
+
+        uint8_t *page_base   = (uint8_t *)page;            /* header at base */
+        uint8_t *slots_start = page_base + slab->page_hdr_bytes;
+        uint8_t *page_end    = page_base + slab->slab_bytes;
+
+        /* Step 2: check if it lies in the page at all */
+        if (p < page_base || p >= page_end) {
+            continue;
+        }
+
+        /* Step 3: reject pointers inside the header region */
+        if (p < slots_start) {
+            errno = EINVAL;
+            return false;
+        }
+
+        /* Step 4: must be aligned to slot boundaries */
+        size_t offset = (size_t)(p - slots_start);
+
+        if ((offset % slab->slot_size) != 0u) {
+            errno = EINVAL;
+            return false;
+        }
+
+        /* Pointer is valid */
+        return true;
+    }
+
+    /* Pointer not found in any page */
+    errno = EINVAL;
+    return false;
+}
+// -------------------------------------------------------------------------------- 
+
+bool reset_slab(slab_t *slab) {
+    if (!slab) {
+        errno = EINVAL;
+        return false;
+    }
+
+    /* Basic sanity checks on geometry */
+    if (slab->obj_size == 0u ||
+        slab->slot_size == 0u ||
+        slab->slab_bytes < slab->page_hdr_bytes + slab->slot_size) {
+        errno = EINVAL;
+        return false;
+    }
+
+    /* After reset, nothing is in use and free_list is rebuilt. */
+    slab->len       = 0u;
+    slab->free_list = NULL;
+
+    /* Walk all pages and re-carve them into free slots. */
+    for (slab_page_t *page = slab->pages; page != NULL; page = page->next) {
+        uint8_t *page_base   = (uint8_t *)page;              /* header at base */
+        uint8_t *slots_start = page_base + slab->page_hdr_bytes;
+        uint8_t *slots_end   = page_base + slab->slab_bytes;
+
+        /* Carve the slots region into slot_size chunks. */
+        for (uint8_t *p = slots_start;
+             p + slab->slot_size <= slots_end;
+             p += slab->slot_size) {
+
+            slab_slot_t *slot = (slab_slot_t *)p;
+            slot->next        = slab->free_list;
+            slab->free_list   = slot;
+        }
+    }
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool save_slab(const slab_t *slab,
+               void *buffer,
+               size_t buffer_size,
+               size_t *bytes_needed) {
+    if (!slab || !bytes_needed) {
+        errno = EINVAL;
+        return false;
+    }
+
+    size_t needed = _slab_snapshot_size(slab);
+    *bytes_needed = needed;
+
+    if (!buffer || buffer_size < needed) {
+        errno = ERANGE;
+        return false;
+    }
+
+    uint8_t *dst = (uint8_t *)buffer;
+
+    /* 1) Copy the slab_t struct itself */
+    memcpy(dst, slab, sizeof(*slab));
+    dst += sizeof(*slab);
+
+    /* 2) Copy each page in list order */
+    for (const slab_page_t *page = slab->pages;
+         page != NULL;
+         page = page->next) {
+
+        memcpy(dst, (const void *)page, slab->slab_bytes);
+        dst += slab->slab_bytes;
+    }
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool restore_slab(slab_t *slab,
+                  const void *buffer,
+                  size_t buffer_size) {
+    if (!slab || !buffer) {
+        errno = EINVAL;
+        return false;
+    }
+
+    const uint8_t *src = (const uint8_t *)buffer;
+
+    /* 1) Peek at the serialized slab_t */
+    slab_t snap_header;
+    if (buffer_size < sizeof(snap_header)) {
+        errno = ERANGE;
+        return false;
+    }
+
+    memcpy(&snap_header, src, sizeof(snap_header));
+    src += sizeof(snap_header);
+
+    /* 2) Count pages from the snapshot's perspective */
+    size_t page_count = 0;
+    const slab_page_t *snap_page = snap_header.pages;
+
+    while (snap_page != NULL) {
+        ++page_count;
+        snap_page = snap_page->next;
+    }
+
+    size_t needed = sizeof(snap_header) + page_count * snap_header.slab_bytes;
+    if (buffer_size < needed) {
+        errno = ERANGE;
+        return false;
+    }
+
+    /* 3) Sanity-check geometry vs the current slab */
+    if (snap_header.obj_size      != slab->obj_size      ||
+        snap_header.slot_size     != slab->slot_size     ||
+        snap_header.align         != slab->align         ||
+        snap_header.slab_bytes    != slab->slab_bytes    ||
+        snap_header.page_hdr_bytes!= slab->page_hdr_bytes||
+        snap_header.objs_per_slab != slab->objs_per_slab) {
+
+        errno = EINVAL;
+        return false;
+    }
+
+    /* 4) Restore pages using snapshot's page list.
+       NOTE: the pointers in snap_header.pages are the addresses
+       of the real page headers in memory at the time of save_slab.
+       We assume the slab has not grown/shrunk pages since then, so
+       those addresses are still valid.
+    */
+    snap_page = snap_header.pages;
+
+    for (size_t i = 0; i < page_count && snap_page != NULL; ++i) {
+        memcpy((void *)snap_page, src, snap_header.slab_bytes);
+        src += snap_header.slab_bytes;
+
+        /* Important: use the *snapshot's* next pointer from the buffer,
+           not the live one, which we just overwrote.
+           We already loaded the snapshot header, so snap_page->next
+           is still the next pointer from the snapshot's perspective.
+         */
+        snap_page = snap_page->next;
+    }
+
+    /* 5) Finally restore the slab_t itself */
+    memcpy(slab, &snap_header, sizeof(*slab));
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool slab_stats(const slab_t *slab, char *buffer, size_t buffer_size) {
+    size_t offset = 0U;
+
+    if ((buffer == NULL) || (buffer_size == 0U)) {
+        errno = EINVAL;
+        return false;
+    }
+
+    if (slab == NULL) {
+        (void)_buf_appendf(buffer, buffer_size, &offset, "%s", "Slab: NULL\n");
+        return true;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "%s", "Slab Statistics:\n")) {
+        return false;
+    }
+
+    /* Count pages */
+    size_t page_count = 0U;
+    for (const slab_page_t *p = slab->pages; p != NULL; p = p->next) {
+        ++page_count;
+    }
+
+    /* Capacity / usage in bytes */
+    size_t const capacity_bytes = page_count * slab->slab_bytes;
+    size_t const used_bytes     = slab->len;
+    size_t const remaining      =
+        (capacity_bytes > used_bytes) ? (capacity_bytes - used_bytes) : 0U;
+
+    /* Total footprint including slab_t struct itself */
+    size_t const slab_struct_bytes =
+        _slab_align_up(sizeof(slab_t), alignof(max_align_t));
+    size_t const total_overhead = slab_struct_bytes + capacity_bytes;
+
+    /* Blocks info */
+    size_t const total_blocks   = page_count * slab->objs_per_slab;
+    size_t const in_use_blocks  =
+        (slab->obj_size != 0U) ? (slab->len / slab->obj_size) : 0U;
+
+    size_t const free_blocks_geom =
+        (total_blocks > in_use_blocks) ? (total_blocks - in_use_blocks) : 0U;
+
+    /* Free blocks counted from the free list (cross-check) */
+    size_t free_blocks_list = 0U;
+    for (const slab_slot_t *slot = slab->free_list;
+         slot != NULL;
+         slot = slot->next) {
+        ++free_blocks_list;
+    }
+
+    /* Basic geometry info */
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Object size: %zu bytes\n", slab->obj_size)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Slot stride: %zu bytes\n", slab->slot_size)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Alignment: %zu bytes\n", slab->align)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Page size: %zu bytes\n", slab->slab_bytes)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Page header bytes: %zu\n", slab->page_hdr_bytes)) {
+        return false;
+    }
+
+    /* Capacity / usage summary */
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Pages: %zu\n", page_count)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Blocks per page: %zu\n", slab->objs_per_slab)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Total blocks: %zu\n", total_blocks)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  In-use blocks: %zu\n", in_use_blocks)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Free blocks (geom): %zu\n", free_blocks_geom)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Free blocks (free list): %zu\n", free_blocks_list)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Used: %zu bytes\n", used_bytes)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Capacity: %zu bytes\n", capacity_bytes)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Remaining: %zu bytes\n", remaining)) {
+        return false;
+    }
+
+    if (!_buf_appendf(buffer, buffer_size, &offset,
+                      "  Total (with overhead): %zu bytes\n", total_overhead)) {
+        return false;
+    }
+
+    /* Utilization with divide-by-zero guard */
+    if (capacity_bytes == 0U) {
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "%s", "  Utilization: N/A (capacity is 0)\n")) {
+            return false;
+        }
+    } else {
+        double const util = (100.0 * (double)used_bytes) / (double)capacity_bytes;
+        if (!_buf_appendf(buffer, buffer_size, &offset,
+                          "  Utilization: %.1f%%\n", util)) {
+            return false;
+        }
+    }
+
+    /* Per-page listing, similar to arena chunk listing */
+    {
+        size_t page_index = 0U;
+        const slab_page_t *current = slab->pages;
+
+        while (current != NULL) {
+            ++page_index;
+
+            if (!_buf_appendf(buffer, buffer_size, &offset,
+                              "  Page %zu: %zu bytes, %zu blocks\n",
+                              page_index,
+                              slab->slab_bytes,
+                              slab->objs_per_slab)) {
+                return false;
+            }
+
+            current = current->next;
+        }
+    }
+
+    return true;
+}
 // ================================================================================
 // ================================================================================
 // eof

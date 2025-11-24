@@ -43,6 +43,7 @@ int main(void) {
         {"Pool Allocator", test_pool, test_pool_count},
         {"Freelist Allocator",  test_freelist, test_freelist_count},
         {"Buddy Allocator",  test_buddy_allocator, test_buddy_allocator_count},
+        {"Slab Allocator",  test_slab_allocator, test_slab_allocator_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);
