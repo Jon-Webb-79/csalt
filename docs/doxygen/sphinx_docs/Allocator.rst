@@ -1271,6 +1271,236 @@ buddy_v_free
 .. doxygenfunction:: buddy_v_free
    :project: csalt
 
+Slab Allocator Overview
+=======================
+The ``slab_t`` allocator implements a *fixed-size object* memory allocation
+model. Memory is acquired from an underlying allocator (typically a
+``buddy_t`` allocator) in page-sized chunks called *slabs*. Each slab is
+subdivided into uniformly-sized slots, and allocations simply return the next
+available slot.
+
+This design provides fast, predictable memory behavior for workloads where
+objects have the same size and are frequently allocated and freed.
+
+This model is ideal when:
+
+* many objects share the **same fixed size**
+* allocation and deallocation occur **frequently**
+* high throughput and predictable memory reuse are required
+* fragmentation must be minimized
+
+Examples include:
+
+* kernel-style data structure allocation (inspired by the Linux slab allocator)
+* fixed-size request/response messaging buffers
+* game engine entities or component storage pools
+* allocator back-ends for frameworks with small, frequently-used structs
+* real-time or embedded systems where ``malloc``/``free`` overhead is undesirable
+
+Benefits
+--------
+
+* **Very fast allocation and free**  
+  (constant time; usually a pointer pop/push from a free-list)
+* **No external fragmentation**, since all slots are equal size
+* **Cache-friendly layout**  
+  (objects of the same type are tightly packed in memory)
+* **Stable pointer addresses** while slabs remain allocated
+* **Deterministic memory usage** for a class of fixed-size objects
+
+Limitations
+-----------
+
+* Supports **fixed-size** allocations only  
+  (all objects must fit within one slot)
+* **Reallocation is not supported**  
+  (slots cannot grow; callers must allocate/copy/free manually)
+* May exhibit **internal fragmentation** if objects do not use the entire slot
+* Memory consumption grows in units of full slabs (pages)
+
+Data Types 
+----------
+The following are data structures and derived data types used in the ``c_allocator.h``
+and ``c_allocator.c`` files to support the ``arena_t`` data type.
+
+slab_t
+~~~~~~
+``slab_t`` is an opaque data structure that is not visibile to the user.  This struct 
+contains metadata for the slab allocator type.
+
+.. code-block:: c
+
+   typedef struct slab_t {
+       buddy_t *buddy;        /* backing buddy allocator */
+       size_t   obj_size;     /* user-visible object size */
+       size_t   slot_size;    /* internal slot size (>= obj_size and >= sizeof(slab_slot_t)) */
+       size_t   align;        /* slot alignment (power of two) */
+       size_t   slab_bytes;   /* total bytes in each slab page (buddy allocation size we carve up) */
+       size_t   page_hdr_bytes;/* bytes reserved for slab_page header (aligned) */
+       size_t   objs_per_slab;/* slots per page */
+       size_t   len;          /* bytes currently in-use by this slab (obj_size * live objects) */
+       slab_page_t *pages;    /* linked list of pages (headers sit at page base) */
+       slab_slot_t *free_list;/* global free-list of free slots */
+   } slab_t;
+
+Initialization and Memory Management
+------------------------------------
+The functions in this section can be used to initialize memory for a slab allocator,
+parse that memory to variables.
+
+init_slab_allocator
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_slab_allocator
+   :project: csalt
+
+alloc_slab
+~~~~~~~~~~
+
+.. doxygenfunction:: alloc_slab
+   :project: csalt
+
+return_slab
+~~~~~~~~~~~
+
+.. doxygenfunction:: return_slab
+   :project: csalt
+
+Utility Funcitons 
+-----------------
+
+is_slab_ptr
+~~~~~~~~~~~
+
+.. doxygenfunction:: is_slab_ptr
+   :project: csalt
+
+reset_slab
+~~~~~~~~~~
+
+.. doxygenfunction:: reset_slab
+   :project: csalt
+
+save_slab
+~~~~~~~~~
+
+.. doxygenfunction:: save_slab
+   :project: csalt
+
+restore_slab
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: restore_slab
+   :project: csalt
+
+slab_stats 
+~~~~~~~~~~~
+
+.. doxygenfunction:: slab_stats
+   :project: csalt
+
+Getter and Setter Functions 
+---------------------------
+
+slab_size
+~~~~~~~~~
+
+.. doxygenfunction:: slab_size
+   :project: csalt
+
+slab_alloc
+~~~~~~~~~~
+
+.. doxygenfunction:: slab_alloc
+   :project: csalt
+
+total_slab_alloc
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: total_slab_alloc
+   :project: csalt
+
+slab_stride
+~~~~~~~~~~~
+
+.. doxygenfunction:: slab_stride
+   :project: csalt
+
+slab_total_blocks
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_total_blocks
+   :project: csalt
+
+slab_free_blocks
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_free_blocks
+   :project: csalt
+
+slab_in_use_blocks
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_in_use_blocks
+   :project: csalt
+
+slab_alignment
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_alignment
+   :project: csalt
+
+
+Slab Context Functions
+----------------------
+
+The following functions provide the arena-backed implementation of the
+allocator vtable interface. They adapt an ``slab_t`` instance to the generic
+allocator API by exposing allocation, reallocation, and bulk deallocation
+operations in a consistent form.
+
+slab_v_alloc
+~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_v_alloc
+   :project: csalt
+
+slab_v_alloc_aligned
+~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_v_alloc_aligned
+   :project: csalt
+
+slab_v_realloc
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_v_realloc
+   :project: csalt
+
+slab_v_realloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_v_realloc_aligned
+   :project: csalt
+
+slab_v_return
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_v_return
+   :project: csalt
+
+slab_v_free
+~~~~~~~~~~~
+
+.. doxygenfunction:: slab_v_free
+   :project: csalt
+
+slab_allocator 
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: slab_allocator
+   :project: csalt
+
 Context Function Pointers
 =========================
 

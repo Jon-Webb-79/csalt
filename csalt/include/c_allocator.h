@@ -6099,59 +6099,908 @@ static inline allocator_vtable_t buddy_allocator(buddy_t* b) {
 typedef struct slab_t slab_t;
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Initialize a slab allocator backed by a buddy allocator.
+ *
+ * Constructs a new ``slab_t`` instance whose control structure is allocated
+ * from the buddy allocator referenced by @p buddy. The slab allocator manages
+ * fixed-size objects of size @p obj_size, with per-object alignment of at
+ * least @p align bytes.
+ *
+ * The slab allocator does **not** own the underlying memory pool; instead, it
+ * draws all slab pages from the caller-provided ::buddy_t instance. The slab
+ * allocator therefore remains valid only as long as @p buddy remains valid.
+ *
+ * The @p align parameter controls the minimum alignment of objects returned by
+ * ::alloc_slab():
+ *
+ * - If @p align is 0, the default ``alignof(max_align_t)`` is used.
+ * - If @p align is not a power of two, it is rounded up to the next power of
+ *   two using ::_next_pow2().
+ * - If normalization of @p align fails, the function returns NULL with errno
+ *   set to EINVAL.
+ *
+ * Each slab page contains:
+ *
+ * 1. A page header of size at least ``sizeof(slab_page_t)``, aligned to
+ *    @p align.
+ * 2. A sequence of fixed-size slots, each of size ``max(obj_size,
+ *    sizeof(slab_slot_t))`` rounded up to @p align.
+ *
+ * The @p slab_bytes_hint parameter influences the total size of each slab
+ * page:
+ *
+ * - If 0, a default minimum is chosen (at least 64 slots or 4 KiB).
+ * - If too small to contain at least one slot, the size is automatically
+ *   increased.
+ * - The final slab size is adjusted so the slot region contains an integer
+ *   number of slots (no tail fragments).
+ *
+ * On success, the returned ``slab_t`` has:
+ *
+ * - No allocated pages yet (pages are created lazily).
+ * - An empty free list.
+ * - Zero bytes in use (``slab->len == 0``).
+ *
+ * This function fails and returns NULL if:
+ *
+ * - @p buddy is NULL
+ * - @p obj_size is 0
+ * - @p align cannot be normalized to a valid power of two
+ * - The underlying ::alloc_buddy_aligned() fails (e.g., ENOMEM)
+ *
+ * In all error cases, errno is set appropriately.
+ *
+ *
+ * The following example creates a buddy allocator, constructs a slab allocator
+ * for objects of type ``my_object_t``, allocates several objects, and then
+ * returns them to the slab:
+ *
+ * @code{.c}
+ * #include "buddy.h"
+ * #include "slab.h"
+ *
+ * typedef struct {
+ *     int   id;
+ *     float value;
+ * } my_object_t;
+ *
+ * int main(void) {
+ *     // 1) Create a buddy allocator with a 1 MiB pool.
+ *     buddy_t *buddy = init_buddy_allocator(1 << 20,   // pool size
+ *                                           64,        // minimum block size
+ *                                           0);        // natural alignment
+ *     if (!buddy) {
+ *         perror("init_buddy_allocator");
+ *         return 1;
+ *     }
+ *
+ *     // 2) Create a slab for fixed-size objects.
+ *     slab_t *slab = init_slab_allocator(buddy,
+ *                                        sizeof(my_object_t),
+ *                                        alignof(my_object_t),
+ *                                        0);  // let the system choose page size
+ *     if (!slab) {
+ *         perror("init_slab_allocator");
+ *         free_buddy(buddy);
+ *         return 1;
+ *     }
+ *
+ *     // 3) Allocate objects from the slab.
+ *     my_object_t *a = alloc_slab(slab, true);
+ *     my_object_t *b = alloc_slab(slab, true);
+ *
+ *     if (!a || !b) {
+ *         perror("alloc_slab");
+ *     } else {
+ *         a->id = 1;
+ *         b->id = 2;
+ *     }
+ *
+ *     // 4) Return objects to the slab.
+ *     return_slab(slab, a);
+ *     return_slab(slab, b);
+ *
+ *     // 5) Reset slab (optional).
+ *     reset_slab(slab);
+ *
+ *     // 6) Destroy the buddy allocator
+ *     //    (this implicitly destroys all slab pages).
+ *     free_buddy(buddy);
+ *
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @param buddy           Pointer to a valid ::buddy_t allocator
+ *                        supplying memory for slab pages.
+ * @param obj_size        Size (in bytes) of each managed object.
+ * @param align           Required alignment for stored objects.
+ *                        If 0, ``alignof(max_align_t)`` is used.
+ * @param slab_bytes_hint Optional hint for the size (in bytes) of each
+ *                        slab page. If 0, a default size is computed.
+ *
+ * @retval slab_t* Pointer to a newly constructed slab allocator on success.
+ * @retval NULL    On failure, with errno set to EINVAL or ENOMEM.
+ */
 slab_t *init_slab_allocator(buddy_t *buddy,
                             size_t   obj_size,
                             size_t   align,
                             size_t   slab_bytes_hint);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Allocate a fixed-size object from a slab allocator.
+ *
+ * Obtains a single object from the slab allocator referenced by @p slab.
+ * Slab allocators manage objects of a fixed size (specified during
+ * ::init_slab_allocator()) and maintain an internal free list of available
+ * slots. If no free slots remain, the allocator automatically attempts to
+ * grow by acquiring a new slab page from the backing buddy allocator via
+ * ::_slab_grow().
+ *
+ * On success, this function:
+ *  - Removes one slot from the free list.
+ *  - Optionally zeroes the object if @p zeroed is true.
+ *  - Increments the internal usage counter by ``slab->obj_size``.
+ *
+ * The returned pointer is aligned according to the slab's configured
+ * alignment, and must later be returned using ::return_slab().
+ *
+ * @par Error Handling
+ * The function returns NULL and sets errno in the following cases:
+ *  - @p slab is NULL (errno = EINVAL)
+ *  - Growing the slab via ::_slab_grow() fails  
+ *    (errno propagated from underlying buddy allocator, typically ENOMEM)
+ *
+ * In all failure cases, the internal state of the slab remains unchanged,
+ * except for any partial allocation attempts inside ::_slab_grow().
+ *
+ * @par Example
+ * The following example illustrates creating a slab allocator for a
+ * user-defined struct, allocating several objects, and returning them:
+ *
+ * @code{.c}
+ * #include "buddy.h"
+ * #include "slab.h"
+ *
+ * typedef struct {
+ *     int id;
+ *     float value;
+ * } my_object_t;
+ *
+ * int main(void) {
+ *     // 1) Create a buddy allocator with a 1 MiB pool.
+ *     buddy_t *buddy = init_buddy_allocator(
+ *         1 << 20,   // pool size
+ *         64,        // minimum block size
+ *         0          // natural alignment
+ *     );
+ *
+ *     if (!buddy) {
+ *         perror("init_buddy_allocator");
+ *         return 1;
+ *     }
+ *
+ *     // 2) Create a slab for my_object_t objects.
+ *     slab_t *slab = init_slab_allocator(
+ *         buddy,
+ *         sizeof(my_object_t),
+ *         alignof(my_object_t),
+ *         0                 // let the allocator choose slab page size
+ *     );
+ *
+ *     if (!slab) {
+ *         perror("init_slab_allocator");
+ *         free_buddy(buddy);
+ *         return 1;
+ *     }
+ *
+ *     // 3) Allocate two objects.
+ *     my_object_t *a = alloc_slab(slab, true);   // zeroed
+ *     my_object_t *b = alloc_slab(slab, false);  // uninitialized
+ *
+ *     if (!a || !b) {
+ *         perror("alloc_slab");
+ *     } else {
+ *         a->id = 1;
+ *         b->id = 2;
+ *     }
+ *
+ *     // 4) Return them when finished.
+ *     return_slab(slab, a);
+ *     return_slab(slab, b);
+ *
+ *     // 5) Optional: reset the entire slab (all objects freed).
+ *     reset_slab(slab);
+ *
+ *     // 6) Destroy buddy allocator (releases all slab memory).
+ *     free_buddy(buddy);
+ *
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @param slab   Pointer to an initialized ::slab_t instance.
+ * @param zeroed If true, the object is zero-initialized to the slab’s object size.
+ *
+ * @retval void* Pointer to a newly allocated object on success.
+ * @retval NULL  On failure, with errno set to EINVAL or a value propagated
+ *               from the buddy allocator during slab growth.
+ */
 void *alloc_slab(slab_t *slab, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return an object to a slab allocator.
+ *
+ * Returns a previously allocated object back to the slab allocator referenced
+ * by @p slab. The pointer must have been obtained from ::alloc_slab() on the
+ * same slab allocator instance; otherwise the function fails with errno set
+ * to EINVAL.
+ *
+ * Returning an object:
+ *  - Pushes the slot back onto the slab’s global free list.
+ *  - Decrements the internal usage counter (``slab->len``) by the object size.
+ *
+ * This function performs strict pointer validation to ensure that @p ptr
+ * refers to a valid slot inside a slab page managed by @p slab. This includes:
+ *  - Checking that the page exists and belongs to this slab.
+ *  - Checking that @p ptr lies inside the slot region of the page.
+ *  - Verifying that @p ptr is aligned on a slot boundary.
+ *
+ * @par Special Cases
+ *  - If @p slab is NULL, the function returns false and sets errno = EINVAL.
+ *  - If @p ptr is NULL, the call is treated like ``free(NULL)`` and returns
+ *    true with no effect.
+ *
+ * @par Error Handling
+ * The function returns false and sets errno = EINVAL when:
+ *  - @p ptr does not belong to any page owned by the slab allocator.
+ *  - @p ptr falls outside the slot region of a matching page.
+ *  - @p ptr is misaligned (not on a slot boundary).
+ *
+ * When returning an object, ``slab->len`` is decreased by the object size.
+ * If the counter underflows (should not happen), it is clamped to zero
+ * defensively.
+ *
+ * @par Example
+ * The following example allocates then frees several objects:
+ *
+ * @code{.c}
+ * typedef struct {
+ *     int   id;
+ *     float value;
+ * } my_object_t;
+ *
+ * buddy_t *buddy = init_buddy_allocator(1<<20, 64, 0);
+ * if (!buddy) {
+ *     perror("init_buddy_allocator");
+ *     return 1;
+ * }
+ *
+ * slab_t *slab = init_slab_allocator(
+ *     buddy,
+ *     sizeof(my_object_t),
+ *     alignof(my_object_t),
+ *     0                  // default page size
+ * );
+ *
+ * my_object_t *a = alloc_slab(slab, true);
+ * my_object_t *b = alloc_slab(slab, true);
+ *
+ * // Use objects a and b...
+ *
+ * // Return them to the slab allocator:
+ * if (!return_slab(slab, a)) {
+ *     perror("return_slab(a)");
+ * }
+ *
+ * if (!return_slab(slab, b)) {
+ *     perror("return_slab(b)");
+ * }
+ *
+ * // Reset the slab or destroy the buddy allocator when finished.
+ * reset_slab(slab);
+ * free_buddy(buddy);
+ * @endcode
+ *
+ * @param slab Pointer to an initialized ::slab_t.
+ * @param ptr  Pointer to an object previously returned by ::alloc_slab().
+ *             May be NULL.
+ *
+ * @retval true  Object successfully returned to the slab allocator.
+ * @retval false Invalid pointer or invalid slab argument; errno is set to EINVAL.
+ */
 bool return_slab(slab_t *slab, void *ptr);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Query the number of logical bytes currently in use by a slab allocator.
+ *
+ * Returns the total number of bytes of user payload currently allocated from
+ * the slab allocator referenced by @p slab. This value is computed as the
+ * number of live objects multiplied by the configured object size
+ * (not the internal slot stride).
+ *
+ * In other words, this reports how many bytes of user data are "in use" from
+ * the slab allocator’s point of view, not counting internal metadata,
+ * page headers, or unused slots.
+ *
+ * @par Error Handling
+ * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ *
+ * @retval size_t Number of logical payload bytes currently in use,
+ *                or 0 on error (with errno set to EINVAL).
+ */
 size_t slab_alloc(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Query the total payload capacity of all pages in a slab allocator.
+ *
+ * Returns the total number of bytes reserved for slots across all pages
+ * managed by @p slab. This is computed as:
+ *
+ * - the number of pages currently allocated, multiplied by
+ * - the configured per-page size (``slab->slab_bytes``).
+ *
+ * This value represents the gross capacity of the slab pages, including
+ * both used and free slots, but excluding the memory occupied by the
+ * ::slab_t struct itself.
+ *
+ * @par Relationship to Other Queries
+ * - ::slab_alloc() reports the subset of this capacity currently in use by
+ *   live objects.
+ * - ::total_slab_alloc() includes both page capacity and the control
+ *   structure overhead.
+ *
+ * @par Error Handling
+ * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ *
+ * @retval size_t Total size in bytes of all slab pages currently allocated,
+ *                or 0 on error (with errno set to EINVAL).
+ */
 size_t slab_size(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Query the full memory footprint of a slab allocator.
+ *
+ * Returns the total number of bytes consumed by the slab allocator itself,
+ * including:
+ *
+ * - the aligned size of the ::slab_t control structure, and
+ * - the size of all currently allocated pages (slabs).
+ *
+ * This is the quantity you would typically use to answer "how much memory
+ * does this slab allocator occupy in total?", including metadata and
+ * capacity for future allocations.
+ *
+ * @par Relationship to Other Queries
+ * - ::slab_alloc() reports the logical payload bytes in use.
+ * - ::slab_size() reports only the total size of the pages, excluding the
+ *   control structure.
+ * - ::total_slab_alloc() includes both the control structure and all pages.
+ *
+ * @par Error Handling
+ * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ *
+ * @retval size_t Total bytes consumed by the slab allocator, including
+ *                metadata and pages, or 0 on error (with errno = EINVAL).
+ */
 size_t total_slab_alloc(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Query the per-slot stride (capacity) of a slab allocator.
+ *
+ * Returns the internal slot size used by @p slab. This stride is:
+ *
+ * - at least as large as the configured object size, and
+ * - large enough to hold internal free-list linkage (e.g., ::slab_slot_t).
+ *
+ * The slot stride may therefore be greater than the nominal object size
+ * if additional padding or metadata is required.
+ *
+ * @par Usage
+ * This function is useful for:
+ * - Validating that requested logical sizes do not exceed the slot capacity
+ *   when using a generic allocator interface.
+ * - Understanding internal memory layout for debugging or statistics.
+ *
+ * @par Error Handling
+ * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ *
+ * @retval size_t Slot stride in bytes, or 0 on error (with errno = EINVAL).
+ */
 size_t slab_stride(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Query the total number of slots managed by a slab allocator.
+ *
+ * Returns the total capacity of @p slab in units of objects (slots), across
+ * all currently allocated pages. This is computed as:
+ *
+ * - the number of pages currently allocated, multiplied by
+ * - the number of objects per page (``objs_per_slab``).
+ *
+ * In other words, this is the maximum number of objects that could be
+ * simultaneously allocated from the slab without growing (adding new pages).
+ *
+ * @par Relationship to Other Queries
+ * - ::slab_total_blocks() reports the total number of slots (used + free).
+ * - ::slab_alloc() / object size gives an upper bound on the number of
+ *   currently allocated objects.
+ * - A complementary function (e.g., ::slab_free_blocks()) can be used to
+ *   compute the number of free slots:  
+ *   ``free_slots = slab_total_blocks(slab) - in_use_slots``.
+ *
+ * @par Error Handling
+ * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ *
+ * @retval size_t Total number of slots (objects) available across all pages,
+ *                or 0 on error (with errno = EINVAL).
+ */
 size_t slab_total_blocks(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Query the number of free (unallocated) slots in a slab allocator.
+ *
+ * Returns the number of currently available allocation slots in @p slab.
+ * This is computed by walking the slab’s global free list and counting the
+ * number of entries. Each entry corresponds to one free slot within some slab
+ * page.
+ *
+ * @par Relationship to Other Queries
+ * - ::slab_total_blocks() returns the total slot capacity.
+ * - ::slab_in_use_blocks() returns the number of allocated slots.
+ * - Therefore:
+ *   @code
+ *   free_blocks == slab_total_blocks(slab) - slab_in_use_blocks(slab)
+ *   @endcode
+ *
+ * @par Performance
+ * This function runs in **O(n)** time, where *n* is the number of free slots.
+ * It is intended for diagnostics, assertions, and statistics—not hot paths.
+ *
+ * @par Error Handling
+ * If @p slab is NULL, the function returns 0 and sets errno = EINVAL.
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ *
+ * @retval size_t Number of free slots, or 0 on error with errno = EINVAL.
+ */
 size_t slab_free_blocks(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Query the object alignment of a slab allocator.
+ *
+ * Returns the minimum alignment (in bytes) guaranteed for all objects
+ * allocated from @p slab. This alignment is determined when the slab
+ * allocator is created via ::init_slab_allocator().
+ *
+ * @par Usage
+ * - Useful when integrating the slab allocator with generic allocator APIs.
+ * - Ensures that allocated objects meet the required ABI alignment.
+ *
+ * @par Error Handling
+ * If @p slab is NULL, the function returns 0 and sets errno = EINVAL.
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ *
+ * @retval size_t Alignment in bytes, or 0 on error (with errno = EINVAL).
+ */
 size_t slab_alignment(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Query the number of currently allocated objects (slots) in a slab.
+ *
+ * Returns the number of slots currently in use by dividing ``slab->len``—
+ * the total logical bytes in use—by the object size configured when the slab
+ * was created.
+ *
+ * This gives the number of *currently allocated objects*, not counting the
+ * free list or empty slots in partially used pages.
+ *
+ * @par Relationship to Other Queries
+ * - ::slab_total_blocks() gives the total slot capacity.
+ * - ::slab_free_blocks() gives the number of free slots.
+ * - ::slab_in_use_blocks() reports how many are actively allocated.
+ *
+ * @par Error Handling
+ * - If @p slab is NULL, returns 0 and sets errno = EINVAL.
+ * - If the slab’s object size is 0 (should never happen), returns 0 and
+ *   sets errno = EINVAL.
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ *
+ * @retval size_t Number of allocated objects, or 0 on error.
+ */
 size_t slab_in_use_blocks(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Determine whether a pointer was allocated by a given slab allocator.
+ *
+ * Returns true if @p ptr refers to a valid object allocated from the slab
+ * allocator referenced by @p slab. The function performs strict validation:
+ *
+ * @par Validation Rules
+ *   1. The pointer must belong to one of the slab’s pages.
+ *   2. It must fall **after** the page header region and **before** the end
+ *      of the page.
+ *   3. It must be aligned on a slot boundary:
+ *      @code
+ *      (ptr - slots_start) % slot_size == 0
+ *      @endcode
+ *   4. The pointer must not lie in the header region of the page.
+ *
+ * These checks ensure that the pointer was returned by ::alloc_slab() and
+ * has not been corrupted or fabricated.
+ *
+ * @par Error Handling
+ * The function returns false and sets errno = EINVAL when:
+ *   - @p slab is NULL
+ *   - @p ptr is NULL
+ *   - @p ptr does not belong to any known slab page
+ *   - @p ptr is inside a page but not inside the slot region
+ *   - @p ptr is misaligned (not on a slot boundary)
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ * @param ptr  Pointer to validate.
+ *
+ * @retval true  @p ptr is a valid object allocated from @p slab.
+ * @retval false Pointer is invalid or does not belong to this slab (errno set).
+ */
 bool is_slab_ptr(const slab_t *slab, const void *ptr);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Reset a slab allocator, returning all slots to the free list.
+ *
+ * Reinitializes the internal state of the slab allocator referenced by
+ * @p slab so that:
+ *
+ *  - All pages remain allocated.
+ *  - All slots in every page are placed back onto the global free list.
+ *  - No objects are considered "in use" (``slab->len == 0``).
+ *
+ * This is a bulk "clear" operation: it does not release any memory to the
+ * backing allocator, but makes all capacity immediately available for reuse.
+ *
+ * @par Geometry Checks
+ * The function first verifies that the slab geometry is valid:
+ *  - ``obj_size != 0``
+ *  - ``slot_size != 0``
+ *  - ``slab_bytes >= page_hdr_bytes + slot_size``
+ *
+ * If any of these conditions fail, the function returns false and sets
+ * errno = EINVAL.
+ *
+ * @par Behavior
+ * For each page in the slab:
+ *  - The slots region is recomputed as the range
+ *    ``[page_base + page_hdr_bytes, page_base + slab_bytes)``.
+ *  - This region is carved into chunks of ``slot_size`` bytes.
+ *  - Each chunk is pushed onto the slab’s global free list.
+ *
+ * After completion:
+ *  - ``slab->len == 0``
+ *  - ``slab->free_list`` references all slots across all pages.
+ *
+ * @par Error Handling
+ * - If @p slab is NULL, returns false and sets errno = EINVAL.
+ * - If the geometry checks fail, returns false and sets errno = EINVAL.
+ *
+ * @par Example
+ * @code{.c}
+ * // Assume slab has been created and used previously:
+ * slab_t *slab = init_slab_allocator(buddy,
+ *                                    sizeof(my_object_t),
+ *                                    alignof(my_object_t),
+ *                                    0);
+ *
+ * my_object_t *a = alloc_slab(slab, true);
+ * my_object_t *b = alloc_slab(slab, true);
+ *
+ * // Use a, b...
+ *
+ * // Now discard all live objects and recycle all slots:
+ * if (!reset_slab(slab)) {
+ *     perror("reset_slab");
+ * }
+ *
+ * // After reset, slab_in_use_blocks(slab) == 0 and all slots are free.
+ * @endcode
+ *
+ * @param slab Pointer to an initialized ::slab_t instance.
+ *
+ * @retval true  Reset succeeded; all slots are free and slab->len == 0.
+ * @retval false Invalid slab or geometry; errno set to EINVAL.
+ */
 bool reset_slab(slab_t *slab);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Serialize the state of a slab allocator into a caller-provided buffer.
+ *
+ * Captures a snapshot of the slab allocator referenced by @p slab into
+ * a contiguous memory region provided by the caller. The snapshot consists of:
+ *
+ *  1. A copy of the ::slab_t control structure.
+ *  2. A copy of each slab page (in list order), each of size ``slab->slab_bytes``.
+ *
+ * The snapshot is intended for in-process checkpointing and later restoration
+ * via ::restore_slab(). It is **not** a stable, portable serialization format:
+ * it contains raw pointers and is only valid within the same process and
+ * allocator lifetime.
+ *
+ * @par Size Query Pattern
+ * The function always computes the number of bytes required to store the
+ * snapshot and writes it to @p bytes_needed. This allows a two-pass pattern:
+ *
+ *  @code{.c}
+ *  size_t bytes_needed = 0;
+ *
+ *  if (!save_slab(slab, NULL, 0, &bytes_needed)) {
+ *      // Expect errno == ERANGE: use bytes_needed to allocate a buffer.
+ *      if (errno != ERANGE) {
+ *          perror("save_slab (size query)");
+ *      }
+ *  }
+ *
+ *  void *buffer = malloc(bytes_needed);
+ *  if (!buffer) { // handle error }
+ *
+ *  if (!save_slab(slab, buffer, bytes_needed, &bytes_needed)) {
+ *      perror("save_slab (snapshot)");
+ *  }
+ *  @endcode
+ *
+ * @par Error Handling
+ * - If @p slab is NULL or @p bytes_needed is NULL, returns false and sets
+ *   errno = EINVAL.
+ * - If @p buffer is NULL or @p buffer_size is smaller than the required size,
+ *   returns false, sets errno = ERANGE, and still fills @p bytes_needed with
+ *   the required size.
+ *
+ * On success, the snapshot is written to @p buffer and the function returns true.
+ *
+ * @param slab         Pointer to an initialized ::slab_t instance.
+ * @param buffer       Destination buffer for the snapshot (may be NULL for
+ *                     size query only).
+ * @param buffer_size  Size of @p buffer in bytes.
+ * @param bytes_needed Output: number of bytes required to store the snapshot.
+ *
+ * @retval true  Snapshot successfully written to @p buffer.
+ * @retval false Invalid arguments or insufficient buffer; errno set to EINVAL
+ *               or ERANGE.
+ */
 bool save_slab(const slab_t *slab,
                void *buffer,
                size_t buffer_size,
                size_t *bytes_needed);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Restore a slab allocator from a previously saved snapshot.
+ *
+ * Restores the state of the slab allocator referenced by @p slab from the
+ * snapshot stored in @p buffer. The snapshot must have been created by
+ * ::save_slab() for the **same slab instance**, within the **same process**,
+ * and without changes to the underlying page layout since the snapshot.
+ *
+ * @par Important Limitations
+ * - The snapshot is **not portable** across processes, architectures, or
+ *   allocator instances; it contains raw pointers.
+ * - The snapshot assumes that:
+ *   - The same pages are still allocated at the same addresses.
+ *   - The slab geometry (object size, alignment, page size, etc.) has not
+ *     changed between save and restore.
+ * - This function is suitable for in-process checkpoint/rollback
+ *   scenarios, not for persistent on-disk serialization.
+ *
+ * @par Restore Procedure (High-Level)
+ *  1. Copy a temporary snapshot header (``slab_t``) from @p buffer.
+ *  2. Use the header’s page list (``snap_header.pages``) to count the number
+ *     of pages that must be restored.
+ *  3. Verify that @p buffer contains enough data for the header and all pages.
+ *  4. Verify that the current @p slab has the same geometry as the snapshot
+ *     (object size, slot size, alignment, slab bytes, header bytes, objects
+ *     per slab).
+ *  5. For each page in the snapshot’s page list, copy the saved page contents
+ *     into the live page at the same address.
+ *  6. Finally, overwrite the live ::slab_t with the snapshot header.
+ *
+ * @par Error Handling
+ * The function returns false and sets errno in the following cases:
+ *  - @p slab is NULL or @p buffer is NULL (errno = EINVAL).
+ *  - @p buffer_size is too small to contain a full snapshot header
+ *    (errno = ERANGE).
+ *  - @p buffer_size is too small to contain all pages indicated by the
+ *    snapshot (errno = ERANGE).
+ *  - The snapshot’s geometry does not match the current slab’s geometry
+ *    (errno = EINVAL).
+ *
+ * On success, @p slab’s internal state (including pages and free list) is
+ * restored to the moment when ::save_slab() was called.
+ *
+ * @par Example
+ * @code{.c}
+ * // Assume slab has been created and used:
+ * slab_t *slab = init_slab_allocator(buddy,
+ *                                    sizeof(my_object_t),
+ *                                    alignof(my_object_t),
+ *                                    0);
+ *
+ * // ... allocate and use objects ...
+ *
+ * // 1) Take a snapshot:
+ * size_t bytes_needed = 0;
+ * (void)save_slab(slab, NULL, 0, &bytes_needed); // expect ERANGE
+ *
+ * void *snapshot = malloc(bytes_needed);
+ * if (!snapshot) {
+ *     perror("malloc snapshot");
+ *     // handle error...
+ * }
+ *
+ * if (!save_slab(slab, snapshot, bytes_needed, &bytes_needed)) {
+ *     perror("save_slab");
+ * }
+ *
+ * // ... mutate slab: allocate/free some objects ...
+ *
+ * // 2) Restore previous state:
+ * if (!restore_slab(slab, snapshot, bytes_needed)) {
+ *     perror("restore_slab");
+ * }
+ *
+ * free(snapshot);
+ * @endcode
+ *
+ * @param slab        Pointer to the live ::slab_t instance to restore.
+ * @param buffer      Pointer to the snapshot buffer previously filled by
+ *                    ::save_slab().
+ * @param buffer_size Size of @p buffer in bytes.
+ *
+ * @retval true  Slab successfully restored from the snapshot.
+ * @retval false Invalid arguments, insufficient buffer, or geometry mismatch;
+ *               errno set to EINVAL or ERANGE.
+ */
 bool restore_slab(slab_t *slab,
                   const void *buffer,
                   size_t buffer_size);
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Format human-readable statistics for a slab allocator.
+ *
+ * Writes a textual summary of the slab allocator referenced by @p slab into
+ * the caller-provided character buffer @p buffer. The summary includes
+ * geometry (object size, slot stride, alignment, page size), capacity,
+ * usage, block counts, utilization, and a per-page listing.
+ *
+ * The output is intended for debugging, logging, and diagnostic tools. It
+ * is not meant to be parsed programmatically.
+ *
+ * @par Buffer Semantics
+ * - @p buffer must be non-NULL.
+ * - @p buffer_size must be greater than 0.
+ * - Output is appended using ::_buf_appendf(), which ensures that the buffer
+ *   is not overrun and that it is always NUL-terminated on success.
+ *
+ * If @p slab is NULL, the function writes:
+ *
+ * @code
+ * Slab: NULL\n
+ * @endcode
+ *
+ * to @p buffer and returns true.
+ *
+ * @par Reported Fields
+ * The function reports, among others:
+ *
+ *  - Object size (bytes)
+ *  - Slot stride (bytes)
+ *  - Alignment (bytes)
+ *  - Page size (bytes) and page header bytes
+ *  - Page count
+ *  - Blocks per page and total blocks
+ *  - In-use blocks
+ *  - Free blocks (geometric, derived from totals)
+ *  - Free blocks (counted from free list, for cross-check)
+ *  - Used bytes, capacity bytes, remaining bytes
+ *  - Total footprint (including slab_t struct)
+ *  - Utilization percentage (used / capacity)
+ *  - Per-page summary: size and block count for each page
+ *
+ * @par Error Handling
+ * - If @p buffer is NULL or @p buffer_size is 0, the function returns false
+ *   and sets errno = EINVAL.
+ * - If @p slab is NULL, a simple "Slab: NULL" line is written and the
+ *   function returns true (no error).
+ * - If any call to ::_buf_appendf() fails (e.g., due to insufficient space),
+ *   the function returns false. errno is not modified by ::slab_stats()
+ *   in that case; callers may consult their own logging or wrap _buf_appendf.
+ *
+ * @par Example
+ * @code{.c}
+ * #include <stdio.h>
+ *
+ * void dump_slab_stats(const slab_t *slab) {
+ *     char buf[1024];
+ *
+ *     if (!slab_stats(slab, buf, sizeof(buf))) {
+ *         perror("slab_stats");
+ *         return;
+ *     }
+ *
+ *     // Print the formatted statistics.
+ *     fputs(buf, stdout);
+ * }
+ *
+ * int main(void) {
+ *     buddy_t *buddy = init_buddy_allocator(1<<20, 64, 0);
+ *     if (!buddy) {
+ *         perror("init_buddy_allocator");
+ *         return 1;
+ *     }
+ *
+ *     slab_t *slab = init_slab_allocator(
+ *         buddy,
+ *         sizeof(int),           // object size
+ *         alignof(int),          // alignment
+ *         0                      // let slab choose page size
+ *     );
+ *     if (!slab) {
+ *         perror("init_slab_allocator");
+ *         free_buddy(buddy);
+ *         return 1;
+ *     }
+ *
+ *     // Use the slab: allocate a few ints.
+ *     int *a = alloc_slab(slab, true);
+ *     int *b = alloc_slab(slab, true);
+ *     if (a) *a = 42;
+ *     if (b) *b = 7;
+ *
+ *     // Dump statistics to stdout.
+ *     dump_slab_stats(slab);
+ *
+ *     // Clean up.
+ *     return_slab(slab, a);
+ *     return_slab(slab, b);
+ *     reset_slab(slab);
+ *     free_buddy(buddy);
+ *
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @param slab         Pointer to an initialized ::slab_t instance, or NULL.
+ * @param buffer       Output buffer for the formatted statistics string.
+ * @param buffer_size  Size of @p buffer in bytes.
+ *
+ * @retval true  Statistics successfully written into @p buffer.
+ * @retval false Invalid arguments or buffer too small for _buf_appendf();
+ *               errno is set to EINVAL when arguments are invalid.
+ */
 bool slab_stats(const slab_t *slab, char *buffer, size_t buffer_size);
 // -------------------------------------------------------------------------------- 
 
@@ -6266,39 +7115,34 @@ static inline void *slab_v_alloc_aligned(void *ctx, size_t size,
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Vtable adapter for slab reallocation.
+ * @brief Vtable adapter for slab reallocation (not supported).
  *
- * Resizes a block of memory previously allocated from the slab allocator
- * referenced by @p ctx. Because a slab has a fixed capacity per slot,
- * exposed via ::slab_stride(), this reallocation is limited:
+ * Slab allocators manage fixed-size objects and do not support resizing
+ * individual allocations. This adapter exists only to satisfy the
+ * @ref realloc_prototype interface; it does not perform any reallocation.
  *
- *  - @p new_size must be greater than 0 and less than or equal to
- *    ::slab_stride().
- *  - The pointer is always reused in place; no new allocation is performed.
- *  - If @p new_size > @p old_size and @p zeroed is true, the additional
- *    bytes in [old_size, new_size) are zeroed.
- *  - If @p new_size exceeds the slot capacity, the function fails with
- *    errno = ENOMEM and returns NULL; the caller must keep using @p old_ptr.
+ * Semantics:
  *
- * Special cases:
+ *  - If @p old_ptr is NULL, the function returns NULL and performs no action.
+ *  - If @p old_ptr is non-NULL, the function simply returns @p old_ptr
+ *    unchanged, regardless of @p old_size, @p new_size, or @p zeroed.
+ *  - No new memory is allocated, no memory is freed, and errno is not
+ *    modified by this function.
  *
- *  - `slab_v_realloc(ctx, NULL, 0, new_size, zeroed)` behaves like
- *    ::slab_v_alloc().
- *  - `slab_v_realloc(ctx, old_ptr, old_size, 0, zeroed)` returns the object
- *    to the slab via ::return_slab() and returns NULL.
+ * Callers must not rely on standard realloc semantics when using a slab
+ * allocator via this vtable. To change the logical size associated with
+ * an object, the caller is responsible for allocating a new object via
+ * ::slab_v_alloc() (or the underlying ::alloc_slab()) and performing any
+ * data copying and deallocation explicitly.
  *
- * This function implements the @ref realloc_prototype interface for
- * slab-backed allocators, with the constraint that blocks cannot grow beyond
- * the slab's fixed slot capacity.
- *
- * @param ctx       Pointer to a slab_t instance.
+ * @param ctx       Pointer to a slab_t instance (unused).
  * @param old_ptr   Pointer to the existing allocation (may be NULL).
- * @param old_size  Logical size of the existing allocation.
- * @param new_size  Requested new logical size.
- * @param zeroed    Whether any expanded portion must be zero-initialized.
+ * @param old_size  Logical size of the existing allocation (ignored).
+ * @param new_size  Requested new logical size (ignored).
+ * @param zeroed    Whether any expanded portion must be zero-initialized
+ *                  (ignored).
  *
- * @retval void* Pointer to the (possibly unchanged) allocation on success.
- * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ * @retval void* @p old_ptr, unchanged. May be NULL if @p old_ptr was NULL.
  */
 static inline void *slab_v_realloc(void *ctx, void *old_ptr,
                                    size_t old_size, size_t new_size,
@@ -6309,36 +7153,36 @@ static inline void *slab_v_realloc(void *ctx, void *old_ptr,
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Vtable adapter for aligned slab reallocation.
+ * @brief Vtable adapter for aligned slab reallocation (not supported).
  *
- * Resizes a block previously allocated from the slab allocator referenced
- * by @p ctx, enforcing a minimum alignment of @p align. As with
- * ::slab_v_realloc(), this is limited by the slab's fixed slot capacity and
- * fixed alignment (exposed via ::slab_stride() and ::slab_alignment()):
+ * As with ::slab_v_realloc(), slab allocators do not support resizing
+ * existing allocations, even when an explicit alignment is requested.
+ * This function exists solely to satisfy the @ref realloc_aligned_prototype
+ * interface for slab-backed allocators.
  *
- *  - @p new_size must be > 0 and <= slot capacity, or the call fails with
- *    ENOMEM.
- *  - @p align must be 0 (natural) or <= slab alignment, or the call fails
- *    with EINVAL.
- *  - Reallocation always reuses the same pointer in place; no new allocation
- *    is performed.
+ * Semantics:
  *
- * Special cases:
+ *  - If @p old_ptr is NULL, the function returns NULL and performs no action.
+ *  - If @p old_ptr is non-NULL, the function simply returns @p old_ptr
+ *    unchanged, regardless of @p old_size, @p new_size, @p zeroed, or
+ *    @p align.
+ *  - No new memory is allocated, no memory is freed, alignment is not
+ *    changed, and errno is not modified by this function.
  *
- *  - `slab_v_realloc_aligned(ctx, NULL, 0, new_size, zeroed, align)` behaves
- *    like ::slab_v_alloc_aligned().
- *  - `slab_v_realloc_aligned(ctx, old_ptr, old_size, 0, zeroed, align)`
- *    frees @p old_ptr via ::return_slab() and returns NULL.
+ * Callers that require true reallocation semantics must implement them
+ * explicitly on top of the slab interface (allocate a new object of the
+ * desired size/alignment, copy data as needed, and return the old object
+ * via ::slab_v_return() / ::return_slab()).
  *
- * @param ctx       Pointer to a slab_t instance.
+ * @param ctx       Pointer to a slab_t instance (unused).
  * @param old_ptr   Pointer to the existing allocation (may be NULL).
- * @param old_size  Logical size of the existing allocation.
- * @param new_size  Requested new size.
- * @param zeroed    Whether any expanded portion must be zero-initialized.
- * @param align     Required alignment (0 for natural, or <= slab alignment).
+ * @param old_size  Logical size of the existing allocation (ignored).
+ * @param new_size  Requested new size (ignored).
+ * @param zeroed    Whether any expanded portion must be zero-initialized
+ *                  (ignored).
+ * @param align     Required alignment (ignored).
  *
- * @retval void* Pointer to the (possibly unchanged) allocation on success.
- * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ * @retval void* @p old_ptr, unchanged. May be NULL if @p old_ptr was NULL.
  */
 static inline void *slab_v_realloc_aligned(void *ctx, void *old_ptr,
                                            size_t old_size, size_t new_size,
@@ -6395,6 +7239,42 @@ static inline void slab_v_free(void *ctx) {
     }
     (void)reset_slab(slab);
 }
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Constructs an allocator_vtable_t for a given slab allocator.
+ *
+ * This helper initializes an allocator_vtable_t that exposes a ::slab_t
+ * instance through the generic allocator interface. All operations
+ * (allocate, reallocate, deallocate, etc.) are forwarded to the
+ * slab-backed vtable adapter functions.
+ *
+ * Because a slab has fixed slot capacity and alignment, allocation and
+ * reallocation requests are subject to additional constraints:
+ *
+ *  - The requested size must be > 0 and <= ::slab_stride().
+ *  - The requested alignment must be 0 or <= ::slab_alignment().
+ *  - Reallocation cannot grow blocks beyond the slot capacity; attempts
+ *    to do so fail with errno = ENOMEM and return NULL (the caller keeps
+ *    the original pointer).
+ *
+ * @param slab Pointer to a slab_t instance to use as the allocator backend.
+ *
+ * @return A fully initialized allocator_vtable_t bound to @p slab.
+ */
+static inline allocator_vtable_t slab_allocator(slab_t *slab) {
+    allocator_vtable_t v = {
+        .allocate           = slab_v_alloc,
+        .allocate_aligned   = slab_v_alloc_aligned,
+        .reallocate         = slab_v_realloc,
+        .reallocate_aligned = slab_v_realloc_aligned,
+        .return_element     = slab_v_return,
+        .deallocate         = slab_v_free,
+        .ctx                = slab
+    };
+    return v;
+}
+
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
