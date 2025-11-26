@@ -48,6 +48,9 @@ Examples include:
 * frame-based game engine or graphical workloads
 * scratch space for iterative scientific computations
 
+It is also appropriate to use a single arena for program lifecycle 
+memory managent if sufficient memory exists for the application.
+
 Benefits
 --------
 
@@ -102,7 +105,7 @@ next ``Chunk`` data structure.
 arena_t 
 ~~~~~~~
 ``arena_t`` is an opaque data structure that can not be directly accessed by a user.
-This structure contains all of the metadata associated with a bump allocator in 
+This structure contains all of the metadata associated with a bump allocator, in 
 additon, this structure also contains pointers to the head and tail ``Chunk`` structures 
 which contain all memory allocations.  Metadata within this struct can be accessed 
 through getter functions.
@@ -129,7 +132,7 @@ through getter functions.
 ArenaCheckPoint 
 ~~~~~~~~~~~~~~~
 ``ArenaCheckPoint`` is an opaque data structure that is used to store data 
-related to a bump allocator.  ``The restore_arena`` function can extract the data from 
+related to a bump allocator.  The ``restore_arena()`` function can extract the data from 
 this structure to reconstitute a bump allocator.  This struct is defined as 
 ``ArenaCheckPoint`` in the .c file and ``ArenaCheckPointRep`` in the .h file.
 
@@ -144,7 +147,10 @@ this structure to reconstitute a bump allocator.  This struct is defined as
 Initialization and Memory Management
 ------------------------------------
 The functions in this section can be used to initialize memory for a bump allocator,
-parse that memory to variables and to deallocate the memory.
+parse that memory to variables and to deallocate the memory. The csalt library restricts 
+the user to a maximum heap allocation of 16 MB per chunk, which is sufficient for most  
+applications.  Larger memory allocations for engineering calculations (i.e. 1400 x 1400 matrices)
+will require a different custom allocator.
 
 init_dynamic_arena 
 ~~~~~~~~~~~~~~~~~~

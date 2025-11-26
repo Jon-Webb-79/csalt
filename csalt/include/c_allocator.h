@@ -363,7 +363,6 @@ arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size
  *
  * // Tear-down: STATIC arena does not own 'buf'.
  * // free_arena(a) should NOT free 'buf'; many implementations make it a no-op or set errno=EPERM.
- * free(buf);
  * @endcode
  *
  * @par Example: Intentionally unaligned buffer
@@ -448,10 +447,12 @@ arena_t* init_arena_with_arena(arena_t* parent,
  *
  * This helper calls:
  *
+ * @code{.c}
  *   init_dynamic_arena(bytes,
  *                      resize,
  *                      4096u,
  *                      alignof(max_align_t));
+ * @endcode
  *
  * Use it when you want a dynamic (heap-growing) arena with a reasonable
  * minimum chunk size (4 KiB) and a base alignment of at least
@@ -495,9 +496,11 @@ arena_t* init_darena(size_t bytes, bool resize);
  *
  * This helper calls:
  *
+ * @code{.c}
  *   init_static_arena(buffer,
  *                     bytes,
  *                     alignof(max_align_t));
+ * @endcode
  *
  * Use it when you want an in-place, non-heap (STATIC) arena built inside a caller-supplied
  * buffer, with the data region aligned to at least @c alignof(max_align_t). If you require
