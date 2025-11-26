@@ -16,6 +16,7 @@ Working with real and integer values in C presents several challenges in modern 
 The ``csalt`` library addresses these challenges by providing four primary containers 
 for all basic c data types:
 
+* A set of custom allocator types to support ease of memory management with a reduction in overhead calls to ``malloc``, ``calloc``, ``realloc`` and ``free``
 * A dynamically allocated vector that automatically manages memory and resizing
 * A safe wrapper for static arrays with bounds checking
 * A dictionary implementation for mapping strings to primitive data types 
@@ -60,10 +61,19 @@ guard ``#ifdef __cplusplus`` to allow compilation with both C and C++.
 Implementation Details
 ######################
 
-The library provides five main container types:
+The library provides these main container types:
 
-String 
-------
+Allocators
+----------
+
+* Fast linear bump-pointer allocation (``arena_t``)
+* Fixed-size block allocator for small, uniform objects (``pool_t``)
+* Variable-sized returnable free list allocator (``free_list_t``)
+* Power-of-two buddy allocator (``buddy_t``) 
+* High-throughput slab allocator for fixed-size objects (``slab_t``)
+
+String  (``string_t``)
+----------------------
 * A dynamically allocated string implementation 
 * Automatically manages memory during string operations 
 * Provides functions for standard string operations 

@@ -1,8 +1,8 @@
-*****
-CSalt
-*****
-EADME.rst
+*************
+CSalt Library 
+*************
 
+Working with real and integer values in C presents several challenges in modern software development:
 
 * Manual memory management for arrays can lead to memory leaks and buffer overflows
 * Static arrays require compile-time size decisions that may not suit runtime needs
@@ -13,6 +13,7 @@ EADME.rst
 The ``csalt`` library addresses these challenges by providing four primary containers 
 for all basic c data types:
 
+* A set of custom allocator types to support ease of memory management with a reduction in overhead calls to ``malloc``, ``calloc``, ``realloc`` and ``free``
 * A dynamically allocated vector that automatically manages memory and resizing
 * A safe wrapper for static arrays with bounds checking
 * A dictionary implementation for mapping strings to primitive data types 
@@ -54,10 +55,19 @@ target platform, including:
 Implementation Details
 ######################
 
-The library provides five main container types:
+The library provides these container types:
 
-String 
-------
+Allocators
+----------
+
+* Fast linear bump-pointer allocation (``arena_t``)
+* Fixed-size block allocator for small, uniform objects (``pool_t``)
+* Variable-sized returnable free list allocator (``free_list_t``)
+* Power-of-two buddy allocator (``buddy_t``) 
+* High-throughput slab allocator for fixed-size objects (``slab_t``)
+
+String ``string_t``
+-----------------
 * A dynamically allocated string implementation 
 * Automatically manages memory during string operations 
 * Provides functions for standard string operations 
