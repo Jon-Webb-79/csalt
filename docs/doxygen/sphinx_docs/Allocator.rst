@@ -176,6 +176,18 @@ init_arena_with_arena
 .. doxygenfunction:: init_arena_with_arena
    :project: csalt
 
+init_arena_with_buddy 
+~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: init_arena_with_buddy
+   :project: csalt
+
+return_arena_with_buddy 
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: return_arena_with_buddy
+   :project: csalt
+
 free_arena
 ~~~~~~~~~~
 

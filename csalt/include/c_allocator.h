@@ -4889,6 +4889,157 @@ void *alloc_buddy(buddy_t *b, size_t size, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
+ * @brief Initialize an arena_t backed by a buddy allocator region.
+ *
+ * This function creates an arena_t that lives entirely inside a single
+ * allocation obtained from the given @p buddy allocator. The buddy allocation
+ * is used to store:
+ *
+ *   - the arena_t header itself,
+ *   - a single Chunk header, and
+ *   - the arena's usable data region.
+ *
+ * The pointer returned by this function is:
+ *
+ *   - the address of the arena_t object, and
+ *   - exactly the same pointer that was returned by alloc_buddy().
+ *
+ * This is important: when the arena is no longer needed, the entire region
+ * (arena_t + Chunk + data) must be returned to the buddy allocator using
+ * return_arena_with_buddy(), which internally calls return_buddy_element()
+ * with the arena pointer.
+ *
+ * The @p bytes parameter specifies how many bytes of the buddy pool should
+ * be reserved for this arena. Within that region, the arena places its
+ * metadata and aligns the remaining data area to @p base_align_in. The
+ * arena's @c alloc field reflects the size of the usable data region, while
+ * @c tot_alloc records the full sub-region size (@p bytes).
+ *
+ * The @p base_align_in parameter specifies the per-arena alignment for
+ * allocations made via alloc_arena(). If @p base_align_in is zero, it
+ * defaults to alignof(max_align_t). Non–power-of-two values are rounded up
+ * to the next power of two, and a minimum of alignof(max_align_t) is
+ * enforced.
+ *
+ * On success, the returned arena_t has:
+ *
+ *   - @c mem_type set to @c DYNAMIC (or a dedicated "buddy-backed" tag if
+ *     you define one),
+ *   - @c resize set to 0 (fixed capacity, no growth), and
+ *   - @c owns_memory set to 0 (the buddy allocator owns the underlying
+ *     memory).
+ *
+ * The caller must not free this arena via free_arena(). Instead, the entire
+ * region must be returned using return_arena_with_buddy().
+ *
+ * On failure, this function returns NULL and sets errno:
+ *
+ *   - EINVAL if:
+ *       - @p buddy is NULL,
+ *       - @p bytes is zero,
+ *       - the requested alignment cannot be normalized to a valid value,
+ *       - the requested sub-region cannot accommodate arena_t, Chunk, and
+ *         at least one usable data byte, or
+ *       - internal size/alignment checks fail.
+ *   - ENOMEM if alloc_buddy() fails to provide the requested region.
+ *
+ * If a buddy allocation was acquired but a subsequent layout check fails,
+ * the region is returned to the buddy allocator via return_buddy_element()
+ * before NULL is returned.
+ *
+ * @param buddy         Pointer to a valid buddy_t allocator instance.
+ * @param bytes         Size of the sub-region to reserve from @p buddy for
+ *                      this arena (including metadata and data).
+ * @param base_align_in Desired per-arena alignment for allocations made via
+ *                      alloc_arena(); 0 means "use alignof(max_align_t)".
+ *
+ * @retval arena_t* Pointer to a fully initialized arena_t on success.
+ * @retval NULL     On failure, with errno set as described above.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096u, 64u, alignof(max_align_t));
+ * if (!b) { // handle error }
+ *
+ * arena_t *a = init_arena_with_buddy(b, 1024u, alignof(max_align_t));
+ * if (!a) { // handle error }
+ *
+ * // Use 'a' as a normal arena:
+ * void *p = alloc_arena(a, 128u, true);
+ * if (!p) { // handle error }
+ *
+ * // When done with this arena region:
+ * if (!return_arena_with_buddy(a, b)) {
+ *     // handle error
+ * }
+ *
+ * free_buddy(b);
+ * @endcode
+ */
+arena_t* init_arena_with_buddy(buddy_t* buddy, size_t bytes, size_t base_align_in);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a buddy-backed arena region to its buddy allocator.
+ *
+ * This function returns the entire memory region associated with an arena
+ * created by init_arena_with_buddy() back to the underlying buddy allocator.
+ *
+ * The @p arena pointer must be the same pointer that was originally returned
+ * by init_arena_with_buddy(), which is also the user pointer obtained from
+ * alloc_buddy(). The function treats @p arena as a single buddy allocation
+ * and returns it via return_buddy_element().
+ *
+ * After a successful call:
+ *
+ *   - the memory containing @p arena, its Chunk header, and the arena's
+ *     data region is returned to @p buddy, and
+ *   - the @p arena pointer becomes invalid and must not be dereferenced.
+ *
+ * This function is intended only for arenas that do not own their memory
+ * independently. If @p arena->owns_memory is non-zero, the function refuses
+ * to proceed and fails with EPERM.
+ *
+ * On failure, the function returns false and sets errno:
+ *
+ *   - EINVAL if @p arena or @p buddy is NULL.
+ *   - EPERM if @p arena->owns_memory is non-zero, indicating the arena was
+ *     not intended to be freed via the buddy allocator.
+ *   - Any errno set by is_buddy_ptr_sized() if that validation fails. In
+ *     this case, no memory is returned to the buddy allocator.
+ *
+ * On success, return_buddy_element() is called with @p arena, and its return
+ * value is propagated to the caller. In that case, the memory region is
+ * considered freed from the arena's perspective.
+ *
+ * @param arena Pointer to an arena_t instance that was created by
+ *              init_arena_with_buddy().
+ * @param buddy Pointer to the buddy_t allocator that originally provided
+ *              the backing memory.
+ *
+ * @retval true  On success; the region has been returned to @p buddy and
+ *               @p arena is no longer valid.
+ * @retval false On failure, with errno set as described above.
+ *
+ * @code{.c}
+ * buddy_t *b = init_buddy_allocator(4096u, 64u, alignof(max_align_t));
+ * if (!b) { // handle error }
+ *
+ * arena_t *a = init_arena_with_buddy(b, 1024u, alignof(max_align_t));
+ * if (!a) { // handle error }
+ *
+ * // Use 'a' for various arena allocations...
+ *
+ * if (!return_arena_with_buddy(a, b)) {
+ *     // handle error; memory not returned to buddy
+ * }
+ *
+ * free_buddy(b);
+ * @endcode
+ */
+bool return_arena_with_buddy(arena_t *arena, buddy_t *buddy);
+// -------------------------------------------------------------------------------- 
+
+/**
  * @brief Allocate an aligned memory block from a buddy allocator.
  *
  * This function allocates @p size bytes from the buddy allocator @p b,
@@ -7284,8 +7435,3 @@ static inline allocator_vtable_t slab_allocator(slab_t *slab) {
 // ================================================================================
 // ================================================================================
 // eof
-//
-// TODO: Look at changes necessary for multi-core and multi-processing systems
-// TODO: Add Buddy Allocator 
-// TODO: Add Slab allocator 
-// TODO: ADD two level segregated fit allocator 

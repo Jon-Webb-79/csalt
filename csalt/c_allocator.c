@@ -466,6 +466,133 @@ arena_t* init_sarena(void* buffer, size_t bytes) {
 }
 // -------------------------------------------------------------------------------- 
 
+arena_t* init_arena_with_buddy(buddy_t* buddy,
+                               size_t  bytes,
+                               size_t  base_align_in) {
+    if (!buddy || bytes == 0) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Normalize per-arena base alignment (>= alignof(max_align_t), power of two)
+    size_t base_align = base_align_in ? base_align_in : alignof(max_align_t);
+    if (!_is_pow2(base_align)) {
+        base_align = _next_pow2(base_align);
+        if (!base_align) {
+            errno = EINVAL;
+            return NULL;
+        }
+    }
+    if (base_align < alignof(max_align_t)) {
+        base_align = alignof(max_align_t);
+    }
+
+    // Single allocation from buddy for entire arena region.
+    // This 'buffer' will also be where we place arena_t.
+    void* buffer = alloc_buddy(buddy, bytes, false);
+    if (!buffer) {
+        // errno set by alloc_buddy (e.g., ENOMEM)
+        return NULL;
+    }
+
+    uintptr_t const b     = (uintptr_t)buffer;
+    uintptr_t const b_end = b + bytes;
+
+    // Place arena_t exactly at the buddy user pointer.
+    uintptr_t p_arena = b;
+
+    // Sanity: must have room for arena_t + Chunk at minimum.
+    if ((b_end - p_arena) < (sizeof(arena_t) + sizeof(Chunk))) {
+        errno = EINVAL;
+        (void)return_buddy_element(buddy, buffer);
+        return NULL;
+    }
+
+    uintptr_t arena_end = p_arena + sizeof(arena_t);
+    if (arena_end < p_arena || arena_end > b_end) {
+        errno = EINVAL;
+        (void)return_buddy_element(buddy, buffer);
+        return NULL;
+    }
+
+    // Place Chunk header aligned for Chunk
+    uintptr_t p_chunk   = _align_up_uintptr(arena_end, alignof(Chunk));
+    uintptr_t chunk_end = p_chunk + sizeof(Chunk);
+    if (chunk_end < p_chunk || chunk_end > b_end) {
+        errno = EINVAL;
+        (void)return_buddy_element(buddy, buffer);
+        return NULL;
+    }
+
+    // Place data aligned to per-arena base alignment
+    uintptr_t p_data = _align_up_uintptr(chunk_end, base_align);
+    if (p_data > b_end) {
+        errno = EINVAL;
+        (void)return_buddy_element(buddy, buffer);
+        return NULL;
+    }
+
+    size_t usable = (size_t)(b_end - p_data);
+    if (usable == 0u) {
+        errno = EINVAL;
+        (void)return_buddy_element(buddy, buffer);
+        return NULL;
+    }
+
+    // Stitch in-place
+    arena_t* a = (arena_t*)p_arena;
+    Chunk*  h = (Chunk*)p_chunk;
+
+    h->chunk = (uint8_t*)p_data;
+    h->len   = 0u;
+    h->alloc = usable;
+    h->next  = NULL;
+
+    a->head      = h;
+    a->tail      = h;
+    a->cur       = (uint8_t*)p_data;
+    a->len       = 0u;
+    a->alloc     = usable;     // total usable data bytes
+    a->tot_alloc = bytes;      // entire region visible to the arena
+    a->min_chunk = 0u;         // no dynamic growth from this arena
+    a->alignment = base_align;
+
+    a->mem_type    = (uint8_t)DYNAMIC;
+    a->resize      = 0u;               // fixed-capacity arena
+    a->owns_memory = 0u;               // buddy owns the underlying memory
+
+    // IMPORTANT: 'a' is exactly the buddy user pointer (buffer).
+    // That means we can later call return_buddy_element(buddy, a).
+
+    return a;
+}
+// -------------------------------------------------------------------------------- 
+
+bool return_arena_with_buddy(arena_t *arena, buddy_t *buddy) {
+    if (!arena || !buddy) {
+        errno = EINVAL;
+        return false;
+    }
+
+    // This arena is supposed to be backed by a buddy allocator,
+    // and must *not* own its memory independently.
+    if (arena->owns_memory) {
+        errno = EPERM;
+        return false;
+    }
+
+    if (!is_buddy_ptr_sized(buddy, (const void *)arena, arena->tot_alloc)) {
+        // is_buddy_ptr_sized sets errno; you can override if you want:
+        // errno = EPERM;
+        return false;
+    }
+
+    // After this call, the entire region (arena_t + Chunk + data)
+    // is returned to the buddy allocator. 'arena' is invalid.
+    return return_buddy_element(buddy, (void *)arena);
+}
+// -------------------------------------------------------------------------------- 
+
 void free_arena(arena_t* arena) {
     if (arena == NULL) { errno = EINVAL; return; }
 
