@@ -3657,14 +3657,17 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
         return false;
     }
 
-    const uint8_t *p = (const uint8_t *)ptr;
+    const uint8_t *p          = (const uint8_t *)ptr;
+    const uint8_t *pool_start = (const uint8_t *)b->base;
+    const uint8_t *pool_end   = pool_start + b->pool_size;
 
-    /* Step 1: Header must be directly before user pointer */
-    if (p < (uint8_t *)b->base + sizeof(buddy_header_t)) {
+    /* Step 0: ptr must lie inside the buddy pool's user range. */
+    if (p < pool_start + sizeof(buddy_header_t) || p >= pool_end) {
         errno = EINVAL;
         return false;
     }
 
+    /* Now it's safe to look at the header, which must be in the pool. */
     const buddy_header_t *hdr =
         (const buddy_header_t *)(p - sizeof(buddy_header_t));
 
@@ -3689,7 +3692,7 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
     }
 
     /* Step 5: user pointer must lie inside the block */
-    const uint8_t *block_start = (const uint8_t *)b->base + hdr->block_offset;
+    const uint8_t *block_start = pool_start + hdr->block_offset;
     const uint8_t *block_end   = block_start + block_size;
 
     if (p < block_start + sizeof(buddy_header_t) || p >= block_end) {
@@ -3700,6 +3703,56 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
     /* Everything checks out */
     return true;
 }
+//
+// bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
+//     if (!b || !ptr) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     const uint8_t *p = (const uint8_t *)ptr;
+//
+//     /* Step 1: Header must be directly before user pointer */
+//     if (p < (uint8_t *)b->base + sizeof(buddy_header_t)) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     const buddy_header_t *hdr =
+//         (const buddy_header_t *)(p - sizeof(buddy_header_t));
+//
+//     /* Step 2: order must be valid */
+//     if (hdr->order < b->min_order || hdr->order > b->max_order) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     size_t block_size = (size_t)1u << hdr->order;
+//
+//     /* Step 3: block_offset must be within pool */
+//     if (hdr->block_offset + block_size > b->pool_size) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     /* Step 4: the block must be aligned correctly */
+//     if (hdr->block_offset & (block_size - 1u)) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     /* Step 5: user pointer must lie inside the block */
+//     const uint8_t *block_start = (const uint8_t *)b->base + hdr->block_offset;
+//     const uint8_t *block_end   = block_start + block_size;
+//
+//     if (p < block_start + sizeof(buddy_header_t) || p >= block_end) {
+//         errno = EINVAL;
+//         return false;
+//     }
+//
+//     /* Everything checks out */
+//     return true;
+// }
 // -------------------------------------------------------------------------------- 
 
 bool is_buddy_ptr_sized(const buddy_t *b, const void *ptr, size_t size) {

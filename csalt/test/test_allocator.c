@@ -1599,6 +1599,77 @@ static void test_sub_arena_independent_allocations(void **state) {
     
     free_arena(parent);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_init_arena_with_buddy_invalid_args(void **state) {
+    (void)state;
+
+    size_t const pool_size   = 4096u;
+    size_t const min_block   = 64u;
+    size_t const buddy_align = alignof(max_align_t);
+
+    buddy_t *buddy = init_buddy_allocator(pool_size, min_block, buddy_align);
+    assert_non_null(buddy);
+
+    /* NULL buddy should fail with EINVAL. */
+    errno = 0;
+    arena_t *arena = init_arena_with_buddy(NULL, 512u, alignof(max_align_t));
+    assert_null(arena);
+    assert_int_equal(errno, EINVAL);
+
+    /* Zero bytes should fail with EINVAL. */
+    errno = 0;
+    arena = init_arena_with_buddy(buddy, 0u, alignof(max_align_t));
+    assert_null(arena);
+    assert_int_equal(errno, EINVAL);
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_return_arena_with_buddy_roundtrip(void **state) {
+    (void)state;
+
+    size_t const pool_size   = 4096u;
+    size_t const min_block   = 64u;
+    size_t const buddy_align = alignof(max_align_t);
+
+    buddy_t *buddy = init_buddy_allocator(pool_size, min_block, buddy_align);
+    assert_non_null(buddy);
+
+    size_t const arena_bytes = 512u;
+
+    errno = 0;
+    arena_t *arena = init_arena_with_buddy(buddy, arena_bytes, alignof(max_align_t));
+    assert_non_null(arena);
+
+    /* Use the arena for one or two allocations. */
+    void *p1 = alloc_arena(arena, 128u, false);
+    void *p2 = alloc_arena(arena, 64u,  false);
+    assert_non_null(p1);
+    assert_non_null(p2);
+
+    /* Now return the entire arena region back to the buddy allocator. */
+    errno = 0;
+    bool ok = return_arena_with_buddy(arena, buddy);
+    assert_true(ok);
+
+    /* After this, 'arena' is invalid and must not be dereferenced. */
+
+    /* We should now be able to allocate another region of similar size
+       from the buddy allocator again. This indirectly proves that the
+       previous region was successfully returned.
+     */
+    errno = 0;
+    void *raw = alloc_buddy(buddy, arena_bytes, false);
+    assert_non_null(raw);
+
+    /* Give that block back as well to leave buddy in a clean state. */
+    ok = return_buddy_element(buddy, raw);
+    assert_true(ok);
+
+    free_buddy(buddy);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1675,6 +1746,9 @@ const struct CMUnitTest test_arena[] = {
     cmocka_unit_test(test_sub_arena_stats),
     cmocka_unit_test(test_sub_arena_checkpoint_restore),
     cmocka_unit_test(test_sub_arena_independent_allocations),
+
+    cmocka_unit_test(test_init_arena_with_buddy_invalid_args),
+    cmocka_unit_test(test_return_arena_with_buddy_roundtrip),
 };
 
 const size_t test_arena_count = sizeof(test_arena) / sizeof(test_arena[0]);
