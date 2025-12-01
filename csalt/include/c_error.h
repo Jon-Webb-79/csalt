@@ -19,6 +19,19 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+
+#ifndef ARENA_USE_CONVENIENCE_MACROS
+#  ifdef NO_FUNCTION_MACROS
+#    define ARENA_USE_CONVENIENCE_MACROS 0
+#  else
+#    define ARENA_USE_CONVENIENCE_MACROS 1
+#  endif
+#endif
+
+/* Sanity: if someone set both, ensure consistency */
+#if defined(NO_ARENA_MACROS) && (ARENA_USE_CONVENIENCE_MACROS+0)!=0
+#  error "NO_ARENA_MACROS set but ARENA_USE_CONVENIENCE_MACROS != 0"
+#endif
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -421,6 +434,184 @@ int set_errno_from_error(ErrorCode code);
  * @endcode
  */
 ErrorCode error_from_errno(int e);
+// ================================================================================ 
+// ================================================================================ 
+
+#if ARENA_USE_CONVENIENCE_MACROS
+/**
+ * @def DEFINE_EXPECTED_TYPE(name, T)
+ * @brief Defines a tagged-union "expected<T>" type similar to C++23 `std::expected`.
+ *
+ * This macro declares a struct named @p name that represents either:
+ *   - a successfully produced value of type @p T, or  
+ *   - an error of type ::ErrorCode.
+ *
+ * Internally, the struct contains:
+ *   - `bool has_value` — indicates whether the union currently stores a value
+ *   - `union { T value; ErrorCode error; } u` — holds either the success value or error
+ *
+ * The tag `has_value` **must** be checked before accessing `u.value` or `u.error`.
+ *
+ * @code{.c}
+ * // Define an expected type for integers
+ * DEFINE_EXPECTED_TYPE(expected_int_t, int);
+ *
+ * // A function that returns expected_int_t
+ * expected_int_t safe_divide(int a, int b) {
+ *     if (b == 0) {
+ *         return EXPECTED_ERR(expected_int_t, DIV_BY_ZERO);
+ *     }
+ *     return EXPECTED_OK(expected_int_t, a / b);
+ * }
+ *
+ * // Using the expected type
+ * expected_int_t r = safe_divide(10, 2);
+ *
+ * if (!r.has_value) {
+ *     printf("Error: %d\n", r.u.error);
+ * } else {
+ *     printf("Result: %d\n", r.u.value);
+ * }
+ * @endcode
+ */
+#define DEFINE_EXPECTED_TYPE(name, T)            \
+    typedef struct name {                        \
+        bool has_value;                          \
+        union {                                  \
+            T value;                             \
+            ErrorCode error;                     \
+        } u;                                     \
+    } name
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @def EXPECTED_OK(TypeName, vexpr)
+ * @brief Constructs a success result for an expected-type value.
+ *
+ * Creates a temporary instance of the expected type @p TypeName with:
+ *   - `has_value = true`
+ *   - `u.value   = vexpr`
+ *
+ * This macro evaluates @p vexpr exactly once and is safe for side-effects.
+ *
+ * @code{.c}
+ * DEFINE_EXPECTED_TYPE(expected_float_t, float);
+ *
+ * expected_float_t sqrt_expected(float x) {
+ *     if (x < 0.0f) {
+ *         return EXPECTED_ERR(expected_float_t, DOMAIN_ERROR);
+ *     }
+ *     return EXPECTED_OK(expected_float_t, sqrtf(x));
+ * }
+ * @endcode
+ */
+#define EXPECTED_OK(TypeName, vexpr)          \
+    ((TypeName){ .has_value = true, .u.value = (vexpr) })
+// --------------------------------------------------------------------------------
+
+/**
+ * @def EXPECTED_ERR(TypeName, eexpr)
+ * @brief Constructs an error result for an expected-type value.
+ *
+ * Creates a temporary instance of the expected type @p TypeName with:
+ *   - `has_value = false`
+ *   - `u.error   = eexpr`
+ *
+ * This macro evaluates @p eexpr exactly once and sets the stored error code.
+ *
+ * @code{.c}
+ * DEFINE_EXPECTED_TYPE(expected_int_t, int);
+ *
+ * expected_int_t parse_int(const char *s) {
+ *     if (!s) {
+ *         return EXPECTED_ERR(expected_int_t, NULL_POINTER);
+ *     }
+ *
+ *     char *end = NULL;
+ *     long val = strtol(s, &end, 10);
+ *     if (end == s || *end != '\0') {
+ *         return EXPECTED_ERR(expected_int_t, PARSING_FAILED);
+ *     }
+ *
+ *     return EXPECTED_OK(expected_int_t, (int)val);
+ * }
+ * @endcode
+ */
+#define EXPECTED_ERR(TypeName, eexpr)         \
+    ((TypeName){ .has_value = false, .u.error = (eexpr) })
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @def EXPECTED_HAS_VALUE(r)
+ * @brief Checks whether an expected-type result holds a value or an error.
+ *
+ * This macro evaluates the tag field of an expected-type instance @p r.
+ * It returns `true` if the result contains a valid success value, or `false`
+ * if it contains an ::ErrorCode.
+ *
+ * This is the C equivalent of C++23 `std::expected::has_value()` or the
+ * implicit `operator bool()` check.
+ *
+ * @code{.c}
+ * DEFINE_EXPECTED_TYPE(expected_int_t, int);
+ *
+ * expected_int_t r = safe_divide(10, 0);
+ *
+ * if (!EXPECTED_HAS_VALUE(r)) {
+ *     printf("Error code: %d\n", EXPECTED_ERROR(r));
+ * } else {
+ *     printf("Quotient: %d\n", EXPECTED_VALUE(r));
+ * }
+ * @endcode
+ */
+#define EXPECTED_HAS_VALUE(r)   ((r).has_value)
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @def EXPECTED_VALUE(r)
+ * @brief Retrieves the value stored in an expected-type result.
+ *
+ * This macro extracts the success value from @p r.  
+ * **Only call this macro if `EXPECTED_HAS_VALUE(r)` is true.**
+ *
+ * Accessing the value when an error is present results in undefined behavior,
+ * as the union member `value` is not active.
+ *
+ * @code{.c}
+ * expected_int_t r = safe_divide(100, 4);
+ *
+ * if (EXPECTED_HAS_VALUE(r)) {
+ *     int v = EXPECTED_VALUE(r);   // OK
+ *     printf("Value = %d\n", v);
+ * } else {
+ *     // Handle error
+ * }
+ * @endcode
+ */
+#define EXPECTED_VALUE(r)       ((r).u.value)
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @def EXPECTED_ERROR(r)
+ * @brief Retrieves the error code stored in an expected-type result.
+ *
+ * This macro extracts the ::ErrorCode from @p r.
+ * **Only call this macro if `EXPECTED_HAS_VALUE(r)` is false.**
+ *
+ * Reading `u.error` when the success-value branch is active results in
+ * undefined behavior.
+ *
+ * @code{.c}
+ * expected_int_t r = safe_divide(10, 0);
+ *
+ * if (!EXPECTED_HAS_VALUE(r)) {
+ *     ErrorCode ec = EXPECTED_ERROR(r);
+ *     fprintf(stderr, "Operation failed: %d\n", ec);
+ * }
+ * @endcode
+ */
+#define EXPECTED_ERROR(r)       ((r).u.error)
+#endif /*ARENA_USE_CONVENIENCE_MACROS*/
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

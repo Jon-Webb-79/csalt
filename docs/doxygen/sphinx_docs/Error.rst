@@ -390,3 +390,52 @@ belongs to that category.
 
 .. doxygenfunction:: ec_is_gen
    :project: csalt
+
+Error Handling Marco 
+====================
+The library provides a small set of convenience macros to model C++23-style
+``std::expected<T, ErrorCode>`` in C. These macros are documented in detail
+in the C headers; this section simply exposes those docstrings into the
+Sphinx documentation.  If the user wishes to ommit macros for explicit type 
+performance, especially for scenarios where the code must meet MISRA standards 
+these macros can be omitted by compiling with the ``STATIC_ONLY`` flag.
+
+Each macro below is pulled directly from its Doxygen doc comment, so the
+authoritative description always lives alongside the implementation.
+Provide breif intro here.  
+
+DEFINE_EXPECTED_TYPE 
+--------------------
+
+.. doxygendefine:: DEFINE_EXPECTED_TYPE
+   :project: csalt
+
+EXPECTED_OK
+-----------
+
+.. doxygendefine:: EXPECTED_OK
+   :project: csalt
+
+EXPECTED_ERR 
+------------
+
+.. doxygendefine:: EXPECTED_ERR
+   :project: csalt
+
+EXPECTED_HAS_VALUE 
+------------------
+
+.. doxygendefine:: EXPECTED_HAS_VALUE
+   :project: csalt
+
+EXPECTED_VALUE 
+--------------
+
+.. doxygendefine:: EXPECTED_VALUE
+   :project: csalt
+
+EXPECTED_ERROR 
+--------------
+
+.. doxygendefine:: EXPECTED_ERROR
+   :project: csalt
