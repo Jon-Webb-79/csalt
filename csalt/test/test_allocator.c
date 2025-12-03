@@ -279,934 +279,978 @@ static void test_arena_double_free(void **state) {
     arena = NULL;
     free_arena(arena);
 }
-// // ================================================================================ 
-// // ================================================================================ 
-// // TEST ARENA ALLOC FUNCTIONS 
-//
-// // struct for test
-// typedef struct {
-//     float one;
-//     int two;
-// } test;
+// ================================================================================ 
+// ================================================================================ 
+// TEST ARENA ALLOC FUNCTIONS 
+
+// struct for test
+typedef struct {
+    float one;
+    int two;
+} test;
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_darena(void **state) {
+    (void) state;
+    arena_expect_t a = init_darena(10000, true);
+    assert_true(a.has_value);
+    arena_t* arena = a.u.value;
+    test* struct_val = (test*)alloc_arena(arena, sizeof(test), false);
+    int* value = (int*)alloc_arena(arena, sizeof(int), false);
+    struct_val->one = 3.4f;
+    struct_val->two = 3;
+    *value = 4;
+    assert_int_equal(*value, 4);
+    assert_int_equal(struct_val->two, 3);
+    assert_float_equal(struct_val->one, 3.4, 0.001);
+    size_t size = arena_size(arena);
+    size_t alloc = arena_alloc(arena);
+    size_t total_alloc = total_arena_alloc(arena);
+    size_t left_over = arena_remaining(arena);
+    assert_int_equal(size, 20);
+    assert_int_equal(alloc, 9888);
+    assert_int_equal(total_alloc, 10000);
+    assert_int_equal(left_over, 9868);
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_darena_zeroed(void **state) {
+    (void)state;
+    arena_expect_t a = init_darena(1000, true);
+    assert_true(a.has_value);
+    arena_t *arena = a.u.value;
+    assert_non_null(arena);
+
+    test* struct_val = alloc_arena(arena, sizeof *struct_val, true);
+    assert_non_null(struct_val);
+
+    // verify every byte (including padding) is zero
+    unsigned char zeros[sizeof *struct_val];
+    memset(zeros, 0, sizeof zeros);
+    assert_memory_equal(struct_val, zeros, sizeof *struct_val);
+
+    // …the rest of your test…
+    int* value = alloc_arena(arena, sizeof *value, false);
+    assert_non_null(value);
+
+    struct_val->one = 3.4f;
+    struct_val->two = 3;
+    *value = 4;
+
+    assert_int_equal(*value, 4);
+    assert_int_equal(struct_val->two, 3);
+    assert_float_equal(struct_val->one, 3.4, 0.001);
+
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_darena_null_value(void **state) {
+    (void) state;
+    int* value = alloc_arena(NULL, sizeof(*value), true);
+    assert_null(value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_darena_zero_input(void **state) {
+    arena_expect_t a = init_darena(10000, true);
+    assert_true(a.has_value);
+    arena_t* arena = a.u.value;
+    int* value = alloc_arena(arena, 0, true);
+    assert_null(value);
+    free_arena(arena);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_sarena(void **state) {
+    (void) state;
+    uint8_t buffer[10000];
+    arena_expect_t a = init_sarena(buffer, 10000);
+    assert_true(a.has_value);
+    arena_t* arena = a.u.value;
+    test* struct_val = (test*)alloc_arena(arena, sizeof(test), false);
+    int* value = (int*)alloc_arena(arena, sizeof(int), false);
+    struct_val->one = 3.4f;
+    struct_val->two = 3;
+    *value = 4;
+    assert_int_equal(*value, 4);
+    assert_int_equal(struct_val->two, 3);
+    assert_float_equal(struct_val->one, 3.4, 0.001);
+    size_t size = arena_size(arena);
+    size_t alloc = arena_alloc(arena);
+    size_t total_alloc = total_arena_alloc(arena);
+    size_t left_over = arena_remaining(arena);
+    assert_int_equal(size, 20);
+    assert_int_equal(alloc, 9888);
+    assert_int_equal(total_alloc, 10000);
+    assert_int_equal(left_over, 9868);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_sarena_zeroed(void **state) {
+    (void)state;
+
+    uint8_t buffer[10000];
+    arena_expect_t a = init_sarena(buffer, 10000);
+    assert_true(a.has_value);
+    arena_t* arena = a.u.value;
+    assert_non_null(arena);
+
+    test* struct_val = alloc_arena(arena, sizeof *struct_val, true);
+    assert_non_null(struct_val);
+
+    // verify every byte (including padding) is zero
+    unsigned char zeros[sizeof *struct_val];
+    memset(zeros, 0, sizeof zeros);
+    assert_memory_equal(struct_val, zeros, sizeof *struct_val);
+    
+    int* value = alloc_arena(arena, sizeof *value, false);
+    assert_non_null(value);
+
+    struct_val->one = 3.4f;
+    struct_val->two = 3;
+    *value = 4;
+
+    assert_int_equal(*value, 4);
+    assert_int_equal(struct_val->two, 3);
+    assert_float_equal(struct_val->one, 3.4, 0.001);
+}
+// ================================================================================ 
+// ================================================================================ 
+// TEST RE_ALLOCATION STRATEGY
+
+static void* alloc_fit(struct arena_t *a, size_t want, size_t *taken) {
+    while (want > 0) {
+        void *p = alloc_arena(a, want, /*zeroed=*/false);
+        if (p) { if (taken) *taken = want; return p; }
+        --want;
+    }
+    if (taken) *taken = 0;
+    return NULL;
+}
 // // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_darena(void **state) {
-//     (void) state;
-//     arena_t* arena = init_darena(10000, true);
-//     test* struct_val = (test*)alloc_arena(arena, sizeof(test), false);
-//     int* value = (int*)alloc_arena(arena, sizeof(int), false);
-//     struct_val->one = 3.4f;
-//     struct_val->two = 3;
-//     *value = 4;
-//     assert_int_equal(*value, 4);
-//     assert_int_equal(struct_val->two, 3);
-//     assert_float_equal(struct_val->one, 3.4, 0.001);
-//     size_t size = arena_size(arena);
-//     size_t alloc = arena_alloc(arena);
-//     size_t total_alloc = total_arena_alloc(arena);
-//     size_t left_over = arena_remaining(arena);
-//     assert_int_equal(size, 20);
-//     assert_int_equal(alloc, 9888);
-//     assert_int_equal(total_alloc, 10000);
-//     assert_int_equal(left_over, 9868);
-//     free_arena(arena);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_darena_zeroed(void **state) {
-//     (void)state;
-//
-//     arena_t* arena = init_darena(10000, true);
-//     assert_non_null(arena);
-//
-//     test* struct_val = alloc_arena(arena, sizeof *struct_val, true);
-//     assert_non_null(struct_val);
-//
-//     // verify every byte (including padding) is zero
-//     unsigned char zeros[sizeof *struct_val];
-//     memset(zeros, 0, sizeof zeros);
-//     assert_memory_equal(struct_val, zeros, sizeof *struct_val);
-//
-//     // …the rest of your test…
-//     int* value = alloc_arena(arena, sizeof *value, false);
-//     assert_non_null(value);
-//
-//     struct_val->one = 3.4f;
-//     struct_val->two = 3;
-//     *value = 4;
-//
-//     assert_int_equal(*value, 4);
-//     assert_int_equal(struct_val->two, 3);
-//     assert_float_equal(struct_val->one, 3.4, 0.001);
-//
-//     free_arena(arena);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_darena_null_value(void **state) {
-//     (void) state;
-//     int* value = alloc_arena(NULL, sizeof(*value), true);
-//     assert_null(value);
-//     assert_int_equal(EINVAL, errno);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_darena_zero_input(void **state) {
-//     arena_t* arena = init_darena(10000, true);
-//     errno = 0;
-//     int* value = alloc_arena(arena, 0, true);
-//     assert_null(value);
-//     assert_int_equal(EINVAL, errno);
-//     free_arena(arena);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_sarena(void **state) {
-//     (void) state;
-//     uint8_t buffer[10000];
-//     arena_t* arena = init_sarena(buffer, 10000);
-//     test* struct_val = (test*)alloc_arena(arena, sizeof(test), false);
-//     int* value = (int*)alloc_arena(arena, sizeof(int), false);
-//     struct_val->one = 3.4f;
-//     struct_val->two = 3;
-//     *value = 4;
-//     assert_int_equal(*value, 4);
-//     assert_int_equal(struct_val->two, 3);
-//     assert_float_equal(struct_val->one, 3.4, 0.001);
-//     size_t size = arena_size(arena);
-//     size_t alloc = arena_alloc(arena);
-//     size_t total_alloc = total_arena_alloc(arena);
-//     size_t left_over = arena_remaining(arena);
-//     assert_int_equal(size, 20);
-//     assert_int_equal(alloc, 9888);
-//     assert_int_equal(total_alloc, 10000);
-//     assert_int_equal(left_over, 9868);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_sarena_zeroed(void **state) {
-//     (void)state;
-//
-//     uint8_t buffer[10000];
-//     arena_t* arena = init_sarena(buffer, 10000);
-//     assert_non_null(arena);
-//
-//     test* struct_val = alloc_arena(arena, sizeof *struct_val, true);
-//     assert_non_null(struct_val);
-//
-//     // verify every byte (including padding) is zero
-//     unsigned char zeros[sizeof *struct_val];
-//     memset(zeros, 0, sizeof zeros);
-//     assert_memory_equal(struct_val, zeros, sizeof *struct_val);
-//     
-//     int* value = alloc_arena(arena, sizeof *value, false);
-//     assert_non_null(value);
-//
-//     struct_val->one = 3.4f;
-//     struct_val->two = 3;
-//     *value = 4;
-//
-//     assert_int_equal(*value, 4);
-//     assert_int_equal(struct_val->two, 3);
-//     assert_float_equal(struct_val->one, 3.4, 0.001);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-// // TEST RE_ALLOCATION STRATEGY
-//
-// static void* alloc_fit(struct arena_t *a, size_t want, size_t *taken) {
-//     while (want > 0) {
-//         void *p = alloc_arena(a, want, /*zeroed=*/false);
-//         if (p) { if (taken) *taken = want; return p; }
-//         --want;
-//     }
-//     if (taken) *taken = 0;
-//     return NULL;
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_grows_when_allowed(void **state) {
-//     (void)state;
-//
-//     struct arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize*/true,
-//                                          /*min_chunk_in*/4096, /*base_align_in*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     /* Make at least one allocation */
-//     assert_non_null(alloc_arena(a, 16, false));
-//
-//     /* Fill the rest of current tail (pad-aware) */
-//     size_t rem = arena_remaining(a);
-//     assert_true(rem > 0);
-//
-//     size_t taken = 0;
-//     void *edge = alloc_fit(a, rem, &taken);
-//     assert_non_null(edge);
-//     assert_true(taken > 0);
-//
-//     /* Next 1-byte alloc should cause growth and succeed */
-//     size_t rem0 = arena_remaining(a);
-//     errno = 0;
-//     void *p = alloc_arena(a, 1, false);
-//     assert_non_null(p);
-//     (void)rem0; /* not used further here */
-//
-//     /* After growth, there should still be capacity remaining. */
-//     assert_true(arena_remaining(a) > 0);
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_fails_when_resize_false(void **state) {
-//     (void)state;
-//
-//     struct arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize*/false,
-//                                          /*min_chunk_in*/4096, /*base_align_in*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     assert_non_null(alloc_arena(a, 16, false));
-//
-//     size_t rem = arena_remaining(a);
-//     assert_true(rem > 0);
-//
-//     size_t taken = 0;
-//     assert_non_null(alloc_fit(a, rem, &taken));
-//     assert_true(taken > 0);
-//
-//     errno = 0;
-//     void *fail = alloc_arena(a, 1, false);
-//     assert_null(fail);
-//     assert_int_equal(errno, EPERM);
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_fails_in_static_arena(void **state) {
-//     (void)state;
-//
-//     /* Provide a caller buffer (aligned enough) */
-//     size_t const BUF = 8192;
-//     void *buf = aligned_alloc(alignof(max_align_t), BUF);
-//     assert_non_null(buf);
-//
-//     struct arena_t *a = init_static_arena(buf, BUF, /*alignment_in*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     assert_non_null(alloc_arena(a, 16, false));
-//
-//     size_t rem = arena_remaining(a);
-//     assert_true(rem > 0);
-//
-//     size_t taken = 0;
-//     assert_non_null(alloc_fit(a, rem, &taken));
-//     assert_true(taken > 0);
-//
-//     errno = 0;
-//     void *fail = alloc_arena(a, 1, false);
-//     assert_null(fail);
-//     assert_int_equal(errno, EPERM);
-//
-//     /* For STATIC, free_arena should not free the user buffer */
-//     free_arena(a);
-//     free(buf);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_first_alloc_in_new_chunk_is_aligned_and_no_pad(void **state) {
-//     (void)state;
-//
-//     const size_t base_align = 64; /* strong alignment to observe easily */
-//     struct arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize*/true,
-//                                          /*min_chunk_in*/4096, /*base_align_in*/base_align);
-//     assert_non_null(a);
-//
-//     /* Burn current tail completely */
-//     assert_non_null(alloc_arena(a, 8, false));
-//     size_t rem = arena_remaining(a);
-//     assert_true(rem > 0);
-//     size_t taken = 0;
-//     assert_non_null(alloc_fit(a, rem, &taken));
-//     assert_true(taken > 0);
-//
-//     /* Allocate 1B -> triggers growth; first block in new chunk should be exactly aligned */
-//     size_t remaining_before = 0, remaining_after = 0;
-//
-//     remaining_before = arena_remaining(a);
-//     void *p = alloc_arena(a, 1, false);
-//     assert_non_null(p);
-//     assert_true(ptr_is_aligned(p, base_align));
-//
-//     remaining_after = arena_remaining(a);
-//     /* No pad on first alloc from a freshly aligned chunk: delta == 1 */
-//     assert_true(remaining_before > 0);
-//     assert_true(remaining_after > 0);
-//
-//     dispose_arena(&a);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-// // TEST IS_PTR FUNCTIONS 
-//
-// static void test_is_arena_ptr_basic_hits_and_misses(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     size_t n = 128;
-//     uint8_t *p = (uint8_t*)alloc_arena(a, n, /*zeroed=*/true);
-//     assert_non_null(p);
-//
-//     /* Hits */
-//     assert_true(is_arena_ptr(a, p));             // start
-//     assert_true(is_arena_ptr(a, p + (n/2)));     // middle
-//     /* Sized hits */
-//     assert_true(is_arena_ptr_sized(a, p, n));    // exact span
-//     assert_true(is_arena_ptr_sized(a, p+1, n-1));
-//
-//     /* Misses */
-//     assert_false(is_arena_ptr(a, p + n));        // end is exclusive
-//     assert_false(is_arena_ptr_sized(a, p, n+1)); // runs past end
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_arena_ptr_tail_fastpath(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(4096, /*resize=*/false, 4096, alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     /* Make a couple allocations; last one is in tail */
-//     (void)alloc_arena(a, 32, false);
-//     uint8_t *q = (uint8_t*)alloc_arena(a, 64, false);
-//     assert_non_null(q);
-//
-//     assert_true(is_arena_ptr(a, q));
-//     assert_true(is_arena_ptr_sized(a, q, 64));
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_arena_ptr_sized_boundaries(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(4096, /*resize=*/false, 4096, alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     size_t n = 256;
-//     uint8_t *p = (uint8_t*)alloc_arena(a, n, false);
-//     assert_non_null(p);
-//
-//     /* Exact boundary is allowed (pe == ue) */
-//     assert_true(is_arena_ptr_sized(a, p + (n-1), 1));
-//     assert_true(is_arena_ptr_sized(a, p, n));
-//
-//     /* One byte too far should fail */
-//     assert_false(is_arena_ptr_sized(a, p + n - 1, 2));
-//     assert_false(is_arena_ptr_sized(a, p + n, 1));
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_arena_ptr_multichunk(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     /* Consume almost all of first chunk */
-//     (void)alloc_arena(a, 32, false);
-//     size_t rem = arena_remaining(a);
-//     size_t taken = 0;
-//     assert_non_null(alloc_fit(a, rem, &taken));
-//     assert_true(taken > 0);
-//
-//     /* Next allocation triggers growth -> new tail chunk */
-//     uint8_t *p2 = (uint8_t*)alloc_arena(a, 64, false);
-//     assert_non_null(p2);
-//
-//     /* Check: pointer in old chunk (we have one from earlier) */
-//     // The earlier 32-byte block's start is not saved; allocate a small one before growth to keep a handle.
-//     // Instead, allocate one more small in the new tail and then check both chunks using p2 and p2+offset.
-//     assert_true(is_arena_ptr(a, p2));
-//     assert_true(is_arena_ptr_sized(a, p2, 64));
-//
-//     /* Allocate another small block so tail len advances; still recognized */
-//     uint8_t *p3 = (uint8_t*)alloc_arena(a, 8, false);
-//     assert_non_null(p3);
-//     assert_true(is_arena_ptr(a, p3));
-//
-//     /* Old chunk pointer: we can derive one by allocating anew from a fresh arena to reproduce.
-//        Simpler: assert that *some* pointer before p2 isn't in new chunk range.
-//        Instead, just ensure is_arena_ptr returns false for clearly foreign memory. */
-//     int dummy = 0;
-//     assert_false(is_arena_ptr(a, &dummy));
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_arena_ptr_sized_cross_chunk_fails(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     /* Force growth to a second chunk. */
-//     (void)alloc_arena(a, 16, false);
-//     size_t rem = arena_remaining(a);
-//     size_t taken = 0;
-//     assert_non_null(alloc_fit(a, rem, &taken));   // burn the rest (pad-aware)
-//     assert_true(taken > 0);
-//
-//     /* First alloc in the NEW chunk: exactly 64 bytes used there. */
-//     uint8_t *p2 = (uint8_t*)alloc_arena(a, 64, false);
-//     assert_non_null(p2);
-//
-//     /* Now, a 2-byte span starting at the last byte of that 64B block
-//        would exceed the USED range of the second chunk -> must be false. */
-//     assert_true(is_arena_ptr_sized(a, p2, 64));        // sanity: the block itself is valid
-//     assert_false(is_arena_ptr_sized(a, p2 + 63, 2));   // crosses beyond used in this chunk
-//
-//     free_arena(a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_arena_ptr_null_and_zero_size_guards(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(4096, /*resize=*/false, 4096, alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     uint8_t *p = (uint8_t*)alloc_arena(a, 16, false);
-//     assert_non_null(p);
-//
-//     /* is_arena_ptr guards */
-//     assert_false(is_arena_ptr(NULL, p));
-//     assert_false(is_arena_ptr(a, NULL));
-//
-//     /* is_arena_ptr_sized guards */
-//     assert_false(is_arena_ptr_sized(NULL, p, 1));
-//     assert_false(is_arena_ptr_sized(a, NULL, 1));
-//     assert_false(is_arena_ptr_sized(a, p, 0));
-//
-//     dispose_arena(&a);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-// // TEST RESET ARENA
-//
-// static void test_reset_dynamic_trim_true_frees_extra_chunks_and_resets_usage(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     /* Record initial head-only capacity (for sanity later) */
-//     size_t initial_remaining = arena_remaining(a);
-//     assert_true(initial_remaining > 0);
-//
-//     /* Fill the first chunk so next alloc triggers growth */
-//     (void)alloc_arena(a, 32, false);
-//     size_t rem = arena_remaining(a);
-//     size_t taken = 0;
-//     assert_non_null(alloc_fit(a, rem, &taken));
-//     assert_true(taken > 0);
-//
-//     /* Allocate in the NEW (tail) chunk, keep a pointer */
-//     uint8_t *tail_ptr = (uint8_t*)alloc_arena(a, 64, false);
-//     assert_non_null(tail_ptr);
-//     assert_true(is_arena_ptr(a, tail_ptr)); /* currently recognized */
-//
-//     /* Reset with trimming: should free extra chunks, zero usage, and reset cur to head */
-//     reset_arena(a, /*trim_extra_chunks=*/true);
-//
-//     /* Pointer into the old tail must no longer be recognized */
-//     assert_false(is_arena_ptr(a, tail_ptr));
-//
-//     /* Usage reset: we should be able to allocate again from a clean arena */
-//     void *p = alloc_arena(a, 16, false);
-//     assert_non_null(p);
-//
-//     /* Remaining after reset should be at most the initial head-only capacity (sanity check).
-//        (Exact equality depends on alignment; allow <= ) */
-//     size_t after_reset = arena_remaining(a);
-//     assert_true(after_reset <= initial_remaining);
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_reset_dynamic_keep_chunks_preserves_capacity(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     size_t initial_remaining = arena_remaining(a);
-//     assert_true(initial_remaining > 0);
-//
-//     /* Force growth */
-//     (void)alloc_arena(a, 32, false);
-//     size_t rem = arena_remaining(a);
-//     size_t taken = 0;
-//     assert_non_null(alloc_fit(a, rem, &taken));
-//     assert_true(taken > 0);
-//     assert_non_null(alloc_arena(a, 64, false)); /* new chunk alive */
-//
-//     /* Keep chunks: zero usage but retain capacity across all chunks */
-//     reset_arena(a, /*trim_extra_chunks=*/false);
-//
-//     size_t after_reset = arena_remaining(a);
-//     /* Because we have at least two chunks retained, remaining should exceed the
-//        original head-only capacity. */
-//     assert_true(after_reset > initial_remaining);
-//
-//     /* And we can now allocate a lot in a single go (should not error) */
-//     void *big = alloc_fit(a, after_reset, &taken);
-//     assert_non_null(big);
-//     assert_true(taken > 0);
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_reset_static_zeroes_usage_ignores_trim(void **state) {
-//     (void)state;
-//
-//     /* Build a static arena over caller-owned buffer */
-//     enum { BUF = 8192 };
-//     void *buf = aligned_alloc(alignof(max_align_t), BUF);
-//     assert_non_null(buf);
-//
-//     arena_t *a = init_static_arena(buf, BUF, /*alignment_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     size_t initial_remaining = arena_remaining(a);
-//     assert_true(initial_remaining > 0);
-//
-//     /* Consume some space */
-//     assert_non_null(alloc_arena(a, 128, true));
-//     size_t mid_remaining = arena_remaining(a);
-//     assert_true(mid_remaining < initial_remaining);
-//
-//     /* Reset with trim=true (should be ignored for STATIC) */
-//     reset_arena(a, /*trim_extra_chunks=*/true);
-//
-//     /* Usage zeroed: remaining is back up (close to initial; allow >=) */
-//     size_t after_reset = arena_remaining(a);
-//     assert_true(after_reset >= mid_remaining);
-//     assert_true(after_reset <= initial_remaining); /* static didn’t gain capacity */
-//
-//     /* We can allocate again from the start */
-//     void *p = alloc_arena(a, 128, false);
-//     assert_non_null(p);
-//
-//     /* Tear down: static free should not free 'buf' */
-//     free_arena(a);
-//     free(buf);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-// // TEST SAVE AND RESTORE 
-//
-// static void test_save_restore_same_chunk_pointer_roundtrip(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     /* Allocate A, then save. */
-//     void *A = alloc_arena(a, 128, false);
-//     assert_non_null(A);
-//     ArenaCheckPoint cp = save_arena(a);
-//
-//     /* Allocate B after the checkpoint; remember its address. */
-//     void *B1 = alloc_arena(a, 64, false);
-//     assert_non_null(B1);
-//
-//     /* Now restore to the checkpoint. */
-//     assert_true(restore_arena(a, cp));
-//
-//     /* Re-allocate the same size: it should come back at the same address as B1. */
-//     void *B2 = alloc_arena(a, 64, false);
-//     assert_non_null(B2);
-//     assert_ptr_equal(B1, B2);
-//
-//     /* And B1 should no longer be considered “used-sized” after restore. */
-//     assert_false(is_arena_ptr_sized(a, B1, 65));
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_save_restore_second_chunk_trims_and_replays_allocation(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     /* Burn first chunk to force growth on next alloc. */
-//     (void)alloc_arena(a, 16, false);
-//     size_t rem = arena_remaining(a);
-//     size_t taken = 0;
-//     assert_non_null(alloc_fit(a, rem, &taken));
-//     assert_true(taken > 0);
-//
-//     /* First allocation in the NEW chunk. */
-//     void *X = alloc_arena(a, 32, false);
-//     assert_non_null(X);
-//
-//     /* Save the checkpoint *inside* the second chunk. */
-//     ArenaCheckPoint cp = save_arena(a);
-//
-//     /* Allocate Y after save; keep its address. */
-//     void *Y1 = alloc_arena(a, 48, false);
-//     assert_non_null(Y1);
-//     assert_true(is_arena_ptr(a, Y1));            /* currently used */
-//
-//     /* Restore: must trim anything after the checkpoint (dynamic) and reset cursor. */
-//     assert_true(restore_arena(a, cp));
-//
-//     /* Y1 should no longer be a valid used span. */
-//     assert_false(is_arena_ptr_sized(a, Y1, 48));
-//
-//     /* Replay Y: address must match the pre-restore Y1. */
-//     void *Y2 = alloc_arena(a, 48, false);
-//     assert_non_null(Y2);
-//     assert_ptr_equal(Y1, Y2);
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_save_restore_static_rewinds_cursor(void **state) {
-//     (void)state;
-//
-//     enum { BUF = 8192 };
-//     void *buf = aligned_alloc(alignof(max_align_t), BUF);
-//     assert_non_null(buf);
-//
-//     arena_t *a = init_static_arena(buf, BUF, /*alignment_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     /* Allocate A, then save, then allocate B. */
-//     void *A = alloc_arena(a, 128, false);
-//     assert_non_null(A);
-//
-//     ArenaCheckPoint cp = save_arena(a);
-//
-//     void *B1 = alloc_arena(a, 96, false);
-//     assert_non_null(B1);
-//
-//     /* Restore should rewind cursor to exactly after A. */
-//     assert_true(restore_arena(a, cp));
-//
-//     /* Re-allocate B; pointer should match. */
-//     void *B2 = alloc_arena(a, 96, false);
-//     assert_non_null(B2);
-//     assert_ptr_equal(B1, B2);
-//
-//     /* And B1 is no longer considered a valid used span after restore. */
-//     assert_true(is_arena_ptr_sized(a, B1, 96));
-//
-//     free_arena(a);   /* must not free 'buf' */
-//     free(buf);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_restore_rejects_checkpoint_from_other_arena(void **state) {
-//     (void)state;
-//
-//     arena_t *a1 = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
-//     arena_t *a2 = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
-//     assert_non_null(a1);
-//     assert_non_null(a2);
-//
-//     /* Make sure a1 has at least one allocation before saving (not strictly required). */
-//     assert_non_null(alloc_arena(a1, 32, false));
-//     ArenaCheckPoint cp = save_arena(a1);
-//
-//     errno = 0;
-//     bool ok = restore_arena(a2, cp);
-//     assert_false(ok);
-//     assert_int_equal(errno, EINVAL);
-//
-//     dispose_arena(&a1);
-//     dispose_arena(&a2);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_restore_accepts_empty_checkpoint_noop(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(4096, false, 4096, alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     ArenaCheckPoint empty = {0};   /* (_priv all zeros) */
-//     size_t before = arena_remaining(a);
-//
-//     assert_true(restore_arena(a, empty));
-//     size_t after = arena_remaining(a);
-//
-//     /* No state change expected. */
-//     assert_int_equal(before, after);
-//
-//     dispose_arena(&a);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-// // TEST MACROS
-//
-// /* A composite type to exercise struct alignment/size */
-// typedef struct {
-//     int    x;
-//     double y;
-// } Demo;
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_arena_alloc_type_and_type_zeroed(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     /* Non-zeroed object */
-//     Demo *p1 = arena_alloc_type(a, Demo);
-//     assert_non_null(p1);
-//     assert_true(ptr_is_aligned(p1, alignof(Demo)));
-//     assert_true(is_arena_ptr_sized(a, p1, sizeof *p1));
-//
-//     /* Zeroed object */
-//     Demo *p2 = arena_alloc_type_zeroed(a, Demo);
-//     assert_non_null(p2);
-//     assert_true(ptr_is_aligned(p2, alignof(Demo)));
-//     assert_true(is_arena_ptr_sized(a, p2, sizeof *p2));
-//     /* Validate zeroing */
-//     for (size_t i = 0; i < sizeof *p2; ++i) {
-//         assert_int_equal(((const uint8_t*)p2)[i], 0);
-//     }
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_arena_alloc_array_and_array_zeroed(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     enum { N = 10 };
-//
-//     /* Non-zeroed array of uint32_t */
-//     uint32_t *arr = arena_alloc_array(a, uint32_t, N);
-//     assert_non_null(arr);
-//     assert_true(ptr_is_aligned(arr, alignof(uint32_t)));
-//     assert_true(is_arena_ptr_sized(a, arr, sizeof(uint32_t)*N));
-//
-//     /* Zeroed array of uint64_t */
-//     uint64_t *zarr = arena_alloc_array_zeroed(a, uint64_t, N);
-//     assert_non_null(zarr);
-//     assert_true(ptr_is_aligned(zarr, alignof(uint64_t)));
-//     assert_true(is_arena_ptr_sized(a, zarr, sizeof(uint64_t)*N));
-//     for (size_t i = 0; i < N; ++i) {
-//         assert_int_equal(zarr[i], 0);
-//     }
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_arena_alloc_array_count_zero_is_error(void **state) {
-//     (void)state;
-//
-//     arena_t *a = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
-//                                   /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     errno = 0;
-//     uint8_t *p = arena_alloc_array(a, uint8_t, 0);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-//
-//     errno = 0;
-//     uint8_t *pz = arena_alloc_array_zeroed(a, uint8_t, 0);
-//     assert_null(pz);
-//     assert_int_equal(errno, EINVAL);
-//
-//     dispose_arena(&a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_grow_copies_and_zeroes_tail(void **state) {
-//     (void)state;
-//
-//     arena_t* a = init_dynamic_arena(/*bytes*/4096, /*resize*/true, /*min_chunk*/0, /*base_align*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     const size_t old_sz = 8;
-//     uint8_t* oldp = (uint8_t*)alloc_arena(a, old_sz, /*zeroed*/false);
-//     assert_non_null(oldp);
-//
-//     // Fill original with a pattern
-//     for (size_t i = 0; i < old_sz; ++i) oldp[i] = (uint8_t)(0xA0u + (uint8_t)i);
-//
-//     const size_t new_sz = 32;
-//     uint8_t* newp = (uint8_t*)realloc_arena(a, oldp, old_sz, new_sz, /*zeroed*/true);
-//     assert_non_null(newp);
-//
-//     // First old_sz bytes must match original
-//     assert_memory_equal(newp, oldp, old_sz);
-//
-//     // Tail must be zeroed
-//     for (size_t i = old_sz; i < new_sz; ++i) {
-//         assert_int_equal(newp[i], 0);
-//     }
-//
-//     // Cleanup arena (base pointer is the arena itself)
-//     free(a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_shrink_is_noop(void **state) {
-//     (void)state;
-//
-//     arena_t* a = init_dynamic_arena(2048, true, 0, alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     const size_t old_sz = 32;
-//     uint8_t* p = (uint8_t*)alloc_arena(a, old_sz, false);
-//     assert_non_null(p);
-//
-//     // Write sentinel values
-//     for (size_t i = 0; i < old_sz; ++i) p[i] = (uint8_t)(0xC0u + (uint8_t)i);
-//
-//     // Shrink
-//     void* q = realloc_arena(a, p, old_sz, /*realloc_size*/16, /*zeroed*/false);
-//     assert_ptr_equal(q, p);
-//
-//     // Same size
-//     void* r = realloc_arena(a, p, old_sz, /*realloc_size*/32, /*zeroed*/false);
-//     assert_ptr_equal(r, p);
-//
-//     free(a);
-// }
-// // -------------------------------------------------------------------------------
-//
-// static void test_realloc_fails_when_insufficient_space(void **state) {
-//     (void)state;
-//
-//     // Keep this pretty small so a large realloc will fail.
-//     arena_t* a = init_dynamic_arena(512, /*resize*/false, /*min_chunk*/0, /*base_align*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     // Consume most space
-//     const size_t old_sz = 400;
-//     void* p = alloc_arena(a, old_sz, false);
-//     assert_non_null(p);
-//
-//     // Request something larger than likely remains
-//     errno = 0;
-//     void* q = realloc_arena(a, p, old_sz, /*realloc_size*/500, /*zeroed*/false);
-//     assert_null(q);
-//     // errno is set inside arena_alloc; don’t assert a specific value to avoid coupling
-//
-//     free(a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_aligned_alignment_and_copy(void **state) {
-//     (void)state;
-//
-//     arena_t* a = init_dynamic_arena(4096, true, 0, alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     const size_t old_sz = 16;
-//     uint8_t* p = (uint8_t*)alloc_arena(a, old_sz, false);
-//     assert_non_null(p);
-//     for (size_t i = 0; i < old_sz; ++i) p[i] = (uint8_t)(0x11u * (uint8_t)i);
-//
-//     const size_t want = 64;
-//     const size_t align = 64;
-//
-//     uint8_t* q = (uint8_t*)realloc_arena_aligned(a, p, old_sz, want, /*zeroed*/false, align);
-//     assert_non_null(q);
-//     assert_true(is_aligned(q, align));
-//
-//     // Prefix preserved
-//     assert_memory_equal(q, p, old_sz);
-//
-//     free(a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_arena_with_arena_basic(void **state) {
-//     (void)state;
-//     
-//     arena_t* parent = init_darena(64 * 1024, true);
-//     assert_non_null(parent);
-//     
-//     arena_t* sub = init_arena_with_arena(parent, 8 * 1024, alignof(max_align_t));
-//     assert_non_null(sub);
-//     
-//     // Verify sub-arena properties using public API
-//     assert_false(arena_owns_memory(sub));
-//     assert_int_equal(arena_mtype(sub), arena_mtype(parent));  // Inherits type
-//     
-//     // Verify we can allocate from sub
-//     void* p = alloc_arena(sub, 256, false);
-//     assert_non_null(p);
-//     
-//     // Verify pointer is within parent's memory
-//     assert_true(is_arena_ptr(parent, sub));  // Sub header in parent
-//     assert_true(is_arena_ptr(parent, p));    // Sub's allocation in parent
-//     
-//     free_arena(sub);
-//     free_arena(parent);
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void test_init_arena_with_arena_null_parent(void **state) {
-//     (void)state;
-//     
-//     errno = 0;
-//     arena_t* sub = init_arena_with_arena(NULL, 4096, 8);
-//     assert_null(sub);
-//     assert_int_equal(errno, EINVAL);
-// }
-// // --------------------------------------------------------------------------------
-//
-// static void test_init_arena_with_arena_zero_bytes(void **state) {
-//     (void)state;
-//     
-//     arena_t* parent = init_darena(16 * 1024, true);
-//     assert_non_null(parent);
-//     
-//     errno = 0;
-//     arena_t* sub = init_arena_with_arena(parent, 0, 8);
-//     assert_null(sub);
-//     assert_int_equal(errno, EINVAL);
-//     
-//     free_arena(parent);
-// }
-// // --------------------------------------------------------------------------------
-//
+
+static void test_realloc_grows_when_allowed(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize*/true,
+                                         /*min_chunk_in*/4096, /*base_align_in*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    struct arena_t *a = expect.u.value;
+    assert_non_null(a);
+
+    /* Make at least one allocation */
+    assert_non_null(alloc_arena(a, 16, false));
+
+    /* Fill the rest of current tail (pad-aware) */
+    size_t rem = arena_remaining(a);
+    assert_true(rem > 0);
+
+    size_t taken = 0;
+    void *edge = alloc_fit(a, rem, &taken);
+    assert_non_null(edge);
+    assert_true(taken > 0);
+
+    /* Next 1-byte alloc should cause growth and succeed */
+    size_t rem0 = arena_remaining(a);
+    errno = 0;
+    void *p = alloc_arena(a, 1, false);
+    assert_non_null(p);
+    (void)rem0; /* not used further here */
+
+    /* After growth, there should still be capacity remaining. */
+    assert_true(arena_remaining(a) > 0);
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_fails_when_resize_false(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize*/false,
+                                         /*min_chunk_in*/4096, /*base_align_in*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    struct arena_t *a = expect.u.value;
+                                
+    assert_non_null(a);
+
+    assert_non_null(alloc_arena(a, 16, false));
+
+    size_t rem = arena_remaining(a);
+    assert_true(rem > 0);
+
+    size_t taken = 0;
+    assert_non_null(alloc_fit(a, rem, &taken));
+    assert_true(taken > 0);
+
+    errno = 0;
+    void *fail = alloc_arena(a, 1, false);
+    assert_null(fail);
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_fails_in_static_arena(void **state) {
+    (void)state;
+
+    /* Provide a caller buffer (aligned enough) */
+    size_t const BUF = 8192;
+    void *buf = aligned_alloc(alignof(max_align_t), BUF);
+    assert_non_null(buf);
+
+    arena_expect_t expect = init_static_arena(buf, BUF, /*alignment_in*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    struct arena_t *a = expect.u.value;
+    assert_non_null(a);
+
+    assert_non_null(alloc_arena(a, 16, false));
+
+    size_t rem = arena_remaining(a);
+    assert_true(rem > 0);
+
+    size_t taken = 0;
+    assert_non_null(alloc_fit(a, rem, &taken));
+    assert_true(taken > 0);
+
+    errno = 0;
+    void *fail = alloc_arena(a, 1, false);
+    assert_null(fail);
+
+    /* For STATIC, free_arena should not free the user buffer */
+    free_arena(a);
+    free(buf);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_first_alloc_in_new_chunk_is_aligned_and_no_pad(void **state) {
+    (void)state;
+
+    const size_t base_align = 64; /* strong alignment to observe easily */
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize*/true,
+                                         /*min_chunk_in*/4096, /*base_align_in*/base_align); 
+    assert_true(expect.has_value);
+    struct arena_t *a = expect.u.value;
+                                    
+    assert_non_null(a);
+
+    /* Burn current tail completely */
+    assert_non_null(alloc_arena(a, 8, false));
+    size_t rem = arena_remaining(a);
+    assert_true(rem > 0);
+    size_t taken = 0;
+    assert_non_null(alloc_fit(a, rem, &taken));
+    assert_true(taken > 0);
+
+    /* Allocate 1B -> triggers growth; first block in new chunk should be exactly aligned */
+    size_t remaining_before = 0, remaining_after = 0;
+
+    remaining_before = arena_remaining(a);
+    void *p = alloc_arena(a, 1, false);
+    assert_non_null(p);
+    assert_true(ptr_is_aligned(p, base_align));
+
+    remaining_after = arena_remaining(a);
+    /* No pad on first alloc from a freshly aligned chunk: delta == 1 */
+    assert_true(remaining_before > 0);
+    assert_true(remaining_after > 0);
+
+    dispose_arena(&a);
+}
+// ================================================================================ 
+// ================================================================================ 
+// TEST IS_PTR FUNCTIONS 
+
+static void test_is_arena_ptr_basic_hits_and_misses(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                                
+    assert_non_null(a);
+
+    size_t n = 128;
+    uint8_t *p = (uint8_t*)alloc_arena(a, n, /*zeroed=*/true);
+    assert_non_null(p);
+
+    /* Hits */
+    assert_true(is_arena_ptr(a, p));             // start
+    assert_true(is_arena_ptr(a, p + (n/2)));     // middle
+    /* Sized hits */
+    assert_true(is_arena_ptr_sized(a, p, n));    // exact span
+    assert_true(is_arena_ptr_sized(a, p+1, n-1));
+
+    /* Misses */
+    assert_false(is_arena_ptr(a, p + n));        // end is exclusive
+    assert_false(is_arena_ptr_sized(a, p, n+1)); // runs past end
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_arena_ptr_tail_fastpath(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(4096, /*resize=*/false, 4096, alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value; 
+    assert_non_null(a);
+
+    /* Make a couple allocations; last one is in tail */
+    (void)alloc_arena(a, 32, false);
+    uint8_t *q = (uint8_t*)alloc_arena(a, 64, false);
+    assert_non_null(q);
+
+    assert_true(is_arena_ptr(a, q));
+    assert_true(is_arena_ptr_sized(a, q, 64));
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_arena_ptr_sized_boundaries(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(4096, /*resize=*/false, 4096, alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value; 
+    assert_non_null(a);
+
+    size_t n = 256;
+    uint8_t *p = (uint8_t*)alloc_arena(a, n, false);
+    assert_non_null(p);
+
+    /* Exact boundary is allowed (pe == ue) */
+    assert_true(is_arena_ptr_sized(a, p + (n-1), 1));
+    assert_true(is_arena_ptr_sized(a, p, n));
+
+    /* One byte too far should fail */
+    assert_false(is_arena_ptr_sized(a, p + n - 1, 2));
+    assert_false(is_arena_ptr_sized(a, p + n, 1));
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_arena_ptr_multichunk(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                            
+    assert_non_null(a);
+
+    /* Consume almost all of first chunk */
+    (void)alloc_arena(a, 32, false);
+    size_t rem = arena_remaining(a);
+    size_t taken = 0;
+    assert_non_null(alloc_fit(a, rem, &taken));
+    assert_true(taken > 0);
+
+    /* Next allocation triggers growth -> new tail chunk */
+    uint8_t *p2 = (uint8_t*)alloc_arena(a, 64, false);
+    assert_non_null(p2);
+
+    /* Check: pointer in old chunk (we have one from earlier) */
+    // The earlier 32-byte block's start is not saved; allocate a small one before growth to keep a handle.
+    // Instead, allocate one more small in the new tail and then check both chunks using p2 and p2+offset.
+    assert_true(is_arena_ptr(a, p2));
+    assert_true(is_arena_ptr_sized(a, p2, 64));
+
+    /* Allocate another small block so tail len advances; still recognized */
+    uint8_t *p3 = (uint8_t*)alloc_arena(a, 8, false);
+    assert_non_null(p3);
+    assert_true(is_arena_ptr(a, p3));
+
+    /* Old chunk pointer: we can derive one by allocating anew from a fresh arena to reproduce.
+       Simpler: assert that *some* pointer before p2 isn't in new chunk range.
+       Instead, just ensure is_arena_ptr returns false for clearly foreign memory. */
+    int dummy = 0;
+    assert_false(is_arena_ptr(a, &dummy));
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_arena_ptr_sized_cross_chunk_fails(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                                
+    assert_non_null(a);
+
+    /* Force growth to a second chunk. */
+    (void)alloc_arena(a, 16, false);
+    size_t rem = arena_remaining(a);
+    size_t taken = 0;
+    assert_non_null(alloc_fit(a, rem, &taken));   // burn the rest (pad-aware)
+    assert_true(taken > 0);
+
+    /* First alloc in the NEW chunk: exactly 64 bytes used there. */
+    uint8_t *p2 = (uint8_t*)alloc_arena(a, 64, false);
+    assert_non_null(p2);
+
+    /* Now, a 2-byte span starting at the last byte of that 64B block
+       would exceed the USED range of the second chunk -> must be false. */
+    assert_true(is_arena_ptr_sized(a, p2, 64));        // sanity: the block itself is valid
+    assert_false(is_arena_ptr_sized(a, p2 + 63, 2));   // crosses beyond used in this chunk
+
+    free_arena(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_arena_ptr_null_and_zero_size_guards(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(4096, /*resize=*/false, 4096, alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+    assert_non_null(a);
+
+    uint8_t *p = (uint8_t*)alloc_arena(a, 16, false);
+    assert_non_null(p);
+
+    /* is_arena_ptr guards */
+    assert_false(is_arena_ptr(NULL, p));
+    assert_false(is_arena_ptr(a, NULL));
+
+    /* is_arena_ptr_sized guards */
+    assert_false(is_arena_ptr_sized(NULL, p, 1));
+    assert_false(is_arena_ptr_sized(a, NULL, 1));
+    assert_false(is_arena_ptr_sized(a, p, 0));
+
+    dispose_arena(&a);
+}
+// ================================================================================ 
+// ================================================================================ 
+// TEST RESET ARENA
+
+static void test_reset_dynamic_trim_true_frees_extra_chunks_and_resets_usage(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                                
+    assert_non_null(a);
+
+    /* Record initial head-only capacity (for sanity later) */
+    size_t initial_remaining = arena_remaining(a);
+    assert_true(initial_remaining > 0);
+
+    /* Fill the first chunk so next alloc triggers growth */
+    (void)alloc_arena(a, 32, false);
+    size_t rem = arena_remaining(a);
+    size_t taken = 0;
+    assert_non_null(alloc_fit(a, rem, &taken));
+    assert_true(taken > 0);
+
+    /* Allocate in the NEW (tail) chunk, keep a pointer */
+    uint8_t *tail_ptr = (uint8_t*)alloc_arena(a, 64, false);
+    assert_non_null(tail_ptr);
+    assert_true(is_arena_ptr(a, tail_ptr)); /* currently recognized */
+
+    /* Reset with trimming: should free extra chunks, zero usage, and reset cur to head */
+    reset_arena(a, /*trim_extra_chunks=*/true);
+
+    /* Pointer into the old tail must no longer be recognized */
+    assert_false(is_arena_ptr(a, tail_ptr));
+
+    /* Usage reset: we should be able to allocate again from a clean arena */
+    void *p = alloc_arena(a, 16, false);
+    assert_non_null(p);
+
+    /* Remaining after reset should be at most the initial head-only capacity (sanity check).
+       (Exact equality depends on alignment; allow <= ) */
+    size_t after_reset = arena_remaining(a);
+    assert_true(after_reset <= initial_remaining);
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_dynamic_keep_chunks_preserves_capacity(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                    
+    assert_non_null(a);
+
+    size_t initial_remaining = arena_remaining(a);
+    assert_true(initial_remaining > 0);
+
+    /* Force growth */
+    (void)alloc_arena(a, 32, false);
+    size_t rem = arena_remaining(a);
+    size_t taken = 0;
+    assert_non_null(alloc_fit(a, rem, &taken));
+    assert_true(taken > 0);
+    assert_non_null(alloc_arena(a, 64, false)); /* new chunk alive */
+
+    /* Keep chunks: zero usage but retain capacity across all chunks */
+    reset_arena(a, /*trim_extra_chunks=*/false);
+
+    size_t after_reset = arena_remaining(a);
+    /* Because we have at least two chunks retained, remaining should exceed the
+       original head-only capacity. */
+    assert_true(after_reset > initial_remaining);
+
+    /* And we can now allocate a lot in a single go (should not error) */
+    void *big = alloc_fit(a, after_reset, &taken);
+    assert_non_null(big);
+    assert_true(taken > 0);
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_static_zeroes_usage_ignores_trim(void **state) {
+    (void)state;
+
+    /* Build a static arena over caller-owned buffer */
+    enum { BUF = 8192 };
+    void *buf = aligned_alloc(alignof(max_align_t), BUF);
+    assert_non_null(buf);
+    arena_expect_t expect = init_static_arena(buf, BUF, /*alignment_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value; 
+    assert_non_null(a);
+
+    size_t initial_remaining = arena_remaining(a);
+    assert_true(initial_remaining > 0);
+
+    /* Consume some space */
+    assert_non_null(alloc_arena(a, 128, true));
+    size_t mid_remaining = arena_remaining(a);
+    assert_true(mid_remaining < initial_remaining);
+
+    /* Reset with trim=true (should be ignored for STATIC) */
+    reset_arena(a, /*trim_extra_chunks=*/true);
+
+    /* Usage zeroed: remaining is back up (close to initial; allow >=) */
+    size_t after_reset = arena_remaining(a);
+    assert_true(after_reset >= mid_remaining);
+    assert_true(after_reset <= initial_remaining); /* static didn’t gain capacity */
+
+    /* We can allocate again from the start */
+    void *p = alloc_arena(a, 128, false);
+    assert_non_null(p);
+
+    /* Tear down: static free should not free 'buf' */
+    free_arena(a);
+    free(buf);
+}
+// ================================================================================ 
+// ================================================================================ 
+// TEST SAVE AND RESTORE 
+
+static void test_save_restore_same_chunk_pointer_roundtrip(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                
+    assert_non_null(a);
+
+    /* Allocate A, then save. */
+    void *A = alloc_arena(a, 128, false);
+    assert_non_null(A);
+    ArenaCheckPoint cp = save_arena(a);
+
+    /* Allocate B after the checkpoint; remember its address. */
+    void *B1 = alloc_arena(a, 64, false);
+    assert_non_null(B1);
+
+    /* Now restore to the checkpoint. */
+    assert_true(restore_arena(a, cp));
+
+    /* Re-allocate the same size: it should come back at the same address as B1. */
+    void *B2 = alloc_arena(a, 64, false);
+    assert_non_null(B2);
+    assert_ptr_equal(B1, B2);
+
+    /* And B1 should no longer be considered “used-sized” after restore. */
+    assert_false(is_arena_ptr_sized(a, B1, 65));
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_save_restore_second_chunk_trims_and_replays_allocation(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/true,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                    
+    assert_non_null(a);
+
+    /* Burn first chunk to force growth on next alloc. */
+    (void)alloc_arena(a, 16, false);
+    size_t rem = arena_remaining(a);
+    size_t taken = 0;
+    assert_non_null(alloc_fit(a, rem, &taken));
+    assert_true(taken > 0);
+
+    /* First allocation in the NEW chunk. */
+    void *X = alloc_arena(a, 32, false);
+    assert_non_null(X);
+
+    /* Save the checkpoint *inside* the second chunk. */
+    ArenaCheckPoint cp = save_arena(a);
+
+    /* Allocate Y after save; keep its address. */
+    void *Y1 = alloc_arena(a, 48, false);
+    assert_non_null(Y1);
+    assert_true(is_arena_ptr(a, Y1));            /* currently used */
+
+    /* Restore: must trim anything after the checkpoint (dynamic) and reset cursor. */
+    assert_true(restore_arena(a, cp));
+
+    /* Y1 should no longer be a valid used span. */
+    assert_false(is_arena_ptr_sized(a, Y1, 48));
+
+    /* Replay Y: address must match the pre-restore Y1. */
+    void *Y2 = alloc_arena(a, 48, false);
+    assert_non_null(Y2);
+    assert_ptr_equal(Y1, Y2);
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_save_restore_static_rewinds_cursor(void **state) {
+    (void)state;
+
+    enum { BUF = 8192 };
+    void *buf = aligned_alloc(alignof(max_align_t), BUF);
+    assert_non_null(buf);
+    arena_expect_t expect = init_static_arena(buf, BUF, /*alignment_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+
+    arena_t *a = expect.u.value; 
+    assert_non_null(a);
+
+    /* Allocate A, then save, then allocate B. */
+    void *A = alloc_arena(a, 128, false);
+    assert_non_null(A);
+
+    ArenaCheckPoint cp = save_arena(a);
+
+    void *B1 = alloc_arena(a, 96, false);
+    assert_non_null(B1);
+
+    /* Restore should rewind cursor to exactly after A. */
+    assert_true(restore_arena(a, cp));
+
+    /* Re-allocate B; pointer should match. */
+    void *B2 = alloc_arena(a, 96, false);
+    assert_non_null(B2);
+    assert_ptr_equal(B1, B2);
+
+    /* And B1 is no longer considered a valid used span after restore. */
+    assert_true(is_arena_ptr_sized(a, B1, 96));
+
+    free_arena(a);   /* must not free 'buf' */
+    free(buf);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_restore_rejects_checkpoint_from_other_arena(void **state) {
+    (void)state;
+    arena_expect_t expect1 = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+    assert_true(expect1.has_value);
+    arena_t *a1 = expect1.u.value;
+
+    arena_expect_t expect2 = init_dynamic_arena(4096, true, 4096, alignof(max_align_t)); 
+    assert_true(expect2.has_value);
+    arena_t *a2 = expect2.u.value;
+
+    assert_non_null(a1);
+    assert_non_null(a2);
+
+    /* Make sure a1 has at least one allocation before saving (not strictly required). */
+    assert_non_null(alloc_arena(a1, 32, false));
+    ArenaCheckPoint cp = save_arena(a1);
+
+    errno = 0;
+    bool ok = restore_arena(a2, cp);
+    assert_false(ok);
+
+    dispose_arena(&a1);
+    dispose_arena(&a2);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_restore_accepts_empty_checkpoint_noop(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(4096, false, 4096, alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value; 
+    assert_non_null(a);
+
+    ArenaCheckPoint empty = {0};   /* (_priv all zeros) */
+    size_t before = arena_remaining(a);
+
+    assert_true(restore_arena(a, empty));
+    size_t after = arena_remaining(a);
+
+    /* No state change expected. */
+    assert_int_equal(before, after);
+
+    dispose_arena(&a);
+}
+// ================================================================================ 
+// ================================================================================ 
+// TEST MACROS
+
+/* A composite type to exercise struct alignment/size */
+typedef struct {
+    int    x;
+    double y;
+} Demo;
+// -------------------------------------------------------------------------------- 
+
+static void test_arena_alloc_type_and_type_zeroed(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                
+    assert_non_null(a);
+
+    /* Non-zeroed object */
+    Demo *p1 = arena_alloc_type(a, Demo);
+    assert_non_null(p1);
+    assert_true(ptr_is_aligned(p1, alignof(Demo)));
+    assert_true(is_arena_ptr_sized(a, p1, sizeof *p1));
+
+    /* Zeroed object */
+    Demo *p2 = arena_alloc_type_zeroed(a, Demo);
+    assert_non_null(p2);
+    assert_true(ptr_is_aligned(p2, alignof(Demo)));
+    assert_true(is_arena_ptr_sized(a, p2, sizeof *p2));
+    /* Validate zeroing */
+    for (size_t i = 0; i < sizeof *p2; ++i) {
+        assert_int_equal(((const uint8_t*)p2)[i], 0);
+    }
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_arena_alloc_array_and_array_zeroed(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                
+    assert_non_null(a);
+
+    enum { N = 10 };
+
+    /* Non-zeroed array of uint32_t */
+    uint32_t *arr = arena_alloc_array(a, uint32_t, N);
+    assert_non_null(arr);
+    assert_true(ptr_is_aligned(arr, alignof(uint32_t)));
+    assert_true(is_arena_ptr_sized(a, arr, sizeof(uint32_t)*N));
+
+    /* Zeroed array of uint64_t */
+    uint64_t *zarr = arena_alloc_array_zeroed(a, uint64_t, N);
+    assert_non_null(zarr);
+    assert_true(ptr_is_aligned(zarr, alignof(uint64_t)));
+    assert_true(is_arena_ptr_sized(a, zarr, sizeof(uint64_t)*N));
+    for (size_t i = 0; i < N; ++i) {
+        assert_int_equal(zarr[i], 0);
+    }
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_arena_alloc_array_count_zero_is_error(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize=*/false,
+                                  /*min_chunk_in=*/4096, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t *a = expect.u.value;
+                
+    assert_non_null(a);
+
+    errno = 0;
+    uint8_t *p = arena_alloc_array(a, uint8_t, 0);
+    assert_null(p);
+
+    errno = 0;
+    uint8_t *pz = arena_alloc_array_zeroed(a, uint8_t, 0);
+    assert_null(pz);
+
+    dispose_arena(&a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_grow_copies_and_zeroes_tail(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(/*bytes*/4096, /*resize*/true, /*min_chunk*/0, /*base_align*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t* a = expect.u.value; 
+    assert_non_null(a);
+
+    const size_t old_sz = 8;
+    uint8_t* oldp = (uint8_t*)alloc_arena(a, old_sz, /*zeroed*/false);
+    assert_non_null(oldp);
+
+    // Fill original with a pattern
+    for (size_t i = 0; i < old_sz; ++i) oldp[i] = (uint8_t)(0xA0u + (uint8_t)i);
+
+    const size_t new_sz = 32;
+    uint8_t* newp = (uint8_t*)realloc_arena(a, oldp, old_sz, new_sz, /*zeroed*/true);
+    assert_non_null(newp);
+
+    // First old_sz bytes must match original
+    assert_memory_equal(newp, oldp, old_sz);
+
+    // Tail must be zeroed
+    for (size_t i = old_sz; i < new_sz; ++i) {
+        assert_int_equal(newp[i], 0);
+    }
+
+    // Cleanup arena (base pointer is the arena itself)
+    free(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_shrink_is_noop(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(2048, true, 0, alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t* a = expect.u.value;
+    assert_non_null(a);
+
+    const size_t old_sz = 32;
+    uint8_t* p = (uint8_t*)alloc_arena(a, old_sz, false);
+    assert_non_null(p);
+
+    // Write sentinel values
+    for (size_t i = 0; i < old_sz; ++i) p[i] = (uint8_t)(0xC0u + (uint8_t)i);
+
+    // Shrink
+    void* q = realloc_arena(a, p, old_sz, /*realloc_size*/16, /*zeroed*/false);
+    assert_ptr_equal(q, p);
+
+    // Same size
+    void* r = realloc_arena(a, p, old_sz, /*realloc_size*/32, /*zeroed*/false);
+    assert_ptr_equal(r, p);
+
+    free(a);
+}
+// -------------------------------------------------------------------------------
+
+static void test_realloc_fails_when_insufficient_space(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(512, /*resize*/false, /*min_chunk*/0, /*base_align*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t* a = expect.u.value;
+    assert_non_null(a);
+
+    // Consume most space
+    const size_t old_sz = 400;
+    void* p = alloc_arena(a, old_sz, false);
+    assert_non_null(p);
+
+    // Request something larger than likely remains
+    errno = 0;
+    void* q = realloc_arena(a, p, old_sz, /*realloc_size*/500, /*zeroed*/false);
+    assert_null(q);
+    // errno is set inside arena_alloc; don’t assert a specific value to avoid coupling
+
+    free(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_aligned_alignment_and_copy(void **state) {
+    (void)state;
+    arena_expect_t expect = init_dynamic_arena(4096, true, 0, alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t* a = expect.u.value; 
+    assert_non_null(a);
+
+    const size_t old_sz = 16;
+    uint8_t* p = (uint8_t*)alloc_arena(a, old_sz, false);
+    assert_non_null(p);
+    for (size_t i = 0; i < old_sz; ++i) p[i] = (uint8_t)(0x11u * (uint8_t)i);
+
+    const size_t want = 64;
+    const size_t align = 64;
+
+    uint8_t* q = (uint8_t*)realloc_arena_aligned(a, p, old_sz, want, /*zeroed*/false, align);
+    assert_non_null(q);
+    assert_true(is_aligned(q, align));
+
+    // Prefix preserved
+    assert_memory_equal(q, p, old_sz);
+
+    free(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_arena_with_arena_basic(void **state) {
+    (void)state;
+    arena_expect_t expect = init_darena(64 * 1024, true); 
+    assert_true(expect.has_value);
+    arena_t* parent = expect.u.value; 
+    assert_non_null(parent);
+    
+    arena_expect_t expect2 = init_arena_with_arena(parent, 8 * 1024, alignof(max_align_t)); 
+    assert_true(expect2.has_value);
+    arena_t* sub = expect2.u.value; 
+    assert_non_null(sub);
+    
+    // Verify sub-arena properties using public API
+    assert_false(arena_owns_memory(sub));
+    assert_int_equal(arena_mtype(sub), arena_mtype(parent));  // Inherits type
+    
+    // Verify we can allocate from sub
+    void* p = alloc_arena(sub, 256, false);
+    assert_non_null(p);
+    
+    // Verify pointer is within parent's memory
+    assert_true(is_arena_ptr(parent, sub));  // Sub header in parent
+    assert_true(is_arena_ptr(parent, p));    // Sub's allocation in parent
+    
+    free_arena(sub);
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
+static void test_init_arena_with_arena_null_parent(void **state) {
+    (void)state;
+    
+    arena_expect_t expect = init_arena_with_arena(NULL, 4096, 8); 
+    assert_false(expect.has_value);
+}
+// --------------------------------------------------------------------------------
+
+static void test_init_arena_with_arena_zero_bytes(void **state) {
+    (void)state;
+    arena_expect_t expect1 = init_darena(16 * 1024, true); 
+    assert_true(expect1.has_value);
+    arena_t* parent = expect1.u.value; 
+    assert_non_null(parent);
+   
+    arena_expect_t expect2 = init_arena_with_arena(parent, 0, 8); 
+    assert_false(expect2.has_value);
+    
+    free_arena(parent);
+}
+// --------------------------------------------------------------------------------
+
 // static void test_init_arena_with_arena_too_small_for_headers(void **state) {
 //     (void)state;
 //     
@@ -1709,49 +1753,49 @@ const struct CMUnitTest test_arena[] = {
     cmocka_unit_test(test_invalid_free_sarena),
     cmocka_unit_test(test_arena_double_free),
     
-  //   cmocka_unit_test(test_alloc_darena),
-  //   cmocka_unit_test(test_alloc_darena_zeroed),
-  //   cmocka_unit_test(test_alloc_darena_null_value),
-  //   cmocka_unit_test(test_alloc_darena_zero_input),
-  //   cmocka_unit_test(test_alloc_sarena),
-  //   cmocka_unit_test(test_alloc_sarena_zeroed),
-  //
-  //   cmocka_unit_test(test_realloc_grows_when_allowed),
-  //   cmocka_unit_test(test_realloc_fails_when_resize_false),
-  //   cmocka_unit_test(test_realloc_fails_in_static_arena),
-  //   cmocka_unit_test(test_realloc_first_alloc_in_new_chunk_is_aligned_and_no_pad),
-  //
-  //   cmocka_unit_test(test_is_arena_ptr_basic_hits_and_misses),
-  //   cmocka_unit_test(test_is_arena_ptr_tail_fastpath),
-  //   cmocka_unit_test(test_is_arena_ptr_sized_boundaries),
-  //   cmocka_unit_test(test_is_arena_ptr_multichunk),
-  //   cmocka_unit_test(test_is_arena_ptr_sized_cross_chunk_fails),
-  //   cmocka_unit_test(test_is_arena_ptr_null_and_zero_size_guards),
-  // 
-  //   cmocka_unit_test(test_reset_dynamic_trim_true_frees_extra_chunks_and_resets_usage),
-  //   cmocka_unit_test(test_reset_dynamic_keep_chunks_preserves_capacity),
-  //   cmocka_unit_test(test_reset_static_zeroes_usage_ignores_trim),
-  //   
-  //   cmocka_unit_test(test_save_restore_same_chunk_pointer_roundtrip),
-  //   cmocka_unit_test(test_save_restore_second_chunk_trims_and_replays_allocation),
-  //   cmocka_unit_test(test_save_restore_static_rewinds_cursor),
-  //   cmocka_unit_test(test_restore_rejects_checkpoint_from_other_arena),
-  //   cmocka_unit_test(test_restore_accepts_empty_checkpoint_noop), 
-  //
-  //   #if ARENA_USE_CONVENIENCE_MACROS
-  //       cmocka_unit_test(test_arena_alloc_type_and_type_zeroed),
-  //       cmocka_unit_test(test_arena_alloc_array_and_array_zeroed),
-  //       cmocka_unit_test(test_arena_alloc_array_count_zero_is_error),
-  //   #endif
-  //
-  //   cmocka_unit_test(test_realloc_grow_copies_and_zeroes_tail),
-  //   cmocka_unit_test(test_realloc_shrink_is_noop),
-  //   cmocka_unit_test(test_realloc_fails_when_insufficient_space),
-  //   cmocka_unit_test(test_realloc_aligned_alignment_and_copy),
-  //
-  //   cmocka_unit_test(test_init_arena_with_arena_basic),
-  //   cmocka_unit_test(test_init_arena_with_arena_null_parent),
-  //   cmocka_unit_test(test_init_arena_with_arena_zero_bytes),
+    cmocka_unit_test(test_alloc_darena),
+    cmocka_unit_test(test_alloc_darena_zeroed),
+    cmocka_unit_test(test_alloc_darena_null_value),
+    cmocka_unit_test(test_alloc_darena_zero_input),
+    cmocka_unit_test(test_alloc_sarena),
+    cmocka_unit_test(test_alloc_sarena_zeroed),
+
+    cmocka_unit_test(test_realloc_grows_when_allowed),
+    cmocka_unit_test(test_realloc_fails_when_resize_false),
+    cmocka_unit_test(test_realloc_fails_in_static_arena),
+    cmocka_unit_test(test_realloc_first_alloc_in_new_chunk_is_aligned_and_no_pad),
+
+    cmocka_unit_test(test_is_arena_ptr_basic_hits_and_misses),
+    cmocka_unit_test(test_is_arena_ptr_tail_fastpath),
+    cmocka_unit_test(test_is_arena_ptr_sized_boundaries),
+    cmocka_unit_test(test_is_arena_ptr_multichunk),
+    cmocka_unit_test(test_is_arena_ptr_sized_cross_chunk_fails),
+    cmocka_unit_test(test_is_arena_ptr_null_and_zero_size_guards),
+
+    cmocka_unit_test(test_reset_dynamic_trim_true_frees_extra_chunks_and_resets_usage),
+    cmocka_unit_test(test_reset_dynamic_keep_chunks_preserves_capacity),
+    cmocka_unit_test(test_reset_static_zeroes_usage_ignores_trim),
+    
+    cmocka_unit_test(test_save_restore_same_chunk_pointer_roundtrip),
+    cmocka_unit_test(test_save_restore_second_chunk_trims_and_replays_allocation),
+    cmocka_unit_test(test_save_restore_static_rewinds_cursor),
+    cmocka_unit_test(test_restore_rejects_checkpoint_from_other_arena),
+    cmocka_unit_test(test_restore_accepts_empty_checkpoint_noop), 
+
+    #if ARENA_USE_CONVENIENCE_MACROS
+        cmocka_unit_test(test_arena_alloc_type_and_type_zeroed),
+        cmocka_unit_test(test_arena_alloc_array_and_array_zeroed),
+        cmocka_unit_test(test_arena_alloc_array_count_zero_is_error),
+    #endif
+
+    cmocka_unit_test(test_realloc_grow_copies_and_zeroes_tail),
+    cmocka_unit_test(test_realloc_shrink_is_noop),
+    cmocka_unit_test(test_realloc_fails_when_insufficient_space),
+    cmocka_unit_test(test_realloc_aligned_alignment_and_copy),
+
+    cmocka_unit_test(test_init_arena_with_arena_basic),
+    cmocka_unit_test(test_init_arena_with_arena_null_parent),
+    cmocka_unit_test(test_init_arena_with_arena_zero_bytes),
   //   cmocka_unit_test(test_init_arena_with_arena_too_small_for_headers),
   //   cmocka_unit_test(test_init_arena_with_arena_exhausts_parent),
   //   cmocka_unit_test(test_init_arena_with_arena_multiple_subs),
