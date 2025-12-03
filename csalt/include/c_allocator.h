@@ -52,7 +52,10 @@
 #include <errno.h>   // errno
 #include <string.h>  // memset
 #include <stddef.h> // max_aling_t
-#include <stdalign.h> // alignof
+#include <stdalign.h> // alignof 
+#include <errno.h>
+
+#include "c_error.h"
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -211,7 +214,16 @@ typedef struct {
 } allocator_vtable_t;
 // ================================================================================ 
 // ================================================================================ 
-// INITIALIZE AND DEALLOCATE FUNCTIONS
+// ARENA FUNCTIONS 
+
+typedef struct {
+    bool has_value;
+    union {
+        arena_t* value;
+        ErrorCode error;
+    } u;
+} arena_expect_t;
+// -------------------------------------------------------------------------------- 
 
 /**
  * @brief Initialize a dynamically growing arena allocator.
@@ -221,6 +233,11 @@ typedef struct {
  * arena header, first chunk header, and initial data region are all placed
  * contiguously in the first allocation. Additional chunks (if growth is
  * enabled) are allocated separately and linked into the arena.
+ *
+ * This function uses an "expected" style return type. On success, the returned
+ * @c arena_expect_t has @c has_value set to @c true and @c u.value points to
+ * a fully initialized @c arena_t. On failure, @c has_value is @c false and
+ * @c u.error contains an appropriate ::ErrorCode value describing the cause.
  *
  * @param bytes          Requested initial total size in bytes. This is the
  *                       minimum storage footprint to allocate. If @p bytes is
@@ -238,33 +255,57 @@ typedef struct {
  *                       Rounded up to the next power-of-two if needed and
  *                       never less than @c alignof(max_align_t).
  *
- * @return Pointer to a new dynamic arena on success, or @c NULL on failure
- *         with @c errno set.
+ * @return An ::arena_expect_t result describing either success or failure.
  *
- * @retval NULL, errno=EINVAL
+ * On success:
+ *   - @c result.has_value == true
+ *   - @c result.u.value   is a pointer to the newly created @c arena_t.
+ *
+ * On failure:
+ *   - @c result.has_value == false
+ *   - @c result.u.error   contains one of the following ::ErrorCode values:
+ *
+ * @retval INVALID_ARG
  *      If @p bytes is too small to contain the arena header and first chunk
- *      header, if @p base_align_in or @p min_chunk_in has an invalid value that
- *      cannot be normalized, or alignment calculations fail.
- * @retval NULL, errno=ENOMEM
- *      If memory allocation fails or arithmetic overflow is detected during
- *      pointer computations.
- * @retval NULL, errno=ENOTSUP
+ *      header, or if @p base_align_in or @p min_chunk_in has an invalid value
+ *      that cannot be normalized (e.g., overflow while rounding up to a
+ *      power-of-two).
+ * @retval ALIGNMENT_ERROR
+ *      If alignment normalization fails or the computed aligned data region
+ *      cannot be placed within the allocated buffer.
+ * @retval LENGTH_OVERFLOW
+ *      If arithmetic overflow is detected during pointer or size computations
+ *      for the header, chunk, or data regions.
+ * @retval OUT_OF_MEMORY
+ *      If the computed usable data region size is zero after layout, indicating
+ *      that no space remains for allocations.
+ * @retval BAD_ALLOC
+ *      If the underlying @c malloc() call for the initial arena buffer fails.
+ * @retval FEATURE_DISABLED
  *      If dynamic arenas are disabled at compile time
  *      (@c ARENA_ENABLE_DYNAMIC == 0).
  *
- * @note The returned arena’s first chunk is fully initialized and ready for
- *       allocation via @c alloc_arena() or @c alloc_arena_aligned().
+ * If your implementation maps ::ErrorCode values to @c errno (e.g., via
+ * @c set_errno_from_error()), then @c errno will be set consistently with
+ * @c result.u.error on failure.
+ *
+ * @note On success, the returned arena’s first chunk is fully initialized and
+ *       ready for allocation via @c alloc_arena() or @c alloc_arena_aligned().
  *
  * @note The initial data region begins at an address aligned to
- *       @c max(base_align_in, alignof(max_align_t)).
+ *       @c max(base_align_in, alignof(max_align_t)) after normalization.
  *
- * @warning The returned arena must be released with @c free_arena(). Individual
- *          allocations from the arena must not be freed with @c free().
+ * @warning On success, the arena returned in @c result.u.value must be released
+ *          with @c free_arena(). Individual allocations from the arena must not
+ *          be freed with @c free().
  *
- * @pre  @c ARENA_ENABLE_DYNAMIC must be enabled.  This occurs by default compilation process
- * @post @c arena->mem_type == DYNAMIC and @c arena->resize == (resize ? 1 : 0).
- * @post @c arena->head == arena->tail and @c arena->cur begins at the start of
- *       the aligned initial data region.
+ * @pre  @c ARENA_ENABLE_DYNAMIC must be enabled (non-zero) at compile time.
+ * @post On success (@c result.has_value == true), the arena @c a =
+ *       @c result.u.value satisfies:
+ *       - @c a->mem_type == DYNAMIC
+ *       - @c a->resize == (resize ? 1 : 0)
+ *       - @c a->head == a->tail
+ *       - @c a->cur begins at the start of the aligned initial data region.
  *
  * @sa init_static_arena(), free_arena(), alloc_arena(), alloc_arena_aligned(),
  *     reset_arena(), arena_remaining()
@@ -273,12 +314,21 @@ typedef struct {
  * @code{.c}
  * // Create a dynamic arena with 4 KiB initial storage,
  * // allow future growth, minimum chunk of 4 KiB, default alignment.
- * arena_t* a = init_dynamic_arena(4096,        // initial bytes
- *                                 true,        // resize enabled
- *                                 4096,        // minimum chunk size for growth
- *                                 alignof(max_align_t));
+ * arena_expect_t res = init_dynamic_arena(4096,        // initial bytes
+ *                                         true,        // resize enabled
+ *                                         4096,        // minimum chunk size for growth
+ *                                         alignof(max_align_t));
  *
- * void* p = alloc_arena(a, 128, true);   // allocate 128 zeroed bytes
+ * if (!res.has_avlue) {
+ *     // Initialization failed; inspect the error code
+ *     ErrorCode ec = res.u.error;
+ *     // handle error (log, abort, fall back, etc.)
+ *     return;
+ * }
+ *
+ * arena_t* a = res.u.value;
+ *
+ * void *p = alloc_arena(a, 128, true);   // allocate 128 zeroed bytes
  * assert(p != NULL);
  *
  * // ... use arena allocations ...
@@ -286,166 +336,238 @@ typedef struct {
  * free_arena(a);  // releases all chunks and the arena header itself
  * @endcode
  */
-arena_t* init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t base_align_in);
+arena_expect_t init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t base_align_in);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Initialize a STATIC (non-growing on the stack) arena inside a caller-supplied buffer.
+ * @brief Initialize a STATIC (non-growing) arena inside a caller-supplied buffer.
  *
  * This function constructs an arena *in place* within the memory range
- * ``[buffer, buffer + bytes)``. No heap allocations are performed. The memory
- * layout is:
+ * ``[buffer, buffer + bytes)``. No heap allocations occur. The memory layout is:
  *
- *     [ arena_t header | padding/alignment | struct Chunk | pad | data... ]
+ *     [ arena_t header | padding | struct Chunk | padding | data... ]
  *
- * The initial (head) chunk’s data base is aligned to @p alignment_in (rounded
- * up to a power-of-two and at least @c alignof(max_align_t)). Any space lost
- * to aligning the @c arena_t, @c struct Chunk, and the data region reduces the
- * usable capacity for allocations.
+ * The data region for the head chunk is aligned to @p alignment_in (rounded up
+ * to a power of two and never less than @c alignof(max_align_t)). Any alignment
+ * padding reduces the usable capacity available for allocations.
  *
- * @param buffer        Caller-supplied backing store for the arena.
- *                      Must remain valid for the entire arena lifetime.
- * @param bytes         Total size in bytes of @p buffer.
- *                      Must be large enough to hold @c arena_t, one @c Chunk,
- *                      and at least one byte of data after alignment/padding.
- * @param alignment_in  Requested base alignment for the chunk’s data region.
- *                      If zero, defaults to @c alignof(max_align_t). If not a
- *                      power of two, it is rounded up to the next power of two.
- *                      Final alignment is always at least @c alignof(max_align_t).
+ * @param buffer        Caller-supplied backing store for the arena. Must remain
+ *                      valid for the entire arena lifetime. The arena header and
+ *                      the first chunk header are written directly into @p buffer.
  *
- * @return Pointer to the in-place @c arena_t on success; @c NULL on failure
- *         with @c errno set.
+ * @param bytes         Total size in bytes of @p buffer. This must be large
+ *                      enough to hold:
+ *                      - one @c arena_t,
+ *                      - one @c Chunk,
+ *                      - at least one byte of data after alignment.
  *
- * @retval NULL, errno=EINVAL
- *      if @p buffer is NULL,
- *      or if @p bytes is too small to fit @c arena_t + @c Chunk after alignment,
- *      or if post-alignment usable capacity is zero,
- *      or if a normalization step detects an invalid range.
+ * @param alignment_in  Requested base alignment for the chunk's data region.
+ *                      If zero, defaults to @c alignof(max_align_t).
+ *                      If not a power of two, it is rounded up to the next
+ *                      power of two. The final alignment is always at least
+ *                      @c alignof(max_align_t).
  *
- * @note  The arena’s @c tot_alloc is set to the full caller footprint:
- *        ``bytes`` (i.e., ``(uintptr_t)buffer_end - (uintptr_t)buffer``).
- *        The arena’s @c alloc is the usable data capacity after all required
- *        alignments/padding have been applied.
+ * @return An ::arena_expect_t describing success or failure.
+ *
+ * On success:
+ *   - @c result.has_value == true
+ *   - @c result.u.value   is a pointer to the in-place @c arena_t
+ *
+ * On failure:
+ *   - @c result.has_value == false
+ *   - @c result.u.error   contains one of the following ::ErrorCode values:
+ *
+ * @retval NULL_POINTER
+ *      If @p buffer is NULL.
+ *
+ * @retval INVALID_ARG
+ *      If @p bytes is too small to contain @c arena_t + @c Chunk after
+ *      alignment, or if the aligned Arena header would lie beyond the buffer.
+ *
+ * @retval ALIGNMENT_ERROR
+ *      If @p alignment_in cannot be normalized to a valid power-of-two, or if
+ *      the aligned data region cannot fit inside the provided buffer.
+ *
+ * @retval LENGTH_OVERFLOW
+ *      If arithmetic overflow is detected while computing pointer offsets or
+ *      buffer boundaries.
+ *
+ * @retval OUT_OF_MEMORY
+ *      If no usable bytes remain for the data region after alignment.
  *
  * @note  The arena is created in STATIC mode:
- *        - @c mem_type = STATIC
+ *        - @c mem_type = STATIC  
  *        - @c resize   = 0 (growth is not permitted)
- *        Calls to @c alloc_arena() that exceed remaining capacity will fail
- *        with @c errno = EPERM.
+ *        Attempts to grow via @c alloc_arena() beyond remaining space should
+ *        return an appropriate ::ErrorCode (often @c OUT_OF_MEMORY or @c OPERATION_UNAVAILABLE).
  *
- * @warning Do **not** call @c free() on @p buffer while the arena is in use.
- *          The arena header lives inside @p buffer; freeing @p buffer invalidates
- *          the arena immediately. The public @c free_arena() must not attempt
- *          to free @p buffer in STATIC mode.
+ * @note  @c tot_alloc is set to the full caller-supplied buffer footprint
+ *        (i.e., ``bytes``). @c alloc is the usable data capacity after all
+ *        required alignment and header placement.
  *
- * @pre  @p buffer points to at least @p bytes of writable memory.
+ * @warning Do **not** free @p buffer while the arena is in use.  
+ *          The arena header lives *inside* @p buffer, so freeing @p buffer
+ *          instantly invalidates the arena.  
+ *          The public @c free_arena() implementation must not attempt to free
+ *          the backing store in STATIC mode.
+ *
+ * @pre  @p buffer points to at least @p bytes of valid writable memory.
  * @pre  The lifetime of @p buffer strictly dominates the lifetime of the arena.
+ *
  * @post On success:
- *       - @c a->head, @c a->tail initialized to a single head chunk
- *       - @c a->cur points to the start of the (aligned) data region
+ *       - @c a->head and @c a->tail reference the single in-place head chunk
+ *       - @c a->cur begins at the start of the aligned data region
  *       - @c a->len == 0
- *       - @c a->alloc == usable bytes in the head chunk
+ *       - @c a->alloc == usable aligned data bytes
  *       - @c a->tot_alloc == bytes
  *
- * @sa   alloc_arena(), reset_arena(), arena_remaining(), arena_stats()
+ * @sa   alloc_arena(), alloc_arena_aligned(), reset_arena(),
+ *       arena_remaining(), arena_stats()
  *
- * @par Example: Aligned caller buffer (typical case)
+ * @par Example: Using a fixed-size stack buffer
  * @code{.c}
- * uint8_t buf[16 * 24];  
- * arena_t *a = init_static_arena(buf, 16 * 24, alignof(max_align_t));
- * assert(a != NULL);
+ * uint8_t buf[4096];
  *
- * void *p1 = alloc_arena(a, 1024, false);  // ok
- * void *p2 = alloc_arena(a, 8192, false);  // may fail if capacity exhausted
+ * arena_expect_t r = init_static_arena(buf, sizeof(buf), alignof(max_align_t));
+ * if (!r.has_value) {
+ *     ErrorCode ec = r.u.error;
+ *     // handle error...
+ * }
  *
- * // Reset discards all allocations but keeps the same capacity.
- * reset_arena(a, false);
+ * arena_t *a = r.u.value;
  *
- * // Tear-down: STATIC arena does not own 'buf'.
- * // free_arena(a) should NOT free 'buf'; many implementations make it a no-op or set errno=EPERM.
+ * void *p1 = alloc_arena(a, 128, false);   // OK
+ * void *p2 = alloc_arena(a, 9000, false);  // fails if capacity exhausted
+ *
+ * reset_arena(a, false);   // discards allocations, capacity unchanged
+ *
+ * // No need to free buf; STATIC arenas do not own their backing store.
  * @endcode
  *
- * @par Example: Intentionally unaligned buffer
+ * @par Example: Caller buffer with forced misalignment
  * @code{.c}
- * enum { RAW = 16384 + 1 };
- * void *raw = malloc(RAW);
- * assert(raw != NULL);
+ * enum { RAW = 16384 };
+ * uint8_t *raw = malloc(RAW);
+ * uint8_t *unaligned = raw + 1;  // deliberately unaligned start
  *
- * // Force an unaligned start:
- * uint8_t *unaligned = (uint8_t*)raw + 1;
+ * arena_expect_t r = init_static_arena(unaligned, RAW - 1, 64);
+ * if (!r.has_value) {
+ *     // handle error...
+ * }
  *
- * // init_static_arena() will align the internal structures and data base.
- * // Usable capacity will be RAW-1 minus header/padding.
- * arena_t *a = init_static_arena(unaligned, RAW - 1, 64);
- * assert(a != NULL);
- *
+ * arena_t *a = r.u.value;
  * void *p = alloc_arena(a, 256, true);
- * assert(p != NULL);
- * assert(((uintptr_t)p % 64) == 0); // data pointer respects requested alignment
  *
- * free(raw);
+ * // Guaranteed 64-byte alignment:
+ * assert(((uintptr_t)p % 64u) == 0u);
+ *
+ * free(raw);  // frees original allocation, not the arena
  * @endcode
  */
-arena_t* init_static_arena(void* buffer, size_t bytes, size_t passing_in);
+arena_expect_t init_static_arena(void* buffer, size_t bytes, size_t passing_in);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Create a sub-arena carved from a parent arena with single allocation.
+ * @brief Create a fixed-capacity sub-arena carved from a parent arena.
  *
- * Allocates a contiguous region from @p parent and constructs an arena header,
- * chunk header, and data region within it (single alloc_arena call). The 
- * sub-arena is fixed-capacity (cannot grow) and does NOT own its backing memory.
+ * This function allocates a contiguous memory region from @p parent using a
+ * single call to @c alloc_arena(), and constructs an entire arena in place
+ * within that region:
  *
- * Memory layout: [ arena_t | padding | Chunk | padding | usable data ]
+ *     [ arena_t header | padding | Chunk | padding | usable data ]
  *
- * @param[in,out] parent    Parent arena to allocate from (must not be NULL).
- * @param[in]     bytes     Total bytes to carve from parent (including headers).
- * @param[in]     alignment Base alignment for sub-arena data allocations.
+ * The resulting sub-arena:
+ *   - **does not own its memory** (owned by the parent)
+ *   - **cannot grow** (fixed capacity)
+ *   - **inherits @c mem_type** from the parent arena
  *
- * @return Pointer to new arena_t on success; NULL on failure with errno set.
+ * @param[in,out] parent        Pointer to a valid parent arena. Must not be NULL.
+ * @param[in]     bytes         Total number of bytes to carve from the parent,
+ *                              including headers, padding, and data region.
+ * @param[in]     alignment_in  Requested base alignment for the sub-arena's
+ *                              data region (0 => @c alignof(max_align_t)).
+ *                              Rounded up to the next power of two if needed.
  *
- * @retval NULL, errno=EINVAL
- *      - parent is NULL
- *      - bytes too small for headers + at least 1 byte of data
- *      - alignment is invalid
+ * @return An ::arena_expect_t describing success or failure.
  *
- * @retval NULL, errno=ENOMEM
- *      - parent cannot satisfy the request
+ * On success:
+ *   - @c result.has_value == true  
+ *   - @c result.u.value   points to the newly constructed sub-arena
  *
- * @note The sub-arena has:
- *       - owns_memory = false (parent owns the backing region)
- *       - resize = false (fixed capacity, cannot grow)
- *       - mem_type inherited from parent
+ * On failure:
+ *   - @c result.has_value == false  
+ *   - @c result.u.error   contains one of the following ::ErrorCode values:
  *
- * @note Calling free_arena() on the sub-arena only nulls it out (no actual free).
- *       The backing memory is released when the parent is freed/reset.
+ * @retval NULL_POINTER
+ *      If @p parent is NULL.
  *
- * @warning If parent is reset or freed, all sub-arenas become invalid.
+ * @retval INVALID_ARG
+ *      If @p bytes is zero or too small to contain @c arena_t + @c Chunk +
+ *      at least one data byte, or if alignment normalization fails.
  *
- * @par Example: Scoped temporary allocations
+ * @retval LENGTH_OVERFLOW
+ *      If pointer arithmetic overflows when computing internal layout.
+ *
+ * @retval ALIGNMENT_ERROR
+ *      If the aligned data region cannot fit within the carved block.
+ *
+ * @retval OUT_OF_MEMORY
+ *      If the parent arena cannot satisfy the @p bytes request.
+ *
+ * @note  The sub-arena has:
+ *        - @c mem_type    = parent->mem_type  
+ *        - @c resize      = 0 (cannot grow)  
+ *        - @c owns_memory = 0 (parent owns the region)
+ *
+ * @note  @c free_arena() on a sub-arena performs only shallow cleanup
+ *        (no memory is freed). The carved region is released only when the
+ *        parent arena is reset or freed.
+ *
+ * @warning Resetting or freeing @p parent immediately invalidates all
+ *          sub-arenas carved from it.
+ *
+ * @post On success:
+ *       - The sub-arena's header and first chunk reside entirely within the
+ *         carved parent region.
+ *       - @c a->cur begins at the aligned start of the data region.
+ *       - @c a->alloc == usable aligned data capacity.
+ *       - @c a->tot_alloc == bytes.
+ *
+ * @sa alloc_arena(), reset_arena(), init_static_arena(), init_dynamic_arena()
+ *
+ * @par Example: Scoped sub-arena for temporary allocations
  * @code{.c}
- * arena_t* main = init_darena(1024*1024, true);
- * 
- * // Carve 8KB sub-arena (includes headers)
- * arena_t* temp = init_arena_with_arena(main, 8192, alignof(max_align_t));
- * assert_non_null(temp);
- * 
- * void* data = alloc_arena(temp, 1024, false);  // Same API as main arena
- * // ... use data ...
- * 
- * free_arena(temp);   // Only nulls it out
- * free_arena(main);   // Frees everything including temp's region
+ * arena_expect_t main_r = init_dynamic_arena(1024 * 1024, true, 4096, 0);
+ * assert(main_r.has_value);
+ *
+ * arena_t *main = main_r.u.value;
+ *
+ * // Carve an 8 KiB sub-arena (headers included)
+ * arena_expect_t sub_r = init_arena_with_arena(main, 8192, alignof(max_align_t));
+ * assert(sub_r.has_value);
+ *
+ * arena_t *temp = sub_r.u.value;
+ *
+ * void *data = alloc_arena(temp, 1024, false);
+ * assert(data != NULL);
+ *
+ * // Sub-arena teardown: no memory is freed; parent still owns everything.
+ * free_arena(temp);
+ *
+ * // Parent teardown releases the entire carved region.
+ * free_arena(main);
  * @endcode
  */
-arena_t* init_arena_with_arena(arena_t* parent,
-                                size_t bytes,
-                                size_t alignment_in);
+arena_expect_t init_arena_with_arena(arena_t* parent,
+                                     size_t bytes,
+                                     size_t alignment_in);
 // -------------------------------------------------------------------------------- 
 
 /**
  * @brief Convenience initializer for a dynamic arena with common defaults.
  *
- * This helper calls:
+ * This helper constructs a dynamic (heap-backed, optionally growing) arena
+ * using typical defaults by forwarding to ::init_dynamic_arena():
  *
  * @code{.c}
  *   init_dynamic_arena(bytes,
@@ -454,47 +576,82 @@ arena_t* init_arena_with_arena(arena_t* parent,
  *                      alignof(max_align_t));
  * @endcode
  *
- * Use it when you want a dynamic (heap-growing) arena with a reasonable
- * minimum chunk size (4 KiB) and a base alignment of at least
- * @c alignof(max_align_t). If you need different tuning for growth chunk size
- * or alignment, call @c init_dynamic_arena() directly.
+ * Use it when you want a dynamic arena with:
+ *   - a reasonable minimum chunk size (4 KiB), and
+ *   - a base alignment of at least @c alignof(max_align_t),
+ * without manually specifying growth chunk size or base alignment.
+ *
+ * If you need custom growth tuning or a different base alignment, call
+ * ::init_dynamic_arena() directly instead.
  *
  * @param bytes   Initial allocation footprint requested for the arena’s first
- *                block. The implementation may increase it to satisfy header
- *                placement and the minimum chunk rule.
+ *                region. The implementation may increase this internally to
+ *                satisfy header placement and the minimum chunk rule.
+ *
  * @param resize  If @c true, the arena may grow by allocating additional
- *                chunks as needed; if @c false, allocations that exceed the
- *                remaining capacity will fail with @c errno = EPERM.
+ *                chunks as needed. If @c false, allocations that exceed the
+ *                remaining capacity will fail with an appropriate ::ErrorCode.
  *
- * @return Pointer to a newly created @c arena_t on success; @c NULL on failure
- *         with @c errno set by @c init_dynamic_arena().
+ * @return An ::arena_expect_t describing success or failure.
  *
- * @retval NULL, errno=EINVAL  Propagated from @c init_dynamic_arena() if
- *                             input or computed layout is invalid.
- * @retval NULL, errno=ENOMEM  If the initial allocation fails.
+ * On success:
+ *   - @c result.has_value == true
+ *   - @c result.u.value   points to the newly created @c arena_t.
+ *
+ * On failure:
+ *   - @c result.has_value == false
+ *   - @c result.u.error   is the ::ErrorCode propagated from
+ *     ::init_dynamic_arena(), typically one of:
+ *
+ *   - @c INVALID_ARG       — invalid size or layout (e.g., too small for headers)
+ *   - @c ALIGNMENT_ERROR   — base alignment normalization or placement failed
+ *   - @c LENGTH_OVERFLOW   — arithmetic overflow in size/layout calculations
+ *   - @c OUT_OF_MEMORY     — no usable data space after layout
+ *   - @c BAD_ALLOC         — underlying @c malloc() for the initial buffer failed
+ *   - @c FEATURE_DISABLED  — dynamic arenas disabled at compile time
  *
  * @note Minimum chunk size is fixed at 4096 bytes (4 KiB) in this wrapper.
- *       This is a conventional page-sized default, not a guarantee of OS
- *       page size. Choose a different value via @c init_dynamic_arena()
- *       if your workload benefits from larger/smaller growth steps.
+ *       This is a conventional page-like default, not a guarantee of OS page
+ *       size. For workloads that benefit from different growth steps, call
+ *       ::init_dynamic_arena() directly.
  *
- * @note The arena’s base alignment is @c alignof(max_align_t). Per-allocation
- *       alignment within the arena follows this base unless you use the
- *       aligned allocation variant (if provided in your API).
+ * @note The arena’s base alignment is @c alignof(max_align_t) in this wrapper.
+ *       Per-allocation alignment follows this base unless you use the aligned
+ *       allocation variant.
  *
  * @warning Dynamic arenas allocate from the heap. Release resources via
- *          @c free_arena() when done. Do not @c free() the returned pointer
- *          directly.
+ *          ::free_arena() when done. Individual allocations from the arena
+ *          must not be freed with @c free().
  *
  * @sa init_dynamic_arena(), init_static_arena(), free_arena()
+ *
+ * @par Example
+ * @code{.c}
+ * arena_expect_t r = init_darena(4096u,  true);
+ * if (!r.has_value) {
+ *     ErrorCode ec = r.u.error;
+ *     // handle error (log, abort, fallback, etc.)
+ *     return;
+ * }
+ *
+ * arena_t *a = r.u.value;
+ *
+ * void *p = alloc_arena(a, 128u, true);  // 128 zeroed bytes
+ * assert(p != NULL);
+ *
+ * // ... use arena allocations ...
+ *
+ * free_arena(a);
+ * @endcode
  */
-arena_t* init_darena(size_t bytes, bool resize);
+arena_expect_t init_darena(size_t bytes, bool resize);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Convenience initializer for a STATIC (non-growing) arena with a safe default alignment.
+ * @brief Convenience initializer for a STATIC (non-growing) arena with default alignment.
  *
- * This helper calls:
+ * This helper constructs a STATIC (non-growing, in-place) arena inside a
+ * caller-supplied buffer by forwarding to ::init_static_arena():
  *
  * @code{.c}
  *   init_static_arena(buffer,
@@ -502,53 +659,74 @@ arena_t* init_darena(size_t bytes, bool resize);
  *                     alignof(max_align_t));
  * @endcode
  *
- * Use it when you want an in-place, non-heap (STATIC) arena built inside a caller-supplied
- * buffer, with the data region aligned to at least @c alignof(max_align_t). If you require
- * a different base alignment, call @c init_static_arena() directly.
+ * Use it when you want an in-place arena built inside a caller-managed buffer
+ * with the data region aligned to at least @c alignof(max_align_t) and do not
+ * need a custom base alignment. For different alignment requirements, call
+ * ::init_static_arena() directly.
  *
- * @param buffer  Caller-supplied backing store where the arena header, first chunk header,
- *                and the data region will be constructed in place. Must stay valid for
- *                the entire lifetime of the arena.
- * @param bytes   Total size in bytes of @p buffer.
+ * @param buffer  Caller-supplied backing store where the arena header, first
+ *                chunk header, and data region will be constructed in place.
+ *                Must remain valid and writable for the entire arena lifetime.
  *
- * @return Pointer to the in-place @c arena_t on success; @c NULL on failure with @c errno set
- *         by @c init_static_arena().
+ * @param bytes   Total size in bytes of @p buffer. Must be large enough to
+ *                contain one @c arena_t, one @c Chunk, and at least one byte
+ *                of usable data after alignment and padding.
  *
- * @retval NULL, errno=EINVAL  Propagated if @p buffer is NULL; or @p bytes cannot fit the
- *                             arena header + chunk header + at least 1 byte of data after
- *                             required alignments; or if normalization detects an invalid range.
+ * @return An ::arena_expect_t describing success or failure.
  *
- * @note  The arena is created in STATIC mode (no growth). Calls to @c alloc_arena() that
- *        exceed remaining capacity will fail with @c errno = EPERM.
+ * On success:
+ *   - @c result.has_value == true
+ *   - @c result.u.value   points to the in-place @c arena_t inside @p buffer.
  *
- * @note  Ownership: the arena does **not** own @p buffer. Do not expect @c free_arena()
- *        to free @p buffer in STATIC mode. The caller is responsible for releasing @p buffer
- *        after the arena is no longer used.  Although the user is encouraged to use stack 
- *        memory buffers for this function which are freed when the scope ends.
+ * On failure:
+ *   - @c result.has_value == false
+ *   - @c result.u.error   is the ::ErrorCode propagated from
+ *     ::init_static_arena(), typically one of:
  *
- * @sa    init_static_arena(), alloc_arena(), reset_arena(), arena_remaining()
+ *   - @c NULL_POINTER     — @p buffer is @c NULL
+ *   - @c INVALID_ARG      — @p bytes too small for header + chunk + data
+ *   - @c ALIGNMENT_ERROR  — base alignment normalization or data placement failed
+ *   - @c LENGTH_OVERFLOW  — arithmetic overflow during layout computation
+ *   - @c OUT_OF_MEMORY    — no usable data region after layout
  *
- * @par Example: Typical usage with caller-managed storage
+ * @note The arena is created in STATIC mode (no growth):
+ *       - @c mem_type    = STATIC
+ *       - @c resize      = 0 (fixed capacity)
+ *       Calls to ::alloc_arena() that exceed remaining capacity will fail and
+ *       return an appropriate ::ErrorCode.
+ *
+ * @note Ownership: the arena does **not** own @p buffer. ::free_arena() for a
+ *       STATIC arena must not attempt to free @p buffer. Typically, the caller
+ *       uses stack or statically allocated storage for @p buffer, which is
+ *       released when its scope or program lifetime ends.
+ *
+ * @sa init_static_arena(), alloc_arena(), reset_arena(), arena_remaining()
+ *
+ * @par Example: Caller-managed stack buffer
  * @code{.c}
- * enum { BUF = 16 * 1024 };
- * uint8_t* buf[16 * 24];
- * assert(buf != NULL);
+ * enum { BUF = 16u * 1024u };
+ * uint8_t buf[BUF];   // stack- or static-allocated backing store
  *
- * arena_t *a = init_sarena(buf, BUF);
- * assert(a != NULL);
+ * arena_expect_t r = init_sarena(buf, BUF);
+ * if (!r.has_value) {
+ *     ErrorCode ec = r.u.error;
+ *     // handle error...
+ *     return;
+ * }
  *
- * void *p = alloc_arena(a, 1024, false);
+ * arena_t *a = r.u.value;
+ *
+ * void *p = alloc_arena(a, 1024u, false);
  * assert(p != NULL);
  *
- * // Reset discards allocations but keeps the same capacity.
+ * // Reset discards allocations but keeps capacity.
  * reset_arena(a, false);
  *
- * // Tear-down: STATIC arena does not free 'buf'.
- * // free_arena(a) should not free 'buf' in STATIC mode.
- * free(buf);
+ * // No explicit free for 'buf' is needed if it is stack or static storage.
+ * // ::free_arena(a) should perform only logical cleanup in STATIC mode.
  * @endcode
  */
-arena_t* init_sarena(void* buffer, size_t bytes);
+arena_expect_t init_sarena(void *buffer, size_t bytes);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -621,9 +799,7 @@ arena_t* init_sarena(void* buffer, size_t bytes);
  * @sa init_dynamic_arena(), init_static_arena(), reset_arena(), alloc_arena()
  */
 void free_arena(arena_t* arena);
-// ================================================================================ 
-// ================================================================================ 
-// ALLOCATION FUNCTIONS 
+// -------------------------------------------------------------------------------- 
 
 /**
  * @brief Allocate a block from an arena with per-arena base alignment.
@@ -632,26 +808,39 @@ void free_arena(arena_t* arena);
  * pointer is aligned to the arena’s base alignment (see @c arena->alignment).
  * If there is not enough space in the tail:
  * - In **STATIC** arenas or when growth is disabled, the call fails.
- * - In **DYNAMIC** arenas with growth enabled, a new chunk is allocated and
- *   linked as the new tail; the block is then carved from that fresh chunk.
+ * - In **DYNAMIC** arenas with growth enabled (and dynamic support compiled in),
+ *   a new chunk is allocated and linked as the new tail; the block is then
+ *   carved from that fresh chunk.
  *
- * @param arena   Arena to allocate from (must be a valid pointer).
+ * This function uses a simple success/failure convention:
+ *   - non-NULL pointer  => allocation succeeded
+ *   - NULL pointer      => allocation failed
+ *
+ * The caller cannot distinguish the exact failure cause from the return
+ * value alone; the typical reasons for failure are documented below.
+ *
+ * @param arena   Arena to allocate from (must be a valid, initialized pointer).
  * @param bytes   Requested payload size in bytes (must be > 0).
  * @param zeroed  If @c true, the returned block is zero-initialized via
  *                @c memset; otherwise it is left uninitialized.
  *
- * @return Pointer to an @c arena->alignment-aligned block of @p bytes on success;
- *         @c NULL on failure with @c errno set.
+ * @return Pointer to an @c arena->alignment-aligned block of @p bytes on
+ *         success; @c NULL on failure.
  *
- * @retval NULL, errno=EINVAL
- *      if @p arena is NULL, or @p bytes == 0, or the arena’s @c alignment is
- *      zero/non–power-of-two, or the internal tail state is invalid.
- * @retval NULL, errno=EPERM
- *      if there is insufficient space in the current tail and either
- *      the arena is @c STATIC or growth is disabled (@c arena->resize == 0).
- * @retval NULL, errno=ENOMEM
- *      (dynamic builds only) if growth is allowed but allocating a new chunk
- *      fails; propagated from the internal growth helper.
+ * @par Failure conditions
+ * This function returns @c NULL if any of the following conditions hold:
+ *   - @p arena is @c NULL.
+ *   - @p bytes is zero.
+ *   - @c arena->alignment is zero or not a power-of-two.
+ *   - The arena’s @c tail pointer is invalid (e.g., @c arena->tail == NULL).
+ *   - There is insufficient space in the current tail chunk and:
+ *       - the arena is STATIC, or
+ *       - dynamic growth is disabled (@c arena->resize == 0), or
+ *       - dynamic growth is compiled out (when @c ARENA_ENABLE_DYNAMIC == 0).
+ *   - (Dynamic builds only) Growth is allowed but allocating a new chunk
+ *     fails (e.g., underlying allocation failure).
+ *   - Internal size/layout checks detect arithmetic overflow or invariant
+ *     violations (if such checks are enabled in the implementation).
  *
  * @note The arena charges both the returned payload and any leading padding
  *       required to reach the alignment. That is, the internal usage counters
@@ -663,40 +852,56 @@ void free_arena(arena_t* arena);
  *       delta in remaining capacity equals exactly @p bytes.
  *
  * @warning The returned pointer must not be freed with @c free(). Memory is
- *          reclaimed only when the entire arena is @c reset_arena() or
- *          destroyed (for dynamic arenas) via @c free_arena().
+ *          reclaimed only when the entire arena is reset via ::reset_arena()
+ *          or destroyed (for dynamic arenas) via ::free_arena().
  *
- * @pre  @p arena points to a properly initialized arena.
- * @pre  @c arena->alignment is a nonzero power-of-two.
+ * @pre  @p arena points to a properly initialized arena object.
+ * @pre  @c arena->alignment is intended to be a nonzero power-of-two.
  * @post On success:
  *       - The returned pointer is @c arena->alignment-aligned.
- *       - @c arena->cur advances by @p bytes (plus any pad in the prior chunk).
- *       - @c tail->len and @c arena->len are updated to include pad+bytes.
+ *       - @c arena->cur advances by @p bytes (plus any leading pad).
+ *       - @c tail->len and @c arena->len are updated to include @c pad + @p bytes.
  *
  * @sa   init_static_arena(), init_dynamic_arena(), reset_arena(), free_arena()
  *
  * @par Example: Allocating from a STATIC arena (no growth)
  * @code{.c}
- * enum { BUF = 8192 };
+ * enum { BUF = 8192u };
  * void *buf = aligned_alloc(alignof(max_align_t), BUF);
- * arena_t *a = init_static_arena(buf, BUF, alignof(max_align_t));
+ * assert(buf != NULL);
  *
- * void *p1 = alloc_arena(a, 256, true);   // ok, zeroed
- * // ... consume capacity ...
- * void *p2 = alloc_arena(a, BUF, false);  // likely fails: errno == EPERM
+ * arena_expect_t r = init_static_arena(buf, BUF, alignof(max_align_t));
+ * assert(r.has_value);
  *
- * // Caller remains owner of 'buf'; free_arena(a) must not free it.
+ * arena_t *a = r.u.value;
+ *
+ * void *p1 = alloc_arena(a, 256u, true);   // ok, zeroed
+ * assert(p1 != NULL);
+ *
+ * // Large request that likely exceeds remaining capacity -> NULL
+ * void *p2 = alloc_arena(a, BUF, false);
+ * if (p2 == NULL) {
+ *     // out of space; caller may fall back or reset the arena
+ * }
+ *
+ * // Caller remains owner of 'buf'; free_arena(a) should not free it in STATIC mode.
  * free(buf);
  * @endcode
  *
  * @par Example: Allocating from a DYNAMIC arena (growth allowed)
  * @code{.c}
- * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * arena_expect_t r = init_dynamic_arena(4096u, true, 4096u, alignof(max_align_t));
+ * assert(r.has_value);
  *
- * // Fill current chunk, then one more byte to trigger growth:
- * (void)alloc_arena(a, 4095, false);
- * void *p = alloc_arena(a, 2, false);     // grows via new chunk, then returns aligned block
- * assert(p != NULL);
+ * arena_t *a = r.u.value;
+ *
+ * // Fill current chunk, then one more allocation to trigger growth.
+ * (void)alloc_arena(a, 4095u, false);
+ *
+ * void *p = alloc_arena(a, 2u, false);     // may grow via new chunk, then return aligned block
+ * if (p == NULL) {
+ *     // Either growth disabled/unsupported or underlying allocation failed
+ * }
  *
  * free_arena(a); // releases all chunks and the arena header block
  * @endcode
@@ -714,12 +919,12 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
  * individually freed.
  *
  * If @p realloc_size is less than or equal to @p var_size, this function
- * performs a no-op and simply returns @p variable, avoiding unnecessary arena
+ * performs a no-op and simply returns @p variable, avoiding additional arena
  * consumption.
  *
  * If @p zeroed is true and a new block is allocated, only the newly added tail
- * region (bytes [var_size, realloc_size)) will be zero-initialized. The first
- * @p var_size bytes preserve their original contents.
+ * region (bytes [@p var_size, @p realloc_size)) will be zero-initialized. The
+ * first @p var_size bytes preserve their original contents.
  *
  * @param arena
  *     Pointer to an initialized ::arena_t instance. Must not be NULL.
@@ -731,7 +936,8 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
  *
  * @param var_size
  *     Size in bytes of the existing object. Must match the size originally
- *     allocated for @p variable.
+ *     allocated for @p variable. Passing an incorrect size results in undefined
+ *     behavior (e.g., out-of-bounds copy).
  *
  * @param realloc_size
  *     New allocation size in bytes. If greater than @p var_size, a new block
@@ -739,69 +945,92 @@ void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
  *     @p var_size, the function returns @p variable.
  *
  * @param zeroed
- *     If true, the newly added tail region is zero-filled. If false, the tail
- *     contains uninitialized memory.
+ *     If true and a new block is allocated, the newly added tail region is
+ *     zero-filled. If false, the tail contains uninitialized memory.
  *
  * @return
  *     - On success, a pointer to a valid memory block:
  *         - The original pointer if no growth was required.
  *         - A new pointer if a larger block was allocated.
- *     - On failure, NULL is returned and `errno` is set to:
- *         - `EINVAL` if @p arena or @p variable is NULL.
- *         - Any error code raised by ::arena_alloc during allocation.
+ *     - On failure, @c NULL is returned.
+ *
+ * @par Failure conditions
+ * This function returns @c NULL if:
+ *   - @p arena is @c NULL, or
+ *   - @p variable is @c NULL, or
+ *   - The internal call to ::alloc_arena() fails.
+ *
+ * Typical reasons ::alloc_arena() may fail include:
+ *   - The arena has insufficient remaining capacity and:
+ *       - it is STATIC, or
+ *       - dynamic growth is disabled (@c arena->resize == 0), or
+ *       - dynamic support is compiled out (@c ARENA_ENABLE_DYNAMIC == 0).
+ *   - The arena’s alignment or internal state is invalid.
+ *   - A new chunk allocation fails in a dynamic arena (e.g., underlying
+ *     allocator failure).
+ *
+ * The exact cause of failure cannot be inferred from the @c NULL return value
+ * alone; callers should treat @c NULL as “reallocation not possible” and
+ * choose an appropriate fallback (e.g., fail the operation, reset/rebuild
+ * the arena, or allocate from a different allocator).
  *
  * @note
- *     - This function never frees memory; old blocks accumulate until the
- *       arena is reset.
- *     - Alignment of the new block follows ::arena_alloc rules.
+ *     - This function never frees memory; old blocks remain in the arena until
+ *       the entire arena is reset.
+ *     - Alignment of the new block follows ::alloc_arena() rules.
  *     - Not thread-safe unless externally synchronized.
  *
  * @code{.c}
  * // Example: growing an integer array inside an arena
- * arena_t* arena = init_dynamic_arena(4096);
- * if (!arena) {
- *     perror("Arena initialization failed");
- *     exit(EXIT_FAILURE);
+ * arena_expect_t r = init_dynamic_arena(4096u, true, 4096u, alignof(max_align_t));
+ * if (!r.has_value) {
+ *     // handle arena initialization error via r.u.error
+ *     return;
  * }
  *
- * size_t n = 4;
- * int* arr = arena_alloc(arena, n * sizeof(int), true);
+ * arena_t *arena = r.u.value;
+ *
+ * size_t n = 4u;
+ * int *arr = alloc_arena(arena, n * sizeof(int), true);
  * if (!arr) {
- *     perror("Initial allocation failed");
- *     exit(EXIT_FAILURE);
+ *     // handle initial allocation failure
+ *     return;
  * }
  *
  * // Populate initial values
- * for (size_t i = 0; i < n; ++i)
+ * for (size_t i = 0u; i < n; ++i) {
  *     arr[i] = (int)i;
+ * }
  *
  * // Grow the array to 8 integers
- * size_t new_n = 8;
- * int* new_arr = realloc_arena(arena, arr,
+ * size_t new_n = 8u;
+ * int *new_arr = realloc_arena(arena,
+ *                              arr,
  *                              n * sizeof(int),
  *                              new_n * sizeof(int),
  *                              true);  // zero-fill the new region
  *
  * if (!new_arr) {
- *     perror("Arena reallocation failed");
- *     exit(EXIT_FAILURE);
+ *     // reallocation failed (out of arena capacity, growth disabled, etc.)
+ *     // choose a fallback strategy (e.g., fail the operation)
+ *     return;
  * }
  *
  * // new_arr now contains: [0, 1, 2, 3, 0, 0, 0, 0]
  *
  * // Use the new space
- * for (size_t i = n; i < new_n; ++i)
+ * for (size_t i = n; i < new_n; ++i) {
  *     new_arr[i] = (int)(i * 10);
+ * }
  *
  * // When done:
  * reset_arena(arena);  // frees all arena memory at once
  * free_arena(arena);   // destroys the allocator
  * @endcode
  *
- * @see arena_alloc
+ * @see alloc_arena
  * @see reset_arena
  */
-
 void* realloc_arena(arena_t* arena, void* variable, size_t var_size, size_t realloc_size,
                     bool zeroed);
 // -------------------------------------------------------------------------------- 
@@ -819,7 +1048,7 @@ void* realloc_arena(arena_t* arena, void* variable, size_t var_size, size_t real
  * If there is insufficient space in the current tail chunk:
  * - In **STATIC** arenas or when growth is disabled, the call fails.
  * - In **DYNAMIC** arenas with growth enabled, a new chunk is allocated with
- *   data naturally aligned to the effective alignment; the block is carved
+ *   its data naturally aligned to the effective alignment; the block is carved
  *   from that fresh chunk with no leading pad.
  *
  * @param arena      Arena to allocate from (must be a valid pointer).
@@ -830,18 +1059,31 @@ void* realloc_arena(arena_t* arena, void* variable, size_t var_size, size_t real
  *                   @c memset; otherwise it is left uninitialized.
  *
  * @return Pointer to an @p alignment-aligned (or better) block of @p bytes on
- *         success; @c NULL on failure with @c errno set.
+ *         success; @c NULL on failure.
  *
- * @retval NULL, errno=EINVAL
- *      if @p arena is NULL, or @p bytes == 0, or @p alignment is non-zero and
- *      not a power-of-two, or if the arena’s base alignment is zero or not a
- *      power-of-two, or if the arena tail state is invalid.
- * @retval NULL, errno=EPERM
- *      if there is insufficient space in the current chunk and either the
- *      arena is @c STATIC or growth is disabled (@c arena->resize == 0).
- * @retval NULL, errno=ENOMEM
- *      (dynamic builds only) if growth is allowed but allocating a new chunk
- *      fails; propagated from the internal chunk initialization helper.
+ * @par Reasons for NULL return
+ * A NULL result may occur for any of the following reasons:
+ *
+ * 1. **Invalid arguments**
+ *      - @p arena is NULL  
+ *      - @p bytes == 0  
+ *      - @p alignment is non-zero and not a power-of-two  
+ *      - The arena’s base alignment is zero or invalid (not a power-of-two)
+ *
+ * 2. **Arena internal state invalid**
+ *      - @c arena->tail is NULL (corrupted or uninitialized arena)
+ *
+ * 3. **Insufficient space with no ability to grow**
+ *      - Arena is STATIC  
+ *      - OR arena is DYNAMIC but @c arena->resize == 0  
+ *      - AND the requested block does not fit in the current chunk
+ *
+ * 4. **Dynamic growth attempted but chunk allocation failed**
+ *      - Growth is enabled, but a new chunk could not be created  
+ *        (e.g., system allocation failure inside @_chunk_new_ex)
+ *
+ * In all cases, failure is indicated solely by the @c NULL return value. No
+ * additional diagnostic information is provided by this function.
  *
  * @note The arena charges both the returned payload and any leading padding
  *       required to reach the alignment. That is, the internal usage counters
@@ -849,9 +1091,9 @@ void* realloc_arena(arena_t* arena, void* variable, size_t var_size, size_t real
  *       @c pad ∈ [0, effective_alignment-1].
  *
  * @note On the first allocation from a freshly grown chunk, no leading padding
- *       is required because the chunk’s data pointer is itself created aligned
- *       to the effective alignment; the delta in remaining capacity equals
- *       exactly @p bytes.
+ *       is required because the chunk’s data pointer is created aligned to the
+ *       effective alignment; the delta in remaining capacity equals exactly
+ *       @p bytes.
  *
  * @warning The returned pointer must not be freed with @c free(). Memory is
  *          reclaimed only when the entire arena is reset via @c reset_arena()
@@ -861,7 +1103,7 @@ void* realloc_arena(arena_t* arena, void* variable, size_t var_size, size_t real
  * @pre  @p alignment is zero (use arena default) or a non-zero power-of-two.
  * @post On success:
  *       - The returned pointer is aligned to @c max(alignment, arena->alignment).
- *       - @c arena->cur advances by @p bytes (plus any pad in the prior chunk).
+ *       - @c arena->cur advances by @p bytes (plus any required leading pad).
  *       - @c tail->len and @c arena->len are updated to include pad+bytes.
  *
  * @sa   alloc_arena(), init_static_arena(), init_dynamic_arena(),
@@ -869,7 +1111,13 @@ void* realloc_arena(arena_t* arena, void* variable, size_t var_size, size_t real
  *
  * @par Example: Requesting a stricter alignment than the arena’s default
  * @code{.c}
- * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * arena_expect_t r = init_dynamic_arena(4096u, true, 4096u, alignof(max_align_t));
+ * if (!r.has_value) {
+ *     // handle arena initialization error via r.u.error
+ *     return;
+ * }
+ *
+ * arena_t *a = r.u.value;
  *
  * // Request 64-byte alignment for SIMD data
  * void *p = alloc_arena_aligned(a, 128, 64, false);
@@ -893,111 +1141,131 @@ void* alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool z
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Reallocate an object within an arena allocator with a specified alignment.
+ * @brief Reallocate an object within an arena using a specified alignment.
  *
- * This function behaves like a `realloc` operation adapted for arena semantics:
- * arenas cannot grow an allocation in place, so reallocation is implemented as:
+ * This function provides a `realloc`-like interface adapted to arena
+ * semantics. Because arenas cannot grow an allocation in place, reallocation
+ * is performed using the following steps:
  *
- *      1. Allocate a new block of @p realloc_size bytes with the requested
- *         alignment @p aligned using ::arena_alloc_aligned.
- *      2. Copy the first @p var_size bytes from @p variable into the new block.
- *      3. Optionally zero-fill the new tail region (bytes [var_size, realloc_size)).
- *      4. Return the new pointer.
+ *   1. Allocate a new block of @p realloc_size bytes with the requested
+ *      alignment @p aligned using ::alloc_arena_aligned().
+ *   2. Copy the first @p var_size bytes from @p variable into the new block.
+ *   3. If @p zeroed is true, zero-fill the newly added region
+ *      (bytes [var_size, realloc_size)).
+ *   4. Return the new block.
  *
- * The old memory is not freed and remains part of the arena until a call to
- * ::reset_arena() or until its parent chunk is discarded.
+ * The original memory remains owned by the arena until the arena is reset.
+ * It is never individually freed.
  *
- * If @p realloc_size is less than or equal to @p var_size, the function performs
- * a no-op and returns @p variable unchanged. This avoids unnecessary arena
- * consumption and matches typical arena semantics.
+ * If @p realloc_size is less than or equal to @p var_size, the function
+ * performs a no-op and returns @p variable unchanged. This avoids unnecessary
+ * arena consumption and is consistent with arena-based allocation semantics.
  *
  * @param arena
- *     Pointer to an initialized ::arena_t. Must not be NULL.
+ *     Pointer to a valid ::arena_t. Must not be NULL.
  *
  * @param variable
- *     Pointer to the existing object previously allocated from @p arena.
- *     Must not be NULL. The function does not validate arena ownership.
+ *     Pointer to an object previously allocated from @p arena. Must not be
+ *     NULL. Ownership is not validated; passing foreign pointers results in
+ *     undefined behavior.
  *
  * @param var_size
- *     Size of the existing object in bytes. Must be the exact size originally
- *     allocated. Passing an incorrect size results in undefined behavior.
+ *     Size in bytes of the existing object. Must match the size originally
+ *     allocated for @p variable. Incorrect sizes lead to undefined behavior.
  *
  * @param realloc_size
- *     New size in bytes for the reallocated object. If greater than @p var_size,
- *     a new block is allocated with alignment @p aligned. Otherwise, this
- *     function returns @p variable unchanged.
+ *     New size in bytes. If greater than @p var_size, a new allocation is
+ *     made; otherwise, the original pointer is returned unchanged.
  *
  * @param zeroed
- *     If true, the newly added tail region is zero-filled. The initial
- *     @p var_size bytes are always preserved exactly.
+ *     If true and a new block is allocated, only the newly added tail region is
+ *     zero-filled. The first @p var_size bytes preserve their original values.
  *
  * @param aligned
- *     Required alignment for the new allocation. Must be a power of two and
- *     supported by ::arena_alloc_aligned. The returned pointer will satisfy:
+ *     Required alignment for the new block. Must be zero (use arena default) or
+ *     a non-zero power-of-two supported by ::alloc_arena_aligned(). The returned
+ *     pointer will satisfy:
  *
  *         (uintptr_t)ptr % aligned == 0
  *
  * @return
- *     - The original @p variable if no growth is required.
- *     - A newly allocated, aligned pointer if growth is required.
- *     - NULL on failure, with `errno` set to:
- *         - `EINVAL` if @p arena or @p variable is NULL.
- *         - Errors propagated from ::arena_alloc_aligned when allocation fails.
+ *     - @p variable itself if @p realloc_size <= @p var_size.
+ *     - A newly allocated, properly aligned pointer if growth succeeds.
+ *     - @c NULL if allocation of the new block fails.
+ *
+ * @par Reasons this function may return NULL
+ * A NULL return indicates that the attempt to allocate a new, larger block
+ * failed. Common causes include:
+ *
+ *   1. **Invalid inputs**
+ *        - @p arena is NULL  
+ *        - @p variable is NULL  
+ *
+ *   2. **Invalid alignment** (checked by ::alloc_arena_aligned)
+ *        - @p aligned is non-zero and not a power-of-two  
+ *        - The arena’s base alignment is invalid  
+ *
+ *   3. **Arena internal state invalid**
+ *        - @c arena->tail is NULL  
+ *        - Corrupted or uninitialized arena state  
+ *
+ *   4. **Insufficient space and no ability to grow**
+ *        - STATIC arena  
+ *        - Or DYNAMIC arena with growth disabled (@c arena->resize == 0)  
+ *        - And the requested block does not fit in the current chunk  
+ *
+ *   5. **Dynamic growth attempted but chunk allocation failed**
+ *        - Growth is allowed but ::alloc_arena_aligned() cannot allocate a
+ *          sufficiently large chunk (e.g., underlying allocation failure)
+ *
+ * In all cases, *only* the NULL return value signals failure; no diagnostic
+ * information is stored or returned.
  *
  * @note
- *     - Alignment of the returned block *may differ from* the original block.
- *     - This function never frees memory; the old block persists.
- *     - Misaligned @p aligned values (non-power-of-two) result in undefined behavior.
- *     - Not thread-safe unless the arena is externally synchronized.
+ *     - The function never frees memory. Old blocks accumulate until the arena
+ *       is reset.
+ *     - Alignment of the new block may differ from the original.
+ *     - Passing a pointer not allocated from @p arena is undefined behavior.
+ *     - Not thread-safe unless externally synchronized.
  *
- * @code
+ * @code{.c}
  * // Example: aligned growth of a struct inside an arena
  * typedef struct {
  *     float x, y, z;
  * } vec3;
  *
- * arena_t* arena = init_dynamic_arena(8192);
- *
- * // Allocate a vec3 with 16-byte alignment
- * vec3* v = arena_alloc_aligned(arena, sizeof(vec3), 16, true);
- * if (!v) {
- *     perror("aligned allocation failed");
- *     exit(EXIT_FAILURE);
+ * arena_expect_t r = init_dynamic_arena(4096u, true, 4096u, alignof(max_align_t));
+ * if (!r.has_value) {
+ *     // handle arena initialization error via r.u.error
+ *     return;
  * }
  *
- * v->x = 1.0f;
- * v->y = 2.0f;
- * v->z = 3.0f;
+ * arena_t *arena = r.u.value;*
  *
- * // Reallocate with 32-byte alignment and additional trailing space
+ * // Allocate with 16-byte alignment
+ * vec3* v = alloc_arena_aligned(arena, sizeof(vec3), 16, true);
+ *
  * size_t old_size = sizeof(vec3);
  * size_t new_size = sizeof(vec3) + 32;
  *
+ * // Grow the block with stricter alignment and zero tail
  * vec3* v2 = realloc_arena_aligned(arena, v,
  *                                  old_size,
  *                                  new_size,
- *                                  true,   // zero the new region
- *                                  32);    // new alignment requirement
+ *                                  true,   // zero tail
+ *                                  32);    // stricter alignment
  *
- * if (!v2) {
- *     perror("aligned realloc failed");
- *     exit(EXIT_FAILURE);
- * }
+ * // v2 is 32-byte aligned and contains a zeroed extension region.
+ * // v still exists in the arena and is not freed.
  *
- * // v2 preserves the vec3 values and now has a zeroed 32-byte tail.
- * // The returned pointer satisfies (uintptr_t)v2 % 32 == 0.
- *
- * // Old object v is still in the arena; it is not freed.
- *
- * reset_arena(arena);   // Free all arena memory at once
+ * reset_arena(arena);   // Reclaims all arena allocations at once
  * free_arena(arena);
  * @endcode
  *
- * @see arena_alloc_aligned
- * @see arena_alloc
+ * @see alloc_arena_aligned
+ * @see alloc_arena
  * @see reset_arena
  */
-
 void* realloc_arena_aligned(arena_t* arena, void* variable, size_t var_size, size_t realloc_size,
                             bool zeroed, size_t alignment);
 // ================================================================================ 
@@ -1110,97 +1378,150 @@ bool is_arena_ptr_sized(const arena_t* arena, const void* ptr, size_t size);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Reset an arena’s usage counters, with an option to trim extra chunks.
+ * @brief Reset an arena to an empty state, optionally trimming dynamic chunks.
  *
- * Rewinds the arena to an “empty” state by zeroing the used-length of every
- * chunk and resetting global usage counters. Two modes are supported:
+ * This function rewinds an arena to a fresh “empty” state. All chunk usage
+ * counters are cleared, @c arena->len becomes 0, and the cursor @c arena->cur
+ * is repositioned appropriately.
  *
- * - **Non-trimming reset** (@p trim_extra_chunks == false): all existing chunks
- *   are retained; capacity and @c tot_alloc are unchanged. The cursor @c cur is
- *   moved to the start of the current @c tail (or @c head if @c tail is NULL).
+ * Two reset modes are supported:
  *
- * - **Trimming reset** (@p trim_extra_chunks == true, dynamic arenas only):
- *   frees every growth chunk after the head (each was a single @c malloc),
- *   detaches the list to a single head chunk, and resets the cursor to the
- *   head’s data base. Usable capacity becomes exactly the head’s @c alloc.
- *   @c tot_alloc is reduced to reflect the removal of those extra chunks.
+ * 1. Non-trimming reset (`trim_extra_chunks == false`)
+ * - All chunks remain allocated.
+ * - Only usage counters are cleared.
+ * - Total capacity (`arena->alloc`) and total allocation footprint
+ *   (`arena->tot_alloc`) are preserved.
+ * - The cursor is moved to the start of the current tail chunk
+ *   (or the head if no tail exists).
  *
- * @param arena             Arena to reset (must be a valid pointer).
- * @param trim_extra_chunks If @c true and the arena is dynamic, free all chunks
- *                          after the head; if @c false, keep the current chunk
- *                          chain and only clear usage.
+ * 2. Trimming reset (`trim_extra_chunks == true`)
+ * Applies **only to DYNAMIC arenas**:
+ * - Frees all growth chunks after the head.  
+ * - Resets the chunk list to a single head chunk.  
+ * - The cursor is reset to the head’s data region.  
+ * - `arena->alloc` becomes exactly the head chunk’s usable size.  
+ * - `arena->tot_alloc` is reduced to reflect the removal of those extra chunks.
  *
- * @return void (errors are reported via @c errno and early-return)
+ * STATIC arenas always behave as if `trim_extra_chunks == false`; they never
+ * free additional chunks because their storage is caller-owned.
  *
- * @retval (no return), errno=EINVAL
- *      if @p arena is @c NULL.
+ * @param arena
+ *     Pointer to an initialized ::arena_t. Must not be NULL.
  *
- * @note STATIC arenas ignore the trim path: their chunk chain is caller-owned
- *       storage; this function will only clear usage and preserve capacity.
+ * @param trim_extra_chunks
+ *     If true and the arena is dynamic, all chunks after the head are freed.
+ *     If false, all chunks are retained and only usage is cleared.
  *
- * @note Accounting details when trimming (dynamic only):
- *       - Each growth chunk contributed
- *         @c align_up(sizeof(Chunk), alignment) + chunk->alloc
- *         to @c tot_alloc at link time; this function subtracts the same
- *         contribution before freeing the chunk header.
- *       - After trimming, @c alloc == head->alloc and @c tot_alloc reflects
- *         the initial base allocation footprint.
+ * @return
+ *     - `true` on success.  
+ *     - `false` if @p arena is NULL.
  *
- * @warning Do not call this concurrently with other operations on the same
- *          arena without external synchronization.
+ * @par Reasons this function may return false
+ * - @p arena is NULL.
+ *
+ * No other failure conditions exist. A NULL arena is the only error state.
+ *
+ * @note
+ * - STATIC arenas never trim: their chunk chain is caller-supplied storage.
+ * - When trimming dynamic arenas, each chunk’s footprint was originally added as:
+ *
+ *       align_up(sizeof(Chunk), arena->alignment) + chunk->alloc
+ *
+ *   This same quantity is subtracted when the chunk is removed.
+ *
+ * @note
+ *   This function is safe to call on arenas created via ::init_dynamic_arena()
+ *   or ::init_static_arena(). When using ::init_dynamic_arena(), remember that
+ *   the initializer returns an `arena_expect_t`. Always check `.has_value`
+ *   before using the returned arena.
+ *
+ * @warning
+ *   Not thread-safe unless externally synchronized.
  *
  * @par Complexity
- * O(N) over the number of chunks; when trimming, freeing is also O(N_tail).
+ *   O(N) over the number of chunks.  
+ *   When trimming, freeing the extra chunks is also O(N_tail).
  *
  * @par Examples
  * @code{.c}
- * // Non-trimming reset (keeps capacity and all chunks):
- * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * // Dynamic arena created via arena_expect_t:
+ * arena_expect_t exp = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * if (!exp.has_value) { / handle error }
+ * arena_t *a = exp.u.value;
+ *
+ * // Non-trimming reset preserves all allocated chunks:
  * (void)alloc_arena(a, 1024, false);
- * reset_arena(a, false);  // capacity retained
+ * reset_arena(a, false);   // usage cleared, capacity preserved
  *
- * // Trimming reset (drop extra chunks, return to a single head):
- * // Force growth:
+ * // Force the arena to grow:
  * size_t rem = arena_remaining(a);
- * (void)alloc_arena(a, rem, false);             // exhaust head
- * (void)alloc_arena(a, 64,  false);             // creates a new tail chunk
- * reset_arena(a, true);   // frees tail(s), cursor at head
+ * (void)alloc_arena(a, rem, false);    // exhaust head
+ * (void)alloc_arena(a, 64,  false);    // causes a new tail chunk
  *
- * free_arena(a); // dynamic arena teardown
+ * // Trimming reset collapses back to a single head chunk:
+ * reset_arena(a, true);
+ *
+ * free_arena(a);  // dynamic arena teardown
  * @endcode
  */
-void reset_arena(arena_t* arena, bool trim_extra_chunks);
+bool reset_arena(arena_t *arena, bool trim_extra_chunks);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Create a lightweight checkpoint of the arena’s current cursor/tail.
+ * @brief Capture a lightweight checkpoint of the arena’s current position.
  *
- * Captures just enough information to later rewind the arena to the same “point
- * in time” without copying any payload data. The checkpoint is an opaque,
- * fixed-size public struct (ABI-stable) that internally records:
+ * Creates an opaque ::ArenaCheckPoint value that encodes the arena’s current
+ * cursor position, the active tail chunk, and the arena’s global used-byte
+ * count at the moment of capture. No memory is copied; only structural
+ * addresses and counters are saved.
  *
- * - the current tail chunk pointer,
- * - the current cursor within that tail,
- * - the arena’s total used bytes at save time (for diagnostics).
+ * The returned checkpoint may later be passed to ::restore_arena() to rewind
+ * the arena to this exact allocation point. Checkpoints provide a fast,
+ * allocation-free mechanism for implementing temporary “scoped” arena usage.
  *
- * The checkpoint remains valid only as long as the recorded tail chunk continues
- * to exist in the arena’s chunk chain. Operations that *remove* or *free* that
- * tail (e.g., trimming resets) may invalidate previously saved checkpoints.
+ * If @p arena is NULL, this function returns a *zeroed* ::ArenaCheckPoint.  
+ * This value is treated as a **no-op checkpoint** by ::restore_arena() and
+ * indicates that no valid state was captured.
  *
- * @param arena  Arena whose state to capture. If @c NULL, an "empty" checkpoint
- *               is returned that @c restore_arena() will treat as a no-op.
+ * Apart from a NULL arena, this function has **no other failure modes**.
  *
- * @return Opaque @c ArenaCheckPoint value which can be passed to
- *         @c restore_arena() to rewind to this position.
+ * Internally (in a private representation), the checkpoint stores:
+ * - the pointer to the current tail chunk at the time of capture,
+ * - the cursor position within that chunk, and
+ * - the arena’s total used length (`arena->len`) for diagnostics.
  *
- * @note Checkpoints do not pin memory. They do not keep chunks alive; they
- *       merely store addresses and counters for later validation/rewind.
+ * A checkpoint is valid **only as long as** the tail chunk it references
+ * remains part of the arena’s chunk list. Operations that remove or free the
+ * recorded chunk invalidate the checkpoint. In particular:
  *
- * @warning This function is not synchronization-safe: if other threads grow,
- *          reset, or free the arena while the checkpoint is being saved or
- *          later restored, behavior is undefined.
+ * - A **trimming reset** (see ::reset_arena with `trim_extra_chunks == true`)
+ *   may free tail chunks, invalidating older checkpoints.
  *
- * @sa restore_arena(), reset_arena(), alloc_arena()
+ * - A **dynamic growth** does *not* invalidate a checkpoint—the tail grows,
+ *   but the checkpoint remains valid unless that tail is later removed.
+ *
+ * - STATIC arenas never remove chunks, so checkpoints remain valid until an
+ *   arena-wide reset that overwrites usage information.
+ *
+ * @param arena
+ *     Pointer to an initialized ::arena_t. If NULL, a zeroed checkpoint is
+ *     returned.
+ *
+ * @return
+ *     - A nonzero ::ArenaCheckPoint that can be safely passed to
+ *       ::restore_arena() for rewinding.
+ *     - A zeroed ::ArenaCheckPoint if @p arena is NULL.
+ *
+ * @note
+ *     Checkpoints do not “pin” or protect memory. They merely store pointers
+ *     and counters. Removing or freeing the underlying chunk chain invalidates
+ *     them.
+ *
+ * @warning
+ *     Not thread-safe unless externally synchronized. Concurrent mutation of
+ *     the arena while saving or restoring invalidates checkpoints.
+ *
+ * @sa restore_arena(), reset_arena(), alloc_arena(), alloc_arena_aligned()
  */
 ArenaCheckPoint save_arena(const arena_t* arena);
 // -------------------------------------------------------------------------------- 
@@ -1208,45 +1529,80 @@ ArenaCheckPoint save_arena(const arena_t* arena);
 /**
  * @brief Rewind an arena to a previously saved checkpoint.
  *
- * Attempts to restore the arena’s cursor and tail to the state captured by
- * @c save_arena(). Validation ensures the checkpoint’s chunk still exists in
- * the current chain and that its saved cursor lies within that chunk’s capacity.
+ * Restores the arena’s allocation state to the point captured by
+ * ::save_arena(). The function rewinds the cursor, tail chunk, and internal
+ * usage counters, optionally freeing dynamic growth chunks depending on the
+ * arena type.
  *
- * Behavior differs by arena type:
- * - **DYNAMIC**: all chunks *after* the checkpoint chunk are freed (each was a
- *   single-malloc “growth” block), and the list is relinked so the checkpoint
- *   chunk becomes the tail. Accounting fields (@c len, @c alloc, @c tot_alloc)
- *   are recomputed for the remaining chain.
- * - **STATIC**: no chunks are freed (storage is caller-owned). The cursor and
- *   tail are rewound; accounting is recomputed. If the checkpoint referred to a
- *   chunk that no longer exists, the restore fails.
+ * If @p cp represents an “empty” checkpoint (as returned when ::save_arena()
+ * is called with a NULL arena), this function performs a **no-op** and returns
+ * @c true.
  *
- * @param arena  Arena to rewind (must be a valid pointer).
- * @param cp     Checkpoint previously returned by @c save_arena().
+ * A checkpoint is valid only if:
+ * - the referenced chunk still exists in the arena’s chunk chain,
+ * - the saved cursor lies within that chunk’s data region,
+ * - the arena has a valid power-of-two alignment,
+ * - the checkpoint was produced from this arena (caller responsibility).
  *
- * @return @c true on success; @c false on failure with @c errno set.
+ * If any of these validations fail, the function returns @c false and the arena
+ * remains unchanged.
  *
- * @retval true
- *      if the checkpoint is empty (no chunk recorded) — treated as a no-op.
+ * **Dynamic arenas**
+ * - All chunks *after* the checkpoint’s chunk are freed (each corresponds to a
+ *   single-growth allocation).
+ * - The chunk list is truncated at the checkpoint chunk, which becomes the new
+ *   tail.
+ * - Usage counters (`len`, `alloc`) and footprint counters (`tot_alloc`) are
+ *   recomputed or adjusted based on the surviving chain.
  *
- * @retval false, errno=EINVAL
- *      if @p arena is @c NULL, or the checkpoint’s chunk is not found in the
- *      current chain (stale checkpoint), or the checkpoint cursor is out of
- *      bounds for that chunk, or the arena alignment is invalid.
+ * **Static arenas**
+ * - No chunks are freed; storage is caller-owned.
+ * - The cursor and tail chunk are rewound to the checkpoint.
+ * - Usage/footprint accounting is recomputed.
  *
- * @note After a successful restore, any pointers returned by @c alloc_arena()
- *       *after* the checkpoint position become invalid (dynamic arenas will
- *       have freed those growth chunks; static arenas will consider their
- *       contents “unused” again).
+ * The function returns @c false if any of the following occur:
  *
- * @note @c tot_alloc is recomputed based on the remaining chain using the
- *       convention: @c align_up(sizeof(arena_t), alignment) +
- *       sum( align_up(sizeof(Chunk), alignment) + chunk->alloc ).
+ * - @p arena is @c NULL.
+ * - The checkpoint’s chunk does not appear in the arena’s current chunk chain
+ *   (e.g., checkpoint is stale due to trimming or external modifications).
+ * - The checkpoint’s saved cursor lies outside the referenced chunk’s data
+ *   bounds.
+ * - The arena’s base alignment is zero or not a power-of-two.
+ * - Internal invariants fail (e.g., chunk missing its data pointer).
  *
- * @warning Not thread-safe; external synchronization is required if other
- *          threads interact with the arena concurrently.
+ * In all failure cases, the arena is left unchanged.
  *
- * @sa save_arena(), reset_arena(), alloc_arena(), free_arena()
+ * - The checkpoint is empty (treated as a no-op).
+ * - The checkpoint is valid and the arena is rewound successfully.
+ *
+ * @param arena
+ *     Pointer to a valid ::arena_t instance. Must not be NULL.
+ *
+ * @param cp
+ *     A checkpoint previously returned by ::save_arena().
+ *
+ * @return
+ *     - @c true  if the checkpoint is valid and the arena is successfully
+ *                rewound (or the checkpoint is empty).
+ *     - @c false if validation fails or the operation cannot be performed.
+ *
+ * @note
+ *     After a successful restore, any pointers obtained from the arena
+ *     **after** the saved checkpoint become invalid:
+ *     - In dynamic arenas, their chunks may have been freed.
+ *     - In static arenas, their memory is still present but considered
+ *       “unused” again.
+ *
+ * @warning
+ *     Checkpoints do not pin memory. If the arena shrinks, trims, or mutates
+ *     after saving a checkpoint, the checkpoint may become invalid.
+ *
+ * @warning
+ *     Not thread-safe. External synchronization is required if other threads
+ *     could interact with the arena concurrently.
+ *
+ * @sa save_arena(), reset_arena(), alloc_arena(), alloc_arena_aligned(),
+ *     free_arena()
  */
 bool restore_arena(arena_t *arena, ArenaCheckPoint cp);
 // ================================================================================ 
@@ -1254,34 +1610,54 @@ bool restore_arena(arena_t *arena, ArenaCheckPoint cp);
 // GETTER FUNCTIONS 
 
 /**
- * @brief Return *immediately usable* bytes remaining in the current tail chunk.
+ * @brief Return the number of *immediately usable* bytes remaining in the arena’s
+ *        current tail chunk.
  *
- * Computes the free space only in the arena’s @b tail chunk as:
+ * Computes the free space available in the tail chunk only, using:
  *
- *     tail->alloc - min(tail->len, tail->alloc)
+ *      remaining = tail->alloc - min(tail->len, tail->alloc)
  *
- * If the arena is NULL, has no tail, or the tail has no data base, returns 0.
+ * This reflects how many bytes can be allocated *without* triggering arena
+ * growth (in dynamic arenas) and without traversing earlier chunks.
  *
- * @param arena  Arena to query (may be NULL).
+ * If @p arena is NULL, has no tail chunk, or the tail chunk lacks a valid data
+ * region, the function returns 0.
  *
- * @return Number of bytes that can be satisfied from the current tail chunk
- *         without growth; 0 if none or on invalid input.
+ * @param arena
+ *     Pointer to an initialized ::arena_t, or NULL.
  *
- * @note This is @b not the total free space across all chunks; it reports
- *       only the space left in the @e current tail. If you need additional
- *       capacity (dynamic arenas), @c alloc_arena() may grow the arena.
+ * @return
+ *     The number of bytes available in the current tail chunk.
+ *     Returns 0 on invalid input or if no space remains. Returns 
+ *     SIZE_MAX if a NULL pointer is passed to the function
  *
- * @note The value ignores any per-allocation padding that might be required to
- *       satisfy the arena’s base alignment. A subsequent allocation of @c n
- *       bytes may require up to @c (alignment-1) extra pad, so an allocation
- *       of size @c n succeeds from the tail iff @c arena_remaining() >= pad + n.
+ * @note
+ *     This is **not** the total free space across all chunks. It reports only
+ *     what the current tail can satisfy directly.
+ *
+ * @note
+ *     The reported value does **not** include any per-allocation alignment
+ *     padding that may be required by ::alloc_arena() or
+ *     ::alloc_arena_aligned().  
+ *     An allocation of @c n bytes succeeds from the tail iff:
+ *
+ *         arena_remaining(a) >= pad + n
+ *
+ *     where @c pad is the alignment padding required to bring the cursor up to
+ *     the arena’s base or requested alignment.
+ *
+ * @note
+ *     For dynamic arenas, if the remaining space is insufficient, a subsequent
+ *     allocation *may* still succeed by causing the arena to grow a new chunk.
  *
  * @par Example
  * @code{.c}
- * size_t r = arena_remaining(a);
- * if (r >= needed + pad_up((uintptr_t)arena_cursor(a), arena_alignment(a))) {
- *     // fits in current tail without growth
+ * size_t rem = arena_remaining(a);
+ *
+ * if (rem == SIZE_MAX) {
+ *    // ascertain if result is real or a NULL pointer was passed to function
  * }
+ *
  * @endcode
  */
 size_t arena_remaining(const arena_t* arena);
@@ -1295,7 +1671,7 @@ size_t arena_remaining(const arena_t* arena);
  *
  * @param arena  Arena to query (may be NULL).
  *
- * @return The number of chunks in the arena; 0 if @p arena is NULL.
+ * @return The number of chunks in the arena; SIZE_MAX if @p arena is NULL.
  *
  * @note For a freshly initialized arena there is always at least one chunk
  *       (the head). After @c reset_arena(..., trim=true) on a dynamic arena,
@@ -1339,7 +1715,7 @@ alloc_t arena_mtype(const arena_t* arena);
  *
  * @param arena  Arena to query (may be NULL).
  *
- * @return Total used bytes (including pad) across the arena; 0 if @p arena is NULL.
+ * @return Total used bytes (including pad) across the arena; SIZE_MAX if @p arena is NULL.
  *
  * @note This value never exceeds @c arena_alloc(arena).
  */
@@ -1355,7 +1731,7 @@ size_t arena_size(const arena_t* arena);
  *
  * @param arena  Arena to query (may be NULL).
  *
- * @return Total usable capacity; 0 if @p arena is NULL.
+ * @return Total usable capacity; SIZE_MAX if @p arena is NULL.
  *
  * @see total_arena_alloc() for capacity including metadata overhead.
  */
@@ -1376,7 +1752,7 @@ size_t arena_alloc(const arena_t* arena);
  * @param arena  Arena to query (may be NULL).
  *
  * @return Total bytes attributed to the arena (data + headers + alignment
- *         padding as accounted by the implementation); 0 if @p arena is NULL.
+ *         padding as accounted by the implementation); SIZE_MAX if @p arena is NULL.
  *
  * @note This is an accounting value; it is not necessarily the exact number of
  *       bytes returned by underlying allocation calls in all configurations.
@@ -1393,7 +1769,7 @@ size_t total_arena_alloc(const arena_t* arena);
  * @param arena  Arena to query.
  *
  * @return The power-of-two alignment (≥ alignof(max_align_t)) used by this arena.
- *         Returns 0 and sets @c errno=EINVAL if @p arena is NULL or uninitialized.
+ *         Returns SIZE_MAX arena is NULL or uninitialized.
  *
  * @note A nonzero return is guaranteed to be a power-of-two by construction.
  */
@@ -1409,7 +1785,7 @@ size_t arena_alignment(const arena_t* arena);
  * @param arena  Arena to query.
  *
  * @return The minimum growth size in bytes; 0 for static arenas or on error.
- *         Returns 0 and sets @c errno=EINVAL if @p arena is NULL or uninitialized.
+ *         Returns SIZE_MAX if @p arena is NULL or uninitialized.
  */
 size_t arena_min_chunk_size(const arena_t* arena);
 // ================================================================================ 
@@ -1553,8 +1929,7 @@ bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
  *                (sub-arena borrowing from parent, owns nothing)
  *
  * @note For static arenas, owns_memory=true means the arena owns its header
- *       structure, but the caller still owns the buffer itself. This is why
- *       free_arena() returns EPERM for static arenas.
+ *       structure, but the caller still owns the buffer itself.
  *
  * @note This function is useful for:
  *       - Determining if toggle_arena_resize() is allowed (requires owns_memory=true)
@@ -1632,8 +2007,7 @@ bool arena_owns_memory(const arena_t* arena);
  *               or ::init_dynamic_arena().
  * @param type   The complete object type to allocate (e.g., @c int, @c struct Foo).
  *
- * @return @c type* on success; @c NULL on failure with @c errno set by
- *         ::alloc_arena() (e.g., @c EINVAL, @c EPERM, @c ENOMEM).
+ * @return @c type* on success; @c NULL on failure
  *
  * @note This macro only wraps ::alloc_arena(); no additional behavior is added.
  * @note Do not pass an incomplete type.
@@ -1669,7 +2043,7 @@ bool arena_owns_memory(const arena_t* arena);
  * @param type   The element type (must be complete).
  * @param count  Number of elements to allocate. Evaluated exactly once.
  *
- * @return @c type* on success; @c NULL on failure with @c errno set by ::alloc_arena().
+ * @return @c type* on success; @c NULL on failure
  *
  * @warning Very large @p count values can overflow the size computation
  *          @c sizeof(type) * (count), causing ::alloc_arena() to fail.
@@ -1703,7 +2077,7 @@ bool arena_owns_memory(const arena_t* arena);
  *               or ::init_dynamic_arena().
  * @param type   The complete object type to allocate and zero.
  *
- * @return @c type* on success; @c NULL on failure with @c errno set by ::alloc_arena().
+ * @return @c type* on success; @c NULL on failure
  *
  * @note Zero-initialization uses @c memset(ptr, 0, sizeof(type)).
  *
@@ -1737,7 +2111,7 @@ bool arena_owns_memory(const arena_t* arena);
  * @param type   Element type (must be complete).
  * @param count  Number of elements to allocate. Evaluated exactly once.
  *
- * @return @c type* on success; @c NULL on failure with @c errno set by ::alloc_arena().
+ * @return @c type* on success; @c NULL on failure
  *
  * @warning Very large @p count values can overflow the size computation.
  * @warning Avoid side effects in @p count (e.g., do not pass @c i++).
@@ -1763,9 +2137,6 @@ bool arena_owns_memory(const arena_t* arena);
  * by @p ctx. If @p zeroed is true, the returned memory will be
  * zero-initialized according to the semantics of alloc_arena().
  *
- * On error, errno is set (typically to ENOMEM or EINVAL) and NULL is
- * returned.
- *
  * This function implements the @ref alloc_prototype interface for
  * arena-backed allocators.
  *
@@ -1779,7 +2150,6 @@ bool arena_owns_memory(const arena_t* arena);
 static inline void* arena_v_alloc(void* ctx, size_t size, bool zeroed) {
     arena_t* arena = (arena_t*)ctx;
     if (!arena) {
-        errno = EINVAL;
         return NULL;
     }
     return alloc_arena(arena, size, zeroed);
@@ -1793,9 +2163,6 @@ static inline void* arena_v_alloc(void* ctx, size_t size, bool zeroed) {
  * by @p ctx, with a minimum alignment of @p align. The alignment must
  * be a power of two. If @p zeroed is true, the returned memory will be
  * zero-initialized.
- *
- * On error, errno is set (typically to ENOMEM or EINVAL) and NULL is
- * returned.
  *
  * This function implements the @ref alloc_aligned_prototype interface
  * for arena-backed allocators.
@@ -1812,7 +2179,6 @@ static inline void* arena_v_alloc_aligned(void* ctx, size_t size,
                                           size_t align, bool zeroed) {
     arena_t* arena = (arena_t*)ctx;
     if (!arena) {
-        errno = EINVAL;
         return NULL;
     }
     return alloc_arena_aligned(arena, size, align, zeroed);
@@ -1831,9 +2197,6 @@ static inline void* arena_v_alloc_aligned(void* ctx, size_t size,
  * allocation grows, any newly added region must be zero-initialized
  * according to the semantics of realloc_arena().
  *
- * On error, errno is set and NULL is returned. In that case, the caller
- * must continue to use @p old_ptr unchanged.
- *
  * This function implements the @ref realloc_prototype interface for
  * arena-backed allocators.
  *
@@ -1851,7 +2214,6 @@ static inline void* arena_v_realloc(void* ctx, void* old_ptr,
                                     bool zeroed) {
     arena_t* arena = (arena_t*)ctx;
     if (!arena) {
-        errno = EINVAL;
         return NULL;
     }
     return realloc_arena(arena, old_ptr, old_size, new_size, zeroed);
@@ -1891,7 +2253,6 @@ static inline void* arena_v_realloc_aligned(void* ctx, void* old_ptr,
                                             bool zeroed, size_t align) {
     arena_t* arena = (arena_t*)ctx;
     if (!arena) {
-        errno = EINVAL;
         return NULL;
     }
     return realloc_arena_aligned(arena, old_ptr, old_size,
@@ -1906,9 +2267,6 @@ static inline void* arena_v_realloc_aligned(void* ctx, void* old_ptr,
  * allocator; all memory is typically released in bulk via a reset or
  * destroy operation. As a result, this function is effectively a no-op.
  *
- * If @p ctx is NULL, errno is set to EINVAL and the function returns.
- * The @p ptr parameter is ignored.
- *
  * This function implements the @ref return_prototype interface for
  * arena-backed allocators.
  *
@@ -1919,7 +2277,6 @@ static inline void arena_v_return(void* ctx, void* ptr) {
     (void)ptr;  // arenas don’t support returning individual blocks
     arena_t* arena = (arena_t*)ctx;
     if (!arena) {
-        errno = EINVAL;
         return;
     }
 }
@@ -1942,7 +2299,6 @@ static inline void arena_v_return(void* ctx, void* ptr) {
 static inline void arena_v_free(void* ctx) {
     arena_t* arena = (arena_t*)ctx;
     if (!arena) {
-        errno = EINVAL;
         return;
     }
     free_arena(arena);
@@ -4892,93 +5248,100 @@ void *alloc_buddy(buddy_t *b, size_t size, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Initialize an arena_t backed by a buddy allocator region.
+ * @brief Initialize an arena_t backed by a region allocated from a buddy allocator.
  *
- * This function creates an arena_t that lives entirely inside a single
- * allocation obtained from the given @p buddy allocator. The buddy allocation
- * is used to store:
+ * This function creates an arena whose entire lifetime and storage are contained inside
+ * a *single allocation* obtained from the provided @p buddy allocator. The allocated
+ * region is used to store:
  *
- *   - the arena_t header itself,
- *   - a single Chunk header, and
- *   - the arena's usable data region.
+ *   - the @c arena_t header,
+ *   - exactly one @c Chunk header, and
+ *   - the arena’s data region aligned to @p base_align_in.
  *
- * The pointer returned by this function is:
+ * The returned arena pointer is:
  *
- *   - the address of the arena_t object, and
- *   - exactly the same pointer that was returned by alloc_buddy().
+ *   - the address of the arena_t object itself, and
+ *   - **exactly equal** to the pointer returned by @c alloc_buddy().
  *
- * This is important: when the arena is no longer needed, the entire region
- * (arena_t + Chunk + data) must be returned to the buddy allocator using
- * return_arena_with_buddy(), which internally calls return_buddy_element()
- * with the arena pointer.
+ * This is important because the backing memory must later be released via
+ * ::return_arena_with_buddy(), which internally calls @c return_buddy_element()
+ * using the arena pointer.
  *
- * The @p bytes parameter specifies how many bytes of the buddy pool should
- * be reserved for this arena. Within that region, the arena places its
- * metadata and aligns the remaining data area to @p base_align_in. The
- * arena's @c alloc field reflects the size of the usable data region, while
- * @c tot_alloc records the full sub-region size (@p bytes).
+ * @param buddy          Valid buddy allocator instance that provides the backing memory.
+ * @param bytes          Total size of the sub-region to reserve from @p buddy.
+ *                       This includes the arena header, the Chunk header, and all
+ *                       aligned/usable data space.
+ * @param base_align_in  Desired per-arena base alignment for allocations made via
+ *                       ::alloc_arena(). If zero, defaults to @c alignof(max_align_t).
  *
- * The @p base_align_in parameter specifies the per-arena alignment for
- * allocations made via alloc_arena(). If @p base_align_in is zero, it
- * defaults to alignof(max_align_t). Non–power-of-two values are rounded up
- * to the next power of two, and a minimum of alignof(max_align_t) is
- * enforced.
+ * @return An ::arena_expect_t describing success or failure.
  *
- * On success, the returned arena_t has:
+ * @par Successful Result
+ * On success:
+ *   - @c result.has_value == true
+ *   - @c result.u.value   points to a fully constructed @c arena_t located inside
+ *     the buddy-allocated region.
  *
- *   - @c mem_type set to @c DYNAMIC (or a dedicated "buddy-backed" tag if
- *     you define one),
- *   - @c resize set to 0 (fixed capacity, no growth), and
- *   - @c owns_memory set to 0 (the buddy allocator owns the underlying
- *     memory).
+ * The initialized arena has:
+ *   - @c mem_type    = DYNAMIC        (memory originates from a dynamic source)
+ *   - @c resize      = 0              (fixed-capacity sub-arena, no growth)
+ *   - @c owns_memory = 0              (buddy allocator owns the backing memory)
+ *   - @c alloc       = usable aligned data bytes
+ *   - @c tot_alloc   = @p bytes
  *
- * The caller must not free this arena via free_arena(). Instead, the entire
- * region must be returned using return_arena_with_buddy().
+ * @par Failure Result
+ * On failure:
+ *   - @c result.has_value == false
+ *   - @c result.u.error   contains an appropriate ::ErrorCode.
  *
- * On failure, this function returns NULL and sets errno:
+ * Possible error codes:
+ *   - @c NULL_POINTER       — @p buddy is NULL.
+ *   - @c INVALID_ARG        — @p bytes is zero, or region too small to hold
+ *                             @c arena_t + @c Chunk + at least one byte of data.
+ *   - @c ALIGNMENT_ERROR    — @p base_align_in cannot be normalized to a valid
+ *                             power-of-two alignment ≥ @c alignof(max_align_t).
+ *   - @c LENGTH_OVERFLOW    — arithmetic overflow detected when computing layout.
+ *   - @c OUT_OF_MEMORY      — @c alloc_buddy() could not satisfy the request.
  *
- *   - EINVAL if:
- *       - @p buddy is NULL,
- *       - @p bytes is zero,
- *       - the requested alignment cannot be normalized to a valid value,
- *       - the requested sub-region cannot accommodate arena_t, Chunk, and
- *         at least one usable data byte, or
- *       - internal size/alignment checks fail.
- *   - ENOMEM if alloc_buddy() fails to provide the requested region.
+ * If an allocation was obtained from the buddy allocator but a subsequent
+ * layout/alignment check fails, the region is **returned automatically** to
+ * @c buddy via @c return_buddy_element() before the error is returned.
  *
- * If a buddy allocation was acquired but a subsequent layout check fails,
- * the region is returned to the buddy allocator via return_buddy_element()
- * before NULL is returned.
+ * @warning
+ * Do **not** call @c free_arena() on an arena created by this function.
+ * Release it only through ::return_arena_with_buddy(), which returns the entire
+ * sub-region to the buddy allocator.
  *
- * @param buddy         Pointer to a valid buddy_t allocator instance.
- * @param bytes         Size of the sub-region to reserve from @p buddy for
- *                      this arena (including metadata and data).
- * @param base_align_in Desired per-arena alignment for allocations made via
- *                      alloc_arena(); 0 means "use alignof(max_align_t)".
+ * @sa alloc_buddy(), return_buddy_element(), return_arena_with_buddy(),
+ *     init_dynamic_arena(), init_static_arena()
  *
- * @retval arena_t* Pointer to a fully initialized arena_t on success.
- * @retval NULL     On failure, with errno set as described above.
- *
+ * @par Example
  * @code{.c}
  * buddy_t *b = init_buddy_allocator(4096u, 64u, alignof(max_align_t));
- * if (!b) { // handle error }
- *
- * arena_t *a = init_arena_with_buddy(b, 1024u, alignof(max_align_t));
- * if (!a) { // handle error }
- *
- * // Use 'a' as a normal arena:
- * void *p = alloc_arena(a, 128u, true);
- * if (!p) { // handle error }
- *
- * // When done with this arena region:
- * if (!return_arena_with_buddy(a, b)) {
+ * if (!b) {
  *     // handle error
  * }
+ *
+ * arena_expect_t r = init_arena_with_buddy(b, 1024u, alignof(max_align_t));
+ * if (!r.has_value) {
+ *     ErrorCode ec = r.u.error;
+ *     // handle error
+ * }
+ *
+ * arena_t *a = r.u.value;
+ *
+ * void *p = alloc_arena(a, 128u, true).u.value;
+ * assert(p != NULL);
+ *
+ * // When finished with this arena:
+ * (void)return_arena_with_buddy(a, b);
  *
  * free_buddy(b);
  * @endcode
  */
-arena_t* init_arena_with_buddy(buddy_t* buddy, size_t bytes, size_t base_align_in);
+arena_expect_t init_arena_with_buddy(buddy_t *buddy,
+                                     size_t   bytes,
+                                     size_t   base_align_in);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -5002,13 +5365,12 @@ arena_t* init_arena_with_buddy(buddy_t* buddy, size_t bytes, size_t base_align_i
  * independently. If @p arena->owns_memory is non-zero, the function refuses
  * to proceed and fails with EPERM.
  *
- * On failure, the function returns false and sets errno:
+ * Failure is only apprant based in false value return.  Possible failure 
+ * reasons are the following 
  *
- *   - EINVAL if @p arena or @p buddy is NULL.
- *   - EPERM if @p arena->owns_memory is non-zero, indicating the arena was
- *     not intended to be freed via the buddy allocator.
- *   - Any errno set by is_buddy_ptr_sized() if that validation fails. In
- *     this case, no memory is returned to the buddy allocator.
+ *   - NULL pointers for arena or buddy passed to function 
+ *   - The arena does not own its memory 
+ *   - The arena structure is not a pointer within the buddy memory allocation
  *
  * On success, return_buddy_element() is called with @p arena, and its return
  * value is propagated to the caller. In that case, the memory region is
@@ -7438,3 +7800,6 @@ static inline allocator_vtable_t slab_allocator(slab_t *slab) {
 // ================================================================================
 // ================================================================================
 // eof
+//
+// TODO: Made it to realloc_arena with updates 
+// TODO: Complete arena with new data types 

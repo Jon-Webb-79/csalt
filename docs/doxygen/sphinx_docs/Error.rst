@@ -8,15 +8,8 @@ Purpose
 =======
 
 The ``c_error.h`` interface defines a common error model for the **csalt** library.
-Every public data structure in csalt exposes a field of type ``ErrorCode`` and every
-public function that can fail sets this error field on the output object it modifies.
-However, any function that allocates a data structure or destroys a data structure will 
-rely on `errno` for error handling.  In addition, data structures passed to a function 
-with a `const` reference will not have error fields set on the output object.  In addition 
-at the beginning of each function where an error code can be set on an object it 
-is reset to `NO_ERROR` to ensure that any attached error codes are local to the  
-function.
-This allows callers to:
+This error handling model provides a protable alternative to ``errno`` which is 
+not portable, nor defined in any standard.
 
 1. Invoke an operation on a csalt object.
 2. Retrieve the most recent error condition from that object.
@@ -25,6 +18,80 @@ This allows callers to:
 By convention, ``NO_ERROR`` is ``0`` and all error conditions are **negative** values.
 This avoids collisions with valid sizes/indices and allows simple checks like
 ``if (err < 0)`` to detect failures.
+
+
+Approach
+========
+
+The ``c_error.h`` module provides a flexible error-handling framework that can
+be used independently by consumers of the ``csalt`` library. Within ``csalt``,
+however, a *hierarchical* error-handling strategy is applied. This strategy
+recognizes that not all API surfaces require the same level of diagnostic detail,
+and that error reporting must be balanced against performance and usability.
+
+Error reporting in ``csalt`` functions typically falls into one of the
+following four categories:
+
+1. **No Error Reporting**  
+   The function provides no indication of success or failure.  
+   Such functions are typically internal utilities or performance-critical
+   primitives where input validity is assumed and misuse constitutes a coding
+   error rather than a runtime condition.
+
+2. **Potential Error (Ambiguous Return Value)**  
+   The function returns a value that *may* indicate an error, but the return
+   value itself could also represent a valid condition.  
+   Examples include:
+   - returning ``NULL`` from an allocation function,
+   - returning ``0`` when ``0`` may be a valid size or count.
+
+   In these cases, callers must interpret results based on context.
+
+3. **Error Indication (Unambiguous Failure)**
+   The function returns a value that *always* indicates failure (e.g., ``NULL``),
+   but provides **no information** about the cause.  
+   Users must consult the documentation to understand possible failure modes.
+
+4. **Error Description (Preferred Maximum Detail)**  
+   The function returns an ``expected``-style struct such as ``arena_expect_t``
+   or ``memory_expect_t`` that:
+   - explicitly indicates success or failure, and  
+   - provides a specific ``ErrorCode`` describing the failure cause.
+
+   This form provides the most complete diagnostic information.
+
+Design Rationale
+----------------
+
+Although type-4 error handling is the most expressive, it also introduces
+overhead: callers must unpack a result structure and branch on success or
+failure, which may be undesirable in extremely hot code paths. Therefore,
+``csalt`` applies the following guiding principles:
+
+- **Hot-path functions** (e.g., ``alloc_arena``) typically use type 2 or 3 error
+  handling to avoid overhead in tight loops.
+- **Initialization functions**, resource acquisition, and configuration APIs
+  typically use type 4 error handling because failures are rare but important to
+  diagnose accurately.
+- **Coding errors** (e.g., passing ``NULL`` where a valid pointer is required)
+  are generally *not* the target of the error-handling system. These are best
+  identified by:
+  - debug builds,
+  - assertions,
+  - static analysis, or
+  - MISRA compliance tools.
+
+  If type-4 handling is in use for a given function, coding errors may still
+  manifest as ``ErrorCode`` results, but this is considered a *byproduct* rather
+  than an intentional feature.
+
+Summary
+-------
+
+The error-handling model in ``csalt`` is intentionally flexible. It allows users
+to select simple or detailed error reporting based on their needs while the
+library maintains clear conventions that balance safety, diagnosability, and
+performance.
 
 Design Notes
 ============
@@ -35,10 +102,6 @@ Design Notes
   while reporting failure through the object’s error field.
 - **String conversion:** Use :c:func:`error_to_string` to produce a human-readable
   description suitable for any logging framework (the csalt core remains logger-agnostic).
-- **errno to ErrorCode:** use :c:func:`error_from_errno` to sync the value of `errno`
-  from the value of `ErrorCode`.
-- **ErrorCode to errno:** use :c:func`set_errno_from_error` to sync the value of `ErrorCode`
-  from `errno`.
 
 API Reference
 =============
@@ -47,7 +110,7 @@ ErrorCode enumeration (overview)
 --------------------------------
 
 The table below summarizes each :c:enum:`ErrorCode` value, its category, and intended use.
-Authoritative comments live in ``error_code.h``; this overview is for quick reference.
+Authoritative comments live in ``c_error.h``; this overview is for quick reference.
 
 .. list-table::
    :header-rows: 1
@@ -313,21 +376,6 @@ error_cat_to_string
 .. doxygenfunction:: error_cat_to_string
    :project: csalt
 
-ErrorCode to errno Conversions 
-------------------------------
-The following functions can be used to ensure that `errno` and `ErrorCode` 
-handling is self consistent.
-
-set_errno_from_error
-~~~~~~~~~~~~~~~~~~~~
-.. doxygenfunction:: set_errno_from_error
-   :project: csalt
-
-error_from_errno
-~~~~~~~~~~~~~~~~
-.. doxygenfunction:: error_from_errno
-   :project: csalt
-
 Error Category Predicates 
 -------------------------
 These helpers classify an :c:enum:`ErrorCode` into the range-based taxonomy
@@ -403,6 +451,24 @@ these macros can be omitted by compiling with the ``STATIC_ONLY`` flag.
 Each macro below is pulled directly from its Doxygen doc comment, so the
 authoritative description always lives alongside the implementation.
 Provide breif intro here.  
+
+Data Structure 
+--------------
+The error handling struct used in this library implements the following 
+syntax.  In the example it is implemented as a function like macro, but a 
+user can implement their own explicit struct so as long as it adheres 
+to this construct.
+
+.. code-block:: c
+
+   #define DEFINE_EXPECTED_TYPE(name, T)            \
+       typedef struct name {                        \
+           bool has_value;                          \
+           union {                                  \
+               T value;                             \
+               ErrorCode error;                     \
+           } u;                                     \
+       } name
 
 DEFINE_EXPECTED_TYPE 
 --------------------
