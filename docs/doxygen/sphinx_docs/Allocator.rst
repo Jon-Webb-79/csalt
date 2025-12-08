@@ -144,6 +144,21 @@ this structure to reconstitute a bump allocator.  This struct is defined as
        size_t len;       // Length of saved chunk
    } ArenaCheckPointRep;
 
+arena_expect_t 
+~~~~~~~~~~~~~~
+``arena_expect_t`` is an error handling struct to be used in the creation 
+of ``arena_t`` data types to catch and convey errors to a user.
+
+.. code-block:: c
+
+   typedef struct {
+       bool has_value;
+       union {
+           arena_t* value;
+           ErrorCode error;
+       } u;
+   } arena_expect_t;
+
 Initialization and Memory Management
 ------------------------------------
 The functions in this section can be used to initialize memory for a bump allocator,
