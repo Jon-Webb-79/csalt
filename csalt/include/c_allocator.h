@@ -105,7 +105,7 @@ typedef struct {
  * @param size    Number of bytes to allocate
  * @param zeroed  If true, memory must be zero-initialized
  *
- * @return Pointer to a block of at least `size` bytes, or NULL on failure.
+ * @return void_ptr_expect_t data type with a pointer to data or errors
  */
 typedef void_ptr_expect_t (*alloc_prototype)(void* ctx, size_t size, bool zeroed);
 
@@ -145,9 +145,9 @@ typedef void* (*alloc_aligned_prototype)(void* ctx, size_t size, size_t align, b
  * @param new_size  Requested new size
  * @param zeroed    Whether any expanded memory must be zero-initialized
  *
- * @return New pointer on success, or NULL on failure (caller must keep old_ptr).
+ * @return void_ptr_expect_t data type with a pointer to data or errors*
  */
-typedef void* (*realloc_prototype)(void* ctx, void* old_ptr,
+typedef void_ptr_expect_t (*realloc_prototype)(void* ctx, void* old_ptr,
                                    size_t old_size, size_t new_size, bool zeroed);
 
 /**
@@ -1044,8 +1044,8 @@ void_ptr_expect_t alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
  * @see alloc_arena
  * @see reset_arena
  */
-void* realloc_arena(arena_t* arena, void* variable, size_t var_size, size_t realloc_size,
-                    bool zeroed);
+void_ptr_expect_t realloc_arena(arena_t* arena, void* variable, size_t var_size, 
+                                size_t realloc_size, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -2077,13 +2077,10 @@ static inline void* arena_v_alloc_aligned(void* ctx, size_t size,
  * @retval void* New pointer to the resized allocation on success.
  * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
  */
-static inline void* arena_v_realloc(void* ctx, void* old_ptr,
+static inline void_ptr_expect_t arena_v_realloc(void* ctx, void* old_ptr,
                                     size_t old_size, size_t new_size,
                                     bool zeroed) {
     arena_t* arena = (arena_t*)ctx;
-    if (!arena) {
-        return NULL;
-    }
     return realloc_arena(arena, old_ptr, old_size, new_size, zeroed);
 }
 // -------------------------------------------------------------------------------- 

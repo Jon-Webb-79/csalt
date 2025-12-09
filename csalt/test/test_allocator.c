@@ -1074,8 +1074,9 @@ static void test_realloc_grow_copies_and_zeroes_tail(void **state) {
     for (size_t i = 0; i < old_sz; ++i) oldp[i] = (uint8_t)(0xA0u + (uint8_t)i);
 
     const size_t new_sz = 32;
-    uint8_t* newp = (uint8_t*)realloc_arena(a, oldp, old_sz, new_sz, /*zeroed*/true);
-    assert_non_null(newp);
+    aexpect = realloc_arena(a, oldp, old_sz, new_sz, true);
+    assert_true(aexpect.has_value);
+    uint8_t* newp = (uint8_t*)aexpect.u.value;
 
     // First old_sz bytes must match original
     assert_memory_equal(newp, oldp, old_sz);
@@ -1107,11 +1108,15 @@ static void test_realloc_shrink_is_noop(void **state) {
     for (size_t i = 0; i < old_sz; ++i) p[i] = (uint8_t)(0xC0u + (uint8_t)i);
 
     // Shrink
-    void* q = realloc_arena(a, p, old_sz, /*realloc_size*/16, /*zeroed*/false);
+    aexpect = realloc_arena(a, p, old_sz, 16, false);
+    assert_true(aexpect.has_value);
+    void* q = aexpect.u.value;
     assert_ptr_equal(q, p);
 
     // Same size
-    void* r = realloc_arena(a, p, old_sz, /*realloc_size*/32, /*zeroed*/false);
+    aexpect = realloc_arena(a, p, old_sz, 32, false);
+    assert_true(aexpect.has_value);
+    void* r = aexpect.u.value;
     assert_ptr_equal(r, p);
 
     free(a);
@@ -1133,8 +1138,9 @@ static void test_realloc_fails_when_insufficient_space(void **state) {
     assert_non_null(p);
 
     // Request something larger than likely remains
-    errno = 0;
-    void* q = realloc_arena(a, p, old_sz, /*realloc_size*/500, /*zeroed*/false);
+    aexpect = realloc_arena(a, p, old_sz, 500, false);
+    assert_true(aexpect.has_value);
+    void* q = aexpect.u.value;
     assert_null(q);
     // errno is set inside arena_alloc; don’t assert a specific value to avoid coupling
 

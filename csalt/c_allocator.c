@@ -842,36 +842,45 @@ inline void_ptr_expect_t alloc_arena(arena_t *arena, size_t bytes, bool zeroed) 
 }
 // -------------------------------------------------------------------------------- 
 
-void* realloc_arena(arena_t* arena,
-                    void*   variable,
-                    size_t  var_size,
-                    size_t  realloc_size,
-                    bool    zeroed)
-{
-    if (!arena || !variable) {
-        errno = EINVAL;
-        return NULL;
+inline void_ptr_expect_t realloc_arena(arena_t *arena,
+                                       void   *variable,
+                                       size_t  var_size,
+                                       size_t  realloc_size,
+                                       bool    zeroed) {
+    /* Basic argument validation */
+    if (arena == NULL) {
+        return vp_err(NULL_POINTER);
+    }
+    if (variable == NULL) {
+        return vp_err(NULL_POINTER);
+    }
+    if (realloc_size == 0u) {
+        return vp_err(INVALID_ARG);
     }
 
-    // No-op on shrink or same size; keeps arena space.
+    /* No-op on shrink or same size; keeps arena space and returns original */
     if (realloc_size <= var_size) {
-        return variable;
+        return vp_ok(variable);
     }
 
-    // Allocate new block (no zeroing; we’ll zero only the tail if requested).
+    /* Allocate new block (no zeroing yet; only tail gets zeroed if requested) */
     void_ptr_expect_t expect = alloc_arena(arena, realloc_size, false);
     if (!expect.has_value) {
-        return NULL;
+        /* Propagate underlying allocation error (BAD_ALLOC, OPERATION_UNAVAILABLE, etc.) */
+        return expect;
     }
-    void* ptr = expect.u.value;
 
+    void *ptr = expect.u.value;
+
+    /* Copy original contents into the new block */
     memcpy(ptr, variable, var_size);
 
+    /* Optionally zero-fill the newly added tail region */
     if (zeroed) {
-        memset((uint8_t*)ptr + var_size, 0, realloc_size - var_size);
+        memset((uint8_t *)ptr + var_size, 0, realloc_size - var_size);
     }
 
-    return ptr;
+    return vp_ok(ptr);
 }
 // -------------------------------------------------------------------------------- 
 
