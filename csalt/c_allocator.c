@@ -491,12 +491,11 @@ arena_expect_t init_arena_with_arena(arena_t *parent,
     }
 
     /* Single allocation from parent for entire sub-arena (header + chunk + data) */
-    void *buffer = alloc_arena(parent, bytes, false);
-    if (buffer == NULL) {
-        /* Cannot distinguish exact cause here; treat as capacity/resource failure */
+    void_ptr_expect_t expect = alloc_arena(parent, bytes, false);
+    if (!expect.has_value) {
         return arena_err(OUT_OF_MEMORY);
-        /* or OPERATION_UNAVAILABLE if you prefer that semantics for STATIC parents */
     }
+    void* buffer = expect.u.value;
 
     uintptr_t const b     = (uintptr_t)buffer;
     uintptr_t const b_end = b + bytes;
@@ -740,58 +739,105 @@ void free_arena(arena_t* arena) {
 // ================================================================================ 
 // ALLOCATION FUNCTIONS
 
+static inline void_ptr_expect_t vp_ok(void *p) {
+    return (void_ptr_expect_t){
+        .has_value = true,
+        .u.value   = p
+    };
+}
+// -------------------------------------------------------------------------------- 
 
-inline void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed) {
-    if (!arena || bytes == 0u) { return NULL; }
+static inline void_ptr_expect_t vp_err(ErrorCode e) {
+    return (void_ptr_expect_t){
+        .has_value = false,
+        .u.error   = e
+    };
+}
+// -------------------------------------------------------------------------------- 
 
-    // Use per-arena base alignment (power-of-two)
-    size_t const a = arena->alignment;
-    if (a == 0u || (a & (a - 1u)) != 0u) { return NULL; }
-
-    Chunk* tail = arena->tail;
-    if (!tail) { return NULL; }
-
-    // Per-allocation pad to 'a'
-    uintptr_t const cur  = (uintptr_t)arena->cur;
-    size_t    const pad  = _pad_up(cur, a);
-    size_t    const need = pad + bytes;
-
-    // Fast path: fits in current tail
-    size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0u;
-    if (avail >= need) {
-        uint8_t* p = (uint8_t*)(cur + pad);  // a-aligned
-        arena->cur  = p + bytes;
-        tail->len  += need;                  // charge pad + bytes
-        arena->len += need;
-        if (zeroed) memset(p, 0, bytes);
-        return p;
+inline void_ptr_expect_t alloc_arena(arena_t *arena, size_t bytes, bool zeroed) {
+    /* Basic argument validation */
+    if (arena == NULL) {
+        return vp_err(NULL_POINTER);
     }
+    if (bytes == 0u) {
+        return vp_err(INVALID_ARG);
+    }
+
+    /* Per-arena base alignment must be a nonzero power-of-two */
+    size_t const a = arena->alignment;
+    if (a == 0u || (a & (a - 1u)) != 0u) {
+        return vp_err(ALIGNMENT_ERROR);
+    }
+
+    Chunk *tail = arena->tail;
+    if (tail == NULL) {
+        return vp_err(ILLEGAL_STATE); /* corrupted or uninitialized arena state */
+    }
+
+    /* Per-allocation pad to 'a' */
+    uintptr_t const cur = (uintptr_t)arena->cur;
+    size_t    const pad = _pad_up(cur, a);
+
+    /* Check for overflow in pad + bytes */
+    if (bytes > (SIZE_MAX - pad)) {
+        return vp_err(LENGTH_OVERFLOW);
+    }
+
+    size_t const need  = pad + bytes;
+    size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0u;
+
+    /* Fast path: fits in current tail */
+    if (avail >= need) {
+        uint8_t *p = (uint8_t *)(cur + pad);  /* a-aligned */
+        arena->cur  = p + bytes;
+        tail->len  += need;                   /* charge pad + bytes */
+        arena->len += need;
+
+        if (zeroed) {
+            memset(p, 0, bytes);
+        }
+        return vp_ok(p);
+    }
+
 #if ARENA_ENABLE_DYNAMIC
-    // No space -> grow only when allowed
-    if (arena->mem_type == STATIC || !arena->resize) { return NULL; }
+    /* No space -> grow only when allowed */
+    if (arena->mem_type == STATIC || !arena->resize) {
+        return vp_err(OPERATION_UNAVAILABLE); /* cannot grow this arena */
+    }
 
     size_t const grow_data = _next_chunk_size(tail->alloc, need, a, arena->min_chunk);
-    Chunk* nc = _chunk_new_ex(grow_data, a);
-    if (!nc) return NULL; // errno set by helper
+    if (grow_data == 0u) {
+        return vp_err(LENGTH_OVERFLOW);
+    }
 
-    // Link
+    Chunk *nc = _chunk_new_ex(grow_data, a);
+    if (nc == NULL) {
+        return vp_err(BAD_ALLOC);
+    }
+
+    /* Link new chunk as tail */
     tail->next  = nc;
     arena->tail = nc;
 
-    // Accounting (approximate footprint: header rounded to 'a' + data bytes)
-    arena->alloc     += nc->alloc;                          // usable capacity added
+    /* Accounting: usable capacity + footprint */
+    arena->alloc     += nc->alloc;
     arena->tot_alloc += _align_up_size(sizeof(Chunk), a) + nc->alloc;
 
-    // First allocation from fresh chunk: base is a-aligned -> no pad
-    void* p = (void*)nc->chunk;
+    /* First allocation from fresh chunk: base is a-aligned -> no pad */
+    void *p = (void *)nc->chunk;
     arena->cur  = nc->chunk + bytes;
     nc->len     = bytes;
     arena->len += bytes;
 
-    if (zeroed) memset(p, 0, bytes);
-    return p;
-#else 
-    return NULL;
+    if (zeroed) {
+        memset(p, 0, bytes);
+    }
+    return vp_ok(p);
+#else
+    /* Dynamic growth support is compiled out */
+    (void)zeroed; /* only relevant if allocation could succeed */
+    return vp_err(UNSUPPORTED);
 #endif
 }
 // -------------------------------------------------------------------------------- 
@@ -813,11 +859,11 @@ void* realloc_arena(arena_t* arena,
     }
 
     // Allocate new block (no zeroing; we’ll zero only the tail if requested).
-    void* ptr = alloc_arena(arena, realloc_size, false);
-    if (!ptr) {
-        // errno set by arena_alloc
+    void_ptr_expect_t expect = alloc_arena(arena, realloc_size, false);
+    if (!expect.has_value) {
         return NULL;
     }
+    void* ptr = expect.u.value;
 
     memcpy(ptr, variable, var_size);
 
@@ -2220,11 +2266,11 @@ freelist_t* init_freelist_with_arena(arena_t* arena,
     }
 
     // Single allocation from arena for everything
-    void* base = alloc_arena(arena, total_alloc, false);
-    if (!base) {
-        // alloc_arena is responsible for setting errno
+    void_ptr_expect_t expect = alloc_arena(arena, total_alloc, false);
+    if (!expect.has_value) {
         return NULL;
     }
+    void* base = expect.u.value;
 
     // freelist_t struct at the beginning
     freelist_t* fl = (freelist_t*)base;
@@ -2332,12 +2378,12 @@ freelist_t* init_dynamic_freelist(size_t bytes, size_t alignment, bool resize) {
     }
 
     /* Carve `available` bytes from the arena in one shot. */
-    void* base = alloc_arena(arena, available, false);
-    if (!base) {
-        /* errno set by alloc_arena */
+    void_ptr_expect_t expect2 = alloc_arena(arena, available, false);
+    if (!expect2.has_value) {
         free_arena(arena);
         return NULL;
     }
+    void* base = expect2.u.value;
 
     /* freelist_t at the beginning (aligned by construction). */
     freelist_t* fl = (freelist_t*)base;
@@ -2426,11 +2472,11 @@ freelist_t* init_static_freelist(void* buffer, size_t bytes, size_t alignment) {
     size_t total_needed = freelist_size + usable_size;
 
     // Single allocation from arena for freelist struct + usable memory
-    void* base = alloc_arena(arena, total_needed, false);
-    if (!base) {
-        // errno set by alloc_arena
-        return NULL;
+    void_ptr_expect_t expect = alloc_arena(arena, total_needed, false);
+    if (!expect.has_value) {
+        return NULL; 
     }
+    void* base = expect.u.value;
 
     // freelist_t at the beginning
     freelist_t* fl = (freelist_t*)base;

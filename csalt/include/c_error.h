@@ -484,6 +484,15 @@ ErrorCode error_from_errno(int e);
     } name
 // -------------------------------------------------------------------------------- 
 
+typedef struct {
+    bool has_value;
+    union {
+        void* value;
+        ErrorCode error;
+    } u;
+} void_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
 /**
  * @def EXPECTED_OK(TypeName, vexpr)
  * @brief Constructs a success result for an expected-type value.

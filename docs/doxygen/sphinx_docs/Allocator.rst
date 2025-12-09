@@ -342,33 +342,6 @@ toggle_arena_resize
 .. doxygenfunction:: toggle_arena_resize
    :project: csalt
 
-Function Like Macros 
---------------------
-
-arena_alloc_type
-~~~~~~~~~~~~~~~~
-
-.. doxygendefine:: arena_alloc_type
-   :project: csalt
-
-arena_alloc_array
-~~~~~~~~~~~~~~~~~
-
-.. doxygendefine:: arena_alloc_array
-   :project: csalt
-
-arena_alloc_type_zeroed
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygendefine:: arena_alloc_type_zeroed
-   :project: csalt
-
-arena_alloc_array_zeroed
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygendefine:: arena_alloc_array_zeroed
-   :project: csalt
-
 Arena Context Functions
 -----------------------
 

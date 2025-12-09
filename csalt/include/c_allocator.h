@@ -107,7 +107,7 @@ typedef struct {
  *
  * @return Pointer to a block of at least `size` bytes, or NULL on failure.
  */
-typedef void* (*alloc_prototype)(void* ctx, size_t size, bool zeroed);
+typedef void_ptr_expect_t (*alloc_prototype)(void* ctx, size_t size, bool zeroed);
 
 /**
  * @typedef alloc_aligned_prototype
@@ -802,111 +802,124 @@ void free_arena(arena_t* arena);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Allocate a block from an arena with per-arena base alignment.
+ * @brief Allocate a block from an arena with its base alignment, returning an
+ *        explicit success-or-error result.
  *
  * Performs a bump allocation from the arena’s current tail chunk. The returned
- * pointer is aligned to the arena’s base alignment (see @c arena->alignment).
- * If there is not enough space in the tail:
- * - In **STATIC** arenas or when growth is disabled, the call fails.
- * - In **DYNAMIC** arenas with growth enabled (and dynamic support compiled in),
- *   a new chunk is allocated and linked as the new tail; the block is then
- *   carved from that fresh chunk.
+ * block is aligned to the arena’s base alignment (see ::arena_t::alignment).
  *
- * This function uses a simple success/failure convention:
- *   - non-NULL pointer  => allocation succeeded
- *   - NULL pointer      => allocation failed
+ * This function does **not** signal errors through `errno`. Instead it returns
+ * a ::void_ptr_expect_t structure containing either:
  *
- * The caller cannot distinguish the exact failure cause from the return
- * value alone; the typical reasons for failure are documented below.
+ *   - `.has_value = true` and `.u.value = void*` on success, or
+ *   - `.has_value = false` and `.u.error = ErrorCode` describing the failure.
  *
- * @param arena   Arena to allocate from (must be a valid, initialized pointer).
- * @param bytes   Requested payload size in bytes (must be > 0).
- * @param zeroed  If @c true, the returned block is zero-initialized via
- *                @c memset; otherwise it is left uninitialized.
+ * - If enough space exists in the current tail chunk, the block is carved out
+ *   immediately (with any required leading padding).
+ * - If not enough space exists:
+ *     - **STATIC** arenas fail immediately.
+ *     - **DYNAMIC** arenas grow by allocating a new chunk (if dynamic support is
+ *       compiled in and growth is enabled).
+ *     - If growth is not permitted or the new chunk cannot be allocated,
+ *       the call fails.
  *
- * @return Pointer to an @c arena->alignment-aligned block of @p bytes on
- *         success; @c NULL on failure.
+ * @param arena
+ *     Pointer to an initialized ::arena_t. Must not be NULL.
  *
- * @par Failure conditions
- * This function returns @c NULL if any of the following conditions hold:
- *   - @p arena is @c NULL.
- *   - @p bytes is zero.
- *   - @c arena->alignment is zero or not a power-of-two.
- *   - The arena’s @c tail pointer is invalid (e.g., @c arena->tail == NULL).
- *   - There is insufficient space in the current tail chunk and:
- *       - the arena is STATIC, or
- *       - dynamic growth is disabled (@c arena->resize == 0), or
- *       - dynamic growth is compiled out (when @c ARENA_ENABLE_DYNAMIC == 0).
- *   - (Dynamic builds only) Growth is allowed but allocating a new chunk
- *     fails (e.g., underlying allocation failure).
- *   - Internal size/layout checks detect arithmetic overflow or invariant
- *     violations (if such checks are enabled in the implementation).
+ * @param bytes
+ *     Requested payload size in bytes. Must be > 0.
  *
- * @note The arena charges both the returned payload and any leading padding
- *       required to reach the alignment. That is, the internal usage counters
- *       (@c tail->len and @c arena->len) increase by
- *       @c pad + @p bytes where @c pad ∈ [0, alignment-1].
+ * @param zeroed
+ *     If true, the returned payload is zero-initialized. Otherwise it is left
+ *     uninitialized.
  *
- * @note On the first allocation from a freshly grown chunk, no leading padding
- *       is required because the chunk’s data base is created aligned; the
- *       delta in remaining capacity equals exactly @p bytes.
+ * @return
+ *     A ::void_ptr_expect_t struct:
+ *       - On success: `.has_value = true`, `.u.value = pointer`.
+ *       - On failure: `.has_value = false`, `.u.error` containing:
  *
- * @warning The returned pointer must not be freed with @c free(). Memory is
- *          reclaimed only when the entire arena is reset via ::reset_arena()
- *          or destroyed (for dynamic arenas) via ::free_arena().
+ * The function returns an error with one of the following codes:
  *
- * @pre  @p arena points to a properly initialized arena object.
- * @pre  @c arena->alignment is intended to be a nonzero power-of-two.
+ * | Condition | Returned ErrorCode |
+ * |----------|--------------------|
+ * | `arena == NULL` | `NULL_POINTER` |
+ * | `bytes == 0` | `INVALID_ARG` |
+ * | `arena->alignment` is zero or not a power-of-two | `ALIGNMENT_ERROR` |
+ * | `arena->tail == NULL` (invalid or corrupted arena state) | `ILLEGAL_STATE` |
+ * | Padding + size overflows `size_t` | `LENGTH_OVERFLOW` |
+ * | Insufficient space & arena is STATIC | `OPERATION_UNAVAILABLE` |
+ * | Insufficient space & growth disabled (`resize == 0`) | `OPERATION_UNAVAILABLE` |
+ * | Growth required but dynamic support compiled out | `UNSUPPORTED` |
+ * | `_next_chunk_size()` reports an invalid/overflow size | `LENGTH_OVERFLOW` |
+ * | `_chunk_new_ex()` fails to allocate a new chunk | `BAD_ALLOC` |
+ *
+ * - The arena charges both the payload and any leading padding needed to reach
+ *   alignment. Internal usage counters (`tail->len`, `arena->len`) increase by:
+ *
+ *       pad + bytes
+ *
+ *   where `pad ∈ [0, alignment-1]`.
+ *
+ * - For the first allocation from a newly grown chunk, no leading padding is
+ *   required because the chunk’s data base is already aligned.
+ *
+ * - The returned pointer must **not** be freed with `free()`. Memory is released
+ *   only when the arena is reset with ::reset_arena() or destroyed via
+ *   ::free_arena().
+ *
+ * @pre
+ *     - `arena` must be initialized.
+ *     - `arena->alignment` must be a non-zero power-of-two.
+ *
  * @post On success:
- *       - The returned pointer is @c arena->alignment-aligned.
- *       - @c arena->cur advances by @p bytes (plus any leading pad).
- *       - @c tail->len and @c arena->len are updated to include @c pad + @p bytes.
+ *     - The returned pointer is aligned to `arena->alignment`.
+ *     - `arena->cur` advances by `pad + bytes`.
+ *     - Usage counters (`tail->len`, `arena->len`) reflect the allocation.
  *
- * @sa   init_static_arena(), init_dynamic_arena(), reset_arena(), free_arena()
+ * @sa
+ *     init_static_arena(), init_dynamic_arena(), alloc_arena_aligned(),
+ *     reset_arena(), free_arena()
  *
- * @par Example: Allocating from a STATIC arena (no growth)
+ * @par Example: STATIC arena (no growth)
  * @code{.c}
- * enum { BUF = 8192u };
- * void *buf = aligned_alloc(alignof(max_align_t), BUF);
- * assert(buf != NULL);
+ * uint8_t buf[8192];
  *
- * arena_expect_t r = init_static_arena(buf, BUF, alignof(max_align_t));
- * assert(r.has_value);
+ * arena_expect_t ar = init_static_arena(buf, sizeof(buf), alignof(max_align_t));
+ * assert(ar.has_value);
  *
- * arena_t *a = r.u.value;
+ * arena_t *a = ar.u.value;
  *
- * void *p1 = alloc_arena(a, 256u, true);   // ok, zeroed
- * assert(p1 != NULL);
+ * void_ptr_expect_t r1 = alloc_arena(a, 256, true);
+ * assert(r1.has_value);
+ * void *p1 = r1.u.value;
  *
- * // Large request that likely exceeds remaining capacity -> NULL
- * void *p2 = alloc_arena(a, BUF, false);
- * if (p2 == NULL) {
- *     // out of space; caller may fall back or reset the arena
+ * // Oversized request -> error (OPERATION_UNAVAILABLE)
+ * void_ptr_expect_t r2 = alloc_arena(a, 9000, false);
+ * if (!r2.has_value) {
+ *     printf("alloc failed: %d\n", r2.u.error);
  * }
- *
- * // Caller remains owner of 'buf'; free_arena(a) should not free it in STATIC mode.
- * free(buf);
  * @endcode
  *
- * @par Example: Allocating from a DYNAMIC arena (growth allowed)
+ * @par Example: DYNAMIC arena (growth allowed)
  * @code{.c}
- * arena_expect_t r = init_dynamic_arena(4096u, true, 4096u, alignof(max_align_t));
- * assert(r.has_value);
+ * arena_expect_t ar = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * assert(ar.has_value);
  *
- * arena_t *a = r.u.value;
+ * arena_t *a = ar.u.value;
  *
- * // Fill current chunk, then one more allocation to trigger growth.
- * (void)alloc_arena(a, 4095u, false);
+ * // Fill current chunk
+ * (void)alloc_arena(a, 4095, false);
  *
- * void *p = alloc_arena(a, 2u, false);     // may grow via new chunk, then return aligned block
- * if (p == NULL) {
- *     // Either growth disabled/unsupported or underlying allocation failed
+ * // This allocation will grow a new chunk
+ * void_ptr_expect_t r = alloc_arena(a, 2, false);
+ * if (!r.has_value) {
+ *     printf("alloc failed: %d\n", r.u.error);
  * }
  *
- * free_arena(a); // releases all chunks and the arena header block
+ * free_arena(a);
  * @endcode
  */
-void* alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
+void_ptr_expect_t alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1987,148 +2000,6 @@ bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
 bool arena_owns_memory(const arena_t* arena);
 // ================================================================================ 
 // ================================================================================ 
-// MACROS 
-
-#if ARENA_USE_CONVENIENCE_MACROS
-/**
- * @def arena_alloc_type(arena, type)
- * @brief Allocate one object of @p type from @p arena (uninitialized).
- *
- * Expands to:
- * @code
- * (type*)alloc_arena((arena), sizeof(type), false)
- * @endcode
- *
- * The returned pointer is aligned to the arena’s base alignment
- * (see ::arena_alignment()) and points to uninitialized storage of size
- * @c sizeof(type).
- *
- * @param arena  An ::arena_t* previously created with ::init_static_arena()
- *               or ::init_dynamic_arena().
- * @param type   The complete object type to allocate (e.g., @c int, @c struct Foo).
- *
- * @return @c type* on success; @c NULL on failure
- *
- * @note This macro only wraps ::alloc_arena(); no additional behavior is added.
- * @note Do not pass an incomplete type.
- *
- * @par Example
- * @code{.c}
- * typedef struct { float x, y, z; } vec3;
- * arena_t* a = init_darena(4096, true);
- * vec3* p = arena_alloc_type(a, vec3);
- * if (!p) { perror("arena_alloc_type"); }
- * // ...
- * free_arena(a);
- * @endcode
- */
-    #define arena_alloc_type(arena, type) \
-        (type*)alloc_arena((arena), sizeof(type), false)
-
-/**
- * @def arena_alloc_array(arena, type, count)
- * @brief Allocate an array of @p count objects of @p type from @p arena (uninitialized).
- *
- * Expands to:
- * @code
- * (type*)alloc_arena((arena), sizeof(type) * (count), false)
- * @endcode
- *
- * The returned pointer is aligned to the arena’s base alignment and provides
- * uninitialized storage for exactly @p count elements of @p type in a single
- * contiguous block.
- *
- * @param arena  An ::arena_t* previously created with ::init_static_arena()
- *               or ::init_dynamic_arena().
- * @param type   The element type (must be complete).
- * @param count  Number of elements to allocate. Evaluated exactly once.
- *
- * @return @c type* on success; @c NULL on failure
- *
- * @warning Very large @p count values can overflow the size computation
- *          @c sizeof(type) * (count), causing ::alloc_arena() to fail.
- * @warning Avoid side effects in @p count (e.g., do not pass @c i++).
- *
- * @par Example
- * @code{.c}
- * arena_t* a = init_darena(4096, true);
- * double* samples = arena_alloc_array(a, double, 1024);
- * if (!samples) { perror("arena_alloc_array"); }
- * // ...
- * free_arena(a);
- * @endcode
- */
-    #define arena_alloc_array(arena, type, count) \
-        (type*)alloc_arena((arena), sizeof(type) * (count), false)
-
-/**
- * @def arena_alloc_type_zeroed(arena, type)
- * @brief Allocate one object of @p type from @p arena and zero-initialize it.
- *
- * Expands to:
- * @code
- * (type*)alloc_arena((arena), sizeof(type), true)
- * @endcode
- *
- * The returned pointer is aligned to the arena’s base alignment and the
- * @c sizeof(type) bytes are set to zero.
- *
- * @param arena  An ::arena_t* previously created with ::init_static_arena()
- *               or ::init_dynamic_arena().
- * @param type   The complete object type to allocate and zero.
- *
- * @return @c type* on success; @c NULL on failure
- *
- * @note Zero-initialization uses @c memset(ptr, 0, sizeof(type)).
- *
- * @par Example
- * @code{.c}
- * typedef struct { int id; char name[32]; } user;
- * arena_t* a = init_darena(4096, true);
- * user* u = arena_alloc_type_zeroed(a, user);  // all fields = 0
- * if (!u) { perror("arena_alloc_type_zeroed"); }
- * // ...
- * free_arena(a);
- * @endcode
- */
-    #define arena_alloc_type_zeroed(arena, type) \
-        (type*)alloc_arena((arena), sizeof(type), true)
-
-/**
- * @def arena_alloc_array_zeroed(arena, type, count)
- * @brief Allocate an array of @p count objects of @p type and zero-initialize the block.
- *
- * Expands to:
- * @code
- * (type*)alloc_arena((arena), sizeof(type) * (count), true)
- * @endcode
- *
- * The returned pointer is aligned to the arena’s base alignment and the entire
- * allocation ( @c sizeof(type) * @p count bytes ) is set to zero.
- *
- * @param arena  An ::arena_t* previously created with ::init_static_arena()
- *               or ::init_dynamic_arena().
- * @param type   Element type (must be complete).
- * @param count  Number of elements to allocate. Evaluated exactly once.
- *
- * @return @c type* on success; @c NULL on failure
- *
- * @warning Very large @p count values can overflow the size computation.
- * @warning Avoid side effects in @p count (e.g., do not pass @c i++).
- *
- * @par Example
- * @code{.c}
- * arena_t* a = init_darena(8192, true);
- * uint8_t* buf = arena_alloc_array_zeroed(a, uint8_t, 512); // 512 zeroed bytes
- * if (!buf) { perror("arena_alloc_array_zeroed"); }
- * // ...
- * free_arena(a);
- * @endcode
- */
-    #define arena_alloc_array_zeroed(arena, type, count) \
-        (type*)alloc_arena((arena), sizeof(type) * (count), true)
-#endif
-// -------------------------------------------------------------------------------- 
 
 /**
  * @brief Vtable adapter for arena allocation.
@@ -2147,11 +2018,8 @@ bool arena_owns_memory(const arena_t* arena);
  * @retval void* Pointer to a block of at least @p size bytes.
  * @retval NULL  On failure, with errno set.
  */
-static inline void* arena_v_alloc(void* ctx, size_t size, bool zeroed) {
+static inline void_ptr_expect_t arena_v_alloc(void* ctx, size_t size, bool zeroed) {
     arena_t* arena = (arena_t*)ctx;
-    if (!arena) {
-        return NULL;
-    }
     return alloc_arena(arena, size, zeroed);
 }
 // -------------------------------------------------------------------------------- 
@@ -3468,156 +3336,156 @@ bool pool_owns_memory(const pool_t* pool);
  * @retval void* Pointer to the allocated pool element.
  * @retval NULL  On error (errno set to EINVAL).
  */
-static inline void* pool_v_alloc(void* ctx, size_t size, bool zeroed) {
-    (void) size;
-    pool_t* pool = (pool_t*)ctx;
-    if (!pool) {
-        errno = EINVAL;
-        return NULL;
-    }
-    if (size > pool_block_size(pool)) {
-        errno = EINVAL;   // requested more than a pool block can hold
-        return NULL;
-    }
-    return alloc_pool(pool, zeroed);
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Vtable adapter for aligned pool allocation.
- *
- * Pool allocators inherently provide alignment guarantees based on the
- * block size and internal structure, and do not support arbitrary alignment
- * requests. Therefore, @p align is ignored.
- *
- * If @p zeroed is true, the returned block will be zero-initialized.
- *
- * @param ctx     Pointer to a pool_t instance.
- * @param size    Requested size (ignored except for compatibility).
- * @param align   Requested alignment (ignored).
- * @param zeroed  Whether the element should be zero-initialized.
- *
- * @return Pointer to a pool element, or NULL on error.
- */
-static inline void* pool_v_alloc_aligned(void* ctx, size_t size,
-                                         size_t align, bool zeroed) {
-    (void) size;
-    (void) align;
-    pool_t* pool = (pool_t*)ctx;
-    return alloc_pool(pool, zeroed);
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Vtable adapter for pool reallocation.
- *
- * Reallocation is not supported by pool allocators because block sizes
- * are fixed. This function simply returns @p old_ptr unchanged.
- *
- * @param ctx       Pointer to a pool_t instance (unused).
- * @param old_ptr   The previously allocated block.
- * @param old_size  Previous allocation size (ignored).
- * @param new_size  Requested new size (ignored).
- * @param zeroed    Whether to zero-init expanded memory (ignored).
- *
- * @return Always returns @p old_ptr.
- */
-static inline void* pool_v_realloc(void* ctx, void* old_ptr,
-                                   size_t old_size, size_t new_size,
-                                   bool zeroed) {
-    (void)ctx; (void)old_size; (void)new_size; (void)zeroed;
-    return old_ptr;
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Vtable adapter for aligned pool reallocation.
- *
- * Like pool_v_realloc(), pool allocators do not support resizing or
- * alignment-based reallocation. The function simply returns @p old_ptr.
- *
- * @param ctx       Pointer to a pool_t instance (unused).
- * @param old_ptr   Previously allocated pool element.
- * @param old_size  Previous size (ignored).
- * @param new_size  Requested size (ignored).
- * @param zeroed    Zero-initialize flag (ignored).
- * @param align     Alignment (ignored).
- *
- * @return Always returns @p old_ptr.
- */
-static inline void* pool_v_realloc_aligned(void* ctx, void* old_ptr,
-                                           size_t old_size, size_t new_size,
-                                           bool zeroed, size_t align) {
-    (void)ctx; (void)old_size; (void)new_size; (void)zeroed; (void)align;
-    return old_ptr;
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Returns a previously allocated pool element to the pool.
- *
- * Pool allocators support element-level return operations. This returns
- * @p ptr to the pool referenced by @p ctx for reuse.
- *
- * If either @p ctx or @p ptr is NULL, errno is set to EINVAL and the
- * function has no effect.
- *
- * @param ctx  Pointer to a pool_t instance.
- * @param ptr  Pool element previously returned by alloc_pool().
- */
-static inline void pool_v_return(void* ctx, void* ptr) {
-    pool_t* pool = (pool_t*)ctx;
-    if (!pool || !ptr) {
-        errno = EINVAL;
-        return;
-    }
-    return_pool_element(pool, ptr);
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Frees all memory owned by the pool allocator.
- *
- * Destroys the pool referenced by @p ctx, releasing all associated
- * memory back to the system. After this call, the pool must not be used.
- *
- * If @p ctx is NULL, errno is set to EINVAL.
- *
- * @param ctx Pointer to a pool_t instance.
- */
-static inline void pool_v_free(void* ctx) {
-    pool_t* pool = (pool_t*)ctx;
-    if (!pool) {
-        errno = EINVAL;
-        return;
-    }
-    free_pool(pool);
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Constructs an allocator_vtable_t for a given pool.
- *
- * This helper initializes a vtable that exposes the pool allocator
- * through the generic allocator interface. All allocation operations
- * forward to pool-compatible functions.
- *
- * @param p Pointer to a pool_t instance used as the allocator backend.
- *
- * @return A fully initialized allocator_vtable_t referring to @p p.
- */
-static inline allocator_vtable_t pool_allocator(pool_t* p) {
-    allocator_vtable_t v = {
-        .allocate          = pool_v_alloc,
-        .allocate_aligned  = pool_v_alloc_aligned,
-        .reallocate        = pool_v_realloc,
-        .reallocate_aligned= pool_v_realloc_aligned,
-        .return_element    = pool_v_return,
-        .deallocate        = pool_v_free,
-        .ctx               = p
-    };
-    return v;
-}
+// static inline void* pool_v_alloc(void* ctx, size_t size, bool zeroed) {
+//     (void) size;
+//     pool_t* pool = (pool_t*)ctx;
+//     if (!pool) {
+//         errno = EINVAL;
+//         return NULL;
+//     }
+//     if (size > pool_block_size(pool)) {
+//         errno = EINVAL;   // requested more than a pool block can hold
+//         return NULL;
+//     }
+//     return alloc_pool(pool, zeroed);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Vtable adapter for aligned pool allocation.
+//  *
+//  * Pool allocators inherently provide alignment guarantees based on the
+//  * block size and internal structure, and do not support arbitrary alignment
+//  * requests. Therefore, @p align is ignored.
+//  *
+//  * If @p zeroed is true, the returned block will be zero-initialized.
+//  *
+//  * @param ctx     Pointer to a pool_t instance.
+//  * @param size    Requested size (ignored except for compatibility).
+//  * @param align   Requested alignment (ignored).
+//  * @param zeroed  Whether the element should be zero-initialized.
+//  *
+//  * @return Pointer to a pool element, or NULL on error.
+//  */
+// static inline void* pool_v_alloc_aligned(void* ctx, size_t size,
+//                                          size_t align, bool zeroed) {
+//     (void) size;
+//     (void) align;
+//     pool_t* pool = (pool_t*)ctx;
+//     return alloc_pool(pool, zeroed);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Vtable adapter for pool reallocation.
+//  *
+//  * Reallocation is not supported by pool allocators because block sizes
+//  * are fixed. This function simply returns @p old_ptr unchanged.
+//  *
+//  * @param ctx       Pointer to a pool_t instance (unused).
+//  * @param old_ptr   The previously allocated block.
+//  * @param old_size  Previous allocation size (ignored).
+//  * @param new_size  Requested new size (ignored).
+//  * @param zeroed    Whether to zero-init expanded memory (ignored).
+//  *
+//  * @return Always returns @p old_ptr.
+//  */
+// static inline void* pool_v_realloc(void* ctx, void* old_ptr,
+//                                    size_t old_size, size_t new_size,
+//                                    bool zeroed) {
+//     (void)ctx; (void)old_size; (void)new_size; (void)zeroed;
+//     return old_ptr;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Vtable adapter for aligned pool reallocation.
+//  *
+//  * Like pool_v_realloc(), pool allocators do not support resizing or
+//  * alignment-based reallocation. The function simply returns @p old_ptr.
+//  *
+//  * @param ctx       Pointer to a pool_t instance (unused).
+//  * @param old_ptr   Previously allocated pool element.
+//  * @param old_size  Previous size (ignored).
+//  * @param new_size  Requested size (ignored).
+//  * @param zeroed    Zero-initialize flag (ignored).
+//  * @param align     Alignment (ignored).
+//  *
+//  * @return Always returns @p old_ptr.
+//  */
+// static inline void* pool_v_realloc_aligned(void* ctx, void* old_ptr,
+//                                            size_t old_size, size_t new_size,
+//                                            bool zeroed, size_t align) {
+//     (void)ctx; (void)old_size; (void)new_size; (void)zeroed; (void)align;
+//     return old_ptr;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Returns a previously allocated pool element to the pool.
+//  *
+//  * Pool allocators support element-level return operations. This returns
+//  * @p ptr to the pool referenced by @p ctx for reuse.
+//  *
+//  * If either @p ctx or @p ptr is NULL, errno is set to EINVAL and the
+//  * function has no effect.
+//  *
+//  * @param ctx  Pointer to a pool_t instance.
+//  * @param ptr  Pool element previously returned by alloc_pool().
+//  */
+// static inline void pool_v_return(void* ctx, void* ptr) {
+//     pool_t* pool = (pool_t*)ctx;
+//     if (!pool || !ptr) {
+//         errno = EINVAL;
+//         return;
+//     }
+//     return_pool_element(pool, ptr);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Frees all memory owned by the pool allocator.
+//  *
+//  * Destroys the pool referenced by @p ctx, releasing all associated
+//  * memory back to the system. After this call, the pool must not be used.
+//  *
+//  * If @p ctx is NULL, errno is set to EINVAL.
+//  *
+//  * @param ctx Pointer to a pool_t instance.
+//  */
+// static inline void pool_v_free(void* ctx) {
+//     pool_t* pool = (pool_t*)ctx;
+//     if (!pool) {
+//         errno = EINVAL;
+//         return;
+//     }
+//     free_pool(pool);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Constructs an allocator_vtable_t for a given pool.
+//  *
+//  * This helper initializes a vtable that exposes the pool allocator
+//  * through the generic allocator interface. All allocation operations
+//  * forward to pool-compatible functions.
+//  *
+//  * @param p Pointer to a pool_t instance used as the allocator backend.
+//  *
+//  * @return A fully initialized allocator_vtable_t referring to @p p.
+//  */
+// static inline allocator_vtable_t pool_allocator(pool_t* p) {
+//     allocator_vtable_t v = {
+//         .allocate          = pool_v_alloc,
+//         .allocate_aligned  = pool_v_alloc_aligned,
+//         .reallocate        = pool_v_realloc,
+//         .reallocate_aligned= pool_v_realloc_aligned,
+//         .return_element    = pool_v_return,
+//         .deallocate        = pool_v_free,
+//         .ctx               = p
+//     };
+//     return v;
+// }
 // ================================================================================ 
 // ================================================================================ 
 // FREE LIST IMPLEMENTATION 
@@ -4707,24 +4575,22 @@ bool freelist_stats(const freelist_t *fl, char *buffer, size_t buffer_size);
  * @return
  *        Pointer to newly allocated memory on success, or NULL on failure.
  */
-static inline void* v_alloc(void* ctx, size_t size, bool zeroed) {
+static inline void_ptr_expect_t v_alloc(void* ctx, size_t size, bool zeroed) {
     (void)ctx;
 
     if (size == 0) {
-        errno = EINVAL;
-        return NULL;
+        return (void_ptr_expect_t){.has_value = false, .u.error = INVALID_ARG};
     }
 
     void* p = malloc(size);
     if (!p) {
-        /* malloc sets errno (usually ENOMEM) */
-        return NULL;
+        return (void_ptr_expect_t){.has_value = false, .u.error = BAD_ALLOC};
     }
 
     if (zeroed) {
         memset(p, 0, size);
     }
-    return p;
+    return (void_ptr_expect_t){.has_value = true, .u.value = p};
 }
 
 // ----------------------------------------------------------------------------- 
@@ -4781,8 +4647,11 @@ static inline void* v_alloc_aligned(void* ctx,
     }
 
     /* We also assume align is a power of two or caller-normalized. */
-
-    return v_alloc(NULL, size, zeroed);
+    void_ptr_expect_t expect = v_alloc(NULL, size,zeroed);
+    if (!expect.has_value) {
+        return NULL;
+    }
+    return expect.u.value;
 }
 // -------------------------------------------------------------------------------- 
 
@@ -4825,10 +4694,12 @@ static inline void* v_realloc(void* ctx,
                               size_t new_size,
                               bool  zeroed) {
     (void)ctx;
-
-    /* NULL behaves like alloc */
     if (!old_ptr) {
-        return v_alloc(NULL, new_size, zeroed);
+        void_ptr_expect_t expect = v_alloc(NULL, new_size, zeroed);
+        if (!expect.has_value) {
+            return NULL;
+        }
+        return expect.u.value;
     }
 
     void* p = realloc(old_ptr, new_size);
@@ -6468,146 +6339,146 @@ static inline void* buddy_v_alloc_aligned(void* ctx, size_t size,
  * @retval void* New pointer to the resized allocation on success.
  * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
  */
-static inline void* buddy_v_realloc(void* ctx, void* old_ptr,
-                                    size_t old_size, size_t new_size,
-                                    bool zeroed) {
-    buddy_t* buddy = (buddy_t*)ctx;
-    if (!buddy) {
-        errno = EINVAL;
-        return NULL;
-    }
-    return realloc_buddy(buddy, old_ptr, old_size, new_size, zeroed);
-}
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Vtable adapter for aligned buddy reallocation.
- *
- * Resizes a block of memory previously allocated from the buddy allocator
- * referenced by @p ctx, enforcing a minimum alignment of @p align for the
- * resulting block. The previous allocation is described by @p old_ptr and
- * @p old_size; the new requested size is @p new_size.
- *
- * Semantics follow ::realloc_buddy_aligned():
- *
- *  - `realloc_buddy_aligned(b, NULL, 0, new_size, align, zeroed)` behaves
- *    like ::alloc_buddy_aligned().
- *  - `realloc_buddy_aligned(b, old_ptr, old_size, 0, align, zeroed)` frees
- *    @p old_ptr and returns NULL.
- *  - If the new size fits in the existing block and the pointer already
- *    satisfies the requested alignment, the pointer is reused in place.
- *  - Otherwise, a new aligned block is allocated, data is copied, and the
- *    old block is returned to the allocator.
- *
- * On error, errno is set and NULL is returned. In that case, the caller must
- * continue to use @p old_ptr unchanged.
- *
- * This function implements the @ref realloc_aligned_prototype interface for
- * buddy-backed allocators.
- *
- * @param ctx       Pointer to a buddy_t instance.
- * @param old_ptr   Pointer to the existing allocation (may be NULL).
- * @param old_size  Size of the existing allocation.
- * @param new_size  Requested new size.
- * @param zeroed    Whether any expanded portion must be zero-initialized.
- * @param align     Required alignment (power of two, or 0 for natural).
- *
- * @retval void* Pointer to the resized, aligned allocation on success.
- * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
- */
-static inline void* buddy_v_realloc_aligned(void* ctx, void* old_ptr,
-                                            size_t old_size, size_t new_size,
-                                            bool zeroed, size_t align) {
-    buddy_t* buddy = (buddy_t*)ctx;
-    if (!buddy) {
-        errno = EINVAL;
-        return NULL;
-    }
-    return realloc_buddy_aligned(buddy, old_ptr, old_size,
-                                 new_size, align, zeroed);
-}
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Vtable adapter for returning an element to a buddy allocator.
- *
- * Returns a block previously allocated from the buddy allocator referenced
- * by @p ctx back to the allocator. This is a thin adapter over
- * ::return_buddy_element().
- *
- * If @p ctx is NULL, errno is set to EINVAL and the function returns without
- * performing any deallocation. If @p ptr is NULL, the call is treated as
- * a no-op (like `free(NULL)`).
- *
- * This function implements the @ref return_prototype interface for
- * buddy-backed allocators.
- *
- * @param ctx Pointer to a buddy_t instance.
- * @param ptr Pointer to an allocated block (may be NULL).
- */
-static inline void buddy_v_return(void* ctx, void* ptr) {
-    buddy_t* buddy = (buddy_t*)ctx;
-    if (!buddy) {
-        errno = EINVAL;
-        return;
-    }
-    (void)return_buddy_element(buddy, ptr);
-}
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Vtable adapter for freeing a buddy allocator.
- *
- * Releases all memory owned by the buddy allocator referenced by @p ctx,
- * including the OS-backed pool and all internal metadata. After this call,
- * the allocator must not be used again.
- *
- * If @p ctx is NULL, errno is set to EINVAL and the function returns
- * without performing any action.
- *
- * This function implements the @ref free_prototype interface for
- * buddy-backed allocators.
- *
- * @param ctx Pointer to a buddy_t instance.
- */
-static inline void buddy_v_free(void* ctx) {
-    buddy_t* buddy = (buddy_t*)ctx;
-    if (!buddy) {
-        errno = EINVAL;
-        return;
-    }
-    free_buddy(buddy);
-}
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Constructs an allocator_vtable_t for a given buddy allocator.
- *
- * This helper initializes an allocator_vtable_t that exposes a ::buddy_t
- * instance through the generic allocator interface. All operations
- * (allocate, reallocate, deallocate, etc.) are forwarded to the
- * buddy-backed vtable adapter functions.
- *
- * The returned vtable is typically used to parameterize other components
- * that depend on the generic allocator API rather than directly on
- * ::buddy_t.
- *
- * @param b Pointer to a buddy_t instance to use as the allocator backend.
- *
- * @return A fully initialized allocator_vtable_t bound to @p b.
- */
-static inline allocator_vtable_t buddy_allocator(buddy_t* b) {
-    allocator_vtable_t v = {
-        .allocate           = buddy_v_alloc,
-        .allocate_aligned   = buddy_v_alloc_aligned,
-        .reallocate         = buddy_v_realloc,
-        .reallocate_aligned = buddy_v_realloc_aligned,
-        .return_element     = buddy_v_return,
-        .deallocate         = buddy_v_free,
-        .ctx                = b
-    };
-    return v;
-}
+// static inline void* buddy_v_realloc(void* ctx, void* old_ptr,
+//                                     size_t old_size, size_t new_size,
+//                                     bool zeroed) {
+//     buddy_t* buddy = (buddy_t*)ctx;
+//     if (!buddy) {
+//         errno = EINVAL;
+//         return NULL;
+//     }
+//     return realloc_buddy(buddy, old_ptr, old_size, new_size, zeroed);
+// }
+// // --------------------------------------------------------------------------------
+//
+// /**
+//  * @brief Vtable adapter for aligned buddy reallocation.
+//  *
+//  * Resizes a block of memory previously allocated from the buddy allocator
+//  * referenced by @p ctx, enforcing a minimum alignment of @p align for the
+//  * resulting block. The previous allocation is described by @p old_ptr and
+//  * @p old_size; the new requested size is @p new_size.
+//  *
+//  * Semantics follow ::realloc_buddy_aligned():
+//  *
+//  *  - `realloc_buddy_aligned(b, NULL, 0, new_size, align, zeroed)` behaves
+//  *    like ::alloc_buddy_aligned().
+//  *  - `realloc_buddy_aligned(b, old_ptr, old_size, 0, align, zeroed)` frees
+//  *    @p old_ptr and returns NULL.
+//  *  - If the new size fits in the existing block and the pointer already
+//  *    satisfies the requested alignment, the pointer is reused in place.
+//  *  - Otherwise, a new aligned block is allocated, data is copied, and the
+//  *    old block is returned to the allocator.
+//  *
+//  * On error, errno is set and NULL is returned. In that case, the caller must
+//  * continue to use @p old_ptr unchanged.
+//  *
+//  * This function implements the @ref realloc_aligned_prototype interface for
+//  * buddy-backed allocators.
+//  *
+//  * @param ctx       Pointer to a buddy_t instance.
+//  * @param old_ptr   Pointer to the existing allocation (may be NULL).
+//  * @param old_size  Size of the existing allocation.
+//  * @param new_size  Requested new size.
+//  * @param zeroed    Whether any expanded portion must be zero-initialized.
+//  * @param align     Required alignment (power of two, or 0 for natural).
+//  *
+//  * @retval void* Pointer to the resized, aligned allocation on success.
+//  * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+//  */
+// static inline void* buddy_v_realloc_aligned(void* ctx, void* old_ptr,
+//                                             size_t old_size, size_t new_size,
+//                                             bool zeroed, size_t align) {
+//     buddy_t* buddy = (buddy_t*)ctx;
+//     if (!buddy) {
+//         errno = EINVAL;
+//         return NULL;
+//     }
+//     return realloc_buddy_aligned(buddy, old_ptr, old_size,
+//                                  new_size, align, zeroed);
+// }
+// // --------------------------------------------------------------------------------
+//
+// /**
+//  * @brief Vtable adapter for returning an element to a buddy allocator.
+//  *
+//  * Returns a block previously allocated from the buddy allocator referenced
+//  * by @p ctx back to the allocator. This is a thin adapter over
+//  * ::return_buddy_element().
+//  *
+//  * If @p ctx is NULL, errno is set to EINVAL and the function returns without
+//  * performing any deallocation. If @p ptr is NULL, the call is treated as
+//  * a no-op (like `free(NULL)`).
+//  *
+//  * This function implements the @ref return_prototype interface for
+//  * buddy-backed allocators.
+//  *
+//  * @param ctx Pointer to a buddy_t instance.
+//  * @param ptr Pointer to an allocated block (may be NULL).
+//  */
+// static inline void buddy_v_return(void* ctx, void* ptr) {
+//     buddy_t* buddy = (buddy_t*)ctx;
+//     if (!buddy) {
+//         errno = EINVAL;
+//         return;
+//     }
+//     (void)return_buddy_element(buddy, ptr);
+// }
+// // --------------------------------------------------------------------------------
+//
+// /**
+//  * @brief Vtable adapter for freeing a buddy allocator.
+//  *
+//  * Releases all memory owned by the buddy allocator referenced by @p ctx,
+//  * including the OS-backed pool and all internal metadata. After this call,
+//  * the allocator must not be used again.
+//  *
+//  * If @p ctx is NULL, errno is set to EINVAL and the function returns
+//  * without performing any action.
+//  *
+//  * This function implements the @ref free_prototype interface for
+//  * buddy-backed allocators.
+//  *
+//  * @param ctx Pointer to a buddy_t instance.
+//  */
+// static inline void buddy_v_free(void* ctx) {
+//     buddy_t* buddy = (buddy_t*)ctx;
+//     if (!buddy) {
+//         errno = EINVAL;
+//         return;
+//     }
+//     free_buddy(buddy);
+// }
+// // --------------------------------------------------------------------------------
+//
+// /**
+//  * @brief Constructs an allocator_vtable_t for a given buddy allocator.
+//  *
+//  * This helper initializes an allocator_vtable_t that exposes a ::buddy_t
+//  * instance through the generic allocator interface. All operations
+//  * (allocate, reallocate, deallocate, etc.) are forwarded to the
+//  * buddy-backed vtable adapter functions.
+//  *
+//  * The returned vtable is typically used to parameterize other components
+//  * that depend on the generic allocator API rather than directly on
+//  * ::buddy_t.
+//  *
+//  * @param b Pointer to a buddy_t instance to use as the allocator backend.
+//  *
+//  * @return A fully initialized allocator_vtable_t bound to @p b.
+//  */
+// static inline allocator_vtable_t buddy_allocator(buddy_t* b) {
+//     allocator_vtable_t v = {
+//         .allocate           = buddy_v_alloc,
+//         .allocate_aligned   = buddy_v_alloc_aligned,
+//         .reallocate         = buddy_v_realloc,
+//         .reallocate_aligned = buddy_v_realloc_aligned,
+//         .return_element     = buddy_v_return,
+//         .deallocate         = buddy_v_free,
+//         .ctx                = b
+//     };
+//     return v;
+// }
 // ================================================================================ 
 // ================================================================================ 
 // SLAB ALLOCATOR 
@@ -7540,257 +7411,256 @@ bool slab_stats(const slab_t *slab, char *buffer, size_t buffer_size);
  * @retval void* Pointer to a block of at least @p size bytes.
  * @retval NULL  On failure, with errno set.
  */
-static inline void *slab_v_alloc(void *ctx, size_t size, bool zeroed) {
-    slab_t *slab = (slab_t *)ctx;
-    if (!slab) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    if (size == 0u) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    /* Maximum capacity per slot (exposed via getter). */
-    size_t const capacity = slab_stride(slab);
-    if (capacity == 0u) {
-        /* slab_stride() already sets errno appropriately. */
-        if (errno == 0) errno = EINVAL;
-        return NULL;
-    }
-
-    if (size > capacity) {
-        errno = ENOMEM;
-        return NULL;
-    }
-
-    return alloc_slab(slab, zeroed);
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Vtable adapter for aligned slab allocation.
- *
- * Allocates a fixed-size object from the slab allocator referenced by @p ctx,
- * with a minimum alignment requirement of @p align. The slab's alignment is
- * exposed via ::slab_alignment(); if @p align is 0, the slab's natural
- * alignment is used, otherwise @p align must not exceed the slab alignment.
- *
- * The requested @p size must be greater than 0 and less than or equal to the
- * slot stride reported by ::slab_stride().
- *
- * On error, errno is set (typically to ENOMEM or EINVAL) and NULL is returned.
- *
- * @param ctx    Pointer to a slab_t instance.
- * @param size   Number of bytes requested (must be <= ::slab_stride()).
- * @param align  Required alignment (0 for natural, or <= ::slab_alignment()).
- * @param zeroed Whether the memory should be zero-initialized.
- *
- * @retval void* Pointer to an aligned block of at least @p size bytes.
- * @retval NULL  On failure, with errno set.
- */
-static inline void *slab_v_alloc_aligned(void *ctx, size_t size,
-                                         size_t align, bool zeroed) {
-    slab_t *slab = (slab_t *)ctx;
-    if (!slab) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    if (size == 0u) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    size_t const capacity = slab_stride(slab);
-    if (capacity == 0u) {
-        if (errno == 0) errno = EINVAL;
-        return NULL;
-    }
-    if (size > capacity) {
-        errno = ENOMEM;
-        return NULL;
-    }
-
-    size_t const slab_align = slab_alignment(slab);
-    if (slab_align == 0u) {
-        if (errno == 0) errno = EINVAL;
-        return NULL;
-    }
-
-    if (align != 0u && align > slab_align) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    /* All slab allocations are at least slab_align-aligned, so they satisfy
-       any requested align <= slab_align. */
-    return alloc_slab(slab, zeroed);
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Vtable adapter for slab reallocation (not supported).
- *
- * Slab allocators manage fixed-size objects and do not support resizing
- * individual allocations. This adapter exists only to satisfy the
- * @ref realloc_prototype interface; it does not perform any reallocation.
- *
- * Semantics:
- *
- *  - If @p old_ptr is NULL, the function returns NULL and performs no action.
- *  - If @p old_ptr is non-NULL, the function simply returns @p old_ptr
- *    unchanged, regardless of @p old_size, @p new_size, or @p zeroed.
- *  - No new memory is allocated, no memory is freed, and errno is not
- *    modified by this function.
- *
- * Callers must not rely on standard realloc semantics when using a slab
- * allocator via this vtable. To change the logical size associated with
- * an object, the caller is responsible for allocating a new object via
- * ::slab_v_alloc() (or the underlying ::alloc_slab()) and performing any
- * data copying and deallocation explicitly.
- *
- * @param ctx       Pointer to a slab_t instance (unused).
- * @param old_ptr   Pointer to the existing allocation (may be NULL).
- * @param old_size  Logical size of the existing allocation (ignored).
- * @param new_size  Requested new logical size (ignored).
- * @param zeroed    Whether any expanded portion must be zero-initialized
- *                  (ignored).
- *
- * @retval void* @p old_ptr, unchanged. May be NULL if @p old_ptr was NULL.
- */
-static inline void *slab_v_realloc(void *ctx, void *old_ptr,
-                                   size_t old_size, size_t new_size,
-                                   bool zeroed) {
-    (void)ctx; (void)old_size; (void)new_size; (void)zeroed;
-    return old_ptr;
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Vtable adapter for aligned slab reallocation (not supported).
- *
- * As with ::slab_v_realloc(), slab allocators do not support resizing
- * existing allocations, even when an explicit alignment is requested.
- * This function exists solely to satisfy the @ref realloc_aligned_prototype
- * interface for slab-backed allocators.
- *
- * Semantics:
- *
- *  - If @p old_ptr is NULL, the function returns NULL and performs no action.
- *  - If @p old_ptr is non-NULL, the function simply returns @p old_ptr
- *    unchanged, regardless of @p old_size, @p new_size, @p zeroed, or
- *    @p align.
- *  - No new memory is allocated, no memory is freed, alignment is not
- *    changed, and errno is not modified by this function.
- *
- * Callers that require true reallocation semantics must implement them
- * explicitly on top of the slab interface (allocate a new object of the
- * desired size/alignment, copy data as needed, and return the old object
- * via ::slab_v_return() / ::return_slab()).
- *
- * @param ctx       Pointer to a slab_t instance (unused).
- * @param old_ptr   Pointer to the existing allocation (may be NULL).
- * @param old_size  Logical size of the existing allocation (ignored).
- * @param new_size  Requested new size (ignored).
- * @param zeroed    Whether any expanded portion must be zero-initialized
- *                  (ignored).
- * @param align     Required alignment (ignored).
- *
- * @retval void* @p old_ptr, unchanged. May be NULL if @p old_ptr was NULL.
- */
-static inline void *slab_v_realloc_aligned(void *ctx, void *old_ptr,
-                                           size_t old_size, size_t new_size,
-                                           bool zeroed, size_t align) {
-    (void)ctx; (void)old_size; (void)new_size; (void)zeroed; (void)align;
-    return old_ptr;
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Vtable adapter for returning an element to a slab allocator.
- *
- * Returns a block previously allocated from the slab allocator referenced
- * by @p ctx back to the allocator. This is a thin adapter over ::return_slab().
- *
- * If @p ctx is NULL, errno is set to EINVAL and the function returns without
- * performing any deallocation. If @p ptr is NULL, the call is treated as
- * a no-op (like `free(NULL)`).
- *
- * @param ctx Pointer to a slab_t instance.
- * @param ptr Pointer to an allocated block (may be NULL).
- */
-static inline void slab_v_return(void *ctx, void *ptr) {
-    slab_t *slab = (slab_t *)ctx;
-    if (!slab) {
-        errno = EINVAL;
-        return;
-    }
-    (void)return_slab(slab, ptr);
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Vtable adapter for logically resetting a slab allocator.
- *
- * For slab-backed allocators, the slab does not own its underlying memory
- * pool; instead, it carves fixed-size objects from a backing allocator.
- * As such, this function does not release the underlying pool; it simply
- * resets the slab's internal state via ::reset_slab(), returning all
- * objects to the free list.
- *
- * After this call, the slab remains valid and may be used again.
- *
- * If @p ctx is NULL, errno is set to EINVAL and the function returns
- * without performing any action.
- *
- * @param ctx Pointer to a slab_t instance.
- */
-static inline void slab_v_free(void *ctx) {
-    slab_t *slab = (slab_t *)ctx;
-    if (!slab) {
-        errno = EINVAL;
-        return;
-    }
-    (void)reset_slab(slab);
-}
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Constructs an allocator_vtable_t for a given slab allocator.
- *
- * This helper initializes an allocator_vtable_t that exposes a ::slab_t
- * instance through the generic allocator interface. All operations
- * (allocate, reallocate, deallocate, etc.) are forwarded to the
- * slab-backed vtable adapter functions.
- *
- * Because a slab has fixed slot capacity and alignment, allocation and
- * reallocation requests are subject to additional constraints:
- *
- *  - The requested size must be > 0 and <= ::slab_stride().
- *  - The requested alignment must be 0 or <= ::slab_alignment().
- *  - Reallocation cannot grow blocks beyond the slot capacity; attempts
- *    to do so fail with errno = ENOMEM and return NULL (the caller keeps
- *    the original pointer).
- *
- * @param slab Pointer to a slab_t instance to use as the allocator backend.
- *
- * @return A fully initialized allocator_vtable_t bound to @p slab.
- */
-static inline allocator_vtable_t slab_allocator(slab_t *slab) {
-    allocator_vtable_t v = {
-        .allocate           = slab_v_alloc,
-        .allocate_aligned   = slab_v_alloc_aligned,
-        .reallocate         = slab_v_realloc,
-        .reallocate_aligned = slab_v_realloc_aligned,
-        .return_element     = slab_v_return,
-        .deallocate         = slab_v_free,
-        .ctx                = slab
-    };
-    return v;
-}
-
+// static inline void *slab_v_alloc(void *ctx, size_t size, bool zeroed) {
+//     slab_t *slab = (slab_t *)ctx;
+//     if (!slab) {
+//         errno = EINVAL;
+//         return NULL;
+//     }
+//
+//     if (size == 0u) {
+//         errno = EINVAL;
+//         return NULL;
+//     }
+//
+//     /* Maximum capacity per slot (exposed via getter). */
+//     size_t const capacity = slab_stride(slab);
+//     if (capacity == 0u) {
+//         /* slab_stride() already sets errno appropriately. */
+//         if (errno == 0) errno = EINVAL;
+//         return NULL;
+//     }
+//
+//     if (size > capacity) {
+//         errno = ENOMEM;
+//         return NULL;
+//     }
+//
+//     return alloc_slab(slab, zeroed);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Vtable adapter for aligned slab allocation.
+//  *
+//  * Allocates a fixed-size object from the slab allocator referenced by @p ctx,
+//  * with a minimum alignment requirement of @p align. The slab's alignment is
+//  * exposed via ::slab_alignment(); if @p align is 0, the slab's natural
+//  * alignment is used, otherwise @p align must not exceed the slab alignment.
+//  *
+//  * The requested @p size must be greater than 0 and less than or equal to the
+//  * slot stride reported by ::slab_stride().
+//  *
+//  * On error, errno is set (typically to ENOMEM or EINVAL) and NULL is returned.
+//  *
+//  * @param ctx    Pointer to a slab_t instance.
+//  * @param size   Number of bytes requested (must be <= ::slab_stride()).
+//  * @param align  Required alignment (0 for natural, or <= ::slab_alignment()).
+//  * @param zeroed Whether the memory should be zero-initialized.
+//  *
+//  * @retval void* Pointer to an aligned block of at least @p size bytes.
+//  * @retval NULL  On failure, with errno set.
+//  */
+// static inline void *slab_v_alloc_aligned(void *ctx, size_t size,
+//                                          size_t align, bool zeroed) {
+//     slab_t *slab = (slab_t *)ctx;
+//     if (!slab) {
+//         errno = EINVAL;
+//         return NULL;
+//     }
+//
+//     if (size == 0u) {
+//         errno = EINVAL;
+//         return NULL;
+//     }
+//
+//     size_t const capacity = slab_stride(slab);
+//     if (capacity == 0u) {
+//         if (errno == 0) errno = EINVAL;
+//         return NULL;
+//     }
+//     if (size > capacity) {
+//         errno = ENOMEM;
+//         return NULL;
+//     }
+//
+//     size_t const slab_align = slab_alignment(slab);
+//     if (slab_align == 0u) {
+//         if (errno == 0) errno = EINVAL;
+//         return NULL;
+//     }
+//
+//     if (align != 0u && align > slab_align) {
+//         errno = EINVAL;
+//         return NULL;
+//     }
+//
+//     /* All slab allocations are at least slab_align-aligned, so they satisfy
+//        any requested align <= slab_align. */
+//     return alloc_slab(slab, zeroed);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Vtable adapter for slab reallocation (not supported).
+//  *
+//  * Slab allocators manage fixed-size objects and do not support resizing
+//  * individual allocations. This adapter exists only to satisfy the
+//  * @ref realloc_prototype interface; it does not perform any reallocation.
+//  *
+//  * Semantics:
+//  *
+//  *  - If @p old_ptr is NULL, the function returns NULL and performs no action.
+//  *  - If @p old_ptr is non-NULL, the function simply returns @p old_ptr
+//  *    unchanged, regardless of @p old_size, @p new_size, or @p zeroed.
+//  *  - No new memory is allocated, no memory is freed, and errno is not
+//  *    modified by this function.
+//  *
+//  * Callers must not rely on standard realloc semantics when using a slab
+//  * allocator via this vtable. To change the logical size associated with
+//  * an object, the caller is responsible for allocating a new object via
+//  * ::slab_v_alloc() (or the underlying ::alloc_slab()) and performing any
+//  * data copying and deallocation explicitly.
+//  *
+//  * @param ctx       Pointer to a slab_t instance (unused).
+//  * @param old_ptr   Pointer to the existing allocation (may be NULL).
+//  * @param old_size  Logical size of the existing allocation (ignored).
+//  * @param new_size  Requested new logical size (ignored).
+//  * @param zeroed    Whether any expanded portion must be zero-initialized
+//  *                  (ignored).
+//  *
+//  * @retval void* @p old_ptr, unchanged. May be NULL if @p old_ptr was NULL.
+//  */
+// static inline void *slab_v_realloc(void *ctx, void *old_ptr,
+//                                    size_t old_size, size_t new_size,
+//                                    bool zeroed) {
+//     (void)ctx; (void)old_size; (void)new_size; (void)zeroed;
+//     return old_ptr;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Vtable adapter for aligned slab reallocation (not supported).
+//  *
+//  * As with ::slab_v_realloc(), slab allocators do not support resizing
+//  * existing allocations, even when an explicit alignment is requested.
+//  * This function exists solely to satisfy the @ref realloc_aligned_prototype
+//  * interface for slab-backed allocators.
+//  *
+//  * Semantics:
+//  *
+//  *  - If @p old_ptr is NULL, the function returns NULL and performs no action.
+//  *  - If @p old_ptr is non-NULL, the function simply returns @p old_ptr
+//  *    unchanged, regardless of @p old_size, @p new_size, @p zeroed, or
+//  *    @p align.
+//  *  - No new memory is allocated, no memory is freed, alignment is not
+//  *    changed, and errno is not modified by this function.
+//  *
+//  * Callers that require true reallocation semantics must implement them
+//  * explicitly on top of the slab interface (allocate a new object of the
+//  * desired size/alignment, copy data as needed, and return the old object
+//  * via ::slab_v_return() / ::return_slab()).
+//  *
+//  * @param ctx       Pointer to a slab_t instance (unused).
+//  * @param old_ptr   Pointer to the existing allocation (may be NULL).
+//  * @param old_size  Logical size of the existing allocation (ignored).
+//  * @param new_size  Requested new size (ignored).
+//  * @param zeroed    Whether any expanded portion must be zero-initialized
+//  *                  (ignored).
+//  * @param align     Required alignment (ignored).
+//  *
+//  * @retval void* @p old_ptr, unchanged. May be NULL if @p old_ptr was NULL.
+//  */
+// static inline void *slab_v_realloc_aligned(void *ctx, void *old_ptr,
+//                                            size_t old_size, size_t new_size,
+//                                            bool zeroed, size_t align) {
+//     (void)ctx; (void)old_size; (void)new_size; (void)zeroed; (void)align;
+//     return old_ptr;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Vtable adapter for returning an element to a slab allocator.
+//  *
+//  * Returns a block previously allocated from the slab allocator referenced
+//  * by @p ctx back to the allocator. This is a thin adapter over ::return_slab().
+//  *
+//  * If @p ctx is NULL, errno is set to EINVAL and the function returns without
+//  * performing any deallocation. If @p ptr is NULL, the call is treated as
+//  * a no-op (like `free(NULL)`).
+//  *
+//  * @param ctx Pointer to a slab_t instance.
+//  * @param ptr Pointer to an allocated block (may be NULL).
+//  */
+// static inline void slab_v_return(void *ctx, void *ptr) {
+//     slab_t *slab = (slab_t *)ctx;
+//     if (!slab) {
+//         errno = EINVAL;
+//         return;
+//     }
+//     (void)return_slab(slab, ptr);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Vtable adapter for logically resetting a slab allocator.
+//  *
+//  * For slab-backed allocators, the slab does not own its underlying memory
+//  * pool; instead, it carves fixed-size objects from a backing allocator.
+//  * As such, this function does not release the underlying pool; it simply
+//  * resets the slab's internal state via ::reset_slab(), returning all
+//  * objects to the free list.
+//  *
+//  * After this call, the slab remains valid and may be used again.
+//  *
+//  * If @p ctx is NULL, errno is set to EINVAL and the function returns
+//  * without performing any action.
+//  *
+//  * @param ctx Pointer to a slab_t instance.
+//  */
+// static inline void slab_v_free(void *ctx) {
+//     slab_t *slab = (slab_t *)ctx;
+//     if (!slab) {
+//         errno = EINVAL;
+//         return;
+//     }
+//     (void)reset_slab(slab);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// /**
+//  * @brief Constructs an allocator_vtable_t for a given slab allocator.
+//  *
+//  * This helper initializes an allocator_vtable_t that exposes a ::slab_t
+//  * instance through the generic allocator interface. All operations
+//  * (allocate, reallocate, deallocate, etc.) are forwarded to the
+//  * slab-backed vtable adapter functions.
+//  *
+//  * Because a slab has fixed slot capacity and alignment, allocation and
+//  * reallocation requests are subject to additional constraints:
+//  *
+//  *  - The requested size must be > 0 and <= ::slab_stride().
+//  *  - The requested alignment must be 0 or <= ::slab_alignment().
+//  *  - Reallocation cannot grow blocks beyond the slot capacity; attempts
+//  *    to do so fail with errno = ENOMEM and return NULL (the caller keeps
+//  *    the original pointer).
+//  *
+//  * @param slab Pointer to a slab_t instance to use as the allocator backend.
+//  *
+//  * @return A fully initialized allocator_vtable_t bound to @p slab.
+//  */
+// static inline allocator_vtable_t slab_allocator(slab_t *slab) {
+//     allocator_vtable_t v = {
+//         .allocate           = slab_v_alloc,
+//         .allocate_aligned   = slab_v_alloc_aligned,
+//         .reallocate         = slab_v_realloc,
+//         .reallocate_aligned = slab_v_realloc_aligned,
+//         .return_element     = slab_v_return,
+//         .deallocate         = slab_v_free,
+//         .ctx                = slab
+//     };
+//     return v;
+// }
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
