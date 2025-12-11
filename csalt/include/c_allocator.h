@@ -123,9 +123,9 @@ typedef void_ptr_expect_t (*alloc_prototype)(void* ctx, size_t size, bool zeroed
  * @param align   Required alignment (power of two)
  * @param zeroed  Whether the returned memory must be zero-initialized
  *
- * @return Pointer to an aligned memory block, or NULL on failure.
+ * @return void_ptr_expect_t data type with a pointer to data or errors
  */
-typedef void* (*alloc_aligned_prototype)(void* ctx, size_t size, size_t align, bool zeroed);
+typedef void_ptr_expect_t (*alloc_aligned_prototype)(void* ctx, size_t size, size_t align, bool zeroed);
 
 /**
  * @typedef realloc_prototype
@@ -145,7 +145,7 @@ typedef void* (*alloc_aligned_prototype)(void* ctx, size_t size, size_t align, b
  * @param new_size  Requested new size
  * @param zeroed    Whether any expanded memory must be zero-initialized
  *
- * @return void_ptr_expect_t data type with a pointer to data or errors*
+ * @return void_ptr_expect_t data type with a pointer to data or errors
  */
 typedef void_ptr_expect_t (*realloc_prototype)(void* ctx, void* old_ptr,
                                    size_t old_size, size_t new_size, bool zeroed);
@@ -169,9 +169,9 @@ typedef void_ptr_expect_t (*realloc_prototype)(void* ctx, void* old_ptr,
  * @param zeroed    Whether expanded memory must be zero-initialized
  * @param align     Required alignment (power of two)
  *
- * @return Pointer to a resized & aligned block, or NULL on failure.
+ * @return void_ptr_expect_t data type with a pointer to data or errors
  */
-typedef void* (*realloc_aligned_prototype)(void* ctx, void* old_ptr,
+typedef void_ptr_expect_t (*realloc_aligned_prototype)(void* ctx, void* old_ptr,
                                            size_t old_size, size_t new_size,
                                            bool zeroed, size_t align);
 
@@ -328,8 +328,11 @@ typedef struct {
  *
  * arena_t* a = res.u.value;
  *
- * void *p = alloc_arena(a, 128, true);   // allocate 128 zeroed bytes
- * assert(p != NULL);
+ * void_ptr_expect_t expect = alloc_arena(a, 128, true) // allocate 128 zeroed bytes 
+ * if (!expect.has_value) {
+ *    // Handle error 
+ * }
+ * void *p = expect.u.value;
  *
  * // ... use arena allocations ...
  *
@@ -436,8 +439,16 @@ arena_expect_t init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in
  *
  * arena_t *a = r.u.value;
  *
- * void *p1 = alloc_arena(a, 128, false);   // OK
- * void *p2 = alloc_arena(a, 9000, false);  // fails if capacity exhausted
+ * void_ptr_expect_t expect = alloc_arena(a, 128, false) // ok 
+ * if (!expect.has_value) {
+ *     // Handle error 
+ * } 
+ * void *p1 = except.u.value;
+ * expect = alloc_arena(a, 9000, false);  
+ * if (!expect.has_value) {
+ *     // This will fail since capacity has been exceeded 
+ *     printf(error_to_string(expect.error));
+ * }
  *
  * reset_arena(a, false);   // discards allocations, capacity unchanged
  *
@@ -456,7 +467,11 @@ arena_expect_t init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in
  * }
  *
  * arena_t *a = r.u.value;
- * void *p = alloc_arena(a, 256, true);
+ * void_ptr_expect_t expect = alloc_arena(a, 256, true);
+ * if (!expect.has_value) {
+ *     // Handle error 
+ * }
+ * void *p = expect.u.value;
  *
  * // Guaranteed 64-byte alignment:
  * assert(((uintptr_t)p % 64u) == 0u);
@@ -548,8 +563,11 @@ arena_expect_t init_static_arena(void* buffer, size_t bytes, size_t passing_in);
  *
  * arena_t *temp = sub_r.u.value;
  *
- * void *data = alloc_arena(temp, 1024, false);
- * assert(data != NULL);
+ * void_ptr_expect_t expect = alloc_arena(temp, 1024, false);
+ * if (!expect.has_value) {
+ *     // Hanlde error 
+ * }
+ * void *data = expect.u.value;
  *
  * // Sub-arena teardown: no memory is freed; parent still owns everything.
  * free_arena(temp);
@@ -636,8 +654,11 @@ arena_expect_t init_arena_with_arena(arena_t* parent,
  *
  * arena_t *a = r.u.value;
  *
- * void *p = alloc_arena(a, 128u, true);  // 128 zeroed bytes
- * assert(p != NULL);
+ * void_ptr_expect_t expect = alloc_arena(a, 128u, true);
+ * if (!expect.has_value) {
+ *     // Handle error 
+ * }
+ * void* p = expect.u.value;
  *
  * // ... use arena allocations ...
  *
@@ -716,8 +737,11 @@ arena_expect_t init_darena(size_t bytes, bool resize);
  *
  * arena_t *a = r.u.value;
  *
- * void *p = alloc_arena(a, 1024u, false);
- * assert(p != NULL);
+ * void_ptr_expect_t expect = alloc_arena(a, 1024u, false);
+ * if (!expect.has_value) {
+ *     // Hanlde error 
+ * }
+ * void *p = expect.u.value;
  *
  * // Reset discards allocations but keeps capacity.
  * reset_arena(a, false);
@@ -776,8 +800,16 @@ arena_expect_t init_sarena(void *buffer, size_t bytes);
  *
  * @par Example (dynamic arena)
  * @code{.c}
- * arena_t *a = init_darena(4096, true);
- * void *p1 = alloc_arena(a, 1024, false);
+ * arena_expect_t expect = init_darena(4096, true);
+ * if (!expect.has_value) {
+ *     // Handle error 
+ * }
+ * arena_t *a = expect.u.value; 
+ * void_ptr_expect_t aexpect = alloc_arena(a, 1024, false);
+ * if (!aexpect.has_value) {
+ *     // Handle error 
+ * }
+ * void *p1 = aexpect.u.value;
  * // ... use p1 ...
  * free_arena(a);   // releases all chunks and 'a' itself
  * a = NULL;        // prevent accidental reuse
@@ -787,7 +819,11 @@ arena_expect_t init_sarena(void *buffer, size_t bytes);
  * @code{.c}
  * enum { BUF = 8192 };
  * void *buf = malloc(alignof(max_align_t));
- * arena_t *a = init_sarena(buf, BUF);
+ * arena_expect_t expect = init_sarena(buf, BUF);
+ * if (!expect.has_value) {
+ *     // Handle error 
+ * }
+ * arena_t *a = expect.u.value;
  *
  * // Later:
  * free_arena(a);   // ERROR: sets errno=EPERM (static arenas are caller-owned)
@@ -923,122 +959,125 @@ void_ptr_expect_t alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Reallocate an object within an arena allocator.
+ * @brief Reallocate an object within an arena, returning a ::void_ptr_expect_t.
  *
- * The arena allocator does not support in-place reallocation. This function
- * provides a `realloc`-like interface by allocating a new block from the arena,
- * copying the original object into it, and returning the new pointer. The
- * original memory remains in the arena until the arena is reset; it cannot be
- * individually freed.
+ * Arenas cannot grow an allocation in place. This function provides a
+ * `realloc`-like interface that implements reallocation as:
  *
- * If @p realloc_size is less than or equal to @p var_size, this function
- * performs a no-op and simply returns @p variable, avoiding additional arena
- * consumption.
+ *   1. If @p realloc_size <= @p var_size:
+ *          → No-op. Return the original pointer in a success expect.
  *
- * If @p zeroed is true and a new block is allocated, only the newly added tail
- * region (bytes [@p var_size, @p realloc_size)) will be zero-initialized. The
- * first @p var_size bytes preserve their original contents.
+ *   2. Otherwise:
+ *          - Allocate a new block of @p realloc_size bytes using ::alloc_arena().
+ *          - Copy the first @p var_size bytes from @p variable into the new block.
+ *          - If @p zeroed is true, zero-fill bytes [@p var_size, @p realloc_size).
+ *          - Return the new pointer in a success expect.
+ *
+ * The original memory is *not* freed and remains part of the arena until a reset.
+ * This function never reclaims memory on failure.
  *
  * @param arena
  *     Pointer to an initialized ::arena_t instance. Must not be NULL.
  *
  * @param variable
- *     Pointer to the existing object previously allocated from @p arena. Must
- *     not be NULL. Passing memory not allocated by the arena results in
- *     undefined behavior.
+ *     Pointer to an existing block previously allocated from @p arena.
+ *     Must not be NULL. Ownership is not validated; passing a foreign pointer
+ *     causes undefined behavior.
  *
  * @param var_size
- *     Size in bytes of the existing object. Must match the size originally
- *     allocated for @p variable. Passing an incorrect size results in undefined
- *     behavior (e.g., out-of-bounds copy).
+ *     Size in bytes of the existing object. Must be exactly the size originally
+ *     allocated; incorrect sizes result in undefined behavior (e.g., buffer
+ *     overrun during memcpy).
  *
  * @param realloc_size
- *     New allocation size in bytes. If greater than @p var_size, a new block
- *     is allocated and the contents copied. If less than or equal to
- *     @p var_size, the function returns @p variable.
+ *     Requested new size. If <= @p var_size, no new allocation occurs.
+ *     If > @p var_size, a new block is allocated and old contents copied.
  *
  * @param zeroed
- *     If true and a new block is allocated, the newly added tail region is
- *     zero-filled. If false, the tail contains uninitialized memory.
+ *     If true and a new block is allocated, only the tail region
+ *     (bytes [@p var_size, @p realloc_size)) is zero-filled. The leading
+ *     @p var_size bytes are preserved.
  *
- * @return
- *     - On success, a pointer to a valid memory block:
- *         - The original pointer if no growth was required.
- *         - A new pointer if a larger block was allocated.
- *     - On failure, @c NULL is returned.
+ * @return ::void_ptr_expect_t
+ *     - On success:
+ *         - expect.has_value = true
+ *         - expect.u.value  = original pointer (no-op case)
+ *           OR the newly allocated pointer (growth case)
  *
- * @par Failure conditions
- * This function returns @c NULL if:
- *   - @p arena is @c NULL, or
- *   - @p variable is @c NULL, or
- *   - The internal call to ::alloc_arena() fails.
+ *     - On failure:
+ *         - expect.has_value = false
+ *         - expect.u.error   = one of the ErrorCode values described below
  *
- * Typical reasons ::alloc_arena() may fail include:
- *   - The arena has insufficient remaining capacity and:
- *       - it is STATIC, or
- *       - dynamic growth is disabled (@c arena->resize == 0), or
- *       - dynamic support is compiled out (@c ARENA_ENABLE_DYNAMIC == 0).
- *   - The arena’s alignment or internal state is invalid.
- *   - A new chunk allocation fails in a dynamic arena (e.g., underlying
- *     allocator failure).
+ * @par Failure conditions and ErrorCode meanings
+ * A failure expect (has_value = false) may contain any of the following:
  *
- * The exact cause of failure cannot be inferred from the @c NULL return value
- * alone; callers should treat @c NULL as “reallocation not possible” and
- * choose an appropriate fallback (e.g., fail the operation, reset/rebuild
- * the arena, or allocate from a different allocator).
+ * **1. INVALID_ARG**
+ *      - @p arena is NULL  
+ *      - @p variable is NULL  
+ *
+ * **2. LENGTH_OVERFLOW**
+ *      - Internal size arithmetic (e.g., var_size + (realloc_size - var_size))
+ *        overflows size_t
+ *
+ * **3. BAD_ALLOC** (propagated from ::alloc_arena)
+ *      - Arena lacks remaining capacity AND:
+ *          * arena is STATIC, or
+ *          * arena->resize == 0 (growth disabled), or
+ *          * dynamic support is compiled out
+ *      - Or dynamic growth attempted but chunk allocation failed
+ *
+ * **4. ALIGNMENT_ERROR** (propagated from ::alloc_arena)
+ *      - Arena’s base alignment invalid or corrupted
+ *
+ * **5. ILLEGAL_STATE** (propagated from ::alloc_arena)
+ *      - Arena internal pointers (e.g., tail) are invalid
  *
  * @note
- *     - This function never frees memory; old blocks remain in the arena until
- *       the entire arena is reset.
- *     - Alignment of the new block follows ::alloc_arena() rules.
+ *     - This function never frees memory; old blocks accumulate until the arena
+ *       is reset via ::reset_arena().
+ *     - Alignment of the new block is determined by ::alloc_arena() rules.
+ *     - Passing a pointer not allocated by the arena results in undefined
+ *       behavior (this function cannot detect foreign pointers).
  *     - Not thread-safe unless externally synchronized.
  *
  * @code{.c}
  * // Example: growing an integer array inside an arena
  * arena_expect_t r = init_dynamic_arena(4096u, true, 4096u, alignof(max_align_t));
  * if (!r.has_value) {
- *     // handle arena initialization error via r.u.error
+ *     fprintf(stderr, "Arena init failed: %d\n", r.u.error);
  *     return;
  * }
  *
  * arena_t *arena = r.u.value;
  *
  * size_t n = 4u;
- * int *arr = alloc_arena(arena, n * sizeof(int), true);
- * if (!arr) {
- *     // handle initial allocation failure
+ * void_ptr_expect_t e0 = alloc_arena(arena, n * sizeof(int), true);
+ * if (!e0.has_value) {
+ *     fprintf(stderr, "Initial alloc failed: %d\n", e0.u.error);
  *     return;
  * }
  *
- * // Populate initial values
- * for (size_t i = 0u; i < n; ++i) {
- *     arr[i] = (int)i;
- * }
+ * int *arr = e0.u.value;
+ * for (size_t i = 0; i < n; ++i) arr[i] = (int)i;
  *
- * // Grow the array to 8 integers
+ * // Grow from 4 to 8 ints
  * size_t new_n = 8u;
- * int *new_arr = realloc_arena(arena,
- *                              arr,
- *                              n * sizeof(int),
- *                              new_n * sizeof(int),
- *                              true);  // zero-fill the new region
+ * void_ptr_expect_t er = realloc_arena(arena,
+ *                                      arr,
+ *                                      n * sizeof(int),
+ *                                      new_n * sizeof(int),
+ *                                      true); // zero-fill new region
  *
- * if (!new_arr) {
- *     // reallocation failed (out of arena capacity, growth disabled, etc.)
- *     // choose a fallback strategy (e.g., fail the operation)
+ * if (!er.has_value) {
+ *     fprintf(stderr, "Realloc failed: %d\n", er.u.error);
  *     return;
  * }
  *
- * // new_arr now contains: [0, 1, 2, 3, 0, 0, 0, 0]
+ * int *new_arr = er.u.value;
+ * // new_arr now holds: [0, 1, 2, 3, 0, 0, 0, 0]
  *
- * // Use the new space
- * for (size_t i = n; i < new_n; ++i) {
- *     new_arr[i] = (int)(i * 10);
- * }
- *
- * // When done:
- * reset_arena(arena);  // frees all arena memory at once
- * free_arena(arena);   // destroys the allocator
+ * reset_arena(arena);
+ * free_arena(arena);
  * @endcode
  *
  * @see alloc_arena
@@ -1049,75 +1088,82 @@ void_ptr_expect_t realloc_arena(arena_t* arena, void* variable, size_t var_size,
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Allocate a block from an arena with a caller-specified alignment.
+ * @brief Allocate a block from an arena with a caller-specified alignment,
+ *        returning a ::void_ptr_expect_t for structured error reporting.
  *
- * Performs a bump allocation from the arena’s current tail chunk, returning a
- * pointer aligned to @p alignment. The effective alignment is the maximum of
- * the requested @p alignment and the arena’s base alignment (see
- * @c arena->alignment). If @p alignment is zero, the arena’s base alignment is
- * used. The requested alignment must be a non-zero power-of-two (or zero to
- * request the arena default).
+ * Performs a bump allocation from the arena’s current tail chunk. The returned
+ * pointer is aligned to the *effective alignment*, defined as:
+ *
+ *      max(requested_alignment, arena->alignment)
+ *
+ * If @p alignment is zero, the arena’s base alignment is used. Any non-zero
+ * alignment must be a power-of-two.
  *
  * If there is insufficient space in the current tail chunk:
- * - In **STATIC** arenas or when growth is disabled, the call fails.
- * - In **DYNAMIC** arenas with growth enabled, a new chunk is allocated with
- *   its data naturally aligned to the effective alignment; the block is carved
- *   from that fresh chunk with no leading pad.
+ *   - In **STATIC** arenas or when growth is disabled, the call fails.
+ *   - In **DYNAMIC** arenas with growth enabled, a new chunk is allocated whose
+ *     data region is naturally aligned to the effective alignment, and the
+ *     block is carved from that fresh chunk with no leading pad.
  *
- * @param arena      Arena to allocate from (must be a valid pointer).
+ * Unlike earlier versions, this function no longer returns NULL. Instead it
+ * returns a ::void_ptr_expect_t:
+ *
+ *      - expect.has_value = true   → allocation succeeded
+ *      - expect.has_value = false  → allocation failed; expect.u.error
+ *                                    contains an ::ErrorCode describing why
+ *
+ * @param arena      Arena to allocate from (must not be NULL).
  * @param bytes      Requested payload size in bytes (must be > 0).
- * @param alignment  Desired alignment in bytes (0 => use arena->alignment).
- *                   Must be a power-of-two if non-zero.
- * @param zeroed     If @c true, the returned block is zero-initialized via
- *                   @c memset; otherwise it is left uninitialized.
+ * @param alignment  Desired alignment (0 → use arena default). Must be a
+ *                   non-zero power-of-two if non-zero.
+ * @param zeroed     If true, the returned memory is zero-initialized.
  *
- * @return Pointer to an @p alignment-aligned (or better) block of @p bytes on
- *         success; @c NULL on failure.
+ * @return ::void_ptr_expect_t
+ *      - On success:    expect.has_value = true,  expect.u.value = pointer
+ *      - On failure:    expect.has_value = false, expect.u.error = ErrorCode
  *
- * @par Reasons for NULL return
- * A NULL result may occur for any of the following reasons:
+ * @par Failure conditions and ErrorCode values
+ * An expect with has_value = false may contain any of the following errors:
  *
- * 1. **Invalid arguments**
+ * **1. INVALID_ARG**
  *      - @p arena is NULL  
  *      - @p bytes == 0  
  *      - @p alignment is non-zero and not a power-of-two  
- *      - The arena’s base alignment is zero or invalid (not a power-of-two)
  *
- * 2. **Arena internal state invalid**
+ * **2. ALIGNMENT_ERROR**
+ *      - Arena base alignment is zero  
+ *      - Arena alignment is not a power-of-two  
+ *
+ * **3. ILLEGAL_STATE**
  *      - @c arena->tail is NULL (corrupted or uninitialized arena)
  *
- * 3. **Insufficient space with no ability to grow**
- *      - Arena is STATIC  
- *      - OR arena is DYNAMIC but @c arena->resize == 0  
- *      - AND the requested block does not fit in the current chunk
+ * **4. OPERATION_UNAVAILABLE**
+ *      - Insufficient space in the current tail AND:
+ *          * arena is STATIC, or  
+ *          * arena->resize == 0 (growth disabled), or  
+ *          * dynamic growth support was compiled out  
  *
- * 4. **Dynamic growth attempted but chunk allocation failed**
- *      - Growth is enabled, but a new chunk could not be created  
- *        (e.g., system allocation failure inside @_chunk_new_ex)
+ * **5. BAD_ALLOC**
+ *      - Dynamic growth is allowed but allocating a new chunk fails
  *
- * In all cases, failure is indicated solely by the @c NULL return value. No
- * additional diagnostic information is provided by this function.
+ * **6. LENGTH_OVERFLOW**
+ *      - Internal size arithmetic (pad + bytes) overflows size_t
  *
- * @note The arena charges both the returned payload and any leading padding
- *       required to reach the alignment. That is, the internal usage counters
- *       (@c tail->len and @c arena->len) increase by @c pad + @p bytes where
- *       @c pad ∈ [0, effective_alignment-1].
+ * @note On success, the arena charges both the payload and the required padding.
+ *       That is, @c tail->len and @c arena->len increase by (pad + bytes).
  *
- * @note On the first allocation from a freshly grown chunk, no leading padding
- *       is required because the chunk’s data pointer is created aligned to the
- *       effective alignment; the delta in remaining capacity equals exactly
- *       @p bytes.
+ * @note On first allocation in a freshly grown chunk, no leading pad is added
+ *       because the chunk’s base is already aligned.
  *
  * @warning The returned pointer must not be freed with @c free(). Memory is
- *          reclaimed only when the entire arena is reset via @c reset_arena()
- *          or destroyed via @c free_arena() (for dynamic arenas).
+ *          reclaimed only through ::reset_arena() or ::free_arena().
  *
- * @pre  @p arena points to a properly initialized arena.
- * @pre  @p alignment is zero (use arena default) or a non-zero power-of-two.
+ * @pre  @p arena is a valid, initialized arena.
+ * @pre  @p alignment is zero or a non-zero power-of-two.
  * @post On success:
- *       - The returned pointer is aligned to @c max(alignment, arena->alignment).
- *       - @c arena->cur advances by @p bytes (plus any required leading pad).
- *       - @c tail->len and @c arena->len are updated to include pad+bytes.
+ *       - The returned pointer is aligned to max(alignment, arena->alignment).
+ *       - @c arena->cur advances by @p bytes (plus pad if allocated from tail).
+ *       - Chunk and arena usage counters are updated accordingly.
  *
  * @sa   alloc_arena(), init_static_arena(), init_dynamic_arena(),
  *       reset_arena(), free_arena()
@@ -1126,14 +1172,18 @@ void_ptr_expect_t realloc_arena(arena_t* arena, void* variable, size_t var_size,
  * @code{.c}
  * arena_expect_t r = init_dynamic_arena(4096u, true, 4096u, alignof(max_align_t));
  * if (!r.has_value) {
- *     // handle arena initialization error via r.u.error
+ *     fprintf(stderr, "arena init failed: %d\n", r.u.error);
+ *     return;
+ * }
+ * arena_t *a = r.u.value;
+ *
+ * void_ptr_expect_t e = alloc_arena_aligned(a, 128, 64, false);
+ * if (!e.has_value) {
+ *     fprintf(stderr, "alloc failed: %d\n", e.u.error);
  *     return;
  * }
  *
- * arena_t *a = r.u.value;
- *
- * // Request 64-byte alignment for SIMD data
- * void *p = alloc_arena_aligned(a, 128, 64, false);
+ * void *p = e.u.value;
  * assert(((uintptr_t)p % 64) == 0);
  *
  * free_arena(a);
@@ -1141,16 +1191,28 @@ void_ptr_expect_t realloc_arena(arena_t* arena, void* variable, size_t var_size,
  *
  * @par Example: Falling back to arena base alignment
  * @code{.c}
- * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * arena_expect_t r = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * if (!r.has_value) {
+ *     fprintf(stderr, "arena init failed: %d\n", r.u.error);
+ *     return;
+ * }
  *
- * // Zero alignment means "use arena->alignment"
- * void *p = alloc_arena_aligned(a, 64, 0, true);
+ * arena_t *a = r.u.value;
+ *
+ * void_ptr_expect_t e2 = alloc_arena_aligned(a, 64, 0, true);
+ * if (!e2.has_value) {
+ *     fprintf(stderr, "alloc failed: %d\n", e2.u.error);
+ *     return;
+ * }
+ *
+ * void *p = e2.u.value;
  * assert(((uintptr_t)p % alignof(max_align_t)) == 0);
  *
  * free_arena(a);
  * @endcode
  */
-void* alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool zeroed);
+
+void_ptr_expect_t alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1279,8 +1341,8 @@ void* alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool z
  * @see alloc_arena
  * @see reset_arena
  */
-void* realloc_arena_aligned(arena_t* arena, void* variable, size_t var_size, size_t realloc_size,
-                            bool zeroed, size_t alignment);
+void_ptr_expect_t realloc_arena_aligned(arena_t* arena, void* variable, size_t var_size, size_t realloc_size,
+                                        bool zeroed, size_t alignment);
 // ================================================================================ 
 // ================================================================================ 
 // UTILITY FUNCTIONS 
@@ -2043,12 +2105,9 @@ static inline void_ptr_expect_t arena_v_alloc(void* ctx, size_t size, bool zeroe
  * @retval void* Pointer to an aligned block of at least @p size bytes.
  * @retval NULL  On failure, with errno set.
  */
-static inline void* arena_v_alloc_aligned(void* ctx, size_t size,
+static inline void_ptr_expect_t arena_v_alloc_aligned(void* ctx, size_t size,
                                           size_t align, bool zeroed) {
     arena_t* arena = (arena_t*)ctx;
-    if (!arena) {
-        return NULL;
-    }
     return alloc_arena_aligned(arena, size, align, zeroed);
 }
 // -------------------------------------------------------------------------------- 
@@ -2113,13 +2172,10 @@ static inline void_ptr_expect_t arena_v_realloc(void* ctx, void* old_ptr,
  * @retval void* Pointer to the resized, aligned allocation on success.
  * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
  */
-static inline void* arena_v_realloc_aligned(void* ctx, void* old_ptr,
+static inline void_ptr_expected_t arena_v_realloc_aligned(void* ctx, void* old_ptr,
                                             size_t old_size, size_t new_size,
                                             bool zeroed, size_t align) {
     arena_t* arena = (arena_t*)ctx;
-    if (!arena) {
-        return NULL;
-    }
     return realloc_arena_aligned(arena, old_ptr, old_size,
                                  new_size, zeroed, align);
 }
@@ -2204,6 +2260,15 @@ static inline allocator_vtable_t arena_allocator(arena_t* a) {
 
 // Forward declarations for opaque pool_t data type
 typedef struct pool_t pool_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        pool_t* value;
+        ErrorCode error;
+    } u;
+} pool_expect_t;
 // ================================================================================ 
 // ================================================================================ 
 // INITIALIZE AND DEALLOCATE FUNCTIONS
@@ -2212,371 +2277,578 @@ typedef struct pool_t pool_t;
  * @brief Initialize a fixed-size memory pool backed by an existing arena.
  *
  * Creates a pool allocator that dispenses fixed-size blocks from @p arena.
- * The pool performs bump allocation from arena slices, optionally reuses freed
- * blocks via an intrusive free list, and can operate in fixed-capacity or 
- * grow-on-demand mode.
+ * The pool acquires memory in “chunks” (slices) carved from the arena,
+ * optionally maintains an intrusive free list for recycled blocks, and may
+ * operate in either fixed-capacity or grow-on-demand mode.
  *
- * The pool header itself is allocated from the provided arena; there is no
- * external @c malloc.
+ * The pool header itself is allocated from @p arena using
+ * ::alloc_arena_aligned(), so no external @c malloc is performed.
  *
- * @param arena             Existing arena to supply memory (must be valid).
- * @param block_size        Requested user payload size in bytes (> 0).
- * @param alignment         Desired block alignment (0 => arena default).
- *                          Must be a power-of-two if nonzero. The effective
- *                          alignment is @c max(alignment, alignof(void*)),
- *                          ensuring freed blocks can store a next-pointer.
- * @param blocks_per_chunk  Number of blocks to allocate per arena slice.
- *                          Must be > 0.
- * @param prewarm_one_chunk If @c true, the pool eagerly acquires one slice
- *                          during initialization so the first allocation is O(1).
- * @param grow_enabled      If @c true, the pool may request additional slices
- *                          from the arena when exhausted; otherwise the pool
- *                          has fixed capacity and further allocations fail once
- *                          that capacity is consumed.
+ * This function uses the ::pool_expect_t result type:
+ * - @c result.has_value == true  → success; the pool pointer is available in
+ *   @c result.u.value
+ * - @c result.has_value == false → failure; the reason is encoded in
+ *   @c result.u.error (an ::ErrorCode)
  *
- * @return
- *   Pointer to a newly initialized pool object on success,
- *   or @c NULL with @c errno set on failure.
+ * @param arena
+ *     Existing arena to supply memory. Must not be NULL.
  *
- * @retval NULL, errno=EINVAL
- *      If @p arena is NULL, @p block_size == 0, @p blocks_per_chunk == 0,
- *      or @p alignment is non-power-of-two.
- * @retval NULL, errno=ENOMEM
- *      If the pool header could not be allocated from @p arena.
- * @retval NULL, errno=EPERM
- *      If @p prewarm_one_chunk or a later grow request is attempted but the
- *      arena cannot grow (STATIC arena or resize disabled).
+ * @param block_size
+ *     User payload size (in bytes) per block. Must be > 0.
  *
- * @note Freed blocks are returned to an intrusive free list and reused in LIFO
- *       order. The caller must only return blocks obtained from this pool.
+ * @param alignment
+ *     Desired alignment for each block (0 → use arena’s default alignment).
+ *     If non-zero, it must be a power-of-two.  
+ *     The effective alignment is:
  *
- * @note Memory is reclaimed only when the underlying arena is reset or destroyed.
- *       Individual blocks must not be freed with @c free().
+ *         max(alignment, alignof(void*))
  *
- * @pre  @p arena is initialized via @c init_static_arena or @c init_dynamic_arena.
+ *     ensuring each freed block can store a next-pointer for the free list.
+ *
+ * @param blocks_per_chunk
+ *     Number of blocks the pool allocates per arena slice. Must be > 0.
+ *
+ * @param prewarm_one_chunk
+ *     If true, the pool immediately acquires one slice during initialization
+ *     so that the first allocation is O(1). If false, the first allocation
+ *     may invoke a grow operation.
+ *
+ * @param grow_enabled
+ *     Whether the pool may request additional slices from the arena when
+ *     capacity is exhausted. If false, the pool is fixed-capacity and
+ *     allocations fail once all blocks are consumed.
+ *
+ * @return ::pool_expect_t
+ *     - On success:  
+ *           @code{.c}
+ *           result.has_value == true  
+ *           pool_t *p = result.u.value;
+ *           @endcode
+ *
+ *     - On failure:  
+ *           @code{.c}
+ *           result.has_value == false  
+ *           ErrorCode e = result.u.error;
+ *           @endcode
+ *
+ * @par ErrorCode meanings
+ * The function may return the following ::ErrorCode values:
+ *
+ * - ::INVALID_ARG  
+ *       If @p arena is NULL, @p block_size == 0, @p blocks_per_chunk == 0,
+ *       or @p alignment is non-zero and not a power-of-two.
+ *
+ * - ::ALIGNMENT_ERROR  
+ *       If the requested alignment exceeds the allocator’s supported limits
+ *       or violates power-of-two requirements.
+ *
+ * - ::BAD_ALLOC  
+ *       If the pool header could not be allocated from @p arena.
+ *
+ * - ::OUT_OF_MEMORY  
+ *       If @p prewarm_one_chunk is true and the pool is unable to acquire its
+ *       initial slice (e.g., arena cannot satisfy the request).
+ *
+ * Additional errors may be returned via propagated ::ErrorCode values from
+ * ::alloc_arena_aligned() or the underlying grow path.
+ *
+ * @note Freed blocks return to an intrusive free list and are reused in LIFO
+ *       order. Only blocks allocated from this pool may be returned to it.
+ *
+ * @note Memory owned by the pool is not individually freed; all storage is
+ *       reclaimed only when the underlying arena is reset or destroyed.
+ *
+ * @pre
+ *     - @p arena was created via ::init_static_arena or ::init_dynamic_arena.  
+ *     - @p alignment is zero or a power-of-two.
+ *
  * @post On success:
- *       - The pool header resides inside @p arena.
- *       - If @p prewarm_one_chunk is true, @c pool_total_blocks() equals
- *         @p blocks_per_chunk.
+ *     - The pool header resides inside @p arena.  
+ *     - If @p prewarm_one_chunk is true:  
+ *           @c pool_total_blocks(p) == @p blocks_per_chunk.
  *
  * @sa alloc_pool(), return_pool_element(), reset_pool(), free_arena()
  *
  * @par Example: Fixed-capacity pool inside a static arena
  * @code{.c}
- * enum { BUF = 64 * 1024 };  // 64 KiB backing buffer
+ * enum { BUF = 64 * 1024 };
  * void *buf = aligned_alloc(alignof(max_align_t), BUF);
- * arena_t *a = init_static_arena(buf, BUF, alignof(max_align_t));
  *
- * // Each block holds 64 bytes, 128 blocks per slice, no arena growth allowed
- * pool_t *p = init_pool_with_arena(a,
- *                                  64,
- *                                  0,
- *                                  128,
- *                                  true,
- *                                  false);
- * assert(p);
+ * arena_expect_t ar = init_static_arena(buf, BUF, alignof(max_align_t));
+ * assert(ar.has_value);
  *
- * void *x = alloc_pool(p);        // ok
- * void *y = alloc_pool(p);        // ok
- * return_pool_element(p, x);      // block reclaimed for reuse
+ * pool_expect_t pr = init_pool_with_arena(ar.u.value,
+ *                                         64,     // block size
+ *                                         0,      // arena default alignment
+ *                                         128,    // blocks per slice
+ *                                         true,   // prewarm slice
+ *                                         false); // fixed capacity
  *
- * // After 128 successful allocs, subsequent calls fail with errno=EPERM:
+ * if (!pr.has_value) {
+ *     // handle pr.u.error
+ * }
+ * pool_t *p = pr.u.value;
+ *
+ * void_ptr_expect_t expect = alloc_pool(p);
+ * if (!expect.has_value) {
+ *    // Handle error 
+ * }
+ * void *x = expect.u.value; 
+ * return_pool_element(p, x);
+ *
+ * // After all 128 blocks are consumed, further allocations fail:
  * for (int i = 0; i < 128; ++i) assert(alloc_pool(p));
- * assert(!alloc_pool(p) && errno == EPERM);
+ * assert(!alloc_pool(p)); // no errno; inspect return code only
  *
- * reset_pool(p);   // pool bookkeeping reset (arena storage not reclaimed here)
- * free(buf);       // static arena buffer was caller-owned
+ * reset_pool(p);
+ * free(buf); // static arena storage was caller-owned
  * @endcode
  *
  * @par Example: Grow-on-demand pool inside a dynamic arena
  * @code{.c}
- * arena_t *a = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * arena_expect_t ar = init_dynamic_arena(4096, true, 4096, alignof(max_align_t));
+ * assert(ar.has_value);
  *
- * pool_t *p = init_pool_with_arena(a,
- *                                  32,
- *                                  16,
- *                                  64,
- *                                  false,
- *                                  true);
+ * pool_expect_t pr = init_pool_with_arena(ar.u.value,
+ *                                         32,
+ *                                         16,
+ *                                         64,
+ *                                         false, // no prewarm
+ *                                         true); // allow growth
  *
- * void *b = alloc_pool(p);   // first call triggers one chunk allocation
+ * if (!pr.has_value) {
+ *     // handle pr.u.error
+ * }
+ * 
+ * pool_t *p = pr.u.value;
+ * void_ptr_expect_t expect = alloc_pool(p);
+ * if (!expect.has_value) {
+ *     // Handle error 
+ * }
+ * void *b = expect.u.value;
  * return_pool_element(p, b); // returned to free list
  *
- * free_arena(a); // destroys pool header and all chunks
+ * free_arena(ar.u.value); // destroys pool header and all slices
  * @endcode
  */
-pool_t* init_pool_with_arena(arena_t* arena,
-                             size_t   block_size,
-                             size_t   alignment,
-                             size_t   blocks_per_chunk,
-                             bool     prewarm_one_chunk,
-                             bool     grow_enabled);
+pool_expect_t* init_pool_with_arena(arena_t* arena,
+                                    size_t   block_size,
+                                    size_t   alignment,
+                                    size_t   blocks_per_chunk,
+                                    bool     prewarm_one_chunk,
+                                    bool     grow_enabled);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Create a pool allocator that owns its own dynamically allocated arena.
+ * @brief Create a grow-capable fixed-size memory pool backed by an internally
+ *        owned dynamic arena.
  *
- * This function constructs a @c pool_t backed by a newly allocated dynamic
- * arena. The pool header is allocated inside the arena itself (no
- * external @c malloc for pool metadata), and the pool may optionally
- * reserve its first slice of memory immediately (“prewarm”).
+ * This constructor creates a pool allocator whose storage is obtained from a
+ * freshly created dynamic arena. The arena is fully owned by the pool and
+ * destroyed automatically when the pool is destroyed via @c free_pool().
  *
- * The pool supports two operation modes:
- * - **Grow mode** (@p grow_enabled = true): additional slices are carved from
- *   the arena on demand. If the arena runs out of backing memory, it may
- *   allocate new chunks (subject to @p min_chunk_bytes).
- * - **Fixed-capacity mode** (@p grow_enabled = false): no new slices may be
- *   allocated after initialization. If @p prewarm_one_chunk = false, the first
- *   call to @c alloc_pool() will fail immediately with @c EPERM.
+ * The pool allocates fixed-size blocks (“elements”) of @p block_size bytes,
+ * using an effective alignment computed from @p alignment and internal
+ * constraints. Blocks are dispensed sequentially from arena slices; freed
+ * blocks are returned to an intrusive free list for fast O(1) reuse.
  *
- * @param block_size        User-visible block payload size in bytes (must be > 0).
- * @param alignment         Requested alignment for returned blocks. If 0,
- *                          @c alignof(max_align_t) is used. Rounded up to at
- *                          least @c alignof(void*) to support the intrusive
- *                          free-list pointer.
- * @param blocks_per_chunk  Number of blocks to allocate per pool slice. Must be > 0.
- * @param arena_seed_bytes  Initial arena allocation size in bytes. Must be > 0.
- *                          Must be large enough to hold the pool header and,
- *                          if @p prewarm_one_chunk is true, at least one slice.
- * @param min_chunk_bytes   Minimum data bytes per arena expansion when growing
- *                          (0 allowed; normalized upward if needed).
- * @param grow_enabled      Whether the pool may request additional slices after
- *                          initialization.
- * @param prewarm_one_chunk Whether to allocate the first slice immediately.
- *                          If @c true and insufficient space is available,
- *                          initialization fails.
+ * The pool may operate in:
+ *   - **Fixed-capacity mode** (`grow_enabled == false`):  
+ *       Only the initial slice is available, and it must be prewarmed
+ *       (i.e., @p prewarm_one_chunk must be true).
  *
- * @return A pointer to a fully initialized pool on success, or @c NULL on
- *         failure with @c errno set.
+ *   - **Grow-on-demand mode** (`grow_enabled == true`):  
+ *       Additional slices are allocated from the arena automatically when the
+ *       pool becomes exhausted.
  *
- * @retval NULL, errno=EINVAL
- *      If any argument is invalid (@p block_size == 0,
- *      @p blocks_per_chunk == 0, @p arena_seed_bytes == 0).
- * @retval NULL, errno=EOVERFLOW
- *      If @c block_size * blocks_per_chunk would overflow @c size_t.
- * @retval NULL, errno=ENOMEM
- *      If memory for the arena or pool header cannot be allocated, or if
- *      @p prewarm_one_chunk is true and the slice cannot be carved.
- * @retval NULL, errno=EPERM
- *      If @p grow_enabled is false, the arena has insufficient initial space,
- *      and @p prewarm_one_chunk is false (first allocation would fail).
- * @retval NULL, errno=ENOTSUP
- *      If dynamic arenas are disabled via compile-time configuration.
+ * The pool header itself is allocated inside the owned arena, so no external
+ * `malloc()` is used.
  *
- * @note The pool takes ownership of the created arena. Call @c free_pool()
- *       (not @c free_arena()) to destroy it.
+ * @param block_size
+ *      Size in bytes of each user allocation. Must be > 0.
  *
- * @note Returned blocks have at least @c alignment alignment and are at least
- *       @c sizeof(void*) bytes to support the intrusive free list.
+ * @param alignment
+ *      Desired block alignment.  
+ *      - If 0, defaults to `alignof(max_align_t)`  
+ *      - The effective alignment is clamped to at least `alignof(void*)`
+ *        to allow storing a next-pointer inside freed blocks.  
+ *      - Must be a power-of-two if nonzero.
  *
- * @warning In fixed-capacity mode (@p grow_enabled = false), failure to
- *          prewarm results in a pool that cannot allocate any blocks until
- *          reset.
+ * @param blocks_per_chunk
+ *      Number of blocks allocated in each arena slice. Must be > 0.
  *
- * @pre @c ARENA_ENABLE_DYNAMIC must be enabled at compile time.
- * @post On success, the pool owns a dynamic arena and can allocate blocks.
+ * @param arena_seed_bytes
+ *      Initial size in bytes for the internal dynamic arena. Must be > 0.
+ *
+ * @param min_chunk_bytes
+ *      Minimum slice size requested from the dynamic arena when growth occurs.
+ *      Passed directly to ::init_dynamic_arena().
+ *
+ * @param grow_enabled
+ *      If true, the pool may grow by acquiring additional slices.  
+ *      If false, the pool is fixed-capacity and **requires**
+ *      @p prewarm_one_chunk == true.
+ *
+ * @param prewarm_one_chunk
+ *      If true, the pool eagerly allocates its first slice so the first call to
+ *      ::alloc_pool() is O(1).  
+ *      If false and the pool is fixed-capacity, initialization fails.
+ *
+ * @return @c pool_expect_t
+ *      Structured success/failure result:
+ *      - On success:  
+ *          @code
+ *          (pool_expect_t){ .has_value = true, .u.value = pool_pointer }
+ *          @endcode
+ *      - On failure:  
+ *          @code
+ *          (pool_expect_t){ .has_value = false, .u.error = <ErrorCode> }
+ *          @endcode
+ *
+ * @par Failure conditions (returned as ErrorCode)
+ * This function may fail with:
+ *
+ * 1. **INVALID_ARG**  
+ *      - @p block_size == 0  
+ *      - @p blocks_per_chunk == 0  
+ *      - @p arena_seed_bytes == 0  
+ *      - @p alignment is non-zero and not a power-of-two  
+ *      - fixed-capacity pool requested (`grow_enabled == false`) but
+ *        @p prewarm_one_chunk == false  
+ *
+ * 2. **LENGTH_OVERFLOW**  
+ *      - Computation of slice size overflows:  
+ *        @code stride * blocks_per_chunk @endcode
+ *
+ * 3. **BAD_ALLOC**  
+ *      - Dynamic arena creation failed  
+ *      - Allocation of the pool header failed  
+ *      - Prewarm slice allocation failed  
+ *
+ * 4. **FEATURE_DISABLED**  
+ *      - Dynamic arenas are disabled at compile time
+ *        (`ARENA_ENABLE_DYNAMIC == 0`).
+ *
+ * 5. **STATE_CORRUPT**  
+ *      - init_dynamic_arena() reported success but returned a NULL arena
+ *        pointer (should not normally occur; defensive condition).
+ *
+ * @note
+ *   - The pool owns its internal arena. Destroying the pool destroys the arena
+ *     and all memory allocated within it.  
+ *   - Individual blocks returned by ::alloc_pool() must **not** be freed with
+ *     `free()`.  
+ *   - Freed blocks are recycled through an intrusive free list; memory is not
+ *     returned to the arena until pool destruction.
+ *
+ * @pre
+ *   - @c ARENA_ENABLE_DYNAMIC must be enabled at build time.
+ *
+ * @post On success:
+ *   - The pool header resides inside a newly created arena.
+ *   - If @p prewarm_one_chunk is true, @c total_blocks == blocks_per_chunk.
+ *   - The pool is ready for use with ::alloc_pool() and ::return_pool_element().
  *
  * @sa init_pool_with_arena(), alloc_pool(), return_pool_element(),
- *     reset_pool(), free_pool(), init_dynamic_arena()
+ *     free_pool(), init_dynamic_arena()
  *
- * @par Example: Grow-enabled pool
+ * @par Example (grow-enabled pool)
  * @code{.c}
- * pool_t* p = init_dynamic_pool(
- *     64,                   // block_size
- *     0,                    // alignment (default)
- *     32,                   // blocks_per_chunk
- *     8192,                 // arena_seed_bytes
- *     4096,                 // min_chunk_bytes
- *     true,                 // grow_enabled
- *     true                  // prewarm_one_chunk
- * );
+ * pool_expect_t r =
+ *     init_dynamic_pool(32,
+ *                       16,
+ *                       64,
+ *                       4096,
+ *                       4096,
+ *                       true,
+ *                       false);
  *
- * void* b1 = alloc_pool(p);  // OK
- * void* b2 = alloc_pool(p);  // Grows when necessary
- *
- * free_pool(p);             // Frees arena and pool
- * @endcode
- *
- * @par Example: Fixed-capacity pool
- * @code{.c}
- * pool_t* p = init_dynamic_pool(
- *     128,                  // block_size
- *     0,                    // default alignment
- *     16,                   // blocks_per_chunk
- *     4096,                 // arena_seed_bytes
- *     0,                    // min_chunk_bytes (not used, no growth)
- *     false,                // grow_enabled = false
- *     true                  // prewarm_one_chunk (allocate first slice now)
- * );
- *
- * // Exactly 16 allocations succeed:
- * for (int i = 0; i < 16; i++) assert(alloc_pool(p) != NULL);
- * assert(alloc_pool(p) == NULL); // EPERM (fixed size reached)
- *
- * free_pool(p);
- * @endcode
- */
-pool_t* init_dynamic_pool(size_t block_size,
-                          size_t alignment,
-                          size_t blocks_per_chunk,
-                          size_t arena_seed_bytes,
-                          size_t min_chunk_bytes,
-                          bool   grow_enabled,
-                          bool   prewarm_one_chunk);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Initialize a fixed-capacity memory pool over a caller-supplied buffer.
- *
- * This function creates a @c pool_t allocator backed by a static arena built
- * inside @p buffer. The pool metadata and the backing slice are allocated from
- * the caller-provided memory region—no heap allocations are performed. The
- * pool eagerly carves a single contiguous slice of memory and divides it into
- * fixed-size blocks. Its capacity is therefore
- *
- *     floor( (buffer_bytes - header_overhead) / stride )
- *
- * where @c stride is @p block_size rounded up to the chosen alignment, and
- * at least @c sizeof(void*) to support the intrusive free list.
- *
- * @p alignment controls the required alignment of each returned element.
- * If zero, @c alignof(max_align_t) is used. The effective alignment is clamped
- * to be at least @c alignof(void*) so freed blocks can store a next-pointer.
- *
- * The caller retains ownership of @p buffer itself; @c free_pool() only tears
- * down the pool and arena metadata and does not free @p buffer.
- *
- * @param buffer        Pointer to caller-owned memory region used for the pool
- *                      and its arena bookkeeping. Must be non-NULL.
- * @param buffer_bytes  Size of @p buffer in bytes. Must be > 0.
- * @param block_size    Size of each allocated block (payload bytes). Must be > 0.
- * @param alignment     Desired alignment for returned blocks (0 → default =
- *                      @c alignof(max_align_t)). The effective alignment will
- *                      be @c max(alignment, alignof(void*)) rounded up by the
- *                      implementation if power-of-two alignment is required.
- *
- * @return A pointer to an initialized fixed-capacity @c pool_t on success, or
- *         @c NULL on failure with @c errno set.
- *
- * @retval NULL, errno=EINVAL
- *      If @p buffer is NULL, or @p buffer_bytes == 0, or @p block_size == 0.
- * @retval NULL, errno=ENOMEM
- *      If the static arena cannot reserve space for the pool header, or if the
- *      remaining capacity cannot fit at least one stride-aligned block.
- *
- * @note This pool never grows. After initialization,
- *       @c grow_enabled == false and @c total_blocks is fixed.
- *       When all blocks are in use, @c alloc_pool() returns NULL with
- *       @c errno == EPERM.
- *
- * @note @c return_pool_element() returns blocks to the pool’s free list.
- *       Returned blocks are reused in LIFO order.
- *
- * @warning Returned memory must not be passed to @c free(). Only @c free_pool()
- *          may be used to destroy the pool metadata. The caller remains
- *          responsible for @p buffer.
- *
- * @sa init_dynamic_pool(), init_pool_with_arena(), init_static_arena(),
- *     alloc_pool(), return_pool_element(), free_pool(), pool_total_blocks(),
- *     pool_stride()
- *
- * @par Example
- * @code{.c}
- * // Statically allocate backing storage
- * enum { BUF = 64 * 1024 };
- * static unsigned char buf[BUF] __attribute__((aligned(64)));
- *
- * // Create a pool of 64-byte blocks inside caller-owned memory
- * pool_t* p = init_static_pool(buf, BUF, 64,  64);
- * assert(p != NULL);
- *
- * size_t cap = pool_total_blocks(p);
- *
- * // Allocate all blocks
- * for (size_t i = 0; i < cap; ++i) {
- *     void *b = alloc_pool(p);
- *     assert(b != NULL);
+ * if (!r.has_value) {
+ *     printf("Pool creation failed: %d\n", r.u.error);
+ *     return;
  * }
  *
- * // Pool is exhausted
- * errno = 0;
- * void *x = alloc_pool(p);
- * assert(x == NULL && errno == EPERM);
+ * pool_t *p = r.u.value;
+ * void_ptr_expect_t expect = alloc_pool(p);
+ * if (!expect.has_value) { 
+ *     // Handle error
+ * }
+ * void *x = expect.u.value;
+ * return_pool_element(p, x); // returns block to free list
  *
- * free_pool(p); // does NOT free 'buf'
+ * free_pool(p);  // destroys pool and its arena
  * @endcode
  */
-pool_t* init_static_pool(void*  buffer,
-                         size_t buffer_bytes,
-                         size_t block_size,
-                         size_t alignment);
+pool_expect_t init_dynamic_pool(size_t block_size,
+                                size_t alignment,
+                                size_t blocks_per_chunk,
+                                size_t arena_seed_bytes,
+                                size_t min_chunk_bytes,
+                                bool   grow_enabled,
+                                bool   prewarm_one_chunk);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Allocate one fixed-size block from a pool.
+ * @brief Initialize a fixed-capacity memory pool backed by a caller-supplied
+ *        static buffer.
  *
- * Obtains a block from the pool in O(1) time. If the pool has previously freed
- * blocks, they are returned first via an intrusive free-list. Otherwise the
- * allocation is carved from the current arena slice (bump pointer). If the
- * current slice is exhausted and pool growth is enabled, a new slice is
- * requested from the backing arena.
+ * This constructor builds a pool allocator whose storage is carved from a
+ * caller-provided memory region @p buffer. Internally, it creates a STATIC
+ * arena in-place inside @p buffer via ::init_static_arena(), then allocates
+ * the pool header and a single slice of pool blocks from that arena.
  *
- * The returned pointer is aligned to the pool’s effective alignment, and the
- * block size is equal to @c pool->block_size bytes. The internal stride
- * (possibly larger than @c block_size) ensures proper alignment and space for
- * the free-list pointer on returned blocks.
+ * The resulting pool:
+ *   - Has a fixed capacity determined by the remaining space in @p buffer
+ *     after arena and pool headers are placed.
+ *   - Never grows: when all blocks are consumed and the free list is empty,
+ *     further allocations fail.
+ *   - Reuses freed blocks via an intrusive free list stored inside the blocks
+ *     themselves.
  *
- * @param pool  Pool to allocate from (must be a valid pointer).
- * @param zeroed true if element is to be zeroed
+ * The caller remains the ultimate owner of @p buffer. Destroying the pool
+ * (e.g., via @c free_pool()) destroys the internal arena and pool metadata,
+ * but must not free @p buffer itself; that remains the caller’s responsibility.
  *
- * @return Pointer to a block on success, or @c NULL on failure with @c errno set.
+ * @param buffer
+ *      Caller-supplied backing storage for the static arena and pool. Must
+ *      point to at least @p buffer_bytes bytes of writable memory and remain
+ *      valid for the entire lifetime of the pool.
  *
- * @retval NULL, errno=EINVAL
- *      If @p pool is @c NULL.
- * @retval NULL, errno=EPERM
- *      If the pool is exhausted and @c grow_enabled == false, or if the backing
- *      arena is STATIC or otherwise cannot grow.
- * @retval NULL, errno=ENOMEM
- *      If growth is permitted but the underlying arena could not allocate a new
- *      slice (propagated from @c alloc_arena_aligned).
+ * @param buffer_bytes
+ *      Total size in bytes of @p buffer. Must be large enough to contain:
+ *        - the arena header,
+ *        - the pool header,
+ *        - and at least one usable block at the computed stride.
  *
- * @note Returned pointers must be released with
- *       @c return_pool_element(pool, ptr), not @c free().
+ * @param block_size
+ *      Size of the user payload for each block (in bytes). Must be > 0.
  *
- * @note When @c grow_enabled == false and the pool becomes full, all subsequent
- *       calls fail until @c reset_pool() is called.
+ * @param alignment
+ *      Desired alignment for pool blocks.  
+ *      - If 0, defaults to `alignof(max_align_t)`.  
+ *      - The effective alignment is clamped to at least `alignof(void*)` so
+ *        that freed blocks can store a next-pointer.  
+ *      - Must be a power-of-two if non-zero; otherwise the function fails
+ *        with ::ALIGNMENT_ERROR.
  *
- * @pre  @p pool was initialized via @c init_pool_with_arena().
+ * @return @c pool_expect_t
+ *      Structured success/failure result:
+ *      - On success:
+ *        @code
+ *        (pool_expect_t){ .has_value = true, .u.value = pool_pointer }
+ *        @endcode
+ *      - On failure:
+ *        @code
+ *        (pool_expect_t){ .has_value = false, .u.error = <ErrorCode> }
+ *        @endcode
+ *
+ * @par Failure conditions (ErrorCode)
+ *
+ * 1. ::NULL_POINTER  
+ *      - @p buffer is NULL.
+ *
+ * 2. ::INVALID_ARG  
+ *      - @p buffer_bytes == 0  
+ *      - @p block_size == 0  
+ *
+ * 3. ::ALIGNMENT_ERROR  
+ *      - @p alignment is non-zero and not a power-of-two.
+ *
+ * 4. Errors propagated from ::init_static_arena()  
+ *      - For example, the caller buffer is too small to hold the arena header,
+ *        chunk header, and at least one data byte, or normalization of the
+ *        static arena layout fails. These appear as whatever ::init_static_arena()
+ *        encodes in @c arena_expect_t.u.error.
+ *
+ * 5. Errors from ::alloc_arena_aligned() when allocating:
+ *      - the pool header, or
+ *      - the single pool slice:
+ *        - Typically ::OUT_OF_MEMORY if there is insufficient usable space
+ *          remaining in the static arena to satisfy the request.
+ *
+ * 6. ::OUT_OF_MEMORY  
+ *      - There is enough space for the arena and pool header, but the computed
+ *        capacity allows zero blocks (i.e., the slice cannot contain even one
+ *        block at the chosen stride).
+ *
+ * 7. ::STATE_CORRUPT  
+ *      - Defensive: ::init_static_arena() reports success but returns a
+ *        NULL arena pointer.
+ *
+ * @note
+ *   - This pool is strictly fixed-capacity: no additional slices will ever be
+ *     allocated. ::alloc_pool() will eventually fail once all blocks are
+ *     allocated and the free list is empty.
+ *   - Individual blocks must not be passed to `free()`. They are reclaimed
+ *     only via ::return_pool_element() or when the pool (and its arena) are
+ *     torn down.
+ *   - The underlying buffer @p buffer is not freed by this API; its lifetime
+ *     is entirely managed by the caller.
+ *
+ * @pre
+ *   - @p buffer points to at least @p buffer_bytes bytes of writable memory.
+ *   - The lifetime of @p buffer strictly dominates the lifetime of the pool.
+ *
  * @post On success:
- *       - The returned pointer is suitably aligned and points to a block of
- *         size @c pool->block_size bytes.
- *       - If carved from the current slice, @c pool->cur advances by @c stride.
- *       - If from the free-list, @c pool->free_blocks decreases by 1.
+ *   - A STATIC arena is constructed in-place inside @p buffer.
+ *   - The pool header resides inside that arena.
+ *   - A single slice covering @c total_blocks * stride bytes is carved out and
+ *     ready to serve allocations.
  *
- * @sa return_pool_element(), reset_pool(), init_pool_with_arena()
+ * @sa init_dynamic_pool(), init_pool_with_arena(),
+ *     alloc_pool(), return_pool_element(), free_pool(),
+ *     init_static_arena()
  *
  * @par Example
  * @code{.c}
- * arena_t* arena = init_dynamic_arena(8192, true, 8192, alignof(max_align_t));
+ * enum { BUF = 64 * 1024 };  // 64 KiB caller-owned buffer
+ * static uint8_t buf[BUF];
  *
- * pool_t* pool = init_pool_with_arena(arena,
- *                                     64,
- *                                     0,
- *                                     32,
- *                                     true,
- *                                     true);
+ * pool_expect_t r =
+ *     init_static_pool(buf,
+ *                      BUF,
+ *                      64,
+ *                      0);  // use default
  *
- * void* a = alloc_pool(pool, false);   // OK
- * void* b = alloc_pool(pool, false);   // OK
+ * if (!r.has_value) {
+ *     printf("static pool init failed: %d\n", r.u.error);
+ *     return;
+ * }
  *
- * return_pool_element(pool, a); // returns 'a' to free-list
+ * pool_t *p = r.u.value;
  *
- * void* c = alloc_pool(pool, true);   // likely returns 'a' again (LIFO reuse)
+ * void_ptr_expect_t expect = alloc_pool(p);
+ * if (!expect.has_value) {
+ *     // Handle error 
+ * }
+ * void *x = expect.u.value;
+ * expect = alloc_pool(p);
+ * if (!expect.has_value) {
+ *     // Handle error 
+ * }
+ * void *y = expect.u.value;      // ok
+ * return_pool_element(p, x);    // block reclaimed for reuse
  *
- * free_arena(arena);            // releases pool header + all slices
+ * // When done:
+ * free_pool(p);   // destroys pool and its internal arena
+ * // 'buf' remains caller-owned and is not freed here.
  * @endcode
  */
-void* alloc_pool(pool_t* pool, bool zeroed);
+pool_expect_t * init_static_pool(void*  buffer,
+                                 size_t buffer_bytes,
+                                 size_t block_size,
+                                 size_t alignment);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Allocate a fixed-size block from a memory pool.
+ *
+ * Retrieves a block from the pool using the following strategy:
+ *
+ *  1. **Free-list reuse (fast path):**  
+ *     If the pool contains previously freed blocks, the most recently
+ *     released block is popped and returned immediately.
+ *
+ *  2. **Carve from current slice:**  
+ *     If the active slice still has unused space (`cur < end`), the next block
+ *     is carved from the slice and returned.
+ *
+ *  3. **Grow-on-demand (dynamic pools only):**  
+ *     If the active slice is full and @c grow_enabled is true, a new slice is
+ *     requested from the pool’s backing arena, and the block is allocated from
+ *     that fresh slice.
+ *
+ * If @p zeroed is true, the block’s user-visible region (`block_size` bytes)
+ * is zero-filled. Any stride padding is left uninitialized.
+ *
+ * This function does **not** use errno. Errors are reported through a
+ * ::void_ptr_expect_t return value.
+ *
+ * @param pool
+ *     Pointer to a valid ::pool_t instance. Must not be NULL.
+ *
+ * @param zeroed
+ *     If true, the returned block's payload is zero-initialized.
+ *
+ * @return ::void_ptr_expect_t describing success or failure:
+ *
+ *   - **Success:**  
+ *       @code
+ *       expect.has_value == true
+ *       expect.u.value   -> pointer to allocated block
+ *       @endcode
+ *
+ *   - **Failure:**  
+ *       @code
+ *       expect.has_value == false
+ *       expect.u.error   == one of:
+ *           NULL_POINTER      — @p pool is NULL
+ *           CAPACITY_OVERFLOW — pool exhausted and growth disabled
+ *           BAD_ALLOC         — arena failed to grow a new slice
+ *           STATE_CORRUPT     — inconsistent state after growth
+ *       @endcode
+ *
+ * @par Failure Conditions
+ * Failure occurs when:
+ *  1. @p pool is NULL → ::NULL_POINTER  
+ *  2. No blocks remain and growth is disabled → ::CAPACITY_OVERFLOW  
+ *  3. Growth is enabled but arena allocation fails → ::BAD_ALLOC  
+ *  4. Growth succeeded but internal state invalid → ::STATE_CORRUPT  
+ *
+ * @note
+ *   - The returned block must be released using ::return_pool_element(),
+ *     not @c free().
+ *   - Memory is reclaimed only when the underlying arena is reset or destroyed.
+ *   - Blocks are reused in **LIFO** order (stack behavior).
+ *
+ * @sa init_pool_with_arena(), init_static_pool(), pool_grow(), return_pool_element()
+ *
+ * @par Example
+ * @code{.c}
+ * // Create a dynamic arena and pool
+ * arena_expect_t ar = init_dynamic_arena(4096u, true, 4096u, alignof(max_align_t));
+ * if (!ar.has_value) {
+ *     fprintf(stderr, "Arena init failed: %d\n", ar.u.error);
+ *     return;
+ * }
+ * arena_t *arena = ar.u.value;
+ *
+ * // Initialize a pool where each block holds 32 bytes
+ * pool_expect_t pr = init_pool_with_arena(arena,
+ *                                         32,          // block size
+ *                                         0,           // alignment = arena default
+ *                                         64,          // blocks per chunk
+ *                                         true,        // prewarm first slice
+ *                                         true);       // allow dynamic growth
+ * if (!pr.has_value) {
+ *     fprintf(stderr, "Pool init failed: %d\n", pr.u.error);
+ *     free_arena(arena);
+ *     return;
+ * }
+ * pool_t *pool = pr.u.value;
+ *
+ * // Allocate a zeroed block
+ * void_ptr_expect_t b1 = alloc_pool(pool, true);
+ * if (!b1.has_value) {
+ *     fprintf(stderr, "alloc_pool failed: %d\n", b1.u.error);
+ *     return;
+ * }
+ *
+ * // Allocate a second block
+ * void_ptr_expect_t b2 = alloc_pool(pool, false);
+ *
+ * // Return first block to the free list
+ * return_pool_element(pool, b1.u.value);
+ *
+ * // Next allocation will reuse the returned block (LIFO behavior)
+ * void_ptr_expect_t reused = alloc_pool(pool, false);
+ * assert(reused.has_value && reused.u.value == b1.u.value);
+ *
+ * // Cleanup
+ * free_arena(arena); // destroys the pool and arena
+ * @endcode
+ */
+void_ptr_expect_t alloc_pool(pool_t* pool, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -3318,171 +3590,298 @@ bool pool_owns_memory(const pool_t* pool);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Vtable adapter for pool allocation.
+ * @brief Allocate a block from a pool via the generic allocator interface.
  *
- * Allocates a single fixed-size element from the pool referenced by @p ctx.
- * Pool allocators do not support variable-sized allocation; therefore
- * @p size is validated only to ensure it does not exceed the pool's block size.
+ * This function adapts ::alloc_pool() to the allocator vtable model.
+ * The caller supplies a pool via @p ctx, and requests a block of size @p size.
  *
- * If @p zeroed is true, the returned block will be zero-initialized.
+ * Pool allocators dispense *fixed-size* blocks. Therefore, the request is valid
+ * only if @p size is less than or equal to the pool's configured block size.
  *
- * @param ctx   Pointer to a pool_t instance.
- * @param size  Requested size (must be <= pool_block_size()).
- * @param zeroed Whether the element should be zero-initialized.
+ * On success, this returns a ::void_ptr_expect_t with:
+ *   - @c has_value = true,
+ *   - @c u.value   = pointer to a valid pool block.
  *
- * @retval void* Pointer to the allocated pool element.
- * @retval NULL  On error (errno set to EINVAL).
+ * On failure, @c has_value is false and @c u.error describes the reason:
+ *   - ::NULL_POINTER     — @p ctx was NULL.
+ *   - ::INVALID_ARG      — requested @p size exceeds pool block capacity.
+ *   - ::BAD_ALLOC        — pool is exhausted and cannot grow.
+ *
+ * @param ctx     Pointer to a ::pool_t instance.
+ * @param size    Number of bytes requested (must not exceed pool block size).
+ * @param zeroed  If true, the returned block is zero-initialized.
+ *
+ * @return A ::void_ptr_expect_t containing either an allocated pointer or
+ *         an error code.
  */
-// static inline void* pool_v_alloc(void* ctx, size_t size, bool zeroed) {
-//     (void) size;
-//     pool_t* pool = (pool_t*)ctx;
-//     if (!pool) {
-//         errno = EINVAL;
-//         return NULL;
-//     }
-//     if (size > pool_block_size(pool)) {
-//         errno = EINVAL;   // requested more than a pool block can hold
-//         return NULL;
-//     }
-//     return alloc_pool(pool, zeroed);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// /**
-//  * @brief Vtable adapter for aligned pool allocation.
-//  *
-//  * Pool allocators inherently provide alignment guarantees based on the
-//  * block size and internal structure, and do not support arbitrary alignment
-//  * requests. Therefore, @p align is ignored.
-//  *
-//  * If @p zeroed is true, the returned block will be zero-initialized.
-//  *
-//  * @param ctx     Pointer to a pool_t instance.
-//  * @param size    Requested size (ignored except for compatibility).
-//  * @param align   Requested alignment (ignored).
-//  * @param zeroed  Whether the element should be zero-initialized.
-//  *
-//  * @return Pointer to a pool element, or NULL on error.
-//  */
-// static inline void* pool_v_alloc_aligned(void* ctx, size_t size,
-//                                          size_t align, bool zeroed) {
-//     (void) size;
-//     (void) align;
-//     pool_t* pool = (pool_t*)ctx;
-//     return alloc_pool(pool, zeroed);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// /**
-//  * @brief Vtable adapter for pool reallocation.
-//  *
-//  * Reallocation is not supported by pool allocators because block sizes
-//  * are fixed. This function simply returns @p old_ptr unchanged.
-//  *
-//  * @param ctx       Pointer to a pool_t instance (unused).
-//  * @param old_ptr   The previously allocated block.
-//  * @param old_size  Previous allocation size (ignored).
-//  * @param new_size  Requested new size (ignored).
-//  * @param zeroed    Whether to zero-init expanded memory (ignored).
-//  *
-//  * @return Always returns @p old_ptr.
-//  */
-// static inline void* pool_v_realloc(void* ctx, void* old_ptr,
-//                                    size_t old_size, size_t new_size,
-//                                    bool zeroed) {
-//     (void)ctx; (void)old_size; (void)new_size; (void)zeroed;
-//     return old_ptr;
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// /**
-//  * @brief Vtable adapter for aligned pool reallocation.
-//  *
-//  * Like pool_v_realloc(), pool allocators do not support resizing or
-//  * alignment-based reallocation. The function simply returns @p old_ptr.
-//  *
-//  * @param ctx       Pointer to a pool_t instance (unused).
-//  * @param old_ptr   Previously allocated pool element.
-//  * @param old_size  Previous size (ignored).
-//  * @param new_size  Requested size (ignored).
-//  * @param zeroed    Zero-initialize flag (ignored).
-//  * @param align     Alignment (ignored).
-//  *
-//  * @return Always returns @p old_ptr.
-//  */
-// static inline void* pool_v_realloc_aligned(void* ctx, void* old_ptr,
-//                                            size_t old_size, size_t new_size,
-//                                            bool zeroed, size_t align) {
-//     (void)ctx; (void)old_size; (void)new_size; (void)zeroed; (void)align;
-//     return old_ptr;
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// /**
-//  * @brief Returns a previously allocated pool element to the pool.
-//  *
-//  * Pool allocators support element-level return operations. This returns
-//  * @p ptr to the pool referenced by @p ctx for reuse.
-//  *
-//  * If either @p ctx or @p ptr is NULL, errno is set to EINVAL and the
-//  * function has no effect.
-//  *
-//  * @param ctx  Pointer to a pool_t instance.
-//  * @param ptr  Pool element previously returned by alloc_pool().
-//  */
-// static inline void pool_v_return(void* ctx, void* ptr) {
-//     pool_t* pool = (pool_t*)ctx;
-//     if (!pool || !ptr) {
-//         errno = EINVAL;
-//         return;
-//     }
-//     return_pool_element(pool, ptr);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// /**
-//  * @brief Frees all memory owned by the pool allocator.
-//  *
-//  * Destroys the pool referenced by @p ctx, releasing all associated
-//  * memory back to the system. After this call, the pool must not be used.
-//  *
-//  * If @p ctx is NULL, errno is set to EINVAL.
-//  *
-//  * @param ctx Pointer to a pool_t instance.
-//  */
-// static inline void pool_v_free(void* ctx) {
-//     pool_t* pool = (pool_t*)ctx;
-//     if (!pool) {
-//         errno = EINVAL;
-//         return;
-//     }
-//     free_pool(pool);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// /**
-//  * @brief Constructs an allocator_vtable_t for a given pool.
-//  *
-//  * This helper initializes a vtable that exposes the pool allocator
-//  * through the generic allocator interface. All allocation operations
-//  * forward to pool-compatible functions.
-//  *
-//  * @param p Pointer to a pool_t instance used as the allocator backend.
-//  *
-//  * @return A fully initialized allocator_vtable_t referring to @p p.
-//  */
-// static inline allocator_vtable_t pool_allocator(pool_t* p) {
-//     allocator_vtable_t v = {
-//         .allocate          = pool_v_alloc,
-//         .allocate_aligned  = pool_v_alloc_aligned,
-//         .reallocate        = pool_v_realloc,
-//         .reallocate_aligned= pool_v_realloc_aligned,
-//         .return_element    = pool_v_return,
-//         .deallocate        = pool_v_free,
-//         .ctx               = p
-//     };
-//     return v;
-// }
+static inline void_ptr_expect_t pool_v_alloc(void *ctx, size_t size, bool zeroed) {
+    pool_t *pool = (pool_t *)ctx;
+
+    if (!pool) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+
+    /* Requested size must fit within a single pool block. */
+    if (size > pool_block_size(pool)) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG   /* asking pool for more than one block can hold */
+        };
+    }
+
+    /* Delegate to the pool’s allocator (LIFO free list, slices, growth, etc.). */
+    return alloc_pool(pool, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Allocate a block from a pool with an alignment request.
+ *
+ * Pool allocators have a *fixed* alignment determined at initialization.
+ * Therefore @p align is ignored, and alignment errors cannot occur here as long
+ * as @p size fits in a single pool block.
+ *
+ * Behavior is identical to ::pool_v_alloc(), except that @p align is ignored.
+ *
+ * @param ctx     Pointer to a ::pool_t instance.
+ * @param size    Number of bytes requested (must not exceed pool block size).
+ * @param align   Ignored; pool alignment is fixed.
+ * @param zeroed  If true, the returned block is zero-initialized.
+ *
+ * @return A ::void_ptr_expect_t with either:
+ *         - valid block pointer, or
+ *         - error: ::NULL_POINTER, ::INVALID_ARG, or ::BAD_ALLOC.
+ */
+static inline void_ptr_expect_t pool_v_alloc_aligned(void *ctx,
+                                                     size_t size,
+                                                     size_t align,
+                                                     bool   zeroed) {
+    (void)align;  /* Per-call alignment is ignored; pool has a fixed block alignment. */
+
+    pool_t *pool = (pool_t *)ctx;
+
+    if (!pool) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+
+    /* Same “fits in one block” rule as pool_v_alloc. */
+    if (size > pool_block_size(pool)) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
+    }
+
+    /* Alignment is determined by the pool’s configuration; we just allocate. */
+    return alloc_pool(pool, zeroed);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Reallocate memory from a pool via the vtable interface.
+ *
+ * Memory pools cannot resize blocks. Therefore, reallocation follows strict
+ * rules:
+ *
+ *   - If @p old_ptr is NULL → returns an error (::INVALID_ARG).
+ *   - If @p new_size exceeds the pool’s block size → returns ::CAPACITY_OVERFLOW.
+ *   - Otherwise, the reallocation is a **no-op**:
+ *       the original pointer is returned unchanged.
+ *
+ * No copying occurs, and no new block is allocated.
+ *
+ * @param ctx        Pointer to a ::pool_t instance.
+ * @param old_ptr    Existing block allocated from the pool (must not be NULL).
+ * @param old_size   Ignored (block size is fixed).
+ * @param new_size   Requested new size (must not exceed block size).
+ * @param zeroed     Ignored (no new memory is created).
+ *
+ * @return A ::void_ptr_expect_t with:
+ *         - success: @p old_ptr unchanged,
+ *         - failure: ::NULL_POINTER, ::INVALID_ARG, or ::CAPACITY_OVERFLOW.
+ */
+static inline void_ptr_expect_t pool_v_realloc(void *ctx,
+                                               void *old_ptr,
+                                               size_t old_size,
+                                               size_t new_size,
+                                               bool  zeroed) {
+    (void)old_size;
+    (void)zeroed;
+
+    pool_t *pool = (pool_t *)ctx;
+
+    if (!pool) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+
+    if (!old_ptr) {
+        /* For this backend, realloc with NULL is treated as invalid. */
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
+    }
+
+    /* Pool blocks are fixed-size: we cannot grow beyond a single block. */
+    if (new_size > pool_block_size(pool)) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = CAPACITY_OVERFLOW
+        };
+    }
+
+    /* No-op: caller must treat this as “same block, same capacity”. */
+    return (void_ptr_expect_t){
+        .has_value = true,
+        .u.value   = old_ptr
+    };
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Reallocate memory from a pool with an alignment request.
+ *
+ * Alignment does not affect reallocation since pools cannot resize blocks and
+ * have fixed alignment. The semantics mirror ::pool_v_realloc():
+ *
+ *   - @p old_ptr must not be NULL,
+ *   - @p new_size must not exceed pool block size,
+ *   - otherwise, return @p old_ptr unchanged.
+ *
+ * @p align is ignored.
+ *
+ * @param ctx        Pointer to a ::pool_t instance.
+ * @param old_ptr    Existing block allocated from the pool.
+ * @param old_size   Ignored.
+ * @param new_size   New size (must not exceed pool block size).
+ * @param zeroed     Ignored.
+ * @param align      Ignored.
+ *
+ * @return A ::void_ptr_expect_t containing either @p old_ptr or an error code.
+ */
+static inline void_ptr_expect_t pool_v_realloc_aligned(void *ctx,
+                                                       void *old_ptr,
+                                                       size_t old_size,
+                                                       size_t new_size,
+                                                       bool   zeroed,
+                                                       size_t align) {
+    (void)align;   /* Per-call alignment is ignored; pool has fixed alignment. */
+    (void)old_size;
+    (void)zeroed;
+
+    pool_t *pool = (pool_t *)ctx;
+
+    if (!pool) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+
+    if (!old_ptr) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
+    }
+
+    if (new_size > pool_block_size(pool)) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = CAPACITY_OVERFLOW
+        };
+    }
+
+    /* Same no-op semantics as pool_v_realloc. */
+    return (void_ptr_expect_t){
+        .has_value = true,
+        .u.value   = old_ptr
+    };
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Return a previously allocated block to the pool.
+ *
+ * This inserts @p ptr into the pool’s intrusive free list for later reuse.
+ *
+ * Invalid inputs result in a silent no-op (consistent with MISRA and
+ * allocator-vtable expectations). No error is returned.
+ *
+ * @param ctx   Pointer to the ::pool_t instance.
+ * @param ptr   Block previously returned by alloc_pool(). Must belong to
+ *              this pool; the function does not validate ownership.
+ *
+ * @note This function never frees memory; it only recycles blocks.
+ */
+static inline void pool_v_return(void *ctx, void *ptr) {
+    pool_t *pool = (pool_t *)ctx;
+
+    if (!pool || !ptr) {
+        /* Silent no-op on invalid input; no errno side-effects. */
+        return;
+    }
+
+    return_pool_element(pool, ptr);
+}
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Destroy a pool via the vtable interface.
+ *
+ * This invokes ::free_pool() on the underlying pool instance. The pool must
+ * have been allocated using a pool initializer such as ::init_pool_with_arena()
+ * or ::init_dynamic_pool().
+ *
+ * Invalid input is ignored by design (no error reporting).
+ *
+ * @param ctx  Pointer to the ::pool_t instance to destroy.
+ *
+ * @note If the pool owns its arena, that arena is destroyed as well.
+ */
+static inline void pool_v_free(void *ctx) {
+    pool_t *pool = (pool_t *)ctx;
+
+    if (!pool) {
+        return; /* nothing to do */
+    }
+
+    free_pool(pool);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Constructs an allocator_vtable_t for a given pool.
+ *
+ * This helper initializes a vtable that exposes the pool allocator
+ * through the generic allocator interface. All allocation operations
+ * forward to pool-compatible functions.
+ *
+ * @param p Pointer to a pool_t instance used as the allocator backend.
+ *
+ * @return A fully initialized allocator_vtable_t referring to @p p.
+ */
+static inline allocator_vtable_t pool_allocator(pool_t* p) {
+    allocator_vtable_t v = {
+        .allocate          = pool_v_alloc,
+        .allocate_aligned  = pool_v_alloc_aligned,
+        .reallocate        = pool_v_realloc,
+        .reallocate_aligned= pool_v_realloc_aligned,
+        .return_element    = pool_v_return,
+        .deallocate        = pool_v_free,
+        .ctx               = p
+    };
+    return v;
+}
 // ================================================================================ 
 // ================================================================================ 
 // FREE LIST IMPLEMENTATION 
@@ -4549,28 +4948,57 @@ bool freelist_stats(const freelist_t *fl, char *buffer, size_t buffer_size);
 // ================================================================================ 
 
 /**
- * @brief Allocate a block of memory using `malloc()`.
+ * @brief Allocate a heap block and return it as a ::void_ptr_expect_t.
  *
- * This is the standard-library backend for the allocator vtable.  
- * The function allocates `size` bytes using `malloc()` and optionally
- * zero-initializes the memory if `zeroed` is true.
+ * This is a thin wrapper around @c malloc() that returns a structured
+ * ::void_ptr_expect_t result instead of a raw pointer. It provides:
  *
- * The function performs the minimal safety checks expected of a compliant
- * allocator:
- *  - `size == 0` is rejected (`EINVAL`)
- *  - `malloc()` failure returns NULL and leaves `errno` unchanged
+ *   - @c INVALID_ARG when @p size == 0.
+ *   - @c BAD_ALLOC   when @c malloc() fails.
+ *
+ * On success, the block is optionally zero-initialized.
+ *
+ * The @p ctx parameter is accepted for compatibility with generic allocator
+ * vtable interfaces but is ignored in this simple backend.
  *
  * @param ctx
- *        Unused. Present only to satisfy the allocator interface.
+ *     Optional allocator context (unused by this implementation).
  *
  * @param size
- *        Number of bytes to allocate. Must be greater than zero.
+ *     Number of bytes to allocate. Must be greater than zero. A request of
+ *     @c size == 0 is treated as invalid and returns an error expect.
  *
  * @param zeroed
- *        If true, the allocated memory is cleared to zero.
+ *     If true, the allocated block is fully zero-initialized via @c memset().
+ *     If false, the contents are uninitialized.
  *
- * @return
- *        Pointer to newly allocated memory on success, or NULL on failure.
+ * @return ::void_ptr_expect_t
+ *     - On success:
+ *         - @c has_value = true
+ *         - @c u.value   = pointer returned by @c malloc()
+ *     - On failure:
+ *         - @c has_value = false
+ *         - @c u.error   = one of:
+ *             - ::INVALID_ARG  (size == 0)
+ *             - ::BAD_ALLOC    (underlying @c malloc() failed)
+ *
+ * @note
+ *     - The caller is responsible for eventually freeing the returned block
+ *       with @c free(), or managing it according to the higher-level system
+ *       that uses this backend.
+ *     - This function does not track or validate ownership.
+ *
+ * @code{.c}
+ * void_ptr_expect_t r = v_alloc(NULL, 256u, true);
+ * if (!r.has_value) {
+ *     fprintf(stderr, "alloc failed: %d\n", r.u.error);
+ *     return;
+ * }
+ *
+ * void *p = r.u.value;
+ * // use p ...
+ * free(p);
+ * @endcode
  */
 static inline void_ptr_expect_t v_alloc(void* ctx, size_t size, bool zeroed) {
     (void)ctx;
@@ -4589,185 +5017,339 @@ static inline void_ptr_expect_t v_alloc(void* ctx, size_t size, bool zeroed) {
     }
     return (void_ptr_expect_t){.has_value = true, .u.value = p};
 }
-
 // ----------------------------------------------------------------------------- 
 
 /**
- * @brief Allocate memory with a requested alignment using the malloc backend.
+ * @brief Allocate a heap block with an alignment constraint, using ::void_ptr_expect_t.
  *
- * This backend does not provide true platform-specific aligned allocation.
- * Instead, it enforces the following policy:
+ * This function implements an alignment-aware interface atop ::v_alloc().
+ * It validates the requested alignment and then delegates to ::v_alloc(),
+ * relying on the guarantee that this backend provides at least
+ * @c alignof(max_align_t) alignment for all allocations.
  *
- *  - If `alignment == 0`, the alignment defaults to `alignof(max_align_t)`.
- *  - If `alignment` exceeds `alignof(max_align_t)`, the request is rejected
- *    with `errno = EINVAL`, because the `malloc()` backend cannot guarantee
- *    stricter alignment.
+ * Alignment semantics:
+ *   - If @p align == 0, the effective alignment becomes @c alignof(max_align_t).
+ *   - If @p align > alignof(max_align_t), the request is rejected.
+ *   - If @p align is non-power-of-two, the request is rejected.
  *
- * When alignment is acceptable, the function behaves exactly like
- * `v_alloc()`.
+ * Because this simple backend does not provide actual over-aligned allocations,
+ * any request with @p align <= alignof(max_align_t) is treated as satisfied
+ * by a normal ::v_alloc() call.
  *
  * @param ctx
- *        Unused.
+ *     Optional allocator context (unused by this implementation).
  *
  * @param size
- *        Number of bytes to allocate. Must be greater than zero.
+ *     Number of bytes to allocate. Must be greater than zero. A request of
+ *     @c size == 0 yields an ::INVALID_ARG error.
  *
- * @param alignment
- *        Required alignment. Must be zero or a power of two, and must not
- *        exceed `alignof(max_align_t)`.
+ * @param align
+ *     Requested alignment in bytes. May be:
+ *       - 0               → use @c alignof(max_align_t)
+ *       - power-of-two ≤ alignof(max_align_t)
+ *
+ *     Any value > @c alignof(max_align_t) or non-power-of-two produces
+ *     ::ALIGNMENT_ERROR.
  *
  * @param zeroed
- *        If true, the returned buffer is set to zero.
+ *     If true, the allocated block is fully zero-initialized; otherwise its
+ *     contents are uninitialized.
  *
- * @return
- *        Pointer to allocated memory on success, or NULL on failure.
+ * @return ::void_ptr_expect_t
+ *     - On success:
+ *         - @c has_value = true
+ *         - @c u.value   = pointer returned by ::v_alloc()
+ *     - On failure:
+ *         - @c has_value = false
+ *         - @c u.error   = one of:
+ *             - ::INVALID_ARG     (size == 0)
+ *             - ::ALIGNMENT_ERROR (invalid or overly strict alignment)
+ *             - ::BAD_ALLOC       (underlying ::v_alloc / @c malloc failed)
+ *
+ * @note
+ *     - This backend does not provide “true” over-aligned allocations; it only
+ *       enforces that @p align does not demand more than @c alignof(max_align_t).
+ *     - Ownership and eventual @c free() are the caller’s responsibility.
+ *
+ * @code{.c}
+ * // Request 16-byte alignment, which is ≤ alignof(max_align_t) on many ABIs.
+ * void_ptr_expect_t r = v_alloc_aligned(NULL, 128u, 16u, true);
+ * if (!r.has_value) {
+ *     fprintf(stderr, "aligned alloc failed: %d\n", r.u.error);
+ *     return;
+ * }
+ * void *p = r.u.value;
+ * // use p ...
+ * free(p);
+ * @endcode
  */
-static inline void* v_alloc_aligned(void* ctx,
-                                    size_t size,
-                                    size_t align,
-                                    bool   zeroed) {
-    (void)ctx;
-
-    if (size == 0) {
-        errno = EINVAL;
-        return NULL;
+static inline void_ptr_expect_t v_alloc_aligned(void *ctx,
+                                                size_t size,
+                                                size_t align,
+                                                bool   zeroed) {
+    /* Validate size */
+    if (size == 0u) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
     }
 
-    if (align == 0) {
-        align = alignof(max_align_t);
+    /* Normalize alignment: 0 → alignof(max_align_t) */
+    size_t eff_align = (align != 0u) ? align : alignof(max_align_t);
+
+    /* For this backend, refuse alignments stricter than max_align_t */
+    if (eff_align > alignof(max_align_t)) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = ALIGNMENT_ERROR
+        };
     }
 
-    /* For this simple backend, refuse alignments stricter than max_align_t. */
-    if (align > alignof(max_align_t)) {
-        errno = EINVAL;
-        return NULL;
+    /* Require power-of-two alignment (defensive) */
+    if ((eff_align & (eff_align - 1u)) != 0u) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = ALIGNMENT_ERROR
+        };
     }
 
-    /* We also assume align is a power of two or caller-normalized. */
-    void_ptr_expect_t expect = v_alloc(NULL, size,zeroed);
-    if (!expect.has_value) {
-        return NULL;
-    }
-    return expect.u.value;
+    /* Delegate to the underlying allocator.
+       This backend guarantees at least alignof(max_align_t), so any
+       eff_align <= alignof(max_align_t) is satisfied. */
+    void_ptr_expect_t expect = v_alloc(ctx, size, zeroed);
+    return expect;  /* propagate success or error unchanged */
 }
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Resize a memory block using `realloc()`.
+ * @brief Resize a heap block using realloc semantics, returning ::void_ptr_expect_t.
  *
- * This backend follows the standard `realloc()` contract:
+ * This is a thin wrapper around @c realloc() that reports success or failure
+ * via ::void_ptr_expect_t and preserves the usual C realloc rules, with one
+ * important difference: a @p new_size of zero is treated as an error
+ * (::INVALID_ARG), not as a “free” request.
  *
- *  - If `old_ptr == NULL`, the call behaves like `v_alloc()`.
- *  - On success, a new pointer is returned and the contents of the old
- *    block are preserved.
- *  - On failure, NULL is returned and the original pointer remains valid.
- *
- * If `zeroed` is true and the block is grown, only the newly-added region
- * (`new_size - old_size`) is zero-initialized.
+ * Semantics:
+ *   - If @p new_size == 0:
+ *       → return error expect (::INVALID_ARG).
+ *   - If @p old_ptr == NULL:
+ *       → behave like an allocation and delegate to ::v_alloc().
+ *   - Otherwise:
+ *       → call @c realloc(old_ptr, new_size).
+ *         - On success: optionally zero-fill the tail if the block grew and
+ *           @p zeroed is true.
+ *         - On failure: return ::BAD_ALLOC and leave @p old_ptr valid.
  *
  * @param ctx
- *        Unused.
+ *     Optional allocator context (unused by this implementation).
  *
  * @param old_ptr
- *        Pointer to previously allocated memory, or NULL.
+ *     Pointer to an existing allocation obtained from this backend, or NULL to
+ *     request a fresh allocation. Passing a foreign pointer yields undefined
+ *     behavior (this function does not validate ownership).
  *
  * @param old_size
- *        Size of the old allocation. Used only for zero-initialization
- *        when growing.
+ *     Previous size of the allocation in bytes. Used only to determine the
+ *     tail region to zero when @p zeroed is true and the block grows. Passing
+ *     an incorrect size leads to undefined behavior (e.g., memset past end).
  *
  * @param new_size
- *        Requested new allocation size.
+ *     Requested new size in bytes. Must be > 0. If greater than @p old_size,
+ *     the block may grow; if smaller, it may shrink in place.
  *
  * @param zeroed
- *        Whether to zero-initialize any newly allocated portion.
+ *     If true and @p new_size > @p old_size and reallocation succeeds, the
+ *     newly added region [@p old_size, @p new_size) is zero-filled.
  *
- * @return
- *        New pointer on success, NULL on allocation failure.
- *        On failure, `old_ptr` remains valid.
+ * @return ::void_ptr_expect_t
+ *     - On success:
+ *         - @c has_value = true
+ *         - @c u.value   = the (possibly moved) pointer returned by @c realloc(),
+ *                         or a freshly allocated pointer if @p old_ptr == NULL.
+ *     - On failure:
+ *         - @c has_value = false
+ *         - @c u.error   = one of:
+ *             - ::INVALID_ARG (new_size == 0)
+ *             - ::BAD_ALLOC   (underlying @c realloc() or ::v_alloc() failed)
+ *
+ * @note
+ *     - On @c BAD_ALLOC from @c realloc(), the original @p old_ptr remains
+ *       valid and is not freed.
+ *     - This function does not attempt to free memory on failure.
+ *     - Ownership and eventual @c free() remain the caller’s responsibility.
+ *
+ * @code{.c}
+ * void_ptr_expect_t r = v_alloc(NULL, 64u, false);
+ * if (!r.has_value) { // handle error }
+ * void *p = r.u.value;
+ *
+ * void_ptr_expect_t rr = v_realloc(NULL, p, 64u, 128u, true);
+ * if (!rr.has_value) {
+ *     fprintf(stderr, "realloc failed: %d\n", rr.u.error);
+ *     // p is still valid here
+ * } else {
+ *     p = rr.u.value;
+ * }
+ * @endcode
  */
-static inline void* v_realloc(void* ctx,
-                              void* old_ptr,
-                              size_t old_size,
-                              size_t new_size,
-                              bool  zeroed) {
-    (void)ctx;
+static inline void_ptr_expect_t v_realloc(void *ctx,
+                                          void *old_ptr,
+                                          size_t old_size,
+                                          size_t new_size,
+                                          bool  zeroed)
+{
+    /* Reject zero-size realloc requests explicitly */
+    if (new_size == 0u) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
+    }
+
+    /* If old_ptr is NULL, this behaves like an allocation. */
     if (!old_ptr) {
-        void_ptr_expect_t expect = v_alloc(NULL, new_size, zeroed);
-        if (!expect.has_value) {
-            return NULL;
-        }
-        return expect.u.value;
+        /* Delegate to v_alloc so we stay within the same backend policy. */
+        return v_alloc(ctx, new_size, zeroed);
     }
 
-    void* p = realloc(old_ptr, new_size);
+    /* Standard realloc semantics for a non-NULL old_ptr. */
+    void *p = realloc(old_ptr, new_size);
     if (!p) {
-        /* realloc failed; old_ptr is still valid, caller must handle */
-        return NULL;
+        /* realloc failed; old_ptr is still valid, caller decides what to do */
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = BAD_ALLOC
+        };
     }
 
+    /* Zero-fill the extended region if requested and we actually grew. */
     if (zeroed && new_size > old_size) {
-        memset((uint8_t*)p + old_size, 0, new_size - old_size);
+        memset((uint8_t *)p + old_size, 0, new_size - old_size);
     }
-    return p;
+
+    return (void_ptr_expect_t){
+        .has_value = true,
+        .u.value   = p
+    };
 }
 // ----------------------------------------------------------------------------- 
 
 /**
- * @brief Aligned version of `v_realloc()` for the malloc backend.
+ * @brief Resize a heap block with an alignment requirement, returning ::void_ptr_expect_t.
  *
- * This function applies the same alignment policy as
- * `v_alloc_aligned()`:
+ * This function combines the semantics of ::v_realloc() with the alignment
+ * validation rules of ::v_alloc_aligned(). Because this simple backend does
+ * not provide true over-aligned allocations, any alignment requirement is
+ * restricted to @c alignof(max_align_t).
  *
- *  - If alignment is zero, the default alignment is used.
- *  - If alignment exceeds `alignof(max_align_t)`, the request is rejected.
+ * Alignment semantics:
+ *   - If @p align == 0, the effective alignment is @c alignof(max_align_t).
+ *   - If @p align is non-zero and not a power-of-two, the call fails with
+ *     ::ALIGNMENT_ERROR.
+ *   - If @p align (after normalization) is greater than @c alignof(max_align_t),
+ *     the call fails with ::ALIGNMENT_ERROR.
  *
- * For acceptable alignments, the operation behaves exactly like
- * `v_realloc()`.
+ * Reallocation semantics:
+ *   - If @p old_ptr == NULL:
+ *       → behave like ::v_alloc_aligned(ctx, new_size, eff_align, zeroed).
+ *   - Otherwise:
+ *       → behave like ::v_realloc(ctx, old_ptr, old_size, new_size, zeroed).
+ *
+ * The alignment check is performed up front; no attempt is made to use
+ * platform-specific over-aligned allocation APIs.
  *
  * @param ctx
- *        Unused.
+ *     Optional allocator context (currently unused).
  *
  * @param old_ptr
- *        Previously allocated pointer, or NULL.
+ *     Pointer to an existing allocation, or NULL to request an aligned
+ *     allocation. Foreign pointers produce undefined behavior.
  *
  * @param old_size
- *        Size of the original allocation.
+ *     Previous size in bytes of @p old_ptr, used to determine how much of the
+ *     block may be zero-filled on growth. Must be accurate when @p old_ptr is
+ *     non-NULL.
  *
  * @param new_size
- *        Requested new size.
+ *     Requested new size in bytes. For the @p old_ptr != NULL case, the
+ *     behavior is that of ::v_realloc(). For @p old_ptr == NULL, it is passed
+ *     through to ::v_alloc_aligned().
  *
  * @param zeroed
- *        Whether to zero newly allocated bytes when growing.
+ *     If true and @p new_size > @p old_size in the @p old_ptr != NULL case,
+ *     the extended region is zero-filled. For the allocation case
+ *     (@p old_ptr == NULL), the entire block is zeroed if true.
  *
- * @param alignment
- *        Desired alignment. Must not exceed `alignof(max_align_t)`.
+ * @param align
+ *     Requested alignment in bytes. May be:
+ *       - 0               → effective alignment = @c alignof(max_align_t)
+ *       - power-of-two ≤ alignof(max_align_t)
  *
- * @return
- *        New pointer on success, NULL on failure.
+ * @return ::void_ptr_expect_t
+ *     - On success:
+ *         - @c has_value = true
+ *         - @c u.value   = allocation/reallocation result pointer
+ *     - On failure:
+ *         - @c has_value = false
+ *         - @c u.error   = one of:
+ *             - ::ALIGNMENT_ERROR (invalid or overly strict alignment)
+ *             - ::INVALID_ARG     (from ::v_realloc when new_size == 0)
+ *             - ::BAD_ALLOC       (allocation or reallocation failure)
+ *
+ * @note
+ *     - This backend does not provide real over-aligned allocations; it only
+ *       enforces that requested alignments do not exceed @c alignof(max_align_t).
+ *     - Ownership and @c free() are still the caller’s responsibility.
+ *
+ * @code{.c}
+ * // Allocate aligned
+ * void_ptr_expect_t a = v_realloc_aligned(NULL, NULL, 0u, 128u, true, 16u);
+ * if (!a.has_value) { // handle error }
+ * void *p = a.u.value;
+ *
+ * // Grow with the same alignment requirement
+ * void_ptr_expect_t r = v_realloc_aligned(NULL, p, 128u, 256u, true, 16u);
+ * if (!r.has_value) { // handle error }
+ * p = r.u.value;
+ *
+ * free(p);
+ * @endcode
  */
-static inline void* v_realloc_aligned(void* ctx,
-                                      void* old_ptr,
-                                      size_t old_size,
-                                      size_t new_size,
-                                      bool   zeroed,
-                                      size_t align) {
-    (void)ctx;
+static inline void_ptr_expect_t v_realloc_aligned(void *ctx,
+                                                  void *old_ptr,
+                                                  size_t old_size,
+                                                  size_t new_size,
+                                                  bool   zeroed,
+                                                  size_t align)
+{
+    /* Normalize alignment: 0 → alignof(max_align_t) */
+    size_t eff_align = (align != 0u) ? align : alignof(max_align_t);
 
+    /* For this simple backend, refuse alignments stricter than max_align_t. */
+    if (eff_align > alignof(max_align_t)) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = ALIGNMENT_ERROR
+        };
+    }
+
+    /* Require power-of-two alignment (defensive). */
+    if ((eff_align & (eff_align - 1u)) != 0u) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = ALIGNMENT_ERROR
+        };
+    }
+
+    /* If old_ptr is NULL, this behaves like an aligned allocation. */
     if (!old_ptr) {
-        return v_alloc_aligned(NULL, new_size, align, zeroed);
+        return v_alloc_aligned(ctx, new_size, eff_align, zeroed);
     }
 
-    /* For this backend, we don't actually enforce extra alignment
-       beyond max_align_t; we just reuse v_realloc. */
-    if (align == 0) {
-        align = alignof(max_align_t);
-    }
-    if (align > alignof(max_align_t)) {
-        errno = EINVAL;
-        return NULL;
-    }
-
-    return v_realloc(NULL, old_ptr, old_size, new_size, zeroed);
+    /* Backend only guarantees up to max_align_t; eff_align <= max_align_t
+       is already validated, so we can just reuse v_realloc. */
+    return v_realloc(ctx, old_ptr, old_size, new_size, zeroed);
 }
 // -------------------------------------------------------------------------------- 
 

@@ -884,94 +884,145 @@ inline void_ptr_expect_t realloc_arena(arena_t *arena,
 }
 // -------------------------------------------------------------------------------- 
 
-void* alloc_arena_aligned(arena_t* arena, size_t bytes, size_t alignment, bool zeroed) {
-    if (!arena || bytes == 0u) { return NULL; }
+inline void_ptr_expect_t alloc_arena_aligned(arena_t *arena,
+                                             size_t  bytes,
+                                             size_t  alignment,
+                                             bool    zeroed) {
+    /* Basic argument validation */
+    if (arena == NULL) {
+        return vp_err(NULL_POINTER);
+    }
+    if (bytes == 0u) {
+        return vp_err(INVALID_ARG);
+    }
 
-    // Choose effective alignment: at least the arena base alignment.
-    size_t a_req = (alignment ? alignment : arena->alignment);
-    // Must be power-of-two; clamp to arena base if smaller.
-    if (a_req == 0u || (a_req & (a_req - 1u)) != 0u) {return NULL; }
-    size_t const a = (a_req < arena->alignment) ? arena->alignment : a_req;
+    /* Validate arena base alignment */
+    size_t const base_align = arena->alignment;
+    if (base_align == 0u || (base_align & (base_align - 1u)) != 0u) {
+        return vp_err(ALIGNMENT_ERROR);
+    }
 
-    Chunk* tail = arena->tail;
-    if (!tail) { return NULL; }
+    /* Choose effective alignment: max(requested, base_align) */
+    size_t a_req = (alignment != 0u) ? alignment : base_align;
+    if (a_req == 0u || (a_req & (a_req - 1u)) != 0u) {
+        return vp_err(ALIGNMENT_ERROR);
+    }
+    size_t const a = (a_req < base_align) ? base_align : a_req;
 
-    // Pad current cursor up to 'a'
-    uintptr_t const cur  = (uintptr_t)arena->cur;
-    size_t    const pad  = _pad_up(cur, a);
-    size_t    const need = pad + bytes;
+    Chunk *tail = arena->tail;
+    if (tail == NULL) {
+        return vp_err(ILLEGAL_STATE); /* corrupted/uninitialized arena */
+    }
 
-    // Fast path: fits in current tail
+    /* Pad current cursor up to 'a' */
+    uintptr_t const cur = (uintptr_t)arena->cur;
+    size_t    const pad = _pad_up(cur, a);
+
+    /* Check for overflow in pad + bytes */
+    if (bytes > (SIZE_MAX - pad)) {
+        return vp_err(LENGTH_OVERFLOW);
+    }
+
+    size_t const need  = pad + bytes;
     size_t const avail = (tail->alloc >= tail->len) ? (tail->alloc - tail->len) : 0u;
+
+    /* Fast path: fits in current tail */
     if (avail >= need) {
-        uint8_t* p = (uint8_t*)(cur + pad);   // a-aligned
+        uint8_t *p = (uint8_t *)(cur + pad);   /* a-aligned */
         arena->cur  = p + bytes;
-        tail->len  += need;                   // charge pad + bytes
+        tail->len  += need;                    /* pad + bytes */
         arena->len += need;
-        if (zeroed) memset(p, 0, bytes);
-        return p;
+
+        if (zeroed) {
+            memset(p, 0, bytes);
+        }
+        return vp_ok(p);
     }
 
 #if ARENA_ENABLE_DYNAMIC
-    // No space -> grow only when allowed
-    if (arena->mem_type == STATIC || !arena->resize) { return NULL; }
+    /* No space -> grow only when allowed */
+    if (arena->mem_type == STATIC || !arena->resize) {
+        return vp_err(OPERATION_UNAVAILABLE);  /* cannot grow this arena */
+    }
 
-    // Ask for a new chunk whose data region is aligned to 'a'.
-    // For a fresh chunk, first allocation will have zero pad.
-    size_t const grow_data = _next_chunk_size(tail->alloc, /*need=*/bytes, /*align=*/a, arena->min_chunk);
-    Chunk* nc = _chunk_new_ex(grow_data, a);
-    if (!nc) return NULL; // helper sets errno
+    /* Ask for a new chunk whose data region is aligned to 'a'. For a fresh
+       chunk, first allocation will have zero pad. */
+    size_t const grow_data =
+        _next_chunk_size(tail->alloc, /*need=*/bytes, /*align=*/a, arena->min_chunk);
+    if (grow_data == 0u) {
+        return vp_err(LENGTH_OVERFLOW);
+    }
 
-    // Link new chunk
+    Chunk *nc = _chunk_new_ex(grow_data, a);
+    if (nc == NULL) {
+        return vp_err(BAD_ALLOC);
+    }
+
+    /* Link new chunk */
     tail->next  = nc;
     arena->tail = nc;
 
-    // Accounting: usable capacity (alloc) is nc->alloc; footprint adds aligned header + data.
+    /* Accounting: usable capacity + footprint */
     arena->alloc     += nc->alloc;
     arena->tot_alloc += _align_up_size(sizeof(Chunk), a) + nc->alloc;
 
-    // First allocation from fresh chunk: nc->chunk is already a-aligned.
-    void* p = (void*)nc->chunk;
+    /* First allocation from fresh chunk: nc->chunk is already a-aligned. */
+    void *p = (void *)nc->chunk;
     arena->cur  = nc->chunk + bytes;
     nc->len     = bytes;
     arena->len += bytes;
 
-    if (zeroed) memset(p, 0, bytes);
-    return p;
+    if (zeroed) {
+        memset(p, 0, bytes);
+    }
+    return vp_ok(p);
 #else
-    return NULL;
+    /* Dynamic growth support is compiled out */
+    if (arena->mem_type == STATIC || !arena->resize) {
+        return vp_err(OPERATION_UNAVAILABLE);
+    } else {
+        return vp_err(UNSUPPORTED);
+    }
 #endif
 }
 // -------------------------------------------------------------------------------- 
 
-void* realloc_arena_aligned(arena_t* arena,
-                            void*   variable,
-                            size_t  var_size,
-                            size_t  realloc_size,
-                            bool    zeroed,
-                            size_t  algined) {
+void_ptr_expect_t realloc_arena_aligned(arena_t* arena,
+                                        void*   variable,
+                                        size_t  var_size,
+                                        size_t  realloc_size,
+                                        bool    zeroed,
+                                        size_t  aligned) {
+    // Validate required inputs
     if (!arena || !variable) {
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
-    // No-op on shrink or same size; keeps arena space.
+    // No-op on shrink or same size
     if (realloc_size <= var_size) {
-        return variable;
+        return (void_ptr_expect_t){ .has_value = true, .u.value = variable };
     }
 
-    // Allocate new block (no zeroing; we’ll zero only the tail if requested).
-    void* ptr = alloc_arena_aligned(arena, realloc_size, algined, false);
-    if (!ptr) {
-        return NULL;
+    // Attempt aligned allocation of new block
+    void_ptr_expect_t alloc_r = alloc_arena_aligned(arena,
+                                                    realloc_size,
+                                                    aligned,
+                                                    false); // zero after memcpy
+    if (!alloc_r.has_value) {
+        return alloc_r;  // propagate ALLOCATION, ALIGNMENT, STATE errors
     }
 
-    memcpy(ptr, variable, var_size);
+    void* new_ptr = alloc_r.u.value;
 
+    // Copy old contents
+    memcpy(new_ptr, variable, var_size);
+
+    // Zero-fill the extension if requested
     if (zeroed) {
-        memset((uint8_t*)ptr + var_size, 0, realloc_size - var_size);
+        memset((uint8_t*)new_ptr + var_size, 0, realloc_size - var_size);
     }
 
-    return ptr;
+    return (void_ptr_expect_t){ .has_value = true, .u.value = new_ptr };
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -1476,7 +1527,7 @@ static inline void _cp_unpack_pool(const PoolCheckPoint* pub, PoolCheckpointRep*
 // POOL STATIC FUNCTIONS 
 
 static bool pool_grow(pool_t* p) {
-    if (!p->grow_enabled) { errno = EPERM; return false; }
+    if (!p->grow_enabled) { return false; }
     const size_t bytes = p->stride * p->blocks_per_chunk;
     uint8_t* base = (uint8_t*)alloc_arena_aligned(p->arena, bytes, p->stride, false);
     if (!base) { errno = ENOMEM; return false; }
@@ -1487,7 +1538,7 @@ static bool pool_grow(pool_t* p) {
 #ifdef DEBUG
     // record this slice; allocate node from arena to avoid malloc
     pool_slice_t* s = (pool_slice_t*)arena_alloc_aligned(p->arena, sizeof *s, alignof(pool_slice_t));
-    if (!s) { errno = ENOMEM; return false; } // extremely unlikely
+    if (!s) { return false; } // extremely unlikely
     s->start = base;
     s->end   = base + bytes;
     s->next  = p->slices;
@@ -1526,234 +1577,400 @@ static inline void pool_push_free(pool_t* p, void* blk) {
 // ================================================================================ 
 // INITIALIZE AND DEALLOCATE FUNCTIONS 
 
-pool_t* init_pool_with_arena(arena_t* arena,
-                             size_t   block_size,
-                             size_t   alignment,
-                             size_t   blocks_per_chunk,
-                             bool     prewarm_one_chunk,
-                             bool     grow_enabled) {
-    if (!arena || block_size == 0 || blocks_per_chunk == 0) {
-        errno = EINVAL;
-        return NULL;
+pool_expect_t init_pool_with_arena(arena_t* arena,
+                                   size_t   block_size,
+                                   size_t   alignment,
+                                   size_t   blocks_per_chunk,
+                                   bool     prewarm_one_chunk,
+                                   bool     grow_enabled) {
+    /* Basic argument validation */
+    if (!arena || block_size == 0u || blocks_per_chunk == 0u) {
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
     }
 
-    // Effective alignment must be at least alignof(void*) for the intrusive next*
+    /* If a non-zero alignment is provided, require power-of-two (defensive). */
+    if (alignment != 0u && (alignment & (alignment - 1u)) != 0u) {
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = ALIGNMENT_ERROR
+        };
+    }
+
+    /* Effective alignment must be at least alignof(void*) for intrusive free-list. */
     size_t eff_align = alignment ? alignment : alignof(max_align_t);
-    // Round alignment to a power-of-two if your project requires; at minimum, clamp:
-    if (eff_align < alignof(void*)) eff_align = alignof(void*);
+    if (eff_align < alignof(void*)) {
+        eff_align = alignof(void*);
+    }
 
-    // Compute stride; ensure a freed block can hold a pointer
+    /* Compute stride; ensure a freed block can hold a pointer. */
     size_t stride = _align_up_size(block_size, eff_align);
-    if (stride < sizeof(void*)) stride = sizeof(void*);
+    if (stride < sizeof(void*)) {
+        stride = sizeof(void*);
+    }
 
-    // Allocate the pool header from the arena so there’s no external malloc
-    pool_t* p = (pool_t*)alloc_arena_aligned(arena, sizeof *p, alignof(pool_t), false);
-    if (!p) { errno = ENOMEM; return NULL; }
+    /* Allocate the pool header from the arena (no external malloc). */
+    void_ptr_expect_t header = alloc_arena_aligned(arena,
+                                                   sizeof(pool_t),
+                                                   alignof(pool_t),
+                                                   false);
+    if (!header.has_value) {
+        /* Propagate the underlying allocation error (BAD_ALLOC, OUT_OF_MEMORY, etc.). */
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = header.u.error
+        };
+    }
 
-    p->arena           = arena;
-    p->owns_arena      = false;
-    p->block_size      = block_size;
-    p->stride          = stride;
-    p->blocks_per_chunk= blocks_per_chunk;
-    p->cur             = NULL;
-    p->end             = NULL;
-    p->free_list       = NULL;
-    p->total_blocks    = 0;
-    p->free_blocks     = 0;
+    pool_t *p = (pool_t *)header.u.value;
 
-    p->grow_enabled    = grow_enabled;
+    /* Initialize pool fields */
+    p->arena            = arena;
+    p->owns_arena       = false;
+    p->block_size       = block_size;
+    p->stride           = stride;
+    p->blocks_per_chunk = blocks_per_chunk;
+    p->cur              = NULL;
+    p->end              = NULL;
+    p->free_list        = NULL;
+    p->total_blocks     = 0u;
+    p->free_blocks      = 0u;
+    p->grow_enabled     = grow_enabled;
 
 #ifdef DEBUG
     p->slices           = NULL;
 #endif
-    // Optional “prewarm” so the first allocation is O(1)
+
+    /* Optional “prewarm” so the first allocation is O(1). */
     if (prewarm_one_chunk) {
-        if (!pool_grow(p)) return NULL; // errno set by pool_grow
+        if (!pool_grow(p)) {
+            /* pool_grow failed: most likely capacity/allocation issue. */
+            return (pool_expect_t){
+                .has_value = false,
+                .u.error   = OUT_OF_MEMORY
+            };
+        }
     }
-    return p;
+
+    return (pool_expect_t){
+        .has_value = true,
+        .u.value   = p
+    };
 }
 // -------------------------------------------------------------------------------- 
 
-pool_t* init_dynamic_pool(size_t block_size,
-                          size_t alignment,
-                          size_t blocks_per_chunk,
-                          size_t arena_seed_bytes,
-                          size_t min_chunk_bytes,
-                          bool   grow_enabled,
-                          bool   prewarm_one_chunk)
-{
+pool_expect_t init_dynamic_pool(size_t block_size,
+                                size_t alignment,
+                                size_t blocks_per_chunk,
+                                size_t arena_seed_bytes,
+                                size_t min_chunk_bytes,
+                                bool   grow_enabled,
+                                bool   prewarm_one_chunk) {
 #if !ARENA_ENABLE_DYNAMIC
-    errno = ENOTSUP;
-    return NULL;
+    /* Dynamic arenas (and thus dynamic pools) are not available in this build. */
+    (void)block_size;
+    (void)alignment;
+    (void)blocks_per_chunk;
+    (void)arena_seed_bytes;
+    (void)min_chunk_bytes;
+    (void)grow_enabled;
+    (void)prewarm_one_chunk;
+
+    return (pool_expect_t){
+        .has_value = false,
+        .u.error   = FEATURE_DISABLED  /* or UNSUPPORTED, if you prefer */
+    };
 #else
-    // -------- argument validation
-    if (block_size == 0 || blocks_per_chunk == 0 || arena_seed_bytes == 0) {
-        errno = EINVAL; return NULL;
+    /* -------- argument validation --------------------------------------- */
+    if (block_size == 0u ||
+        blocks_per_chunk == 0u ||
+        arena_seed_bytes == 0u)
+    {
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
     }
 
-    // NEW: fixed-capacity pools must be prewarmed, otherwise they’d be unusable
+    /* Fixed-capacity pools must be prewarmed; otherwise they’d be unusable. */
     if (!grow_enabled && !prewarm_one_chunk) {
-        errno = EINVAL; return NULL;
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
     }
 
-    // -------- compute effective alignment and stride
+    /* If a non-zero alignment is provided, require power-of-two (defensive). */
+    if (alignment != 0u && (alignment & (alignment - 1u)) != 0u) {
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = ALIGNMENT_ERROR
+        };
+    }
+
+    /* -------- compute effective alignment and stride --------------------- */
     size_t eff_align = alignment ? alignment : alignof(max_align_t);
-    // if (!_is_pow2(eff_align)) eff_align = _next_pow2(eff_align);
-    if (eff_align < alignof(void*)) eff_align = alignof(void*);
+    if (eff_align < alignof(void*)) {
+        eff_align = alignof(void*);
+    }
 
     size_t stride = _align_up_size(block_size, eff_align);
-    if (stride < sizeof(void*)) stride = sizeof(void*);
+    if (stride < sizeof(void*)) {
+        stride = sizeof(void*);
+    }
 
-    // Overflow guard: bytes = stride * blocks_per_chunk
+    /* Overflow guard: bytes = stride * blocks_per_chunk */
     if (blocks_per_chunk > SIZE_MAX / stride) {
-        errno = EOVERFLOW; return NULL;
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = LENGTH_OVERFLOW
+        };
     }
     const size_t slice_bytes = stride * blocks_per_chunk;
 
-    // Arena base alignment should never be less than max_align_t
+    /* Arena base alignment should never be less than max_align_t */
     size_t arena_base_align = eff_align;
-    if (arena_base_align < alignof(max_align_t)) arena_base_align = alignof(max_align_t);
+    if (arena_base_align < alignof(max_align_t)) {
+        arena_base_align = alignof(max_align_t);
+    }
 
-    // -------- create the owned arena
+    /* -------- create the owned arena ------------------------------------ */
     arena_expect_t a = init_dynamic_arena(/*bytes=*/arena_seed_bytes,
                                           /*resize=*/grow_enabled,
                                           /*min_chunk_in=*/min_chunk_bytes,
                                           /*base_align_in=*/arena_base_align);
     if (!a.has_value) {
-        return NULL;
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = a.u.error   /* propagate underlying ErrorCode */
+        };
     }
-    arena_t* arena = a.u.value;
+
+    arena_t *arena = a.u.value;
     if (!arena) {
-        return NULL; // errno set by init_dynamic_arena
+        /* Should not normally happen if has_value == true, but be defensive. */
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = STATE_CORRUPT
+        };
     }
 
-    // -------- allocate pool header inside arena (no external malloc)
-    pool_t* p = (pool_t*)alloc_arena_aligned(arena, sizeof *p, alignof(pool_t), /*zeroed=*/false);
-    if (!p) {
-        free_arena(arena); // errno set by alloc_arena_aligned
-        return NULL;
+    /* -------- allocate pool header inside arena (no external malloc) ----- */
+    void_ptr_expect_t hdr = alloc_arena_aligned(arena,
+                                                sizeof(pool_t),
+                                                alignof(pool_t),
+                                                /*zeroed=*/false);
+    if (!hdr.has_value) {
+        /* Tear down the arena we just created, then propagate the error. */
+        free_arena(arena);
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = hdr.u.error
+        };
     }
 
-    // -------- initialize pool fields
+    pool_t *p = (pool_t *)hdr.u.value;
+
+    /* -------- initialize pool fields ------------------------------------- */
     p->arena            = arena;
     p->owns_arena       = true;
     p->block_size       = block_size;
     p->stride           = stride;
     p->blocks_per_chunk = blocks_per_chunk;
-    p->cur = p->end     = NULL;
+    p->cur              = NULL;
+    p->end              = NULL;
     p->free_list        = NULL;
-    p->total_blocks     = 0;
-    p->free_blocks      = 0;
+    p->total_blocks     = 0u;
+    p->free_blocks      = 0u;
     p->grow_enabled     = grow_enabled;
 #ifdef DEBUG
     p->slices           = NULL;
 #endif
 
-    // -------- prewarm behavior
+    /* -------- prewarm behavior ------------------------------------------ */
     if (prewarm_one_chunk) {
-        uint8_t* base = (uint8_t*)alloc_arena_aligned(arena, slice_bytes, stride, /*zeroed=*/false);
-        if (!base) {
-            free_arena(arena); // errno already set (ENOMEM / EPERM)
-            return NULL;
+        void_ptr_expect_t slice = alloc_arena_aligned(arena,
+                                                      slice_bytes,
+                                                      stride,
+                                                      /*zeroed=*/false);
+        if (!slice.has_value) {
+            /* Failed to get the initial slice; give up and destroy arena. */
+            free_arena(arena);
+            return (pool_expect_t){
+                .has_value = false,
+                .u.error   = slice.u.error   /* likely BAD_ALLOC / OUT_OF_MEMORY */
+            };
         }
-        p->cur = base;
-        p->end = base + slice_bytes;
+
+        uint8_t *base = (uint8_t *)slice.u.value;
+        p->cur         = base;
+        p->end         = base + slice_bytes;
         p->total_blocks += blocks_per_chunk;
 
 #ifdef DEBUG
-        pool_slice_t* s = (pool_slice_t*)alloc_arena_aligned(arena, sizeof *s, alignof(pool_slice_t), false);
-        if (s) { s->start = base; s->end = base + slice_bytes; s->next = p->slices; p->slices = s; }
+        void_ptr_expect_t slice_hdr =
+            alloc_arena_aligned(arena,
+                                sizeof(pool_slice_t),
+                                alignof(pool_slice_t),
+                                /*zeroed=*/false);
+        if (slice_hdr.has_value) {
+            pool_slice_t *s = (pool_slice_t *)slice_hdr.u.value;
+            s->start = base;
+            s->end   = base + slice_bytes;
+            s->next  = p->slices;
+            p->slices = s;
+        }
+        /* If DEBUG slice allocation fails, we simply skip debug tracking. */
 #endif
     }
 
-    return p;
-#endif // ARENA_ENABLE_DYNAMIC
+    return (pool_expect_t){
+        .has_value = true,
+        .u.value   = p
+    };
+#endif /* ARENA_ENABLE_DYNAMIC */
 }
-
 // -------------------------------------------------------------------------------- 
 
-pool_t* init_static_pool(void*  buffer,
-                         size_t buffer_bytes,
-                         size_t block_size,
-                         size_t alignment) {
+pool_expect_t init_static_pool(void  *buffer,
+                               size_t buffer_bytes,
+                               size_t block_size,
+                               size_t alignment) {
     // ---- validate inputs
-    if (!buffer || buffer_bytes == 0 || block_size == 0) {
-        errno = EINVAL; return NULL;
+    if (!buffer) {
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+    if (buffer_bytes == 0u || block_size == 0u) {
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
     }
 
     // ---- compute effective block alignment and stride
     size_t eff_align = alignment ? alignment : alignof(max_align_t);
-    // If your project enforces power-of-two, normalize with your helpers:
-    // if (!_is_pow2(eff_align)) eff_align = _next_pow2(eff_align);
-    if (eff_align < alignof(void*)) eff_align = alignof(void*);
+
+    // Require power-of-two alignment (defensive)
+    if ((eff_align & (eff_align - 1u)) != 0u) {
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = ALIGNMENT_ERROR
+        };
+    }
+
+    if (eff_align < alignof(void*)) {
+        eff_align = alignof(void*);
+    }
 
     size_t stride = _align_up_size(block_size, eff_align);
-    if (stride < sizeof(void*)) stride = sizeof(void*);
+    if (stride < sizeof(void*)) {
+        stride = sizeof(void*);
+    }
 
     // Arena base alignment should be >= max_align_t (and >= eff_align)
     size_t arena_base_align = eff_align;
-    if (arena_base_align < alignof(max_align_t)) arena_base_align = alignof(max_align_t);
+    if (arena_base_align < alignof(max_align_t)) {
+        arena_base_align = alignof(max_align_t);
+    }
 
     // ---- create the owned static arena (header lives in caller buffer)
     arena_expect_t a = init_static_arena(buffer, buffer_bytes, arena_base_align);
     if (!a.has_value) {
-        return NULL;
+        // propagate static-arena error
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = a.u.error
+        };
     }
-    arena_t* arena = a.u.value;
+
+    arena_t *arena = a.u.value;
     if (!arena) {
-        // errno set by init_static_arena
-        return NULL;
+        // Defensive: success flag but NULL pointer
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = STATE_CORRUPT
+        };
     }
 
     // ---- allocate pool header inside the arena (no external malloc)
-    pool_t* p = (pool_t*)alloc_arena_aligned(arena, sizeof *p, alignof(pool_t), /*zeroed=*/false);
-    if (!p) {
+    void_ptr_expect_t hdr = alloc_arena_aligned(arena,
+                                                sizeof *arena, // careful! should be sizeof *p, see below
+                                                alignof(pool_t),
+                                                /*zeroed=*/false);
+    if (!hdr.has_value) {
         // Not enough room even for the pool header within the caller buffer
         free_arena(arena);
-        // errno set by alloc_arena_aligned (likely ENOMEM)
-        return NULL;
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = hdr.u.error
+        };
     }
+
+    pool_t *p = (pool_t *)hdr.u.value;
 
     // ---- compute capacity from remaining tail space
     size_t rem = arena_remaining(arena);             // usable bytes after header
-    size_t blocks = rem / stride;                    // floor to integral blocks
-    if (blocks == 0) {
+    size_t blocks = (stride > 0u) ? (rem / stride) : 0u;
+    if (blocks == 0u) {
         // No space to hold even one block at requested alignment/stride
         free_arena(arena);
-        errno = ENOMEM;
-        return NULL;
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = OUT_OF_MEMORY
+        };
     }
 
     // Carve the single (and only) slice now (prewarm is required by policy)
     size_t slice_bytes = blocks * stride;
-    uint8_t* base = (uint8_t*)alloc_arena_aligned(arena, slice_bytes, stride, /*zeroed=*/false);
-    if (!base) {
-        // Alignment could reduce usable capacity below our estimate
+
+    void_ptr_expect_t slice =
+        alloc_arena_aligned(arena, slice_bytes, stride, /*zeroed=*/false);
+    if (!slice.has_value) {
         free_arena(arena);
-        // errno set by alloc_arena_aligned
-        return NULL;
+        return (pool_expect_t){
+            .has_value = false,
+            .u.error   = slice.u.error
+        };
     }
+
+    uint8_t *base = (uint8_t *)slice.u.value;
 
     // ---- initialize pool fields (fixed-capacity)
     p->arena            = arena;
-    p->owns_arena       = true;     // owns arena object; caller still owns raw buffer per your static-arena contract
+    p->owns_arena       = true;   // owns arena object; caller still owns raw buffer per static-arena contract
     p->block_size       = block_size;
     p->stride           = stride;
-    p->blocks_per_chunk = 0;        // not used in static pools
+    p->blocks_per_chunk = 0;      // not used in static pools
     p->cur              = base;
     p->end              = base + slice_bytes;
     p->free_list        = NULL;
     p->total_blocks     = blocks;
     p->free_blocks      = 0;
-    p->grow_enabled     = false;    // static pools never grow
+    p->grow_enabled     = false;  // static pools never grow
+
 #ifdef DEBUG
     p->slices           = NULL;
     // Track the single slice for debug-time ownership checks
-    pool_slice_t* s = (pool_slice_t*)alloc_arena_aligned(arena, sizeof *s, alignof(pool_slice_t), false);
-    if (s) { s->start = base; s->end = base + slice_bytes; s->next = p->slices; p->slices = s; }
+    void_ptr_expect_t dbg_slice =
+        alloc_arena_aligned(arena, sizeof(pool_slice_t), alignof(pool_slice_t), false);
+    if (dbg_slice.has_value) {
+        pool_slice_t *s = (pool_slice_t *)dbg_slice.u.value;
+        s->start = base;
+        s->end   = base + slice_bytes;
+        s->next  = p->slices;
+        p->slices = s;
+    }
 #endif
 
-    return p;
+    return (pool_expect_t){
+        .has_value = true,
+        .u.value   = p
+    };
 }
 // -------------------------------------------------------------------------------- 
 

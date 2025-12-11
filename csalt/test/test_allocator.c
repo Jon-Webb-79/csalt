@@ -1165,7 +1165,9 @@ static void test_realloc_aligned_alignment_and_copy(void **state) {
     const size_t want = 64;
     const size_t align = 64;
 
-    uint8_t* q = (uint8_t*)realloc_arena_aligned(a, p, old_sz, want, /*zeroed*/false, align);
+    aexpect = realloc_arena_aligned(a, p, old_sz, want, false, align);
+    assert_true(aexpect.has_value);
+    uint8_t* q = (uint8_t*)aexpect.u.value;
     assert_non_null(q);
     assert_true(is_aligned(q, align));
 
