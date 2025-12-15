@@ -514,6 +514,21 @@ this structure to reconstitute a bump allocator.  This struct is defined as
    #endif
    } PoolCheckpointRep;
 
+pool_expect_t 
+~~~~~~~~~~~~~~
+``pool_expect_t`` is an error handling struct to be used in the creation 
+of ``pool_t`` data types to catch and convey errors to a user.
+
+.. code-block:: c
+
+   typedef struct {
+       bool has_value;
+       union {
+           pool_t* value;
+           ErrorCode error;
+       } u;
+   } pool_expect_t;
+
 Initialization and Memory Management 
 ------------------------------------
 The following functions can be used to initialize a pool allocator 
