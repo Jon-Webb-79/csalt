@@ -3889,89 +3889,124 @@ static inline allocator_vtable_t pool_allocator(pool_t* p) {
 typedef struct freelist_t freelist_t;
 // -------------------------------------------------------------------------------- 
 
+typedef struct {
+    bool has_value;
+    union {
+        freelist_t* value;
+        ErrorCode error;
+    } u;
+} freelist_expect_t;
+// -------------------------------------------------------------------------------- 
+
 /**
  * @brief Initialize a freelist allocator using memory obtained from an existing arena.
  *
- * This function creates a `freelist_t` inside the caller-provided `arena_t`.
- * The freelist itself does not own the memory; the arena remains responsible
- * for its lifetime. All allocations made through the freelist draw from a
- * single contiguous region carved out of the arena via a single `alloc_arena()`
- * call.
+ * Creates a ::freelist_t object entirely within the storage provided by an
+ * existing ::arena_t. The freelist does not own the underlying memory; the
+ * arena remains responsible for its lifetime. All memory managed by the
+ * freelist is carved from the arena via a single allocation.
  *
- * The freelist memory layout consists of:
+ * The internal memory layout is:
  *
- *     [ freelist_t struct | aligned user memory region ]
+ *     [ freelist_t | aligned usable memory region ]
  *
- * Within the memory region, allocations are managed using variable-sized
- * blocks. Returned blocks are coalesced whenever possible to limit external
- * fragmentation.
+ * Within the usable region, the freelist manages variable-sized blocks using
+ * a linked free-block structure. Returned blocks are reinserted into the free
+ * list and coalesced when possible to reduce external fragmentation.
  *
  * @param arena
- *        Pointer to an initialized `arena_t`. The freelist is allocated
- *        directly from this arena. Must not be NULL.
+ *        Pointer to an initialized ::arena_t. Must not be NULL.
  *
  * @param size
- *        Requested number of usable bytes for the freelist (not including
- *        internal metadata). Must be at least `freelist_min_request`. If the
- *        region rounds up to an alignment boundary, the actual usable size may
- *        be slightly larger than requested.
+ *        Requested number of usable bytes for the freelist (excluding internal
+ *        metadata). Must be at least ::freelist_min_request. The actual usable
+ *        capacity may be rounded up to satisfy alignment constraints.
  *
  * @param alignment
  *        Desired alignment for both the freelist structure and its internal
- *        memory region. If zero, `alignof(max_align_t)` is used. Non–power-of-two
- *        values are rounded up. The final alignment is always at least
- *        `alignof(max_align_t)`.
+ *        memory region. If zero, defaults to @c alignof(max_align_t).
+ *        Non–power-of-two values are rounded up. The effective alignment is
+ *        always at least @c alignof(max_align_t).
  *
  * @return
- *        Pointer to a fully initialized `freelist_t` on success, or NULL on
- *        error. In case of failure, `errno` is set to:
+ *        A ::freelist_expect_t describing the result:
  *
- *        - `EINVAL`  if inputs are invalid  
- *        - `ENOMEM`  if the arena does not have enough space  
+ *        - @c has_value == true  
+ *          @c u.value points to a fully initialized ::freelist_t.
+ *
+ *        - @c has_value == false  
+ *          @c u.error contains an ::ErrorCode describing the failure.
+ *
+ * @par Failure conditions
+ * Initialization fails if any of the following occur:
+ *
+ * - @p arena is NULL.
+ * - @p size is smaller than ::freelist_min_request.
+ * - The requested alignment cannot be normalized to a valid power-of-two.
+ * - Arithmetic overflow occurs while computing internal layout sizes.
+ * - The arena cannot supply a contiguous block large enough to hold the
+ *   freelist header and usable memory region.
  *
  * @note
- *        The freelist does not grow. Its capacity is fully determined by the
- *        initial `size` request and available arena space.
+ * The freelist has fixed capacity. It does not grow after initialization.
+ * All capacity is determined by the initial @p size request and the available
+ * space in the arena.
  *
  * @note
- *        The returned freelist shares the arena's lifetime. When the arena is
- *        reset or destroyed, all freelist allocations become invalid.
+ * The freelist shares the lifetime of the parent arena. When the arena is
+ * reset or destroyed, all allocations obtained from the freelist become
+ * invalid.
+ *
+ * @note
+ * Allocation functions operating on this freelist (e.g.,
+ * ::alloc_freelist()) return a ::void_ptr_expect_t to explicitly report
+ * allocation success or failure.
+ *
+ * @warning
+ * The freelist does not perform ownership validation. Passing pointers not
+ * allocated by this freelist to ::return_freelist_element() results in
+ * undefined behavior.
  *
  * @par Example
- * Creating a freelist inside an arena:
+ * Creating and using a freelist inside a static arena:
  *
  * @code{.c}
- * #include "arena.h"
- * #include "freelist.h"
+ * #include "c_allocator.h"
  *
  * int main(void) {
  *     uint8_t buffer[2048];
  *
- *     // Create a static arena over a fixed buffer.
- *     arena_t* arena =
+ *     arena_expect_t a =
  *         init_static_arena(buffer, sizeof buffer, alignof(max_align_t));
- *     if (!arena) return 1;
+ *     if (!a.has_value) {
+ *         return 1;
+ *     }
  *
- *     // Create a freelist that uses 1024 bytes from the arena.
- *     freelist_t* fl = init_freelist_with_arena(arena, 1024, 0);
- *     if (!fl) return 1;
+ *     freelist_expect_t f =
+ *         init_freelist_with_arena(a.u.value, 1024, 0);
+ *     if (!f.has_value) {
+ *         // handle initialization error via f.u.error
+ *         return 1;
+ *     }
  *
- *     // Allocate memory from the freelist
- *     const size_t N = 64;
- *     void* p = alloc_freelist(fl, N, true);
+ *     freelist_t* fl = f.u.value;
  *
- *     // ... use p ...
+ *     void_ptr_expect_t p = alloc_freelist(fl, 64, true);
+ *     if (!p.has_value) {
+ *         // allocation failed
+ *         return 1;
+ *     }
  *
- *     // Free the memory back to the freelist
- *     return_freelist_element(fl, p);
+ *     // use p.u.value
  *
- *     // Freelist is automatically invalidated when the arena is reset/destroyed
- *     reset_arena(arena);
+ *     return_freelist_element(fl, p.u.value);
+ *
+ *     reset_arena(a.u.value);
  *     return 0;
  * }
  * @endcode
  */
-freelist_t* init_freelist_with_arena(arena_t* arena, 
+freelist_expect_t init_freelist_with_arena(arena_t* arena, 
                                      size_t size, 
                                      size_t alignment);
 // -------------------------------------------------------------------------------- 
@@ -3979,79 +4014,102 @@ freelist_t* init_freelist_with_arena(arena_t* arena,
 /**
  * @brief Create a dynamically backed freelist allocator.
  *
- * This function allocates a new `arena_t` and constructs a `freelist_t` inside
- * it. The freelist *owns* the arena and will release it when
- * `free_freelist()` is called. All memory used by the freelist—including the
- * freelist structure itself and all future allocations—resides inside this
- * dedicated arena.
+ * Constructs a `freelist_t` inside a newly created dynamic `arena_t`. The
+ * freelist *owns* the arena and is responsible for its lifetime. All memory
+ * used by the freelist—including the freelist structure itself and all future
+ * allocations—resides entirely within this dedicated arena.
  *
- * The caller specifies a desired usable payload size (`bytes`). The allocator
- * then calculates the minimum total memory required to store:
+ * The caller specifies a desired minimum usable payload size (`bytes`). This
+ * function computes the minimum arena space required to accommodate:
  *
- *   - an aligned `freelist_t` structure  
- *   - at least one free block (`free_block_t`)  
- *   - the requested usable region  
+ *   - an aligned `freelist_t` control structure,
+ *   - at least one `free_block_t`, and
+ *   - the requested usable memory region.
  *
- * The underlying dynamic arena may provide more than the requested minimum;
- * any extra space is incorporated into the freelist.
+ * The underlying dynamic arena may allocate more space than requested; any
+ * additional capacity is incorporated into the freelist automatically.
  *
  * @param bytes
- *        Requested minimum usable payload size (not counting internal
- *        metadata). Must be at least `freelist_min_request`. If the value is
- *        too small to hold control structures, initialization fails and
- *        `errno` is set to `EINVAL`.
+ *        Requested minimum usable payload size in bytes (excluding internal
+ *        metadata). Must be at least `freelist_min_request`.
  *
  * @param alignment
- *        Desired alignment for the freelist header and all internal
- *        allocations. If zero, `alignof(max_align_t)` is used. Non–power-of-two
- *        values are rounded up. The resulting alignment is guaranteed to be at
- *        least `alignof(max_align_t)`.
+ *        Desired alignment for the freelist header and all internal allocations.
+ *        If zero, `alignof(max_align_t)` is used. Non–power-of-two values are
+ *        rounded up. The effective alignment is always at least
+ *        `alignof(max_align_t)`.
  *
  * @param resize
- *        Whether the underlying dynamic arena is permitted to grow. In the
- *        current freelist design, the freelist itself remains *fixed-size* once
- *        constructed, but future versions may allow growth when this flag is
- *        enabled. Passing `false` ensures a strictly fixed-size allocator.
+ *        Controls whether the underlying dynamic arena is permitted to grow.
+ *        In the current design, the freelist itself remains fixed-size after
+ *        construction; this flag primarily affects arena behavior and future
+ *        extensibility.
  *
  * @return
- *        A pointer to a fully initialized `freelist_t` on success, or NULL on
- *        failure. In case of error, `errno` is set to:
+ *        A `freelist_expect_t` result:
  *
- *        - `EINVAL`  — invalid arguments or size too small  
- *        - `ENOMEM`  — underlying arena could not allocate sufficient space  
- *        - `ENOTSUP` — dynamic arenas disabled (`ARENA_ENABLE_DYNAMIC = 0`)  
+ *        - `has_value == true`  
+ *          `u.value` points to a fully initialized `freelist_t`.
+ *
+ *        - `has_value == false`  
+ *          `u.error` describes the failure condition.
+ *
+ * @par Failure conditions
+ * This function returns `has_value == false` for any of the following reasons:
+ *
+ *   - **Invalid arguments**
+ *       - `bytes` is smaller than `freelist_min_request`
+ *       - arithmetic overflow occurs during size calculations
+ *
+ *   - **Invalid alignment**
+ *       - requested alignment cannot be normalized to a valid power-of-two
+ *
+ *   - **Insufficient memory**
+ *       - the dynamic arena cannot allocate the required space
+ *
+ *   - **Unsupported configuration**
+ *       - dynamic arenas are disabled at compile time
+ *         (`ARENA_ENABLE_DYNAMIC == 0`)
  *
  * @note
- *        The freelist takes ownership of the newly created `arena_t`. Call
- *        `free_freelist()` to release all memory associated with the freelist.
+ *        The freelist owns the arena created by this function. Call
+ *        `free_freelist()` to release all associated memory.
  *
  * @note
- *        The actual usable size (`freelist_alloc(fl)`) may be larger than
- *        requested, depending on how the underlying dynamic arena chooses its
- *        chunk sizes.
+ *        The actual usable capacity of the freelist may exceed the requested
+ *        `bytes`, depending on how the underlying arena rounds allocations.
+ *
+ * @warning
+ *        All pointers obtained from this freelist become invalid once
+ *        `free_freelist()` is called.
  *
  * @par Example
- * Creating a standalone freelist with dynamic allocation:
+ * Creating a standalone freelist with dynamic backing:
  *
  * @code{.c}
- * #include "arena.h"
- * #include "freelist.h"
+ * #include "c_allocator.h"
  *
  * int main(void) {
- *     // Request at least 4096 bytes of usable space
- *     freelist_t* fl = init_dynamic_freelist(4096, 0, false);
- *     if (!fl) {
- *         fprintf(stderr, "Freelist init failed: %s\n", strerror(errno));
+ *     freelist_expect_t r = init_dynamic_freelist(4096, 0, false);
+ *     if (!r.has_value) {
+ *         // handle error via r.u.error
  *         return 1;
  *     }
  *
+ *     freelist_t* fl = r.u.value;
+ *
  *     // Allocate memory from the freelist
- *     void* p = alloc_freelist(fl, 128, true);
- *     if (!p) return 1;
+ *     void_ptr_expect_t m = alloc_freelist(fl, 128, true);
+ *     if (!m.has_value) {
+ *         // allocation failed (out of space, etc.)
+ *         free_freelist(fl);
+ *         return 1;
+ *     }
  *
- *     // Use memory...
+ *     void* p = m.u.value;
+ *     // ... use p ...
  *
- *     // Free the element back to the freelist
+ *     // Return memory to the freelist
  *     return_freelist_element(fl, p);
  *
  *     // Destroy the freelist and its arena
@@ -4059,100 +4117,139 @@ freelist_t* init_freelist_with_arena(arena_t* arena,
  *     return 0;
  * }
  * @endcode
+ *
+ * @sa init_freelist_with_arena(), alloc_freelist(), return_freelist_element(),
+ *     free_freelist()
  */
-freelist_t* init_dynamic_freelist(size_t bytes, size_t alignment, bool resize);
+freelist_expect_t init_dynamic_freelist(size_t bytes, size_t alignment, bool resize);
 // -------------------------------------------------------------------------------- 
 
 /**
  * @brief Initialize a freelist allocator over a user-supplied static buffer.
  *
- * This function constructs a `freelist_t` using memory provided entirely by the
- * caller. No heap allocation occurs. The freelist does **not** take ownership
- * of the buffer; the caller retains responsibility for ensuring that the buffer
- * remains valid for the freelist’s lifetime.
+ * Constructs a `freelist_t` entirely within a caller-provided memory buffer.
+ * No heap allocation is performed. The freelist does **not** take ownership of
+ * the buffer; the caller is responsible for ensuring that the buffer remains
+ * valid for the full lifetime of the freelist.
  *
- * A static freelist is ideal for embedded systems, scratch buffers, fixed-size
- * workspaces, or any environment where dynamic allocation is restricted.
+ * A static freelist is well suited for embedded systems, scratch allocators,
+ * fixed-capacity workspaces, or environments where dynamic allocation is
+ * restricted or forbidden.
  *
- * The memory layout inside the buffer is:
+ * Internally, this function creates a non-owning STATIC arena over the supplied
+ * buffer and then carves a freelist allocator out of that arena.
+ *
+ * The in-buffer memory layout is:
  *
  *     [ aligned freelist_t | aligned free region for allocations ]
  *
- * The free region is placed immediately after the freelist header and begins as
- * one large free block. All allocations and frees operate within this region.
+ * The free region begins as a single large free block and is managed using
+ * variable-sized blocks with coalescing on free.
  *
  * @param buffer
- *        Pointer to the start of the user-supplied memory region. This buffer
- *        must be at least `min_freelist_alloc()` bytes *plus* enough space for
- *        a `freelist_t` header. Must not be NULL.
+ *     Pointer to the start of the user-supplied memory region.
+ *     Must not be NULL.
  *
  * @param bytes
- *        Total size of the buffer. Must be large enough to contain:
+ *     Total size of the buffer in bytes. Must be large enough to contain at
+ *     least:
  *
- *            sizeof(freelist_t) + sizeof(free_block_t)
+ *         sizeof(freelist_t) + sizeof(free_block_t)
  *
- *        and preferably more, to provide usable allocation space. If `bytes` is
- *        smaller than the minimum required size, initialization fails with
- *        `errno = EINVAL`.
+ *     and preferably more to provide usable allocation capacity. If insufficient,
+ *     initialization fails.
  *
  * @param alignment
- *        Required alignment for the freelist header and all internal blocks.
- *        If zero, `alignof(max_align_t)` is used. Non–power-of-two values are
- *        rounded up. The final alignment always satisfies:
+ *     Required alignment for the freelist header and all internal allocations.
+ *     If zero, `alignof(max_align_t)` is used. Non–power-of-two values are
+ *     rounded up. The effective alignment always satisfies:
  *
- *            alignment >= alignof(max_align_t)
+ *         alignment >= alignof(max_align_t)
  *
  * @return
- *        Pointer to an initialized `freelist_t` on success, or NULL on failure.
- *        In case of failure:
+ *     A `freelist_expect_t` result:
  *
- *        - `EINVAL`  — invalid buffer, size too small, or bad alignment  
- *        - `ENOMEM`  — unexpected allocation failure inside arena creation  
+ *     - `has_value == true`
+ *         - `u.value` points to a fully initialized `freelist_t`
+ *
+ *     - `has_value == false`
+ *         - `u.error` indicates the reason initialization failed
+ *
+ * @par Failure reasons
+ * Initialization fails with `has_value == false` for any of the following:
+ *
+ * 1. **Invalid arguments**
+ *      - @p buffer is NULL
+ *      - @p bytes is smaller than the minimum required control structures
+ *
+ * 2. **Alignment errors**
+ *      - Requested alignment cannot be normalized to a valid power-of-two
+ *
+ * 3. **Insufficient buffer capacity**
+ *      - The buffer cannot accommodate the freelist header and at least one
+ *        free block after alignment
+ *
+ * 4. **Arena initialization failure**
+ *      - Internal static arena setup fails (propagated from
+ *        ::init_static_arena)
+ *
+ * 5. **Arena allocation failure**
+ *      - Internal call to ::alloc_arena fails due to layout constraints
  *
  * @note
- *        The freelist *does not* own the memory region. Destroying the freelist
- *        does not free the buffer.
+ *     The freelist does **not** own the underlying memory. Destroying or
+ *     resetting the freelist does not free the buffer.
  *
  * @note
- *        The `arena_t` created internally wraps the caller’s buffer and is also
- *        non-owning. The freelist simply carves out its own region from that
- *        static arena.
+ *     The internal arena created by this function is also non-owning and
+ *     exists solely to support allocator composition.
+ *
+ * @note
+ *     All memory returned by `alloc_freelist()` becomes invalid if the
+ *     underlying arena is reset or destroyed.
  *
  * @par Example
  * Creating a freelist over a static buffer:
  *
  * @code{.c}
- * #include "arena.h"
- * #include "freelist.h"
+ * #include "c_allocator.h"
  *
  * int main(void) {
- *     // Allocate a static buffer
  *     uint8_t buffer[2048];
  *
- *     // Create a freelist using the buffer
- *     freelist_t* fl = init_static_freelist(buffer, sizeof buffer, 0);
- *     if (!fl) {
- *         fprintf(stderr, "Static freelist init failed: %s\n", strerror(errno));
+ *     freelist_expect_t r =
+ *         init_static_freelist(buffer, sizeof buffer, 0);
+ *
+ *     if (!r.has_value) {
+ *         // Handle initialization error via r.u.error
  *         return 1;
  *     }
  *
- *     // Allocate memory from the freelist
- *     void* p = alloc_freelist(fl, 128, true);
- *     if (!p) return 1;
+ *     freelist_t* fl = r.u.value;
+ *
+ *     void_ptr_expect_t a = alloc_freelist(fl, 128, true);
+ *     if (!a.has_value) {
+ *         // Allocation failed (capacity exhausted, etc.)
+ *         return 1;
+ *     }
+ *
+ *     void* p = a.u.value;
  *
  *     // Use memory...
  *
- *     // Return memory to freelist
  *     return_freelist_element(fl, p);
  *
- *     // Because the freelist is static, no destruction call is required.
- *     // The caller owns the buffer and may reuse or discard it at will.
- *
+ *     // No destruction required; caller owns the buffer.
  *     return 0;
  * }
  * @endcode
+ *
+ * @see init_dynamic_freelist
+ * @see alloc_freelist
+ * @see return_freelist_element
+ * @see init_static_arena
  */
-freelist_t* init_static_freelist(void* buffer, size_t bytes, size_t alignment);
+freelist_expect_t init_static_freelist(void* buffer, size_t bytes, size_t alignment);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -4199,90 +4296,124 @@ void free_freelist(freelist_t* fl);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Allocate a block of memory from a freelist.
+ * @brief Allocate a block of memory from a freelist allocator.
  *
- * This function allocates `bytes` of user-visible memory from a freelist,
- * returning a pointer that is aligned to the freelist's effective alignment.
- * Internally, the allocator may consume more than `bytes` due to:
+ * This function allocates @p bytes of user-visible memory from the freelist,
+ * returning a pointer aligned to the freelist’s effective alignment. Internally,
+ * the allocator may consume more memory than requested due to:
  *
- *   - a small header (`freelist_header_t`) stored immediately before the
- *     returned user pointer
+ *   - a small allocation header (`freelist_header_t`) stored immediately
+ *     before the returned user pointer
  *   - alignment padding between the free block and the user region
- *   - full-block consumption if the remaining tail fragment is too small
- *     to form another free block
+ *   - full-block consumption when the remaining fragment is too small to
+ *     form another free block
  *
- * These internal details are tracked automatically and do not affect the
- * pointer returned to the caller.
+ * These internal details are fully managed by the allocator and are invisible
+ * to the caller.
  *
- * Memory returned by this function can later be freed with
- * `return_freelist_element()`, which restores the block to the free list
- * and performs coalescing to reduce external fragmentation.
+ * Memory returned by this function must be released back to the freelist using
+ * ::return_freelist_element(). The allocator performs block coalescing where
+ * possible to reduce external fragmentation.
  *
  * @param fl
- *        Pointer to a valid `freelist_t`. Must not be NULL.
+ *     Pointer to a valid ::freelist_t instance. Must not be NULL.
  *
  * @param bytes
- *        Number of user bytes requested. Must be greater than zero.
+ *     Number of user bytes requested. Must be greater than zero.
  *
  * @param zeroed
- *        If true, the returned block's user region is zero-initialized.
+ *     If @c true, the returned user region is zero-initialized. If @c false,
+ *     the contents of the block are left uninitialized.
  *
  * @return
- *        Pointer to an aligned user region on success, or NULL on error.  
- *        In case of failure, `errno` is set to:
+ *     A ::void_ptr_expect_t result:
  *
- *        - `EINVAL` — invalid arguments or overflow in size computation  
- *        - `ENOMEM` — no suitable free block is available  
+ *     - @c has_value == true  
+ *         - @c u.value points to an aligned user-accessible memory region
+ *
+ *     - @c has_value == false  
+ *         - @c u.error indicates the reason for failure
+ *
+ * @retval INVALID_ARG
+ *     The freelist pointer is NULL, the requested size is zero, or internal
+ *     argument validation fails.
+ *
+ * @retval ALIGNMENT_ERROR
+ *     The freelist alignment is invalid (not a power-of-two).
+ *
+ * @retval CAPACITY_OVERFLOW
+ *     No suitable free block exists to satisfy the request, or an internal
+ *     size computation overflow was detected.
  *
  * @note
- *        The returned pointer is always aligned to at least
- *        `freelist_alignment(fl)`, but internal padding may increase the
- *        actual size charged against freelist capacity.
+ *     The returned pointer is always aligned to at least
+ *     `freelist_alignment(fl)`. Alignment padding may increase the amount of
+ *     freelist capacity consumed beyond @p bytes.
  *
  * @note
- *        The freelist may internally split free blocks or consume them fully
- *        to minimize unusable tail fragments.
+ *     The freelist may split free blocks or consume them entirely to avoid
+ *     leaving unusable tail fragments.
+ *
+ * @note
+ *     This function is not thread-safe unless externally synchronized.
+ *
+ * @par Example
+ * Allocating and returning memory from a freelist:
  *
  * @code{.c}
- * freelist_t* fl = init_dynamic_freelist(2048, 0, false);
- * if (!fl) return 1;
+ * freelist_expect_t fe = init_dynamic_freelist(2048, 0, false);
+ * if (!fe.has_value) {
+ *     // handle freelist initialization error via fe.u.error
+ *     return;
+ * }
  *
- * void* p = alloc_freelist(fl, 128, true);
- * if (!p) return 1;
+ * freelist_t* fl = fe.u.value;
+ *
+ * void_ptr_expect_t r = alloc_freelist(fl, 128, true);
+ * if (!r.has_value) {
+ *     // handle allocation failure via r.u.error
+ *     free_freelist(fl);
+ *     return;
+ * }
+ *
+ * void* p = r.u.value;
  *
  * // p is aligned and safe to use
  *
- * // Free the memory back to the freelist
  * return_freelist_element(fl, p);
  *
- * // Destroy freelist and its arena
  * free_freelist(fl);
  * @endcode
+ *
+ * @see return_freelist_element
+ * @see init_freelist_with_arena
+ * @see init_dynamic_freelist
+ * @see init_static_freelist
  */
-void* alloc_freelist(freelist_t* fl, size_t size, bool zero);
+void_ptr_expect_t alloc_freelist(freelist_t* fl, size_t size, bool zero);
 // -------------------------------------------------------------------------------- 
 
 /**
  * @brief Allocate an aligned block of memory from a freelist.
  *
- * This function behaves like ::alloc_freelist, but allows the caller to
+ * This function behaves like ::alloc_freelist(), but allows the caller to
  * request a specific alignment for the returned pointer. The effective
- * alignment is computed as:
+ * alignment is computed as follows:
  *
- *   - if @p alignment is zero, the freelist's base alignment is used
- *   - if @p alignment is not a power of two, it is rounded up
- *   - the final alignment is at least ::freelist_alignment(fl)
+ *   - If @p alignment is zero, the freelist’s base alignment is used.
+ *   - If @p alignment is not a power-of-two, it is rounded up.
+ *   - The final alignment is always at least ::freelist_alignment(fl).
  *
  * Internally, the allocator may consume more memory than the requested
  * @p bytes due to:
  *
- *   - the freelist header stored immediately before the user pointer
- *   - padding required to satisfy the requested alignment
- *   - full-block consumption when the tail fragment would be too small
+ *   - a freelist header stored immediately before the user pointer
+ *   - padding required to satisfy the effective alignment
+ *   - full-block consumption when the remaining fragment would be too small
  *     to form another free block
  *
- * The caller only sees a pointer to a region of size @p bytes, aligned
- * to the requested (or stricter) alignment.
+ * These details are tracked internally and do not affect the size or alignment
+ * guarantees of the pointer returned to the caller.
  *
  * @param fl
  *        Pointer to a valid ::freelist_t. Must not be NULL.
@@ -4291,174 +4422,284 @@ void* alloc_freelist(freelist_t* fl, size_t size, bool zero);
  *        Number of user bytes requested. Must be greater than zero.
  *
  * @param alignment
- *        Desired alignment for the returned pointer. If zero, the freelist's
- *        base alignment is used. Non–power-of-two values are rounded up.
- *        The resulting alignment is always at least ::freelist_alignment(fl).
+ *        Desired alignment for the returned pointer. If zero, the freelist’s
+ *        base alignment is used. Non–power-of-two values are rounded up. The
+ *        effective alignment is guaranteed to be at least
+ *        ::freelist_alignment(fl).
  *
  * @param zeroed
- *        If true, the user region is zero-initialized before being returned.
+ *        If true, the user-visible region is zero-initialized before being
+ *        returned.
  *
  * @return
- *        Pointer to an aligned user region on success, or NULL on error.
- *        On failure, errno is set to:
+ *        A ::void_ptr_expect_t describing the result:
  *
- *        - EINVAL  if arguments are invalid or alignment normalization fails
- *        - ENOMEM  if no suitable free block is available
+ *        - @c has_value == true  
+ *          @c u.value points to an aligned user region of @p bytes.
+ *
+ *        - @c has_value == false  
+ *          @c u.error indicates the reason for failure:
+ *
+ *          - ::INVALID_ARG  
+ *              if @p fl is NULL or @p bytes is zero
+ *
+ *          - ::ALIGNMENT_ERROR  
+ *              if alignment normalization fails or overflows
+ *
+ *          - ::CAPACITY_OVERFLOW  
+ *              if no suitable free block is available
  *
  * @note
- *        The returned pointer can be freed with ::return_freelist_element.
- *        The alignment requested here does not change the freelist's global
- *        accounting semantics.
+ *        The returned pointer must be released using
+ *        ::return_freelist_element(). Individual blocks must not be freed
+ *        with @c free().
  *
+ * @note
+ *        Requesting a stricter alignment may increase internal fragmentation
+ *        but does not otherwise affect freelist accounting semantics.
+ *
+ * @par Example
  * @code{.c}
- * freelist_t* fl = init_dynamic_freelist(4096, 0, false);
- * if (!fl) return 1;
+ * freelist_expect_t fr = init_dynamic_freelist(4096, 0, false);
+ * if (!fr.has_value) {
+ *     return 1;
+ * }
  *
- * size_t align = 64;
- * void* p = alloc_freelist_aligned(fl, 256, align, true);
- * if (!p) return 1;
+ * freelist_t *fl = fr.u.value;
+ *
+ * void_ptr_expect_t r =
+ *     alloc_freelist_aligned(fl, 256, 64, true);
+ *
+ * if (!r.has_value) {
+ *     // handle allocation failure via r.u.error
+ *     free_freelist(fl);
+ *     return 1;
+ * }
+ *
+ * void *p = r.u.value;
+ *
+ * // use p ...
  *
  * return_freelist_element(fl, p);
  * free_freelist(fl);
  * @endcode
+ *
+ * @see alloc_freelist
+ * @see return_freelist_element
  */
-void* alloc_freelist_aligned(freelist_t* fl,
-                             size_t      bytes,
-                             size_t      alignment,
-                             bool        zeroed);
+
+void_ptr_expect_t alloc_freelist_aligned(freelist_t* fl,
+                                         size_t      bytes,
+                                         size_t      alignment,
+                                         bool        zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
  * @brief Resize an allocation managed by a freelist.
  *
- * This function behaves similarly to the standard C library `realloc()`,
- * but operates on memory obtained from a ::freelist_t. The behavior is:
+ * This function provides a `realloc`-like interface for memory obtained from
+ * a ::freelist_t. Because freelists do not support in-place growth, resizing
+ * follows these rules:
  *
- *   - If @p ptr is NULL, this is equivalent to ::alloc_freelist.
- *   - If @p new_size <= @p old_size, the existing pointer is returned
- *     unchanged (the block is not shrunk).
+ *   - If @p ptr is @c NULL, the call behaves like ::alloc_freelist().
+ *   - If @p new_size is less than or equal to @p old_size, the existing
+ *     pointer is returned unchanged (the block is not shrunk).
  *   - If the block must grow, a new block is allocated, the first
- *     @p old_size bytes are copied, the old block is freed via
- *     ::return_freelist_element, and the new pointer is returned.
+ *     @p old_size bytes are copied, the old block is returned to the freelist
+ *     via ::return_freelist_element(), and the new pointer is returned.
  *
- * The returned pointer is always aligned to ::freelist_alignment(fl).
+ * The returned pointer is always aligned to at least
+ * ::freelist_alignment(fl).
  *
  * @param fl
- *        Pointer to a valid freelist. Must not be NULL.
+ *        Pointer to a valid ::freelist_t. Must not be NULL.
  *
  * @param ptr
- *        Existing user pointer previously returned by ::alloc_freelist.
- *        May be NULL.
+ *        Existing user pointer previously returned by ::alloc_freelist or
+ *        ::alloc_freelist_aligned. May be NULL.
  *
  * @param old_size
  *        Number of user bytes originally allocated at @p ptr.
- *        The caller must supply this value; it is not stored by the freelist.
+ *        The freelist does not store user sizes internally; the caller must
+ *        supply an accurate value.
  *
  * @param new_size
  *        Number of user bytes requested for the resized allocation.
+ *        Must be greater than zero.
  *
  * @param zeroed
- *        If true, any newly added region (beyond old_size) is zero-filled.
+ *        If true and the allocation grows, the newly added region
+ *        (@c [old_size, new_size)) is zero-initialized.
  *
  * @return
- *        Pointer to a resized allocation on success, or NULL on failure.
- *        On error, errno is set to:
+ *        A ::void_ptr_expect_t describing the result:
  *
- *        - EINVAL : invalid freelist pointer or size arguments  
- *        - ENOMEM : insufficient free space to grow the block  
+ *        - @c has_value == true  
+ *              @c u.value points to:
+ *                - the original pointer if no growth was required, or
+ *                - a newly allocated block if growth succeeded.
+ *
+ *        - @c has_value == false  
+ *              @c u.error contains the reason for failure, typically:
+ *                - ::INVALID_ARG        — invalid arguments (e.g. NULL freelist,
+ *                                          zero @p new_size)
+ *                - ::CAPACITY_OVERFLOW  — insufficient free space to grow
  *
  * @note
- *        The freelist does not currently support in-place growth; all expansions
- *        require allocation+copy+free.
+ *        The freelist never frees memory implicitly. Old blocks remain valid
+ *        until explicitly returned to the freelist.
  *
  * @note
- *        The caller must track old_size accurately. The freelist does not
- *        store user-requested sizes internally.
+ *        In-place growth is not supported; all expansions require
+ *        allocate–copy–return semantics.
+ *
+ * @note
+ *        Passing a pointer not allocated from this freelist results in
+ *        undefined behavior.
  *
  * @code{.c}
- * freelist_t* fl = init_dynamic_freelist(4096, 0, false);
- * void* p = alloc_freelist(fl, 64, false);
+ * freelist_expect_t flr = init_dynamic_freelist(4096, 0, false);
+ * if (!flr.has_value) {
+ *     // handle freelist initialization error
+ *     return;
+ * }
+ *
+ * freelist_t* fl = flr.u.value;
+ *
+ * void_ptr_expect_t a = alloc_freelist(fl, 64, false);
+ * if (!a.has_value) return;
  *
  * // Grow from 64 bytes to 200 bytes
- * void* q = realloc_freelist(fl, p, 64, 200, true);
- * if (!q) return 1;
+ * void_ptr_expect_t r =
+ *     realloc_freelist(fl, a.u.value, 64, 200, true);
  *
- * return_freelist_element(fl, q);
+ * if (!r.has_value) {
+ *     // handle resize failure via r.u.error
+ *     return;
+ * }
+ *
+ * return_freelist_element(fl, r.u.value);
  * free_freelist(fl);
  * @endcode
+ *
+ * @see alloc_freelist
+ * @see alloc_freelist_aligned
+ * @see return_freelist_element
  */
-void* realloc_freelist(freelist_t* fl, void* variable, size_t old_size, size_t new_size, bool zeroed);
+void_ptr_expect_t realloc_freelist(freelist_t* fl, void* variable, size_t old_size, size_t new_size, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Resize an aligned freelist allocation.
+ * @brief Resize an aligned allocation managed by a freelist.
  *
- * This function extends ::realloc_freelist by allowing the caller to specify
- * a desired alignment for the new allocation. The behavior mirrors standard
- * `realloc()` semantics with the following rules:
+ * This function is the alignment-aware counterpart to
+ * ::realloc_freelist. It provides `realloc`-like behavior for memory
+ * obtained from a ::freelist_t, while allowing the caller to request a
+ * specific alignment for the resized allocation.
  *
- *   - If @p ptr is NULL, the call behaves like ::alloc_freelist_aligned.
- *   - If @p new_size <= @p old_size, the original pointer is returned
- *     unchanged (no shrinking occurs).
- *   - If the block must grow, a new aligned block is allocated, the first
- *     @p old_size bytes are copied, and the old block is freed.
+ * Because freelists do not support in-place growth, expansion is always
+ * implemented as:
  *
- * The returned pointer is aligned to at least:
+ *   1. Allocate a new block of @p new_size bytes with the requested
+ *      alignment using ::alloc_freelist_aligned().
+ *   2. Copy the first @p old_size bytes from @p ptr into the new block.
+ *   3. Optionally zero-fill the newly added tail region.
+ *   4. Return the old block to the freelist via ::return_freelist_element().
+ *
+ * If @p new_size is less than or equal to @p old_size, the function performs
+ * a no-op and returns the original pointer unchanged.
+ *
+ * The effective alignment of the returned block is:
  *
  *     max(requested_alignment, freelist_alignment(fl))
  *
  * @param fl
- *        Pointer to a valid freelist. Must not be NULL.
+ *        Pointer to a valid ::freelist_t. Must not be NULL.
  *
  * @param ptr
- *        Existing aligned pointer previously returned by
- *        ::alloc_freelist_aligned or ::alloc_freelist.
+ *        Existing pointer previously returned by ::alloc_freelist or
+ *        ::alloc_freelist_aligned. May be NULL, in which case this function
+ *        behaves like ::alloc_freelist_aligned.
  *
  * @param old_size
- *        Number of user bytes originally allocated at @p ptr.
+ *        Number of user bytes originally allocated at @p ptr. The freelist
+ *        does not track user sizes internally; the caller must supply this
+ *        value accurately.
  *
  * @param new_size
  *        Number of user bytes requested for the resized allocation.
+ *        Must be greater than zero.
  *
  * @param zeroed
- *        If true, any newly added region (beyond old_size) is zero-filled.
+ *        If true and a new block is allocated, the newly added tail region
+ *        (bytes [@p old_size, @p new_size)) is zero-filled.
  *
  * @param alignment
- *        Desired alignment for the returned pointer. Non–power-of-two values
- *        are rounded up; final alignment is always at least ::freelist_alignment(fl).
+ *        Desired alignment for the returned pointer. If zero, the freelist’s
+ *        base alignment is used. Non–power-of-two values are rounded up.
  *
  * @return
- *        Pointer to a resized, aligned block on success, or NULL on failure.
- *        On error, errno is set to:
+ *        A ::void_ptr_expect_t with the following semantics:
  *
- *        - EINVAL : invalid freelist or alignment  
- *        - ENOMEM : insufficient free space  
+ *        - @c has_value == true  
+ *          @c u.value points to the resized allocation (which may be the
+ *          original pointer if no growth was required).
+ *
+ *        - @c has_value == false  
+ *          @c u.error indicates the reason for failure, typically one of:
+ *            - ::INVALID_ARG        — invalid freelist, size, or alignment
+ *            - ::ALIGNMENT_ERROR   — requested alignment cannot be satisfied
+ *            - ::CAPACITY_OVERFLOW — insufficient free space to grow
  *
  * @note
- *        Like ::realloc_freelist, this function never shrinks blocks.
+ *        This function never shrinks allocations. Requests with
+ *        @p new_size <= @p old_size return the original pointer unchanged.
  *
  * @note
- *        If @p ptr was allocated with a lower alignment than requested here,
- *        the returned block may move.
+ *        If the original block was allocated with a weaker alignment than
+ *        requested here, the returned block will necessarily move.
+ *
+ * @warning
+ *        Any pointers returned by earlier allocations that overlap the freed
+ *        block become invalid after a successful grow operation.
  *
  * @code{.c}
- * freelist_t* fl = init_dynamic_freelist(4096, 0, false);
- * void* p = alloc_freelist_aligned(fl, 128, 64, false);
+ * freelist_expect_t f = init_dynamic_freelist(4096, 0, false);
+ * if (!f.has_value) return 1;
  *
- * // Grow to 512 bytes, keeping 64-byte alignment
- * void* q = realloc_freelist_aligned(fl, p, 128, 512, true, 64);
- * if (!q) return 1;
+ * freelist_t* fl = f.u.value;
+ *
+ * // Initial allocation with 64-byte alignment
+ * void_ptr_expect_t a = alloc_freelist_aligned(fl, 128, 64, false);
+ * if (!a.has_value) return 1;
+ *
+ * void* p = a.u.value;
+ *
+ * // Grow to 512 bytes, preserving alignment
+ * void_ptr_expect_t r =
+ *     realloc_freelist_aligned(fl, p, 128, 512, true, 64);
+ *
+ * if (!r.has_value) {
+ *     // handle error via r.u.error
+ *     return 1;
+ * }
+ *
+ * void* q = r.u.value;
  *
  * return_freelist_element(fl, q);
  * free_freelist(fl);
  * @endcode
+ *
+ * @see realloc_freelist
+ * @see alloc_freelist_aligned
+ * @see return_freelist_element
  */
-void* realloc_freelist_aligned(freelist_t* fl,
-                               void*       ptr,
-                               size_t      old_size,
-                               size_t      new_size,
-                               bool        zeroed,
-                               size_t      alignment);
+void_ptr_expect_t realloc_freelist_aligned(freelist_t* fl,
+                                           void*       ptr,
+                                           size_t      old_size,
+                                           size_t      new_size,
+                                           bool        zeroed,
+                                           size_t      alignment);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -4944,6 +5185,250 @@ size_t min_freelist_alloc();
  * @endcode
  */
 bool freelist_stats(const freelist_t *fl, char *buffer, size_t buffer_size);
+// ================================================================================ 
+// ================================================================================ 
+
+/**
+ * @brief Allocate memory from a freelist via allocator vtable.
+ *
+ * Requests a block of at least @p size bytes from the freelist associated
+ * with @p ctx. On success, returns a valid pointer wrapped in
+ * ::void_ptr_expect_t. On failure, returns an error code.
+ *
+ * @param ctx    Allocator context; must point to a valid ::freelist_t.
+ * @param size   Number of bytes requested (> 0).
+ * @param zeroed If true, the returned memory is zero-initialized.
+ *
+ * @return ::void_ptr_expect_t containing a pointer on success or an error
+ *         code on failure.
+ */
+static inline void_ptr_expect_t
+freelist_v_alloc(void *ctx, size_t size, bool zeroed) {  
+    freelist_t *fl = (freelist_t *)ctx;
+    if (fl == NULL) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+    if (size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+
+    /* delegate */
+    return alloc_freelist(fl, size, zeroed);
+}
+
+// ----------------------------------------------------------------------------- 
+
+/**
+ * @brief Allocate aligned memory from a freelist via allocator vtable.
+ *
+ * Requests a block of at least @p size bytes aligned to @p align. The
+ * effective alignment is validated and normalized by the freelist allocator.
+ *
+ * @param ctx    Allocator context; must point to a valid ::freelist_t.
+ * @param size   Number of bytes requested (> 0).
+ * @param align  Requested alignment in bytes (0 => freelist default).
+ * @param zeroed If true, the returned memory is zero-initialized.
+ *
+ * @return ::void_ptr_expect_t containing a pointer on success or an error
+ *         code on failure.
+ */
+static inline void_ptr_expect_t
+freelist_v_alloc_aligned(void *ctx, size_t size, size_t align, bool zeroed) {
+    freelist_t *fl = (freelist_t *)ctx;
+    if (fl == NULL) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+    if (size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+
+    /* Let alloc_freelist_aligned normalize/validate alignment if that's its policy.
+       If you prefer to pre-check here, add power-of-two validation + min clamp. */
+    return alloc_freelist_aligned(fl, size, align, zeroed);
+}
+
+// ----------------------------------------------------------------------------- 
+
+/**
+ * @brief Reallocate a freelist allocation via allocator vtable.
+ *
+ * Resizes a previously allocated block. If @p old_ptr is NULL, behaves
+ * like an allocation. Shrinking does not release memory.
+ *
+ * @param ctx       Allocator context; must point to a valid ::freelist_t.
+ * @param old_ptr   Existing allocation or NULL.
+ * @param old_size  Size of the existing allocation in bytes.
+ * @param new_size  Requested new size in bytes (> 0).
+ * @param zeroed    If true, newly added memory is zero-initialized.
+ *
+ * @return ::void_ptr_expect_t containing the resized pointer on success
+ *         or an error code on failure.
+ */
+static inline void_ptr_expect_t
+freelist_v_realloc(void *ctx,
+                   void *old_ptr,
+                   size_t old_size,
+                   size_t new_size,
+                   bool zeroed) {
+    freelist_t *fl = (freelist_t *)ctx;
+    if (fl == NULL) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    /* Policy: new_size == 0 is invalid (mirrors your v_realloc backend). */
+    if (new_size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+
+    return realloc_freelist(fl, old_ptr, old_size, new_size, zeroed);
+}
+
+// ----------------------------------------------------------------------------- 
+
+/**
+ * @brief Reallocate a freelist allocation with alignment via allocator vtable.
+ *
+ * Resizes a previously allocated block while enforcing a requested alignment.
+ * If the block must grow, a new aligned block is allocated and the old block
+ * is returned to the freelist.
+ *
+ * @param ctx       Allocator context; must point to a valid ::freelist_t.
+ * @param old_ptr   Existing allocation or NULL.
+ * @param old_size  Size of the existing allocation in bytes.
+ * @param new_size  Requested new size in bytes (> 0).
+ * @param zeroed    If true, newly added memory is zero-initialized.
+ * @param align     Requested alignment in bytes (0 => freelist default).
+ *
+ * @return ::void_ptr_expect_t containing the resized pointer on success
+ *         or an error code on failure.
+ */
+static inline void_ptr_expect_t
+freelist_v_realloc_aligned(void *ctx,
+                           void *old_ptr,
+                           size_t old_size,
+                           size_t new_size,
+                           bool zeroed,
+                           size_t align) {
+    freelist_t *fl = (freelist_t *)ctx;
+    if (fl == NULL) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    if (new_size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+
+    return realloc_freelist_aligned(fl, old_ptr, old_size, new_size, zeroed, align);
+}
+
+// ----------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a previously allocated block to a freelist.
+ *
+ * Restores a block obtained from the freelist back into its free list.
+ * The pointer must have been returned by this allocator.
+ *
+ * @param ctx Allocator context; must point to a valid ::freelist_t.
+ * @param ptr Pointer previously obtained from this allocator.
+ */
+
+static inline void
+freelist_v_return(void *ctx, void *ptr) {
+    freelist_t *fl = (freelist_t *)ctx;
+    if (fl == NULL || ptr == NULL) {
+        return;
+    }
+
+    /* If your return_freelist_element currently returns void, change this wrapper
+       to call it and return true. If it returns bool, propagate it. */
+    return return_freelist_element(fl, ptr);
+}
+
+// ----------------------------------------------------------------------------- 
+
+/**
+ * @brief Destroy a freelist allocator via allocator vtable.
+ *
+ * Releases all resources owned by the freelist. If the freelist owns its
+ * backing arena, the arena is destroyed as well.
+ *
+ * @param ctx Allocator context; must point to a valid ::freelist_t.
+ */
+
+static inline void
+freelist_v_free(void *ctx) {
+    freelist_t *fl = (freelist_t *)ctx;
+    if (fl == NULL) {
+        return;
+    }
+
+    /* If your free_freelist returns void, call it and return true. */
+    return free_freelist(fl);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Obtain an allocator vtable backed by a freelist allocator.
+ *
+ * Returns an ::allocator_vtable_t whose function pointers implement allocation,
+ * reallocation, aligned allocation, return, and destruction operations using
+ * a ::freelist_t as the underlying allocator.
+ *
+ * The returned vtable is stateless and does not own any memory. It may be
+ * reused for multiple freelist instances; the actual allocator state is
+ * provided at call time via the @c ctx parameter passed to each vtable
+ * function.
+ *
+ * @return An ::allocator_vtable_t configured for freelist-based allocation.
+ *
+ * @note The caller is responsible for ensuring that the @c ctx argument passed
+ *       to the vtable functions points to a valid ::freelist_t.
+ *
+ * @note This function does not allocate, initialize, or destroy a freelist.
+ *       It only provides the function bindings required to use a freelist
+ *       through the generic allocator interface.
+ *
+ * @warning Passing a context pointer that is not a valid ::freelist_t to any
+ *          function in the returned vtable results in undefined behavior.
+ *
+ * @par Example
+ * Using a freelist through the generic allocator interface:
+ *
+ * @code{.c}
+ * freelist_expect_t flr = init_dynamic_freelist(4096, 0, false);
+ * if (!flr.has_value) {
+ *     // handle error
+ *     return;
+ * }
+ *
+ * freelist_t *fl = flr.u.value;
+ *
+ * allocator_vtable_t alloc = freelist_allocator();
+ *
+ * void_ptr_expect_t r = alloc.alloc(fl, 128, true);
+ * if (!r.has_value) {
+ *     // handle allocation error
+ * }
+ *
+ * alloc.ret(fl, r.u.value);
+ * alloc.free(fl);
+ * @endcode
+ */
+static inline allocator_vtable_t
+freelist_allocator(void) {
+    allocator_vtable_t vt;
+
+    vt.alloc           = freelist_v_alloc;
+    vt.alloc_aligned   = freelist_v_alloc_aligned;
+    vt.realloc         = freelist_v_realloc;
+    vt.realloc_aligned = freelist_v_realloc_aligned;
+    vt.ret             = freelist_v_return;   /* or .return_fn depending on your struct */
+    vt.free            = freelist_v_free;
+
+    return vt;
+}
+
 // ================================================================================ 
 // ================================================================================ 
 

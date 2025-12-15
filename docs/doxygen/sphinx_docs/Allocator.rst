@@ -1024,6 +1024,50 @@ min_freelist_alloc
 
 .. _context:
 
+Freelist Context Functions
+--------------------------
+
+The following functions provide the freelist-backed implementation of the
+allocator vtable interface. They adapt an ``freelist_t`` instance to the generic
+allocator API by exposing allocation, reallocation, and bulk deallocation
+operations in a consistent form.
+
+freelist_v_alloc
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_v_alloc
+   :project: csalt
+
+freelist_v_alloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_v_alloc_aligned
+   :project: csalt
+
+freelist_v_realloc
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_v_realloc
+   :project: csalt
+
+freelist_v_realloc_aligned
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_v_realloc_aligned
+   :project: csalt
+
+freelist_v_return
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_v_return
+   :project: csalt
+
+freelist_v_free
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: freelist_v_free
+   :project: csalt
+
 Buddy Allocator Overview
 ========================
 

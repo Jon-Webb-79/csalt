@@ -2523,71 +2523,96 @@ struct freelist_t {
 static size_t  freelist_min_request = sizeof(free_block_t);
 // -------------------------------------------------------------------------------- 
 
-freelist_t* init_freelist_with_arena(arena_t* arena,
-                                     size_t  size,
-                                     size_t  alignment)
-{
+static inline freelist_expect_t freelist_ok(freelist_t* fl) {
+    return (freelist_expect_t){
+        .has_value = true,
+        .u.value   = fl
+    };
+}
+// -------------------------------------------------------------------------------- 
+
+static inline freelist_expect_t freelist_err(ErrorCode e) {
+    return (freelist_expect_t){
+        .has_value = false,
+        .u.error   = e
+    };
+}
+// -------------------------------------------------------------------------------- 
+
+freelist_expect_t init_freelist_with_arena(arena_t* arena,
+                                           size_t  size,
+                                           size_t  alignment_in) {
     if (!arena) {
-        errno = EINVAL;
-        return NULL;
+        return freelist_err(NULL_POINTER);
     }
 
     if (size < freelist_min_request) {
-        errno = EINVAL;
-        return NULL;
+        return freelist_err(INVALID_ARG);
     }
 
-    // Normalize alignment (0 => at least max_align_t, power of two)
-    if (alignment == 0) alignment = alignof(max_align_t);
+    /* Normalize alignment (0 => at least max_align_t, power of two) */
+    size_t alignment = (alignment_in != 0u) ? alignment_in : alignof(max_align_t);
+
     if (!_is_pow2(alignment)) {
         alignment = _next_pow2(alignment);
-        if (!alignment) { errno = EINVAL; return NULL; }
+        if (alignment == 0u) {
+            return freelist_err(ALIGNMENT_ERROR);
+        }
     }
     if (alignment < alignof(max_align_t)) {
         alignment = alignof(max_align_t);
     }
 
-    // Calculate total allocation: freelist_t struct + usable memory
+    /* Compute struct and usable sizes (both aligned) */
     size_t struct_size = _align_up_size(sizeof(freelist_t), alignment);
     size_t usable_size = _align_up_size(size, alignment);
-    size_t total_alloc = struct_size + usable_size;
 
-    // Ensure usable_size is at least large enough for free_block_t
     if (usable_size < sizeof(free_block_t)) {
         usable_size = sizeof(free_block_t);
-        total_alloc = struct_size + usable_size;
     }
 
-    // Single allocation from arena for everything
+    /* Overflow guard: total_alloc = struct_size + usable_size */
+    if (struct_size > (SIZE_MAX - usable_size)) {
+        return freelist_err(INVALID_ARG); /* or CAPACITY_OVERFLOW if you prefer */
+    }
+    size_t total_alloc = struct_size + usable_size;
+
+    /* Single allocation from arena for everything */
     void_ptr_expect_t expect = alloc_arena(arena, total_alloc, false);
     if (!expect.has_value) {
-        return NULL;
+        /* Propagate the more specific allocation failure */
+        return freelist_err(expect.u.error);
     }
-    void* base = expect.u.value;
 
-    // freelist_t struct at the beginning
+    void* base = expect.u.value;
+    if (!base) {
+        /* Defensive: should not happen if expect.has_value == true */
+        return freelist_err(BAD_ALLOC);
+    }
+
+    /* freelist_t struct at the beginning */
     freelist_t* fl = (freelist_t*)base;
     memset(fl, 0, sizeof *fl);
 
-    // Usable memory starts after the struct (aligned)
+    /* Usable memory starts after the struct region (already aligned) */
     void* memory = (uint8_t*)base + struct_size;
 
-    // Initialize the freelist structure
+    /* Initialize freelist metadata */
     fl->memory       = memory;
-    fl->cur          = (uint8_t*)memory;    // Next available slot (initially at start)
-    fl->len          = 0;
+    fl->cur          = (uint8_t*)memory;
+    fl->len          = 0u;
     fl->alloc        = usable_size;
     fl->tot_alloc    = total_alloc;
     fl->alignment    = alignment;
-    fl->owns_memory  = false;               // Underlying arena is owned by caller
+    fl->owns_memory  = false;     /* arena owns the backing allocation */
     fl->parent_arena = arena;
 
-    // Initialize with one large free block
-    fl->head         = (free_block_t*)memory;
-    fl->head->size   = usable_size;
-    fl->head->next   = NULL;
+    /* Initialize with one large free block */
+    fl->head       = (free_block_t*)memory;
+    fl->head->size = usable_size;
+    fl->head->next = NULL;
 
-    return fl;
+    return freelist_ok(fl);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -2596,204 +2621,219 @@ inline size_t min_freelist_alloc() {
 }
 // -------------------------------------------------------------------------------- 
 
-freelist_t* init_dynamic_freelist(size_t bytes, size_t alignment, bool resize) {
-#if ARENA_ENABLE_DYNAMIC
-    /* Treat `bytes` as the desired minimum usable payload. */
-    if (bytes < freelist_min_request) {
-        errno = EINVAL;
-        return NULL;
-    } 
-
-    if (bytes == 0) {
+freelist_expect_t init_dynamic_freelist(size_t bytes, size_t alignment, bool resize) {
+#if !ARENA_ENABLE_DYNAMIC
+    return (freelist_expect_t){
+        .has_value = false,
+        .u.error   = INVALID_ARG /* or NOT_SUPPORTED if you have it */
+    };
+#else
+    /* Defaults / argument validation */
+    if (bytes == 0u) {
         bytes = FREELIST_DEFAULT_MIN_ALLOC;
     }
+    if (bytes < freelist_min_request) {
+        return (freelist_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
+    }
 
-    /* Normalize alignment (0 => at least max_align_t, power of two). */
-    if (alignment == 0) alignment = alignof(max_align_t);
-    if (!_is_pow2(alignment)) {
-        alignment = _next_pow2(alignment);
-        if (!alignment) {
-            errno = EINVAL;
-            return NULL;
+    /* Normalize alignment (0 => max_align_t, round to next pow2, clamp >= max_align_t) */
+    size_t a = (alignment != 0u) ? alignment : alignof(max_align_t);
+
+    if (!_is_pow2(a)) {
+        a = _next_pow2(a);
+        if (a == 0u) {
+            return (freelist_expect_t){
+                .has_value = false,
+                .u.error   = ALIGNMENT_ERROR
+            };
         }
     }
-    if (alignment < alignof(max_align_t)) {
-        alignment = alignof(max_align_t);
+    if (a < alignof(max_align_t)) {
+        a = alignof(max_align_t);
     }
 
-    /* We know we at least need space for:
-       - aligned freelist_t
-       - at least one free_block_t
-       - and hopefully `bytes` worth of payload.
+    /* Compute minimum user-space required:
+       [aligned freelist_t] + [at least one free_block_t] + [payload bytes] */
+    const size_t struct_size_aligned = _align_up_size(sizeof(freelist_t), a);
+    const size_t min_free_region     = sizeof(free_block_t);
+    const size_t requested_payload   = bytes;
 
-       We'll ask the arena for a bit more than that to give it room
-       for its own internal bookkeeping. The arena may round this up
-       or down; we'll query the actual available bytes afterward. */
-    size_t struct_size_aligned = _align_up_size(sizeof(freelist_t), alignment);
-    size_t min_free_region     = sizeof(free_block_t);
-    size_t requested_payload   = bytes;
-
-    /* Guard against overflow in the sums. */
+    /* Overflow guard */
     if (struct_size_aligned > SIZE_MAX - min_free_region ||
-        struct_size_aligned + min_free_region > SIZE_MAX - requested_payload) {
-        errno = EINVAL;
-        return NULL;
+        (struct_size_aligned + min_free_region) > SIZE_MAX - requested_payload) {
+        return (freelist_expect_t){
+            .has_value = false,
+            .u.error   = CAPACITY_OVERFLOW
+        };
     }
 
-    size_t min_total_user = struct_size_aligned + min_free_region + requested_payload;
+    const size_t min_total_user =
+        struct_size_aligned + min_free_region + requested_payload;
 
-    /* Ask the arena to manage at least min_total_user bytes of user space.
-       Let it decide the actual chunk size; we will adapt to the real
-       arena_remaining() afterward. */
-    bool   arena_resize = resize;     /* currently we still treat freelist as fixed-size;
-                                         you can keep this false if you prefer */
-    size_t min_chunk    = 0;          /* or some policy if you plan to grow later */
+    /* Create owned arena (dynamic) */
+    const bool   arena_resize = resize;
+    const size_t min_chunk    = 0u; /* policy hook */
 
-    arena_expect_t a = init_dynamic_arena(min_total_user,
-                                        arena_resize,
-                                        min_chunk,
-                                        alignment);  
-    if (!a.has_value) {
-        return NULL;
+    arena_expect_t ar = init_dynamic_arena(/*bytes=*/min_total_user,
+                                          /*resize=*/arena_resize,
+                                          /*min_chunk_in=*/min_chunk,
+                                          /*base_align_in=*/a);
+    if (!ar.has_value) {
+        return (freelist_expect_t){
+            .has_value = false,
+            .u.error   = ar.u.error
+        };
     }
-    arena_t* arena = a.u.value;
+
+    arena_t* arena = ar.u.value;
     if (!arena) {
-        return NULL;
+        /* defensive; shouldn't happen if has_value == true */
+        return (freelist_expect_t){
+            .has_value = false,
+            .u.error   = BAD_ALLOC
+        };
     }
 
-    /* Now ask the arena how many bytes it actually exposes as usable. */
-    size_t available = arena_remaining(arena);
-    if (available < struct_size_aligned + min_free_region) {
-        /* Not enough room even for control structures. */
-        free_arena(arena);
-        errno = ENOMEM;
-        return NULL;
+    /* Determine actual usable bytes exposed by arena */
+    const size_t available = arena_remaining(arena);
+    if (available < (struct_size_aligned + min_free_region)) {
+        (void)free_arena(arena);
+        return (freelist_expect_t){
+            .has_value = false,
+            .u.error   = BAD_ALLOC
+        };
     }
 
-    /* Carve `available` bytes from the arena in one shot. */
-    void_ptr_expect_t expect2 = alloc_arena(arena, available, false);
-    if (!expect2.has_value) {
-        free_arena(arena);
-        return NULL;
+    /* Carve a single contiguous region from the arena */
+    void_ptr_expect_t mem = alloc_arena(arena, available, false);
+    if (!mem.has_value) {
+        (void)free_arena(arena);
+        return (freelist_expect_t){
+            .has_value = false,
+            .u.error   = mem.u.error
+        };
     }
-    void* base = expect2.u.value;
 
-    /* freelist_t at the beginning (aligned by construction). */
+    void* base = mem.u.value;
+
+    /* freelist_t at the beginning */
     freelist_t* fl = (freelist_t*)base;
     memset(fl, 0, sizeof *fl);
 
-    /* Usable memory starts after the aligned freelist_t. */
-    void*  memory     = (uint8_t*)base + struct_size_aligned;
-    size_t usable_sz  = available - struct_size_aligned;
+    /* Usable memory starts after the aligned freelist_t */
+    void*  memory    = (uint8_t*)base + struct_size_aligned;
+    size_t usable_sz = available - struct_size_aligned;
 
     /* Initialize freelist */
     fl->memory       = memory;
     fl->cur          = (uint8_t*)memory;
-    fl->len          = 0;
-    fl->alloc        = usable_sz;      /* actual usable region we got */
-    fl->tot_alloc    = available;      /* total bytes carved from arena */
-    fl->alignment    = alignment;
+    fl->len          = 0u;
+    fl->alloc        = usable_sz;
+    fl->tot_alloc    = available;
+    fl->alignment    = a;
     fl->parent_arena = arena;
     fl->owns_memory  = true;
 
-    /* One large free block spans the entire usable region. */
+    /* One large free block spans the entire usable region */
     fl->head       = (free_block_t*)memory;
     fl->head->size = usable_sz;
     fl->head->next = NULL;
 
-    return fl;
-#else
-    errno = ENOTSUP;
-    return NULL;
+    return (freelist_expect_t){
+        .has_value = true,
+        .u.value   = fl
+    };
 #endif
 }
+
 // -------------------------------------------------------------------------------- 
 
-freelist_t* init_static_freelist(void* buffer, size_t bytes, size_t alignment) {
+freelist_expect_t init_static_freelist(void* buffer, size_t bytes, size_t alignment) {
+    /* Basic input validation */
+    if (!buffer) {
+        return freelist_err(NULL_POINTER);
+    }
     if (bytes < freelist_min_request) {
-        errno = EINVAL;
-        return NULL;
+        return freelist_err(INVALID_ARG);
     }
 
-    if (bytes == 0) {
-        bytes = FREELIST_DEFAULT_MIN_ALLOC;  // or treat as error
+    /* Your existing policy treats bytes==0 as “default”; but here it’s static,
+       so we cannot conjure storage. Keep it an error (recommended). */
+    if (bytes == 0u) {
+        return freelist_err(INVALID_ARG);
     }
 
-    // Early obvious minimum: struct + at least one free block
-    {
-        size_t min_needed_raw = sizeof(freelist_t) + sizeof(free_block_t);
-        if (bytes < min_needed_raw) {
-            errno = EINVAL;
-            return NULL;
+    /* Must at least fit control structs in the caller buffer */
+    if (bytes < (sizeof(freelist_t) + sizeof(free_block_t))) {
+        return freelist_err(INVALID_ARG);
+    }
+
+    /* Normalize alignment (0 => max_align_t, power-of-two, clamp floor) */
+    size_t a = (alignment != 0u) ? alignment : alignof(max_align_t);
+    if (!_is_pow2(a)) {
+        a = _next_pow2(a);
+        if (a == 0u) {
+            return freelist_err(ALIGNMENT_ERROR);
         }
     }
-
-    // Normalize alignment (0 => at least max_align_t, power of two)
-    if (alignment == 0) alignment = alignof(max_align_t);
-    if (!_is_pow2(alignment)) {
-        alignment = _next_pow2(alignment);
-        if (!alignment) { errno = EINVAL; return NULL; }
-    }
-    if (alignment < alignof(max_align_t)) {
-        alignment = alignof(max_align_t);
+    if (a < alignof(max_align_t)) {
+        a = alignof(max_align_t);
     }
 
-    // Create the underlying static arena over the user buffer
-    arena_expect_t a = init_static_arena(buffer, bytes, alignment);
-    if (!a.has_value) {
-        return NULL;
+    /* Create static arena over user buffer (arena header lives in buffer) */
+    arena_expect_t ar = init_static_arena(buffer, bytes, a);
+    if (!ar.has_value) {
+        /* propagate arena error */
+        return freelist_err(ar.u.error);
     }
-    arena_t* arena = a.u.value;
+    arena_t* arena = ar.u.value;
     if (!arena) {
-        return NULL;
+        /* defensive: should not happen if has_value==true */
+        return freelist_err(INVALID_ARG);
     }
 
-    // Calculate space needed for freelist struct (aligned)
-    size_t freelist_size = _align_up_size(sizeof(freelist_t), alignment);
+    /* Space for freelist header inside arena user space */
+    const size_t fl_hdr = _align_up_size(sizeof(freelist_t), a);
 
-    // Check if we have enough space for at least freelist + one free block
-    size_t arena_bytes = arena_alloc(arena);  // or arena->alloc if that's your API
-
-    size_t min_needed = freelist_size + sizeof(free_block_t);
-    if (arena_bytes < min_needed) {
-        errno = EINVAL;
-        return NULL;  // arena is too small for freelist + first block
+    /* Use arena usable capacity (data capacity, not total footprint) */
+    const size_t arena_bytes = arena_alloc(arena); /* or arena->alloc */
+    if (arena_bytes < (fl_hdr + sizeof(free_block_t))) {
+        return freelist_err(INVALID_ARG);
     }
 
-    // Usable space is what remains after the freelist header
-    size_t usable_size  = arena_bytes - freelist_size;
-    size_t total_needed = freelist_size + usable_size;
+    /* Carve everything (freelist header + remaining usable memory) in one shot */
+    const size_t usable_size  = arena_bytes - fl_hdr;
+    const size_t total_needed = fl_hdr + usable_size;
 
-    // Single allocation from arena for freelist struct + usable memory
-    void_ptr_expect_t expect = alloc_arena(arena, total_needed, false);
-    if (!expect.has_value) {
-        return NULL; 
+    void_ptr_expect_t mem = alloc_arena(arena, total_needed, false);
+    if (!mem.has_value) {
+        return freelist_err(mem.u.error);
     }
-    void* base = expect.u.value;
+    void* base = mem.u.value;
 
-    // freelist_t at the beginning
+    /* Stitch in-place */
     freelist_t* fl = (freelist_t*)base;
     memset(fl, 0, sizeof *fl);
 
-    // Usable memory starts after the struct (already aligned)
-    void* memory = (uint8_t*)base + freelist_size;
+    void* region = (uint8_t*)base + fl_hdr;
 
-    // Initialize freelist
-    fl->memory       = memory;              // Start of memory region
-    fl->cur          = (uint8_t*)memory;    // Next available slot
-    fl->len          = 0;
+    fl->memory       = region;
+    fl->cur          = (uint8_t*)region;
+    fl->len          = 0u;
     fl->alloc        = usable_size;
     fl->tot_alloc    = total_needed;
-    fl->alignment    = alignment;
+    fl->alignment    = a;
     fl->parent_arena = arena;
-    fl->owns_memory  = false;               // user owns the static buffer
+    fl->owns_memory  = false; /* caller owns the static buffer */
 
-    // One large initial free block
-    fl->head         = (free_block_t*)memory;
-    fl->head->size   = usable_size;
-    fl->head->next   = NULL;
+    fl->head       = (free_block_t*)region;
+    fl->head->size = usable_size;
+    fl->head->next = NULL;
 
-    return fl;
+    return freelist_ok(fl);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -2818,20 +2858,28 @@ void free_freelist(freelist_t* fl) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void* alloc_freelist_internal(freelist_t* fl,
-                                     size_t      bytes,
-                                     size_t      eff_align,
-                                     bool        zeroed) {
-    if (!fl || bytes == 0) {
-        errno = EINVAL;
-        return NULL;
+static void_ptr_expect_t alloc_freelist_internal(freelist_t* fl,
+                                                 size_t      bytes,
+                                                 size_t      eff_align,
+                                                 bool        zeroed)  {
+    if (!fl || bytes == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+
+    /* Normalize / validate effective alignment */
+    if (eff_align == 0u) {
+        eff_align = alignof(max_align_t);
+    }
+    if ((eff_align & (eff_align - 1u)) != 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = ALIGNMENT_ERROR };
     }
 
     const size_t header_size = sizeof(freelist_header_t);
 
+    /* Overflow guard for: user_addr = align_up(block_addr + header_size, eff_align)
+       and user_end = user_addr + bytes */
     if (bytes > SIZE_MAX - header_size - (eff_align - 1u)) {
-        errno = EINVAL;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
     }
 
     free_block_t** current = &fl->head;
@@ -2839,11 +2887,21 @@ static void* alloc_freelist_internal(freelist_t* fl,
     while (*current) {
         free_block_t* block      = *current;
         uintptr_t     block_addr = (uintptr_t)block;
-        uintptr_t     block_end  = block_addr + block->size;
 
-        uintptr_t after_header = block_addr + header_size;
+        /* Defensive overflow check for block_end */
+        if (block->size > (size_t)(UINTPTR_MAX - block_addr)) {
+            return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
+        }
+        uintptr_t block_end = block_addr + (uintptr_t)block->size;
+
+        uintptr_t after_header = block_addr + (uintptr_t)header_size;
         uintptr_t user_addr    = _align_up_uintptr(after_header, eff_align);
-        uintptr_t user_end     = user_addr + bytes;
+
+        /* Defensive overflow check for user_end */
+        if ((uintptr_t)bytes > (UINTPTR_MAX - user_addr)) {
+            return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
+        }
+        uintptr_t user_end = user_addr + (uintptr_t)bytes;
 
         if (user_end > block_end) {
             current = &block->next;
@@ -2851,15 +2909,14 @@ static void* alloc_freelist_internal(freelist_t* fl,
         }
 
         size_t offset    = (size_t)(user_addr - block_addr);
-        size_t used_size = (size_t)(user_end - block_addr);
+        size_t used_size = (size_t)(user_end  - block_addr);
         size_t remaining = block->size - used_size;
 
         size_t block_size_for_hdr;
 
         if (remaining >= sizeof(free_block_t)) {
-            // Split: front portion used for this allocation
-            free_block_t* new_block =
-                (free_block_t*)((uint8_t*)block + used_size);
+            /* Split block: front portion used, remainder stays free */
+            free_block_t* new_block = (free_block_t*)((uint8_t*)block + used_size);
             new_block->size = remaining;
             new_block->next = block->next;
 
@@ -2868,20 +2925,22 @@ static void* alloc_freelist_internal(freelist_t* fl,
 
             block_size_for_hdr = used_size;
         } else {
-            // Use entire block
+            /* Consume entire block */
             block_size_for_hdr = block->size;
-            user_end           = block_addr + block_size_for_hdr;
             *current           = block->next;
+
+            /* user_end is no longer meaningful; the header records real block size */
         }
 
-        uint8_t*           user_ptr = (uint8_t*)user_addr;
+        uint8_t* user_ptr = (uint8_t*)user_addr;
+
         freelist_header_t* hdr =
             (freelist_header_t*)(user_ptr - header_size);
 
         hdr->block_size = block_size_for_hdr;
         hdr->offset     = offset;
 
-        // IMPORTANT: count full block, not just user bytes
+        /* Account full block consumption */
         fl->len += block_size_for_hdr;
 
         uint8_t* block_used_end = (uint8_t*)block + block_size_for_hdr;
@@ -2893,37 +2952,76 @@ static void* alloc_freelist_internal(freelist_t* fl,
             memset(user_ptr, 0, bytes);
         }
 
-        return user_ptr;
+        return (void_ptr_expect_t){ .has_value = true, .u.value = user_ptr };
     }
 
-    errno = ENOMEM;
-    return NULL;
+    /* No block large enough */
+    return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
 }
-// -------------------------------------------------------------------------------- 
+// --------------------------------------------------------------------------------
 
-void* alloc_freelist(freelist_t* fl, size_t bytes, bool zeroed) {
-    if (!fl) { errno = EINVAL; return NULL; }
+void_ptr_expect_t alloc_freelist(freelist_t* fl, size_t bytes, bool zeroed)
+{
+    if (!fl) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+
+    /* fl->alignment should already be normalized at init; still safe to pass through */
     return alloc_freelist_internal(fl, bytes, fl->alignment, zeroed);
 }
 // -------------------------------------------------------------------------------- 
 
-void* alloc_freelist_aligned(freelist_t* fl,
-                             size_t      bytes,
-                             size_t      alignment,
-                             bool        zeroed) {
-    if (!fl) { errno = EINVAL; return NULL; }
-    if (bytes == 0) { errno = EINVAL; return NULL; }
-
-    if (alignment == 0) alignment = fl->alignment;
-    if (!_is_pow2(alignment)) {
-        alignment = _next_pow2(alignment);
-        if (!alignment) { errno = EINVAL; return NULL; }
-    }
-    if (alignment < fl->alignment) {
-        alignment = fl->alignment;
+static inline void_ptr_expect_t
+alloc_freelist_aligned(freelist_t *fl,
+                       size_t      bytes,
+                       size_t      alignment,
+                       bool        zeroed) {
+    if (!fl) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
     }
 
-    return alloc_freelist_internal(fl, bytes, alignment, zeroed);
+    if (bytes == 0u) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
+    }
+
+    /* Normalize alignment: 0 → freelist base alignment */
+    size_t eff_align = (alignment != 0u) ? alignment : fl->alignment;
+
+    /* Require power-of-two alignment */
+    if ((eff_align & (eff_align - 1u)) != 0u) {
+        eff_align = _next_pow2(eff_align);
+        if (eff_align == 0u) {
+            return (void_ptr_expect_t){
+                .has_value = false,
+                .u.error   = ALIGNMENT_ERROR
+            };
+        }
+    }
+
+    /* Enforce minimum freelist alignment */
+    if (eff_align < fl->alignment) {
+        eff_align = fl->alignment;
+    }
+
+    /* Delegate to internal allocator */
+    void *ptr = alloc_freelist_internal(fl, bytes, eff_align, zeroed);
+    if (!ptr) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = CAPACITY_OVERFLOW
+        };
+    }
+
+    return (void_ptr_expect_t){
+        .has_value = true,
+        .u.value   = ptr
+    };
 }
 // -------------------------------------------------------------------------------- 
 
@@ -3022,52 +3120,64 @@ void return_freelist_element(freelist_t* fl, void* ptr) {
 }
 // -------------------------------------------------------------------------------- 
 
-void* realloc_freelist(freelist_t* fl,
-                       void*       ptr,
-                       size_t      old_size,
-                       size_t      new_size,
-                       bool        zeroed) {
+void_ptr_expect_t realloc_freelist(freelist_t* fl,
+                                   void*       ptr,
+                                   size_t      old_size,
+                                   size_t      new_size,
+                                   bool        zeroed) {
     if (!fl) {
-        errno = EINVAL;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
-    // NULL ptr behaves like alloc
+    /* Reject zero-size realloc requests explicitly (policy choice).
+       If you prefer "new_size==0 => free + NULL", you can implement that instead. */
+    if (new_size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+
+    /* NULL ptr behaves like alloc */
     if (!ptr) {
-        return alloc_freelist(fl, new_size, zeroed);
+        return alloc_freelist(fl, new_size, zeroed);  /* now returns void_ptr_expect_t */
     }
 
-    // Shrink or same size: keep pointer
+    /* Shrink or same size: keep pointer (arena/freelist semantics) */
     if (new_size <= old_size) {
-        return ptr;
+        return (void_ptr_expect_t){ .has_value = true, .u.value = ptr };
     }
 
-    // Need to grow
-    void* new_ptr = alloc_freelist(fl, new_size, false);
-    if (!new_ptr) {
-        return NULL;    // errno set by alloc_freelist
+    /* Grow: allocate new, copy, optionally zero tail, then free old */
+    void_ptr_expect_t ex = alloc_freelist(fl, new_size, /*zeroed=*/false);
+    if (!ex.has_value) {
+        /* Propagate the allocation failure exactly */
+        return ex;
     }
 
+    void* new_ptr = ex.u.value;
+
+    /* Caller contract: old_size must match original allocation size.
+       We assume old_size bytes are readable from ptr. */
     memcpy(new_ptr, ptr, old_size);
 
     if (zeroed) {
         memset((uint8_t*)new_ptr + old_size, 0, new_size - old_size);
     }
 
+    /* Return old block to freelist (non-expected API; assumes valid ptr). */
     return_freelist_element(fl, ptr);
-    return new_ptr;
+
+    return (void_ptr_expect_t){ .has_value = true, .u.value = new_ptr };
 }
 // -------------------------------------------------------------------------------- 
 
-void* realloc_freelist_aligned(freelist_t* fl,
-                               void*       ptr,
-                               size_t      old_size,
-                               size_t      new_size,
-                               bool        zeroed,
-                               size_t      alignment) {
-    if (!fl) {
-        errno = EINVAL;
-        return NULL;
+void_ptr_expect_t realloc_freelist_aligned(freelist_t* fl,
+                                           void*       ptr,
+                                           size_t      old_size,
+                                           size_t      new_size,
+                                           bool        zeroed,
+                                           size_t      alignment) {
+    // Validate freelist + requested size
+    if (!fl || new_size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
     // NULL ptr behaves like aligned alloc
@@ -3075,16 +3185,19 @@ void* realloc_freelist_aligned(freelist_t* fl,
         return alloc_freelist_aligned(fl, new_size, alignment, zeroed);
     }
 
-    // Shrink or same size: keep pointer
+    // Shrink or same size: keep pointer (no shrink performed)
     if (new_size <= old_size) {
-        return ptr;
+        return (void_ptr_expect_t){ .has_value = true, .u.value = ptr };
     }
 
-    // Need to grow with requested alignment
-    void* new_ptr = alloc_freelist_aligned(fl, new_size, alignment, false);
-    if (!new_ptr) {
-        return NULL;    // errno set by alloc_freelist_aligned
+    // Grow with requested alignment
+    void_ptr_expect_t a = alloc_freelist_aligned(fl, new_size, alignment, false);
+    if (!a.has_value) {
+        // Propagate alignment/capacity failures from alloc_freelist_aligned()
+        return a;
     }
+
+    void* new_ptr = a.u.value;
 
     memcpy(new_ptr, ptr, old_size);
 
@@ -3092,8 +3205,10 @@ void* realloc_freelist_aligned(freelist_t* fl,
         memset((uint8_t*)new_ptr + old_size, 0, new_size - old_size);
     }
 
+    // Return old block to freelist (does not fail in your API)
     return_freelist_element(fl, ptr);
-    return new_ptr;
+
+    return (void_ptr_expect_t){ .has_value = true, .u.value = new_ptr };
 }
 // -------------------------------------------------------------------------------- 
 
