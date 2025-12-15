@@ -1529,15 +1529,21 @@ static inline void _cp_unpack_pool(const PoolCheckPoint* pub, PoolCheckpointRep*
 static bool pool_grow(pool_t* p) {
     if (!p->grow_enabled) { return false; }
     const size_t bytes = p->stride * p->blocks_per_chunk;
-    uint8_t* base = (uint8_t*)alloc_arena_aligned(p->arena, bytes, p->stride, false);
-    if (!base) { errno = ENOMEM; return false; }
+    void_ptr_expect_t expect = alloc_arena_aligned(p->arena, bytes, p->stride, false); 
+    if (!expect.has_value) {
+        return false;
+    }
+    uint8_t* base = (uint8_t*)expect.u.value;
+    if (!base) { return false; }
     p->cur = base;
     p->end = base + bytes;
     p->total_blocks += p->blocks_per_chunk;
 
 #ifdef DEBUG
     // record this slice; allocate node from arena to avoid malloc
-    pool_slice_t* s = (pool_slice_t*)arena_alloc_aligned(p->arena, sizeof *s, alignof(pool_slice_t));
+    expect = arena_alloc_aligned(p->arena, sizeof *s, alignof(pool_slice_t)); 
+    if (!expect.has_value) { return false; }
+    pool_slice_t* s = (pool_slice_t*)expect.u.value;
     if (!s) { return false; } // extremely unlikely
     s->start = base;
     s->end   = base + bytes;
@@ -1974,21 +1980,82 @@ pool_expect_t init_static_pool(void  *buffer,
 }
 // -------------------------------------------------------------------------------- 
 
-inline void* alloc_pool(pool_t* pool, bool zeroed) {
-    if (!pool) { errno = EINVAL; return NULL; }
-
-    // 1) Reuse from free list if available
-    void* blk = pool_pop_free(pool);
-    if (blk) return blk;
-
-    // 2) Carve from the current slice; grow if necessary
-    if (pool->cur == pool->end) {
-        if (!pool_grow(pool)) return NULL; // errno set
+inline void_ptr_expect_t alloc_pool(pool_t *pool, bool zeroed) {
+    // ---- Validate pool pointer
+    if (!pool) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
     }
-    blk  = pool->cur;
+
+    // ---- 1) Reuse from free list if available
+    void *blk = pool_pop_free(pool);
+    if (blk) {
+        if (zeroed) {
+            memset(blk, 0, pool->block_size);
+        }
+        return (void_ptr_expect_t){
+            .has_value = true,
+            .u.value   = blk
+        };
+    }
+
+    // ---- 2) Carve from the current slice
+    if (pool->cur != pool->end) {
+        blk = pool->cur;
+        pool->cur += pool->stride;
+
+        if (zeroed) {
+            memset(blk, 0, pool->block_size);
+        }
+
+        return (void_ptr_expect_t){
+            .has_value = true,
+            .u.value   = blk
+        };
+    }
+
+    // ---- 3) At slice end → attempt to grow (if allowed)
+    if (!pool->grow_enabled) {
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = CAPACITY_OVERFLOW
+        };
+    }
+
+    // pool_grow must return bool or be updated to return ErrorCode.
+    bool ok = pool_grow(pool);
+    if (!ok) {
+        // pool_grow failure means arena alloc failed
+        // or arena itself is out-of-memory or static.
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = BAD_ALLOC
+        };
+    }
+
+    // After successful growth, pool->cur and pool->end are updated,
+    // so allocation must succeed immediately.
+    if (pool->cur == pool->end) {
+        // This should be impossible unless state is corrupted.
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = STATE_CORRUPT
+        };
+    }
+
+    blk = pool->cur;
     pool->cur += pool->stride;
-    if (zeroed) memset(blk, 0, pool->block_size);
-    return blk;
+
+    if (zeroed) {
+        memset(blk, 0, pool->block_size);
+    }
+
+    return (void_ptr_expect_t){
+        .has_value = true,
+        .u.value   = blk
+    };
 }
 // -------------------------------------------------------------------------------- 
 

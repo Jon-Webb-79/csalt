@@ -2172,7 +2172,7 @@ static inline void_ptr_expect_t arena_v_realloc(void* ctx, void* old_ptr,
  * @retval void* Pointer to the resized, aligned allocation on success.
  * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
  */
-static inline void_ptr_expected_t arena_v_realloc_aligned(void* ctx, void* old_ptr,
+static inline void_ptr_expect_t arena_v_realloc_aligned(void* ctx, void* old_ptr,
                                             size_t old_size, size_t new_size,
                                             bool zeroed, size_t align) {
     arena_t* arena = (arena_t*)ctx;
@@ -2431,12 +2431,12 @@ typedef struct {
  * free_arena(ar.u.value); // destroys pool header and all slices
  * @endcode
  */
-pool_expect_t* init_pool_with_arena(arena_t* arena,
-                                    size_t   block_size,
-                                    size_t   alignment,
-                                    size_t   blocks_per_chunk,
-                                    bool     prewarm_one_chunk,
-                                    bool     grow_enabled);
+pool_expect_t init_pool_with_arena(arena_t* arena,
+                                   size_t   block_size,
+                                   size_t   alignment,
+                                   size_t   blocks_per_chunk,
+                                   bool     prewarm_one_chunk,
+                                   bool     grow_enabled);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -2734,10 +2734,10 @@ pool_expect_t init_dynamic_pool(size_t block_size,
  * // 'buf' remains caller-owned and is not freed here.
  * @endcode
  */
-pool_expect_t * init_static_pool(void*  buffer,
-                                 size_t buffer_bytes,
-                                 size_t block_size,
-                                 size_t alignment);
+pool_expect_t init_static_pool(void*  buffer,
+                               size_t buffer_bytes,
+                               size_t block_size,
+                               size_t alignment);
 // -------------------------------------------------------------------------------- 
 
 /**

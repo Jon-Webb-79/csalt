@@ -15,6 +15,7 @@
 #include "c_allocator.h"
 #include "test_suite.h"
 
+#include <endian.h>
 #include <stdint.h>
 #include <errno.h>
 #include <stdalign.h>
@@ -1139,10 +1140,7 @@ static void test_realloc_fails_when_insufficient_space(void **state) {
 
     // Request something larger than likely remains
     aexpect = realloc_arena(a, p, old_sz, 500, false);
-    assert_true(aexpect.has_value);
-    void* q = aexpect.u.value;
-    assert_null(q);
-    // errno is set inside arena_alloc; don’t assert a specific value to avoid coupling
+    assert_false(aexpect.has_value);
 
     free(a);
 }
@@ -1860,864 +1858,906 @@ const struct CMUnitTest test_arena[] = {
 };
 
 const size_t test_arena_count = sizeof(test_arena) / sizeof(test_arena[0]);
+// ================================================================================ 
+// ================================================================================ 
+// TEST POOL 
+
+// Helper functions
+static arena_t* make_dynamic_arena(size_t seed_bytes) {
+    // resize=rue, min_chunk=64 KiB, base_align = max_align_t
+    arena_expect_t expect = init_dynamic_arena(seed_bytes, /*resize=*/true, /*min_chunk_in=*/1u<<16, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    return expect.u.value;
+}
+
+static arena_t* make_tiny_dynamic_arena(size_t seed_bytes) {
+    // Small seed & no min_chunk; we want a tiny usable region to trigger ENOMEM on pool header alloc
+    arena_expect_t expect = init_dynamic_arena(seed_bytes, /*resize=*/false, /*min_chunk_in=*/0, /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    return expect.u.value;
+}
+// Helper: create a dynamic arena that cannot grow and leave only `leave_bytes` free.
+static arena_t* make_exhausted_dynamic_arena(size_t seed_bytes, size_t leave_bytes) {
+    // resize = false, min_chunk = 0, base_align = max_align_t
+    arena_expect_t expect = init_dynamic_arena(seed_bytes, /*resize=*/false, /*min_chunk_in=*/0,
+                                    /*base_align_in=*/alignof(max_align_t)); 
+    assert_true(expect.has_value);
+    arena_t* a = expect.u.value;
+
+    // Consume all but `leave_bytes` from the current tail.
+    // Assumes you expose arena_remaining(...) and alloc_arena(...).
+    size_t rem = arena_remaining(a);
+    if (rem > leave_bytes) {
+        void_ptr_expect_t aexpect = alloc_arena(a, rem - leave_bytes, /*zeroed=*/false); 
+        assert_true(aexpect.has_value);
+    }
+    return a;
+}
+
+// Optional small convenience to snapshot+restore errno around calls
+#define SAVE_ERRNO(name)    int name = errno
+#define RESTORE_ERRNO(name) do { errno = name; } while (0)
+// ================================================================================ 
+// ================================================================================ 
+// TEST INIT WITH ARENA
+
+static void test_init_pool_invalid_args(void **state) {
+    (void)state;
+
+    pool_expect_t expect = init_pool_with_arena(NULL, /*block_size=*/64, /*alignment=*/0, 
+                                    /*blocks_per_chunk=*/16, /*prewarm=*/false,
+                                    /*enable reallocations*/ true); 
+    assert_false(expect.has_value);
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    expect = init_pool_with_arena(a, /*block_size=*/0, /*alignment=*/0, 
+                                  /*blocks_per_chunk=*/16, /*prewarm=*/false,
+                                  /*enable reallocations*/ true); 
+    assert_false(expect.has_value);
+    free_arena(a);
+    expect = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
+                             /*blocks_per_chunk=*/0, /*prewarm=*/false,
+                             /*enable reallocations*/ true); 
+    assert_false(expect.has_value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_pool_header_lives_in_arena(void **state) {
+    (void)state;
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    pool_expect_t expect = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
+                                    /*blocks_per_chunk=*/32, /*prewarm=*/false,
+                                    /*enable reallocations*/ true); 
+    assert_true(expect.has_value);
+    pool_t* p = expect.u.value;
+
+    // The pool header was allocated from the arena; verify with your helper
+    assert_true(is_arena_ptr(a, (const void*)p));
+
+    // Basic invariants
+    assert_int_equal(pool_block_size(p), 64);
+    assert_true(pool_stride(p) >= 64);
+    assert_true(pool_stride(p) % alignof(void*) == 0);
+    assert_int_equal(pool_total_blocks(p), 0);
+    assert_int_equal(pool_free_blocks(p), 0);
+    free_arena(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_pool_alignment_and_stride_rules(void **state) {
+    (void)state;
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    pool_expect_t expect = init_pool_with_arena(a, /*block_size=*/1, /*alignment=*/0, 
+                                     /*blocks_per_chunk=*/8, /*prewarm=*/false,
+                                     /*enable reallocations*/ true); 
+    assert_true(expect.has_value);
+
+    // Tiny block size to force stride >= sizeof(void*)
+    pool_t* p = expect.u.value;
+
+    size_t stride = pool_stride(p);
+    assert_true(stride >= sizeof(void*));
+    assert_true(stride % alignof(void*) == 0);
+
+    // Stronger requested alignment should be honored
+    size_t req_align = 64;
+    expect = init_pool_with_arena(a, /*block_size=*/48, /*alignment=*/req_align, 
+                                     /*blocks_per_chunk=*/8, /*prewarm=*/false,
+                                     /*enable reallocations*/ true); 
+    assert_true(expect.has_value);
+    pool_t* q = expect.u.value;
+    assert_non_null(q);
+
+    size_t qstride = pool_stride(q);
+    assert_true(qstride >= 48);
+    assert_true(qstride % req_align == 0);
+    free_arena(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_pool_prewarm_sets_blocks(void **state) {
+    (void)state;
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    const size_t blocks_per_chunk = 16;
+    pool_expect_t expect = init_pool_with_arena(a, /*block_size=*/32, /*alignment=*/0, 
+                                     blocks_per_chunk, /*prewarm=*/true,
+                                     /*enable reallocations*/ true); 
+    assert_true(expect.has_value);
+    pool_t* p = expect.u.value;
+
+    // After prewarm, the pool has made one chunk available
+    assert_int_equal(pool_total_blocks(p), blocks_per_chunk);
+    assert_int_equal(pool_free_blocks(p), 0);
+
+    // First allocations should succeed and come from the current slice (free_list still empty)
+    void_ptr_expect_t aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void* x = aexpect.u.value;
+
+    aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void* y = aexpect.u.value;
+
+    // Free one and ensure LIFO via intrusive list
+    return_pool_element(p, x);
+    assert_int_equal(pool_free_blocks(p), 1);
+    aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void* z = aexpect.u.value;
+    assert_ptr_equal(z, x);
+    free_arena(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_pool_fails_when_no_room_for_header(void **state) {
+    (void)state;
+
+    // Make a valid arena, but leave only a few bytes so the pool header can't fit.
+    arena_t* a = make_exhausted_dynamic_arena(4096, /*leave_bytes=*/8);
+    assert_non_null(a);
+    
+    pool_expect_t expect = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0,
+                                     /*blocks_per_chunk=*/8, /*prewarm=*/false,
+                                     /*enable reallocations*/ true); 
+    assert_false(expect.has_value);
+    free_arena(a);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_reset_semantics(void **state) {
+    (void)state;
+
+    arena_t* a = make_dynamic_arena(1<<20);
+    assert_non_null(a);
+
+    pool_expect_t expect = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
+                                     /*blocks_per_chunk=*/8, /*prewarm=*/true,
+                                     /*enable reallocations*/ true); 
+    assert_true(expect.has_value);
+    pool_t* p = expect.u.value;
+
+    void_ptr_expect_t aexpect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    void* b0 = aexpect.u.value;
+
+    aexpect = alloc_pool(p, false);
+    assert_true(aexpect.u.value);
+    void* b1 = aexpect.u.value;
+    assert_non_null(b0);
+    assert_non_null(b1);
+
+    return_pool_element(p, b0);
+    assert_int_equal(pool_free_blocks(p), 1);
+
+    // Reset pool: clears its bookkeeping (free list, slice window, counters)
+    reset_pool(p);
+    assert_int_equal(pool_total_blocks(p), 0);
+    assert_int_equal(pool_free_blocks(p), 0);
+
+    // Alloc should still wora after reset (pool will grow again)
+    aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    free_arena(a);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+static void test_init_dynamic_pool_invalid_args(void **state) {
+    (void)state;
+
+    pool_expect_t expect = init_dynamic_pool(0, 0, 32, 8192, 4096, true, true); 
+    assert_false(expect.has_value);
+
+    expect = init_dynamic_pool(64, 0, 0, 8192, 4096, true, true); 
+    assert_false(expect.has_value);
+
+    expect = init_dynamic_pool(64, 0, 32, 0, 4096, true, true); 
+    assert_false(expect.has_value);
+    //free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_overflow_guard(void **state) {
+    (void)state;
+
+    size_t too_many = (SIZE_MAX / sizeof(void*)) + 1;
+
+    pool_expect_t expect = init_dynamic_pool(8, 0, too_many, 8192, 4096, true, false); 
+    assert_false(expect.has_value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_alignment_and_stride(void **state) {
+    (void)state;
+
+    pool_expect_t expect = init_dynamic_pool(48, 64, 8, 8192, 4096, true, false); 
+    assert_true(expect.has_value);
+    pool_t *p = expect.u.value;
+
+    assert_int_equal(pool_block_size(p), 48);
+    size_t stride = pool_stride(p);
+
+    assert_true(stride >= 48);
+    assert_true(stride % 64 == 0);
+    assert_true(stride >= sizeof(void*));
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_fixed_prewarm_exact(void **state) {
+    (void)state;
+
+    const size_t blocks = 16;
+
+    // Fixed-capacity (grow_enabled = false) + prewarm = required & valid
+    pool_expect_t expect = init_dynamic_pool(
+        /*block_size=*/64,
+        /*alignment=*/0,
+        /*blocks_per_chunk=*/blocks,
+        /*arena_seed_bytes=*/8192,
+        /*min_chunk_bytes=*/0,
+        /*grow_enabled=*/false,
+        /*prewarm_one_chunk=*/true
+    ); 
+    assert_true(expect.has_value);
+    pool_t *p = expect.u.value;
+
+    // After prewarm, pool exposes exactly 'blocks' capacity
+    assert_int_equal(pool_total_blocks(p), blocks);
+    assert_int_equal(pool_free_blocks(p), 0);
+
+    // Stride invariants: >= block_size, >= sizeof(void*), multiple of alignof(void*)
+    size_t stride = pool_stride(p);
+    assert_true(stride >= 64);
+    assert_true(stride >= sizeof(void *));
+    assert_true((stride % alignof(void*)) == 0);
+
+    // Allocate exactly 'blocks' items successfully
+    void_ptr_expect_t aexpect;
+    void* saved[16] = {0};
+    for (size_t i = 0; i < blocks; ++i) {
+        aexpect = alloc_pool(p, false);
+        assert_true(aexpect.has_value);
+        saved[i] = aexpect.u.value;
+        assert_non_null(saved[i]);
+        // Optional: check alignment of returned block
+        assert_true(((uintptr_t)saved[i] % stride) == 0);
+    }
+
+    // Next allocation should fail with EPERM (fixed-capacity exhausted)
+    aexpect = alloc_pool(p, false);
+    assert_false(aexpect.has_value);
+
+    // Return one element, free_list should get one
+    return_pool_element(p, saved[0]);
+    assert_int_equal(pool_free_blocks(p), 1);
+    assert_int_equal(pool_total_blocks(p), blocks); // capacity unchanged
+
+    // Re-allocate and confirm LIFO reuse (likely returns the same pointer)
+    aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void *r = aexpect.u.value;
+    assert_ptr_equal(r, saved[0]);
+    assert_int_equal(pool_free_blocks(p), 0);
+
+    // Capacity is still fixed; next extra allocation still fails
+    aexpect = alloc_pool(p, false);
+    assert_false(aexpect.has_value);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_fixed_no_prewarm_first_alloc_fails(void **state) {
+    (void)state;
+
+    pool_expect_t expect = init_dynamic_pool(64, 0, 8, 4096, 0, false, false); 
+    assert_true(expect.has_value);
+    pool_t *p = expect.u.value;
+    assert_non_null(p);
+
+    void_ptr_expect_t aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    assert_null(aexpect.u.value);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_grow_prewarm_and_reuse(void **state) {
+    (void)state;
+
+    pool_expect_t expect = init_dynamic_pool(32, 16, 8, 8192, 4096, true, true);
+    assert_true(expect.has_value);
+    pool_t *p = expect.u.value;
+
+    void_ptr_expect_t aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void *a = aexpect.u.value;
+
+    aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void *b = aexpect.u.value;
+    assert_non_null(a);
+    assert_non_null(b);
+
+    return_pool_element(p, a);
+    assert_int_equal(pool_free_blocks(p), 1);
+
+    aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void *c = aexpect.u.value;
+    assert_ptr_equal(c, a);
+    assert_int_equal(pool_free_blocks(p), 0);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_grow_lazy_first_alloc(void **state) {
+    (void)state;
+
+    pool_expect_t expect = init_dynamic_pool(64, 0, 4, 4096, 2048, true, false); 
+    assert_true(expect.has_value);
+    pool_t *p = expect.u.value;
+
+    assert_int_equal(pool_total_blocks(p), 0);
+
+    void_ptr_expect_t aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    assert_non_null(aexpect.u.value);
+    assert_int_equal(pool_total_blocks(p), 4);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_dynamic_pool_tiny_seed_fails(void **state) {
+    (void)state;
+
+    pool_expect_t expect = init_dynamic_pool(64, 0, 8, 32, 0, true, false); 
+    assert_false(expect.has_value);
+}
 // // ================================================================================ 
 // // ================================================================================ 
-// // TEST POOL 
-//
-// // Helper functions
-// static arena_t* make_dynamic_arena(size_t seed_bytes) {
-//     // resize=true, min_chunk=64 KiB, base_align = max_align_t
-//     return init_dynamic_arena(seed_bytes, /*resize=*/true, /*min_chunk_in=*/1u<<16, /*base_align_in=*/alignof(max_align_t));
-// }
-//
-// static arena_t* make_tiny_dynamic_arena(size_t seed_bytes) {
-//     // Small seed & no min_chunk; we want a tiny usable region to trigger ENOMEM on pool header alloc
-//     return init_dynamic_arena(seed_bytes, /*resize=*/false, /*min_chunk_in=*/0, /*base_align_in=*/alignof(max_align_t));
-// }
-// // Helper: create a dynamic arena that cannot grow and leave only `leave_bytes` free.
-// static arena_t* make_exhausted_dynamic_arena(size_t seed_bytes, size_t leave_bytes) {
-//     // resize = false, min_chunk = 0, base_align = max_align_t
-//     arena_t* a = init_dynamic_arena(seed_bytes, /*resize=*/false, /*min_chunk_in=*/0,
-//                                     /*base_align_in=*/alignof(max_align_t));
-//     assert_non_null(a);
-//
-//     // Consume all but `leave_bytes` from the current tail.
-//     // Assumes you expose arena_remaining(...) and alloc_arena(...).
-//     size_t rem = arena_remaining(a);
-//     if (rem > leave_bytes) {
-//         void* eaten = alloc_arena(a, rem - leave_bytes, /*zeroed=*/false);
-//         assert_non_null(eaten);
-//     }
-//     return a;
-// }
-//
-// // Optional small convenience to snapshot+restore errno around calls
-// #define SAVE_ERRNO(name)    int name = errno
-// #define RESTORE_ERRNO(name) do { errno = name; } while (0)
-// // ================================================================================ 
-// // ================================================================================ 
-// // TEST INIT WITH ARENA
-//
-// static void test_init_pool_invalid_args(void **state) {
-//     (void)state;
-//
-//     errno = 0;
-//     pool_t* p = init_pool_with_arena(NULL, /*block_size=*/64, /*alignment=*/0, 
-//                                     /*blocks_per_chunk=*/16, /*prewarm=*/false,
-//                                     /*enable reallocations*/ true);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-//
-//     arena_t* a = make_dynamic_arena(1<<20);
-//     assert_non_null(a);
-//
-//     errno = 0;
-//     p = init_pool_with_arena(a, /*block_size=*/0, /*alignment=*/0, 
-//                             /*blocks_per_chunk=*/16, /*prewarm=*/false,
-//                             /*enable reallocations*/ true);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-//     free_arena(a);
-//     errno = 0;
-//     p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
-//                              /*blocks_per_chunk=*/0, /*prewarm=*/false,
-//                              /*enable reallocations*/ true);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_pool_header_lives_in_arena(void **state) {
-//     (void)state;
-//
-//     arena_t* a = make_dynamic_arena(1<<20);
-//     assert_non_null(a);
-//
-//     pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
-//                                     /*blocks_per_chunk=*/32, /*prewarm=*/false,
-//                                     /*enable reallocations*/ true);
-//     assert_non_null(p);
-//
-//     // The pool header was allocated from the arena; verify with your helper
-//     assert_true(is_arena_ptr(a, (const void*)p));
-//
-//     // Basic invariants
-//     assert_int_equal(pool_block_size(p), 64);
-//     assert_true(pool_stride(p) >= 64);
-//     assert_true(pool_stride(p) % alignof(void*) == 0);
-//     assert_int_equal(pool_total_blocks(p), 0);
-//     assert_int_equal(pool_free_blocks(p), 0);
-//     free_arena(a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_pool_alignment_and_stride_rules(void **state) {
-//     (void)state;
-//
-//     arena_t* a = make_dynamic_arena(1<<20);
-//     assert_non_null(a);
-//
-//     // Tiny block size to force stride >= sizeof(void*)
-//     pool_t* p = init_pool_with_arena(a, /*block_size=*/1, /*alignment=*/0, 
-//                                      /*blocks_per_chunk=*/8, /*prewarm=*/false,
-//                                      /*enable reallocations*/ true);
-//     assert_non_null(p);
-//
-//     size_t stride = pool_stride(p);
-//     assert_true(stride >= sizeof(void*));
-//     assert_true(stride % alignof(void*) == 0);
-//
-//     // Stronger requested alignment should be honored
-//     size_t req_align = 64;
-//     pool_t* q = init_pool_with_arena(a, /*block_size=*/48, /*alignment=*/req_align, 
-//                                      /*blocks_per_chunk=*/8, /*prewarm=*/false,
-//                                      /*enable reallocations*/ true);
-//     assert_non_null(q);
-//
-//     size_t qstride = pool_stride(q);
-//     assert_true(qstride >= 48);
-//     assert_true(qstride % req_align == 0);
-//     free_arena(a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_pool_prewarm_sets_blocks(void **state) {
-//     (void)state;
-//
-//     arena_t* a = make_dynamic_arena(1<<20);
-//     assert_non_null(a);
-//
-//     const size_t blocks_per_chunk = 16;
-//     pool_t* p = init_pool_with_arena(a, /*block_size=*/32, /*alignment=*/0, 
-//                                      blocks_per_chunk, /*prewarm=*/true,
-//                                      /*enable reallocations*/ true);
-//     assert_non_null(p);
-//
-//     // After prewarm, the pool has made one chunk available
-//     assert_int_equal(pool_total_blocks(p), blocks_per_chunk);
-//     assert_int_equal(pool_free_blocks(p), 0);
-//
-//     // First allocations should succeed and come from the current slice (free_list still empty)
-//     void* x = alloc_pool(p, false);
-//     assert_non_null(x);
-//     void* y = alloc_pool(p, false);
-//     assert_non_null(y);
-//
-//     // Free one and ensure LIFO via intrusive list
-//     return_pool_element(p, x);
-//     assert_int_equal(pool_free_blocks(p), 1);
-//     void* z = alloc_pool(p, false);
-//     assert_ptr_equal(z, x);
-//     free_arena(a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_pool_fails_when_no_room_for_header(void **state) {
-//     (void)state;
-//
-//     // Make a valid arena, but leave only a few bytes so the pool header can't fit.
-//     arena_t* a = make_exhausted_dynamic_arena(4096, /*leave_bytes=*/8);
-//     assert_non_null(a);
-//     
-//     errno = 0;
-//     pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0,
-//                                      /*blocks_per_chunk=*/8, /*prewarm=*/false,
-//                                      /*enable reallocations*/ true);
-//     
-//     // Header allocation should fail because the arena cannot grow (resize=false)
-//     assert_null(p);
-//     assert_int_equal(errno, ENOMEM);
-//     free_arena(a);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_pool_reset_semantics(void **state) {
-//     (void)state;
-//
-//     arena_t* a = make_dynamic_arena(1<<20);
-//     assert_non_null(a);
-//
-//     pool_t* p = init_pool_with_arena(a, /*block_size=*/64, /*alignment=*/0, 
-//                                      /*blocks_per_chunk=*/8, /*prewarm=*/true,
-//                                      /*enable reallocations*/ true);
-//     assert_non_null(p);
-//
-//     void* b0 = alloc_pool(p, false);
-//     void* b1 = alloc_pool(p, false);
-//     assert_non_null(b0);
-//     assert_non_null(b1);
-//
-//     return_pool_element(p, b0);
-//     assert_int_equal(pool_free_blocks(p), 1);
-//
-//     // Reset pool: clears its bookkeeping (free list, slice window, counters)
-//     reset_pool(p);
-//     assert_int_equal(pool_total_blocks(p), 0);
-//     assert_int_equal(pool_free_blocks(p), 0);
-//
-//     // Alloc should still work after reset (pool will grow again)
-//     void* b2 = alloc_pool(p, false);
-//     assert_non_null(b2);
-//     free_arena(a);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-//
-// static void test_init_dynamic_pool_invalid_args(void **state) {
-//     (void)state;
-//
-//     SAVE_ERRNO(e0); errno = 0;
-//     pool_t *p = init_dynamic_pool(0, 0, 32, 8192, 4096, true, true);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-//     RESTORE_ERRNO(e0);
-//
-//     SAVE_ERRNO(e1); errno = 0;
-//     p = init_dynamic_pool(64, 0, 0, 8192, 4096, true, true);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-//     RESTORE_ERRNO(e1);
-//
-//     SAVE_ERRNO(e2); errno = 0;
-//     p = init_dynamic_pool(64, 0, 32, 0, 4096, true, true);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-//     RESTORE_ERRNO(e2);
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_dynamic_pool_overflow_guard(void **state) {
-//     (void)state;
-//
-//     size_t too_many = (SIZE_MAX / sizeof(void*)) + 1;
-//
-//     SAVE_ERRNO(e); errno = 0;
-//     pool_t *p = init_dynamic_pool(8, 0, too_many, 8192, 4096, true, false);
-//     assert_null(p);
-//     assert_int_equal(errno, EOVERFLOW);
-//     RESTORE_ERRNO(e);
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_dynamic_pool_alignment_and_stride(void **state) {
-//     (void)state;
-//
-//     pool_t *p = init_dynamic_pool(48, 64, 8, 8192, 4096, true, false);
-//     assert_non_null(p);
-//
-//     assert_int_equal(pool_block_size(p), 48);
-//     size_t stride = pool_stride(p);
-//
-//     assert_true(stride >= 48);
-//     assert_true(stride % 64 == 0);
-//     assert_true(stride >= sizeof(void*));
-//
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_dynamic_pool_fixed_prewarm_exact(void **state) {
-//     (void)state;
-//
-//     const size_t blocks = 16;
-//
-//     // Fixed-capacity (grow_enabled = false) + prewarm = required & valid
-//     pool_t *p = init_dynamic_pool(
-//         /*block_size=*/64,
-//         /*alignment=*/0,
-//         /*blocks_per_chunk=*/blocks,
-//         /*arena_seed_bytes=*/8192,
-//         /*min_chunk_bytes=*/0,
-//         /*grow_enabled=*/false,
-//         /*prewarm_one_chunk=*/true
-//     );
-//     assert_non_null(p);
-//
-//     // After prewarm, pool exposes exactly 'blocks' capacity
-//     assert_int_equal(pool_total_blocks(p), blocks);
-//     assert_int_equal(pool_free_blocks(p), 0);
-//
-//     // Stride invariants: >= block_size, >= sizeof(void*), multiple of alignof(void*)
-//     size_t stride = pool_stride(p);
-//     assert_true(stride >= 64);
-//     assert_true(stride >= sizeof(void *));
-//     assert_true((stride % alignof(void*)) == 0);
-//
-//     // Allocate exactly 'blocks' items successfully
-//     void* saved[16] = {0};
-//     for (size_t i = 0; i < blocks; ++i) {
-//         saved[i] = alloc_pool(p, false);
-//         assert_non_null(saved[i]);
-//         // Optional: check alignment of returned block
-//         assert_true(((uintptr_t)saved[i] % stride) == 0);
-//     }
-//
-//     // Next allocation should fail with EPERM (fixed-capacity exhausted)
-//     SAVE_ERRNO(e0); errno = 0;
-//     void *extra = alloc_pool(p, false);
-//     assert_null(extra);
-//     assert_int_equal(errno, EPERM);
-//     RESTORE_ERRNO(e0);
-//
-//     // Return one element, free_list should get one
-//     return_pool_element(p, saved[0]);
-//     assert_int_equal(pool_free_blocks(p), 1);
-//     assert_int_equal(pool_total_blocks(p), blocks); // capacity unchanged
-//
-//     // Re-allocate and confirm LIFO reuse (likely returns the same pointer)
-//     void *r = alloc_pool(p, false);
-//     assert_non_null(r);
-//     assert_ptr_equal(r, saved[0]);
-//     assert_int_equal(pool_free_blocks(p), 0);
-//
-//     // Capacity is still fixed; next extra allocation still fails
-//     SAVE_ERRNO(e1); errno = 0;
-//     extra = alloc_pool(p, false);
-//     assert_null(extra);
-//     assert_int_equal(errno, EPERM);
-//     RESTORE_ERRNO(e1);
-//
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// // static void test_init_dynamic_pool_fixed_no_prewarm_first_alloc_fails(void **state) {
-// //     (void)state;
-// //
-// //     pool_t *p = init_dynamic_pool(64, 0, 8, 4096, 0, false, false);
-// //     assert_non_null(p);
-// //
-// //     SAVE_ERRNO(e); errno = 0;
-// //     assert_null(alloc_pool(p));
-// //     assert_int_equal(errno, EPERM);
-// //     RESTORE_ERRNO(e);
-// //
-// //     free_pool(p);
-// // }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_dynamic_pool_grow_prewarm_and_reuse(void **state) {
-//     (void)state;
-//
-//     pool_t *p = init_dynamic_pool(32, 16, 8, 8192, 4096, true, true);
-//     assert_non_null(p);
-//
-//     void *a = alloc_pool(p, false);
-//     void *b = alloc_pool(p, false);
-//     assert_non_null(a);
-//     assert_non_null(b);
-//
-//     return_pool_element(p, a);
-//     assert_int_equal(pool_free_blocks(p), 1);
-//
-//     void *c = alloc_pool(p, false);
-//     assert_ptr_equal(c, a);
-//     assert_int_equal(pool_free_blocks(p), 0);
-//
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_dynamic_pool_grow_lazy_first_alloc(void **state) {
-//     (void)state;
-//
-//     pool_t *p = init_dynamic_pool(64, 0, 4, 4096, 2048, true, false);
-//     assert_non_null(p);
-//
-//     assert_int_equal(pool_total_blocks(p), 0);
-//
-//     assert_non_null(alloc_pool(p, false));
-//     assert_int_equal(pool_total_blocks(p), 4);
-//
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_dynamic_pool_tiny_seed_fails(void **state) {
-//     (void)state;
-//
-//     SAVE_ERRNO(e); errno = 0;
-//     pool_t *p = init_dynamic_pool(64, 0, 8, 32, 0, true, false);
-//     assert_null(p);
-//     assert_true(errno == EINVAL || errno == ENOMEM);
-//     RESTORE_ERRNO(e);
-//     free_pool(p);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-//
-// static void* make_aligned_buffer(size_t bytes, size_t align) {
-//     // Simple portable aligned storage for tests.
-//     // For large buffers you might prefer posix_memalign/malloc+align tricks.
-//     // Here we just over-allocate on the stack for small examples.
-//     // In practice, we’ll use static arrays with attributes below.
-//     (void)bytes; (void)align;
-//     return NULL; // not used; we’ll test with static arrays instead
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_static_pool_invalid_args(void **state) {
-//     (void)state;
-//
-//     // NULL buffer
-//     SAVE_ERRNO(e0); errno = 0;
-//     pool_t* p = init_static_pool(NULL, 1024, 64, 0);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-//     RESTORE_ERRNO(e0);
-//
-//     // zero buffer_bytes
-//     static unsigned char buf1[128];
-//     SAVE_ERRNO(e1); errno = 0;
-//     p = init_static_pool(buf1, 0, 64, 0);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-//     RESTORE_ERRNO(e1);
-//
-//     // zero block_size
-//     SAVE_ERRNO(e2); errno = 0;
-//     p = init_static_pool(buf1, sizeof buf1, 0, 0);
-//     assert_null(p);
-//     assert_int_equal(errno, EINVAL);
-//     RESTORE_ERRNO(e2);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_static_pool_too_small_buffer(void **state) {
-//     (void)state;
-//
-//     // Very small buffer that should fail regardless of overhead
-//     static unsigned char tiny[32];
-//     SAVE_ERRNO(e); errno = 0;
-//     pool_t* p = init_static_pool(tiny, sizeof tiny, /*block_size=*/64, /*alignment=*/0);
-//     assert_null(p);
-//     // Depending on internal layout it will be ENOMEM (most likely).
-//     assert_int_equal(errno, EINVAL);
-//     RESTORE_ERRNO(e);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_static_pool_alignment_and_stride(void **state) {
-//     (void)state;
-//
-//     // Generous buffer
-//     static unsigned char buf[64 * 1024] __attribute__((aligned(64)));
-//     pool_t* p = init_static_pool(buf, sizeof buf, /*block_size=*/48, /*alignment=*/64);
-//     assert_non_null(p);
-//
-//     // stride rules
-//     size_t bs = pool_block_size(p);
-//     size_t st = pool_stride(p);
-//     assert_int_equal(bs, 48);
-//     assert_true(st >= 48);
-//     assert_true(st >= sizeof(void*));
-//     assert_true(st % 64 == 0);                      // requested alignment honored
-//     assert_true(st % alignof(void*) == 0);          // intrusive free-list
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_static_pool_stride_minimum(void **state) {
-//     (void)state;
-//
-//     static unsigned char buf[4096] __attribute__((aligned(16)));
-//     pool_t* p = init_static_pool(buf, sizeof buf, /*block_size=*/1, /*alignment=*/0);
-//     assert_non_null(p);
-//
-//     size_t st = pool_stride(p);
-//     assert_true(st >= sizeof(void*));
-//     assert_true(st % alignof(void*) == 0);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_static_pool_capacity_and_exhaustion(void **state) {
-//     (void)state;
-//
-//     // Use a reasonable buffer to ensure capacity > 0
-//     static unsigned char buf[16 * 1024] __attribute__((aligned(64)));
-//     pool_t* p = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/0);
-//     assert_non_null(p);
-//
-//     const size_t cap = pool_total_blocks(p);
-//     assert_true(cap > 0);
-//
-//     // Allocate exactly 'cap' blocks
-//     for (size_t i = 0; i < cap; ++i) {
-//         void* b = alloc_pool(p, false);
-//         assert_non_null(b);
-//         // Returned pointer alignment (relative to stride)
-//         assert_true(((uintptr_t)b % pool_stride(p)) == 0);
-//     }
-//
-//     // Next allocation must fail with EPERM
-//     SAVE_ERRNO(e0); errno = 0;
-//     void* extra = alloc_pool(p, false);
-//     assert_null(extra);
-//     assert_int_equal(errno, EPERM);
-//     RESTORE_ERRNO(e0);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_static_pool_free_list_reuse(void **state) {
-//     (void)state;
-//
-//     static unsigned char buf[8 * 1024] __attribute__((aligned(32)));
-//     pool_t* p = init_static_pool(buf, sizeof buf, /*block_size=*/32, /*alignment=*/16);
-//     assert_non_null(p);
-//
-//     size_t cap = pool_total_blocks(p);
-//     assert_true(cap > 2); // ensure we can do a few operations
-//
-//     void* a = alloc_pool(p, false);
-//     void* b = alloc_pool(p, false);
-//     assert_non_null(a);
-//     assert_non_null(b);
-//     assert_int_equal(pool_free_blocks(p), 0);
-//
-//     // Return 'a' then re-alloc and confirm LIFO reuse
-//     return_pool_element(p, a);
-//     assert_int_equal(pool_free_blocks(p), 1);
-//
-//     void* c = alloc_pool(p, false);
-//     assert_ptr_equal(c, a);
-//     assert_int_equal(pool_free_blocks(p), 0);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_static_pool_one_block_only(void **state) {
-//     (void)state;
-//
-//     // Force a “tight” buffer by using a large block size relative to buffer
-//     // Exact header size is unknown, so we don’t assert cap==1; we assert cap>=1 and exercise exhaustion.
-//     static unsigned char buf[8192] __attribute__((aligned(64)));
-//     pool_t* p = init_static_pool(buf, sizeof buf, /*block_size=*/4096, /*alignment=*/64);
-//     assert_non_null(p);
-//
-//     size_t cap = pool_total_blocks(p);
-//     assert_true(cap >= 1);
-//
-//     // Allocate all capacity
-//     for (size_t i = 0; i < cap; ++i) {
-//         assert_non_null(alloc_pool(p, false));
-//     }
-//
-//     // Next allocation must fail
-//     SAVE_ERRNO(e); errno = 0;
-//     void* z = alloc_pool(p, false);
-//     assert_null(z);
-//     assert_int_equal(errno, EPERM);
-//     RESTORE_ERRNO(e);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-//
-// static void test_pool_alignment_matches_contract(void **state) {
-//     (void)state;
-//
-//     // Dynamic, grow-enabled, prewarmed; ask for strong alignment
-//     pool_t *p = init_dynamic_pool(
-//         /*block_size=*/48,
-//         /*alignment=*/64,
-//         /*blocks_per_chunk=*/8,
-//         /*arena_seed_bytes=*/8192,
-//         /*min_chunk_bytes=*/4096,
-//         /*grow_enabled=*/true,
-//         /*prewarm_one_chunk=*/true
-//     );
-//     assert_non_null(p);
-//
-//     size_t a = pool_alignment(p);
-//     size_t s = pool_stride(p);
-//
-//     // Alignment must be at least alignof(void*), and stride multiple of alignment
-//     assert_true(a >= alignof(void*));
-//     assert_true((s % a) == 0);
-//
-//     // Since we requested 64, expect base alignment to be >= 64
-//     assert_true(a >= 64);
-//
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_pool_bump_remaining_single_chunk(void **state) {
-//     (void)state;
-//
-//     // Static pool → single prewarmed slice by design
-//     static unsigned char buf[8 * 1024] __attribute__((aligned(64)));
-//     pool_t *p = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/64);
-//     assert_non_null(p);
-//
-//     size_t before = pool_bump_remaining_blocks(p);
-//     assert_true(before > 0);
-//     assert_int_equal(before, pool_total_blocks(p)); // static pool: all capacity in one slice
-//
-//     // Allocate two blocks → bump remaining decreases by 2
-//     void *b0 = alloc_pool(p, false); assert_non_null(b0);
-//     void *b1 = alloc_pool(p, false); assert_non_null(b1);
-//
-//     size_t after2 = pool_bump_remaining_blocks(p);
-//     assert_int_equal(after2, before - 2);
-//
-//     // Return one block → free list grows, bump remaining unchanged
-//     return_pool_element(p, b0);
-//     assert_int_equal(pool_free_blocks(p), 1);
-//     size_t after_free = pool_bump_remaining_blocks(p);
-//     assert_int_equal(after_free, after2);
-//
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-// //
-// static void test_pool_bump_remaining_two_chunks_dynamic(void **state) {
-//     (void)state;
-//
-//     // Dynamic, grow-enabled, prewarm one chunk with small count
-//     const size_t BPC = 8;
-//     pool_t *p = init_dynamic_pool(
-//         /*block_size=*/32,
-//         /*alignment=*/16,
-//         /*blocks_per_chunk=*/BPC,
-//         /*arena_seed_bytes=*/8192,
-//         /*min_chunk_bytes=*/4096,
-//         /*grow_enabled=*/true,
-//         /*prewarm_one_chunk=*/true
-//     );
-//     assert_non_null(p);
-//
-//     // Initial bump remaining equals that chunk's capacity
-//     assert_int_equal(pool_bump_remaining_blocks(p), BPC);
-//
-//     // Exhaust the first chunk
-//     for (size_t i = 0; i < BPC; ++i) {
-//         assert_non_null(alloc_pool(p, false));
-//     }
-//     assert_int_equal(pool_bump_remaining_blocks(p), 0);
-//
-//     // Next allocation should trigger growth → new chunk carved, one block consumed
-//     void *g = alloc_pool(p, false);
-//     assert_non_null(g);
-//     assert_int_equal(pool_bump_remaining_blocks(p), BPC - 1);
-//
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_pool_in_use_blocks_counts(void **state) {
-//     (void)state;
-//
-//     static unsigned char buf[16 * 1024] __attribute__((aligned(64)));
-//     pool_t *p = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/0);
-//     assert_non_null(p);
-//     assert_int_equal(pool_in_use_blocks(p), 0);
-//     
-//     void *a = alloc_pool(p, false); assert_non_null(a);
-//     void *b = alloc_pool(p, false); assert_non_null(b);
-//
-//     assert_int_equal(pool_in_use_blocks(p), 2);
-//
-//     return_pool_element(p, a);
-//     assert_int_equal(pool_in_use_blocks(p), 1);
-//
-//     return_pool_element(p, b);
-//     assert_int_equal(pool_in_use_blocks(p), 0);
-//
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_pool_owns_arena_and_mtype_static_vs_dynamic(void **state) {
-//     (void)state;
-//
-//     // Static
-//     static unsigned char sbuf[4096] __attribute__((aligned(64)));
-//     pool_t *ps = init_static_pool(sbuf, sizeof sbuf, /*block_size=*/64, /*alignment=*/0);
-//     assert_non_null(ps);
-//     assert_true(pool_owns_arena(ps));
-//     assert_int_equal(pool_mtype(ps), STATIC);
-//     free_pool(ps);
-//
-//     // Dynamic
-//     pool_t *pd = init_dynamic_pool(
-//         /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/8,
-//         /*arena_seed_bytes=*/8192, /*min_chunk_bytes=*/4096,
-//         /*grow_enabled=*/true, /*prewarm_one_chunk=*/true
-//     );
-//     assert_non_null(pd);
-//     assert_true(pool_owns_arena(pd));
-//     assert_int_equal(pool_mtype(pd), DYNAMIC);
-//     free_pool(pd);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_pool_grow_enabled_and_toggle(void **state) {
-//     (void)state;
-//
-//     // Dynamic, grow-enabled initially
-//     pool_t *p = init_dynamic_pool(
-//         /*block_size=*/32, /*alignment=*/0, /*blocks_per_chunk=*/4,
-//         /*arena_seed_bytes=*/8192, /*min_chunk_bytes=*/4096,
-//         /*grow_enabled=*/true, /*prewarm_one_chunk=*/true
-//     );
-//     assert_non_null(p);
-//     assert_true(pool_grow_enabled(p));
-//     
-//     // Freeze
-//     toggle_pool_growth(p, false);
-//     assert_false(pool_grow_enabled(p));
-//
-//     // Re-enable (allowed: dynamic arena and resize==true)
-//     toggle_pool_growth(p, true);
-//     assert_true(pool_grow_enabled(p));
-//
-//     free_pool(p);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_pool_grow_toggle_disallowed_on_static(void **state) {
-//     (void)state;
-//
-//     static unsigned char buf[4096] __attribute__((aligned(64)));
-//     pool_t *p = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/0);
-//     assert_non_null(p);
-//
-//     // Static pool is fixed-capacity: grow_enabled should be false and enabling should fail
-//     assert_false(pool_grow_enabled(p));
-//     
-//     SAVE_ERRNO(e); errno = 0;
-//     toggle_pool_growth(p, true);
-//     assert_false(pool_grow_enabled(p));
-//
-//     free_pool(p);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-//
-// static void test_pool_save_restore_basic(void **state) {
-//     (void)state;
-//     
-//     pool_t* p = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true);
-//     assert_non_null(p);
-//     
-//     // Allocate, save, allocate more, restore
-//     void* a = alloc_pool(p, false);
-//     assert_non_null(a);
-//     
-//     PoolCheckPoint cp = save_pool(p);
-//     
-//     void* b = alloc_pool(p, false);
-//     assert_non_null(b);
-//     
-//     size_t before = pool_in_use_blocks(p);
-//     assert_true(restore_pool(p, cp));
-//     size_t after = pool_in_use_blocks(p);
-//     
-//     // After restore, one less block in use
-//     assert_true(after < before);
-//     
-//     free_pool(p);
-// }
-//
-// static void test_pool_restore_reuses_address(void **state) {
-//     (void)state;
-//     
-//     pool_t* p = init_dynamic_pool(64, 8, 128, 4096, 4096, true, true);
-//     assert_non_null(p);
-//     
-//     PoolCheckPoint cp = save_pool(p);
-//     
-//     void* first = alloc_pool(p, false);
-//     assert_non_null(first);
-//     
-//     assert_true(restore_pool(p, cp));
-//     
-//     void* second = alloc_pool(p, false);
-//     assert_non_null(second);
-//     
-//     // Should get same address (deterministic bump allocation)
-//     assert_ptr_equal(first, second);
-//     
-//     free_pool(p);
-// }
-//
-// static void test_pool_restore_invalidates_checkpoint(void **state) {
-//     (void)state;
-//     
-//     pool_t* p = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true);
-//     assert_non_null(p);
-//     
-//     PoolCheckPoint cp = save_pool(p);
-//     (void)alloc_pool(p, false);
-//     
-//     // Reset invalidates all checkpoints
-//     reset_pool(p);
-//
-//     errno = 0;
-//     assert_false(restore_pool(p, cp));
-//     // assert_int_equal(errno, EINVAL);
-//     
-//     free_pool(p);
-// }
-//
-// static void test_pool_empty_checkpoint_noop(void **state) {
-//     (void)state;
-//     
-//     pool_t* p = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true);
-//     assert_non_null(p);
-//     
-//     PoolCheckPoint empty = {0};
-//     
-//     size_t before = pool_total_blocks(p);
-//     assert_true(restore_pool(p, empty));
-//     size_t after = pool_total_blocks(p);
-//     
-//     assert_int_equal(before, after);  // No change
-//     
-//     free_pool(p);
-// }
-// // ================================================================================ 
-// // ================================================================================ 
-//
-// const struct CMUnitTest test_pool[] = {
-//     cmocka_unit_test(test_init_pool_invalid_args),
-//     cmocka_unit_test(test_init_pool_header_lives_in_arena),
-//     cmocka_unit_test(test_init_pool_alignment_and_stride_rules),
-//     cmocka_unit_test(test_init_pool_prewarm_sets_blocks),
-//     cmocka_unit_test(test_init_pool_fails_when_no_room_for_header ),
-//     cmocka_unit_test(test_pool_reset_semantics),
-//     
-//     cmocka_unit_test(test_init_dynamic_pool_invalid_args),
-//     cmocka_unit_test(test_init_dynamic_pool_overflow_guard),
-//     cmocka_unit_test(test_init_dynamic_pool_alignment_and_stride),
-//     cmocka_unit_test(test_init_dynamic_pool_fixed_prewarm_exact),
-//     cmocka_unit_test(test_init_dynamic_pool_grow_prewarm_and_reuse),
-//     cmocka_unit_test(test_init_dynamic_pool_grow_lazy_first_alloc),
-//     cmocka_unit_test(test_init_dynamic_pool_tiny_seed_fails),
-//
-//     cmocka_unit_test(test_init_static_pool_invalid_args),
-//     cmocka_unit_test(test_init_static_pool_too_small_buffer),
-//     cmocka_unit_test(test_init_static_pool_alignment_and_stride),
-//     cmocka_unit_test(test_init_static_pool_stride_minimum),
-//     cmocka_unit_test(test_init_static_pool_capacity_and_exhaustion),
-//     cmocka_unit_test(test_init_static_pool_free_list_reuse),
-//     cmocka_unit_test(test_init_static_pool_one_block_only),
-//
-//     cmocka_unit_test(test_pool_alignment_matches_contract),
-//     cmocka_unit_test(test_pool_bump_remaining_single_chunk),
-//     cmocka_unit_test(test_pool_bump_remaining_two_chunks_dynamic),
-//     cmocka_unit_test(test_pool_in_use_blocks_counts),
-//     cmocka_unit_test(test_pool_owns_arena_and_mtype_static_vs_dynamic),
-//     cmocka_unit_test(test_pool_grow_enabled_and_toggle),
-//     cmocka_unit_test(test_pool_grow_toggle_disallowed_on_static),
-//
-//     cmocka_unit_test(test_pool_save_restore_basic),
-//     cmocka_unit_test(test_pool_restore_reuses_address),
-//     cmocka_unit_test(test_pool_restore_invalidates_checkpoint),
-//     cmocka_unit_test(test_pool_empty_checkpoint_noop),
-// };
-//
-// const size_t test_pool_count = sizeof(test_pool) / sizeof(test_pool[0]);
+
+static void* make_aligned_buffer(size_t bytes, size_t align) {
+    // Simple portable aligned storage for tests.
+    // For large buffers you might prefer posix_memalign/malloc+align tricks.
+    // Here we just over-allocate on the stack for small examples.
+    // In practice, we’ll use static arrays with attributes below.
+    (void)bytes; (void)align;
+    return NULL; // not used; we’ll test with static arrays instead
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_pool_invalid_args(void **state) {
+    (void)state;
+
+    // NULL buffer
+    pool_expect_t expect = init_static_pool(NULL, 1024, 64, 0); 
+    assert_false(expect.has_value);
+
+    // zero buffer_bytes
+    static unsigned char buf1[128];
+    expect = init_static_pool(buf1, 0, 64, 0); 
+    assert_false(expect.has_value);
+    expect = init_static_pool(buf1, 0, 64, 0);
+    assert_false(expect.has_value);
+
+    // zero block_size
+    expect = init_static_pool(buf1, sizeof buf1, 0, 0); 
+    assert_false(expect.has_value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_pool_too_small_buffer(void **state) {
+    (void)state;
+
+    // Very small buffer that should fail regardless of overhead
+    static unsigned char tiny[32];
+    SAVE_ERRNO(e); errno = 0;
+    pool_expect_t expect = init_static_pool(tiny, sizeof tiny, /*block_size=*/64, /*alignment=*/0); 
+    assert_false(expect.has_value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_pool_alignment_and_stride(void **state) {
+    (void)state;
+
+    // Generous buffer
+    static unsigned char buf[64 * 1024] __attribute__((aligned(64)));
+    pool_expect_t expect = init_static_pool(buf, sizeof buf, /*block_size=*/48, /*alignment=*/64); 
+    assert_true(expect.has_value);
+    pool_t* p = expect.u.value;
+    assert_non_null(p);
+
+    // stride rules
+    size_t bs = pool_block_size(p);
+    size_t st = pool_stride(p);
+    assert_int_equal(bs, 48);
+    assert_true(st >= 48);
+    assert_true(st >= sizeof(void*));
+    assert_true(st % 64 == 0);                      // requested alignment honored
+    assert_true(st % alignof(void*) == 0);          // intrusive free-list
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_pool_stride_minimum(void **state) {
+    (void)state;
+
+    static unsigned char buf[4096] __attribute__((aligned(16)));
+    pool_expect_t expect = init_static_pool(buf, sizeof buf, /*block_size=*/1, /*alignment=*/0); 
+    assert_true(expect.has_value);
+    pool_t* p = expect.u.value;
+
+    size_t st = pool_stride(p);
+    assert_true(st >= sizeof(void*));
+    assert_true(st % alignof(void*) == 0);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_pool_capacity_and_exhaustion(void **state) {
+    (void)state;
+
+    // Use a reasonable buffer to ensure capacity > 0
+    static unsigned char buf[16 * 1024] __attribute__((aligned(64)));
+    pool_expect_t expect = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/0); 
+    assert_true(expect.has_value);
+    pool_t* p = expect.u.value;
+    assert_non_null(p);
+
+    const size_t cap = pool_total_blocks(p);
+    assert_true(cap > 0);
+
+    // Allocate exactly 'cap' blocks
+    void_ptr_expect_t aexpect;
+    for (size_t i = 0; i < cap; ++i) {
+        aexpect = alloc_pool(p, false);
+        assert_true(aexpect.has_value);
+        void *b = aexpect.u.value;
+        // Returned pointer alignment (relative to stride)
+        assert_true(((uintptr_t)b % pool_stride(p)) == 0);
+    }
+
+    // Next allocation must fail with EPERM
+    aexpect = alloc_pool(p, false);
+    assert_false(aexpect.has_value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_pool_free_list_reuse(void **state) {
+    (void)state;
+
+    static unsigned char buf[8 * 1024] __attribute__((aligned(32)));
+    pool_expect_t expect = init_static_pool(buf, sizeof buf, /*block_size=*/32, /*alignment=*/16); 
+    assert_true(expect.has_value);
+    pool_t* p = expect.u.value;
+
+    size_t cap = pool_total_blocks(p);
+    assert_true(cap > 2); // ensure we can do a few operations
+
+    void_ptr_expect_t aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void* a = aexpect.u.value;
+
+    aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void* b = aexpect.u.value;
+    assert_int_equal(pool_free_blocks(p), 0);
+
+    // Return 'a' then re-alloc and confirm LIFO reuse
+    return_pool_element(p, a);
+    assert_int_equal(pool_free_blocks(p), 1);
+
+    aexpect = alloc_pool(p, false);
+    assert_true(aexpect.has_value);
+    void* c = aexpect.u.value;
+    assert_ptr_equal(c, a);
+    assert_int_equal(pool_free_blocks(p), 0);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_static_pool_one_block_only(void **state) {
+    (void)state;
+
+    // Force a “tight” buffer by using a large block size relative to buffer
+    // Exact header size is unknown, so we don’t assert cap==1; we assert cap>=1 and exercise exhaustion.
+    static unsigned char buf[8192] __attribute__((aligned(64)));
+    pool_expect_t expect = init_static_pool(buf, sizeof buf, /*block_size=*/4096, /*alignment=*/64); 
+    assert_true(expect.has_value);
+    pool_t* p = expect.u.value;
+
+    size_t cap = pool_total_blocks(p);
+    assert_true(cap >= 1);
+
+    // Allocate all capacity
+    void_ptr_expect_t aexpect;
+    for (size_t i = 0; i < cap; ++i) {
+        aexpect = alloc_pool(p, false);
+        assert_true(aexpect.has_value);
+    }
+
+    aexpect = alloc_pool(p, false);
+    assert_false(aexpect.has_value);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+static void test_pool_alignment_matches_contract(void **state) {
+    (void)state;
+
+    // Dynamic, grow-enabled, prewarmed; ask for strong alignment
+    pool_expect_t pexpect = init_dynamic_pool(
+        /*block_size=*/48,
+        /*alignment=*/64,
+        /*blocks_per_chunk=*/8,
+        /*arena_seed_bytes=*/8192,
+        /*min_chunk_bytes=*/4096,
+        /*grow_enabled=*/true,
+        /*prewarm_one_chunk=*/true
+    ); 
+    assert_true(pexpect.has_value);
+    pool_t* p = pexpect.u.value;
+    size_t a = pool_alignment(p);
+    size_t s = pool_stride(p);
+
+    // Alignment must be at least alignof(void*), and stride multiple of alignment
+    assert_true(a >= alignof(void*));
+    assert_true((s % a) == 0);
+
+    // Since we requested 64, expect base alignment to be >= 64
+    assert_true(a >= 64);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_bump_remaining_single_chunk(void **state) {
+    (void)state;
+
+    // Static pool → single prewarmed slice by design
+    static unsigned char buf[8 * 1024] __attribute__((aligned(64)));
+    pool_expect_t pexpect = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/64); 
+    assert_true(pexpect.has_value);
+    pool_t *p = pexpect.u.value;
+    assert_non_null(p);
+
+    size_t before = pool_bump_remaining_blocks(p);
+    assert_true(before > 0);
+    assert_int_equal(before, pool_total_blocks(p)); // static pool: all capacity in one slice
+
+    // Allocate two blocks → bump remaining decreases by 2
+    void_ptr_expect_t expect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    void *b0 = expect.u.value;
+
+    expect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    void *b1 = expect.u.value;
+
+    size_t after2 = pool_bump_remaining_blocks(p);
+    assert_int_equal(after2, before - 2);
+
+    // Return one block → free list grows, bump remaining unchanged
+    return_pool_element(p, b0);
+    assert_int_equal(pool_free_blocks(p), 1);
+    size_t after_free = pool_bump_remaining_blocks(p);
+    assert_int_equal(after_free, after2);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_bump_remaining_two_chunks_dynamic(void **state) {
+    (void)state;
+
+    // Dynamic, grow-enabled, prewarm one chunk with small count
+    const size_t BPC = 8;
+    pool_expect_t pexpect = init_dynamic_pool(
+        /*block_size=*/32,
+        /*alignment=*/16,
+        /*blocks_per_chunk=*/BPC,
+        /*arena_seed_bytes=*/8192,
+        /*min_chunk_bytes=*/4096,
+        /*grow_enabled=*/true,
+        /*prewarm_one_chunk=*/true
+    ); 
+    assert_true(pexpect.has_value);
+    pool_t *p = pexpect.u.value;
+
+    // Initial bump remaining equals that chunk's capacity
+    assert_int_equal(pool_bump_remaining_blocks(p), BPC);
+
+    // Exhaust the first chunk
+    void_ptr_expect_t expect;
+    for (size_t i = 0; i < BPC; ++i) {
+        expect = alloc_pool(p, false);
+        assert_true(expect.has_value);
+    }
+    assert_int_equal(pool_bump_remaining_blocks(p), 0);
+
+    // Next allocation should trigger growth → new chunk carved, one block consumed
+    expect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    assert_int_equal(pool_bump_remaining_blocks(p), BPC - 1);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_in_use_blocks_counts(void **state) {
+    (void)state;
+
+    static unsigned char buf[16 * 1024] __attribute__((aligned(64)));
+    pool_expect_t pexpect = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/0); 
+    assert_true(pexpect.has_value);
+    pool_t *p = pexpect.u.value;
+    assert_int_equal(pool_in_use_blocks(p), 0);
+   
+    void_ptr_expect_t expect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    void *a = expect.u.value;
+    
+    expect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    void *b = expect.u.value;
+
+    assert_int_equal(pool_in_use_blocks(p), 2);
+
+    return_pool_element(p, a);
+    assert_int_equal(pool_in_use_blocks(p), 1);
+
+    return_pool_element(p, b);
+    assert_int_equal(pool_in_use_blocks(p), 0);
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_owns_arena_and_mtype_static_vs_dynamic(void **state) {
+    (void)state;
+
+    // Static
+    static unsigned char sbuf[4096] __attribute__((aligned(64)));
+    pool_expect_t pexpect = init_static_pool(sbuf, sizeof sbuf, /*block_size=*/64, /*alignment=*/0); 
+    assert_true(pexpect.has_value);
+    pool_t *ps = pexpect.u.value;
+    assert_true(pool_owns_arena(ps));
+    assert_int_equal(pool_mtype(ps), STATIC);
+    free_pool(ps);
+
+    // Dynamic 
+    pexpect = init_dynamic_pool(
+        /*block_size=*/64, /*alignment=*/0, /*blocks_per_chunk=*/8,
+        /*arena_seed_bytes=*/8192, /*min_chunk_bytes=*/4096,
+        /*grow_enabled=*/true, /*prewarm_one_chunk=*/true
+    ); 
+    assert_true(pexpect.has_value);
+    pool_t *pd = pexpect.u.value;
+    
+    assert_non_null(pd);
+    assert_true(pool_owns_arena(pd));
+    assert_int_equal(pool_mtype(pd), DYNAMIC);
+    free_pool(pd);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_grow_enabled_and_toggle(void **state) {
+    (void)state;
+
+    // Dynamic, grow-enabled initially
+    pool_expect_t pexpect = init_dynamic_pool(
+        /*block_size=*/32, /*alignment=*/0, /*blocks_per_chunk=*/4,
+        /*arena_seed_bytes=*/8192, /*min_chunk_bytes=*/4096,
+        /*grow_enabled=*/true, /*prewarm_one_chunk=*/true
+    ); 
+    assert_true(pexpect.has_value);
+    pool_t *p = pexpect.u.value;
+    assert_true(pool_grow_enabled(p));
+    
+    // Freeze
+    toggle_pool_growth(p, false);
+    assert_false(pool_grow_enabled(p));
+
+    // Re-enable (allowed: dynamic arena and resize==true)
+    toggle_pool_growth(p, true);
+    assert_true(pool_grow_enabled(p));
+
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_grow_toggle_disallowed_on_static(void **state) {
+    (void)state;
+
+    static unsigned char buf[4096] __attribute__((aligned(64)));
+    pool_expect_t pexpect = init_static_pool(buf, sizeof buf, /*block_size=*/64, /*alignment=*/0); 
+    assert_true(pexpect.has_value);
+    pool_t *p = pexpect.u.value;
+
+    // Static pool is fixed-capacity: grow_enabled should be false and enabling should fail
+    assert_false(pool_grow_enabled(p));
+    
+    toggle_pool_growth(p, true);
+    assert_false(pool_grow_enabled(p));
+
+    free_pool(p);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+static void test_pool_save_restore_basic(void **state) {
+    (void)state;
+
+    pool_expect_t pexpect = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true); 
+    assert_true(pexpect.has_value);
+    pool_t* p = pexpect.u.value;
+    
+    // Allocate, save, allocate more, restore
+    void_ptr_expect_t expect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    void* a = expect.u.value;
+    assert_non_null(a);
+    
+    PoolCheckPoint cp = save_pool(p);
+   
+    expect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    void* b = expect.u.value;
+    assert_non_null(b);
+    
+    size_t before = pool_in_use_blocks(p);
+    assert_true(restore_pool(p, cp));
+    size_t after = pool_in_use_blocks(p);
+    
+    // After restore, one less block in use
+    assert_true(after < before);
+    
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_restore_reuses_address(void **state) {
+    (void)state;
+
+    pool_expect_t pexpect = init_dynamic_pool(64, 8, 128, 4096, 4096, true, true);
+    assert_true(pexpect.has_value);
+    pool_t* p = pexpect.u.value;
+    
+    PoolCheckPoint cp = save_pool(p);
+   
+    void_ptr_expect_t expect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    void* first = expect.u.value;
+    assert_non_null(first);
+    
+    assert_true(restore_pool(p, cp));
+   
+    expect = alloc_pool(p, false);
+    assert_true(expect.has_value);
+    void* second = expect.u.value;
+    assert_non_null(second);
+    
+    // Should get same address (deterministic bump allocation)
+    assert_ptr_equal(first, second);
+    
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_restore_invalidates_checkpoint(void **state) {
+    (void)state;
+
+    pool_expect_t pexpect = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true); 
+    assert_true(pexpect.has_value);
+    pool_t* p = pexpect.u.value;
+    
+    PoolCheckPoint cp = save_pool(p);
+    (void)alloc_pool(p, false);
+    
+    // Reset invalidates all checkpoints
+    reset_pool(p);
+
+    errno = 0;
+    assert_false(restore_pool(p, cp));
+    // assert_int_equal(errno, EINVAL);
+    
+    free_pool(p);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_pool_empty_checkpoint_noop(void **state) {
+    (void)state;
+
+    pool_expect_t pexpect = init_dynamic_pool(32, 4, 64, 4096, 4096, true, true); 
+    assert_true(pexpect.has_value);
+    pool_t* p = pexpect.u.value;
+    
+    PoolCheckPoint empty = {0};
+    
+    size_t before = pool_total_blocks(p);
+    assert_true(restore_pool(p, empty));
+    size_t after = pool_total_blocks(p);
+    
+    assert_int_equal(before, after);  // No change
+    
+    free_pool(p);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+const struct CMUnitTest test_pool[] = {
+    cmocka_unit_test(test_init_pool_invalid_args),
+    cmocka_unit_test(test_init_pool_header_lives_in_arena),
+    cmocka_unit_test(test_init_pool_alignment_and_stride_rules),
+    cmocka_unit_test(test_init_pool_prewarm_sets_blocks),
+    cmocka_unit_test(test_init_pool_fails_when_no_room_for_header ),
+    cmocka_unit_test(test_pool_reset_semantics),
+    
+    cmocka_unit_test(test_init_dynamic_pool_invalid_args),
+    cmocka_unit_test(test_init_dynamic_pool_overflow_guard),
+    cmocka_unit_test(test_init_dynamic_pool_alignment_and_stride),
+    cmocka_unit_test(test_init_dynamic_pool_fixed_prewarm_exact),
+    cmocka_unit_test(test_init_dynamic_pool_grow_prewarm_and_reuse),
+    cmocka_unit_test(test_init_dynamic_pool_grow_lazy_first_alloc),
+    cmocka_unit_test(test_init_dynamic_pool_tiny_seed_fails),
+
+    cmocka_unit_test(test_init_static_pool_invalid_args),
+    cmocka_unit_test(test_init_static_pool_too_small_buffer),
+    cmocka_unit_test(test_init_static_pool_alignment_and_stride),
+    cmocka_unit_test(test_init_static_pool_stride_minimum),
+    cmocka_unit_test(test_init_static_pool_capacity_and_exhaustion),
+    cmocka_unit_test(test_init_static_pool_free_list_reuse),
+    cmocka_unit_test(test_init_static_pool_one_block_only),
+
+    cmocka_unit_test(test_pool_alignment_matches_contract),
+    cmocka_unit_test(test_pool_bump_remaining_single_chunk),
+    cmocka_unit_test(test_pool_bump_remaining_two_chunks_dynamic),
+    cmocka_unit_test(test_pool_in_use_blocks_counts),
+    cmocka_unit_test(test_pool_owns_arena_and_mtype_static_vs_dynamic),
+    cmocka_unit_test(test_pool_grow_enabled_and_toggle),
+    cmocka_unit_test(test_pool_grow_toggle_disallowed_on_static),
+
+    cmocka_unit_test(test_pool_save_restore_basic),
+    cmocka_unit_test(test_pool_restore_reuses_address),
+    cmocka_unit_test(test_pool_restore_invalidates_checkpoint),
+    cmocka_unit_test(test_pool_empty_checkpoint_noop),
+};
+
+const size_t test_pool_count = sizeof(test_pool) / sizeof(test_pool[0]);
 // // ================================================================================ 
 // // ================================================================================ 
 //
