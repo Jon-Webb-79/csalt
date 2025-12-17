@@ -891,6 +891,21 @@ that enables a link list to tracked returned memory.
        struct free_block* next;
    } free_block_t;
 
+freelist_expect_t 
+~~~~~~~~~~~~~~~~~
+``freelist_expect_t`` is an error handling struct to be used in the creation 
+of ``freelist_t`` data types to catch and convey errors to a user.
+
+.. code-block:: c
+
+   typedef struct {
+       bool has_value;
+       union {
+           freelist_t* value;
+           ErrorCode error;
+       } u;
+   } freelist_expect_t;
+
 Initialization and Memory Management
 ------------------------------------
 The functions in this section can be used to initialize memory for a free list allocator,
