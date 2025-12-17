@@ -5320,7 +5320,6 @@ freelist_v_realloc_aligned(void *ctx,
 
     return realloc_freelist_aligned(fl, old_ptr, old_size, new_size, zeroed, align);
 }
-
 // ----------------------------------------------------------------------------- 
 
 /**
@@ -5342,7 +5341,7 @@ freelist_v_return(void *ctx, void *ptr) {
 
     /* If your return_freelist_element currently returns void, change this wrapper
        to call it and return true. If it returns bool, propagate it. */
-    return return_freelist_element(fl, ptr);
+    return_freelist_element(fl, ptr);
 }
 
 // ----------------------------------------------------------------------------- 
@@ -5364,71 +5363,79 @@ freelist_v_free(void *ctx) {
     }
 
     /* If your free_freelist returns void, call it and return true. */
-    return free_freelist(fl);
+    free_freelist(fl);
 }
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Obtain an allocator vtable backed by a freelist allocator.
+ * @brief Create an allocator vtable bound to a specific freelist instance.
  *
- * Returns an ::allocator_vtable_t whose function pointers implement allocation,
- * reallocation, aligned allocation, return, and destruction operations using
- * a ::freelist_t as the underlying allocator.
+ * Constructs and returns an ::allocator_vtable_t whose operations are backed
+ * by the provided ::freelist_t. All allocation, reallocation, aligned
+ * allocation, return, and destruction operations performed through the
+ * returned vtable will operate on the supplied freelist instance.
  *
- * The returned vtable is stateless and does not own any memory. It may be
- * reused for multiple freelist instances; the actual allocator state is
- * provided at call time via the @c ctx parameter passed to each vtable
- * function.
+ * Unlike a stateless allocator descriptor, the returned vtable captures the
+ * freelist pointer in its @c ctx field. This binds the allocator interface to
+ * a specific freelist for its entire lifetime.
  *
- * @return An ::allocator_vtable_t configured for freelist-based allocation.
+ * @param freelist
+ *        Pointer to an initialized ::freelist_t that will service all allocator
+ *        requests made through the returned vtable. Must not be NULL.
  *
- * @note The caller is responsible for ensuring that the @c ctx argument passed
- *       to the vtable functions points to a valid ::freelist_t.
+ * @return
+ *        An ::allocator_vtable_t configured to allocate from @p freelist.
  *
- * @note This function does not allocate, initialize, or destroy a freelist.
- *       It only provides the function bindings required to use a freelist
- *       through the generic allocator interface.
+ * @note
+ *        The returned vtable does not take ownership of the freelist. The caller
+ *        remains responsible for managing the freelist’s lifetime and must
+ *        ensure that it remains valid for as long as the vtable is in use.
  *
- * @warning Passing a context pointer that is not a valid ::freelist_t to any
- *          function in the returned vtable results in undefined behavior.
+ * @note
+ *        Multiple allocator vtables may be created for the same freelist
+ *        instance. All such vtables will operate on the same underlying pool
+ *        of memory.
+ *
+ * @warning
+ *        Destroying or resetting the freelist while the returned vtable is
+ *        still in use results in undefined behavior.
  *
  * @par Example
- * Using a freelist through the generic allocator interface:
+ * Binding a freelist to the generic allocator interface:
  *
  * @code{.c}
  * freelist_expect_t flr = init_dynamic_freelist(4096, 0, false);
  * if (!flr.has_value) {
- *     // handle error
+ *     // handle initialization error
  *     return;
  * }
  *
  * freelist_t *fl = flr.u.value;
  *
- * allocator_vtable_t alloc = freelist_allocator();
+ * allocator_vtable_t alloc = freelist_allocator(fl);
  *
- * void_ptr_expect_t r = alloc.alloc(fl, 128, true);
+ * void_ptr_expect_t r = alloc.allocate(alloc.ctx, 128, true);
  * if (!r.has_value) {
  *     // handle allocation error
  * }
  *
- * alloc.ret(fl, r.u.value);
- * alloc.free(fl);
+ * alloc.return_element(alloc.ctx, r.u.value);
+ *
+ * alloc.deallocate(alloc.ctx);  // frees the freelist (and its arena, if owned)
  * @endcode
  */
-static inline allocator_vtable_t
-freelist_allocator(void) {
-    allocator_vtable_t vt;
-
-    vt.alloc           = freelist_v_alloc;
-    vt.alloc_aligned   = freelist_v_alloc_aligned;
-    vt.realloc         = freelist_v_realloc;
-    vt.realloc_aligned = freelist_v_realloc_aligned;
-    vt.ret             = freelist_v_return;   /* or .return_fn depending on your struct */
-    vt.free            = freelist_v_free;
-
-    return vt;
+static inline allocator_vtable_t freelist_allocator(freelist_t* a) {
+    allocator_vtable_t v = {
+        .allocate           = freelist_v_alloc,
+        .allocate_aligned   = freelist_v_alloc_aligned,
+        .reallocate         = freelist_v_realloc,
+        .reallocate_aligned = freelist_v_realloc_aligned,
+        .return_element     = freelist_v_return,
+        .deallocate         = freelist_v_free,
+        .ctx                = a
+    };
+    return v;
 }
-
 // ================================================================================ 
 // ================================================================================ 
 

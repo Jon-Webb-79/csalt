@@ -2971,11 +2971,10 @@ void_ptr_expect_t alloc_freelist(freelist_t* fl, size_t bytes, bool zeroed)
 }
 // -------------------------------------------------------------------------------- 
 
-static inline void_ptr_expect_t
-alloc_freelist_aligned(freelist_t *fl,
-                       size_t      bytes,
-                       size_t      alignment,
-                       bool        zeroed) {
+void_ptr_expect_t alloc_freelist_aligned(freelist_t *fl,
+                                         size_t      bytes,
+                                         size_t      alignment,
+                                         bool        zeroed) {
     if (!fl) {
         return (void_ptr_expect_t){
             .has_value = false,
@@ -3010,24 +3009,20 @@ alloc_freelist_aligned(freelist_t *fl,
     }
 
     /* Delegate to internal allocator */
-    void *ptr = alloc_freelist_internal(fl, bytes, eff_align, zeroed);
-    if (!ptr) {
+    void_ptr_expect_t ptr = alloc_freelist_internal(fl, bytes, eff_align, zeroed);
+    if (!ptr.has_value) {
         return (void_ptr_expect_t){
             .has_value = false,
-            .u.error   = CAPACITY_OVERFLOW
+            .u.error   = ptr.u.error
         };
     }
 
-    return (void_ptr_expect_t){
-        .has_value = true,
-        .u.value   = ptr
-    };
+    return ptr;
 }
 // -------------------------------------------------------------------------------- 
 
 void return_freelist_element(freelist_t* fl, void* ptr) {
     if (!fl || !ptr) {
-        errno = EINVAL;
         return;
     }
 
@@ -3039,7 +3034,6 @@ void return_freelist_element(freelist_t* fl, void* ptr) {
 
     // Basic bounds: user pointer must be inside region and leave room for header
     if (user_ptr < mem_start8 + header_size || user_ptr > mem_end8) {
-        errno = EINVAL;
         return;
     }
 

@@ -41,7 +41,7 @@ int main(void) {
         {"Error Handling",  test_error, test_error_count},
         {"Arena Allocator", test_arena, test_arena_count},
         {"Pool Allocator", test_pool, test_pool_count},
-        // {"Freelist Allocator",  test_freelist, test_freelist_count},
+        {"Freelist Allocator",  test_freelist, test_freelist_count},
         // {"Buddy Allocator",  test_buddy_allocator, test_buddy_allocator_count},
         // {"Slab Allocator",  test_slab_allocator, test_slab_allocator_count},
     };
