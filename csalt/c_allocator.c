@@ -604,11 +604,11 @@ arena_expect_t init_arena_with_buddy(buddy_t *buddy,
     }
 
     /* Single allocation from buddy for entire arena region. */
-    void *buffer = alloc_buddy(buddy, bytes, false);
-    if (buffer == NULL) {
-        /* Buddy could not satisfy the request (pool exhausted, etc.) */
-        return arena_err(OUT_OF_MEMORY);
+    void_ptr_expect_t expect =  alloc_buddy(buddy, bytes, false);
+    if (!expect.has_value) {
+        return arena_err(expect.u.error);
     }
+    void *buffer = expect.u.value;
 
     uintptr_t const b     = (uintptr_t)buffer;
     uintptr_t const b_end = b + bytes;
@@ -3662,73 +3662,108 @@ static inline uint32_t _level_to_order(const buddy_t *b, uint32_t level) {
 }
 // -------------------------------------------------------------------------------- 
 
-buddy_t *init_buddy_allocator(size_t pool_size,
-                              size_t min_block_size,
-                              size_t base_align) {
-    if (pool_size == 0 || min_block_size == 0) {
-        errno = EINVAL;
-        return NULL;
+static inline buddy_expect_t buddy_ok(buddy_t *b) {
+    return (buddy_expect_t){ .has_value = true, .u.value = b };
+}
+// -------------------------------------------------------------------------------- 
+
+static inline buddy_expect_t buddy_err(ErrorCode e) {
+    return (buddy_expect_t){ .has_value = false, .u.error = e };
+}
+// -------------------------------------------------------------------------------- 
+
+buddy_expect_t init_buddy_allocator(size_t pool_size,
+                                    size_t min_block_size,
+                                    size_t base_align) {
+    /* ---- validate obvious inputs */
+    if (pool_size == 0u || min_block_size == 0u) {
+        return buddy_err(INVALID_ARG);
     }
 
     buddy_t *b = calloc(1, sizeof(*b));
-    if (!b) { errno = ENOMEM; return NULL; }
+    if (!b) {
+        return buddy_err(BAD_ALLOC);
+    }
 
-    /* 1) Normalize base alignment */
-    if (base_align == 0) {
+    /* ---- normalize base alignment */
+    if (base_align == 0u) {
         base_align = alignof(max_align_t);
     }
+
+    /* If not power-of-two, round up. If that overflows -> CAPACITY_OVERFLOW. */
     if ((base_align & (base_align - 1u)) != 0u) {
-        base_align = _next_pow2(base_align);
-        if (!base_align) { free(b); errno = EINVAL; return NULL; }
+        size_t next = _next_pow2(base_align);
+        if (next == 0u) {
+            free(b);
+            return buddy_err(CAPACITY_OVERFLOW);
+        }
+        base_align = next;
     }
 
-    /* 2) Compute header-aligned user offset */
-    size_t header_size = sizeof(buddy_header_t);
+    /* Still defensive: alignment must be nonzero power-of-two. */
+    if (base_align == 0u || (base_align & (base_align - 1u)) != 0u) {
+        free(b);
+        return buddy_err(INVALID_ARG);
+    }
 
-    /* Align the user pointer to base_align relative to block start */
-    size_t user_offset = (header_size + (base_align - 1u)) & ~(base_align - 1u);
+    /* ---- compute header-aligned user offset */
+    size_t const header_size = sizeof(buddy_header_t);
 
-    /* 3) Ensure min_block_size is at least big enough to hold header+alignment */
+    /* user_offset = align_up(header_size, base_align) with overflow guard */
+    if (header_size > SIZE_MAX - (base_align - 1u)) {
+        free(b);
+        return buddy_err(CAPACITY_OVERFLOW);
+    }
+    size_t const user_offset = (header_size + (base_align - 1u)) & ~(base_align - 1u);
+
+    /* Ensure min_block_size can hold header+alignment */
     if (min_block_size < user_offset) {
         min_block_size = user_offset;
     }
 
-    /* 4) Round min_block_size and pool_size up to powers of two */
-    size_t min_blk = _next_pow2(min_block_size);
-    size_t pool    = _next_pow2(pool_size);
+    /* ---- round sizes up to powers of two (overflow -> CAPACITY_OVERFLOW) */
+    size_t const min_blk = _next_pow2(min_block_size);
+    if (min_blk == 0u) {
+        free(b);
+        return buddy_err(CAPACITY_OVERFLOW);
+    }
 
+    size_t const pool = _next_pow2(pool_size);
+    if (pool == 0u) {
+        free(b);
+        return buddy_err(CAPACITY_OVERFLOW);
+    }
+
+    /* Unsatisfiable request: min block larger than pool */
     if (min_blk > pool) {
-        errno = EINVAL;
         free(b);
-        return NULL;
+        return buddy_err(INVALID_ARG);
     }
 
-    uint32_t min_order  = _ilog2_size(min_blk);
-    uint32_t max_order  = _ilog2_size(pool);
-    uint32_t num_levels = max_order - min_order + 1;
+    uint32_t const min_order  = _ilog2_size(min_blk);
+    uint32_t const max_order  = _ilog2_size(pool);
+    uint32_t const num_levels = (max_order - min_order) + 1u;
 
-    if (num_levels == 0) {
-        errno = EINVAL;
+    if (num_levels == 0u) {
         free(b);
-        return NULL;
+        return buddy_err(INVALID_ARG);
     }
 
+    /* ---- allocate backing pool */
     void *base = buddy_os_alloc(pool);
     if (!base) {
-        errno = ENOMEM;
         free(b);
-        return NULL;
+        return buddy_err(BAD_ALLOC);
     }
 
-    buddy_block_t **free_lists =
-        calloc(num_levels, sizeof(buddy_block_t *));
+    buddy_block_t **free_lists = calloc(num_levels, sizeof(buddy_block_t *));
     if (!free_lists) {
         buddy_os_free(base, pool);
         free(b);
-        errno = ENOMEM;
-        return NULL;
+        return buddy_err(BAD_ALLOC);
     }
 
+    /* ---- populate buddy struct */
     b->base       = base;
     b->pool_size  = pool;
     b->min_order  = min_order;
@@ -3737,21 +3772,48 @@ buddy_t *init_buddy_allocator(size_t pool_size,
     b->free_lists = free_lists;
 
     b->alloc       = pool;
-    b->len         = 0;
-    b->total_alloc = pool
-                   + num_levels * sizeof(buddy_block_t *)
-                   + sizeof(*b);
+    b->len         = 0u;
+
+    /* total_alloc accounting: guard overflow */
+    size_t total = pool;
+
+    if (num_levels > SIZE_MAX / sizeof(buddy_block_t *)) {
+        buddy_os_free(base, pool);
+        free(free_lists);
+        free(b);
+        return buddy_err(CAPACITY_OVERFLOW);
+    }
+    size_t const lists_bytes = (size_t)num_levels * sizeof(buddy_block_t *);
+
+    if (total > SIZE_MAX - lists_bytes) {
+        buddy_os_free(base, pool);
+        free(free_lists);
+        free(b);
+        return buddy_err(CAPACITY_OVERFLOW);
+    }
+    total += lists_bytes;
+
+    if (total > SIZE_MAX - sizeof(*b)) {
+        buddy_os_free(base, pool);
+        free(free_lists);
+        free(b);
+        return buddy_err(CAPACITY_OVERFLOW);
+    }
+    total += sizeof(*b);
+
+    b->total_alloc = total;
 
     b->base_align  = base_align;
     b->user_offset = user_offset;
 
+    /* ---- seed top free list */
     buddy_block_t *initial_block = (buddy_block_t *)base;
     initial_block->next = NULL;
 
-    uint32_t top_level = _order_to_level(b, max_order);
+    uint32_t const top_level = _order_to_level(b, max_order);
     b->free_lists[top_level] = initial_block;
 
-    return b;
+    return buddy_ok(b);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -3768,13 +3830,15 @@ void free_buddy(buddy_t *b) {
 }
 // -------------------------------------------------------------------------------- 
 
-void *alloc_buddy(buddy_t *b, size_t size, bool zeroed) {
-    if (!b || size == 0) {
-        errno = EINVAL;
-        return NULL;
+void_ptr_expect_t alloc_buddy(buddy_t *b, size_t size, bool zeroed) {
+    if (!b || size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
-    /* Include header overhead. */
+    /* total = user payload + header (guard overflow) */
+    if (size > SIZE_MAX - sizeof(buddy_header_t)) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
+    }
     size_t total = size + sizeof(buddy_header_t);
 
     /* Ensure at least min block size. */
@@ -3783,29 +3847,31 @@ void *alloc_buddy(buddy_t *b, size_t size, bool zeroed) {
         total = min_block;
     } else {
         total = _next_pow2(total);
+        if (total == 0u) {
+            /* _next_pow2() uses 0 as overflow/sentinel in your codebase */
+            return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
+        }
     }
 
+    /* Request cannot exceed pool. */
     if (total > b->pool_size) {
-        errno = ENOMEM;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
     }
 
+    /* Compute order for total (defensive clamp). */
     uint32_t order = _ilog2_size(total);
     if (order < b->min_order) order = b->min_order;
     if (order > b->max_order) {
-        errno = ENOMEM;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
     }
 
     uint32_t desired_level = _order_to_level(b, order);
     int32_t  lvl           = _find_nonempty_level(b, desired_level);
-
     if (lvl < 0) {
-        errno = ENOMEM;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
     }
 
-    /* Take a block from level 'lvl'. */
+    /* Pop a block from level 'lvl'. */
     buddy_block_t *block = b->free_lists[lvl];
     b->free_lists[lvl]   = block->next;
     block->next          = NULL;
@@ -3826,80 +3892,88 @@ void *alloc_buddy(buddy_t *b, size_t size, bool zeroed) {
         _freelist_push(&b->free_lists[split_level], split_block);
     }
 
-    /* Now 'block' is the final block of size 2^order. */
+    /* Final block is size 2^order. */
     uint8_t *block_bytes = (uint8_t *)block;
 
-    /* Header lives at block start in the unaligned case. */
-    buddy_header_t *hdr = (buddy_header_t *)block_bytes;
-    hdr->order        = order;
-    hdr->block_offset = (size_t)(block_bytes - (uint8_t *)b->base);
+    buddy_header_t *hdr  = (buddy_header_t *)block_bytes;
+    hdr->order           = order;
+    hdr->block_offset    = (size_t)(block_bytes - (uint8_t *)b->base);
 
     size_t block_size = (size_t)1u << order;
+
+    /* Defensive: ensure accounting cannot overflow */
+    if (block_size > SIZE_MAX - b->len) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
+    }
     b->len += block_size;
 
-    /* User pointer is just after the header. */
     uint8_t *user_ptr = block_bytes + sizeof(buddy_header_t);
 
     if (zeroed) {
         memset(user_ptr, 0, block_size - sizeof(buddy_header_t));
     }
 
-    return (void *)user_ptr;
+    return (void_ptr_expect_t){ .has_value = true, .u.value = (void *)user_ptr };
 }
+
 // -------------------------------------------------------------------------------- 
 
-void *alloc_buddy_aligned(buddy_t *b,
-                          size_t  size,
-                          size_t  align,
-                          bool    zeroed) {
-    if (!b || size == 0) {
-        errno = EINVAL;
-        return NULL;
+void_ptr_expect_t alloc_buddy_aligned(buddy_t *b,
+                                      size_t  size,
+                                      size_t  align,
+                                      bool    zeroed) {
+    if (!b || size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
-    if (align == 0) {
-        /* Treat 0 as "natural" alignment. */
+    /* Normalize alignment: 0 -> natural alignment */
+    if (align == 0u) {
         align = alignof(max_align_t);
     }
 
-    /* Require power-of-two alignment. */
-    if (align & (align - 1u)) {
+    /* Require power-of-two alignment; round up if needed. */
+    if ((align & (align - 1u)) != 0u) {
         align = _next_pow2(align);
-        if (!align) { errno = EINVAL; return NULL; }
+        if (align == 0u) {
+            return (void_ptr_expect_t){ .has_value = false, .u.error = ALIGNMENT_ERROR };
+        }
     }
 
-    /* We need room for:
-       - header
-       - requested payload
-       - worst-case alignment padding (align-1)
-    */
+    /* Guard: total = size + header + (align-1) */
+    if (align == 0u) { /* defensive; shouldn't happen */
+        return (void_ptr_expect_t){ .has_value = false, .u.error = ALIGNMENT_ERROR };
+    }
+    if (size > SIZE_MAX - sizeof(buddy_header_t) - (align - 1u)) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
+    }
+
     size_t total = size + sizeof(buddy_header_t) + (align - 1u);
 
+    /* Ensure at least min block size. */
     size_t min_block = (size_t)1u << b->min_order;
     if (total < min_block) {
         total = min_block;
     } else {
         total = _next_pow2(total);
+        if (total == 0u) {
+            return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
+        }
     }
 
     if (total > b->pool_size) {
-        errno = ENOMEM;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
     }
 
     uint32_t order = _ilog2_size(total);
     if (order < b->min_order) order = b->min_order;
     if (order > b->max_order) {
-        errno = ENOMEM;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
     }
 
     uint32_t desired_level = _order_to_level(b, order);
     int32_t  lvl           = _find_nonempty_level(b, desired_level);
-
     if (lvl < 0) {
-        errno = ENOMEM;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
     }
 
     /* Take a block from level 'lvl'. */
@@ -3926,53 +4000,47 @@ void *alloc_buddy_aligned(buddy_t *b,
     size_t   block_size  = (size_t)1u << order;
     uint8_t *block_bytes = (uint8_t *)block;
 
-    /* Find an aligned user pointer inside this block.
-       We want user_ptr aligned to 'align', with enough room
-       immediately before it for the header.
-    */
-
+    /* Find an aligned user pointer inside this block. */
     uintptr_t block_addr = (uintptr_t)block_bytes;
 
-    /* Minimal place we can put the user pointer: after header. */
-    uintptr_t min_user = block_addr + sizeof(buddy_header_t);
-
-    /* Candidate aligned user pointer. */
-    uintptr_t aligned_user =
-        (min_user + (align - 1u)) & ~(uintptr_t)(align - 1u);
-
-    /* Ensure the header + payload fit inside this block. */
-    if (aligned_user + size > block_addr + block_size) {
-        /* In theory this shouldn't happen because we over-allocated with +align-1,
-           but be defensive: treat as ENOMEM. */
-        errno = ENOMEM;
-        /* Return block to free list. */
+    /* min_user = block_addr + sizeof(header) */
+    if ((uintptr_t)sizeof(buddy_header_t) > (UINTPTR_MAX - block_addr)) {
+        /* Should never happen in practice; treat as overflow and undo allocation. */
         uint32_t lvl_final = _order_to_level(b, order);
         _freelist_push(&b->free_lists[lvl_final], block);
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
+    }
+    uintptr_t min_user = block_addr + (uintptr_t)sizeof(buddy_header_t);
+
+    /* aligned_user = align_up(min_user, align) */
+    uintptr_t aligned_user = (min_user + (uintptr_t)(align - 1u)) & ~(uintptr_t)(align - 1u);
+
+    /* Ensure aligned_user + size <= block_addr + block_size */
+    uintptr_t block_end = block_addr + (uintptr_t)block_size;
+    if ((uintptr_t)size > (UINTPTR_MAX - aligned_user) || (aligned_user + (uintptr_t)size) > block_end) {
+        /* Defensive: return block to free list */
+        uint32_t lvl_final = _order_to_level(b, order);
+        _freelist_push(&b->free_lists[lvl_final], block);
+        return (void_ptr_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
     }
 
     uint8_t *user_ptr = (uint8_t *)aligned_user;
 
     /* Header lives immediately before user_ptr. */
-    buddy_header_t *hdr =
-        (buddy_header_t *)(user_ptr - sizeof(buddy_header_t));
-    hdr->order        = order;
-    hdr->block_offset = (size_t)(block_bytes - (uint8_t *)b->base);
+    buddy_header_t *hdr = (buddy_header_t *)(user_ptr - sizeof(buddy_header_t));
+    hdr->order          = order;
+    hdr->block_offset   = (size_t)(block_bytes - (uint8_t *)b->base);
 
     b->len += block_size;
 
     if (zeroed) {
-        /* Zero the entire usable payload region behind user_ptr.
-           You could also just zero [0, size) if you prefer.
-         */
-        size_t payload_bytes =
-            (block_bytes + block_size) - user_ptr;
+        /* Zero the usable payload region from user_ptr to end-of-block. */
+        size_t payload_bytes = (size_t)((block_bytes + block_size) - user_ptr);
         memset(user_ptr, 0, payload_bytes);
     }
 
-    return (void *)user_ptr;
+    return (void_ptr_expect_t){ .has_value = true, .u.value = (void *)user_ptr };
 }
-
 // --------------------------------------------------------------------------------
 
 bool return_buddy_element(buddy_t *b, void *ptr) {
@@ -4053,153 +4121,167 @@ bool return_buddy_element(buddy_t *b, void *ptr) {
 }
 // -------------------------------------------------------------------------------- 
 
-void* realloc_buddy(buddy_t* buddy,
-                    void*    old_ptr,
-                    size_t   old_size,
-                    size_t   new_size,
-                    bool     zeroed) {
+void_ptr_expect_t realloc_buddy(buddy_t* buddy,
+                                void*    old_ptr,
+                                size_t   old_size,
+                                size_t   new_size,
+                                bool     zeroed) {
+    /* Validate allocator */
     if (!buddy) {
-        errno = EINVAL;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
-    /* realloc(NULL, n) => malloc-like behavior */
+    /* realloc(NULL, n) => alloc(n) */
     if (!old_ptr) {
-        if (new_size == 0) {
-            /* realloc(NULL, 0) is allowed to return NULL. */
-            return NULL;
+        if (new_size == 0u) {
+            /* Keep semantics explicit: treat as invalid request for this API. */
+            return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
         }
-        return alloc_buddy(buddy, new_size, zeroed);
+        return alloc_buddy(buddy, new_size, zeroed); /* returns void_ptr_expect_t */
     }
 
-    /* realloc(ptr, 0) => free(ptr), return NULL */
-    if (new_size == 0) {
+    /* realloc(ptr, 0) => free(ptr), return NULL-ish.
+       With expected<T>, return success with NULL pointer (and has_value=true). */
+    if (new_size == 0u) {
         (void)return_buddy_element(buddy, old_ptr);
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = true, .u.value = NULL };
     }
 
-    if (old_size == 0) {
-        /* Caller claims old_size is 0 but passed a non-NULL pointer.
-           Treat as programmer error. */
-        errno = EINVAL;
-        return NULL;
+    /* Caller must provide a meaningful old_size when old_ptr != NULL */
+    if (old_size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
-    /* Determine how much usable space is actually behind old_ptr. */
-    buddy_header_t *hdr =
-        (buddy_header_t *)((uint8_t *)old_ptr - sizeof(buddy_header_t));
-    uint32_t order      = hdr->order;
-    size_t   block_size = (size_t)1u << order;
-    size_t   usable_old = block_size - sizeof(buddy_header_t);
+    /* Determine usable capacity behind old_ptr (based on header order) */
+    buddy_header_t* hdr =
+        (buddy_header_t*)((uint8_t*)old_ptr - sizeof(buddy_header_t));
 
-    /* If new_size fits in the existing block, no need to move. */
+    uint32_t order = hdr->order;
+
+    /* Defensive: order must be within allocator range */
+    if (order < buddy->min_order || order > buddy->max_order) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+
+    size_t block_size = (size_t)1u << order;
+    if (block_size < sizeof(buddy_header_t)) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = CAPACITY_OVERFLOW };
+    }
+
+    size_t usable_old = block_size - sizeof(buddy_header_t);
+
+    /* If it fits, keep same pointer (no shrink; optional zero tail) */
     if (new_size <= usable_old) {
-        /* Optionally, if zeroed == true and new_size > old_size,
-           you can zero the extension region. */
         if (zeroed && new_size > old_size) {
-            size_t extra = new_size - old_size;
-            memset((uint8_t *)old_ptr + old_size, 0, extra);
+            /* Clamp old_size to usable_old to avoid writing past the block if caller lied */
+            size_t logical_old = (old_size < usable_old) ? old_size : usable_old;
+            size_t extra       = new_size - logical_old;
+            memset((uint8_t*)old_ptr + logical_old, 0, extra);
         }
-        return old_ptr;
+        return (void_ptr_expect_t){ .has_value = true, .u.value = old_ptr };
     }
 
-    /* Need a bigger block. */
-    void *new_ptr = alloc_buddy(buddy, new_size, zeroed);
-    if (!new_ptr) {
-        /* errno set by alloc_buddy; old_ptr is still valid. */
-        return NULL;
+    /* Need a bigger block */
+    void_ptr_expect_t new_expect = alloc_buddy(buddy, new_size, zeroed);
+    if (!new_expect.has_value) {
+        /* old_ptr remains valid */
+        return new_expect;
     }
 
-    /* Copy min(logical old size, usable old capacity). */
-    size_t copy_bytes = old_size < usable_old ? old_size : usable_old;
+    void* new_ptr = new_expect.u.value;
+
+    /* Copy min(old_size, usable_old) bytes */
+    size_t copy_bytes = (old_size < usable_old) ? old_size : usable_old;
     memcpy(new_ptr, old_ptr, copy_bytes);
 
-    /* Return the old block. */
+    /* Return old block */
     (void)return_buddy_element(buddy, old_ptr);
 
-    return new_ptr;
+    return (void_ptr_expect_t){ .has_value = true, .u.value = new_ptr };
 }
 // -------------------------------------------------------------------------------- 
 
-void *realloc_buddy_aligned(buddy_t *b,
-                            void   *old_ptr,
-                            size_t  old_size,
-                            size_t  new_size,
-                            size_t  align,
-                            bool    zeroed) {
+void_ptr_expect_t realloc_buddy_aligned(buddy_t *b,
+                                        void   *old_ptr,
+                                        size_t  old_size,
+                                        size_t  new_size,
+                                        size_t  align,
+                                        bool    zeroed) {
     if (!b) {
-        errno = EINVAL;
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
-    /* realloc(NULL, n) => alloc */
+    /* realloc(NULL, 0) => success with NULL (no-op) */
     if (!old_ptr) {
-        if (new_size == 0) {
-            return NULL;
+        if (new_size == 0u) {
+            return (void_ptr_expect_t){ .has_value = true, .u.value = NULL };
         }
-        return alloc_buddy_aligned(b, new_size, align, zeroed);
+        return alloc_buddy_aligned(b, new_size, align, zeroed); /* expected-style */
     }
 
-    /* realloc(p, 0) => free(p), return NULL */
-    if (new_size == 0) {
+    /* realloc(p, 0) => free(p), success with NULL */
+    if (new_size == 0u) {
         (void)return_buddy_element(b, old_ptr);
-        return NULL;
+        return (void_ptr_expect_t){ .has_value = true, .u.value = NULL };
     }
 
-    if (old_size == 0) {
-        /* Caller passed non-NULL ptr but claims size 0. Treat as error. */
-        errno = EINVAL;
-        return NULL;
+    /* Caller claims old_size==0 but passed a pointer */
+    if (old_size == 0u) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
-    if (align == 0) {
-        align = alignof(max_align_t);
-    }
-    if (align & (align - 1u)) {
-        align = _next_pow2(align);
-        if (!align) { errno = EINVAL; return NULL; }
-    }
-
-    /* Introspect old block. */
-    buddy_header_t *hdr =
-        (buddy_header_t *)((uint8_t *)old_ptr - sizeof(buddy_header_t));
-    uint32_t order      = hdr->order;
-    size_t   block_size = (size_t)1u << order;
-
-    size_t usable_old =
-        block_size - ((size_t)((uint8_t *)old_ptr - (uint8_t *)b->base) - hdr->block_offset)
-        - sizeof(buddy_header_t);
-
-    /* Simpler & safer: just treat usable_old as block_size - sizeof(header)
-       for both unaligned and aligned allocations. We know user_ptr is always
-       within the block and header sits immediately before it. So:
-    */
-    usable_old = block_size - sizeof(buddy_header_t);
-
-    /* If it fits and alignment is already OK, reuse in place. */
-    if (new_size <= usable_old &&
-        (((uintptr_t)old_ptr & (align - 1u)) == 0u)) {
-
-        if (zeroed && new_size > old_size) {
-            size_t extra = new_size - old_size;
-            memset((uint8_t *)old_ptr + old_size, 0, extra);
+    /* Normalize requested alignment: 0 -> natural; non-pow2 -> round up */
+    size_t eff_align = (align != 0u) ? align : alignof(max_align_t);
+    if ((eff_align & (eff_align - 1u)) != 0u) {
+        eff_align = _next_pow2(eff_align);
+        if (eff_align == 0u) {
+            return (void_ptr_expect_t){ .has_value = false, .u.error = ALIGNMENT_ERROR };
         }
-        return old_ptr;
     }
 
-    /* Need a new block. */
-    void *new_ptr = alloc_buddy_aligned(b, new_size, align, zeroed);
-    if (!new_ptr) {
-        /* errno set by alloc_buddy_aligned; old_ptr is still valid. */
-        return NULL;
+    /* Introspect old block header: header is immediately before user_ptr */
+    buddy_header_t *hdr = (buddy_header_t *)((uint8_t *)old_ptr - sizeof(buddy_header_t));
+    uint32_t order      = hdr->order;
+
+    /* Defensive: shifting by >= word bits is UB; also sanity-check order */
+    if (order > b->max_order) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
+    size_t block_size = (size_t)1u << order;
+
+    /* Usable space behind old_ptr (simple model: block - header). */
+    if (block_size < sizeof(buddy_header_t)) {
+        return (void_ptr_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+    size_t usable_old = block_size - sizeof(buddy_header_t);
+
+    /* If it fits and the pointer already satisfies requested alignment, reuse. */
+    if (new_size <= usable_old &&
+        (((uintptr_t)old_ptr & (eff_align - 1u)) == 0u))
+    {
+        if (zeroed && new_size > old_size) {
+            memset((uint8_t *)old_ptr + old_size, 0, new_size - old_size);
+        }
+        return (void_ptr_expect_t){ .has_value = true, .u.value = old_ptr };
+    }
+
+    /* Need a new block with (possibly stricter) alignment. */
+    void_ptr_expect_t nex = alloc_buddy_aligned(b, new_size, eff_align, zeroed);
+    if (!nex.has_value) {
+        /* Old pointer remains valid; propagate error. */
+        return nex;
+    }
+
+    void *new_ptr = nex.u.value;
+
+    /* Copy min(logical old size, old usable capacity). */
     size_t copy_bytes = (old_size < usable_old) ? old_size : usable_old;
     memcpy(new_ptr, old_ptr, copy_bytes);
 
     (void)return_buddy_element(b, old_ptr);
 
-    return new_ptr;
+    return (void_ptr_expect_t){ .has_value = true, .u.value = new_ptr };
 }
 // -------------------------------------------------------------------------------- 
 
@@ -4586,20 +4668,19 @@ static inline size_t _slab_align_up(size_t x, size_t a) {
 
 static bool _slab_grow(slab_t *slab) {
     if (!slab || !slab->buddy) {
-        errno = EINVAL;
         return false;
     }
 
     /* Allocate one slab page from the buddy allocator. */
-    void *mem = alloc_buddy_aligned(slab->buddy,
-                                    slab->slab_bytes,
-                                    slab->align,
-                                    false);
-    if (!mem) {
-        /* errno set by alloc_buddy_aligned */
+    void_ptr_expect_t expect = alloc_buddy_aligned(slab->buddy,
+                                                   slab->slab_bytes,
+                                                   slab->align,
+                                                   false); 
+    if (!expect.has_value) {
         return false;
     }
-
+    void *mem = expect.u.value;
+    
     uint8_t    *raw  = (uint8_t *)mem;
     slab_page_t *page = (slab_page_t *)raw;
 
@@ -4677,14 +4758,14 @@ slab_t *init_slab_allocator(buddy_t *buddy,
 
     /* Allocate the slab_t itself from the buddy allocator. */
     size_t   slab_struct_bytes = _slab_align_up(sizeof(slab_t), alignof(max_align_t));
-    slab_t *slab = (slab_t *)alloc_buddy_aligned(buddy,
-                                                 slab_struct_bytes,
-                                                 alignof(max_align_t),
-                                                 true /* zeroed */);
-    if (!slab) {
-        /* errno set by alloc_buddy_aligned */
+    void_ptr_expect_t expect = alloc_buddy_aligned(buddy,
+                                                   slab_struct_bytes,
+                                                   alignof(max_align_t),
+                                                   true); 
+    if (!expect.has_value) {
         return NULL;
     }
+    slab_t *slab = (slab_t*)expect.u.value;
 
     slab->buddy = buddy;
     slab->obj_size = obj_size;

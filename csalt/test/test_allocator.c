@@ -1720,11 +1720,11 @@ static void test_init_arena_with_buddy_invalid_args(void **state) {
     size_t const min_block   = 64u;
     size_t const buddy_align = alignof(max_align_t);
 
-    buddy_t *buddy = init_buddy_allocator(pool_size, min_block, buddy_align);
-    assert_non_null(buddy);
+    buddy_expect_t bexpect = init_buddy_allocator(pool_size, min_block, buddy_align); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
 
     /* NULL buddy should fail with EINVAL. */
-    errno = 0;
     arena_expect_t expect = init_arena_with_buddy(NULL, 512u, alignof(max_align_t)); 
     assert_false(expect.has_value);
 
@@ -1743,12 +1743,12 @@ static void test_return_arena_with_buddy_roundtrip(void **state) {
     size_t const min_block   = 64u;
     size_t const buddy_align = alignof(max_align_t);
 
-    buddy_t *buddy = init_buddy_allocator(pool_size, min_block, buddy_align);
-    assert_non_null(buddy);
+    buddy_expect_t bexpect = init_buddy_allocator(pool_size, min_block, buddy_align); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
 
     size_t const arena_bytes = 512u;
 
-    errno = 0;
     arena_expect_t expect = init_arena_with_buddy(buddy, arena_bytes, alignof(max_align_t)); 
     assert_true(expect.has_value);
     arena_t *arena = expect.u.value;
@@ -1773,7 +1773,10 @@ static void test_return_arena_with_buddy_roundtrip(void **state) {
        from the buddy allocator again. This indirectly proves that the
        previous region was successfully returned.
      */
-    void *raw = alloc_buddy(buddy, arena_bytes, false);
+    aexpect = alloc_buddy(buddy, arena_bytes, false); 
+    assert_true(aexpect.has_value);
+
+    void *raw = aexpect.u.value;
     assert_non_null(raw);
 
     /* Give that block back as well to leave buddy in a clean state. */

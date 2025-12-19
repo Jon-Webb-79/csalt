@@ -1194,6 +1194,21 @@ The ``buddy_t`` data type uses the following structs.
        size_t   block_offset;
    } buddy_header_t;
 
+buddy_expect_t 
+~~~~~~~~~~~~~~
+``buddy_expect_t`` is an error handling struct to be used in the creation 
+of ``buddy_t`` data types to catch and convey errors to a user.
+
+.. code-block:: c
+
+   typedef struct {
+       bool has_value;
+       union {
+           buddy_t* value;
+           ErrorCode error;
+       } u;
+   } buddy_expect_t;
+
 Initialization and Memory Management
 ------------------------------------
 The functions in this section can be used to initialize memory for a bump allocator,
