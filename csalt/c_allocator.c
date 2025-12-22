@@ -3742,7 +3742,7 @@ buddy_expect_t init_buddy_allocator(size_t pool_size,
 
     uint32_t const min_order  = _ilog2_size(min_blk);
     uint32_t const max_order  = _ilog2_size(pool);
-    uint32_t const num_levels = (max_order - min_order) + 1u;
+    uint64_t const num_levels = (max_order - min_order) + 1u;
 
     if (num_levels == 0u) {
         free(b);
@@ -4838,11 +4838,11 @@ void_ptr_expect_t alloc_slab(slab_t *slab, bool zeroed) {
     /* Grow if no free slots. */
     if (slab->free_list == NULL) {
         /* Prefer: _slab_grow returns void_ptr_expect_t (or similar) */
-        void_ptr_expect_t g = _slab_grow(slab);
-        if (!g.has_value) {
+        bool g = _slab_grow(slab);
+        if (!g) {
             return (void_ptr_expect_t){
                 .has_value = false,
-                .u.error   = g.u.error
+                .u.error   = BAD_ALLOC
             };
         }
 

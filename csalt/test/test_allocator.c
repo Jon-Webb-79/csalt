@@ -4736,873 +4736,858 @@ const struct CMUnitTest test_buddy_allocator[] = {
 };
 
 const size_t test_buddy_allocator_count = sizeof(test_buddy_allocator) / sizeof(test_buddy_allocator[0]);
-// // ================================================================================ 
-// // ================================================================================ 
-// // TEST SLAB ALLOCATOR 
-//
-// /* Convenience: choose a reasonable buddy config for tests */
-// #define TEST_BUDDY_POOL_SIZE      (1u << 20)  /* 1 MiB */
-// #define TEST_BUDDY_MIN_BLOCK_SIZE 64u
-//
-// /* Helper to create/destroy a buddy allocator locally in each test */
-// static buddy_t *create_test_buddy(void) {
-//     buddy_t *b = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                       TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                       0u); /* base_align = 0 => default */
-//     assert_non_null(b);
-//     return b;
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_slab_null_buddy(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     slab_t *slab = init_slab_allocator(NULL,
-//                                        /*obj_size=*/16u,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//
-//     assert_null(slab);
-//     assert_int_equal(errno, EINVAL);
-// }
-//
-// static void test_init_slab_zero_object_size(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = create_test_buddy();
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        /*obj_size=*/0u,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//
-//     assert_null(slab);
-//     assert_int_equal(errno, EINVAL);
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_slab_default_alignment(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = create_test_buddy();
-//
-//     size_t const obj_size = 24u;
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        obj_size,
-//                                        /*align=*/0u,          /* use default */
-//                                        /*slab_bytes_hint=*/0u); /* use default */
-//     assert_non_null(slab);
-//
-//     /* slab itself should be inside the buddy pool */
-//     assert_true(is_buddy_ptr(buddy, slab));
-//
-//     /* No pages allocated yet, so: */
-//     assert_int_equal(slab_alloc(slab), 0u);
-//     assert_int_equal(slab_size(slab), 0u);
-//     assert_int_equal(slab_total_blocks(slab), 0u);
-//     assert_int_equal(slab_free_blocks(slab), 0u);
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//
-//     /* Alignment should be at least alignof(max_align_t) */
-//     size_t const slab_align = slab_alignment(slab);
-//     assert_true((slab_align & (slab_align - 1u)) == 0u); /* power of two */
-//     assert_true(slab_align >= alignof(max_align_t));
-//
-//     /* Stride must be >= object size and >= sizeof(void*) for free-list link */
-//     size_t const stride = slab_stride(slab);
-//     assert_true(stride >= obj_size);
-//     assert_true(stride >= sizeof(void*));
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_slab_custom_alignment_pow2(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = create_test_buddy();
-//
-//     size_t const obj_size = 32u;
-//     size_t const align    = 64u;
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        obj_size,
-//                                        align,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     /* Alignment should be exactly what we requested (already power-of-two). */
-//     assert_int_equal(slab_alignment(slab), align);
-//
-//     /* Again, no pages yet: capacity == 0. */
-//     assert_int_equal(slab_size(slab), 0u);
-//     assert_int_equal(slab_total_blocks(slab), 0u);
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_slab_alignment_rounded_up(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = create_test_buddy();
-//
-//     size_t const obj_size = 16u;
-//     size_t const align_in = 24u;   /* not a power of two, should round to 32 */
-//     size_t const expected_align = 32u;
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        obj_size,
-//                                        align_in,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     size_t const slab_align = slab_alignment(slab);
-//     assert_int_equal(slab_align, expected_align);
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_slab_small_page_hint(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = create_test_buddy();
-//
-//     size_t const obj_size = 8u;
-//     size_t const hint     = 32u;  /* intentionally very small */
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        obj_size,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/hint);
-//     assert_non_null(slab);
-//
-//     /* No pages yet, but first allocation should succeed and create a page. */
-//     assert_int_equal(slab_size(slab), 0u);
-//     assert_int_equal(slab_total_blocks(slab), 0u);
-//
-//     void *p = alloc_slab(slab, false);
-//     assert_non_null(p);
-//
-//     /* Now we must have capacity and at least one block. */
-//     assert_true(slab_size(slab) > 0u);
-//     assert_true(slab_total_blocks(slab) >= 1u);
-//     assert_true(slab_in_use_blocks(slab) == 1u);
-//
-//     /* Returned pointer should have the advertised alignment. */
-//     size_t const a = slab_alignment(slab);
-//     assert_true(((uintptr_t)p & (a - 1u)) == 0u);
-//
-//     /* Cleanup */
-//     assert_true(return_slab(slab, p));
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_slab_basic(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     size_t const obj_size = 32u;
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        obj_size,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     /* Initially, no pages and no allocations. */
-//     assert_int_equal(slab_alloc(slab), 0u);
-//     assert_int_equal(slab_size(slab), 0u);
-//     assert_int_equal(slab_total_blocks(slab), 0u);
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//     assert_int_equal(slab_free_blocks(slab), 0u);
-//
-//     /* First allocation should succeed and create a page. */
-//     void *p1 = alloc_slab(slab, /*zeroed=*/false);
-//     assert_non_null(p1);
-//
-//     /* Pointer should be aligned per slab_alignment. */
-//     size_t const a = slab_alignment(slab);
-//     assert_true((a & (a - 1u)) == 0u);          /* a is power-of-two */
-//     assert_true(((uintptr_t)p1 & (a - 1u)) == 0u);
-//
-//     /* Now the slab must have capacity and one in-use block. */
-//     assert_true(slab_size(slab) > 0u);
-//     assert_true(slab_total_blocks(slab) >= 1u);
-//     assert_int_equal(slab_in_use_blocks(slab), 1u);
-//
-//     /* Used bytes should be obj_size * in_use_blocks. */
-//     assert_int_equal(slab_alloc(slab), obj_size);
-//
-//     /* There should be at least one free block unless page holds exactly 1. */
-//     size_t total_blocks = slab_total_blocks(slab);
-//     size_t free_blocks  = slab_free_blocks(slab);
-//     assert_true(total_blocks >= 1u);
-//     assert_true(free_blocks + slab_in_use_blocks(slab) == total_blocks);
-//
-//     /* Clean up: free buddy (which implicitly releases slab memory). */
-//     assert_true(return_slab(slab, p1));
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_slab_zeroed(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     typedef struct {
-//         int x;
-//         int y;
-//     } vec2i;
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        sizeof(vec2i),
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     /* Allocate zeroed. */
-//     vec2i *v = (vec2i *)alloc_slab(slab, /*zeroed=*/true);
-//     assert_non_null(v);
-//
-//     /* Should start as all zeros. */
-//     assert_int_equal(v->x, 0);
-//     assert_int_equal(v->y, 0);
-//
-//     /* Write some values and verify. */
-//     v->x = 3;
-//     v->y = -7;
-//     assert_int_equal(v->x, 3);
-//     assert_int_equal(v->y, -7);
-//
-//     /* Accounting: exactly one block in use. */
-//     assert_int_equal(slab_in_use_blocks(slab), 1u);
-//     assert_int_equal(slab_alloc(slab), sizeof(vec2i));
-//
-//     /* Return the block. */
-//     assert_true(return_slab(slab, v));
-//
-//     /* After return, in-use should be 0. */
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//     assert_int_equal(slab_alloc(slab), 0u);
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_return_slab_reuse(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     size_t const obj_size = 16u;
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        obj_size,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     void *p1 = alloc_slab(slab, false);
-//     void *p2 = alloc_slab(slab, false);
-//     assert_non_null(p1);
-//     assert_non_null(p2);
-//     assert_ptr_not_equal(p1, p2);
-//
-//     /* Now two blocks in use. */
-//     assert_int_equal(slab_in_use_blocks(slab), 2u);
-//
-//     /* Free p1 and then allocate again; we expect LIFO reuse of slots,
-//        so the newly allocated pointer should equal p1. */
-//     assert_true(return_slab(slab, p1));
-//     assert_int_equal(slab_in_use_blocks(slab), 1u);
-//
-//     void *p3 = alloc_slab(slab, false);
-//     assert_non_null(p3);
-//     assert_ptr_equal(p3, p1);
-//
-//     /* Clean up. Return both. */
-//     assert_true(return_slab(slab, p2));
-//     assert_true(return_slab(slab, p3));
-//
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_return_slab_null_pointer(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        /*obj_size=*/16u,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     /* No allocations yet. */
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//
-//     /* return_slab on NULL should be a no-op success. */
-//     assert_true(return_slab(slab, NULL));
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_return_slab_invalid_pointer(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        /*obj_size=*/32u,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     int stack_value = 42;
-//     errno = 0;
-//
-//     /* Returning a pointer that does not belong to the slab should fail. */
-//     bool ok = return_slab(slab, &stack_value);
-//     assert_false(ok);
-//     assert_int_equal(errno, EINVAL);
-//
-//     /* Still no allocations in use. */
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_slab_is_slab_ptr(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        /*obj_size=*/24u,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     void *p = alloc_slab(slab, false);
-//     assert_non_null(p);
-//
-//     /* p must be recognized as a valid slab pointer. */
-//     assert_true(is_slab_ptr(slab, p));
-//
-//     int other = 123;
-//     assert_false(is_slab_ptr(slab, &other));
-//     assert_int_equal(errno, EINVAL);
-//
-//     /* Clean up. */
-//     assert_true(return_slab(slab, p));
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_reset_slab_null(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     bool ok = reset_slab(NULL);
-//     assert_false(ok);
-//     assert_int_equal(errno, EINVAL);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_reset_slab_basic(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     size_t const obj_size = 32u;
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        obj_size,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     /* Allocate a few objects to force at least one page. */
-//     void *p1 = alloc_slab(slab, false);
-//     void *p2 = alloc_slab(slab, false);
-//     void *p3 = alloc_slab(slab, false);
-//     assert_non_null(p1);
-//     assert_non_null(p2);
-//     assert_non_null(p3);
-//
-//     size_t total_blocks_before = slab_total_blocks(slab);
-//     assert_true(total_blocks_before >= 3u);
-//
-//     assert_int_equal(slab_in_use_blocks(slab), 3u);
-//     assert_int_equal(slab_alloc(slab), 3u * obj_size);
-//
-//     /* Now reset. */
-//     errno = 0;
-//     bool ok = reset_slab(slab);
-//     assert_true(ok);
-//     assert_int_equal(errno, 0);
-//
-//     /* After reset, nothing should be in use. */
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//     assert_int_equal(slab_alloc(slab), 0u);
-//
-//     /* Capacity (bytes / blocks) should be unchanged. */
-//     size_t total_blocks_after = slab_total_blocks(slab);
-//     assert_int_equal(total_blocks_after, total_blocks_before);
-//
-//     /* All blocks should now be free. */
-//     assert_int_equal(slab_free_blocks(slab), total_blocks_after);
-//
-//     /* We do NOT try to return p1/p2/p3 after reset: that would be UB. */
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_save_slab_null_slab(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     size_t bytes_needed = 0;
-//     bool ok = save_slab(NULL,
-//                         /*buffer=*/NULL,
-//                         /*buffer_size=*/0u,
-//                         &bytes_needed);
-//
-//     assert_false(ok);
-//     assert_int_equal(errno, EINVAL);
-//     /* bytes_needed is unspecified on error here; we only care about errno. */
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_save_slab_size_only(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        /*obj_size=*/16u,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     /* Create at least one page. */
-//     void *p = alloc_slab(slab, false);
-//     assert_non_null(p);
-//
-//     size_t bytes_needed = 0;
-//     errno = 0;
-//
-//     /* Request a save with buffer_size too small (0). */
-//     bool ok = save_slab(slab,
-//                         /*buffer=*/NULL,
-//                         /*buffer_size=*/0u,
-//                         &bytes_needed);
-//
-//     assert_false(ok);
-//     assert_int_equal(errno, ERANGE);
-//     assert_true(bytes_needed > 0u);
-//
-//     /* No state change expected in slab. */
-//     assert_int_equal(slab_in_use_blocks(slab), 1u);
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_save_restore_roundtrip(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     typedef struct {
-//         int a;
-//         int b;
-//     } pair_t;
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        sizeof(pair_t),
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     /* Allocate a few objects and initialize them. */
-//     pair_t *p1 = (pair_t *)alloc_slab(slab, true);
-//     pair_t *p2 = (pair_t *)alloc_slab(slab, true);
-//     pair_t *p3 = (pair_t *)alloc_slab(slab, true);
-//     assert_non_null(p1);
-//     assert_non_null(p2);
-//     assert_non_null(p3);
-//
-//     p1->a = 1;  p1->b = 10;
-//     p2->a = 2;  p2->b = 20;
-//     p3->a = 3;  p3->b = 30;
-//
-//     size_t const in_use_before   = slab_in_use_blocks(slab);
-//     size_t const alloc_bytes_before = slab_alloc(slab);
-//     size_t const total_blocks_before = slab_total_blocks(slab);
-//     size_t const free_blocks_before  = slab_free_blocks(slab);
-//
-//     assert_int_equal(in_use_before, 3u);
-//     assert_true(total_blocks_before >= 3u);
-//     assert_true(free_blocks_before + in_use_before == total_blocks_before);
-//
-//     /* First call to save_slab: get required size. */
-//     size_t bytes_needed = 0;
-//     errno = 0;
-//
-//     bool ok = save_slab(slab,
-//                         /*buffer=*/NULL,
-//                         /*buffer_size=*/0u,
-//                         &bytes_needed);
-//     assert_false(ok);
-//     assert_int_equal(errno, ERANGE);
-//     assert_true(bytes_needed > 0u);
-//
-//     /* Second call: provide a buffer of the correct size. */
-//     void *buffer = malloc(bytes_needed);
-//     assert_non_null(buffer);
-//
-//     errno = 0;
-//     ok = save_slab(slab,
-//                    buffer,
-//                    bytes_needed,
-//                    &bytes_needed);
-//     assert_true(ok);
-//     assert_int_equal(errno, 0);
-//
-//     /* Mutate state after snapshot: change values, free/alloc, etc. */
-//     p1->a = 111;  p1->b = 999;
-//     (void)return_slab(slab, p2);
-//     pair_t *p4 = (pair_t *)alloc_slab(slab, false);
-//     assert_non_null(p4);
-//     p4->a = 444;  p4->b = 555;
-//
-//     assert_int_equal(slab_in_use_blocks(slab), 3u); /* p1, p3, p4 */
-//
-//     /* Now restore from snapshot. This should roll back:
-//        - allocations/frees
-//        - contents of p1, p2, p3
-//        - counters (len, free list, etc.)
-//     */
-//     errno = 0;
-//     ok = restore_slab(slab, buffer, bytes_needed);
-//     assert_true(ok);
-//     assert_int_equal(errno, 0);
-//
-//     /* After restore, pointers p1/p2/p3 should be valid again
-//        (snapshot logic assumes same pages still exist), and
-//        contents should match original values, not mutated ones.
-//     */
-//     assert_int_equal(p1->a, 1);
-//     assert_int_equal(p1->b, 10);
-//     assert_int_equal(p2->a, 2);
-//     assert_int_equal(p2->b, 20);
-//     assert_int_equal(p3->a, 3);
-//     assert_int_equal(p3->b, 30);
-//
-//     /* Accounting should match pre-snapshot state. */
-//     assert_int_equal(slab_in_use_blocks(slab), in_use_before);
-//     assert_int_equal(slab_alloc(slab), alloc_bytes_before);
-//     assert_int_equal(slab_total_blocks(slab), total_blocks_before);
-//
-//     /* Free blocks (geom) should match too. */
-//     assert_int_equal(slab_free_blocks(slab), free_blocks_before);
-//
-//     free(buffer);
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_restore_slab_small_buffer(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        /*obj_size=*/16u,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     void *p = alloc_slab(slab, false);
-//     assert_non_null(p);
-//
-//     /* Save to find required size. */
-//     size_t bytes_needed = 0;
-//     (void)save_slab(slab, NULL, 0u, &bytes_needed);
-//     assert_true(bytes_needed > 0u);
-//
-//     /* Create a buffer too small on purpose. */
-//     size_t const small_size = bytes_needed / 2u;
-//     void *buffer = malloc(bytes_needed);
-//     assert_non_null(buffer);
-//
-//     /* First, create a valid snapshot. */
-//     bool ok = save_slab(slab, buffer, bytes_needed, &bytes_needed);
-//     assert_true(ok);
-//
-//     /* Attempt to restore using only part of the buffer. */
-//     errno = 0;
-//     ok = restore_slab(slab, buffer, small_size);
-//     assert_false(ok);
-//     assert_int_equal(errno, ERANGE);
-//
-//     free(buffer);
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_slab_getters_null_slab(void **state) {
-//     (void)state;
-//
-//     errno = 0;
-//     assert_int_equal(slab_alloc(NULL), 0u);
-//     assert_int_equal(errno, EINVAL);
-//
-//     errno = 0;
-//     assert_int_equal(slab_size(NULL), 0u);
-//     assert_int_equal(errno, EINVAL);
-//
-//     errno = 0;
-//     assert_int_equal(total_slab_alloc(NULL), 0u);
-//     assert_int_equal(errno, EINVAL);
-//
-//     errno = 0;
-//     assert_int_equal(slab_stride(NULL), 0u);
-//     assert_int_equal(errno, EINVAL);
-//
-//     errno = 0;
-//     assert_int_equal(slab_total_blocks(NULL), 0u);
-//     assert_int_equal(errno, EINVAL);
-//
-//     errno = 0;
-//     assert_int_equal(slab_free_blocks(NULL), 0u);
-//     assert_int_equal(errno, EINVAL);
-//
-//     errno = 0;
-//     assert_int_equal(slab_alignment(NULL), 0u);
-//     assert_int_equal(errno, EINVAL);
-//
-//     errno = 0;
-//     assert_int_equal(slab_in_use_blocks(NULL), 0u);
-//     assert_int_equal(errno, EINVAL);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_slab_getters_initial_state(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     size_t const obj_size = 32u;
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        obj_size,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     /* No pages allocated yet -> zero usage and capacity. */
-//     assert_int_equal(slab_alloc(slab), 0u);
-//     assert_int_equal(slab_size(slab), 0u);
-//     assert_int_equal(slab_total_blocks(slab), 0u);
-//     assert_int_equal(slab_free_blocks(slab), 0u);
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//
-//     /* total_slab_alloc should be >= alloc and size. */
-//     size_t total = total_slab_alloc(slab);
-//     assert_true(total >= slab_alloc(slab));
-//     assert_true(total >= slab_size(slab));
-//
-//     /* Alignment should be power-of-two and at least alignof(max_align_t). */
-//     size_t const a = slab_alignment(slab);
-//     assert_true((a & (a - 1u)) == 0u);
-//     assert_true(a >= alignof(max_align_t));
-//
-//     /* Stride must be >= object size and at least sizeof(void*) for next pointer. */
-//     size_t const stride = slab_stride(slab);
-//     assert_true(stride >= obj_size);
-//     assert_true(stride >= sizeof(void*));
-//
-//     free_buddy(buddy);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_slab_getters_after_allocs_and_frees(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *buddy = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
-//                                           TEST_BUDDY_MIN_BLOCK_SIZE,
-//                                           0u);
-//     assert_non_null(buddy);
-//
-//     size_t const obj_size = 24u;
-//
-//     slab_t *slab = init_slab_allocator(buddy,
-//                                        obj_size,
-//                                        /*align=*/0u,
-//                                        /*slab_bytes_hint=*/0u);
-//     assert_non_null(slab);
-//
-//     /* Snapshot of total_slab_alloc before first allocation (just slab struct). */
-//     size_t const total_before = total_slab_alloc(slab);
-//
-//     /* Allocate several blocks to force at least one page. */
-//     void *p1 = alloc_slab(slab, false);
-//     void *p2 = alloc_slab(slab, false);
-//     void *p3 = alloc_slab(slab, false);
-//     void *p4 = alloc_slab(slab, false);
-//     assert_non_null(p1);
-//     assert_non_null(p2);
-//     assert_non_null(p3);
-//     assert_non_null(p4);
-//
-//     /* After first allocation, capacity and total footprint must be > 0. */
-//     assert_true(slab_size(slab) > 0u);
-//     assert_true(slab_total_blocks(slab) >= 4u);
-//
-//     /* total_slab_alloc should have grown (pages added). */
-//     size_t const total_after = total_slab_alloc(slab);
-//     assert_true(total_after >= total_before);
-//     assert_true(total_after > total_before);
-//
-//     /* In-use blocks and alloc bytes. */
-//     size_t const in_use = slab_in_use_blocks(slab);
-//     assert_int_equal(in_use, 4u);
-//
-//     size_t const alloc_bytes = slab_alloc(slab);
-//     assert_int_equal(alloc_bytes, in_use * obj_size);
-//
-//     /* Capacity relationships. */
-//     size_t const total_blocks = slab_total_blocks(slab);
-//     size_t const free_blocks  = slab_free_blocks(slab);
-//
-//     assert_true(total_blocks >= in_use);
-//     assert_int_equal(free_blocks + in_use, total_blocks);
-//
-//     /* Now free two blocks and check counters update. */
-//     assert_true(return_slab(slab, p2));
-//     assert_true(return_slab(slab, p4));
-//
-//     size_t const in_use2 = slab_in_use_blocks(slab);
-//     size_t const alloc_bytes2 = slab_alloc(slab);
-//     size_t const free_blocks2 = slab_free_blocks(slab);
-//     size_t const total_blocks2 = slab_total_blocks(slab);
-//
-//     assert_int_equal(in_use2, 2u);
-//     assert_int_equal(alloc_bytes2, in_use2 * obj_size);
-//     assert_int_equal(total_blocks2, total_blocks);  /* capacity unchanged */
-//     assert_int_equal(free_blocks2 + in_use2, total_blocks2);
-//
-//     /* total_slab_alloc should still be >= size and alloc, and same pages. */
-//     size_t const total_after_free = total_slab_alloc(slab);
-//     assert_true(total_after_free >= slab_size(slab));
-//     assert_true(total_after_free >= slab_alloc(slab));
-//     /* It may equal total_after; we don't require shrink. */
-//
-//     /* Free remaining blocks. */
-//     assert_true(return_slab(slab, p1));
-//     assert_true(return_slab(slab, p3));
-//
-//     assert_int_equal(slab_in_use_blocks(slab), 0u);
-//     assert_int_equal(slab_alloc(slab), 0u);
-//     assert_int_equal(slab_free_blocks(slab), slab_total_blocks(slab));
-//
-//     free_buddy(buddy);
-// }
-// /* ------------------------------------------------------------------------- */
-//
-// const struct CMUnitTest test_slab_allocator[] = {
-//     cmocka_unit_test(test_init_slab_null_buddy),
-//     cmocka_unit_test(test_init_slab_zero_object_size),
-//     cmocka_unit_test(test_init_slab_default_alignment),
-//     cmocka_unit_test(test_init_slab_custom_alignment_pow2),
-//     cmocka_unit_test(test_init_slab_alignment_rounded_up),
-//     cmocka_unit_test(test_init_slab_small_page_hint),
-//
-//     cmocka_unit_test(test_alloc_slab_basic),
-//     cmocka_unit_test(test_alloc_slab_zeroed),
-//     cmocka_unit_test(test_return_slab_reuse),
-//     cmocka_unit_test(test_return_slab_null_pointer),
-//     cmocka_unit_test(test_return_slab_invalid_pointer),
-//     cmocka_unit_test(test_alloc_slab_is_slab_ptr),
-//
-//     cmocka_unit_test(test_reset_slab_null),
-//     cmocka_unit_test(test_reset_slab_basic),
-//     cmocka_unit_test(test_save_slab_null_slab),
-//     cmocka_unit_test(test_save_slab_size_only),
-//     cmocka_unit_test(test_save_restore_roundtrip),
-//     cmocka_unit_test(test_restore_slab_small_buffer),
-//
-//     cmocka_unit_test(test_slab_getters_null_slab),
-//     cmocka_unit_test(test_slab_getters_initial_state),
-//     cmocka_unit_test(test_slab_getters_after_allocs_and_frees),
-// };
-//
-// const size_t test_slab_allocator_count = sizeof(test_slab_allocator) / sizeof(test_slab_allocator[0]);
+// ================================================================================ 
+// ================================================================================ 
+// TEST SLAB ALLOCATOR 
+
+/* Convenience: choose a reasonable buddy config for tests */
+#define TEST_BUDDY_POOL_SIZE      (1u << 20)  /* 1 MiB */
+#define TEST_BUDDY_MIN_BLOCK_SIZE 64u
+
+/* Helper to create/destroy a buddy allocator locally in each test */
+static buddy_t *create_test_buddy(void) {
+    buddy_expect_t b = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                            TEST_BUDDY_MIN_BLOCK_SIZE,
+                                            0u); /* base_align = 0 => default */
+    assert_true(b.has_value);
+    return b.u.value;
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_slab_null_buddy(void **state) {
+    (void)state;
+
+    slab_expect_t expect = init_slab_allocator(NULL,
+                                       /*obj_size=*/16u,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u);
+    assert_false(expect.has_value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_slab_zero_object_size(void **state) {
+    (void)state;
+
+    buddy_t *buddy = create_test_buddy();
+
+    slab_expect_t expect = init_slab_allocator(buddy,
+                                               /*obj_size=*/0u,
+                                               /*align=*/0u,
+                                               /*slab_bytes_hint=*/0u); 
+    assert_false(expect.has_value);
+    
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_slab_default_alignment(void **state) {
+    (void)state;
+
+    buddy_t *buddy = create_test_buddy();
+
+    size_t const obj_size = 24u;
+    slab_expect_t expect = init_slab_allocator(buddy,
+                                               obj_size,
+                                               /*align=*/0u,          /* use default */
+                                               /*slab_bytes_hint=*/0u); 
+    assert_true(expect.has_value);
+    slab_t *slab = expect.u.value; 
+    /* slab itself should be inside the buddy pool */
+    assert_true(is_buddy_ptr(buddy, slab));
+
+    /* No pages allocated yet, so: */
+    assert_int_equal(slab_alloc(slab), 0u);
+    assert_int_equal(slab_size(slab), 0u);
+    assert_int_equal(slab_total_blocks(slab), 0u);
+    assert_int_equal(slab_free_blocks(slab), 0u);
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+
+    /* Alignment should be at least alignof(max_align_t) */
+    size_t const slab_align = slab_alignment(slab);
+    assert_true((slab_align & (slab_align - 1u)) == 0u); /* power of two */
+    assert_true(slab_align >= alignof(max_align_t));
+
+    /* Stride must be >= object size and >= sizeof(void*) for free-list link */
+    size_t const stride = slab_stride(slab);
+    assert_true(stride >= obj_size);
+    assert_true(stride >= sizeof(void*));
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_slab_custom_alignment_pow2(void **state) {
+    (void)state;
+
+    buddy_t *buddy = create_test_buddy();
+
+    size_t const obj_size = 32u;
+    size_t const align    = 64u;
+
+    slab_expect_t expect = init_slab_allocator(buddy,
+                                       obj_size,
+                                       align,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(expect.has_value);
+    slab_t *slab = expect.u.value;
+
+    /* Alignment should be exactly what we requested (already power-of-two). */
+    assert_int_equal(slab_alignment(slab), align);
+
+    /* Again, no pages yet: capacity == 0. */
+    assert_int_equal(slab_size(slab), 0u);
+    assert_int_equal(slab_total_blocks(slab), 0u);
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_slab_alignment_rounded_up(void **state) {
+    (void)state;
+    errno = 0;
+
+    buddy_t *buddy = create_test_buddy();
+
+    size_t const obj_size = 16u;
+    size_t const align_in = 24u;   /* not a power of two, should round to 32 */
+    size_t const expected_align = 32u;
+
+    slab_expect_t expect = init_slab_allocator(buddy,
+                                       obj_size,
+                                       align_in,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(expect.has_value);
+    slab_t *slab = expect.u.value;
+
+    size_t const slab_align = slab_alignment(slab);
+    assert_int_equal(slab_align, expected_align);
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_slab_small_page_hint(void **state) {
+    (void)state;
+    errno = 0;
+
+    buddy_t *buddy = create_test_buddy();
+
+    size_t const obj_size = 8u;
+    size_t const hint     = 32u;  /* intentionally very small */
+
+    slab_expect_t expect = init_slab_allocator(buddy,
+                                       obj_size,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/hint); 
+    assert_true(expect.has_value);
+    slab_t *slab = expect.u.value;
+    
+    /* No pages yet, but first allocation should succeed and create a page. */
+    assert_int_equal(slab_size(slab), 0u);
+    assert_int_equal(slab_total_blocks(slab), 0u);
+
+    void_ptr_expect_t aexpect = alloc_slab(slab, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+    assert_non_null(p);
+
+    /* Now we must have capacity and at least one block. */
+    assert_true(slab_size(slab) > 0u);
+    assert_true(slab_total_blocks(slab) >= 1u);
+    assert_true(slab_in_use_blocks(slab) == 1u);
+
+    /* Returned pointer should have the advertised alignment. */
+    size_t const a = slab_alignment(slab);
+    assert_true(((uintptr_t)p & (a - 1u)) == 0u);
+
+    /* Cleanup */
+    assert_true(return_slab(slab, p));
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_slab_basic(void **state) {
+    (void)state;
+    errno = 0;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
+    
+    size_t const obj_size = 32u;
+
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       obj_size,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t* slab = sexpect.u.value;
+    /* Initially, no pages and no allocations. */
+    assert_int_equal(slab_alloc(slab), 0u);
+    assert_int_equal(slab_size(slab), 0u);
+    assert_int_equal(slab_total_blocks(slab), 0u);
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+    assert_int_equal(slab_free_blocks(slab), 0u);
+
+    /* First allocation should succeed and create a page. */
+    void_ptr_expect_t vexpect = alloc_slab(slab, /*zeroed=*/false); 
+    assert_true(vexpect.has_value);
+    void *p1 = vexpect.u.value;
+
+    /* Pointer should be aligned per slab_alignment. */
+    size_t const a = slab_alignment(slab);
+    assert_true((a & (a - 1u)) == 0u);          /* a is power-of-two */
+    assert_true(((uintptr_t)p1 & (a - 1u)) == 0u);
+
+    /* Now the slab must have capacity and one in-use block. */
+    assert_true(slab_size(slab) > 0u);
+    assert_true(slab_total_blocks(slab) >= 1u);
+    assert_int_equal(slab_in_use_blocks(slab), 1u);
+
+    /* Used bytes should be obj_size * in_use_blocks. */
+    assert_int_equal(slab_alloc(slab), obj_size);
+
+    /* There should be at least one free block unless page holds exactly 1. */
+    size_t total_blocks = slab_total_blocks(slab);
+    size_t free_blocks  = slab_free_blocks(slab);
+    assert_true(total_blocks >= 1u);
+    assert_true(free_blocks + slab_in_use_blocks(slab) == total_blocks);
+
+    /* Clean up: free buddy (which implicitly releases slab memory). */
+    assert_true(return_slab(slab, p1));
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_slab_zeroed(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value; 
+    
+    typedef struct {
+        int x;
+        int y;
+    } vec2i;
+
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       sizeof(vec2i),
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab = sexpect.u.value;
+    
+    /* Allocate zeroed. */
+    void_ptr_expect_t vexpect = alloc_slab(slab, /*zeroed=*/true);
+    assert_true(vexpect.has_value);
+ 
+    vec2i *v = (vec2i *)vexpect.u.value;
+
+    /* Should start as all zeros. */
+    assert_int_equal(v->x, 0);
+    assert_int_equal(v->y, 0);
+
+    /* Write some values and verify. */
+    v->x = 3;
+    v->y = -7;
+    assert_int_equal(v->x, 3);
+    assert_int_equal(v->y, -7);
+
+    /* Accounting: exactly one block in use. */
+    assert_int_equal(slab_in_use_blocks(slab), 1u);
+    assert_int_equal(slab_alloc(slab), sizeof(vec2i));
+
+    /* Return the block. */
+    assert_true(return_slab(slab, v));
+
+    /* After return, in-use should be 0. */
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+    assert_int_equal(slab_alloc(slab), 0u);
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_return_slab_reuse(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy =  bexpect.u.value;
+    
+    size_t const obj_size = 16u;
+
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       obj_size,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab = sexpect.u.value;
+   
+    void_ptr_expect_t vexpect = alloc_slab(slab, false); 
+    assert_true(vexpect.has_value);
+    void *p1 = vexpect.u.value;
+
+    vexpect = alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    void *p2 = vexpect.u.value;
+    assert_ptr_not_equal(p1, p2);
+
+    /* Now two blocks in use. */
+    assert_int_equal(slab_in_use_blocks(slab), 2u);
+
+    /* Free p1 and then allocate again; we expect LIFO reuse of slots,
+       so the newly allocated pointer should equal p1. */
+    assert_true(return_slab(slab, p1));
+    assert_int_equal(slab_in_use_blocks(slab), 1u);
+
+    vexpect = alloc_slab(slab, false); 
+    assert_true(vexpect.has_value);
+    void *p3 = vexpect.u.value;
+    assert_ptr_equal(p3, p1);
+
+    /* Clean up. Return both. */
+    assert_true(return_slab(slab, p2));
+    assert_true(return_slab(slab, p3));
+
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_return_slab_null_pointer(void **state) {
+    (void)state;
+    errno = 0;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
+   
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       /*obj_size=*/16u,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab =  sexpect.u.value;
+    
+    /* No allocations yet. */
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+
+    /* return_slab on NULL should be a no-op success. */
+    assert_true(return_slab(slab, NULL));
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_return_slab_invalid_pointer(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy =  bexpect.u.value;
+   
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       /*obj_size=*/32u,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab = sexpect.u.value;
+
+    int stack_value = 42;
+
+    /* Returning a pointer that does not belong to the slab should fail. */
+    bool ok = return_slab(slab, &stack_value);
+    assert_false(ok);
+
+    /* Still no allocations in use. */
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_slab_is_slab_ptr(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
+   
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       /*obj_size=*/24u,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab = sexpect.u.value;
+   
+    void_ptr_expect_t vexpect = alloc_slab(slab, false); 
+    assert_true(vexpect.has_value);
+    void *p = vexpect.u.value;
+
+    /* p must be recognized as a valid slab pointer. */
+    assert_true(is_slab_ptr(slab, p));
+
+    int other = 123;
+    assert_false(is_slab_ptr(slab, &other));
+
+    /* Clean up. */
+    assert_true(return_slab(slab, p));
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_slab_null(void **state) {
+    (void)state;
+
+    bool ok = reset_slab(NULL);
+    assert_false(ok);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_reset_slab_basic(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
+    
+    size_t const obj_size = 32u;
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       obj_size,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab = sexpect.u.value;
+    
+    /* Allocate a few objects to force at least one page. */
+    void_ptr_expect_t vexpect = alloc_slab(slab, false); 
+    assert_true(vexpect.has_value);
+    void *p1 = vexpect.u.value;;
+
+    vexpect = alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    void *p2 = vexpect.u.value;
+
+    vexpect = alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    void *p3 = vexpect.u.value;
+    
+    size_t total_blocks_before = slab_total_blocks(slab);
+    assert_true(total_blocks_before >= 3u);
+
+    assert_int_equal(slab_in_use_blocks(slab), 3u);
+    assert_int_equal(slab_alloc(slab), 3u * obj_size);
+
+    /* Now reset. */
+    bool ok = reset_slab(slab);
+    assert_true(ok);
+
+    /* After reset, nothing should be in use. */
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+    assert_int_equal(slab_alloc(slab), 0u);
+
+    /* Capacity (bytes / blocks) should be unchanged. */
+    size_t total_blocks_after = slab_total_blocks(slab);
+    assert_int_equal(total_blocks_after, total_blocks_before);
+
+    /* All blocks should now be free. */
+    assert_int_equal(slab_free_blocks(slab), total_blocks_after);
+
+    /* We do NOT try to return p1/p2/p3 after reset: that would be UB. */
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_save_slab_null_slab(void **state) {
+    (void)state;
+
+    size_t bytes_needed = 0;
+    bool ok = save_slab(NULL,
+                        /*buffer=*/NULL,
+                        /*buffer_size=*/0u,
+                        &bytes_needed);
+
+    assert_false(ok);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_save_slab_size_only(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
+   
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       /*obj_size=*/16u,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab = sexpect.u.value;
+    
+    /* Create at least one page. */
+    void_ptr_expect_t vexpect =  alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    void *p = vexpect.u.value;
+
+    size_t bytes_needed = 0;
+    errno = 0;
+
+    /* Request a save with buffer_size too small (0). */
+    bool ok = save_slab(slab,
+                        /*buffer=*/NULL,
+                        /*buffer_size=*/0u,
+                        &bytes_needed);
+
+    assert_false(ok);
+    assert_true(bytes_needed > 0u);
+
+    /* No state change expected in slab. */
+    assert_int_equal(slab_in_use_blocks(slab), 1u);
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_save_restore_roundtrip(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
+    
+    typedef struct {
+        int a;
+        int b;
+    } pair_t;
+
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       sizeof(pair_t),
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab = sexpect.u.value;
+    
+    /* Allocate a few objects and initialize them. */
+    void_ptr_expect_t vexpect = alloc_slab(slab, true); 
+    assert_true(vexpect.has_value);
+    pair_t *p1 = (pair_t *)vexpect.u.value;
+
+    vexpect = alloc_slab(slab, true);
+    assert_true(vexpect.has_value);
+    pair_t *p2 = (pair_t *)vexpect.u.value;
+
+    vexpect = alloc_slab(slab, true);
+    assert_true(vexpect.has_value);
+    pair_t *p3 = (pair_t *)vexpect.u.value;
+    
+    p1->a = 1;  p1->b = 10;
+    p2->a = 2;  p2->b = 20;
+    p3->a = 3;  p3->b = 30;
+
+    size_t const in_use_before   = slab_in_use_blocks(slab);
+    size_t const alloc_bytes_before = slab_alloc(slab);
+    size_t const total_blocks_before = slab_total_blocks(slab);
+    size_t const free_blocks_before  = slab_free_blocks(slab);
+
+    assert_int_equal(in_use_before, 3u);
+    assert_true(total_blocks_before >= 3u);
+    assert_true(free_blocks_before + in_use_before == total_blocks_before);
+
+    /* First call to save_slab: get required size. */
+    size_t bytes_needed = 0;
+
+    bool ok = save_slab(slab,
+                        /*buffer=*/NULL,
+                        /*buffer_size=*/0u,
+                        &bytes_needed);
+    assert_false(ok);
+    assert_true(bytes_needed > 0u);
+
+    /* Second call: provide a buffer of the correct size. */
+    void *buffer = malloc(bytes_needed);
+    assert_non_null(buffer);
+
+    errno = 0;
+    ok = save_slab(slab,
+                   buffer,
+                   bytes_needed,
+                   &bytes_needed);
+    assert_true(ok);
+    assert_int_equal(errno, 0);
+
+    /* Mutate state after snapshot: change values, free/alloc, etc. */
+    p1->a = 111;  p1->b = 999;
+    (void)return_slab(slab, p2);
+    vexpect = alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    pair_t *p4 = (pair_t *)vexpect.u.value;
+    assert_non_null(p4);
+    p4->a = 444;  p4->b = 555;
+
+    assert_int_equal(slab_in_use_blocks(slab), 3u); /* p1, p3, p4 */
+
+    /* Now restore from snapshot. This should roll back:
+       - allocations/frees
+       - contents of p1, p2, p3
+       - counters (len, free list, etc.)
+    */
+    ok = restore_slab(slab, buffer, bytes_needed);
+    assert_true(ok);
+
+    /* After restore, pointers p1/p2/p3 should be valid again
+       (snapshot logic assumes same pages still exist), and
+       contents should match original values, not mutated ones.
+    */
+    assert_int_equal(p1->a, 1);
+    assert_int_equal(p1->b, 10);
+    assert_int_equal(p2->a, 2);
+    assert_int_equal(p2->b, 20);
+    assert_int_equal(p3->a, 3);
+    assert_int_equal(p3->b, 30);
+
+    /* Accounting should match pre-snapshot state. */
+    assert_int_equal(slab_in_use_blocks(slab), in_use_before);
+    assert_int_equal(slab_alloc(slab), alloc_bytes_before);
+    assert_int_equal(slab_total_blocks(slab), total_blocks_before);
+
+    /* Free blocks (geom) should match too. */
+    assert_int_equal(slab_free_blocks(slab), free_blocks_before);
+
+    free(buffer);
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_restore_slab_small_buffer(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
+   
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       /*obj_size=*/16u,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u);
+    assert_true(sexpect.has_value);
+    slab_t *slab =  sexpect.u.value;
+   
+    void_ptr_expect_t vexpect = alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    void *p = vexpect.u.value;
+
+    /* Save to find required size. */
+    size_t bytes_needed = 0;
+    (void)save_slab(slab, NULL, 0u, &bytes_needed);
+    assert_true(bytes_needed > 0u);
+
+    /* Create a buffer too small on purpose. */
+    size_t const small_size = bytes_needed / 2u;
+    void *buffer = malloc(bytes_needed);
+    assert_non_null(buffer);
+
+    /* First, create a valid snapshot. */
+    bool ok = save_slab(slab, buffer, bytes_needed, &bytes_needed);
+    assert_true(ok);
+
+    /* Attempt to restore using only part of the buffer. */
+    ok = restore_slab(slab, buffer, small_size);
+    assert_false(ok);
+
+    free(buffer);
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_slab_getters_initial_state(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
+    
+    size_t const obj_size = 32u;
+
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       obj_size,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab = sexpect.u.value;
+    
+    /* No pages allocated yet -> zero usage and capacity. */
+    assert_int_equal(slab_alloc(slab), 0u);
+    assert_int_equal(slab_size(slab), 0u);
+    assert_int_equal(slab_total_blocks(slab), 0u);
+    assert_int_equal(slab_free_blocks(slab), 0u);
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+
+    /* total_slab_alloc should be >= alloc and size. */
+    size_t total = total_slab_alloc(slab);
+    assert_true(total >= slab_alloc(slab));
+    assert_true(total >= slab_size(slab));
+
+    /* Alignment should be power-of-two and at least alignof(max_align_t). */
+    size_t const a = slab_alignment(slab);
+    assert_true((a & (a - 1u)) == 0u);
+    assert_true(a >= alignof(max_align_t));
+
+    /* Stride must be >= object size and at least sizeof(void*) for next pointer. */
+    size_t const stride = slab_stride(slab);
+    assert_true(stride >= obj_size);
+    assert_true(stride >= sizeof(void*));
+
+    free_buddy(buddy);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_slab_getters_after_allocs_and_frees(void **state) {
+    (void)state;
+
+    buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
+                                          TEST_BUDDY_MIN_BLOCK_SIZE,
+                                          0u); 
+    assert_true(bexpect.has_value);
+    buddy_t *buddy = bexpect.u.value;
+    
+    size_t const obj_size = 24u;
+
+    slab_expect_t sexpect = init_slab_allocator(buddy,
+                                       obj_size,
+                                       /*align=*/0u,
+                                       /*slab_bytes_hint=*/0u); 
+    assert_true(sexpect.has_value);
+    slab_t *slab = sexpect.u.value;
+    
+    /* Snapshot of total_slab_alloc before first allocation (just slab struct). */
+    size_t const total_before = total_slab_alloc(slab);
+
+    /* Allocate several blocks to force at least one page. */
+    void_ptr_expect_t vexpect =  alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    void *p1 = vexpect.u.value;
+
+    vexpect = alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    void *p2 = vexpect.u.value;
+
+    vexpect = alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    void *p3 = vexpect.u.value;
+
+    vexpect = alloc_slab(slab, false);
+    assert_true(vexpect.has_value);
+    void *p4 = vexpect.u.value;
+    
+    /* After first allocation, capacity and total footprint must be > 0. */
+    assert_true(slab_size(slab) > 0u);
+    assert_true(slab_total_blocks(slab) >= 4u);
+
+    /* total_slab_alloc should have grown (pages added). */
+    size_t const total_after = total_slab_alloc(slab);
+    assert_true(total_after >= total_before);
+    assert_true(total_after > total_before);
+
+    /* In-use blocks and alloc bytes. */
+    size_t const in_use = slab_in_use_blocks(slab);
+    assert_int_equal(in_use, 4u);
+
+    size_t const alloc_bytes = slab_alloc(slab);
+    assert_int_equal(alloc_bytes, in_use * obj_size);
+
+    /* Capacity relationships. */
+    size_t const total_blocks = slab_total_blocks(slab);
+    size_t const free_blocks  = slab_free_blocks(slab);
+
+    assert_true(total_blocks >= in_use);
+    assert_int_equal(free_blocks + in_use, total_blocks);
+
+    /* Now free two blocks and check counters update. */
+    assert_true(return_slab(slab, p2));
+    assert_true(return_slab(slab, p4));
+
+    size_t const in_use2 = slab_in_use_blocks(slab);
+    size_t const alloc_bytes2 = slab_alloc(slab);
+    size_t const free_blocks2 = slab_free_blocks(slab);
+    size_t const total_blocks2 = slab_total_blocks(slab);
+
+    assert_int_equal(in_use2, 2u);
+    assert_int_equal(alloc_bytes2, in_use2 * obj_size);
+    assert_int_equal(total_blocks2, total_blocks);  /* capacity unchanged */
+    assert_int_equal(free_blocks2 + in_use2, total_blocks2);
+
+    /* total_slab_alloc should still be >= size and alloc, and same pages. */
+    size_t const total_after_free = total_slab_alloc(slab);
+    assert_true(total_after_free >= slab_size(slab));
+    assert_true(total_after_free >= slab_alloc(slab));
+    /* It may equal total_after; we don't require shrink. */
+
+    /* Free remaining blocks. */
+    assert_true(return_slab(slab, p1));
+    assert_true(return_slab(slab, p3));
+
+    assert_int_equal(slab_in_use_blocks(slab), 0u);
+    assert_int_equal(slab_alloc(slab), 0u);
+    assert_int_equal(slab_free_blocks(slab), slab_total_blocks(slab));
+
+    free_buddy(buddy);
+}
+/* ------------------------------------------------------------------------- */
+
+const struct CMUnitTest test_slab_allocator[] = {
+    cmocka_unit_test(test_init_slab_null_buddy),
+    cmocka_unit_test(test_init_slab_zero_object_size),
+    cmocka_unit_test(test_init_slab_default_alignment),
+    cmocka_unit_test(test_init_slab_custom_alignment_pow2),
+    cmocka_unit_test(test_init_slab_alignment_rounded_up),
+    cmocka_unit_test(test_init_slab_small_page_hint),
+
+    cmocka_unit_test(test_alloc_slab_basic),
+    cmocka_unit_test(test_alloc_slab_zeroed),
+    cmocka_unit_test(test_return_slab_reuse),
+    cmocka_unit_test(test_return_slab_null_pointer),
+    cmocka_unit_test(test_return_slab_invalid_pointer),
+    cmocka_unit_test(test_alloc_slab_is_slab_ptr),
+
+    cmocka_unit_test(test_reset_slab_null),
+    cmocka_unit_test(test_reset_slab_basic),
+    cmocka_unit_test(test_save_slab_null_slab),
+    cmocka_unit_test(test_save_slab_size_only),
+    cmocka_unit_test(test_save_restore_roundtrip),
+    cmocka_unit_test(test_restore_slab_small_buffer),
+
+    cmocka_unit_test(test_slab_getters_initial_state),
+    cmocka_unit_test(test_slab_getters_after_allocs_and_frees),
+};
+
+const size_t test_slab_allocator_count = sizeof(test_slab_allocator) / sizeof(test_slab_allocator[0]);
 // ================================================================================
 // ================================================================================
 // eof

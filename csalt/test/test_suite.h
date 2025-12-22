@@ -89,14 +89,14 @@ extern const size_t test_buddy_allocator_count;
 // ================================================================================
 // ================================================================================
 
-// /**
-//  * @brief Test suite for slab allocator functionality
-//  * 
-//  * Covers:
-//  * - Test of slab allocation initialization with an non owned arena
-//  */
-// extern const struct CMUnitTest test_slab_allocator[];
-// extern const size_t test_slab_allocator_count;
+/**
+ * @brief Test suite for slab allocator functionality
+ * 
+ * Covers:
+ * - Test of slab allocation initialization with an non owned arena
+ */
+extern const struct CMUnitTest test_slab_allocator[];
+extern const size_t test_slab_allocator_count;
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus
