@@ -3679,1016 +3679,1046 @@ const size_t test_freelist_count = sizeof(test_freelist) / sizeof(test_freelist[
 // // ================================================================================ 
 // // TEST BUDDY ALLOCATOR 
 //
-// static size_t next_pow2_test(size_t x) {
-//     if (x == 0) return 1;
-//     x--;
-//     for (size_t i = 1; i < sizeof(size_t) * 8; i <<= 1) {
-//         x |= x >> i;
-//     }
-//     x++;
-//     return x;
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_buddy_zero_pool(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *b = init_buddy_allocator(0u, 64u, 16u);
-//
-//     assert_null(b);
-//     assert_int_equal(errno, EINVAL);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_buddy_zero_min_block(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *b = init_buddy_allocator(1024u, 0u, 16u);
-//
-//     assert_null(b);
-//     assert_int_equal(errno, EINVAL);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_buddy_zero_base_align(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *b = init_buddy_allocator(1024u, 64u, 0u);
-//
-//     assert_non_null(b);
-//
-//     /* Nothing allocated yet */
-//     assert_int_equal(buddy_alloc(b), 0u);
-//     assert_int_equal(buddy_remaining(b), 1024u);
-//
-//     /* Largest block is entire pool */
-//     assert_int_equal(buddy_largest_block(b), 1024u);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_buddy_min_block_too_large(void **state) {
-//     (void)state;
-//     errno = 0;
-//
-//     buddy_t *b = init_buddy_allocator(1024u, 4096u, 64u);
-//     assert_null(b);
-//     assert_int_equal(errno, EINVAL);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_buddy_rounding(void **state) {
-//     (void)state;
-//
-//     size_t req_pool = 1500u;        /* rounds to 2048 */
-//     size_t req_min  = 30u;          /* rounds to 32   */
-//     size_t align    = 16u;          /* already pow2   */
-//
-//     size_t expected_pool = next_pow2_test(req_pool);
-//     size_t expected_min  = next_pow2_test(req_min);
-//
-//     errno = 0;
-//     buddy_t *b = init_buddy_allocator(req_pool, req_min, align);
-//
-//     assert_non_null(b);
-//
-//     /* No allocation yet */
-//     assert_int_equal(buddy_alloc(b), 0u);
-//     assert_int_equal(buddy_remaining(b), expected_pool);
-//     assert_int_equal(buddy_largest_block(b), expected_pool);
-//
-//     /* Total alloc must be >= expected_pool */
-//     assert_true(total_buddy_alloc(b) >= expected_pool);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_buddy_exact_powers_of_two(void **state) {
-//     (void)state;
-//
-//     size_t pool = 1u << 20; /* 1 MiB */
-//     size_t minb = 1u << 6;  /* 64 B  */
-//
-//     errno = 0;
-//     buddy_t *b = init_buddy_allocator(pool, minb, 64u);
-//     assert_non_null(b);
-//
-//     assert_int_equal(buddy_alloc(b), 0u);
-//     assert_int_equal(buddy_remaining(b), pool);
-//     assert_int_equal(buddy_largest_block(b), pool);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_init_buddy_non_pow2_align(void **state) {
-//     (void)state;
-//
-//     size_t pool = 4096u;
-//     size_t mb   = 64u;
-//     size_t bad_align = 24u; /* rounds to 32 */
-//
-//     errno = 0;
-//     buddy_t *b = init_buddy_allocator(pool, mb, bad_align);
-//     assert_non_null(b);
-//
-//     /* Sanity checks for init state: */
-//     assert_int_equal(buddy_remaining(b), pool);
-//     assert_int_equal(buddy_largest_block(b), pool);
-//     assert_int_equal(buddy_alloc(b), 0u);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_buddy_basic(void **state) {
-//     (void)state;
-//
-//     size_t pool      = 1024u;
-//     size_t min_block = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     errno = 0;
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t before_remaining = buddy_remaining(b);
-//     assert_int_equal(before_remaining, next_pow2_test(pool));
-//
-//     size_t req_size = 32u;
-//
-//     void *p = alloc_buddy(b, req_size, false);
-//     assert_non_null(p);
-//
-//     /* remaining should have decreased by at least req_size */
-//     size_t after_remaining = buddy_remaining(b);
-//     assert_true(after_remaining < before_remaining);
-//
-//     /* buddy_alloc should reflect bytes consumed from the pool */
-//     size_t used = buddy_alloc(b);
-//     assert_int_equal(used, before_remaining - after_remaining);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_buddy_too_large(void **state) {
-//     (void)state;
-//
-//     size_t pool      = 1024u;
-//     size_t min_block = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     errno = 0;
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     /* Request larger than the entire pool. */
-//     errno = 0;
-//     void *p = alloc_buddy(b, pool + 1u, false);
-//     assert_null(p);
-//     assert_int_equal(errno, ENOMEM);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_buddy_zeroed_reuse_full_block(void **state) {
-//     (void)state;
-//
-//     size_t pool      = 1024u;
-//     size_t min_block = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//     
-//     /* Request big enough so allocator uses the whole pool as one block.
-//        We assume header + requested_size rounds up to pool. */
-//     size_t req_size = 900u;
-//
-//     void *p1 = alloc_buddy(b, req_size, false);
-//     assert_non_null(p1);
-//
-//     /* Pool should now be fully consumed. */
-//     assert_int_equal(buddy_remaining(b), 0u);
-//
-//     /* Fill with a non-zero pattern. */
-//     memset(p1, 0xAA, req_size);
-//
-//     /* Free the block. */
-//     assert_true(return_buddy_element(b, p1));
-//
-//     /* Full pool should be free again. */
-//     assert_int_equal(buddy_remaining(b), pool);
-//
-//     /* Allocate again, this time zeroed. */
-//     void *p2 = alloc_buddy(b, req_size, true);
-//     assert_non_null(p2);
-//
-//     /* Verify buffer is zeroed. */
-//     const unsigned char *bytes = (const unsigned char *)p2;
-//     for (size_t i = 0; i < req_size; ++i) {
-//         assert_int_equal(bytes[i], 0u);
-//     }
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_buddy_aligned_basic(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t req_size = 128u;
-//     size_t align    = 64u;
-//
-//     void *p = alloc_buddy_aligned(b, req_size, align, false);
-//     assert_non_null(p);
-//
-//     uintptr_t addr = (uintptr_t)p;
-//     assert_int_equal(addr % align, 0u);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_buddy_aligned_non_pow2_align(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t req_size = 128u;
-//     size_t align    = 24u; /* should be normalized to 32 internally */
-//
-//     void *p = alloc_buddy_aligned(b, req_size, align, false);
-//     assert_non_null(p);
-//
-//     uintptr_t addr = (uintptr_t)p;
-//     /* We don't care about 24, we care it meets the rounded alignment: 32. */
-//     assert_int_equal(addr % 32u, 0u);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_buddy_aligned_zero_align(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 2048u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t req_size = 100u;
-//
-//     void *p = alloc_buddy_aligned(b, req_size, 0u, false);
-//     assert_non_null(p);
-//
-//     uintptr_t addr = (uintptr_t)p;
-//     /* At least max_align_t alignment. */
-//     assert_int_equal(addr % alignof(max_align_t), 0u);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_buddy_aligned_zeroed_reuse_full_block(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 2048u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t req_size = 1800u;
-//     size_t align    = 64u;
-//
-//     void *p1 = alloc_buddy_aligned(b, req_size, align, false);
-//     assert_non_null(p1);
-//     assert_int_equal(buddy_remaining(b), 0u);
-//
-//     memset(p1, 0xBB, req_size);
-//
-//     assert_true(return_buddy_element(b, p1));
-//     assert_int_equal(buddy_remaining(b), pool);
-//
-//     void *p2 = alloc_buddy_aligned(b, req_size, align, true);
-//     assert_non_null(p2);
-//
-//     uintptr_t addr = (uintptr_t)p2;
-//     assert_int_equal(addr % align, 0u);
-//
-//     const unsigned char *bytes = (const unsigned char *)p2;
-//     for (size_t i = 0; i < req_size; ++i) {
-//         assert_int_equal(bytes[i], 0u);
-//     }
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_alloc_buddy_aligned_too_large(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 1024u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     errno = 0;
-//     void *p = alloc_buddy_aligned(b, pool + 512u, 64u, false);
-//     assert_null(p);
-//     assert_int_equal(errno, ENOMEM);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_from_null(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t new_size = 128u;
-//
-//     errno = 0;
-//     void *p = realloc_buddy(b, NULL, 0u, new_size, false);
-//     assert_non_null(p);
-//     assert_int_equal(errno, 0);
-//
-//     /* Basic sanity: some memory is now used. */
-//     assert_true(buddy_alloc(b) > 0u);
-//     assert_true(buddy_remaining(b) < next_pow2_test(pool));
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_to_zero_frees(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 2048u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t size = 128u;
-//     void *p = alloc_buddy(b, size, false);
-//     assert_non_null(p);
-//
-//     size_t remaining_before = buddy_remaining(b);
-//
-//     /* realloc to 0 -> free */
-//     errno = 0;
-//     void *p2 = realloc_buddy(b, p, size, 0u, false);
-//     assert_null(p2);
-//     assert_int_equal(errno, 0);
-//
-//     /* Entire pool should be free again. */
-//     assert_int_equal(buddy_remaining(b), next_pow2_test(pool));
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_shrink_in_place(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t old_size = 200u;
-//     size_t new_size = 100u;
-//
-//     uint8_t pattern[200];
-//     for (size_t i = 0; i < old_size; ++i) {
-//         pattern[i] = (uint8_t)(i & 0xFFu);
-//     }
-//
-//     void *p = alloc_buddy(b, old_size, false);
-//     assert_non_null(p);
-//
-//     memcpy(p, pattern, old_size);
-//
-//     errno = 0;
-//     void *p2 = realloc_buddy(b, p, old_size, new_size, false);
-//     assert_non_null(p2);
-//
-//     /* Ideally, shrink is in-place; if your implementation guarantees this,
-//        keep this assert. If not, you can drop it and only check contents. */
-//     assert_ptr_equal(p2, p);
-//
-//     /* First new_size bytes must match original data. */
-//     uint8_t *bytes = (uint8_t *)p2;
-//     for (size_t i = 0; i < new_size; ++i) {
-//         assert_int_equal(bytes[i], pattern[i]);
-//     }
-//
-//     /* The allocator should still consider the block "allocated" (no free). */
-//     assert_true(buddy_remaining(b) < next_pow2_test(pool));
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_grow_zeroed(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t old_size = 100u;
-//     size_t new_size = 300u;
-//
-//     uint8_t pattern[100];
-//     for (size_t i = 0; i < old_size; ++i) {
-//         pattern[i] = (uint8_t)(0xA0u + (i & 0x0Fu));
-//     }
-//
-//     void *p = alloc_buddy(b, old_size, false);
-//     assert_non_null(p);
-//     memcpy(p, pattern, old_size);
-//
-//     errno = 0;
-//     void *p2 = realloc_buddy(b, p, old_size, new_size, true);
-//     assert_non_null(p2);
-//     /* Implementation may or may not reuse same address; don't assume. */
-//
-//     uint8_t *bytes = (uint8_t *)p2;
-//
-//     /* Old region preserved. */
-//     for (size_t i = 0; i < old_size; ++i) {
-//         assert_int_equal(bytes[i], pattern[i]);
-//     }
-//
-//     /* New region zeroed. */
-//     for (size_t i = old_size; i < new_size; ++i) {
-//         assert_int_equal(bytes[i], 0u);
-//     }
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_grow_too_large_failure(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 1024u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t old_size = 128u;
-//     void *p = alloc_buddy(b, old_size, false);
-//     assert_non_null(p);
-//
-//     /* Fill with a pattern. */
-//     uint8_t *bytes = (uint8_t *)p;
-//     for (size_t i = 0; i < old_size; ++i) {
-//         bytes[i] = (uint8_t)(0x55u);
-//     }
-//
-//     size_t before_remaining = buddy_remaining(b);
-//
-//     errno = 0;
-//     void *p2 = realloc_buddy(b, p, old_size, pool * 2u, false);
-//     assert_null(p2);
-//     assert_int_equal(errno, ENOMEM);
-//
-//     /* Old pointer should still be valid and content unchanged. */
-//     for (size_t i = 0; i < old_size; ++i) {
-//         assert_int_equal(bytes[i], 0x55u);
-//     }
-//
-//     /* Allocator state shouldn't claim more memory used than before. */
-//     assert_int_equal(buddy_remaining(b), before_remaining);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_aligned_from_null(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t new_size = 128u;
-//     size_t align    = 64u;
-//
-//     errno = 0;
-//     void *p = realloc_buddy_aligned(b, NULL, 0u, new_size, align, false);
-//     assert_non_null(p);
-//     assert_int_equal(errno, 0);
-//
-//     uintptr_t addr = (uintptr_t)p;
-//     assert_int_equal(addr % align, 0u);
-//
-//     /* Basic sanity: pool is not fully free anymore. */
-//     assert_true(buddy_remaining(b) < next_pow2_test(pool));
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_aligned_to_zero_frees(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 2048u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t size  = 128u;
-//     size_t align = 64u;
-//
-//     void *p = alloc_buddy_aligned(b, size, align, false);
-//     assert_non_null(p);
-//
-//     size_t before_remaining = buddy_remaining(b);
-//
-//     errno = 0;
-//     void *p2 = realloc_buddy_aligned(b, p, size, 0u, align, false);
-//     assert_null(p2);
-//     assert_int_equal(errno, 0);
-//
-//     /* Entire pool should be free again. */
-//     assert_int_equal(buddy_remaining(b), next_pow2_test(pool));
-//     assert_true(buddy_remaining(b) >= before_remaining);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_aligned_shrink_preserves_data(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t old_size = 200u;
-//     size_t new_size = 100u;
-//     size_t align    = 64u;
-//
-//     uint8_t pattern[200];
-//     for (size_t i = 0; i < old_size; ++i) {
-//         pattern[i] = (uint8_t)(i & 0xFFu);
-//     }
-//
-//     void *p = alloc_buddy_aligned(b, old_size, align, false);
-//     assert_non_null(p);
-//     uintptr_t addr = (uintptr_t)p;
-//     assert_int_equal(addr % align, 0u);
-//
-//     memcpy(p, pattern, old_size);
-//
-//     errno = 0;
-//     void *p2 = realloc_buddy_aligned(b, p, old_size, new_size, align, false);
-//     assert_non_null(p2);
-//     /* We won't require same pointer, but it often will be. */
-//     uintptr_t addr2 = (uintptr_t)p2;
-//     assert_int_equal(addr2 % align, 0u);
-//     assert_int_equal(errno, 0);
-//
-//     /* First new_size bytes must match original data. */
-//     uint8_t *bytes = (uint8_t *)p2;
-//     for (size_t i = 0; i < new_size; ++i) {
-//         assert_int_equal(bytes[i], pattern[i]);
-//     }
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_aligned_grow_zeroed(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t old_size = 100u;
-//     size_t new_size = 300u;
-//     size_t align    = 64u;
-//
-//     uint8_t pattern[100];
-//     for (size_t i = 0; i < old_size; ++i) {
-//         pattern[i] = (uint8_t)(0xB0u + (i & 0x0Fu));
-//     }
-//
-//     void *p = alloc_buddy_aligned(b, old_size, align, false);
-//     assert_non_null(p);
-//     uintptr_t addr = (uintptr_t)p;
-//     assert_int_equal(addr % align, 0u);
-//
-//     memcpy(p, pattern, old_size);
-//
-//     errno = 0;
-//     void *p2 = realloc_buddy_aligned(b, p, old_size, new_size, align, true);
-//     assert_non_null(p2);
-//     uintptr_t addr2 = (uintptr_t)p2;
-//     assert_int_equal(addr2 % align, 0u);
-//     assert_int_equal(errno, 0);
-//
-//     uint8_t *bytes = (uint8_t *)p2;
-//
-//     /* Old region preserved. */
-//     for (size_t i = 0; i < old_size; ++i) {
-//         assert_int_equal(bytes[i], pattern[i]);
-//     }
-//
-//     /* New region zeroed. */
-//     for (size_t i = old_size; i < new_size; ++i) {
-//         assert_int_equal(bytes[i], 0u);
-//     }
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_aligned_grow_too_large_failure(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 1024u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t old_size = 128u;
-//     size_t align    = 32u;
-//
-//     void *p = alloc_buddy_aligned(b, old_size, align, false);
-//     assert_non_null(p);
-//     uintptr_t addr = (uintptr_t)p;
-//     assert_int_equal(addr % 32u, 0u);
-//
-//     /* Fill with a known pattern. */
-//     uint8_t *bytes = (uint8_t *)p;
-//     for (size_t i = 0; i < old_size; ++i) {
-//         bytes[i] = (uint8_t)0x5Au;
-//     }
-//
-//     size_t before_remaining = buddy_remaining(b);
-//
-//     errno = 0;
-//     void *p2 = realloc_buddy_aligned(b, p, old_size, pool * 2u, align, false);
-//     assert_null(p2);
-//     assert_int_equal(errno, ENOMEM);
-//
-//     /* Old pointer still valid, contents unchanged. */
-//     for (size_t i = 0; i < old_size; ++i) {
-//         assert_int_equal(bytes[i], 0x5Au);
-//     }
-//
-//     /* Remaining bytes in pool should be unchanged. */
-//     assert_int_equal(buddy_remaining(b), before_remaining);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_realloc_buddy_aligned_zero_align_behavior(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 2048u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t old_size = 64u;
-//     size_t new_size = 256u;
-//
-//     /* Start from NULL: behaves like alloc_buddy_aligned with natural alignment. */
-//     void *p = realloc_buddy_aligned(b, NULL, 0u, old_size, 0u, false);
-//     assert_non_null(p);
-//
-//     uintptr_t addr = (uintptr_t)p;
-//     assert_int_equal(addr % alignof(max_align_t), 0u);
-//
-//     /* Now grow with align == 0 again. */
-//     void *p2 = realloc_buddy_aligned(b, p, old_size, new_size, 0u, false);
-//     assert_non_null(p2);
-//
-//     uintptr_t addr2 = (uintptr_t)p2;
-//     assert_int_equal(addr2 % alignof(max_align_t), 0u);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static size_t get_normalized_pool(size_t requested_pool,
-//                                   size_t min_block,
-//                                   size_t base_align)
-// {
-//     buddy_t *b = init_buddy_allocator(requested_pool, min_block, base_align);
-//     assert_non_null(b);
-//     size_t pool = buddy_remaining(b);
-//     free_buddy(b);
-//     return pool;
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_buddy_ptr_null_args(void **state) {
-//     (void)state;
-//
-//     int dummy = 42;
-//
-//     errno = 0;
-//     assert_false(is_buddy_ptr(NULL, &dummy));
-//     assert_int_equal(errno, EINVAL);
-//
-//     size_t pool       = 1024u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     errno = 0;
-//     assert_false(is_buddy_ptr(b, NULL));
-//     assert_int_equal(errno, EINVAL);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_buddy_ptr_valid_alloc(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 2048u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t size = 128u;
-//     void *p = alloc_buddy(b, size, false);
-//     assert_non_null(p);
-//
-//     errno = 0;
-//     assert_true(is_buddy_ptr(b, p));
-//     /* errno should not indicate an error on success */
-//     assert_int_not_equal(errno, EINVAL);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_buddy_ptr_foreign_pointer(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 2048u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     int local = 123;
-//
-//     errno = 0;
-//     assert_false(is_buddy_ptr(b, &local));
-//     assert_int_equal(errno, EINVAL);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_buddy_ptr_other_buddy(void **state) {
-//     (void)state;
-//
-//     size_t pool1      = 2048u;
-//     size_t pool2      = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b1 = init_buddy_allocator(pool1, min_block, base_align);
-//     buddy_t *b2 = init_buddy_allocator(pool2, min_block, base_align);
-//     assert_non_null(b1);
-//     assert_non_null(b2);
-//
-//     void *p = alloc_buddy(b1, 128u, false);
-//     assert_non_null(p);
-//
-//     errno = 0;
-//     assert_false(is_buddy_ptr(b2, p));
-//     assert_int_equal(errno, EINVAL);
-//
-//     free_buddy(b1);
-//     free_buddy(b2);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_buddy_ptr_offset_into_block(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 2048u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     void *p = alloc_buddy(b, 128u, false);
-//     assert_non_null(p);
-//
-//     uint8_t *p_offset = (uint8_t *)p + 1;
-//
-//     errno = 0;
-//     assert_false(is_buddy_ptr(b, p_offset));
-//     assert_int_equal(errno, EINVAL);
-//
-//     /* Original pointer is still valid. */
-//     errno = 0;
-//     assert_true(is_buddy_ptr(b, p));
-//     assert_int_not_equal(errno, EINVAL);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_buddy_ptr_sized_null_args(void **state) {
-//     (void)state;
-//
-//     int dummy = 0;
-//
-//     errno = 0;
-//     assert_false(is_buddy_ptr_sized(NULL, &dummy, 16u));
-//     assert_int_equal(errno, EINVAL);
-//
-//     size_t pool       = 1024u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     errno = 0;
-//     assert_false(is_buddy_ptr_sized(b, NULL, 16u));
-//     assert_int_equal(errno, EINVAL);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_buddy_ptr_sized_exact_request(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 4096u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     size_t req_size = 256u;
-//     void *p = alloc_buddy(b, req_size, false);
-//     assert_non_null(p);
-//
-//     errno = 0;
-//     assert_true(is_buddy_ptr_sized(b, p, req_size));
-//     assert_int_not_equal(errno, EINVAL);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_buddy_ptr_sized_too_large(void **state) {
-//     (void)state;
-//
-//     size_t requested_pool = 2048u;
-//     size_t min_block      = 64u;
-//     size_t base_align     = alignof(max_align_t);
-//
-//     /* Get the normalized pool (after pow2 rounding) for a sanity bound. */
-//     size_t normalized_pool = get_normalized_pool(requested_pool,
-//                                                  min_block,
-//                                                  base_align);
-//
-//     buddy_t *b = init_buddy_allocator(requested_pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     void *p = alloc_buddy(b, 128u, false);
-//     assert_non_null(p);
-//
-//     /* Ask for more than the entire pool; this should be too large. */
-//     size_t huge_size = normalized_pool * 2u;
-//
-//     errno = 0;
-//     assert_false(is_buddy_ptr_sized(b, p, huge_size));
-//     /* We defined ERANGE in the design for "size does not fit". */
-//     assert_int_equal(errno, ERANGE);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// static void test_is_buddy_ptr_sized_foreign_pointer(void **state) {
-//     (void)state;
-//
-//     size_t pool       = 1024u;
-//     size_t min_block  = 64u;
-//     size_t base_align = alignof(max_align_t);
-//
-//     buddy_t *b = init_buddy_allocator(pool, min_block, base_align);
-//     assert_non_null(b);
-//
-//     int local = 42;
-//
-//     errno = 0;
-//     assert_false(is_buddy_ptr_sized(b, &local, sizeof local));
-//     assert_int_equal(errno, EINVAL);
-//
-//     free_buddy(b);
-// }
-// // -------------------------------------------------------------------------------- 
-//
-// const struct CMUnitTest test_buddy_allocator[] = {
-//     cmocka_unit_test(test_init_buddy_zero_pool),
-//     cmocka_unit_test(test_init_buddy_zero_min_block),
-//     cmocka_unit_test(test_init_buddy_zero_base_align),
-//     cmocka_unit_test(test_init_buddy_min_block_too_large),
-//     cmocka_unit_test(test_init_buddy_rounding),
-//     cmocka_unit_test(test_init_buddy_exact_powers_of_two),
-//     cmocka_unit_test(test_init_buddy_non_pow2_align),
-//
-//     cmocka_unit_test(test_alloc_buddy_basic),
-//     cmocka_unit_test(test_alloc_buddy_too_large),
-//     cmocka_unit_test(test_alloc_buddy_zeroed_reuse_full_block),
-//
-//     cmocka_unit_test(test_alloc_buddy_aligned_basic),
-//     cmocka_unit_test(test_alloc_buddy_aligned_non_pow2_align),
-//     cmocka_unit_test(test_alloc_buddy_aligned_zero_align),
-//     cmocka_unit_test(test_alloc_buddy_aligned_zeroed_reuse_full_block),
-//     cmocka_unit_test(test_alloc_buddy_aligned_too_large),
-//
-//     cmocka_unit_test(test_realloc_buddy_from_null),
-//     cmocka_unit_test(test_realloc_buddy_to_zero_frees),
-//     cmocka_unit_test(test_realloc_buddy_shrink_in_place),
-//     cmocka_unit_test(test_realloc_buddy_grow_zeroed),
-//     cmocka_unit_test(test_realloc_buddy_grow_too_large_failure),
-//
-//     cmocka_unit_test(test_realloc_buddy_aligned_from_null),
-//     cmocka_unit_test(test_realloc_buddy_aligned_to_zero_frees),
-//     cmocka_unit_test(test_realloc_buddy_aligned_shrink_preserves_data),
+static size_t next_pow2_test(size_t x) {
+    if (x == 0) return 1;
+    x--;
+    for (size_t i = 1; i < sizeof(size_t) * 8; i <<= 1) {
+        x |= x >> i;
+    }
+    x++;
+    return x;
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_buddy_zero_pool(void **state) {
+    (void)state;
+
+    buddy_expect_t expect = init_buddy_allocator(0u, 64u, 16u); 
+    assert_false(expect.has_value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_buddy_zero_min_block(void **state) {
+    (void)state;
+
+    buddy_expect_t expect = init_buddy_allocator(1024u, 0u, 16u); 
+    assert_false(expect.has_value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_buddy_zero_base_align(void **state) {
+    (void)state;
+    errno = 0;
+    
+    buddy_expect_t expect = init_buddy_allocator(1024u, 64u, 0u); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    /* Nothing allocated yet */
+    assert_int_equal(buddy_alloc(b), 0u);
+    assert_int_equal(buddy_remaining(b), 1024u);
+
+    /* Largest block is entire pool */
+    assert_int_equal(buddy_largest_block(b), 1024u);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_buddy_min_block_too_large(void **state) {
+    (void)state;
+    buddy_expect_t expect = init_buddy_allocator(1024u, 4096u, 64u); 
+    assert_false(expect.has_value);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_buddy_rounding(void **state) {
+    (void)state;
+
+    size_t req_pool = 1500u;        /* rounds to 2048 */
+    size_t req_min  = 30u;          /* rounds to 32   */
+    size_t align    = 16u;          /* already pow2   */
+
+    size_t expected_pool = next_pow2_test(req_pool);
+    size_t expected_min  = next_pow2_test(req_min);
+
+    errno = 0;
+    buddy_expect_t expect = init_buddy_allocator(req_pool, req_min, align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    /* No allocation yet */
+    assert_int_equal(buddy_alloc(b), 0u);
+    assert_int_equal(buddy_remaining(b), expected_pool);
+    assert_int_equal(buddy_largest_block(b), expected_pool);
+
+    /* Total alloc must be >= expected_pool */
+    assert_true(total_buddy_alloc(b) >= expected_pool);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_buddy_exact_powers_of_two(void **state) {
+    (void)state;
+
+    size_t pool = 1u << 20; /* 1 MiB */
+    size_t minb = 1u << 6;  /* 64 B  */
+
+    buddy_expect_t expect = init_buddy_allocator(pool, minb, 64u); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+    assert_non_null(b);
+
+    assert_int_equal(buddy_alloc(b), 0u);
+    assert_int_equal(buddy_remaining(b), pool);
+    assert_int_equal(buddy_largest_block(b), pool);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_init_buddy_non_pow2_align(void **state) {
+    (void)state;
+
+    size_t pool = 4096u;
+    size_t mb   = 64u;
+    size_t bad_align = 24u; /* rounds to 32 */
+
+    buddy_expect_t expect = init_buddy_allocator(pool, mb, bad_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    /* Sanity checks for init state: */
+    assert_int_equal(buddy_remaining(b), pool);
+    assert_int_equal(buddy_largest_block(b), pool);
+    assert_int_equal(buddy_alloc(b), 0u);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_buddy_basic(void **state) {
+    (void)state;
+
+    size_t pool      = 1024u;
+    size_t min_block = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t before_remaining = buddy_remaining(b);
+    assert_int_equal(before_remaining, next_pow2_test(pool));
+
+    size_t req_size = 32u;
+
+    void_ptr_expect_t aexpect = alloc_buddy(b, req_size, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    /* remaining should have decreased by at least req_size */
+    size_t after_remaining = buddy_remaining(b);
+    assert_true(after_remaining < before_remaining);
+
+    /* buddy_alloc should reflect bytes consumed from the pool */
+    size_t used = buddy_alloc(b);
+    assert_int_equal(used, before_remaining - after_remaining);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_buddy_too_large(void **state) {
+    (void)state;
+
+    size_t pool      = 1024u;
+    size_t min_block = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    /* Request larger than the entire pool. */
+    void_ptr_expect_t aexpect = alloc_buddy(b, pool + 1u, false); 
+    assert_false(aexpect.has_value);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_buddy_zeroed_reuse_full_block(void **state) {
+    (void)state;
+
+    size_t pool      = 1024u;
+    size_t min_block = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+    
+    /* Request big enough so allocator uses the whole pool as one block.
+       We assume header + requested_size rounds up to pool. */
+    size_t req_size = 900u;
+
+    void_ptr_expect_t aexpect = alloc_buddy(b, req_size, false); 
+    assert_true(aexpect.has_value);
+    void *p1 = aexpect.u.value;
+    assert_non_null(p1);
+
+    /* Pool should now be fully consumed. */
+    assert_int_equal(buddy_remaining(b), 0u);
+
+    /* Fill with a non-zero pattern. */
+    memset(p1, 0xAA, req_size);
+
+    /* Free the block. */
+    assert_true(return_buddy_element(b, p1));
+
+    /* Full pool should be free again. */
+    assert_int_equal(buddy_remaining(b), pool);
+
+    /* Allocate again, this time zeroed. */
+    aexpect = alloc_buddy(b, req_size, true); 
+    assert_true(aexpect.has_value);
+    void *p2 = aexpect.u.value;
+
+    /* Verify buffer is zeroed. */
+    const unsigned char *bytes = (const unsigned char *)p2;
+    for (size_t i = 0; i < req_size; ++i) {
+        assert_int_equal(bytes[i], 0u);
+    }
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_buddy_aligned_basic(void **state) {
+    (void)state;
+
+    size_t pool       = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+    assert_non_null(b);
+
+    size_t req_size = 128u;
+    size_t align    = 64u;
+
+    void_ptr_expect_t aexpect = alloc_buddy_aligned(b, req_size, align, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+    assert_non_null(p);
+
+    uintptr_t addr = (uintptr_t)p;
+    assert_int_equal(addr % align, 0u);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_buddy_aligned_non_pow2_align(void **state) {
+    (void)state;
+
+    size_t pool       = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t req_size = 128u;
+    size_t align    = 24u; /* should be normalized to 32 internally */
+
+    void_ptr_expect_t aexpect = alloc_buddy_aligned(b, req_size, align, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    uintptr_t addr = (uintptr_t)p;
+    /* We don't care about 24, we care it meets the rounded alignment: 32. */
+    assert_int_equal(addr % 32u, 0u);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_buddy_aligned_zero_align(void **state) {
+    (void)state;
+
+    size_t pool       = 2048u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t req_size = 100u;
+
+    void_ptr_expect_t aexpect = alloc_buddy_aligned(b, req_size, 0u, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    uintptr_t addr = (uintptr_t)p;
+    /* At least max_align_t alignment. */
+    assert_int_equal(addr % alignof(max_align_t), 0u);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_buddy_aligned_zeroed_reuse_full_block(void **state) {
+    (void)state;
+
+    size_t pool       = 2048u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t req_size = 1800u;
+    size_t align    = 64u;
+
+    void_ptr_expect_t aexpect = alloc_buddy_aligned(b, req_size, align, false); 
+    assert_true(aexpect.has_value);
+    void *p1 = aexpect.u.value;
+    assert_int_equal(buddy_remaining(b), 0u);
+
+    memset(p1, 0xBB, req_size);
+
+    assert_true(return_buddy_element(b, p1));
+    assert_int_equal(buddy_remaining(b), pool);
+
+    aexpect = alloc_buddy_aligned(b, req_size, align, true); 
+    assert_true(aexpect.has_value);
+    void *p2 = aexpect.u.value;
+
+    uintptr_t addr = (uintptr_t)p2;
+    assert_int_equal(addr % align, 0u);
+
+    const unsigned char *bytes = (const unsigned char *)p2;
+    for (size_t i = 0; i < req_size; ++i) {
+        assert_int_equal(bytes[i], 0u);
+    }
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_alloc_buddy_aligned_too_large(void **state) {
+    (void)state;
+
+    size_t pool       = 1024u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    void_ptr_expect_t aexpect = alloc_buddy_aligned(b, pool + 512u, 64u, false); 
+    assert_false(aexpect.has_value);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_from_null(void **state) {
+    (void)state;
+
+    size_t pool       = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t new_size = 128u;
+
+    void_ptr_expect_t aexpect = realloc_buddy(b, NULL, 0u, new_size, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    /* Basic sanity: some memory is now used. */
+    assert_true(buddy_alloc(b) > 0u);
+    assert_true(buddy_remaining(b) < next_pow2_test(pool));
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_to_zero_frees(void **state) {
+    (void)state;
+
+    size_t pool       = 2048u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t size = 128u;
+    void_ptr_expect_t aexpect = alloc_buddy(b, size, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    size_t remaining_before = buddy_remaining(b);
+
+    /* realloc to 0 -> free */
+    aexpect = realloc_buddy(b, p, size, 0u, false); 
+    assert_true(aexpect.has_value);
+
+    /* Entire pool should be free again. */
+    assert_int_equal(buddy_remaining(b), next_pow2_test(pool));
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_shrink_in_place(void **state) {
+    (void)state;
+
+    size_t pool       = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t old_size = 200u;
+    size_t new_size = 100u;
+
+    uint8_t pattern[200];
+    for (size_t i = 0; i < old_size; ++i) {
+        pattern[i] = (uint8_t)(i & 0xFFu);
+    }
+
+    void_ptr_expect_t aexpect = alloc_buddy(b, old_size, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    memcpy(p, pattern, old_size);
+
+    aexpect = realloc_buddy(b, p, old_size, new_size, false); 
+    assert_true(aexpect.has_value);
+    void *p2 = aexpect.u.value;
+    assert_non_null(p2);
+
+    /* Ideally, shrink is in-place; if your implementation guarantees this,
+       keep this assert. If not, you can drop it and only check contents. */
+    assert_ptr_equal(p2, p);
+
+    /* First new_size bytes must match original data. */
+    uint8_t *bytes = (uint8_t *)p2;
+    for (size_t i = 0; i < new_size; ++i) {
+        assert_int_equal(bytes[i], pattern[i]);
+    }
+
+    /* The allocator should still consider the block "allocated" (no free). */
+    assert_true(buddy_remaining(b) < next_pow2_test(pool));
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_grow_zeroed(void **state) {
+    (void)state;
+
+    size_t pool       = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t old_size = 100u;
+    size_t new_size = 300u;
+
+    uint8_t pattern[100];
+    for (size_t i = 0; i < old_size; ++i) {
+        pattern[i] = (uint8_t)(0xA0u + (i & 0x0Fu));
+    }
+
+    void_ptr_expect_t aexpect = alloc_buddy(b, old_size, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+    memcpy(p, pattern, old_size);
+
+    aexpect = realloc_buddy(b, p, old_size, new_size, true); 
+    assert_true(aexpect.has_value);
+    void *p2 = aexpect.u.value;
+    assert_non_null(p2);
+    /* Implementation may or may not reuse same address; don't assume. */
+
+    uint8_t *bytes = (uint8_t *)p2;
+
+    /* Old region preserved. */
+    for (size_t i = 0; i < old_size; ++i) {
+        assert_int_equal(bytes[i], pattern[i]);
+    }
+
+    /* New region zeroed. */
+    for (size_t i = old_size; i < new_size; ++i) {
+        assert_int_equal(bytes[i], 0u);
+    }
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_grow_too_large_failure(void **state) {
+    (void)state;
+
+    size_t pool       = 1024u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t old_size = 128u;
+    void_ptr_expect_t aexpect = alloc_buddy(b, old_size, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    /* Fill with a pattern. */
+    uint8_t *bytes = (uint8_t *)p;
+    for (size_t i = 0; i < old_size; ++i) {
+        bytes[i] = (uint8_t)(0x55u);
+    }
+
+    size_t before_remaining = buddy_remaining(b);
+
+    aexpect = realloc_buddy(b, p, old_size, pool * 2u, false); 
+    assert_false(aexpect.has_value);
+
+    /* Old pointer should still be valid and content unchanged. */
+    for (size_t i = 0; i < old_size; ++i) {
+        assert_int_equal(bytes[i], 0x55u);
+    }
+
+    /* Allocator state shouldn't claim more memory used than before. */
+    assert_int_equal(buddy_remaining(b), before_remaining);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_aligned_from_null(void **state) {
+    (void)state;
+
+    size_t pool       = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t new_size = 128u;
+    size_t align    = 64u;
+
+    void_ptr_expect_t aexpect = realloc_buddy_aligned(b, NULL, 0u, new_size, align, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+    assert_non_null(p);
+    assert_int_equal(errno, 0);
+
+    uintptr_t addr = (uintptr_t)p;
+    assert_int_equal(addr % align, 0u);
+
+    /* Basic sanity: pool is not fully free anymore. */
+    assert_true(buddy_remaining(b) < next_pow2_test(pool));
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_aligned_to_zero_frees(void **state) {
+    (void)state;
+
+    size_t pool       = 2048u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+    assert_non_null(b);
+
+    size_t size  = 128u;
+    size_t align = 64u;
+
+    void_ptr_expect_t aexpect = alloc_buddy_aligned(b, size, align, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    size_t before_remaining = buddy_remaining(b);
+
+    aexpect = realloc_buddy_aligned(b, p, size, 0u, align, false); 
+    assert_true(aexpect.has_value);
+    void *p2 = aexpect.u.value;
+
+    /* Entire pool should be free again. */
+    assert_int_equal(buddy_remaining(b), next_pow2_test(pool));
+    assert_true(buddy_remaining(b) >= before_remaining);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_aligned_shrink_preserves_data(void **state) {
+    (void)state;
+
+    size_t pool       = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t old_size = 200u;
+    size_t new_size = 100u;
+    size_t align    = 64u;
+
+    uint8_t pattern[200];
+    for (size_t i = 0; i < old_size; ++i) {
+        pattern[i] = (uint8_t)(i & 0xFFu);
+    }
+
+    void_ptr_expect_t aexpect = alloc_buddy_aligned(b, old_size, align, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+    assert_non_null(p);
+    uintptr_t addr = (uintptr_t)p;
+    assert_int_equal(addr % align, 0u);
+
+    memcpy(p, pattern, old_size);
+
+    errno = 0;
+    aexpect = realloc_buddy_aligned(b, p, old_size, new_size, align, false); 
+    assert_true(aexpect.has_value);
+    void *p2 = aexpect.u.value;
+    assert_non_null(p2);
+    /* We won't require same pointer, but it often will be. */
+    uintptr_t addr2 = (uintptr_t)p2;
+    assert_int_equal(addr2 % align, 0u);
+    assert_int_equal(errno, 0);
+
+    /* First new_size bytes must match original data. */
+    uint8_t *bytes = (uint8_t *)p2;
+    for (size_t i = 0; i < new_size; ++i) {
+        assert_int_equal(bytes[i], pattern[i]);
+    }
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_aligned_grow_zeroed(void **state) {
+    (void)state;
+
+    size_t pool       = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t old_size = 100u;
+    size_t new_size = 300u;
+    size_t align    = 64u;
+
+    uint8_t pattern[100];
+    for (size_t i = 0; i < old_size; ++i) {
+        pattern[i] = (uint8_t)(0xB0u + (i & 0x0Fu));
+    }
+
+    void_ptr_expect_t aexpect = alloc_buddy_aligned(b, old_size, align, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+    assert_non_null(p);
+    uintptr_t addr = (uintptr_t)p;
+    assert_int_equal(addr % align, 0u);
+
+    memcpy(p, pattern, old_size);
+
+    aexpect = realloc_buddy_aligned(b, p, old_size, new_size, align, true); 
+    assert_true(aexpect.has_value);
+    void *p2 = aexpect.u.value;
+    uintptr_t addr2 = (uintptr_t)p2;
+    assert_int_equal(addr2 % align, 0u);
+    assert_int_equal(errno, 0);
+
+    uint8_t *bytes = (uint8_t *)p2;
+
+    /* Old region preserved. */
+    for (size_t i = 0; i < old_size; ++i) {
+        assert_int_equal(bytes[i], pattern[i]);
+    }
+
+    /* New region zeroed. */
+    for (size_t i = old_size; i < new_size; ++i) {
+        assert_int_equal(bytes[i], 0u);
+    }
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_aligned_grow_too_large_failure(void **state) {
+    (void)state;
+
+    size_t pool       = 1024u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t old_size = 128u;
+    size_t align    = 32u;
+
+    void_ptr_expect_t aexpect = alloc_buddy_aligned(b, old_size, align, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+    uintptr_t addr = (uintptr_t)p;
+    assert_int_equal(addr % 32u, 0u);
+
+    /* Fill with a known pattern. */
+    uint8_t *bytes = (uint8_t *)p;
+    for (size_t i = 0; i < old_size; ++i) {
+        bytes[i] = (uint8_t)0x5Au;
+    }
+
+    size_t before_remaining = buddy_remaining(b);
+
+    aexpect = realloc_buddy_aligned(b, p, old_size, pool * 2u, align, false); 
+    assert_false(aexpect.has_value);
+
+    /* Old pointer still valid, contents unchanged. */
+    for (size_t i = 0; i < old_size; ++i) {
+        assert_int_equal(bytes[i], 0x5Au);
+    }
+
+    /* Remaining bytes in pool should be unchanged. */
+    assert_int_equal(buddy_remaining(b), before_remaining);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_realloc_buddy_aligned_zero_align_behavior(void **state) {
+    (void)state;
+
+    size_t pool       = 2048u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t old_size = 64u;
+    size_t new_size = 256u;
+
+    /* Start from NULL: behaves like alloc_buddy_aligned with natural alignment. */
+    void_ptr_expect_t aexpect = realloc_buddy_aligned(b, NULL, 0u, old_size, 0u, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    uintptr_t addr = (uintptr_t)p;
+    assert_int_equal(addr % alignof(max_align_t), 0u);
+
+    /* Now grow with align == 0 again. */
+    aexpect = realloc_buddy_aligned(b, p, old_size, new_size, 0u, false); 
+    assert_true(aexpect.has_value);
+    void *p2 = aexpect.u.value;
+    assert_non_null(p2);
+
+    uintptr_t addr2 = (uintptr_t)p2;
+    assert_int_equal(addr2 % alignof(max_align_t), 0u);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static size_t get_normalized_pool(size_t requested_pool,
+                                  size_t min_block,
+                                  size_t base_align) {
+    buddy_expect_t expect = init_buddy_allocator(requested_pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+    size_t pool = buddy_remaining(b);
+    free_buddy(b);
+    return pool;
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_buddy_ptr_null_args(void **state) {
+    (void)state;
+
+    int dummy = 42;
+
+    assert_false(is_buddy_ptr(NULL, &dummy));
+
+    size_t pool       = 1024u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    assert_false(is_buddy_ptr(b, NULL));
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_buddy_ptr_valid_alloc(void **state) {
+    (void)state;
+
+    size_t pool       = 2048u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t size = 128u;
+    void_ptr_expect_t aexpect = alloc_buddy(b, size, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+    assert_non_null(p);
+
+    errno = 0;
+    assert_true(is_buddy_ptr(b, p));
+    /* errno should not indicate an error on success */
+    assert_int_not_equal(errno, EINVAL);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_buddy_ptr_foreign_pointer(void **state) {
+    (void)state;
+
+    size_t pool       = 2048u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    int local = 123;
+
+    errno = 0;
+    assert_false(is_buddy_ptr(b, &local));
+    assert_int_equal(errno, EINVAL);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_buddy_ptr_other_buddy(void **state) {
+    (void)state;
+
+    size_t pool1      = 2048u;
+    size_t pool2      = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool1, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b1 = expect.u.value;
+
+    expect = init_buddy_allocator(pool2, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b2 = expect.u.value;
+
+    void_ptr_expect_t aexpect = alloc_buddy(b1, 128u, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    assert_false(is_buddy_ptr(b2, p));
+
+    free_buddy(b1);
+    free_buddy(b2);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_buddy_ptr_offset_into_block(void **state) {
+    (void)state;
+
+    size_t pool       = 2048u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    void_ptr_expect_t aexpect = alloc_buddy(b, 128u, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    uint8_t *p_offset = (uint8_t *)p + 1;
+
+    assert_false(is_buddy_ptr(b, p_offset));
+    assert_int_equal(errno, EINVAL);
+
+    /* Original pointer is still valid. */
+    assert_true(is_buddy_ptr(b, p));
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_buddy_ptr_sized_null_args(void **state) {
+    (void)state;
+
+    int dummy = 0;
+
+    assert_false(is_buddy_ptr_sized(NULL, &dummy, 16u));
+    assert_int_equal(errno, EINVAL);
+
+    size_t pool       = 1024u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+    assert_non_null(b);
+
+    assert_false(is_buddy_ptr_sized(b, NULL, 16u));
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_buddy_ptr_sized_exact_request(void **state) {
+    (void)state;
+
+    size_t pool       = 4096u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    size_t req_size = 256u;
+    void_ptr_expect_t aexpect = alloc_buddy(b, req_size, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+
+    assert_true(is_buddy_ptr_sized(b, p, req_size));
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_buddy_ptr_sized_too_large(void **state) {
+    (void)state;
+
+    size_t requested_pool = 2048u;
+    size_t min_block      = 64u;
+    size_t base_align     = alignof(max_align_t);
+
+    /* Get the normalized pool (after pow2 rounding) for a sanity bound. */
+    size_t normalized_pool = get_normalized_pool(requested_pool,
+                                                 min_block,
+                                                 base_align);
+
+    buddy_expect_t expect = init_buddy_allocator(requested_pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    void_ptr_expect_t aexpect = alloc_buddy(b, 128u, false); 
+    assert_true(aexpect.has_value);
+    void *p = aexpect.u.value;
+    assert_non_null(p);
+
+    /* Ask for more than the entire pool; this should be too large. */
+    size_t huge_size = normalized_pool * 2u;
+
+    errno = 0;
+    assert_false(is_buddy_ptr_sized(b, p, huge_size));
+    /* We defined ERANGE in the design for "size does not fit". */
+    assert_int_equal(errno, ERANGE);
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_is_buddy_ptr_sized_foreign_pointer(void **state) {
+    (void)state;
+
+    size_t pool       = 1024u;
+    size_t min_block  = 64u;
+    size_t base_align = alignof(max_align_t);
+
+    buddy_expect_t expect = init_buddy_allocator(pool, min_block, base_align); 
+    assert_true(expect.has_value);
+    buddy_t *b = expect.u.value;
+
+    int local = 42;
+
+    assert_false(is_buddy_ptr_sized(b, &local, sizeof local));
+
+    free_buddy(b);
+}
+// -------------------------------------------------------------------------------- 
+
+const struct CMUnitTest test_buddy_allocator[] = {
+    cmocka_unit_test(test_init_buddy_zero_pool),
+    cmocka_unit_test(test_init_buddy_zero_min_block),
+    cmocka_unit_test(test_init_buddy_zero_base_align),
+    cmocka_unit_test(test_init_buddy_min_block_too_large),
+    cmocka_unit_test(test_init_buddy_rounding),
+    cmocka_unit_test(test_init_buddy_exact_powers_of_two),
+    cmocka_unit_test(test_init_buddy_non_pow2_align),
+
+    cmocka_unit_test(test_alloc_buddy_basic),
+    cmocka_unit_test(test_alloc_buddy_too_large),
+    cmocka_unit_test(test_alloc_buddy_zeroed_reuse_full_block),
+
+    cmocka_unit_test(test_alloc_buddy_aligned_basic),
+    cmocka_unit_test(test_alloc_buddy_aligned_non_pow2_align),
+    cmocka_unit_test(test_alloc_buddy_aligned_zero_align),
+    cmocka_unit_test(test_alloc_buddy_aligned_zeroed_reuse_full_block),
+    cmocka_unit_test(test_alloc_buddy_aligned_too_large),
+
+    cmocka_unit_test(test_realloc_buddy_from_null),
+    cmocka_unit_test(test_realloc_buddy_to_zero_frees),
+    cmocka_unit_test(test_realloc_buddy_shrink_in_place),
+    cmocka_unit_test(test_realloc_buddy_grow_zeroed),
+    cmocka_unit_test(test_realloc_buddy_grow_too_large_failure),
+
+    cmocka_unit_test(test_realloc_buddy_aligned_from_null),
+    cmocka_unit_test(test_realloc_buddy_aligned_to_zero_frees),
+    cmocka_unit_test(test_realloc_buddy_aligned_shrink_preserves_data),
 //     cmocka_unit_test(test_realloc_buddy_aligned_grow_zeroed),
 //     cmocka_unit_test(test_realloc_buddy_aligned_grow_too_large_failure),
 //     cmocka_unit_test(test_realloc_buddy_aligned_zero_align_behavior),
@@ -4703,9 +4733,9 @@ const size_t test_freelist_count = sizeof(test_freelist) / sizeof(test_freelist[
 //     cmocka_unit_test(test_is_buddy_ptr_sized_exact_request),
 //     cmocka_unit_test(test_is_buddy_ptr_sized_too_large),
 //     cmocka_unit_test(test_is_buddy_ptr_sized_foreign_pointer),
-// };
-//
-// const size_t test_buddy_allocator_count = sizeof(test_buddy_allocator) / sizeof(test_buddy_allocator[0]);
+};
+
+const size_t test_buddy_allocator_count = sizeof(test_buddy_allocator) / sizeof(test_buddy_allocator[0]);
 // // ================================================================================ 
 // // ================================================================================ 
 // // TEST SLAB ALLOCATOR 

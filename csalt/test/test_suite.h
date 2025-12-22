@@ -78,17 +78,17 @@ extern const size_t test_freelist_count;
 // ================================================================================ 
 // ================================================================================ 
 
-// /**
-//  * @brief Test suite for buddy allocator functionality
-//  * 
-//  * Covers:
-//  * - Test of buddy allocation initialization with an non owned arena
-//  */
-// extern const struct CMUnitTest test_buddy_allocator[];
-// extern const size_t test_buddy_allocator_count;
-// // ================================================================================
-// // ================================================================================
-//
+/**
+ * @brief Test suite for buddy allocator functionality
+ * 
+ * Covers:
+ * - Test of buddy allocation initialization with an non owned arena
+ */
+extern const struct CMUnitTest test_buddy_allocator[];
+extern const size_t test_buddy_allocator_count;
+// ================================================================================
+// ================================================================================
+
 // /**
 //  * @brief Test suite for slab allocator functionality
 //  * 
