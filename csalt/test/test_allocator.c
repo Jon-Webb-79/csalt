@@ -17,7 +17,6 @@
 
 #include <endian.h>
 #include <stdint.h>
-#include <errno.h>
 #include <stdalign.h>
 #include <stddef.h>
 #include <string.h>
@@ -462,7 +461,6 @@ static void test_realloc_grows_when_allowed(void **state) {
 
     /* Next 1-byte alloc should cause growth and succeed */
     size_t rem0 = arena_remaining(a);
-    errno = 0;
 
     aexpect = alloc_arena(a, 1, false);
     assert_true(aexpect.has_value);
@@ -1028,7 +1026,6 @@ static void test_restore_rejects_checkpoint_from_other_arena(void **state) {
     assert_true(aexpect.has_value);
     ArenaCheckPoint cp = save_arena(a1);
 
-    errno = 0;
     bool ok = restore_arena(a2, cp);
     assert_false(ok);
 
@@ -1444,7 +1441,6 @@ static void test_sub_arena_from_static_parent(void **state) {
     free_arena(sub);
     
     // Parent free should fail (STATIC)
-    errno = 0;
     free_arena(parent);
     
     // Caller owns buffer (stack allocated in this case)
@@ -1522,9 +1518,7 @@ static void test_cannot_toggle_resize_on_sub_arena(void **state) {
     assert_false(arena_owns_memory(sub));
     
     // Try to enable resize - should fail
-    errno = 0;
     toggle_arena_resize(sub, true);
-    assert_int_equal(errno, EPERM);
     
     // Verify sub still can't grow by trying to over-allocate
     size_t rem = arena_remaining(sub);
@@ -1562,7 +1556,6 @@ static void test_arena_owns_memory_static(void **state) {
     // Static arena owns its header (but not the buffer)
     assert_true(arena_owns_memory(a));
     
-    errno = 0;
     free_arena(a);
 }
 // --------------------------------------------------------------------------------
@@ -1896,10 +1889,6 @@ static arena_t* make_exhausted_dynamic_arena(size_t seed_bytes, size_t leave_byt
     }
     return a;
 }
-
-// Optional small convenience to snapshot+restore errno around calls
-#define SAVE_ERRNO(name)    int name = errno
-#define RESTORE_ERRNO(name) do { errno = name; } while (0)
 // ================================================================================ 
 // ================================================================================ 
 // TEST INIT WITH ARENA
@@ -2291,7 +2280,6 @@ static void test_init_static_pool_too_small_buffer(void **state) {
 
     // Very small buffer that should fail regardless of overhead
     static unsigned char tiny[32];
-    SAVE_ERRNO(e); errno = 0;
     pool_expect_t expect = init_static_pool(tiny, sizeof tiny, /*block_size=*/64, /*alignment=*/0); 
     assert_false(expect.has_value);
 }
@@ -2694,9 +2682,7 @@ static void test_pool_restore_invalidates_checkpoint(void **state) {
     // Reset invalidates all checkpoints
     reset_pool(p);
 
-    errno = 0;
     assert_false(restore_pool(p, cp));
-    // assert_int_equal(errno, EINVAL);
     
     free_pool(p);
 }
@@ -3516,7 +3502,6 @@ static void test_reset_freelist_basic_static(void **state) {
     (void)state;
 
     uint8_t buffer[4096];
-    errno = 0;
 
     freelist_expect_t fexpect = init_static_freelist(buffer, sizeof buffer, 0u); 
     assert_true(fexpect.has_value);
@@ -3553,7 +3538,6 @@ static void test_reset_freelist_basic_static(void **state) {
 
     /* Now reset */
     reset_freelist(fl);
-    assert_int_equal(errno, 0);
 
     /* After reset, accounting should look like a fresh freelist */
     size_t size_reset      = freelist_size(fl);
@@ -3621,7 +3605,6 @@ static void test_reset_freelist_after_fragmentation(void **state) {
 
     /* Now reset everything */
     reset_freelist(fl);
-    assert_int_equal(errno, 0);
 
     size_t size_after_reset      = freelist_size(fl);
     size_t remaining_after_reset = freelist_remaining(fl);
@@ -3708,7 +3691,6 @@ static void test_init_buddy_zero_min_block(void **state) {
 
 static void test_init_buddy_zero_base_align(void **state) {
     (void)state;
-    errno = 0;
     
     buddy_expect_t expect = init_buddy_allocator(1024u, 64u, 0u); 
     assert_true(expect.has_value);
@@ -3742,7 +3724,6 @@ static void test_init_buddy_rounding(void **state) {
     size_t expected_pool = next_pow2_test(req_pool);
     size_t expected_min  = next_pow2_test(req_min);
 
-    errno = 0;
     buddy_expect_t expect = init_buddy_allocator(req_pool, req_min, align); 
     assert_true(expect.has_value);
     buddy_t *b = expect.u.value;
@@ -4236,7 +4217,6 @@ static void test_realloc_buddy_aligned_from_null(void **state) {
     assert_true(aexpect.has_value);
     void *p = aexpect.u.value;
     assert_non_null(p);
-    assert_int_equal(errno, 0);
 
     uintptr_t addr = (uintptr_t)p;
     assert_int_equal(addr % align, 0u);
@@ -4310,7 +4290,6 @@ static void test_realloc_buddy_aligned_shrink_preserves_data(void **state) {
 
     memcpy(p, pattern, old_size);
 
-    errno = 0;
     aexpect = realloc_buddy_aligned(b, p, old_size, new_size, align, false); 
     assert_true(aexpect.has_value);
     void *p2 = aexpect.u.value;
@@ -4318,7 +4297,6 @@ static void test_realloc_buddy_aligned_shrink_preserves_data(void **state) {
     /* We won't require same pointer, but it often will be. */
     uintptr_t addr2 = (uintptr_t)p2;
     assert_int_equal(addr2 % align, 0u);
-    assert_int_equal(errno, 0);
 
     /* First new_size bytes must match original data. */
     uint8_t *bytes = (uint8_t *)p2;
@@ -4364,7 +4342,6 @@ static void test_realloc_buddy_aligned_grow_zeroed(void **state) {
     void *p2 = aexpect.u.value;
     uintptr_t addr2 = (uintptr_t)p2;
     assert_int_equal(addr2 % align, 0u);
-    assert_int_equal(errno, 0);
 
     uint8_t *bytes = (uint8_t *)p2;
 
@@ -4510,10 +4487,7 @@ static void test_is_buddy_ptr_valid_alloc(void **state) {
     void *p = aexpect.u.value;
     assert_non_null(p);
 
-    errno = 0;
     assert_true(is_buddy_ptr(b, p));
-    /* errno should not indicate an error on success */
-    assert_int_not_equal(errno, EINVAL);
 
     free_buddy(b);
 }
@@ -4532,9 +4506,7 @@ static void test_is_buddy_ptr_foreign_pointer(void **state) {
 
     int local = 123;
 
-    errno = 0;
     assert_false(is_buddy_ptr(b, &local));
-    assert_int_equal(errno, EINVAL);
 
     free_buddy(b);
 }
@@ -4585,7 +4557,6 @@ static void test_is_buddy_ptr_offset_into_block(void **state) {
     uint8_t *p_offset = (uint8_t *)p + 1;
 
     assert_false(is_buddy_ptr(b, p_offset));
-    assert_int_equal(errno, EINVAL);
 
     /* Original pointer is still valid. */
     assert_true(is_buddy_ptr(b, p));
@@ -4600,7 +4571,6 @@ static void test_is_buddy_ptr_sized_null_args(void **state) {
     int dummy = 0;
 
     assert_false(is_buddy_ptr_sized(NULL, &dummy, 16u));
-    assert_int_equal(errno, EINVAL);
 
     size_t pool       = 1024u;
     size_t min_block  = 64u;
@@ -4663,10 +4633,8 @@ static void test_is_buddy_ptr_sized_too_large(void **state) {
     /* Ask for more than the entire pool; this should be too large. */
     size_t huge_size = normalized_pool * 2u;
 
-    errno = 0;
     assert_false(is_buddy_ptr_sized(b, p, huge_size));
     /* We defined ERANGE in the design for "size does not fit". */
-    assert_int_equal(errno, ERANGE);
 
     free_buddy(b);
 }
@@ -4844,7 +4812,6 @@ static void test_init_slab_custom_alignment_pow2(void **state) {
 
 static void test_init_slab_alignment_rounded_up(void **state) {
     (void)state;
-    errno = 0;
 
     buddy_t *buddy = create_test_buddy();
 
@@ -4868,7 +4835,6 @@ static void test_init_slab_alignment_rounded_up(void **state) {
 
 static void test_init_slab_small_page_hint(void **state) {
     (void)state;
-    errno = 0;
 
     buddy_t *buddy = create_test_buddy();
 
@@ -4908,7 +4874,6 @@ static void test_init_slab_small_page_hint(void **state) {
 
 static void test_alloc_slab_basic(void **state) {
     (void)state;
-    errno = 0;
 
     buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
                                           TEST_BUDDY_MIN_BLOCK_SIZE,
@@ -5064,7 +5029,6 @@ static void test_return_slab_reuse(void **state) {
 
 static void test_return_slab_null_pointer(void **state) {
     (void)state;
-    errno = 0;
 
     buddy_expect_t bexpect = init_buddy_allocator(TEST_BUDDY_POOL_SIZE,
                                           TEST_BUDDY_MIN_BLOCK_SIZE,
@@ -5251,7 +5215,6 @@ static void test_save_slab_size_only(void **state) {
     void *p = vexpect.u.value;
 
     size_t bytes_needed = 0;
-    errno = 0;
 
     /* Request a save with buffer_size too small (0). */
     bool ok = save_slab(slab,
@@ -5330,13 +5293,11 @@ static void test_save_restore_roundtrip(void **state) {
     void *buffer = malloc(bytes_needed);
     assert_non_null(buffer);
 
-    errno = 0;
     ok = save_slab(slab,
                    buffer,
                    bytes_needed,
                    &bytes_needed);
     assert_true(ok);
-    assert_int_equal(errno, 0);
 
     /* Mutate state after snapshot: change values, free/alloc, etc. */
     p1->a = 111;  p1->b = 999;

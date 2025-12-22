@@ -15,7 +15,6 @@
 
 #include <stdlib.h>  // size_t, uintptr_t
 #include <stdint.h>  // uint8_t
-#include <errno.h>   // errno and macros
 #include <string.h>  // memset
 #include <stdio.h>   // printf
 #include <stdarg.h>  // va_list, va_start
@@ -25,7 +24,6 @@
 #define _GNU_SOURCE
 #include <sys/mman.h>
 #include <unistd.h>
-#include <errno.h>
 
 #include "c_allocator.h"
 // ================================================================================ 
@@ -132,20 +130,17 @@ static inline uintptr_t _align_up_uintptr(uintptr_t p, size_t a) {
 #if ARENA_ENABLE_DYNAMIC
 static struct Chunk* _chunk_new_ex(size_t data_bytes, size_t data_align){
     if ((data_bytes == 0U) || (data_align == 0U) || ((data_align & (data_align - 1U)) != 0U)) {
-        errno = EINVAL;
         return NULL;
     }
 
     /* Worst-case header+pad before data: sizeof(Chunk) + (data_align - 1) */
     if (data_bytes > SIZE_MAX - (sizeof(struct Chunk) + (data_align - 1U))) {
-        errno = ENOMEM;
         return NULL;
     }
     size_t const total = sizeof(struct Chunk) + (data_align - 1U) + data_bytes;
 
     struct Chunk* ch = (struct Chunk*)malloc(total);
     if (ch == NULL) {
-        errno = ENOMEM;
         return NULL;
     }
 
@@ -252,8 +247,6 @@ static inline arena_expect_t arena_ok(arena_t *a) {
 // -------------------------------------------------------------------------------- 
 
 static inline arena_expect_t arena_err(ErrorCode e) {
-    /* If you want errno set, do it here: */
-    // errno = set_errno_from_error(e);
     return (arena_expect_t){
         .has_value = false,
         .u.error   = e
@@ -1367,21 +1360,18 @@ inline bool arena_owns_memory(const arena_t* arena) {
 
 inline void toggle_arena_resize(arena_t* arena, bool toggle) {
     if (!arena) {
-        errno = EINVAL;
         return;
     }
 
 #if ARENA_ENABLE_DYNAMIC
     // Cannot toggle resize for static arenas
     if (arena->mem_type == STATIC) {
-        errno = EPERM;
         return;
     }
     
     // Cannot toggle resize for sub-arenas (borrowed memory)
     // Sub-arenas are always fixed-size by design
     if (!arena->owns_memory) {
-        errno = EPERM;
         return;
     }
     
@@ -1391,7 +1381,6 @@ inline void toggle_arena_resize(arena_t* arena, bool toggle) {
     
 #else 
     (void)toggle;  // Suppress unused parameter warning
-    errno = ENOTSUP;
     return;
 #endif
 }
@@ -2104,7 +2093,6 @@ void free_pool(pool_t* pool) {
 
 inline size_t pool_block_size(const pool_t* pool) {
     if (!pool) {
-        errno = EINVAL;
         return 0;
     }
     return pool->block_size;
@@ -2113,7 +2101,6 @@ inline size_t pool_block_size(const pool_t* pool) {
 
 inline size_t pool_stride(const pool_t* pool) {
     if (!pool) {
-        errno = EINVAL;
         return 0;
     }
     return pool->stride;
@@ -2122,7 +2109,6 @@ inline size_t pool_stride(const pool_t* pool) {
 
 inline size_t pool_total_blocks(const pool_t* pool) {
     if (!pool || !pool->arena) {
-        errno = EINVAL;
         return 0;
     }
     return pool->total_blocks;
@@ -2131,7 +2117,6 @@ inline size_t pool_total_blocks(const pool_t* pool) {
 
 inline size_t pool_free_blocks(const pool_t* pool) {
     if (!pool || !pool->arena) {
-        errno = EINVAL;
         return 0;
     }
     return pool->free_blocks;
@@ -2140,7 +2125,6 @@ inline size_t pool_free_blocks(const pool_t* pool) {
 
 inline size_t pool_alignment(const pool_t* pool) {
     if (!pool || !pool->arena) {
-        errno = EINVAL;
         return 0;
     }
     return pool->arena->alignment;
@@ -2149,7 +2133,6 @@ inline size_t pool_alignment(const pool_t* pool) {
 
 size_t pool_bump_remaining_blocks(const pool_t* pool) {
     if (!pool || !pool->arena) {
-        errno = EINVAL;
         return 0;
     }
     // Defensive guards: stride must be non-zero and the slice must exist.
@@ -2169,7 +2152,6 @@ size_t pool_bump_remaining_blocks(const pool_t* pool) {
 
 inline size_t pool_in_use_blocks(const pool_t* pool) {
     if (!pool) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -2185,7 +2167,6 @@ inline size_t pool_in_use_blocks(const pool_t* pool) {
 
 inline bool pool_owns_arena(const pool_t* pool) {
     if (!pool) {
-        errno = EINVAL;
         return false;
     }
     return pool->owns_arena;
@@ -2194,7 +2175,6 @@ inline bool pool_owns_arena(const pool_t* pool) {
 
 inline bool pool_grow_enabled(const pool_t* pool) {
     if (!pool) {
-        errno = EINVAL;
         return false;
     }
     return pool->grow_enabled;
@@ -2203,7 +2183,6 @@ inline bool pool_grow_enabled(const pool_t* pool) {
 
 inline alloc_t pool_mtype(const pool_t* pool) {
     if (!pool || !pool->arena) {
-        errno = EINVAL;
         return ALLOC_INVALID;
     }
     return arena_mtype(pool->arena);
@@ -2212,16 +2191,13 @@ inline alloc_t pool_mtype(const pool_t* pool) {
 
 inline void toggle_pool_growth(pool_t* pool, bool toggle) {
     if (!pool || !pool->arena) {
-        errno = EINVAL;
         return;
     }
     
 #if !ARENA_ENABLE_DYNAMIC
-    errno = ENOTSUP;
     return;
 #else
     if (pool->arena->mem_type == STATIC) {
-        errno = EPERM;
         return;
     }
     pool->grow_enabled = toggle;
@@ -2234,7 +2210,6 @@ bool pool_stats(const pool_t *pool, char *buffer, size_t buffer_size) {
     size_t offset = 0U;
 
     if (!buffer || buffer_size == 0U) {
-        errno = EINVAL;
         return false;
     }
 
@@ -2373,7 +2348,6 @@ PoolCheckPoint save_pool(const pool_t* pool) {
 
 bool restore_pool(pool_t* pool, PoolCheckPoint cp) {
     if (!pool) {
-        errno = EINVAL;
         return false;
     }
     
@@ -2391,20 +2365,17 @@ bool restore_pool(pool_t* pool, PoolCheckPoint cp) {
     if (rep.cur && rep.end) {
         // Pool was reset if both cur and end are NULL
         if (!pool->cur && !pool->end && pool->total_blocks == 0) {
-            errno = EINVAL;  // Pool was reset since checkpoint
             return false;
         }
         
         // Basic sanity checks
         if (rep.cur > rep.end) {
-            errno = EINVAL;
             return false;
         }
         
         // Verify the checkpoint's slice is within our arena's memory
         if (!is_arena_ptr(pool->arena, rep.cur) || 
             !is_arena_ptr(pool->arena, rep.end - 1)) {
-            errno = EINVAL;
             return false;
         }
     }
@@ -2412,7 +2383,6 @@ bool restore_pool(pool_t* pool, PoolCheckPoint cp) {
 #ifdef DEBUG
     // Debug build: check if slice tracking was reset
     if (rep.slices && !pool->slices) {
-        errno = EINVAL;  // Pool was reset (slice list cleared)
         return false;
     }
     
@@ -2426,7 +2396,6 @@ bool restore_pool(pool_t* pool, PoolCheckPoint cp) {
             }
         }
         if (!found) {
-            errno = EINVAL;
             return false;
         }
     }
@@ -2437,7 +2406,6 @@ bool restore_pool(pool_t* pool, PoolCheckPoint cp) {
     // If checkpoint thinks pool had blocks, but current pool has zero total_blocks,
     // it likely was reset
     if (rep.total_blocks > 0 && pool->total_blocks == 0) {
-        errno = EINVAL;  // Pool state incompatible with checkpoint
         return false;
     }
     
@@ -2455,7 +2423,6 @@ bool restore_pool(pool_t* pool, PoolCheckPoint cp) {
 
 inline size_t pool_size(const pool_t* pool) {
     if (!pool) {
-        errno = EINVAL;
         return 0;
     }
     size_t blocks = pool_in_use_blocks(pool);
@@ -2465,7 +2432,6 @@ inline size_t pool_size(const pool_t* pool) {
 
 inline size_t pool_alloc(const pool_t* pool) {
     if (!pool) {
-        errno = EINVAL;
         return 0;
     }
     return pool->total_blocks;
@@ -2474,7 +2440,6 @@ inline size_t pool_alloc(const pool_t* pool) {
 
 inline size_t pool_footprint(const pool_t* pool) {
     if (!pool) {
-        errno = EINVAL;
         return 0;
     }
     return pool->total_blocks * pool->stride;
@@ -2483,7 +2448,6 @@ inline size_t pool_footprint(const pool_t* pool) {
 
 inline bool pool_owns_memory(const pool_t* pool) {
     if (!pool) {
-        errno = EINVAL;
         return false;
     }
     return pool->owns_arena;
@@ -2839,18 +2803,15 @@ freelist_expect_t init_static_freelist(void* buffer, size_t bytes, size_t alignm
 
 void free_freelist(freelist_t* fl) {
     if (fl == NULL) { 
-        errno = EINVAL; 
         return; 
     }
     
     // Check if we own the memory (dynamic) or not (static)
     if (!fl->owns_memory || freelist_mtype(fl) == STATIC) {
-        errno = EPERM;
         return;
     }
     
     if (fl->parent_arena == NULL) {
-        errno = EINVAL;
         return;
     }
     
@@ -3053,23 +3014,19 @@ void return_freelist_element(freelist_t* fl, void* ptr) {
 
     // Sanity checks on block size and bounds
     if (block_size < sizeof(free_block_t) || block_size > fl->alloc) {
-        errno = EINVAL;
         return;
     }
     if (block_addr < mem_start || block_addr + block_size > mem_end) {
-        errno = EINVAL;
         return;
     }
 
     // Also ensure offset is sane (block_size must cover offset + header at least)
     if (offset > block_size) {
-        errno = EINVAL;
         return;
     }
 
     // Accounting: we charged block_size on alloc, so undo exactly that
     if (fl->len < block_size) {
-        errno = EINVAL;
         return;
     }
     fl->len -= block_size;
@@ -3208,13 +3165,11 @@ void_ptr_expect_t realloc_freelist_aligned(freelist_t* fl,
 
 inline void reset_freelist(freelist_t* fl) {
     if (!fl) {
-        errno = EINVAL;
         return;
     }
 
     if (!fl->memory || fl->alloc == 0) {
         // Freelist not properly initialized or already torn down
-        errno = EINVAL;
         return;
     }
 
@@ -3336,7 +3291,6 @@ bool is_freelist_ptr_sized(const freelist_t* fl, const void* ptr, size_t size) {
 
 inline size_t freelist_remaining(const freelist_t* fl) {
     if (!fl) {
-        errno = EINVAL;
         return 0;
     }
     
@@ -3347,7 +3301,6 @@ inline size_t freelist_remaining(const freelist_t* fl) {
 
 inline alloc_t freelist_mtype(const freelist_t* fl) {
     if (!fl) {
-        errno = EINVAL;
         return ALLOC_INVALID;
     }
     return arena_mtype(fl->parent_arena);
@@ -3356,7 +3309,6 @@ inline alloc_t freelist_mtype(const freelist_t* fl) {
 
 inline size_t freelist_size(const freelist_t* fl) {
     if (!fl) {
-        errno = EINVAL;
         return 0;
     }
     return fl->len;
@@ -3365,7 +3317,6 @@ inline size_t freelist_size(const freelist_t* fl) {
 
 inline size_t freelist_alloc(const freelist_t* fl) {
     if (!fl) {
-        errno = EINVAL;
         return 0;
     }
     return fl->alloc;
@@ -3374,7 +3325,6 @@ inline size_t freelist_alloc(const freelist_t* fl) {
 
 inline size_t total_freelist_alloc(const freelist_t* fl) {
     if (!fl) {
-        errno = EINVAL;
         return 0;
     }
     return fl->tot_alloc;
@@ -3383,7 +3333,6 @@ inline size_t total_freelist_alloc(const freelist_t* fl) {
 
 inline size_t freelist_alignment(const freelist_t* fl) {
     if (!fl) {
-        errno = EINVAL;
         return 0;
     }
     return fl->alignment;
@@ -3392,7 +3341,6 @@ inline size_t freelist_alignment(const freelist_t* fl) {
 
 bool freelist_owns_arena(const freelist_t* fl) {
     if (!fl) {
-        errno = EINVAL;
         return false;
     }
     return fl->owns_memory;
@@ -3403,7 +3351,6 @@ bool freelist_stats(const freelist_t *fl, char *buffer, size_t buffer_size) {
     size_t offset = 0u;
 
     if ((buffer == NULL) || (buffer_size == 0u)) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4045,7 +3992,6 @@ void_ptr_expect_t alloc_buddy_aligned(buddy_t *b,
 
 bool return_buddy_element(buddy_t *b, void *ptr) {
     if (!b) {
-        errno = EINVAL;
         return false;
     }
     if (!ptr) {
@@ -4061,7 +4007,6 @@ bool return_buddy_element(buddy_t *b, void *ptr) {
 
     uint32_t order = hdr->order;
     if (order < b->min_order || order > b->max_order) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4071,7 +4016,6 @@ bool return_buddy_element(buddy_t *b, void *ptr) {
     uint8_t *base  = (uint8_t *)b->base;
     size_t   off   = hdr->block_offset;
     if (off + block_size > b->pool_size) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4287,7 +4231,6 @@ void_ptr_expect_t realloc_buddy_aligned(buddy_t *b,
 
 bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
     if (!b || !ptr) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4297,7 +4240,6 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
 
     /* Step 0: ptr must lie inside the buddy pool's user range. */
     if (p < pool_start + sizeof(buddy_header_t) || p >= pool_end) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4307,7 +4249,6 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
 
     /* Step 2: order must be valid */
     if (hdr->order < b->min_order || hdr->order > b->max_order) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4315,13 +4256,11 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
 
     /* Step 3: block_offset must be within pool */
     if (hdr->block_offset + block_size > b->pool_size) {
-        errno = EINVAL;
         return false;
     }
 
     /* Step 4: the block must be aligned correctly */
     if (hdr->block_offset & (block_size - 1u)) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4330,68 +4269,17 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
     const uint8_t *block_end   = block_start + block_size;
 
     if (p < block_start + sizeof(buddy_header_t) || p >= block_end) {
-        errno = EINVAL;
         return false;
     }
 
     /* Everything checks out */
     return true;
 }
-//
-// bool is_buddy_ptr(const buddy_t *b, const void *ptr) {
-//     if (!b || !ptr) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     const uint8_t *p = (const uint8_t *)ptr;
-//
-//     /* Step 1: Header must be directly before user pointer */
-//     if (p < (uint8_t *)b->base + sizeof(buddy_header_t)) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     const buddy_header_t *hdr =
-//         (const buddy_header_t *)(p - sizeof(buddy_header_t));
-//
-//     /* Step 2: order must be valid */
-//     if (hdr->order < b->min_order || hdr->order > b->max_order) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     size_t block_size = (size_t)1u << hdr->order;
-//
-//     /* Step 3: block_offset must be within pool */
-//     if (hdr->block_offset + block_size > b->pool_size) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     /* Step 4: the block must be aligned correctly */
-//     if (hdr->block_offset & (block_size - 1u)) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     /* Step 5: user pointer must lie inside the block */
-//     const uint8_t *block_start = (const uint8_t *)b->base + hdr->block_offset;
-//     const uint8_t *block_end   = block_start + block_size;
-//
-//     if (p < block_start + sizeof(buddy_header_t) || p >= block_end) {
-//         errno = EINVAL;
-//         return false;
-//     }
-//
-//     /* Everything checks out */
-//     return true;
-// }
 // -------------------------------------------------------------------------------- 
 
 bool is_buddy_ptr_sized(const buddy_t *b, const void *ptr, size_t size) {
     if (!is_buddy_ptr(b, ptr)) {
-        return false;  /* errno already set */
+        return false;
     }
 
     const buddy_header_t *hdr =
@@ -4401,7 +4289,6 @@ bool is_buddy_ptr_sized(const buddy_t *b, const void *ptr, size_t size) {
     size_t usable = block_size - sizeof(buddy_header_t);
 
     if (size > usable) {
-        errno = ERANGE; /* size does not fit in underlying block */
         return false;
     }
 
@@ -4411,14 +4298,12 @@ bool is_buddy_ptr_sized(const buddy_t *b, const void *ptr, size_t size) {
 
 bool reset_buddy(buddy_t *b) {
     if (!b) {
-        errno = EINVAL;
         return false;
     }
 
     if (!b->base || b->pool_size == 0 ||
         b->num_levels == 0 ||
         b->max_order < b->min_order) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4441,7 +4326,6 @@ bool reset_buddy(buddy_t *b) {
 
 inline size_t buddy_alloc(const buddy_t *b) {
     if (!b) {
-        errno = EINVAL;
         return 0;
     }
     /* b->len counts actual bytes consumed from the pool. */
@@ -4451,7 +4335,6 @@ inline size_t buddy_alloc(const buddy_t *b) {
 
 inline size_t total_buddy_alloc(const buddy_t *b) {
     if (!b) {
-        errno = EINVAL;
         return 0;
     }
     /* b->total_alloc = pool_size + metadata */
@@ -4461,7 +4344,6 @@ inline size_t total_buddy_alloc(const buddy_t *b) {
 
 inline size_t buddy_size(const buddy_t *b) {
     if (!b) {
-        errno = EINVAL;
         return 0;
     }
     /* Current footprint of the entire allocator in memory. */
@@ -4471,7 +4353,6 @@ inline size_t buddy_size(const buddy_t *b) {
 
 inline size_t buddy_remaining(const buddy_t *b) {
     if (!b) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -4482,7 +4363,6 @@ inline size_t buddy_remaining(const buddy_t *b) {
 
 inline size_t buddy_largest_block(const buddy_t *b) {
     if (!b) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -4503,7 +4383,6 @@ bool buddy_stats(const buddy_t *buddy, char *buffer, size_t buffer_size) {
     size_t offset = 0U;
 
     if ((buffer == NULL) || (buffer_size == 0U)) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4620,7 +4499,6 @@ bool buddy_stats(const buddy_t *buddy, char *buffer, size_t buffer_size) {
 
 size_t buddy_alignment(const buddy_t* buddy) {
     if (!buddy) {
-        errno = EINVAL;
         return 0;
     }
     return buddy->base_align;
@@ -5109,7 +4987,6 @@ bool save_slab(const slab_t *slab,
                size_t buffer_size,
                size_t *bytes_needed) {
     if (!slab || !bytes_needed) {
-        errno = EINVAL;
         return false;
     }
 
@@ -5179,7 +5056,6 @@ bool restore_slab(slab_t *slab,
         snap_header.page_hdr_bytes!= slab->page_hdr_bytes||
         snap_header.objs_per_slab != slab->objs_per_slab) {
 
-        errno = EINVAL;
         return false;
     }
 
