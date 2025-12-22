@@ -1438,6 +1438,21 @@ contains metadata for the slab allocator type.
        slab_slot_t *free_list;/* global free-list of free slots */
    } slab_t;
 
+slab_expect_t 
+~~~~~~~~~~~~~
+``slab_expect_t`` is an error handling struct to be used in the creation 
+of ``slab_t`` data types to catch and convey errors to a user.
+
+.. code-block:: c
+
+   typedef struct {
+       bool has_value;
+       union {
+           slab_t* value;
+           ErrorCode error;
+       } u;
+   } slab_expect_t;
+
 Initialization and Memory Management
 ------------------------------------
 The functions in this section can be used to initialize memory for a slab allocator,

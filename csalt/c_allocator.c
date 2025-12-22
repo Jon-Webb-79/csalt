@@ -4734,40 +4734,41 @@ static size_t _slab_snapshot_size(const slab_t *slab) {
 }
 // -------------------------------------------------------------------------------- 
 
-/* Uses _next_pow2(size_t) from your buddy code. */
-slab_t *init_slab_allocator(buddy_t *buddy,
-                            size_t   obj_size,
-                            size_t   align,
-                            size_t   slab_bytes_hint) {
+
+slab_expect_t init_slab_allocator(buddy_t *buddy,
+                                  size_t   obj_size,
+                                  size_t   align,
+                                  size_t   slab_bytes_hint) {
     if (!buddy || obj_size == 0u) {
-        errno = EINVAL;
-        return NULL;
+        return (slab_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 
     /* Normalize alignment. */
     if (align == 0u) {
         align = alignof(max_align_t);
     }
-    if (align & (align - 1u)) {
+    if (!_is_pow2(align)) {
         align = _next_pow2(align);
-        if (!align) {
-            errno = EINVAL;
-            return NULL;
+        if (align == 0u) {
+            return (slab_expect_t){ .has_value = false, .u.error = ALIGNMENT_ERROR };
         }
     }
 
     /* Allocate the slab_t itself from the buddy allocator. */
-    size_t   slab_struct_bytes = _slab_align_up(sizeof(slab_t), alignof(max_align_t));
-    void_ptr_expect_t expect = alloc_buddy_aligned(buddy,
-                                                   slab_struct_bytes,
-                                                   alignof(max_align_t),
-                                                   true); 
-    if (!expect.has_value) {
-        return NULL;
-    }
-    slab_t *slab = (slab_t*)expect.u.value;
+    size_t slab_struct_bytes = _slab_align_up(sizeof(slab_t), alignof(max_align_t));
 
-    slab->buddy = buddy;
+    void_ptr_expect_t sexpect =
+        alloc_buddy_aligned(buddy,
+                            slab_struct_bytes,
+                            alignof(max_align_t),
+                            /*zeroed=*/true);
+    if (!sexpect.has_value) {
+        return (slab_expect_t){ .has_value = false, .u.error = sexpect.u.error };
+    }
+
+    slab_t *slab = (slab_t *)sexpect.u.value;
+
+    slab->buddy    = buddy;
     slab->obj_size = obj_size;
     slab->align    = align;
 
@@ -4805,13 +4806,14 @@ slab_t *init_slab_allocator(buddy_t *buddy,
     /* Make slab_bytes a multiple of slot_size after header, so no tail fragment. */
     size_t usable_for_slots = slab_bytes - page_hdr_bytes;
     size_t objs_per_slab    = usable_for_slots / slot_size;
+
     if (objs_per_slab == 0u) {
-        objs_per_slab       = 1u;
-        usable_for_slots    = slot_size;
-        slab_bytes          = page_hdr_bytes + usable_for_slots;
+        objs_per_slab    = 1u;
+        usable_for_slots = slot_size;
+        slab_bytes       = page_hdr_bytes + usable_for_slots;
     } else {
-        usable_for_slots    = objs_per_slab * slot_size;
-        slab_bytes          = page_hdr_bytes + usable_for_slots;
+        usable_for_slots = objs_per_slab * slot_size;
+        slab_bytes       = page_hdr_bytes + usable_for_slots;
     }
 
     slab->slab_bytes    = slab_bytes;
@@ -4821,21 +4823,35 @@ slab_t *init_slab_allocator(buddy_t *buddy,
     slab->pages     = NULL;
     slab->free_list = NULL;
 
-    return slab;
+    return (slab_expect_t){ .has_value = true, .u.value = slab };
 }
 // -------------------------------------------------------------------------------- 
 
-void *alloc_slab(slab_t *slab, bool zeroed) {
+void_ptr_expect_t alloc_slab(slab_t *slab, bool zeroed) {
     if (!slab) {
-        errno = EINVAL;
-        return NULL;
+        return (void_ptr_expect_t){
+            .has_value = false,
+            .u.error   = INVALID_ARG
+        };
     }
 
     /* Grow if no free slots. */
-    if (!slab->free_list) {
-        if (!_slab_grow(slab)) {
-            /* errno set by _slab_grow/buddy allocator */
-            return NULL;
+    if (slab->free_list == NULL) {
+        /* Prefer: _slab_grow returns void_ptr_expect_t (or similar) */
+        void_ptr_expect_t g = _slab_grow(slab);
+        if (!g.has_value) {
+            return (void_ptr_expect_t){
+                .has_value = false,
+                .u.error   = g.u.error
+            };
+        }
+
+        /* Defensive: grow should populate free_list. If it didn't, treat as alloc failure. */
+        if (slab->free_list == NULL) {
+            return (void_ptr_expect_t){
+                .has_value = false,
+                .u.error   = BAD_ALLOC
+            };
         }
     }
 
@@ -4852,13 +4868,15 @@ void *alloc_slab(slab_t *slab, bool zeroed) {
     /* Track payload bytes currently in use. */
     slab->len += slab->obj_size;
 
-    return user_ptr;
+    return (void_ptr_expect_t){
+        .has_value = true,
+        .u.value   = user_ptr
+    };
 }
 // -------------------------------------------------------------------------------- 
 
 bool return_slab(slab_t *slab, void *ptr) {
     if (!slab) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4870,7 +4888,6 @@ bool return_slab(slab_t *slab, void *ptr) {
     slab_page_t *page = _slab_find_page(slab, ptr);
     if (!page) {
         /* Pointer not from this slab allocator. */
-        errno = EINVAL;
         return false;
     }
 
@@ -4882,7 +4899,6 @@ bool return_slab(slab_t *slab, void *ptr) {
 
     /* Must be within the slots region. */
     if (p < slots_start || p >= slots_end) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4890,7 +4906,6 @@ bool return_slab(slab_t *slab, void *ptr) {
 
     /* Must be aligned on a slot boundary. */
     if ((offset % slab->slot_size) != 0u) {
-        errno = EINVAL;
         return false;
     }
 
@@ -4911,7 +4926,6 @@ bool return_slab(slab_t *slab, void *ptr) {
 
 inline size_t slab_alloc(const slab_t *slab) {
     if (!slab) {
-        errno = EINVAL;
         return 0;
     }
     return slab->len;   /* logical bytes in use */
@@ -4920,7 +4934,6 @@ inline size_t slab_alloc(const slab_t *slab) {
 
 inline size_t slab_size(const slab_t *slab) {
     if (!slab) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -4935,7 +4948,6 @@ inline size_t slab_size(const slab_t *slab) {
 
 inline size_t total_slab_alloc(const slab_t *slab) {
     if (!slab) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -4953,7 +4965,6 @@ inline size_t total_slab_alloc(const slab_t *slab) {
 
 inline size_t slab_stride(const slab_t *slab) {
     if (!slab) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -4964,7 +4975,6 @@ inline size_t slab_stride(const slab_t *slab) {
 
 inline size_t slab_total_blocks(const slab_t *slab) {
     if (!slab) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -4980,7 +4990,6 @@ inline size_t slab_total_blocks(const slab_t *slab) {
 
 inline size_t slab_free_blocks(const slab_t *slab) {
     if (!slab) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -4998,7 +5007,6 @@ inline size_t slab_free_blocks(const slab_t *slab) {
 
 inline size_t slab_alignment(const slab_t *slab) {
     if (!slab) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -5008,12 +5016,10 @@ inline size_t slab_alignment(const slab_t *slab) {
 
 inline size_t slab_in_use_blocks(const slab_t *slab) {
     if (!slab) {
-        errno = EINVAL;
         return 0;
     }
 
     if (slab->obj_size == 0) {
-        errno = EINVAL;
         return 0;
     }
 
@@ -5023,7 +5029,6 @@ inline size_t slab_in_use_blocks(const slab_t *slab) {
 
 bool is_slab_ptr(const slab_t *slab, const void *ptr) {
     if (!slab || !ptr) {
-        errno = EINVAL;
         return false;
     }
 
@@ -5043,7 +5048,6 @@ bool is_slab_ptr(const slab_t *slab, const void *ptr) {
 
         /* Step 3: reject pointers inside the header region */
         if (p < slots_start) {
-            errno = EINVAL;
             return false;
         }
 
@@ -5051,7 +5055,6 @@ bool is_slab_ptr(const slab_t *slab, const void *ptr) {
         size_t offset = (size_t)(p - slots_start);
 
         if ((offset % slab->slot_size) != 0u) {
-            errno = EINVAL;
             return false;
         }
 
@@ -5060,14 +5063,12 @@ bool is_slab_ptr(const slab_t *slab, const void *ptr) {
     }
 
     /* Pointer not found in any page */
-    errno = EINVAL;
     return false;
 }
 // -------------------------------------------------------------------------------- 
 
 bool reset_slab(slab_t *slab) {
     if (!slab) {
-        errno = EINVAL;
         return false;
     }
 
@@ -5075,7 +5076,6 @@ bool reset_slab(slab_t *slab) {
     if (slab->obj_size == 0u ||
         slab->slot_size == 0u ||
         slab->slab_bytes < slab->page_hdr_bytes + slab->slot_size) {
-        errno = EINVAL;
         return false;
     }
 
@@ -5117,7 +5117,6 @@ bool save_slab(const slab_t *slab,
     *bytes_needed = needed;
 
     if (!buffer || buffer_size < needed) {
-        errno = ERANGE;
         return false;
     }
 
@@ -5144,7 +5143,6 @@ bool restore_slab(slab_t *slab,
                   const void *buffer,
                   size_t buffer_size) {
     if (!slab || !buffer) {
-        errno = EINVAL;
         return false;
     }
 
@@ -5153,7 +5151,6 @@ bool restore_slab(slab_t *slab,
     /* 1) Peek at the serialized slab_t */
     slab_t snap_header;
     if (buffer_size < sizeof(snap_header)) {
-        errno = ERANGE;
         return false;
     }
 
@@ -5171,7 +5168,6 @@ bool restore_slab(slab_t *slab,
 
     size_t needed = sizeof(snap_header) + page_count * snap_header.slab_bytes;
     if (buffer_size < needed) {
-        errno = ERANGE;
         return false;
     }
 
@@ -5218,7 +5214,6 @@ bool slab_stats(const slab_t *slab, char *buffer, size_t buffer_size) {
     size_t offset = 0U;
 
     if ((buffer == NULL) || (buffer_size == 0U)) {
-        errno = EINVAL;
         return false;
     }
 
