@@ -220,7 +220,7 @@ typedef struct {
     bool has_value;
     union {
         arena_t* value;
-        ErrorCode error;
+        error_code_t error;
     } u;
 } arena_expect_t;
 // -------------------------------------------------------------------------------- 
@@ -237,7 +237,7 @@ typedef struct {
  * This function uses an "expected" style return type. On success, the returned
  * @c arena_expect_t has @c has_value set to @c true and @c u.value points to
  * a fully initialized @c arena_t. On failure, @c has_value is @c false and
- * @c u.error contains an appropriate ::ErrorCode value describing the cause.
+ * @c u.error contains an appropriate ::error_code_t value describing the cause.
  *
  * @param bytes          Requested initial total size in bytes. This is the
  *                       minimum storage footprint to allocate. If @p bytes is
@@ -263,7 +263,7 @@ typedef struct {
  *
  * On failure:
  *   - @c result.has_value == false
- *   - @c result.u.error   contains one of the following ::ErrorCode values:
+ *   - @c result.u.error   contains one of the following ::error_code_t values:
  *
  * @retval INVALID_ARG
  *      If @p bytes is too small to contain the arena header and first chunk
@@ -285,7 +285,7 @@ typedef struct {
  *      If dynamic arenas are disabled at compile time
  *      (@c ARENA_ENABLE_DYNAMIC == 0).
  *
- * If your implementation maps ::ErrorCode values to @c errno (e.g., via
+ * If your implementation maps ::error_code_t values to @c errno (e.g., via
  * @c set_errno_from_error()), then @c errno will be set consistently with
  * @c result.u.error on failure.
  *
@@ -321,7 +321,7 @@ typedef struct {
  *
  * if (!res.has_avlue) {
  *     // Initialization failed; inspect the error code
- *     ErrorCode ec = res.u.error;
+ *     error_code_t ec = res.u.error;
  *     // handle error (log, abort, fall back, etc.)
  *     return;
  * }
@@ -378,7 +378,7 @@ arena_expect_t init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in
  *
  * On failure:
  *   - @c result.has_value == false
- *   - @c result.u.error   contains one of the following ::ErrorCode values:
+ *   - @c result.u.error   contains one of the following ::error_code_t values:
  *
  * @retval NULL_POINTER
  *      If @p buffer is NULL.
@@ -402,7 +402,7 @@ arena_expect_t init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in
  *        - @c mem_type = STATIC  
  *        - @c resize   = 0 (growth is not permitted)
  *        Attempts to grow via @c alloc_arena() beyond remaining space should
- *        return an appropriate ::ErrorCode (often @c OUT_OF_MEMORY or @c OPERATION_UNAVAILABLE).
+ *        return an appropriate ::error_code_t (often @c OUT_OF_MEMORY or @c OPERATION_UNAVAILABLE).
  *
  * @note  @c tot_alloc is set to the full caller-supplied buffer footprint
  *        (i.e., ``bytes``). @c alloc is the usable data capacity after all
@@ -433,7 +433,7 @@ arena_expect_t init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in
  *
  * arena_expect_t r = init_static_arena(buf, sizeof(buf), alignof(max_align_t));
  * if (!r.has_value) {
- *     ErrorCode ec = r.u.error;
+ *     error_code_t ec = r.u.error;
  *     // handle error...
  * }
  *
@@ -511,7 +511,7 @@ arena_expect_t init_static_arena(void* buffer, size_t bytes, size_t passing_in);
  *
  * On failure:
  *   - @c result.has_value == false  
- *   - @c result.u.error   contains one of the following ::ErrorCode values:
+ *   - @c result.u.error   contains one of the following ::error_code_t values:
  *
  * @retval NULL_POINTER
  *      If @p parent is NULL.
@@ -608,7 +608,7 @@ arena_expect_t init_arena_with_arena(arena_t* parent,
  *
  * @param resize  If @c true, the arena may grow by allocating additional
  *                chunks as needed. If @c false, allocations that exceed the
- *                remaining capacity will fail with an appropriate ::ErrorCode.
+ *                remaining capacity will fail with an appropriate ::error_code_t.
  *
  * @return An ::arena_expect_t describing success or failure.
  *
@@ -618,7 +618,7 @@ arena_expect_t init_arena_with_arena(arena_t* parent,
  *
  * On failure:
  *   - @c result.has_value == false
- *   - @c result.u.error   is the ::ErrorCode propagated from
+ *   - @c result.u.error   is the ::error_code_t propagated from
  *     ::init_dynamic_arena(), typically one of:
  *
  *   - @c INVALID_ARG       — invalid size or layout (e.g., too small for headers)
@@ -647,7 +647,7 @@ arena_expect_t init_arena_with_arena(arena_t* parent,
  * @code{.c}
  * arena_expect_t r = init_darena(4096u,  true);
  * if (!r.has_value) {
- *     ErrorCode ec = r.u.error;
+ *     error_code_t ec = r.u.error;
  *     // handle error (log, abort, fallback, etc.)
  *     return;
  * }
@@ -701,7 +701,7 @@ arena_expect_t init_darena(size_t bytes, bool resize);
  *
  * On failure:
  *   - @c result.has_value == false
- *   - @c result.u.error   is the ::ErrorCode propagated from
+ *   - @c result.u.error   is the ::error_code_t propagated from
  *     ::init_static_arena(), typically one of:
  *
  *   - @c NULL_POINTER     — @p buffer is @c NULL
@@ -714,7 +714,7 @@ arena_expect_t init_darena(size_t bytes, bool resize);
  *       - @c mem_type    = STATIC
  *       - @c resize      = 0 (fixed capacity)
  *       Calls to ::alloc_arena() that exceed remaining capacity will fail and
- *       return an appropriate ::ErrorCode.
+ *       return an appropriate ::error_code_t.
  *
  * @note Ownership: the arena does **not** own @p buffer. ::free_arena() for a
  *       STATIC arena must not attempt to free @p buffer. Typically, the caller
@@ -730,7 +730,7 @@ arena_expect_t init_darena(size_t bytes, bool resize);
  *
  * arena_expect_t r = init_sarena(buf, BUF);
  * if (!r.has_value) {
- *     ErrorCode ec = r.u.error;
+ *     error_code_t ec = r.u.error;
  *     // handle error...
  *     return;
  * }
@@ -848,7 +848,7 @@ void free_arena(arena_t* arena);
  * a ::void_ptr_expect_t structure containing either:
  *
  *   - `.has_value = true` and `.u.value = void*` on success, or
- *   - `.has_value = false` and `.u.error = ErrorCode` describing the failure.
+ *   - `.has_value = false` and `.u.error = error_code_t` describing the failure.
  *
  * - If enough space exists in the current tail chunk, the block is carved out
  *   immediately (with any required leading padding).
@@ -876,7 +876,7 @@ void free_arena(arena_t* arena);
  *
  * The function returns an error with one of the following codes:
  *
- * | Condition | Returned ErrorCode |
+ * | Condition | Returned error_code_t |
  * |----------|--------------------|
  * | `arena == NULL` | `NULL_POINTER` |
  * | `bytes == 0` | `INVALID_ARG` |
@@ -1006,9 +1006,9 @@ void_ptr_expect_t alloc_arena(arena_t* arena, size_t bytes, bool zeroed);
  *
  *     - On failure:
  *         - expect.has_value = false
- *         - expect.u.error   = one of the ErrorCode values described below
+ *         - expect.u.error   = one of the error_code_t values described below
  *
- * @par Failure conditions and ErrorCode meanings
+ * @par Failure conditions and error_code_t meanings
  * A failure expect (has_value = false) may contain any of the following:
  *
  * **1. INVALID_ARG**
@@ -1110,7 +1110,7 @@ void_ptr_expect_t realloc_arena(arena_t* arena, void* variable, size_t var_size,
  *
  *      - expect.has_value = true   → allocation succeeded
  *      - expect.has_value = false  → allocation failed; expect.u.error
- *                                    contains an ::ErrorCode describing why
+ *                                    contains an ::error_code_t describing why
  *
  * @param arena      Arena to allocate from (must not be NULL).
  * @param bytes      Requested payload size in bytes (must be > 0).
@@ -1120,9 +1120,9 @@ void_ptr_expect_t realloc_arena(arena_t* arena, void* variable, size_t var_size,
  *
  * @return ::void_ptr_expect_t
  *      - On success:    expect.has_value = true,  expect.u.value = pointer
- *      - On failure:    expect.has_value = false, expect.u.error = ErrorCode
+ *      - On failure:    expect.has_value = false, expect.u.error = error_code_t
  *
- * @par Failure conditions and ErrorCode values
+ * @par Failure conditions and error_code_t values
  * An expect with has_value = false may contain any of the following errors:
  *
  * **1. INVALID_ARG**
@@ -2266,7 +2266,7 @@ typedef struct {
     bool has_value;
     union {
         pool_t* value;
-        ErrorCode error;
+        error_code_t error;
     } u;
 } pool_expect_t;
 // ================================================================================ 
@@ -2288,7 +2288,7 @@ typedef struct {
  * - @c result.has_value == true  → success; the pool pointer is available in
  *   @c result.u.value
  * - @c result.has_value == false → failure; the reason is encoded in
- *   @c result.u.error (an ::ErrorCode)
+ *   @c result.u.error (an ::error_code_t)
  *
  * @param arena
  *     Existing arena to supply memory. Must not be NULL.
@@ -2328,11 +2328,11 @@ typedef struct {
  *     - On failure:  
  *           @code{.c}
  *           result.has_value == false  
- *           ErrorCode e = result.u.error;
+ *           error_code_t e = result.u.error;
  *           @endcode
  *
- * @par ErrorCode meanings
- * The function may return the following ::ErrorCode values:
+ * @par error_code_t meanings
+ * The function may return the following ::error_code_t values:
  *
  * - ::INVALID_ARG  
  *       If @p arena is NULL, @p block_size == 0, @p blocks_per_chunk == 0,
@@ -2349,7 +2349,7 @@ typedef struct {
  *       If @p prewarm_one_chunk is true and the pool is unable to acquire its
  *       initial slice (e.g., arena cannot satisfy the request).
  *
- * Additional errors may be returned via propagated ::ErrorCode values from
+ * Additional errors may be returned via propagated ::error_code_t values from
  * ::alloc_arena_aligned() or the underlying grow path.
  *
  * @note Freed blocks return to an intrusive free list and are reused in LIFO
@@ -2502,10 +2502,10 @@ pool_expect_t init_pool_with_arena(arena_t* arena,
  *          @endcode
  *      - On failure:  
  *          @code
- *          (pool_expect_t){ .has_value = false, .u.error = <ErrorCode> }
+ *          (pool_expect_t){ .has_value = false, .u.error = <error_code_t> }
  *          @endcode
  *
- * @par Failure conditions (returned as ErrorCode)
+ * @par Failure conditions (returned as error_code_t)
  * This function may fail with:
  *
  * 1. **INVALID_ARG**  
@@ -2639,10 +2639,10 @@ pool_expect_t init_dynamic_pool(size_t block_size,
  *        @endcode
  *      - On failure:
  *        @code
- *        (pool_expect_t){ .has_value = false, .u.error = <ErrorCode> }
+ *        (pool_expect_t){ .has_value = false, .u.error = <error_code_t> }
  *        @endcode
  *
- * @par Failure conditions (ErrorCode)
+ * @par Failure conditions (error_code_t)
  *
  * 1. ::NULL_POINTER  
  *      - @p buffer is NULL.
@@ -3893,7 +3893,7 @@ typedef struct {
     bool has_value;
     union {
         freelist_t* value;
-        ErrorCode error;
+        error_code_t error;
     } u;
 } freelist_expect_t;
 // -------------------------------------------------------------------------------- 
@@ -3935,7 +3935,7 @@ typedef struct {
  *          @c u.value points to a fully initialized ::freelist_t.
  *
  *        - @c has_value == false  
- *          @c u.error contains an ::ErrorCode describing the failure.
+ *          @c u.error contains an ::error_code_t describing the failure.
  *
  * @par Failure conditions
  * Initialization fails if any of the following occur:
@@ -5959,7 +5959,7 @@ typedef struct {
     bool has_value;
     union {
         buddy_t* value;
-        ErrorCode error;
+        error_code_t error;
     } u;
 } buddy_expect_t;
 // ================================================================================ 
@@ -6013,7 +6013,7 @@ typedef struct {
  *         ::buddy_t allocator.
  *
  *     - On failure:  
- *         @c has_value is false and @c u.error contains an ::ErrorCode
+ *         @c has_value is false and @c u.error contains an ::error_code_t
  *         describing the reason for failure.
  *
  * @retval INVALID_ARG
@@ -6278,7 +6278,7 @@ void_ptr_expect_t alloc_buddy(buddy_t *b, size_t size, bool zeroed);
  * @par Failure Result
  * On failure:
  *   - @c result.has_value == false
- *   - @c result.u.error   contains an appropriate ::ErrorCode.
+ *   - @c result.u.error   contains an appropriate ::error_code_t.
  *
  * Possible error codes:
  *   - @c NULL_POINTER       — @p buddy is NULL.
@@ -6310,7 +6310,7 @@ void_ptr_expect_t alloc_buddy(buddy_t *b, size_t size, bool zeroed);
  *
  * arena_expect_t r = init_arena_with_buddy(b, 1024u, alignof(max_align_t));
  * if (!r.has_value) {
- *     ErrorCode ec = r.u.error;
+ *     error_code_t ec = r.u.error;
  *     // handle error
  * }
  *
@@ -6753,7 +6753,7 @@ void_ptr_expect_t realloc_buddy(buddy_t* buddy, void* old_ptr, size_t old_size, 
  * @return
  *     A ::void_ptr_expect_t result:
  *       - @c {.has_value=true,  .u.value=<ptr>} on success (ptr may be NULL)
- *       - @c {.has_value=false, .u.error=<ErrorCode>} on failure
+ *       - @c {.has_value=false, .u.error=<error_code_t>} on failure
  *
  * @par Error codes
  * On failure, @c .u.error is set to one of:
@@ -7596,7 +7596,7 @@ typedef struct {
     bool has_value;
     union {
         slab_t* value;
-        ErrorCode error;
+        error_code_t error;
     } u;
 } slab_expect_t;
 // -------------------------------------------------------------------------------- 
@@ -7763,7 +7763,7 @@ slab_expect_t init_slab_allocator(buddy_t *buddy,
  *  - On success, ``has_value == true`` and ``u.value`` contains a pointer
  *    to the allocated object.
  *  - On failure, ``has_value == false`` and ``u.error`` contains an
- *    ::ErrorCode describing the reason for failure.
+ *    ::error_code_t describing the reason for failure.
  *
  * Possible error codes include (but are not limited to):
  *  - ::INVALID_ARG  
@@ -7843,7 +7843,7 @@ slab_expect_t init_slab_allocator(buddy_t *buddy,
  * @return
  *     A ::void_ptr_expect_t containing either:
  *     - ``u.value`` — pointer to the allocated object on success, or
- *     - ``u.error`` — an ::ErrorCode describing the failure.
+ *     - ``u.error`` — an ::error_code_t describing the failure.
  */
 void_ptr_expect_t alloc_slab(slab_t *slab, bool zeroed);
 // -------------------------------------------------------------------------------- 

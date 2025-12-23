@@ -57,7 +57,7 @@ extern "C" {
  *   -9xx  Generic / Fallback (not implemented, unknown)
  *
  * Success is `0` (::NO_ERROR). A single positive sentinel (::INVALID_ERROR = 1)
- * is reserved for getter-style APIs that cannot update an internal ::ErrorCode
+ * is reserved for getter-style APIs that cannot update an internal ::error_code_t
  * field (e.g., NULL handle passed to a const getter). Do not store or propagate
  * ::INVALID_ERROR as a normal error; prefer category codes instead.
  *
@@ -74,7 +74,7 @@ extern "C" {
  * if (EC_CATEGORY(err) == 5) retry_io();  // any I/O (-5xx)
  * @endcode
  */
-typedef enum ErrorCode {
+typedef enum error_code_t {
     /* Success / sentinel */
     NO_ERROR            = 0,    /**< Success / no error */
     INVALID_ERROR       = 1,    /**< Non-taxonomy sentinel for invalid getter input */
@@ -147,7 +147,7 @@ typedef enum ErrorCode {
     NOT_IMPLEMENTED     = -981, /**< Functionality not yet implemented */
     OPERATION_UNAVAILABLE = -982,/**< Operation unavailable in current build/runtime */
     UNKNOWN             = -999  /**< Unknown/unspecified error */
-} ErrorCode;
+} error_code_t;
 // -------------------------------------------------------------------------------- 
 
 typedef enum {
@@ -164,36 +164,36 @@ typedef enum {
 } ErrorCategory;
 
 /**
- * @brief Return the category (decimal range) for an ErrorCode.
+ * @brief Return the category (decimal range) for an error_code_t.
  *
  * 0 = success/sentinel (>=0), 1 = ARG(-1xx), 2 = MEM(-2xx), ..., 9 = GEN(-9xx).
  */
-static inline ErrorCategory ec_category(ErrorCode ec) {
+static inline ErrorCategory ec_category(error_code_t ec) {
     return (ec >= 0) ? ECAT_NONE : (ErrorCategory)((-(int)ec) / 100);
 }
 
 /** @brief True if @p ec is an argument/input error (-1xx). */
-static inline bool ec_is_arg(ErrorCode ec)   { return ec_category(ec) == ECAT_ARG; }
+static inline bool ec_is_arg(error_code_t ec)   { return ec_category(ec) == ECAT_ARG; }
 /** @brief True if @p ec is a memory/allocation error (-2xx). */
-static inline bool ec_is_mem(ErrorCode ec)   { return ec_category(ec) == ECAT_MEM; }
+static inline bool ec_is_mem(error_code_t ec)   { return ec_category(ec) == ECAT_MEM; }
 /** @brief True if @p ec is a state/container error (-3xx). */
-static inline bool ec_is_state(ErrorCode ec) { return ec_category(ec) == ECAT_STATE; }
+static inline bool ec_is_state(error_code_t ec) { return ec_category(ec) == ECAT_STATE; }
 /** @brief True if @p ec is a math/domain error (-4xx). */
-static inline bool ec_is_math(ErrorCode ec)  { return ec_category(ec) == ECAT_MATH; }
+static inline bool ec_is_math(error_code_t ec)  { return ec_category(ec) == ECAT_MATH; }
 /** @brief True if @p ec is an I/O error (-5xx). */
-static inline bool ec_is_io(ErrorCode ec)    { return ec_category(ec) == ECAT_IO; }
+static inline bool ec_is_io(error_code_t ec)    { return ec_category(ec) == ECAT_IO; }
 /** @brief True if @p ec is a type/format error (-6xx). */
-static inline bool ec_is_fmt(ErrorCode ec)   { return ec_category(ec) == ECAT_FMT; }
+static inline bool ec_is_fmt(error_code_t ec)   { return ec_category(ec) == ECAT_FMT; }
 /** @brief True if @p ec is a concurrency error (-7xx). */
-static inline bool ec_is_conc(ErrorCode ec)  { return ec_category(ec) == ECAT_CONC; }
+static inline bool ec_is_conc(error_code_t ec)  { return ec_category(ec) == ECAT_CONC; }
 /** @brief True if @p ec is a config/policy error (-8xx). */
-static inline bool ec_is_cfg(ErrorCode ec)   { return ec_category(ec) == ECAT_CFG; }
+static inline bool ec_is_cfg(error_code_t ec)   { return ec_category(ec) == ECAT_CFG; }
 /** @brief True if @p ec is a generic/fallback error (-9xx). */
-static inline bool ec_is_gen(ErrorCode ec)   { return ec_category(ec) == ECAT_GEN; }
+static inline bool ec_is_gen(error_code_t ec)   { return ec_category(ec) == ECAT_GEN; }
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Convert an ::ErrorCode to a short human-readable message.
+ * @brief Convert an ::error_code_t to a short human-readable message.
  *
  * Returns a stable, static string literal describing @p code. Messages are
  * aligned with the range-based taxonomy (−1xx argument, −2xx memory, …) and
@@ -202,7 +202,7 @@ static inline bool ec_is_gen(ErrorCode ec)   { return ec_category(ec) == ECAT_GE
  * Error reporting:
  * - Pure function: does not modify global state (e.g., `errno`).
  *
- * @param code  The ::ErrorCode to describe.
+ * @param code  The ::error_code_t to describe.
  *
  * @return Pointer to a constant, NUL-terminated string. The pointer refers to
  *         a static string literal that must not be freed or modified.
@@ -212,18 +212,18 @@ static inline bool ec_is_gen(ErrorCode ec)   { return ec_category(ec) == ECAT_GE
  *
  * @note The mapping is intentionally concise and stable for logging. For a
  *       broader label (category), see ::error_cat_to_string or
- *       ::error_category_str. To translate between ::ErrorCode and `errno`,
+ *       ::error_category_str. To translate between ::error_code_t and `errno`,
  *       use ::set_errno_from_error and ::error_from_errno.
  *
  * @par Example
  * @code{.c}
- * ErrorCode ec = BAD_ALLOC;
+ * error_code_t ec = BAD_ALLOC;
  * fprintf(stderr, "[%s/%d] %s\n",
  *         error_category_tag(ec), (int)ec, error_to_string(ec));
  * // -> "[MEM/-201] Memory allocation failed"
  * @endcode
  */
-const char* error_to_string(ErrorCode code);
+const char* error_to_string(error_code_t code);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -257,9 +257,9 @@ const char* error_cat_to_string(ErrorCategory cat);
 // ================================================================================ 
 
 /**
- * @brief Set POSIX `errno` from a range-based ::ErrorCode and return the value set.
+ * @brief Set POSIX `errno` from a range-based ::error_code_t and return the value set.
  *
- * Translates the library’s ::ErrorCode taxonomy (−1xx argument, −2xx memory, …)
+ * Translates the library’s ::error_code_t taxonomy (−1xx argument, −2xx memory, …)
  * into a best-fit POSIX `errno`, assigns it to the calling thread’s `errno`, and
  * returns the same integer. This centralizes error→`errno` policy so call sites
  * behave consistently.
@@ -296,7 +296,7 @@ const char* error_cat_to_string(ErrorCategory cat);
  * - Always sets and returns the chosen `errno` value (including 0 for success).
  * - This function itself does not fail.
  *
- * @param code  The ::ErrorCode to translate.
+ * @param code  The ::error_code_t to translate.
  *
  * @return The POSIX `errno` value assigned to `errno` for @p code.
  *
@@ -330,7 +330,7 @@ const char* error_cat_to_string(ErrorCategory cat);
  *                concurrently from multiple threads.
  *
  * @warning Call this **before** any operation that might overwrite `errno`
- *          (e.g., immediately after detecting/setting an ::ErrorCode).
+ *          (e.g., immediately after detecting/setting an ::error_code_t).
  *
  * @note The mapping is not one-to-one; the inverse (::error_from_errno) is lossy.
  *       Keep both helpers consistent if you change policy.
@@ -348,21 +348,21 @@ const char* error_cat_to_string(ErrorCategory cat);
  * @endcode
  */
 
-int set_errno_from_error(ErrorCode code);
+int set_errno_from_error(error_code_t code);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Translate a POSIX `errno` value to a canonical ::ErrorCode.
+ * @brief Translate a POSIX `errno` value to a canonical ::error_code_t.
  *
  * Provides a best-effort **reverse mapping** from @p e to the library’s
- * range-based ::ErrorCode taxonomy (−1xx argument, −2xx memory, …).
- * Because multiple ::ErrorCode values often share the same `errno`, this
+ * range-based ::error_code_t taxonomy (−1xx argument, −2xx memory, …).
+ * Because multiple ::error_code_t values often share the same `errno`, this
  * function returns a single **canonical** code for each `errno`
  * (e.g., `ENOMEM` → ::OUT_OF_MEMORY).
  *
  * Semantics:
  * - **Pure function**: does **not** modify `errno` or any global state.
- * - **Lossy mapping**: several distinct ::ErrorCode values can map to the
+ * - **Lossy mapping**: several distinct ::error_code_t values can map to the
  *   same `errno`; the reverse cannot always recover the original value.
  *
  * Mapping summary (high level):
@@ -392,7 +392,7 @@ int set_errno_from_error(ErrorCode code);
  *
  * @param e  A POSIX `errno` value (e.g., the current `errno`).
  *
- * @return A canonical ::ErrorCode for @p e. For `e == 0`, returns ::NO_ERROR.
+ * @return A canonical ::error_code_t for @p e. For `e == 0`, returns ::NO_ERROR.
  *
  * @retval NO_ERROR            For `0`.
  * @retval OUT_OF_MEMORY       For `ENOMEM`.
@@ -426,14 +426,14 @@ int set_errno_from_error(ErrorCode code);
  * @par Example
  * @code{.c}
  * if (read(fd, buf, n) < 0) {
- *     ErrorCode ec = error_from_errno(errno);
+ *     error_code_t ec = error_from_errno(errno);
  *     log_error("[%s/%d] %s (errno=%d:%s)",
  *               error_category_tag(ec), (int)ec, error_to_string(ec),
  *               errno, strerror(errno));
  * }
  * @endcode
  */
-ErrorCode error_from_errno(int e);
+error_code_t error_from_errno(int e);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -444,11 +444,11 @@ ErrorCode error_from_errno(int e);
  *
  * This macro declares a struct named @p name that represents either:
  *   - a successfully produced value of type @p T, or  
- *   - an error of type ::ErrorCode.
+ *   - an error of type ::error_code_t.
  *
  * Internally, the struct contains:
  *   - `bool has_value` — indicates whether the union currently stores a value
- *   - `union { T value; ErrorCode error; } u` — holds either the success value or error
+ *   - `union { T value; error_code_t error; } u` — holds either the success value or error
  *
  * The tag `has_value` **must** be checked before accessing `u.value` or `u.error`.
  *
@@ -479,7 +479,7 @@ ErrorCode error_from_errno(int e);
         bool has_value;                          \
         union {                                  \
             T value;                             \
-            ErrorCode error;                     \
+            error_code_t error;                     \
         } u;                                     \
     } name
 // -------------------------------------------------------------------------------- 
@@ -488,7 +488,7 @@ typedef struct {
     bool has_value;
     union {
         void* value;
-        ErrorCode error;
+        error_code_t error;
     } u;
 } void_ptr_expect_t;
 // -------------------------------------------------------------------------------- 
@@ -556,7 +556,7 @@ typedef struct {
  *
  * This macro evaluates the tag field of an expected-type instance @p r.
  * It returns `true` if the result contains a valid success value, or `false`
- * if it contains an ::ErrorCode.
+ * if it contains an ::error_code_t.
  *
  * This is the C equivalent of C++23 `std::expected::has_value()` or the
  * implicit `operator bool()` check.
@@ -604,7 +604,7 @@ typedef struct {
  * @def EXPECTED_ERROR(r)
  * @brief Retrieves the error code stored in an expected-type result.
  *
- * This macro extracts the ::ErrorCode from @p r.
+ * This macro extracts the ::error_code_t from @p r.
  * **Only call this macro if `EXPECTED_HAS_VALUE(r)` is false.**
  *
  * Reading `u.error` when the success-value branch is active results in
@@ -614,7 +614,7 @@ typedef struct {
  * expected_int_t r = safe_divide(10, 0);
  *
  * if (!EXPECTED_HAS_VALUE(r)) {
- *     ErrorCode ec = EXPECTED_ERROR(r);
+ *     error_code_t ec = EXPECTED_ERROR(r);
  *     fprintf(stderr, "Operation failed: %d\n", ec);
  * }
  * @endcode

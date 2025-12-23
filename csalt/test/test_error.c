@@ -33,7 +33,7 @@
 // TEST ERROR_TO_STRING 
 
 /* Small helper to keep assertions consistent. */
-static void check(ErrorCode code, const char *expected)
+static void check(error_code_t code, const char *expected)
 {
     const char *s = error_to_string(code);
     assert_non_null(s);
@@ -155,7 +155,7 @@ static void test_error_to_string_fallback_unrecognized(void **state)
 {
     (void)state;
     /* Pick a value outside your enum set: negative and not in any case label. */
-    const char *s = error_to_string((ErrorCode)(-7777));
+    const char *s = error_to_string((error_code_t)(-7777));
     assert_non_null(s);
     assert_string_equal(s, "Unrecognized error code");
 }
@@ -225,7 +225,7 @@ static void test_error_cat_to_string_pointer_stability(void **state)
 // ================================================================================ 
 // TEST BOOL FUNCTIONS 
 
-typedef bool (*pred_fn)(ErrorCode);
+typedef bool (*pred_fn)(error_code_t);
 
 /* Order matters: index 0..8 must match categories ARG..GEN below */
 static pred_fn PRED[] = {
@@ -237,7 +237,7 @@ static const char *PRED_NAME[] = {
 };
 
 /* Helper: check that exactly one predicate (at idx_expected) is true */
-static void expect_only(size_t idx_expected, ErrorCode ec) {
+static void expect_only(size_t idx_expected, error_code_t ec) {
     for (size_t i = 0; i < sizeof PRED / sizeof PRED[0]; ++i) {
         bool got  = PRED[i](ec);
         bool want = (i == idx_expected);
@@ -246,7 +246,7 @@ static void expect_only(size_t idx_expected, ErrorCode ec) {
     }
 }
 
-static void expect_none(ErrorCode ec) {
+static void expect_none(error_code_t ec) {
     for (size_t i = 0; i < sizeof PRED / sizeof PRED[0]; ++i) {
         ASSERT_FALSE_NAMED(PRED[i](ec), PRED_NAME[i]);
     }
@@ -256,7 +256,7 @@ static void test_ec_predicates_each_category(void **state) {
     (void)state;
 
     /* -1xx argument */
-    ErrorCode arg_codes[] = {
+    error_code_t arg_codes[] = {
         INVALID_ARG, NULL_POINTER, OUT_OF_BOUNDS, SIZE_MISMATCH, UNINITIALIZED,
         ITERATOR_INVALID, PRECONDITION_FAIL, POSTCONDITION_FAIL, ILLEGAL_STATE
     };
@@ -264,7 +264,7 @@ static void test_ec_predicates_each_category(void **state) {
         expect_only(0, arg_codes[i]); /* idx 0 = ARG */
 
     /* -2xx memory */
-    ErrorCode mem_codes[] = {
+    error_code_t mem_codes[] = {
         BAD_ALLOC, REALLOC_FAIL, OUT_OF_MEMORY, LENGTH_OVERFLOW,
         CAPACITY_OVERFLOW, ALIGNMENT_ERROR
     };
@@ -272,21 +272,21 @@ static void test_ec_predicates_each_category(void **state) {
         expect_only(1, mem_codes[i]); /* idx 1 = MEM */
 
     /* -3xx state */
-    ErrorCode state_codes[] = {
+    error_code_t state_codes[] = {
         STATE_CORRUPT, ALREADY_INITIALIZED, NOT_FOUND, EMPTY, CONCURRENT_MODIFICATION
     };
     for (size_t i = 0; i < sizeof state_codes/sizeof *state_codes; ++i)
         expect_only(2, state_codes[i]); /* idx 2 = STATE */
 
     /* -4xx math */
-    ErrorCode math_codes[] = {
+    error_code_t math_codes[] = {
         DIV_BY_ZERO, SINGULAR_MATRIX, NUMERIC_OVERFLOW, DOMAIN_ERROR, LOSS_OF_PRECISION
     };
     for (size_t i = 0; i < sizeof math_codes/sizeof *math_codes; ++i)
         expect_only(3, math_codes[i]); /* idx 3 = MATH */
 
     /* -5xx io */
-    ErrorCode io_codes[] = {
+    error_code_t io_codes[] = {
         FILE_OPEN, FILE_READ, FILE_WRITE, PERMISSION_DENIED, IO_INTERRUPTED,
         IO_TIMEOUT, IO_CLOSED, IO_WOULD_BLOCK
     };
@@ -294,28 +294,28 @@ static void test_ec_predicates_each_category(void **state) {
         expect_only(4, io_codes[i]); /* idx 4 = IO */
 
     /* -6xx format */
-    ErrorCode fmt_codes[] = {
+    error_code_t fmt_codes[] = {
         TYPE_MISMATCH, FORMAT_INVALID, ENCODING_INVALID, PARSING_FAILED, VALIDATION_FAILED
     };
     for (size_t i = 0; i < sizeof fmt_codes/sizeof *fmt_codes; ++i)
         expect_only(5, fmt_codes[i]); /* idx 5 = FMT */
 
     /* -7xx concurrency */
-    ErrorCode conc_codes[] = {
+    error_code_t conc_codes[] = {
         LOCK_FAILED, DEADLOCK_DETECTED, THREAD_FAIL, CANCELLED, RACE_DETECTED
     };
     for (size_t i = 0; i < sizeof conc_codes/sizeof *conc_codes; ++i)
         expect_only(6, conc_codes[i]); /* idx 6 = CONC */
 
     /* -8xx config */
-    ErrorCode cfg_codes[] = {
+    error_code_t cfg_codes[] = {
         CONFIG_INVALID, UNSUPPORTED, FEATURE_DISABLED, VERSION_MISMATCH, RESOURCE_EXHAUSTED
     };
     for (size_t i = 0; i < sizeof cfg_codes/sizeof *cfg_codes; ++i)
         expect_only(7, cfg_codes[i]); /* idx 7 = CFG */
 
     /* -9xx generic */
-    ErrorCode gen_codes[] = {
+    error_code_t gen_codes[] = {
         NOT_IMPLEMENTED, OPERATION_UNAVAILABLE, UNKNOWN
     };
     for (size_t i = 0; i < sizeof gen_codes/sizeof *gen_codes; ++i)
@@ -331,7 +331,7 @@ static void test_ec_predicates_nonerror_values(void **state) {
 /* Optional: for an out-of-range negative value, no predicate should match. */
 static void test_ec_predicates_unknown_negative(void **state) {
     (void)state;
-    ErrorCode weird = (ErrorCode)(-7777); /* not in -1xx..-9xx enum set */
+    error_code_t weird = (error_code_t)(-7777); /* not in -1xx..-9xx enum set */
     expect_none(weird);
 }
 // ================================================================================ 

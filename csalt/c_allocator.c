@@ -246,7 +246,7 @@ static inline arena_expect_t arena_ok(arena_t *a) {
 }
 // -------------------------------------------------------------------------------- 
 
-static inline arena_expect_t arena_err(ErrorCode e) {
+static inline arena_expect_t arena_err(error_code_t e) {
     return (arena_expect_t){
         .has_value = false,
         .u.error   = e
@@ -740,7 +740,7 @@ static inline void_ptr_expect_t vp_ok(void *p) {
 }
 // -------------------------------------------------------------------------------- 
 
-static inline void_ptr_expect_t vp_err(ErrorCode e) {
+static inline void_ptr_expect_t vp_err(error_code_t e) {
     return (void_ptr_expect_t){
         .has_value = false,
         .u.error   = e
@@ -1739,7 +1739,7 @@ pool_expect_t init_dynamic_pool(size_t block_size,
     if (!a.has_value) {
         return (pool_expect_t){
             .has_value = false,
-            .u.error   = a.u.error   /* propagate underlying ErrorCode */
+            .u.error   = a.u.error   /* propagate underlying error_code_t */
         };
     }
 
@@ -2013,7 +2013,7 @@ inline void_ptr_expect_t alloc_pool(pool_t *pool, bool zeroed) {
         };
     }
 
-    // pool_grow must return bool or be updated to return ErrorCode.
+    // pool_grow must return bool or be updated to return error_code_t.
     bool ok = pool_grow(pool);
     if (!ok) {
         // pool_grow failure means arena alloc failed
@@ -2495,7 +2495,7 @@ static inline freelist_expect_t freelist_ok(freelist_t* fl) {
 }
 // -------------------------------------------------------------------------------- 
 
-static inline freelist_expect_t freelist_err(ErrorCode e) {
+static inline freelist_expect_t freelist_err(error_code_t e) {
     return (freelist_expect_t){
         .has_value = false,
         .u.error   = e
@@ -3614,7 +3614,7 @@ static inline buddy_expect_t buddy_ok(buddy_t *b) {
 }
 // -------------------------------------------------------------------------------- 
 
-static inline buddy_expect_t buddy_err(ErrorCode e) {
+static inline buddy_expect_t buddy_err(error_code_t e) {
     return (buddy_expect_t){ .has_value = false, .u.error = e };
 }
 // -------------------------------------------------------------------------------- 

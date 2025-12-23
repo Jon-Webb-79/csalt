@@ -17,7 +17,7 @@
 // ================================================================================ 
 // DEFIINE CONST CHAR RETURNS FOR TYPES 
 
-const char* error_to_string(ErrorCode code)
+const char* error_to_string(error_code_t code)
 {
     switch (code) {
         case NO_ERROR:               return "No error";
