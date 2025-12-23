@@ -11,15 +11,6 @@ The ``c_error.h`` interface defines a common error model for the **csalt** libra
 This error handling model provides a protable alternative to ``errno`` which is 
 not portable, nor defined in any standard.
 
-1. Invoke an operation on a csalt object.
-2. Retrieve the most recent error condition from that object.
-3. Convert the error to a human-readable message for logs or diagnostics.
-
-By convention, ``NO_ERROR`` is ``0`` and all error conditions are **negative** values.
-This avoids collisions with valid sizes/indices and allows simple checks like
-``if (err < 0)`` to detect failures.
-
-
 Approach
 ========
 
@@ -54,9 +45,9 @@ following four categories:
 
 4. **Error Description (Preferred Maximum Detail)**  
    The function returns an ``expected``-style struct such as ``arena_expect_t``
-   or ``memory_expect_t`` that:
+   or ``void_ptr_expect_t`` that:
    - explicitly indicates success or failure, and  
-   - provides a specific ``ErrorCode`` describing the failure cause.
+   - provides a specific ``error_code_t`` describing the failure cause.
 
    This form provides the most complete diagnostic information.
 
@@ -82,7 +73,7 @@ failure, which may be undesirable in extremely hot code paths. Therefore,
   - MISRA compliance tools.
 
   If type-4 handling is in use for a given function, coding errors may still
-  manifest as ``ErrorCode`` results, but this is considered a *byproduct* rather
+  manifest as ``error_code_t`` results, but this is considered a *byproduct* rather
   than an intentional feature.
 
 Summary
@@ -96,7 +87,7 @@ performance.
 Design Notes
 ============
 
-- **Status location:** Each csalt object carries its own ``ErrorCode`` so status is
+- **Status location:** Each csalt object carries its own ``error_code_t`` so status is
   scoped to the object that was acted upon (no global state).
 - **Return values:** Functions may return useful values directly (e.g., sizes, counts)
   while reporting failure through the object’s error field.
@@ -109,7 +100,7 @@ API Reference
 ErrorCode enumeration (overview)
 --------------------------------
 
-The table below summarizes each :c:enum:`ErrorCode` value, its category, and intended use.
+The table below summarizes each :c:enum:`error_code_t` value, its category, and intended use.
 Authoritative comments live in ``c_error.h``; this overview is for quick reference.
 
 .. list-table::
@@ -358,7 +349,7 @@ Legend
 
 See also
 ~~~~~~~~
-- :c:func:`error_to_string` — convert any :c:enum:`ErrorCode` to a short human-readable message (strings defined in code comments).
+- :c:func:`error_to_string` — convert any :c:enum:`error_code_t` to a short human-readable message (strings defined in code comments).
 
 
 Logging Helper Functions 
@@ -378,7 +369,7 @@ error_cat_to_string
 
 Error Category Predicates 
 -------------------------
-These helpers classify an :c:enum:`ErrorCode` into the range-based taxonomy
+These helpers classify an :c:enum:`error_code_t` into the range-based taxonomy
 (-1xx argument, -2xx memory, …). Each function returns ``true`` iff the code
 belongs to that category.
 
@@ -442,7 +433,7 @@ belongs to that category.
 Error Handling Marco 
 ====================
 The library provides a small set of convenience macros to model C++23-style
-``std::expected<T, ErrorCode>`` in C. These macros are documented in detail
+``std::expected<T, error_code_t>`` in C. These macros are documented in detail
 in the C headers; this section simply exposes those docstrings into the
 Sphinx documentation.  If the user wishes to ommit macros for explicit type 
 performance, especially for scenarios where the code must meet MISRA standards 
