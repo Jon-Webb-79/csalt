@@ -377,7 +377,7 @@ belongs to that category.
 
    #include "c_error.h"
 
-   void log_by_category(ErrorCode ec) {
+   void log_by_category(error_code_t ec) {
        /* Fast boolean checks (header-defined static inline) */
        if (ec_is_mem(ec)) {
            fprintf(stderr, "[MEM/-2xx] %s\n", error_to_string(ec));

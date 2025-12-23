@@ -772,9 +772,6 @@ arena_expect_t init_sarena(void *buffer, size_t bytes);
  *      if @p arena was created as @c STATIC. Static arenas are built inside
  *      caller-owned buffers and must not be freed here.
  *
- * **ERRORS:**
- * Sets @c errno to EINVAL or EPERM as described above.
- *
  * @note   For **STATIC** arenas (from @c init_static_arena()/@c init_sarena()),
  *         the arena header lives inside the caller’s buffer; freeing it here
  *         would be invalid. In STATIC mode the caller manages the buffer’s
@@ -795,8 +792,7 @@ arena_expect_t init_sarena(void *buffer, size_t bytes);
  *   head chunk). Each growth chunk is a single-malloc block freed with
  *   @c free(chunk_header). Internal pointers such as @c chunk->chunk must
  *   never be freed directly.
- * - Static: @c free_arena() must not free the caller’s buffer; it returns
- *   with @c errno = EPERM.
+ * - Static: @c free_arena() must not free the caller’s buffer.
  *
  * @par Example (dynamic arena)
  * @code{.c}
@@ -826,7 +822,7 @@ arena_expect_t init_sarena(void *buffer, size_t bytes);
  * arena_t *a = expect.u.value;
  *
  * // Later:
- * free_arena(a);   // ERROR: sets errno=EPERM (static arenas are caller-owned)
+ * free_arena(a);  
  * // Correct teardown:
  * // (Optionally) reset_arena(a, false);
  * free(buf);       // caller frees its own buffer
@@ -1886,14 +1882,10 @@ size_t arena_min_chunk_size(const arena_t* arena);
  *
  * @return void  (errors reported via @c errno and early return)
  *
- * @retval (no return), errno=EPERM
- *         if @p arena is a STATIC arena (growth is never permitted for static).
- *
  * @note This function does not shrink or free existing chunks. To drop extra
  *       chunks and return to a single head chunk, use @c reset_arena(arena, true).
  *
- * @note Has no effect on STATIC arenas; calling it on a STATIC arena sets
- *       @c errno=EPERM and returns without modifying the arena.
+ * @note Has no effect on STATIC arenas.
  *
  * @warning Not thread-safe; coordinate with other threads that allocate from or
  *          modify the same arena.
@@ -6348,8 +6340,7 @@ arena_expect_t init_arena_with_buddy(buddy_t *buddy,
  *   - the @p arena pointer becomes invalid and must not be dereferenced.
  *
  * This function is intended only for arenas that do not own their memory
- * independently. If @p arena->owns_memory is non-zero, the function refuses
- * to proceed and fails with EPERM.
+ * independently.
  *
  * Failure is only apprant based in false value return.  Possible failure 
  * reasons are the following 

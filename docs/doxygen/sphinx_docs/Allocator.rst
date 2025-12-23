@@ -11,9 +11,9 @@ dangling pointers in large applications.
 
 The *C Allocator module* in this library provides lightweight and efficient
 allocation utilities implemented in pure C and declared in
-``c_allocator.h``. The module has no external dependencies within the CSalt
-library, making it suitable for independent use as well as integration into
-larger systems.
+``c_allocator.h``.  The only dpendency this module has within the CSalt 
+library is the ``c_error.h`` file, making it suitable ifor integration 
+into larger systems.
 
 Build-time configuration flags modify behavior depending on needs:
 
@@ -155,7 +155,7 @@ of ``arena_t`` data types to catch and convey errors to a user.
        bool has_value;
        union {
            arena_t* value;
-           ErrorCode error;
+           error_code_t error;
        } u;
    } arena_expect_t;
 
@@ -525,7 +525,7 @@ of ``pool_t`` data types to catch and convey errors to a user.
        bool has_value;
        union {
            pool_t* value;
-           ErrorCode error;
+           error_code_t error;
        } u;
    } pool_expect_t;
 
@@ -902,7 +902,7 @@ of ``freelist_t`` data types to catch and convey errors to a user.
        bool has_value;
        union {
            freelist_t* value;
-           ErrorCode error;
+           error_code_t error;
        } u;
    } freelist_expect_t;
 
@@ -1205,7 +1205,7 @@ of ``buddy_t`` data types to catch and convey errors to a user.
        bool has_value;
        union {
            buddy_t* value;
-           ErrorCode error;
+           error_code_t error;
        } u;
    } buddy_expect_t;
 
@@ -1449,7 +1449,7 @@ of ``slab_t`` data types to catch and convey errors to a user.
        bool has_value;
        union {
            slab_t* value;
-           ErrorCode error;
+           error_code_t error;
        } u;
    } slab_expect_t;
 
