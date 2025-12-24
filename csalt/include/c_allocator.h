@@ -49,11 +49,9 @@
 #include <stdlib.h>  // size_t 
 #include <stdbool.h> // true and false
 #include <stdint.h>  // unit8_t
-#include <errno.h>   // errno
 #include <string.h>  // memset
 #include <stddef.h> // max_aling_t
 #include <stdalign.h> // alignof 
-#include <errno.h>
 
 #include "c_error.h"
 // ================================================================================ 
@@ -98,8 +96,6 @@ typedef struct {
  *
  * This function allocates `size` bytes using the allocator identified
  * by `ctx`. If `zeroed` is true, the returned memory must be
- * zero-initialized. If allocation fails, the implementation should set
- * errno (typically to ENOMEM) and return NULL.
  *
  * @param ctx     Allocator context (arena, pool, heap wrapper, etc.)
  * @param size    Number of bytes to allocate
@@ -115,8 +111,7 @@ typedef void_ptr_expect_t (*alloc_prototype)(void* ctx, size_t size, bool zeroed
  *
  * This function allocates `size` bytes with at least `align` alignment.
  * Alignment must be a power of two. If `zeroed` is true, the returned
- * memory must be zero-initialized. On failure, errno must be set and
- * NULL returned.
+ * memory must be zero-initialized.
  *
  * @param ctx     Allocator context
  * @param size    Number of bytes to allocate
@@ -135,9 +130,6 @@ typedef void_ptr_expect_t (*alloc_aligned_prototype)(void* ctx, size_t size, siz
  * may move the allocation; if they do, the old contents up to
  * `min(old_size, new_size)` must remain intact. If `zeroed` is true and
  * `new_size > old_size`, the newly added region must be zeroed.
- *
- * If reallocation fails, errno must be set and NULL returned. In that
- * case, the caller must retain `old_ptr` unchanged.
  *
  * @param ctx       Allocator context
  * @param old_ptr   Pointer to existing allocation (may be NULL)
@@ -158,9 +150,6 @@ typedef void_ptr_expect_t (*realloc_prototype)(void* ctx, void* old_ptr,
  * minimum alignment requirement for the resulting allocation.
  * `align` must be a power of two. If expanded, new memory must be zeroed
  * when `zeroed` is true.
- *
- * On failure, errno must be set and NULL returned, and the caller must
- * continue to use the original block (`old_ptr`).
  *
  * @param ctx       Allocator context
  * @param old_ptr   Pointer to an existing allocation
@@ -284,10 +273,6 @@ typedef struct {
  * @retval FEATURE_DISABLED
  *      If dynamic arenas are disabled at compile time
  *      (@c ARENA_ENABLE_DYNAMIC == 0).
- *
- * If your implementation maps ::error_code_t values to @c errno (e.g., via
- * @c set_errno_from_error()), then @c errno will be set consistently with
- * @c result.u.error on failure.
  *
  * @note On success, the returned arena’s first chunk is fully initialized and
  *       ready for allocation via @c alloc_arena() or @c alloc_arena_aligned().
@@ -763,14 +748,6 @@ arena_expect_t init_sarena(void *buffer, size_t bytes);
  * all pointers previously returned by @c alloc_arena() become invalid.
  *
  * @param arena  Pointer to a dynamic arena instance to destroy.
- *
- * @return void  (errors are reported via @c errno and early-return)
- *
- * @retval (no return), errno=EINVAL
- *      if @p arena is @c NULL.
- * @retval (no return), errno=EPERM
- *      if @p arena was created as @c STATIC. Static arenas are built inside
- *      caller-owned buffers and must not be freed here.
  *
  * @note   For **STATIC** arenas (from @c init_static_arena()/@c init_sarena()),
  *         the arena header lives inside the caller’s buffer; freeing it here
@@ -1762,8 +1739,7 @@ size_t arena_chunk_count(const arena_t* arena);
  *
  * @param arena  Arena to query.
  *
- * @return The @c alloc_t value for this arena. If @p arena is NULL, sets
- *         @c errno to @c EINVAL and returns @c ALLOC_INVALID.
+ * @return The @c alloc_t value for this arena.
  *
  * @retval STATIC   The arena uses caller-supplied storage and cannot grow.
  * @retval DYNAMIC  The arena was dynamically allocated and may grow (subject
@@ -1873,14 +1849,9 @@ size_t arena_min_chunk_size(const arena_t* arena);
  * - When @p toggle is @c true, subsequent allocations that do not fit in the
  *   current tail may grow the arena (subject to other limits such as
  *   @c min_chunk).
- * - When @p toggle is @c false, allocations that do not fit in the current tail
- *   will fail with @c errno=EPERM (no growth); the arena remains usable for
- *   allocations that do fit in the existing capacity.
  *
  * @param arena   Arena to modify. Must be a valid pointer to a @b dynamic arena.
  * @param toggle  @c true to allow growth; @c false to forbid growth.
- *
- * @return void  (errors reported via @c errno and early return)
  *
  * @note This function does not shrink or free existing chunks. To drop extra
  *       chunks and return to a single head chunk, use @c reset_arena(arena, true).
@@ -1926,8 +1897,8 @@ void toggle_arena_resize(arena_t* arena, bool toggle);
  * If @p arena is NULL, the function writes: "Arena: NULL\n" and returns @c true.
  *
  * The function guarantees no truncation: it uses a bounded formatter and
- * returns @c false if the output would exceed @p buffer_size (leaving @c errno
- * set). On success, the buffer is NUL-terminated.
+ * returns @c false if the output would exceed @p buffer_size. 
+ * On success, the buffer is NUL-terminated.
  *
  * @param arena         Arena to describe. May be NULL (prints "Arena: NULL\n").
  * @param buffer        Destination character buffer for the report. Must not be NULL.
@@ -1935,17 +1906,7 @@ void toggle_arena_resize(arena_t* arena, bool toggle);
  *                      terminating NUL. Must be > 0.
  *
  * @return @c true on success (fully written, NUL-terminated);
- *         @c false on error with @c errno set.
- *
- * @retval false, errno=EINVAL
- *         if @p buffer is NULL, or @p buffer_size is 0.
- *
- * @retval false, errno=EINVAL
- *         if an internal formatting error is detected.
- *
- * @retval false, errno=ERANGE
- *         if there is not enough space in @p buffer for the full report (the
- *         function avoids partial/truncated output).
+ *         @c false on error.
  *
  * @note The report includes:
  *       - Type: "STATIC" or "DYNAMIC" (derived from @c arena->mem_type).
@@ -1987,7 +1948,6 @@ bool arena_stats(const arena_t* arena, char* buffer, size_t buffer_size);
  *
  * @return true if the arena owns its backing memory; false otherwise.
  *
- * @retval false, errno=EINVAL  if @p arena is NULL
  * @retval true   Arena created with init_darena() or init_dynamic_arena()
  *                (owns its dynamically allocated memory)
  * @retval true   Arena created with init_sarena() or init_static_arena()
@@ -2070,7 +2030,7 @@ bool arena_owns_memory(const arena_t* arena);
  * @param zeroed Whether the memory should be zero-initialized.
  *
  * @retval void* Pointer to a block of at least @p size bytes.
- * @retval NULL  On failure, with errno set.
+ * @retval NULL  On failure.
  */
 static inline void_ptr_expect_t arena_v_alloc(void* ctx, size_t size, bool zeroed) {
     arena_t* arena = (arena_t*)ctx;
@@ -2095,7 +2055,7 @@ static inline void_ptr_expect_t arena_v_alloc(void* ctx, size_t size, bool zeroe
  * @param zeroed Whether the memory should be zero-initialized.
  *
  * @retval void* Pointer to an aligned block of at least @p size bytes.
- * @retval NULL  On failure, with errno set.
+ * @retval NULL  On failure.
  */
 static inline void_ptr_expect_t arena_v_alloc_aligned(void* ctx, size_t size,
                                           size_t align, bool zeroed) {
@@ -2126,7 +2086,7 @@ static inline void_ptr_expect_t arena_v_alloc_aligned(void* ctx, size_t size,
  * @param zeroed    Whether any expanded portion must be zero-initialized.
  *
  * @retval void* New pointer to the resized allocation on success.
- * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ * @retval NULL  On failure.
  */
 static inline void_ptr_expect_t arena_v_realloc(void* ctx, void* old_ptr,
                                     size_t old_size, size_t new_size,
@@ -2148,9 +2108,6 @@ static inline void_ptr_expect_t arena_v_realloc(void* ctx, void* old_ptr,
  * min(@p old_size, @p new_size). If @p zeroed is true and the
  * allocation grows, any newly added region must be zero-initialized.
  *
- * On error, errno is set and NULL is returned. In that case, the caller
- * must continue to use @p old_ptr unchanged.
- *
  * This function implements the @ref realloc_aligned_prototype interface
  * for arena-backed allocators.
  *
@@ -2162,7 +2119,7 @@ static inline void_ptr_expect_t arena_v_realloc(void* ctx, void* old_ptr,
  * @param align     Required alignment (power of two).
  *
  * @retval void* Pointer to the resized, aligned allocation on success.
- * @retval NULL  On failure, with errno set (caller keeps @p old_ptr).
+ * @retval NULL  On failure.
  */
 static inline void_ptr_expect_t arena_v_realloc_aligned(void* ctx, void* old_ptr,
                                             size_t old_size, size_t new_size,
@@ -2200,9 +2157,6 @@ static inline void arena_v_return(void* ctx, void* ptr) {
  *
  * Releases all memory owned by the arena referenced by @p ctx. After
  * this call, the arena must not be used again.
- *
- * If @p ctx is NULL, errno is set to EINVAL and the function returns
- * without performing any action.
  *
  * This function implements the @ref free_prototype interface for
  * arena-backed allocators.
@@ -3039,8 +2993,7 @@ void free_pool(pool_t* pool);
  *
  * @param pool  Pool to query (must be non-NULL).
  *
- * @return The payload size in bytes, or @c 0 if @p pool is @c NULL (and
- *         @c errno is set to @c EINVAL).
+ * @return The payload size in bytes, or @c 0 if @p pool is @c NULL 
  *
  * @sa pool_stride(), alloc_pool(), return_pool_element(),
  *     init_pool_with_arena(), pool_total_blocks(), pool_free_blocks()
@@ -3064,8 +3017,7 @@ size_t pool_block_size(const pool_t* pool);
  *
  * @param pool  Pool to query (must be non-NULL).
  *
- * @return The stride in bytes, or @c 0 if @p pool is @c NULL (and @c errno is
- *         set to @c EINVAL).
+ * @return The stride in bytes, or @c 0 if @p pool is @c NULL 
  *
  * @note The stride is @c max(block_size, sizeof(void*)), rounded up to the
  *       pool’s effective alignment.
@@ -3094,7 +3046,7 @@ size_t pool_stride(const pool_t* pool);
  * @param pool  Pool to query (must be non-NULL).
  *
  * @return Total number of blocks the pool has made available, or @c 0 if
- *         @p pool is @c NULL (and @c errno is set to @c EINVAL).
+ *         @p pool is @c NULL 
  *
  * @note This does not necessarily equal the number of currently usable blocks
  *       if @c reset_pool() was called without resetting the backing arena.
@@ -3121,8 +3073,7 @@ size_t pool_total_blocks(const pool_t* pool);
  *
  * @param pool  Pool to query (must be non-NULL).
  *
- * @return Number of free blocks, or @c 0 if @p pool is @c NULL (and @c errno is
- *         set to @c EINVAL).
+ * @return Number of free blocks, or @c 0 if @p pool is @c NULL  
  *
  * @sa alloc_pool(), return_pool_element(), reset_pool(),
  *     pool_total_blocks(), pool_stride()
@@ -3145,7 +3096,6 @@ size_t pool_free_blocks(const pool_t* pool);
  * @param pool  Valid pool handle.
  *
  * @return The pool's alignment in bytes on success.
- * @retval 0 and @c errno=EINVAL if @p pool is NULL or has no arena.
  *
  * @note The returned alignment is always >= alignof(void*).
  * @note Does not modify errno on success.
@@ -3164,7 +3114,6 @@ size_t pool_alignment(const pool_t* pool);
  * @param pool  Valid pool handle.
  *
  * @return Remaining blocks available in the current slice.
- * @retval 0 and @c errno=EINVAL if @p pool is NULL or has no arena.
  *
  * @note This value counts *only* unused bump-region blocks. Additional free
  *       blocks may exist on the free list; see @c pool_free_blocks().
@@ -3181,7 +3130,6 @@ size_t pool_bump_remaining_blocks(const pool_t* pool);
  * @param pool  Valid pool handle.
  *
  * @return Number of allocated (live) blocks owned by the caller.
- * @retval 0 and @c errno=EINVAL if @p pool is NULL or has no arena.
  *
  * @note Computed as:
  *       @code
@@ -3257,7 +3205,7 @@ alloc_t pool_mtype(const pool_t* pool);
  *        * Dynamic allocation support is enabled (ARENA_ENABLE_DYNAMIC),
  *        * The pool's arena is @c DYNAMIC,
  *        * The arena's own resize flag is enabled (@c arena->resize != 0).
- *    Otherwise, the pool remains non-growing and @c errno is set.
+ *    Otherwise, the pool remains non-growing.
  *
  * @param pool   Pointer to a valid pool instance.
  * @param toggle @c true to enable pool growth, @c false to disable it.
@@ -3267,11 +3215,6 @@ alloc_t pool_mtype(const pool_t* pool);
  * @note On failure, the pool growth setting remains unchanged.
  *
  * @par Errors
- * @c errno is set to:
- *   - @c EINVAL if @p pool or @c pool->arena is NULL.
- *   - @c ENOTSUP if the library was built without dynamic arena support.
- *   - @c EPERM if enabling growth on a static arena or on a dynamic arena
- *              whose own resize flag is disabled.
  *
  * @warning Enabling growth does not guarantee future allocations will succeed;
  *          it only permits @c alloc_pool() to request more memory. Allocation
@@ -3285,12 +3228,6 @@ void toggle_pool_growth(pool_t* pool, bool toggle);
 
 /**
  * @brief Format a human-readable summary of a pool into @p buffer.
- *
- * Mirrors arena_stats() style and errno behavior:
- * - On invalid arguments (NULL buffer or size==0) => false, errno=EINVAL.
- * - If @p pool is NULL, writes "Pool: NULL\n" and returns true.
- * - All formatting uses the internal _buf_appendf() which protects against
- *   truncation and sets errno accordingly (ERANGE, EINVAL).
  *
  * The report includes:
  *  - Kind (STATIC/DYNAMIC) from underlying arena
@@ -3363,12 +3300,12 @@ PoolCheckPoint save_pool(const pool_t* pool);
  * @param[in,out] pool  Pointer to the pool to restore. Must not be NULL.
  * @param[in]     cp    Checkpoint previously returned by save_pool().
  *
- * @return true on success, false on failure with errno set.
+ * @return true on success, false on failure.
  *
  * @retval true  Pool successfully restored to checkpoint state.
- * @retval false Restoration failed (see errno).
+ * @retval false Restoration failed.
  *
- * @retval false, errno=EINVAL
+ * @retval false, for the following reasons
  *      - @p pool is NULL
  *      - Checkpoint is invalid or corrupted
  *      - Checkpoint's bump pointer is out of bounds
@@ -3426,9 +3363,8 @@ bool restore_pool(pool_t* pool, PoolCheckPoint cp);
  *
  * @param[in] pool  Pointer to the pool to query.
  *
- * @return Number of payload bytes in use, or 0 on error with errno set.
+ * @return Number of payload bytes in use, or 0 on error.
  *
- * @retval 0, errno=EINVAL  if @p pool is NULL
  */
 size_t pool_size(const pool_t* pool);
 // -------------------------------------------------------------------------------- 
@@ -3447,9 +3383,8 @@ size_t pool_size(const pool_t* pool);
  *
  * @param[in] pool  Pointer to the pool to query.
  *
- * @return Total capacity in payload bytes, or 0 on error with errno set.
+ * @return Total capacity in payload bytes, or 0 on error.
  *
- * @retval 0, errno=EINVAL  if @p pool is NULL
  */
 size_t pool_alloc(const pool_t* pool);
 // -------------------------------------------------------------------------------- 
@@ -3466,9 +3401,8 @@ size_t pool_alloc(const pool_t* pool);
  *
  * @param[in] pool  Pointer to the pool to query.
  *
- * @return Total memory footprint in bytes, or 0 on error with errno set.
+ * @return Total memory footprint in bytes, or 0 on error.
  *
- * @retval 0, errno=EINVAL  if @p pool is NULL
  */
 size_t pool_footprint(const pool_t* pool);
 // -------------------------------------------------------------------------------- 
@@ -3520,8 +3454,6 @@ bool is_pool_ptr(const pool_t* pool, const void* ptr);
  * @return `true` if the pool owns its arena;  
  *         `false` if it borrows an external arena or if `pool == NULL`.
  *
- * @retval false, errno = EINVAL  
- *     If `pool` is `NULL`.
  *
  * @code{.c}
  * // Example:
@@ -3552,7 +3484,7 @@ bool pool_owns_memory(const pool_t* pool);
  *
  * - Obtains one block from `pool` via `alloc_pool(pool)`.
  * - Casts the result to `T*`.
- * - Returns `NULL` on failure; `errno` is set by the allocator.
+ * - Returns `NULL` on failure.
  *
  * @note
  * - Caller must initialize the returned object.
@@ -4261,15 +4193,9 @@ freelist_expect_t init_static_freelist(void* buffer, size_t bytes, size_t alignm
  * @param fl
  *        Pointer to a freelist. Must refer to a dynamically allocated freelist.
  *
- * @retval void
- *         The function does not return a value. On failure it sets errno:
- *
- *         - `EINVAL` : `fl` is NULL or its parent arena pointer is NULL  
- *         - `EPERM`  : freelist does not own its memory (i.e., static freelist)
- *
  * @note
  *        This function only applies to freelists that own their arena.
- *        Attempting to free a static freelist does nothing and sets errno.
+ *        Attempting to free a static freelist does nothing.
  *
  * @code{.c}
  * freelist_t* fl = init_dynamic_freelist(2048, 0, false);
@@ -4722,15 +4648,6 @@ void_ptr_expect_t realloc_freelist_aligned(freelist_t* fl,
  *        Pointer previously returned by a freelist allocation. Must not
  *        be NULL and must refer to a currently allocated block.
  *
- * @return
- *        Nothing. On error, `errno` is set to:
- *
- *        - EINVAL : @p fl is NULL  
- *        - EINVAL : @p ptr is NULL  
- *        - EINVAL : @p ptr does not lie inside the freelist region  
- *        - EINVAL : allocation header is corrupt or inconsistent  
- *        - EINVAL : block extends beyond freelist bounds  
- *        - EINVAL : freeing more bytes than the freelist thinks were used  
  *
  * @note
  *        Double frees, frees of foreign pointers, and corrupted metadata
@@ -4779,10 +4696,6 @@ void return_freelist_element(freelist_t* fl, void* ptr);
  *        Pointer to an initialized freelist. Must not be NULL. The freelist
  *        must have a valid `memory` region and non-zero capacity.
  *
- * @return
- *        Nothing. On error, `errno` is set to:
- *
- *        - EINVAL : `fl` is NULL or not properly initialized
  *
  * @note
  *        This operation invalidates all outstanding freelist allocations.
@@ -4916,9 +4829,7 @@ bool is_freelist_ptr_sized(const freelist_t* fl, const void* ptr, size_t size);
  *
  * @return
  *        Number of remaining bytes (`size_t`) that can be consumed by new
- *        allocations, or 0 on error. On failure, errno is set to:
- *
- *        - EINVAL : @p fl is NULL
+ *        allocations, or 0 on error.
  *
  * @code{.c}
  * size_t before = freelist_remaining(fl);
@@ -4941,9 +4852,7 @@ size_t freelist_remaining(const freelist_t* fl);
  *
  * @return
  *        An ::alloc_t value describing the arena's allocation mode, or
- *        ::ALLOC_INVALID if @p fl is NULL. On error, errno is set to:
- *
- *        - EINVAL : @p fl is NULL
+ *        ::ALLOC_INVALID if @p fl is NULL. On erreor.
  *
  * @note
  *        Typical values include STATIC and DYNAMIC, depending on how
@@ -4971,9 +4880,7 @@ alloc_t freelist_mtype(const freelist_t* fl);
  *
  * @return
  *        Number of bytes accounted as in use, or 0 on error.
- *        On failure, errno is set to:
  *
- *        - EINVAL : @p fl is NULL
  */
 size_t freelist_size(const freelist_t* fl);
 // -------------------------------------------------------------------------------- 
@@ -4994,9 +4901,7 @@ size_t freelist_size(const freelist_t* fl);
  *
  * @return
  *        Total usable freelist capacity in bytes, or 0 on error.
- *        On failure, errno is set to:
  *
- *        - EINVAL : @p fl is NULL
  */
 size_t freelist_alloc(const freelist_t* fl);
 // -------------------------------------------------------------------------------- 
@@ -5018,9 +4923,7 @@ size_t freelist_alloc(const freelist_t* fl);
  *
  * @return
  *        Total bytes reserved from the arena for this freelist, or 0 on error.
- *        On failure, errno is set to:
  *
- *        - EINVAL : @p fl is NULL
  */
 size_t total_freelist_alloc(const freelist_t* fl);
 // -------------------------------------------------------------------------------- 
@@ -5039,9 +4942,7 @@ size_t total_freelist_alloc(const freelist_t* fl);
  *
  * @return
  *        The freelist's base alignment in bytes, or 0 on error.
- *        On failure, errno is set to:
  *
- *        - EINVAL : @p fl is NULL
  */
 size_t freelist_alignment(const freelist_t* fl);
 // -------------------------------------------------------------------------------- 
@@ -5068,9 +4969,6 @@ size_t freelist_alignment(const freelist_t* fl);
  *        true  if the freelist owns its arena and is allowed to free it  
  *        false if the freelist is non-owning, or if @p fl is NULL  
  *
- *        When @p fl is NULL, errno is set to:
- *
- *        - EINVAL : @p fl is NULL
  */
 bool freelist_owns_arena(const freelist_t* fl);
 // -------------------------------------------------------------------------------- 
@@ -5095,8 +4993,7 @@ bool freelist_owns_arena(const freelist_t* fl);
  *
  * @return
  *     The minimum number of usable bytes (`size_t`) required to initialize a
- *     freelist. Any attempt to construct a freelist with a smaller size will
- *     fail with `errno = EINVAL`.
+ *     freelist.
  *
  * @par Example
  * @code{.c}
@@ -5109,7 +5006,7 @@ bool freelist_owns_arena(const freelist_t* fl);
  * freelist_t* fl = init_static_freelist(buffer, sizeof buffer, 0);
  *
  * if (!fl) {
- *     fprintf(stderr, "Freelist creation failed: %s\n", strerror(errno));
+ *     // Hanlde error
  * }
  * @endcode
  */
@@ -5155,7 +5052,6 @@ size_t min_freelist_alloc();
  *
  * @retval false
  *         An error occurred. In this case:
- *           - `EINVAL` is set if `buffer` is NULL or size is zero.
  *           - Any internal `_buf_appendf()` failure (buffer too small)
  *             results in `false`, but the buffer may contain partial output.
  *
@@ -5888,7 +5784,6 @@ static inline void v_free(void* ctx) {
  *
  *   - `allocate_aligned`  
  *        Accepts alignment requests up to `alignof(max_align_t)`.  
- *        Larger alignments are rejected with `EINVAL`, since `malloc()`
  *        cannot guarantee stricter alignment.
  *
  *   - `reallocate`  
@@ -6360,7 +6255,7 @@ arena_expect_t init_arena_with_buddy(buddy_t *buddy,
  *
  * @retval true  On success; the region has been returned to @p buddy and
  *               @p arena is no longer valid.
- * @retval false On failure, with errno set as described above.
+ * @retval false On failure.
  *
  * @code{.c}
  * buddy_t *b = init_buddy_allocator(4096u, 64u, alignof(max_align_t));
@@ -6503,7 +6398,6 @@ void_ptr_expect_t alloc_buddy_aligned(buddy_t *b,
  *
  * Freeing proceeds as follows:
  *
- *   1. If @p b is NULL, the function fails with @c errno = EINVAL.
  *   2. If @p ptr is NULL, the call is treated as a no-op (like `free(NULL)`).
  *   3. The block header is read to determine the block's order and offset.
  *   4. The allocator’s accounting value ``len`` is decreased by the block size.
@@ -6523,14 +6417,6 @@ void_ptr_expect_t alloc_buddy_aligned(buddy_t *b,
  * @return
  *     `true` on success, or `false` on failure.
  *
- * @retval false
- *     The function returns `false` and sets @c errno under these conditions:
- *
- *       - @c EINVAL  
- *         - @p b is NULL  
- *         - The header preceding @p ptr is invalid  
- *         - The block order is outside the range [`min_order`, `max_order`]  
- *         - The recorded block offset/size lies outside the allocator’s pool  
  *
  * @note
  *     After this operation, @p ptr and any derived pointers become invalid.
@@ -6818,8 +6704,7 @@ void_ptr_expect_t realloc_buddy_aligned(buddy_t *b,
  *   6. The user pointer @p ptr must point inside the block, at or after the
  *      header and strictly before the block end.
  *
- * If all checks succeed, the function returns `true` and leaves @c errno
- * unchanged. On failure it returns `false` and sets @c errno.
+ * If all checks succeed, the function returns `true`.
  *
  * @param b
  *     Pointer to a ::buddy_t allocator. Must not be NULL.
@@ -6830,18 +6715,6 @@ void_ptr_expect_t realloc_buddy_aligned(buddy_t *b,
  * @return
  *     `true` if @p ptr is structurally valid for @p b, `false` otherwise.
  *
- * @retval false
- *     The function returns `false` and sets @c errno under these conditions:
- *
- *       - @c EINVAL  
- *         - @p b is NULL  
- *         - @p ptr is NULL  
- *         - The header is not located immediately before @p ptr  
- *         - The header @c order is outside the valid range  
- *         - The header @c block_offset plus block size exceeds the pool  
- *         - The block offset is not properly aligned for its size  
- *         - @p ptr does not lie within the computed block range
- *
  * @note
  *     This function does *not* track allocation state; it cannot distinguish
  *     between allocated and freed blocks. It only verifies that @p ptr looks
@@ -6850,7 +6723,7 @@ void_ptr_expect_t realloc_buddy_aligned(buddy_t *b,
  * @warning
  *     Passing arbitrary pointers (e.g., stack addresses or pointers from
  *     another allocator) is safe but will cause the function to return
- *     `false` with @c errno = EINVAL. Misuse of the buddy allocator API
+ *     `false`. Misuse of the buddy allocator API
  *     (such as double frees) may still result in undefined behavior elsewhere.
  *
  * @code{.c}
@@ -6898,7 +6771,7 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr);
  *      where @c block_size is `2^order` derived from the internal header.
  *
  * If both conditions hold, the function returns `true`. Otherwise, it returns
- * `false` and sets @c errno appropriately.
+ * `false`.
  *
  * @param b
  *     Pointer to a ::buddy_t allocator. Must not be NULL.
@@ -6915,14 +6788,6 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr);
  *     `true` if @p ptr is a valid buddy pointer for @p b and @p size fits
  *     within the underlying block; `false` otherwise.
  *
- * @retval false
- *     The function returns `false` and sets @c errno under these conditions:
- *
- *       - @c EINVAL  
- *         - ::is_buddy_ptr(@p b, @p ptr) fails (invalid pointer or allocator)  
- *
- *       - @c ERANGE  
- *         - @p size is larger than the usable capacity of the underlying block
  *
  * @note
  *     This function is particularly useful for debug assertions and defensive
@@ -6943,13 +6808,6 @@ bool is_buddy_ptr(const buddy_t *b, const void *ptr);
  * // This should succeed: we requested 128 bytes.
  * if (!is_buddy_ptr_sized(b, p, 128)) {
  *     perror("is_buddy_ptr_sized");
- * }
- *
- * // This should fail with ERANGE if 4096 exceeds the block capacity.
- * if (!is_buddy_ptr_sized(b, p, 4096)) {
- *     if (errno == ERANGE) {
- *         fprintf(stderr, "Requested size is larger than block capacity.\n");
- *     }
  * }
  *
  * return_buddy_element(b, p);
@@ -6990,15 +6848,6 @@ bool is_buddy_ptr_sized(const buddy_t *b, const void *ptr, size_t size);
  * @return
  *     `true` on success, or `false` on failure.
  *
- * @retval false
- *     The function returns `false` and sets @c errno under the following
- *     conditions:
- *
- *       - @c EINVAL  
- *         - @p b is NULL  
- *         - The allocator structure has an invalid state  
- *           (e.g., missing pool, zero pool size, invalid min/max order values,
- *            or zero free-list levels)
  *
  * @note
  *     This operation does **not** release or reallocate OS memory; the pool is
@@ -7054,8 +6903,6 @@ bool reset_buddy(buddy_t *b);
  * @return
  *     The total number of bytes consumed from the pool, or `0` on error.
  *
- * @retval 0
- *     Returned when @p b is NULL, with @c errno set to @c EINVAL.
  *
  * @note
  *     This is analogous to "arena used" or "pool used" metrics in other
@@ -7086,8 +6933,6 @@ size_t buddy_alloc(const buddy_t *b);
  * @return
  *     The total footprint in bytes, or `0` on error.
  *
- * @retval 0
- *     Returned if @p b is NULL, with @c errno set to @c EINVAL.
  *
  * @note
  *     This value does *not* change during normal allocation or free
@@ -7113,8 +6958,6 @@ size_t total_buddy_alloc(const buddy_t *b);
  * @return
  *     Total size in bytes, or `0` on error.
  *
- * @retval 0
- *     Returned if @p b is NULL, with @c errno set to @c EINVAL.
  *
  * @note
  *     Equivalent to calling ::buddy_alloc_total().
@@ -7155,8 +6998,6 @@ size_t buddy_size(const buddy_t *b);
  * @return
  *     The number of free bytes remaining in the pool, or `0` on error.
  *
- * @retval 0
- *     Returned if @p b is NULL, with @c errno set to @c EINVAL.
  *
  * @code{.c}
  * buddy_t *b = init_buddy_allocator(4096, 64, 32);
@@ -7197,10 +7038,6 @@ size_t buddy_remaining(const buddy_t *b);
  *     The size in bytes of the largest free block, or `0` if no free blocks
  *     exist, or on error.
  *
- * @retval 0
- *     Returned if:
- *       - @p b is NULL (with @c errno set to @c EINVAL)
- *       - All free lists are empty (allocator fully consumed)
  *
  * @note
  *     A return value of `0` does not always mean the allocator is out of
@@ -7270,16 +7107,8 @@ size_t buddy_largest_block(const buddy_t *b);
  *     `true` if all output was successfully written to @p buffer, `false`
  *     if an error occurred (including insufficient buffer space).
  *
- * @retval false
- *     The function returns `false` and sets @c errno under these conditions:
- *
- *       - @c EINVAL  
- *         - @p buffer is NULL  
- *         - @p buffer_size is zero
- *
  *     If ::_buf_appendf() fails (e.g., due to insufficient buffer capacity),
- *     this function returns `false`. In that case, @c errno is not directly
- *     modified here; consult ::_buf_appendf()’s behavior if needed.
+ *     this function returns `false`.
  *
  * @note
  *     The function uses ::buddy_largest_block() to compute the largest free
@@ -7335,9 +7164,6 @@ bool buddy_stats(const buddy_t *buddy, char *buffer, size_t buffer_size);
  *
  * @return
  *     The allocator’s default alignment in bytes, or `0` on error.
- *
- * @retval 0
- *     Returned when @p buddy is NULL, with @c errno set to @c EINVAL.
  *
  * @note
  *     The default alignment applies to normal allocations made via
@@ -7844,8 +7670,7 @@ void_ptr_expect_t alloc_slab(slab_t *slab, bool zeroed);
  *
  * Returns a previously allocated object back to the slab allocator referenced
  * by @p slab. The pointer must have been obtained from ::alloc_slab() on the
- * same slab allocator instance; otherwise the function fails with errno set
- * to EINVAL.
+ * same slab allocator instance.
  *
  * Returning an object:
  *  - Pushes the slot back onto the slab’s global free list.
@@ -7858,12 +7683,12 @@ void_ptr_expect_t alloc_slab(slab_t *slab, bool zeroed);
  *  - Verifying that @p ptr is aligned on a slot boundary.
  *
  * @par Special Cases
- *  - If @p slab is NULL, the function returns false and sets errno = EINVAL.
+ *  - If @p slab is NULL, the function returns false.
  *  - If @p ptr is NULL, the call is treated like ``free(NULL)`` and returns
  *    true with no effect.
  *
  * @par Error Handling
- * The function returns false and sets errno = EINVAL when:
+ * The function returns false.
  *  - @p ptr does not belong to any page owned by the slab allocator.
  *  - @p ptr falls outside the slot region of a matching page.
  *  - @p ptr is misaligned (not on a slot boundary).
@@ -7918,7 +7743,7 @@ void_ptr_expect_t alloc_slab(slab_t *slab, bool zeroed);
  *             May be NULL.
  *
  * @retval true  Object successfully returned to the slab allocator.
- * @retval false Invalid pointer or invalid slab argument; errno is set to EINVAL.
+ * @retval false Invalid pointer.
  */
 bool return_slab(slab_t *slab, void *ptr);
 // -------------------------------------------------------------------------------- 
@@ -7936,12 +7761,11 @@ bool return_slab(slab_t *slab, void *ptr);
  * page headers, or unused slots.
  *
  * @par Error Handling
- * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
  *
  * @param slab Pointer to an initialized ::slab_t instance.
  *
  * @retval size_t Number of logical payload bytes currently in use,
- *                or 0 on error (with errno set to EINVAL).
+ *                or 0.
  */
 size_t slab_alloc(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
@@ -7965,13 +7789,10 @@ size_t slab_alloc(const slab_t *slab);
  * - ::total_slab_alloc() includes both page capacity and the control
  *   structure overhead.
  *
- * @par Error Handling
- * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
- *
  * @param slab Pointer to an initialized ::slab_t instance.
  *
  * @retval size_t Total size in bytes of all slab pages currently allocated,
- *                or 0 on error (with errno set to EINVAL).
+ *                or 01.
  */
 size_t slab_size(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
@@ -7996,12 +7817,12 @@ size_t slab_size(const slab_t *slab);
  * - ::total_slab_alloc() includes both the control structure and all pages.
  *
  * @par Error Handling
- * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
+ * If @p slab is NULL, the function returns 0.
  *
  * @param slab Pointer to an initialized ::slab_t instance.
  *
  * @retval size_t Total bytes consumed by the slab allocator, including
- *                metadata and pages, or 0 on error (with errno = EINVAL).
+ *                metadata and pages, or 0 on error.
  */
 size_t total_slab_alloc(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
@@ -8024,11 +7845,11 @@ size_t total_slab_alloc(const slab_t *slab);
  * - Understanding internal memory layout for debugging or statistics.
  *
  * @par Error Handling
- * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
+ * If @p slab is NULL, the function returns 0.
  *
  * @param slab Pointer to an initialized ::slab_t instance.
  *
- * @retval size_t Slot stride in bytes, or 0 on error (with errno = EINVAL).
+ * @retval size_t Slot stride in bytes, or 0.
  */
 size_t slab_stride(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
@@ -8054,12 +7875,12 @@ size_t slab_stride(const slab_t *slab);
  *   ``free_slots = slab_total_blocks(slab) - in_use_slots``.
  *
  * @par Error Handling
- * If @p slab is NULL, the function returns 0 and sets errno to EINVAL.
+ * If @p slab is NULL, the function returns 0.
  *
  * @param slab Pointer to an initialized ::slab_t instance.
  *
  * @retval size_t Total number of slots (objects) available across all pages,
- *                or 0 on error (with errno = EINVAL).
+ *                or 0 on error.
  */
 size_t slab_total_blocks(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
@@ -8085,11 +7906,11 @@ size_t slab_total_blocks(const slab_t *slab);
  * It is intended for diagnostics, assertions, and statistics—not hot paths.
  *
  * @par Error Handling
- * If @p slab is NULL, the function returns 0 and sets errno = EINVAL.
+ * If @p slab is NULL, the function returns 0.
  *
  * @param slab Pointer to an initialized ::slab_t instance.
  *
- * @retval size_t Number of free slots, or 0 on error with errno = EINVAL.
+ * @retval size_t Number of free slots, or 0 on error.
  */
 size_t slab_free_blocks(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
@@ -8106,11 +7927,11 @@ size_t slab_free_blocks(const slab_t *slab);
  * - Ensures that allocated objects meet the required ABI alignment.
  *
  * @par Error Handling
- * If @p slab is NULL, the function returns 0 and sets errno = EINVAL.
+ * If @p slab is NULL, the function returns 0.
  *
  * @param slab Pointer to an initialized ::slab_t instance.
  *
- * @retval size_t Alignment in bytes, or 0 on error (with errno = EINVAL).
+ * @retval size_t Alignment in bytes, or 0 on error.
  */
 size_t slab_alignment(const slab_t *slab);
 // -------------------------------------------------------------------------------- 
@@ -8131,9 +7952,8 @@ size_t slab_alignment(const slab_t *slab);
  * - ::slab_in_use_blocks() reports how many are actively allocated.
  *
  * @par Error Handling
- * - If @p slab is NULL, returns 0 and sets errno = EINVAL.
- * - If the slab’s object size is 0 (should never happen), returns 0 and
- *   sets errno = EINVAL.
+ * - If @p slab is NULL, returns 0.
+ * - If the slab’s object size is 0 (should never happen), returns 0.
  *
  * @param slab Pointer to an initialized ::slab_t instance.
  *
@@ -8161,19 +7981,11 @@ size_t slab_in_use_blocks(const slab_t *slab);
  * These checks ensure that the pointer was returned by ::alloc_slab() and
  * has not been corrupted or fabricated.
  *
- * @par Error Handling
- * The function returns false and sets errno = EINVAL when:
- *   - @p slab is NULL
- *   - @p ptr is NULL
- *   - @p ptr does not belong to any known slab page
- *   - @p ptr is inside a page but not inside the slot region
- *   - @p ptr is misaligned (not on a slot boundary)
- *
  * @param slab Pointer to an initialized ::slab_t instance.
  * @param ptr  Pointer to validate.
  *
  * @retval true  @p ptr is a valid object allocated from @p slab.
- * @retval false Pointer is invalid or does not belong to this slab (errno set).
+ * @retval false Pointer is invalid or does not belong to this slab.
  */
 bool is_slab_ptr(const slab_t *slab, const void *ptr);
 // -------------------------------------------------------------------------------- 
@@ -8197,9 +8009,6 @@ bool is_slab_ptr(const slab_t *slab, const void *ptr);
  *  - ``slot_size != 0``
  *  - ``slab_bytes >= page_hdr_bytes + slot_size``
  *
- * If any of these conditions fail, the function returns false and sets
- * errno = EINVAL.
- *
  * @par Behavior
  * For each page in the slab:
  *  - The slots region is recomputed as the range
@@ -8212,8 +8021,8 @@ bool is_slab_ptr(const slab_t *slab, const void *ptr);
  *  - ``slab->free_list`` references all slots across all pages.
  *
  * @par Error Handling
- * - If @p slab is NULL, returns false and sets errno = EINVAL.
- * - If the geometry checks fail, returns false and sets errno = EINVAL.
+ * - If @p slab is NULL, returns false.
+ * - If the geometry checks fail, returns false.
  *
  * @par Example
  * @code{.c}
@@ -8239,7 +8048,7 @@ bool is_slab_ptr(const slab_t *slab, const void *ptr);
  * @param slab Pointer to an initialized ::slab_t instance.
  *
  * @retval true  Reset succeeded; all slots are free and slab->len == 0.
- * @retval false Invalid slab or geometry; errno set to EINVAL.
+ * @retval false Invalid slab or geometry.
  */
 bool reset_slab(slab_t *slab);
 // -------------------------------------------------------------------------------- 
@@ -8265,13 +8074,6 @@ bool reset_slab(slab_t *slab);
  *  @code{.c}
  *  size_t bytes_needed = 0;
  *
- *  if (!save_slab(slab, NULL, 0, &bytes_needed)) {
- *      // Expect errno == ERANGE: use bytes_needed to allocate a buffer.
- *      if (errno != ERANGE) {
- *          perror("save_slab (size query)");
- *      }
- *  }
- *
  *  void *buffer = malloc(bytes_needed);
  *  if (!buffer) { // handle error }
  *
@@ -8281,11 +8083,9 @@ bool reset_slab(slab_t *slab);
  *  @endcode
  *
  * @par Error Handling
- * - If @p slab is NULL or @p bytes_needed is NULL, returns false and sets
- *   errno = EINVAL.
+ * - If @p slab is NULL or @p bytes_needed is NULL.
  * - If @p buffer is NULL or @p buffer_size is smaller than the required size,
- *   returns false, sets errno = ERANGE, and still fills @p bytes_needed with
- *   the required size.
+ *   returns false.
  *
  * On success, the snapshot is written to @p buffer and the function returns true.
  *
@@ -8296,8 +8096,6 @@ bool reset_slab(slab_t *slab);
  * @param bytes_needed Output: number of bytes required to store the snapshot.
  *
  * @retval true  Snapshot successfully written to @p buffer.
- * @retval false Invalid arguments or insufficient buffer; errno set to EINVAL
- *               or ERANGE.
  */
 bool save_slab(const slab_t *slab,
                void *buffer,
@@ -8334,16 +8132,6 @@ bool save_slab(const slab_t *slab,
  *  5. For each page in the snapshot’s page list, copy the saved page contents
  *     into the live page at the same address.
  *  6. Finally, overwrite the live ::slab_t with the snapshot header.
- *
- * @par Error Handling
- * The function returns false and sets errno in the following cases:
- *  - @p slab is NULL or @p buffer is NULL (errno = EINVAL).
- *  - @p buffer_size is too small to contain a full snapshot header
- *    (errno = ERANGE).
- *  - @p buffer_size is too small to contain all pages indicated by the
- *    snapshot (errno = ERANGE).
- *  - The snapshot’s geometry does not match the current slab’s geometry
- *    (errno = EINVAL).
  *
  * On success, @p slab’s internal state (including pages and free list) is
  * restored to the moment when ::save_slab() was called.
@@ -8388,8 +8176,6 @@ bool save_slab(const slab_t *slab,
  * @param buffer_size Size of @p buffer in bytes.
  *
  * @retval true  Slab successfully restored from the snapshot.
- * @retval false Invalid arguments, insufficient buffer, or geometry mismatch;
- *               errno set to EINVAL or ERANGE.
  */
 bool restore_slab(slab_t *slab,
                   const void *buffer,
@@ -8439,8 +8225,7 @@ bool restore_slab(slab_t *slab,
  *  - Per-page summary: size and block count for each page
  *
  * @par Error Handling
- * - If @p buffer is NULL or @p buffer_size is 0, the function returns false
- *   and sets errno = EINVAL.
+ * - If @p buffer is NULL or @p buffer_size is 0.
  * - If @p slab is NULL, a simple "Slab: NULL" line is written and the
  *   function returns true (no error).
  * - If any call to ::_buf_appendf() fails (e.g., due to insufficient space),
@@ -8506,8 +8291,6 @@ bool restore_slab(slab_t *slab,
  * @param buffer_size  Size of @p buffer in bytes.
  *
  * @retval true  Statistics successfully written into @p buffer.
- * @retval false Invalid arguments or buffer too small for _buf_appendf();
- *               errno is set to EINVAL when arguments are invalid.
  */
 bool slab_stats(const slab_t *slab, char *buffer, size_t buffer_size);
 // -------------------------------------------------------------------------------- 
