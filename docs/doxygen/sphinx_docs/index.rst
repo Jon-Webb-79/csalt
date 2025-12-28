@@ -22,6 +22,7 @@ for all basic c data types:
 * A dictionary implementation for mapping strings to primitive data types 
 * A dictionary implementation for mapping strings to arrays of primitive data types
 * A dictionary implementation for dense and sparse storage methods
+* Build time config flags ``STATIC_ONLY`` and ``NO_FUNCTION_MACROS`` to support MISRA compliant builds
 
 Performance Acceleration
 ------------------------

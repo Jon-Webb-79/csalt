@@ -19,6 +19,7 @@ for all basic c data types:
 * A dictionary implementation for mapping strings to primitive data types 
 * A dictionary implementation for mapping strings to arrays of primitive data types
 * A matrix implementation for dense and sparse storage methods
+* Build time config flags ``STATIC_ONLY`` and ``NO_FUNCTION_MACROS`` to support MISRA compliant builds
 
 When to Use This Library
 ########################
@@ -127,7 +128,8 @@ The following are areas for future improvement in the code base
 Contributing
 ############
 Pull requests are welcome.  For major changes, please open an issue first to discuss
-what you would like to change.  Please make sure to include and update tests
+EADME.rst
+
 as well as relevant doc-string and sphinx updates.
 
 License
