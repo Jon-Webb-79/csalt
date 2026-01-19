@@ -2456,7 +2456,7 @@ inline bool pool_owns_memory(const pool_t* pool) {
 // ================================================================================ 
 // FREE LIST IMPLEMENTATION 
 
-static size_t FREELIST_DEFAULT_MIN_ALLOC = 16;
+static size_t FREELIST_DEFAULT_MIN_ALLOC = 4096;
 
 typedef struct free_block {
     size_t size;
@@ -2593,7 +2593,7 @@ freelist_expect_t init_dynamic_freelist(size_t bytes, size_t alignment, bool res
     };
 #else
     /* Defaults / argument validation */
-    if (bytes == 0u) {
+    if (bytes < FREELIST_DEFAULT_MIN_ALLOC) {
         bytes = FREELIST_DEFAULT_MIN_ALLOC;
     }
     if (bytes < freelist_min_request) {

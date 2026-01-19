@@ -2942,9 +2942,9 @@ static void test_init_dynamic_freelist_size_zero_uses_default(void **state) {
     (void)state;
 
     freelist_expect_t fexpect = init_dynamic_freelist(0u, 0u, false); 
-    assert_false(fexpect.has_value);
+    assert_true(fexpect.has_value);
     fexpect = init_dynamic_freelist(6u, 0u, false); 
-    assert_false(fexpect.has_value);
+    assert_true(fexpect.has_value);
 }
 // -------------------------------------------------------------------------------- 
 
