@@ -214,6 +214,7 @@ typedef struct {
 } arena_expect_t;
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 /**
  * @brief Initialize a dynamically growing arena allocator.
  *
@@ -221,7 +222,9 @@ typedef struct {
  * permitted by @p resize, may grow by allocating new chunks on demand. The
  * arena header, first chunk header, and initial data region are all placed
  * contiguously in the first allocation. Additional chunks (if growth is
- * enabled) are allocated separately and linked into the arena.
+ * enabled) are allocated separately and linked into the arena.  If the user 
+ * compiles the code with the ``STATIC_ONLY`` flag, this function will not be 
+ * compiled as part of the code.
  *
  * This function uses an "expected" style return type. On success, the returned
  * @c arena_expect_t has @c has_value set to @c true and @c u.value points to
@@ -325,6 +328,7 @@ typedef struct {
  * @endcode
  */
 arena_expect_t init_dynamic_arena(size_t bytes, bool resize, size_t min_chunk_in, size_t base_align_in);
+#endif
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -566,11 +570,14 @@ arena_expect_t init_arena_with_arena(arena_t* parent,
                                      size_t alignment_in);
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 /**
  * @brief Convenience initializer for a dynamic arena with common defaults.
  *
  * This helper constructs a dynamic (heap-backed, optionally growing) arena
- * using typical defaults by forwarding to ::init_dynamic_arena():
+ * using typical defaults by forwarding to ::init_dynamic_arena():  If the 
+ * code is compiled with the ``STATIC_ONLY`` flag, this function will not be 
+ * compiled as part of the code base.
  *
  * @code{.c}
  *   init_dynamic_arena(bytes,
@@ -651,6 +658,7 @@ arena_expect_t init_arena_with_arena(arena_t* parent,
  * @endcode
  */
 arena_expect_t init_darena(size_t bytes, bool resize);
+#endif
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -2385,13 +2393,16 @@ pool_expect_t init_pool_with_arena(arena_t* arena,
                                    bool     grow_enabled);
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 /**
  * @brief Create a grow-capable fixed-size memory pool backed by an internally
  *        owned dynamic arena.
  *
  * This constructor creates a pool allocator whose storage is obtained from a
  * freshly created dynamic arena. The arena is fully owned by the pool and
- * destroyed automatically when the pool is destroyed via @c free_pool().
+ * destroyed automatically when the pool is destroyed via @c free_pool(). This 
+ * function will not compile with the code base if the ``STATIC_ONLY`` compile time 
+ * flag is invoked.
  *
  * The pool allocates fixed-size blocks (“elements”) of @p block_size bytes,
  * using an effective alignment computed from @p alignment and internal
@@ -2532,6 +2543,7 @@ pool_expect_t init_dynamic_pool(size_t block_size,
                                 size_t min_chunk_bytes,
                                 bool   grow_enabled,
                                 bool   prewarm_one_chunk);
+#endif
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -3935,13 +3947,16 @@ freelist_expect_t init_freelist_with_arena(arena_t* arena,
                                      size_t alignment);
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 /**
  * @brief Create a dynamically backed freelist allocator.
  *
  * Constructs a `freelist_t` inside a newly created dynamic `arena_t`. The
  * freelist *owns* the arena and is responsible for its lifetime. All memory
  * used by the freelist—including the freelist structure itself and all future
- * allocations—resides entirely within this dedicated arena.
+ * allocations—resides entirely within this dedicated arena.  This function will 
+ * not compile with the code base if the ``STATIC_ONLY`` flag is invoked at  
+ * compile time.
  *
  * The caller specifies a desired minimum usable payload size (`bytes`). This
  * function computes the minimum arena space required to accommodate:
@@ -4046,6 +4061,7 @@ freelist_expect_t init_freelist_with_arena(arena_t* arena,
  *     free_freelist()
  */
 freelist_expect_t init_dynamic_freelist(size_t bytes, size_t alignment, bool resize);
+#endif
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -5839,6 +5855,7 @@ static inline allocator_vtable_t malloc_allocator(void) {
 // ================================================================================ 
 // BUDDY ALLOCATOR 
 
+#if ARENA_ENABLE_DYNAMIC
 typedef struct buddy_t buddy_t;
 // -------------------------------------------------------------------------------- 
 
@@ -5858,6 +5875,8 @@ typedef struct {
  * This function constructs a new ::buddy_t allocator backed by a
  * power-of-two–sized memory pool obtained from the OS using
  * `buddy_os_alloc()` (typically `mmap` on POSIX or `VirtualAlloc` on Windows).
+ * If the code is compiled with a ``STATIC_ONLY`` flag, none of the buddy allocator 
+ * functions in this library will compile with the code base.
  *
  * The allocator divides the pool into blocks whose sizes are powers of two,
  * ranging from @p min_block_size up to @p pool_size. All allocation requests
@@ -6120,6 +6139,7 @@ void free_buddy(buddy_t *b);
 void_ptr_expect_t alloc_buddy(buddy_t *b, size_t size, bool zeroed);
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 /**
  * @brief Initialize an arena_t backed by a region allocated from a buddy allocator.
  *
@@ -6138,7 +6158,9 @@ void_ptr_expect_t alloc_buddy(buddy_t *b, size_t size, bool zeroed);
  *
  * This is important because the backing memory must later be released via
  * ::return_arena_with_buddy(), which internally calls @c return_buddy_element()
- * using the arena pointer.
+ * using the arena pointer. The buddy allocator exists on the heap.  If the code 
+ * is compiled with the ``STATIC_OBLY`` flag, this function will not be compiled 
+ * with the code base.
  *
  * @param buddy          Valid buddy allocator instance that provides the backing memory.
  * @param bytes          Total size of the sub-region to reserve from @p buddy.
@@ -6226,7 +6248,8 @@ arena_expect_t init_arena_with_buddy(buddy_t *buddy,
  * The @p arena pointer must be the same pointer that was originally returned
  * by init_arena_with_buddy(), which is also the user pointer obtained from
  * alloc_buddy(). The function treats @p arena as a single buddy allocation
- * and returns it via return_buddy_element().
+ * and returns it via return_buddy_element(). This function will not compile with 
+ * the code base if the ``STATIC_ONLY`` flag is invoked.
  *
  * After a successful call:
  *
@@ -6274,6 +6297,7 @@ arena_expect_t init_arena_with_buddy(buddy_t *buddy,
  * @endcode
  */
 bool return_arena_with_buddy(arena_t *arena, buddy_t *buddy);
+#endif
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -7424,7 +7448,8 @@ typedef struct {
  * Constructs a new ::slab_t instance whose control structure is allocated
  * from the buddy allocator referenced by @p buddy. The slab allocator manages
  * fixed-size objects of size @p obj_size, with per-object alignment of at
- * least @p align bytes.
+ * least @p align bytes.  If the code is compiled with a ``STATIC_ONLY`` flag, 
+ * none of the slab allocator functions will compile with the code base.
  *
  * The slab allocator does **not** own the underlying memory pool. All slab
  * pages are obtained from the caller-provided ::buddy_t instance, and the
@@ -8583,7 +8608,7 @@ static inline allocator_vtable_t slab_allocator(slab_t *slab) {
     };
     return v;
 }
-
+#endif /* ARENA_ENABLE_DYNAMIC */
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

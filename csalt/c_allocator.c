@@ -254,12 +254,11 @@ static inline arena_expect_t arena_err(error_code_t e) {
 }
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 arena_expect_t init_dynamic_arena(size_t bytes,
                                   bool   resize,
                                   size_t min_chunk_in,
                                   size_t base_align_in) {
-#if ARENA_ENABLE_DYNAMIC
-
     /* Normalize min_chunk (0 allowed) */
     size_t min_chunk = min_chunk_in;
     if (min_chunk && !_is_pow2(min_chunk)) {
@@ -351,14 +350,6 @@ arena_expect_t init_dynamic_arena(size_t bytes,
     a->owns_memory = (uint8_t)1u;
 
     return arena_ok(a);
-
-#else
-    /* Feature compiled out */
-    (void)bytes;
-    (void)resize;
-    (void)min_chunk_in;
-    (void)base_align_in;
-    return arena_err(FEATURE_DISABLED);
 #endif
 }
 // -------------------------------------------------------------------------------- 
@@ -559,9 +550,11 @@ arena_expect_t init_arena_with_arena(arena_t *parent,
 }
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 arena_expect_t init_darena(size_t bytes, bool resize) {
     return init_dynamic_arena(bytes, resize, 4096u, alignof(max_align_t));
 }
+#endif
 // --------------------------------------------------------------------------------
 
 arena_expect_t init_sarena(void* buffer, size_t bytes) {
@@ -569,6 +562,7 @@ arena_expect_t init_sarena(void* buffer, size_t bytes) {
 }
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 arena_expect_t init_arena_with_buddy(buddy_t *buddy,
                                      size_t   bytes,
                                      size_t   base_align_in) {
@@ -693,6 +687,7 @@ bool return_arena_with_buddy(arena_t *arena, buddy_t *buddy) {
 
     return return_buddy_element(buddy, (void *)arena);
 }
+#endif
 // -------------------------------------------------------------------------------- 
 
 void free_arena(arena_t* arena) {
@@ -1656,6 +1651,7 @@ pool_expect_t init_pool_with_arena(arena_t* arena,
 }
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 pool_expect_t init_dynamic_pool(size_t block_size,
                                 size_t alignment,
                                 size_t blocks_per_chunk,
@@ -1663,21 +1659,6 @@ pool_expect_t init_dynamic_pool(size_t block_size,
                                 size_t min_chunk_bytes,
                                 bool   grow_enabled,
                                 bool   prewarm_one_chunk) {
-#if !ARENA_ENABLE_DYNAMIC
-    /* Dynamic arenas (and thus dynamic pools) are not available in this build. */
-    (void)block_size;
-    (void)alignment;
-    (void)blocks_per_chunk;
-    (void)arena_seed_bytes;
-    (void)min_chunk_bytes;
-    (void)grow_enabled;
-    (void)prewarm_one_chunk;
-
-    return (pool_expect_t){
-        .has_value = false,
-        .u.error   = FEATURE_DISABLED  /* or UNSUPPORTED, if you prefer */
-    };
-#else
     /* -------- argument validation --------------------------------------- */
     if (block_size == 0u ||
         blocks_per_chunk == 0u ||
@@ -2585,13 +2566,8 @@ inline size_t min_freelist_alloc() {
 }
 // -------------------------------------------------------------------------------- 
 
+#if ARENA_ENABLE_DYNAMIC
 freelist_expect_t init_dynamic_freelist(size_t bytes, size_t alignment, bool resize) {
-#if !ARENA_ENABLE_DYNAMIC
-    return (freelist_expect_t){
-        .has_value = false,
-        .u.error   = INVALID_ARG /* or NOT_SUPPORTED if you have it */
-    };
-#else
     /* Defaults / argument validation */
     if (bytes < FREELIST_DEFAULT_MIN_ALLOC) {
         bytes = FREELIST_DEFAULT_MIN_ALLOC;
@@ -2710,9 +2686,8 @@ freelist_expect_t init_dynamic_freelist(size_t bytes, size_t alignment, bool res
         .has_value = true,
         .u.value   = fl
     };
-#endif
 }
-
+#endif
 // -------------------------------------------------------------------------------- 
 
 freelist_expect_t init_static_freelist(void* buffer, size_t bytes, size_t alignment) {
@@ -3469,6 +3444,7 @@ bool freelist_stats(const freelist_t *fl, char *buffer, size_t buffer_size) {
 // ================================================================================ 
 // BUDDY ALLOCATOR 
 
+#if ARENA_ENABLE_DYNAMIC
 /* Free block node (stored in the block memory itself when free). */
 typedef struct buddy_block {
     struct buddy_block *next;
@@ -5249,6 +5225,7 @@ bool slab_stats(const slab_t *slab, char *buffer, size_t buffer_size) {
 
     return true;
 }
+#endif /* ARENA_ENABLE_DYNAMIC */
 // ================================================================================
 // ================================================================================
 // eof
