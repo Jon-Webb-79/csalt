@@ -5839,7 +5839,7 @@ static inline void v_free(void* ctx) {
  * alloc.return_element(alloc.ctx, p);
  * @endcode
  */
-static inline allocator_vtable_t malloc_allocator(void) {
+static inline allocator_vtable_t heap_allocator(void) {
     allocator_vtable_t v = {
         .allocate           = v_alloc,
         .allocate_aligned   = v_alloc_aligned,

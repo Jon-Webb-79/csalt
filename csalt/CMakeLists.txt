@@ -50,6 +50,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 # --------------------------------------------------------------------
 set(CSALT_SOURCES
   c_allocator.c
+  c_string.c
   c_error.c
 )
 
