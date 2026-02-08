@@ -1,969 +1,160 @@
-.. _string_type_file:
+.. _string_file:
 
 *****************
 C String Overview
 *****************
 
-The c_string library provides a dynamic string type and associated functions 
-for safe string manipulation in C.  All of the functions described in this 
-section can be found in the ``c_string.h`` header file.  This file implements 
-the ``error_codes.h`` file to provide error code functionality.
+String handling in C is traditionally performed using raw character arrays
+and functions from ``string.h``. While efficient, this approach requires
+manual management of memory allocation, buffer sizing, and null termination,
+which can introduce risks such as buffer overflows, memory leaks, and
+undefined behavior in large or safety-critical systems.
+
+The *C String module* in this library provides a lightweight, allocator-aware
+string container implemented in pure C and declared in ``c_string.h``.
+Unlike conventional C strings, this container explicitly tracks:
+
+* The current string length (excluding the null terminator)
+* The total allocated buffer size (including space for the terminator)
+* The allocator used to create and release the string memory
+
+By integrating directly with the allocator abstraction defined in
+``c_allocator.h``, the string container supports heap, arena, pool, slab,
+or custom allocation strategies without changing the public API.  
+This enables deterministic memory behavior suitable for embedded,
+real-time, or safety-regulated environments.
+
+String construction follows a **capacity-driven model**:
+
+* A requested capacity of ``0`` allocates exactly enough memory to store the
+  full input string plus the null terminator.
+* A non-zero capacity allocates space for the requested number of characters
+  **plus one byte for the null terminator**.
+* If the requested capacity is smaller than the input string length, the
+  stored string is **safely truncated** and always null-terminated.
+* If the requested capacity is larger, unused buffer space remains available
+  for future operations.
+
+All functions return explicit success/error state using the
+``*_expect_t`` pattern defined in ``c_error.h``, avoiding implicit failure
+modes common in traditional C string handling.
+
+These characteristics make the C String module appropriate for:
+
+* Deterministic and allocator-controlled memory management
+* Embedded or real-time software requiring bounded behavior
+* Safety-critical systems emphasizing explicit error handling
+* Large applications seeking consistent container abstractions in C
 
 Data Types
 ==========
+The following data structures and derived data types are defined in
+``c_string.h`` and implemented in ``c_string.c`` to support the allocator-aware
+string container.
 
 string_t
 --------
-A dynamic string type that manages memory allocation automatically and provides safe string operations.
-The internal structure is opaque to users, preventing direct manipulation of the memory.
+``string_t`` is a **public, non-opaque** data structure that represents a
+dynamically managed C-style string.  
+Unlike opaque container types used elsewhere in the library, this structure is
+intentionally visible so that users may:
 
-While the data structure is opaque to the user, the struct has this 
-format
+* Inspect internal metadata directly when appropriate
+* Integrate the container with custom utilities or serialization logic
+* Extend behavior through user-defined helper functions or wrappers
+
+The structure stores both the string data and the metadata required for safe
+memory management through the allocator abstraction defined in
+``c_allocator.h``.
+
+Key properties maintained by ``string_t`` include:
+
+* A pointer to a null-terminated character buffer
+* The current logical length of the string (excluding the terminator)
+* The total allocated buffer size in bytes (including space for the terminator)
+* The allocator instance responsible for allocation and release of memory
+
+These fields allow deterministic control over memory usage while preserving
+compatibility with standard C string operations.
 
 .. code-block:: c
 
    typedef struct {
-       char* str;           // pointer to string literal
-       size_t len;          // The length of the populated literal 
-       size_t alloc;        // The allocated memory in indices 
-       ErrorCode error;     // The error code
+       char* str;                 // Pointer to null-terminated character buffer
+       size_t len;                // Logical string length (excludes '\0')
+       size_t alloc;              // Total allocated bytes (includes space for '\0')
+       allocator_vtable_t allocator; // Allocator used for memory management
    } string_t;
 
-string_v
---------
-The dynamic string vector type that manages memory allocation automatically and 
-provides a safe encapsulation for ``string_t`` data types in an array format.
-This struct is provided as an opaque data structure.
+The following invariants are guaranteed for any valid ``string_t`` instance:
+
+* ``str`` always points to a **null-terminated** character sequence.
+* ``alloc >= len + 1`` to ensure space for the terminator.
+* Memory ownership and release are handled exclusively through the stored
+  allocator.
+
+Because the structure is public, users must preserve these invariants when
+manipulating fields directly.  
+Violating them may result in undefined behavior or allocator misuse.
+
+string_expect_t
+---------------
+``string_expect_t`` is a lightweight result container used for explicit error
+handling during string construction and operations.  
+This follows the ``*_expect_t`` convention defined in ``c_error.h`` and avoids
+implicit failure modes such as returning ``NULL`` without context.
 
 .. code-block:: c
 
    typedef struct {
-       string_t* data;      // Pointer to array of string literals 
-       size_t len;          // The populated length of the string array 
-       size_t alloc;        // The allocated memory in indices 
-       ErrorCode error;     // The error code
-   } string_v;
+       bool has_value;
+       union {
+           string_t* value;
+           error_code_t error;
+       } u;
+   } string_expect_t;
 
-str_iter 
---------
-The `str_iter` data type is used to manage a string iterator for 
-quick user access to the internal string. 
+When ``has_value`` is ``true``, the ``value`` field contains a valid
+``string_t`` pointer that must eventually be released using
+``return_string()``.  
+When ``has_value`` is ``false``, the ``error`` field contains the associated
+error code describing the failure condition.
 
-.. code-block:: c
+String Functions 
+================
 
-   // mutable interface
-   typedef struct {
-       string_t *owner;
-       char     *begin;
-       char     *end;    /* one past last */
-       char     *cur;    /* current; valid iff cur < end */
-   } str_iter;
+Creation and Teardown
+---------------------
 
-   // immutable interface
-   typedef struct {
-       const string_t *owner;
-       const char     *begin;
-       const char     *end;    /* one past last */
-       const char     *cur;    /* current; valid iff cur < end */
-   } cstr_iter;
-
-String Overview 
-===============
-This section describes the attributes and functions associated with the 
-`string_t` data type.
-
-Initialization and Memory Management
-------------------------------------
-The functions and Macros in this section are used to control the creation,
-memory allocation, and specific destruction of ``string_t`` data types.
-
-init_string
+init_string 
 ~~~~~~~~~~~
 
 .. doxygenfunction:: init_string
    :project: csalt
 
-free_string
-~~~~~~~~~~~
+return_string 
+~~~~~~~~~~~~~
 
-.. doxygenfunction:: free_string
+.. doxygenfunction:: return_string
    :project: csalt
 
-STRING_GBC 
-~~~~~~~~~~
-
-.. doxygendefine:: STRING_GBC 
-   :project: csalt 
-
-trim_string
-~~~~~~~~~~~
-
-.. doxygenfunction:: trim_string
-   :project: csalt
-
-reserve_string
-~~~~~~~~~~~~~~
-
-.. doxygenfunction:: reserve_string
-   :project: csalt
-
-Utility Funcitons 
+Utility Functions 
 -----------------
-The functions in this section are used to retrieve data from the `string_t` 
-data structure.
 
-is_string_valid 
-~~~~~~~~~~~~~~~
+const_string 
+~~~~~~~~~~~~
 
-.. doxygenfunction:: is_string_valid
+.. doxygenfunction:: const_string
    :project: csalt
 
-get_string 
-~~~~~~~~~~
-
-.. doxygenfunction:: get_string
-   :project: csalt
-
-string_size
+string_size 
 ~~~~~~~~~~~
 
 .. doxygenfunction:: string_size
    :project: csalt
 
-string_alloc
+string_alloc 
 ~~~~~~~~~~~~
 
 .. doxygenfunction:: string_alloc
-   :project: csalt
-
-get_string_error
-~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: get_string_error
-   :project: csalt
-
-.. note:: Error codes can be found in :ref:`Error Code Overview <error_code_file>`. 
-
-compare_strings_lit
-~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: compare_strings_lit
-   :project: csalt
-
-compare_strings_string
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: compare_strings_string
-   :project: csalt
-
-compare_strings
-~~~~~~~~~~~~~~~
-
-.. doxygendefine:: compare_strings
-   :project: csalt
-
-copy_string 
-~~~~~~~~~~~
-
-.. doxygenfunction:: copy_string
-   :project: csalt
-
-pop_string_token 
-~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: pop_string_token
-   :project: csalt
-
-token_count 
-~~~~~~~~~~~
-
-.. doxygenfunction:: token_count
-   :project: csalt
-
-get_char
-~~~~~~~~
-
-.. doxygenfunction:: get_char
-   :project: csalt
-
-first_char
-~~~~~~~~~~
-
-.. doxygenfunction:: first_char
-   :project: csalt
-
-last_char
-~~~~~~~~~
-
-.. doxygenfunction:: last_char
-   :project: csalt
-
-String Manipulation 
--------------------
-The functions in this section are used to manipulate data in a `string_t` object.
-
-string_string_concat 
-~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: string_string_concat
-   :project: csalt
-
-string_lit_concat 
-~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: string_lit_concat
-   :project: csalt
-
-string_concat 
-~~~~~~~~~~~~~
-
-.. doxygendefine:: string_concat
-   :project: csalt
-
-drop_lit_substr
-~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: drop_lit_substr
-   :project: csalt
-
-drop_string_substr
-~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: drop_string_substr
-   :project: csalt
-
-drop_substr
-~~~~~~~~~~~
-
-.. doxygendefine:: drop_substr
-   :project: csalt
-
-replace_lit_substr
-~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: replace_lit_substr
-   :project: csalt
-
-replace_string_substr
-~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: replace_string_substr
-   :project: csalt
-
-replace_substr
-~~~~~~~~~~~~~~
-
-.. doxygendefine:: replace_substr
-   :project: csalt
-
-to_upper_char
-~~~~~~~~~~~~~
-
-.. doxygenfunction:: to_upper_char
-   :project: csalt
-
-to_lower_char
-~~~~~~~~~~~~~
-
-.. doxygenfunction:: to_lower_char
-   :project: csalt
-
-to_uppercase
-~~~~~~~~~~~~
-
-.. doxygenfunction:: to_uppercase
-   :project: csalt
-
-to_lowercase
-~~~~~~~~~~~~
-
-.. doxygenfunction:: to_lowercase
-   :project: csalt
-
-replace_char
-~~~~~~~~~~~~
-
-.. doxygenfunction:: replace_char
-   :project: csalt
-
-trim_leading_whitespace
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: trim_leading_whitespace
-   :project: csalt
-
-trim_trailing_whitespace
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: trim_trailing_whitespace
-   :project: csalt
-
-trim_all_whitespace
-~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: trim_all_whitespace
-   :project: csalt
-
-swap_string
-~~~~~~~~~~~
-
-.. doxygenfunction:: swap_string
-   :project: csalt
-
-tokenize_string 
-~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: tokenize_string
-   :project: csalt
-
-Search String 
--------------
-The functions in this section can be used to search a string for spechic 
-`char` values or sub strings.
-
-first_char_occurance
-~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: first_char_occurrance
-   :project: csalt
-
-last_char_occurance
-~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: last_char_occurrance
-   :project: csalt
-
-first_lit_substr_occurrance 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: first_lit_substr_occurrence 
-   :project: csalt
-
-first_string_substr_occurrance 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: first_string_substr_occurrence 
-   :project: csalt
-
-first_substr_occurrance 
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygendefine:: first_substr_occurrence 
-   :project: csalt
-
-last_lit_substr_occurrance 
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: last_lit_substr_occurrence 
-   :project: csalt
-
-last_string_substr_occurrance 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: last_string_substr_occurrence 
-   :project: csalt
-
-last_substr_occurrance 
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygendefine:: last_substr_occurrence 
-   :project: csalt
-
-is_string_ptr 
-~~~~~~~~~~~~~
-
-.. doxygenfunction:: is_string_ptr
-   :project: csalt
-
-String Iterator 
----------------
-The iterator lets you traverse the payload of a ``string_t`` without exposing
-its internals. Iterators are invalidated by operations that can reallocate,
-such as concatenation, reserve, replace, or drop.
-
-Mutable API Reference
-~~~~~~~~~~~~~~~~~~~~~
-.. doxygenstruct:: str_iter
-   :project: csalt
-.. doxygenfunction:: str_iter_make
-   :project: csalt
-.. doxygenfunction:: str_iter_valid
-   :project: csalt
-.. doxygenfunction:: str_iter_get
-   :project: csalt
-.. doxygenfunction:: str_iter_next
-   :project: csalt
-.. doxygenfunction:: str_iter_prev
-   :project: csalt
-.. doxygenfunction:: str_iter_advance
-   :project: csalt
-.. doxygenfunction:: str_iter_seek_begin
-   :project: csalt
-.. doxygenfunction:: str_iter_seek_end
-   :project: csalt
-
-Immutable API Reference 
-~~~~~~~~~~~~~~~~~~~~~~~
-.. doxygenstruct:: cstr_iter
-   :project: csalt
-.. doxygenfunction:: cstr_iter_make
-   :project: csalt
-.. doxygenfunction:: cstr_iter_valid
-   :project: csalt
-.. doxygenfunction:: cstr_iter_get
-   :project: csalt
-.. doxygenfunction:: cstr_iter_next
-   :project: csalt
-.. doxygenfunction:: cstr_iter_prev
-   :project: csalt
-.. doxygenfunction:: cstr_iter_advance
-   :project: csalt
-.. doxygenfunction:: cstr_iter_seek_begin
-   :project: csalt
-.. doxygenfunction:: cstr_iter_seek_end
-   :project: csalt
-
-Basic forward iteration
-~~~~~~~~~~~~~~~~~~~~~~~
-.. code-block:: c
-
-   #include "c_string.h"
-   #include "csalt_string_iter.h"
-   #include <stdio.h>
-
-   void print_forward(string_t* s) {
-       cstr_iter it = cstr_iter_make(s);
-       for (; cstr_iter_valid(&it); cstr_iter_next(&it)) {
-           putchar(cstr_iter_get(&it));
-       }
-       putchar('\n');
-   }
-
-   int main(void) {
-       string_t* s = init_string("Hello, world!");
-       if (!s) { perror("init_string"); return 1; }
-       print_forward(s);
-       free_string(s);
-       return 0;
-   }
-
-Output::
-  
-  Hello, world!
-
-Reverse iteration
-~~~~~~~~~~~~~~~~~
-.. code-block:: c
-
-   #include "c_string.h"
-   #include "csalt_string_iter.h"
-   #include <stdio.h>
-
-   void print_reverse(string_t* s) {
-       str_iter it = str_iter_make(s);
-
-       /* Go to end (one-past-last), then step back to last if any */
-       str_iter_seek_end(&it);
-       while (str_iter_prev(&it)) {
-           putchar(str_iter_get(&it));
-       }
-       putchar('\n');
-   }
-
-   int main(void) {
-       string_t* s = init_string("abcde");
-       if (!s) { perror("init_string"); return 1; }
-       print_reverse(s);
-       free_string(s);
-       return 0;
-   }
-
-Output::
-  
-  edcba
-
-Find the first digit (returns pointer and index)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. code-block:: c
-
-   #include "c_string.h"
-   #include "csalt_string_iter.h"
-   #include <stdio.h>
-
-   const char* find_first_digit_ptr(const string_t* s) {
-       cstr_iter it = cstr_iter_make(s);
-       for (; cstr_iter_valid(&it); cstr_iter_next(&it)) {
-           char ch = cstr_iter_get(&it);
-           if (ch >= '0' && ch <= '9') {
-               return cstr_iter_ptr(&it);  /* pointer into s payload */
-           }
-       }
-       return NULL;
-   }
-
-   int main(void) {
-       string_t* s = init_string("id=42; name=alice");
-       if (!s) { perror("init_string"); return 1; }
-
-       const char* p = find_first_digit_ptr(s);
-       if (p) {
-           /* position via iterator rebuilt at p */
-           cstr_iter it = cstr_iter_make(s);
-           while (cstr_iter_valid(&it) && cstr_iter_ptr(&it) != p) {
-               cstr_iter_next(&it);
-           }
-           printf("first digit '%c' at index %zu\\n", *p, cstr_iter_pos(&it));
-       } else {
-           puts("no digit");
-       }
-       free_string(s);
-       return 0;
-   }
-
-Possible output::
-  
-  first digit '4' at index 3
-
-Windowed replacement using iterator-friendly bounds
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. code-block:: c
-
-   #include "c_string.h"
-   #include "csalt_string_iter.h"
-   #include <stdio.h>
-
-   int main(void) {
-       string_t* s = init_string("foo X foo Y foo Z");
-       if (!s) { perror("init_string"); return 1; }
-
-       /* Choose a window: first 9 characters only ("foo X foo") */
-       char* lo = first_char(s);   /* inclusive lower bound */
-       char* hi = lo + 8;          /* inclusive upper bound */
-
-       if (!replace_substr(s, "foo", "BAR", lo, hi)) {
-           perror("replace_substr");
-           fprintf(stderr, "%s\\n", error_to_string(get_string_error(s)));
-           free_string(s);
-           return 1;
-       }
-
-       printf("%s\\n", get_string(s));
-       free_string(s);
-       return 0;
-   }
-
-Output::
-  
-  BAR X BAR Y foo Z
-
-Uppercase in place with the mutable iterator
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. code-block:: c
-
-   #include "c_string.h"
-   #include "csalt_string_iter.h"
-   #include <ctype.h>
-
-   void to_uppercase_iter(string_t* s) {
-       str_iter it = str_iter_make(s);
-       for (; str_iter_valid(&it); str_iter_next(&it)) {
-           char* p = str_iter_ptr(&it);
-           unsigned char c = (unsigned char)*p;
-           if (c >= 'a' && c <= 'z') *p = (char)(c - ('a' - 'A'));
-       }
-   }
-
-   int main(void) {
-       string_t* s = init_string("Hello, World! 123");
-       to_uppercase_iter(s);
-       puts(get_string(s));  /* HELLO, WORLD! 123 */
-       free_string(s);
-       return 0;
-   }
-
-Checksum over bytes with a const iterator
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. code-block:: c
-
-   #include "c_string.h"
-   #include "csalt_string_iter.h"
-   #include <stdint.h>
-   #include <stdio.h>
-
-   uint32_t checksum32(const string_t* s) {
-       uint32_t h = 2166136261u;          /* FNV-1a base */
-       cstr_iter it = cstr_iter_make(s);
-       for (; cstr_iter_valid(&it); cstr_iter_next(&it)) {
-           h ^= (uint8_t)cstr_iter_get(&it);
-           h *= 16777619u;
-       }
-       return h;
-   }
-
-   int main(void) {
-       string_t* s = init_string("abc");
-       printf("%u\\n", (unsigned)checksum32(s));
-       free_string(s);
-       return 0;
-   }
-
-.. note::
-
-   - Iterators are **invalidated** by any operation that may reallocate or resize
-     the string (e.g., concat, reserve, replace, drop). If you need to mutate and
-     then continue iterating, store **offsets** (indices) rather than raw pointers,
-     perform the mutation, then **rebuild** the iterator from the new buffer.
-   - ``end`` is one-past-last; ``*_get`` returns ``0`` when the iterator is not valid.
-
-String Vector Overview 
-======================
-This section describes that attributes and functions associated with the 
-`string_v` data type.
-
-Initialization and Memory Management
-------------------------------------
-
-init_str_vector
-~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: init_str_vector
-   :project: csalt
-
-free_str_vector
-~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: free_str_vector
-   :project: csalt
-
-STRVEC_GBC 
-~~~~~~~~~~
-
-.. doxygendefine:: STRVEC_GBC 
-   :project: csalt
-
-Utility Funcitons 
------------------
-
-is_str_vector_valid 
-~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: is_str_vector_valid
-   :project: csalt
-
-get_str_vector_error
-~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: get_str_vector_error
-   :project: csalt
-
-.. note:: Error codes can be found in :ref:`Error Code Overview <error_code_file>`.
-
-str_vector_size
-~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: str_vector_size
-   :project: csalt
-
-str_vector_alloc
-~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: str_vector_alloc
-   :project: csalt
-
-cstr_vector_index
-~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: cstr_vector_index
-   :project: csalt
-
-str_vector_index
-~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: str_vector_index
-   :project: csalt
-
-Vector Manipulation 
--------------------
-The following functions can be used to insert data into a string vector.
-
-push_back_str_vector
-~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: push_back_str_vector
-   :project: csalt
-
-push_front_str_vector
-~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: push_front_str_vector
-   :project: csalt
-
-pop_back_str_vector
-~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: pop_back_str_vector
-   :project: csalt
-
-pop_front_str_vector
-~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: pop_front_str_vector
-   :project: csalt
-
-pop_any_str_vector
-~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: pop_any_str_vector
-   :project: csalt
-
-insert_str_vector
-~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: insert_str_vector
-   :project: csalt
-
-delete_front_str_vector
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: delete_front_str_vector
-   :project: csalt
-
-delete_back_str_vector
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: delete_back_str_vector
-   :project: csalt
-
-delete_any_str_vector
-~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: delete_any_str_vector
-   :project: csalt
-
-reverse_str_vector
-~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: reverse_str_vector
-   :project: csalt
-
-sort_str_vector
-~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: sort_str_vector
-   :project: csalt
-
-Search Vector
--------------
-
-binary_search_str_vector
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. doxygenfunction:: binary_search_str_vector
-   :project: csalt
-
-String Vector Iterator 
-----------------------
-The iterator lets you traverse the payload of a ``string_v`` without exposing
-its internals. Iterators are invalidated by operations that can reallocate,
-such as concatenation, reserve, replace, or drop.
-
-Mutable API Reference
-~~~~~~~~~~~~~~~~~~~~~
-.. doxygenfunction:: strv_iter_make
-   :project: csalt
-.. doxygenfunction:: strv_iter_valid
-   :project: csalt
-.. doxygenfunction:: strv_iter_get
-   :project: csalt
-.. doxygenfunction:: strv_iter_next
-   :project: csalt
-.. doxygenfunction:: strv_iter_prev
-   :project: csalt
-.. doxygenfunction:: strv_iter_advance
-   :project: csalt
-.. doxygenfunction:: strv_iter_seek_begin
-   :project: csalt
-.. doxygenfunction:: strv_iter_seek_end
-   :project: csalt
-
-Immutable API Reference 
-~~~~~~~~~~~~~~~~~~~~~~~
-.. doxygenfunction:: cstrv_iter_make
-   :project: csalt
-.. doxygenfunction:: cstrv_iter_valid
-   :project: csalt
-.. doxygenfunction:: cstrv_iter_get
-   :project: csalt
-.. doxygenfunction:: cstrv_iter_next
-   :project: csalt
-.. doxygenfunction:: cstrv_iter_prev
-   :project: csalt
-.. doxygenfunction:: cstrv_iter_advance
-   :project: csalt
-.. doxygenfunction:: cstrv_iter_seek_begin
-   :project: csalt
-.. doxygenfunction:: cstrv_iter_seek_end
-   :project: csalt
-
-
-Examples
-~~~~~~~~
-
-.. code-block:: c
-
-   #include "c_string.h"  /* string_v / string_t + iterator APIs */
-
-   /* Print each element with its index using the immutable iterator. */
-   void demo_citer_print_all(void) {
-       string_v *v = init_str_vector(4);
-       push_back_str_vector(v, "alpha");
-       push_back_str_vector(v, "beta");
-       push_back_str_vector(v, "gamma");
-
-       cstrv_iter it = cstrv_iter_make(v);
-       for (; cstrv_iter_valid(&it); cstrv_iter_next(&it)) {
-           const string_t *s = cstrv_iter_get(&it);
-           printf("[%zu] %s\n", cstrv_iter_pos(&it), get_string(s));
-       }
-
-       free_str_vector(v);
-   }
-
-Output::
-
-   [0] alpha
-   [1] beta
-   [2] gamma
-
-.. code-block:: c
-
-   #include "c_string.h"
-
-   void demo_citer_advance_seek(void) {
-       string_v *v = init_str_vector(4);
-       push_back_str_vector(v, "red");
-       push_back_str_vector(v, "green");
-       push_back_str_vector(v, "blue");
-       push_back_str_vector(v, "cyan");
-
-       cstrv_iter it = cstrv_iter_make(v);
-
-       /* Skip first two (clamped to end if k > size). */
-       (void)cstrv_iter_advance(&it, 2);
-       for (; cstrv_iter_valid(&it); cstrv_iter_next(&it)) {
-           puts(get_string(cstrv_iter_get(&it)));
-       }
-
-       /* Seek to end (one-past-last), then back to begin and print the first. */
-       (void)cstrv_iter_seek_end(&it);
-       if (cstrv_iter_at_end(&it)) {
-           (void)cstrv_iter_seek_begin(&it);
-       }
-       if (cstrv_iter_valid(&it)) {
-           printf("First again: %s\n", get_string(cstrv_iter_get(&it)));
-       }
-
-       free_str_vector(v);
-   }
-
-Output::
-
-   blue
-   cyan
-   First again: red
-
-.. code-block:: c
-
-   #include "c_string.h"
-
-   void demo_miter_append_suffix(void) {
-       string_v *v = init_str_vector(3);
-       push_back_str_vector(v, "oak");
-       push_back_str_vector(v, "pine");
-       push_back_str_vector(v, "elm");
-
-       /* Mutate payloads only (safe for iterator): */
-       strv_iter it = strv_iter_make(v);
-       for (; strv_iter_valid(&it); strv_iter_next(&it)) {
-           string_t *s = strv_iter_get(&it);
-           if (!string_lit_concat(s, "_tree")) {
-               perror("string_lit_concat");
-               break;
-           }
-       }
-
-       /* Verify with a const iterator. */
-       cstrv_iter cit = cstrv_iter_make(v);
-       for (; cstrv_iter_valid(&cit); cstrv_iter_next(&cit)) {
-           puts(get_string(cstrv_iter_get(&cit)));
-       }
-
-       free_str_vector(v);
-   }
-
-Output::
-
-   oak_tree
-   pine_tree
-   elm_tree
-
-.. code-block:: c
-
-   #include "c_string.h"
-
-   void demo_miter_step_pos(void) {
-       string_v *v = init_str_vector(3);
-       push_back_str_vector(v, "A");
-       push_back_str_vector(v, "B");
-       push_back_str_vector(v, "C");
-
-       strv_iter it = strv_iter_make(v);
-
-       (void)strv_iter_advance(&it, 2);   /* A,B, now at C */
-       if (!strv_iter_prev(&it)) {
-           /* malformed or at begin; errno set only if malformed */
-       }
-
-       if (strv_iter_valid(&it)) {
-           printf("Index=%zu Value=%s\n",
-                  strv_iter_pos(&it), get_string(strv_iter_get(&it)));
-       }
-
-       free_str_vector(v);
-   }
-
-Output::
-
-   Index=1 Value=B
-
-.. note::
-
-   Any operation that may **reallocate or reorder** the vector
-   (push/insert/erase/pop, sort, reverse, reserve/growth) **invalidates existing
-   iterators**. Recreate iterators after such operations.
-
-Generic Macros 
-==============
-
-The following macros use the `_Generic` keyword to provide type safe compile
-time dispatching for the correct function based on data type.  In essense 
-these macros provide generic helper functions for `string_t` and `string_v`
-functions.
-
-str_size 
---------
-
-.. doxygendefine:: str_size
-   :project: csalt
-
-str_alloc 
----------
-
-.. doxygendefine:: str_alloc
-   :project: csalt
-
-str_error 
----------
-
-.. doxygendefine:: str_error
    :project: csalt

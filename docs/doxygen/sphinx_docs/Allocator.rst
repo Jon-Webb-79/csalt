@@ -1720,9 +1720,9 @@ v_free
 .. doxygenfunction:: v_free
    :project: csalt
 
-malloc_allocator 
-~~~~~~~~~~~~~~~~
+heap_allocator 
+~~~~~~~~~~~~~~
 
-.. doxygenfunction:: malloc_allocator
+.. doxygenfunction:: heap_allocator
    :project: csalt
 

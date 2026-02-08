@@ -75,7 +75,8 @@ Allocators
 
 String  (``string_t``)
 ----------------------
-* A dynamically allocated string implementation 
+* Utilizes allocators from the ``c_allocator.h`` file or user developed custom 
+  allocators to manage memory.
 * Automatically manages memory during string operations 
 * Provides functions for standard string operations 
 * Provides an iterator for access methods
