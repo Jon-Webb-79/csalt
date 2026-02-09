@@ -84,6 +84,91 @@ void return_string(string_t* s) {
 
     a.return_element(a.ctx, s);
 }
+// -------------------------------------------------------------------------------- 
+
+bool str_concat(string_t* s, const char* str) {
+    if (!s || !s->str || !str) return false;
+
+    allocator_vtable_t* a = &s->allocator;
+
+    // We need at least allocate + return_element; reallocate is optional (fallback below).
+    if (!a->allocate || !a->return_element) return false;
+
+    size_t const len1 = s->len;
+    size_t const len2 = strlen(str);
+
+    if (len2 == 0u) return true;
+
+    // overflow guard: len1 + len2 + 1
+    if (len2 > (SIZE_MAX - 1u - len1)) return false;
+
+    size_t const needed = len1 + len2 + 1u; // bytes including NUL
+
+    // Check whether source pointer aliases current string buffer (including NUL)
+    const char* const s_begin = s->str;
+    const char* const s_end   = s->str + (len1 + 1u);
+    bool const overlaps = (str >= s_begin && str < s_end);
+
+    const char* src = str;
+    char* temp = NULL;
+
+    // If we must grow and src aliases s->str, we must copy src aside before growing.
+    if (needed > s->alloc && overlaps) {
+        void_ptr_expect_t tr = a->allocate(a->ctx, len2, false);
+        if (!tr.has_value) return false;
+
+        temp = (char*)tr.u.value;
+        memcpy(temp, str, len2);
+        src = temp;
+    }
+
+    // Ensure capacity
+    if (needed > s->alloc) {
+        if (a->reallocate) {
+            // Preferred: reallocate in-place or move
+            void_ptr_expect_t rr =
+                a->reallocate(a->ctx, s->str, s->alloc, needed, false);
+            if (!rr.has_value) {
+                if (temp) a->return_element(a->ctx, temp);
+                return false;
+            }
+            s->str = (char*)rr.u.value;
+            s->alloc = needed;
+        } else {
+            // Fallback: allocate new buffer + copy old + append + (attempt) return old buffer
+            void_ptr_expect_t nr = a->allocate(a->ctx, needed, false);
+            if (!nr.has_value) {
+                if (temp) a->return_element(a->ctx, temp);
+                return false;
+            }
+
+            char* newbuf = (char*)nr.u.value;
+
+            // Copy old content including NUL
+            memcpy(newbuf, s->str, len1 + 1u);
+
+            // Best-effort return old buffer (no-op for arenas)
+            a->return_element(a->ctx, s->str);
+
+            s->str = newbuf;
+            s->alloc = needed;
+        }
+    }
+
+    // Append safely (memmove handles overlap)
+    memmove(s->str + len1, src, len2);
+    s->str[len1 + len2] = '\0';
+    s->len = len1 + len2;
+
+    if (temp) a->return_element(a->ctx, temp);
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool string_concat(string_t* s, const string_t* str) {
+    if (!str) return false;
+    return str_concat(s, const_string(str));
+}
 // ================================================================================
 // ================================================================================
 // eof

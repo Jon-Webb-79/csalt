@@ -15,6 +15,19 @@
 #ifndef c_string_H
 #define c_string_H
 
+#ifndef ARENA_USE_CONVENIENCE_MACROS
+#  ifdef NO_FUNCTION_MACROS
+#    define ARENA_USE_CONVENIENCE_MACROS 0
+#  else
+#    define ARENA_USE_CONVENIENCE_MACROS 1
+#  endif
+#endif
+
+/* Sanity: if someone set both, ensure consistency */
+#if defined(NO_ARENA_MACROS) && (ARENA_USE_CONVENIENCE_MACROS+0)!=0
+#  error "NO_ARENA_MACROS set but ARENA_USE_CONVENIENCE_MACROS != 0"
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -174,6 +187,184 @@ static inline size_t string_alloc(const string_t* s) {
  * @endcode
  */
 void return_string(string_t* s);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Concatenate a C string onto a CSalt string.
+ *
+ * Appends the null-terminated string @p str to the end of the destination
+ * string @p s. If additional capacity is required, the function attempts to
+ * grow the underlying buffer using the allocator associated with @p s.
+ *
+ * This function is safe for overlapping memory regions. If the source pointer
+ * lies within the destination buffer and reallocation is required, a temporary
+ * copy is created before growth to preserve correctness.
+ *
+ * @param s   Destination string to be extended.
+ * @param str Null-terminated C string to append.
+ *
+ * @retval true  Concatenation succeeded.
+ * @retval false Invalid arguments, allocation failure, or size overflow.
+ *
+ * @note
+ * - The allocator stored in @p s determines growth behavior.
+ * - Arena allocators may not reclaim intermediate buffers until the arena
+ *   itself is reset or destroyed.
+ * - The resulting string is always null-terminated on success.
+ *
+ * @code{.c}
+ * string_expect_t r = init_string("Hello", 0, heap_allocator());
+ * if (r.has_value) {
+ *     string_t* s = r.u.value;
+ *
+ *     if (str_concat(s, ", world!")) {
+ *         printf("%s\n", const_string(s)); // "Hello, world!"
+ *     }
+ *
+ *     return_string(s);
+ * }
+ * @endcode
+ */
+bool str_concat(string_t* s, const char* str);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Concatenate one CSalt string onto another.
+ *
+ * Appends the contents of @p str to the destination string @p s. This function
+ * behaves identically to @ref str_concat but obtains the source characters from
+ * another managed @ref string_t instance.
+ *
+ * The operation respects allocator semantics and may trigger buffer growth
+ * using the destination string's allocator.
+ *
+ * @param s    Destination string to be extended.
+ * @param str  Source string whose contents will be appended.
+ *
+ * @retval true  Concatenation succeeded.
+ * @retval false Invalid arguments, allocation failure, or size overflow.
+ *
+ * @note
+ * - Source and destination may reference the same underlying buffer.
+ *   Overlap is handled safely.
+ * - The destination string remains null-terminated on success.
+ *
+ * @code{.c}
+ * string_expect_t a = init_string("CSalt", 0, heap_allocator());
+ * string_expect_t b = init_string(" Library", 0, heap_allocator());
+ *
+ * if (a.has_value && b.has_value) {
+ *     string_t* s1 = a.u.value;
+ *     string_t* s2 = b.u.value;
+ *
+ *     if (string_concat(s1, s2)) {
+ *         printf("%s\n", const_string(s1)); // "CSalt Library"
+ *     }
+ *
+ *     return_string(s1);
+ *     return_string(s2);
+ * }
+ * @endcode
+ */
+bool string_concat(string_t* s, const string_t * str);
+// -------------------------------------------------------------------------------- 
+
+#if ARENA_USE_CONVENIENCE_MACROS && !defined(NO_FUNCTION_MACROS)
+
+/* Expression-safe static assertion:
+ * If cond is false => negative array => compile error.
+ * This is valid in expression contexts (unlike _Static_assert).
+ */
+#ifndef CSALT_STATIC_ASSERT_EXPR_
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+#endif
+
+/* Returns 1 if src type is supported, else 0. */
+#ifndef CONCAT_STRING_SUPPORTED_SRC_
+#define CONCAT_STRING_SUPPORTED_SRC_(x) \
+    _Generic((x), \
+        const char*:      1, \
+        char*:            1, \
+        const string_t*:  1, \
+        string_t*:        1, \
+        default:          0)
+#endif
+
+/* Compile-time check: triggers error for unsupported src types. */
+#ifndef CONCAT_STRING_TYPECHECK_
+#define CONCAT_STRING_TYPECHECK_(x) \
+    CSALT_STATIC_ASSERT_EXPR_(CONCAT_STRING_SUPPORTED_SRC_(x), \
+                              concat_string_unsupported_src_type)
+#endif
+
+/* Convenience macro: dispatches to the correct implementation. */
+#ifndef concat_string
+/**
+ * @brief Type-safe generic string concatenation convenience macro.
+ *
+ * Dispatches to the correct concatenation routine based on the type of
+ * the source argument @p src using the C11 `_Generic` selection mechanism.
+ *
+ * Supported source types:
+ * - `const char*` → @ref str_concat  
+ * - `char*` → @ref str_concat  
+ * - `const string_t*` → @ref string_concat  
+ * - `string_t*` → @ref string_concat  
+ *
+ * Any unsupported source type triggers a **compile-time error** in C11
+ * builds via @ref _concat_string_type_error, ensuring strong type safety
+ * without runtime overhead.
+ *
+ * This macro is available only when:
+ * - `ARENA_USE_CONVENIENCE_MACROS` is defined, and  
+ * - `NO_FUNCTION_MACROS` is **not** defined (to preserve MISRA-style builds).
+ *
+ * @param dst Destination @ref string_t instance to be extended.
+ * @param src Source data to append (`const char*` or `string_t*`).
+ *
+ * @retval true  Concatenation succeeded.
+ * @retval false Concatenation failed (allocation error, overflow, or
+ *               invalid arguments).  
+ *               This return value originates from the selected function.
+ *
+ * @note
+ * - The destination string’s allocator controls any required buffer growth.
+ * - For arena allocators, intermediate buffers may persist until the arena
+ *   is reset or destroyed.
+ * - No runtime type checks are performed; dispatch occurs entirely at
+ *   compile time.
+ *
+ * @code{.c}
+ * string_expect_t r = init_string("Answer: ", 0, heap_allocator());
+ * if (r.has_value) {
+ *     string_t* s = r.u.value;
+ *
+ *     concat_string(s, "42");
+ *     printf("%s\n", const_string(s));  // "Answer: 42"
+ *
+ *     return_string(s);
+ * }
+ * @endcode
+ */
+#define concat_string(dst, src) \
+    (CONCAT_STRING_TYPECHECK_(src), \
+     _Generic((src), \
+        const char*:      str_concat, \
+        char*:            str_concat, \
+        const string_t*:  string_concat, \
+        string_t*:        string_concat \
+     )((dst), (src)))
+#endif
+
+/* NOTE on string literals:
+ * If your compiler treats "B" as char[N] in _Generic, you may need:
+ *   concat_string(s, (const char*)"B");
+ * or:
+ *   const char* lit = "B"; concat_string(s, lit);
+ */
+
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !defined(NO_FUNCTION_MACROS) */
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

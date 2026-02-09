@@ -158,3 +158,32 @@ string_alloc
 
 .. doxygenfunction:: string_alloc
    :project: csalt
+
+String Manipulation
+-------------------
+
+str_concat
+~~~~~~~~~~
+
+.. doxygenfunction:: str_concat
+   :project: csalt
+
+string_concat
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: string_concat
+   :project: csalt
+
+Generic Macros
+--------------
+
+The generic macros described in this section are only available when
+``ARENA_USE_CONVENIENCE_MACROS`` is enabled and the code is **not**
+compiled with ``NO_FUNCTION_MACROS``.
+
+concat_string
+~~~~~~~~~~~~~
+
+.. doxygendefine:: concat_string
+   :project: csalt
+
