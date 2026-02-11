@@ -9,6 +9,51 @@
 #include <stdint.h>
 #include <immintrin.h>
 #include <string.h>
+// ================================================================================ 
+// ================================================================================ 
+
+static inline unsigned simd_ctz64_(uint64_t x) {
+    /* Precondition: x != 0 */
+    unsigned idx = 0u;
+    while ((x & 1ull) == 0ull) {
+        x >>= 1u;
+        ++idx;
+    }
+    return idx;
+}
+
+static inline size_t simd_first_diff_u8(const uint8_t* a,
+                                        const uint8_t* b,
+                                        size_t n) {
+    if ((a == NULL) || (b == NULL) || (n == 0u)) {
+        return 0u;
+    }
+
+    size_t i = 0u;
+
+    while ((i + 64u) <= n) {
+        __m512i va = _mm512_loadu_si512((const void*)(a + i));
+        __m512i vb = _mm512_loadu_si512((const void*)(b + i));
+
+        __mmask64 eqmask = _mm512_cmpeq_epi8_mask(va, vb);
+
+        if ((uint64_t)eqmask != UINT64_MAX) {
+            uint64_t mism = (uint64_t)(~(uint64_t)eqmask); /* 1 where different */
+            unsigned bit  = simd_ctz64_(mism);
+            return i + (size_t)bit;
+        }
+
+        i += 64u;
+    }
+
+    for (; i < n; ++i) {
+        if (a[i] != b[i]) { return i; }
+    }
+    return n;
+}
+
+// ================================================================================ 
+// ================================================================================ 
 
 static inline int csalt_highbit_u64(uint64_t m) { return 63 - __builtin_clzll(m); }
 

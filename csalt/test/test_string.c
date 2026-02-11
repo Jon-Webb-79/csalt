@@ -411,6 +411,330 @@ static void test_string_pool_concat_macro_dispatches_string(void **state) {
     destroy_pool_allocator(&a);
 }
 #endif
+// -------------------------------------------------------------------------------- 
+
+/* =============================================================================
+   str_compare tests
+   ============================================================================= */
+
+static void test_string_str_compare_equal(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    assert_int_equal(str_compare(s, "abc"), (int8_t)0);
+
+    return_string(s);
+}
+
+static void test_string_str_compare_diff_middle_less(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* 'b' < 'x' at index 1 -> s < "axc" */
+    assert_int_equal(str_compare(s, "axc"), (int8_t)-1);
+
+    return_string(s);
+}
+
+static void test_string_str_compare_diff_middle_greater(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("axc", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* 'x' > 'b' at index 1 -> s > "abc" */
+    assert_int_equal(str_compare(s, "abc"), (int8_t)1);
+
+    return_string(s);
+}
+
+static void test_string_str_compare_bounded_by_string_len_str_longer(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* All 3 chars match; C string continues -> s shorter => s < str */
+    assert_int_equal(str_compare(s, "abcXYZ"), (int8_t)-1);
+
+    return_string(s);
+}
+
+static void test_string_str_compare_bounded_by_string_len_str_shorter(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* C string ends early -> s is greater (since s still has non-NUL chars) */
+    assert_int_equal(str_compare(s, "ab"), (int8_t)1);
+
+    return_string(s);
+}
+
+static void test_string_str_compare_truncated_string_instance(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    /* capacity 2 => "he" (len==2) */
+    string_expect_t r = init_string("hello", 2u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    assert_int_equal(string_size(s), 2u);
+    assert_string_equal(const_string(s), "he");
+
+    /* Compare bounded string "he" against longer literal "hello" -> s < str */
+    assert_int_equal(str_compare(s, "hello"), (int8_t)-1);
+
+    return_string(s);
+}
+
+// static void test_string_str_compare_invalid_args(void **state)
+// {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     string_expect_t r = init_string("abc", 0u, a);
+//     assert_true(r.has_value);
+//
+//     string_t *s = r.u.value;
+//
+//     assert_int_equal(str_compare(NULL, "abc"), (int8_t)INT8_MIN);
+//     assert_int_equal(str_compare(s, NULL), (int8_t)INT8_MIN);
+//
+//     /* Corrupt state: s->str == NULL should be treated as invalid */
+//     s->str = NULL;
+//     
+//     assert_int_equal(str_compare(s, "abc"), (int8_t)INT8_MIN);
+//     
+//     /* Don't call return_string(s) now because we intentionally corrupted it */
+// }
+
+/* =============================================================================
+   string_compare tests
+   ============================================================================= */
+
+static void test_string_string_compare_equal(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t r1 = init_string("abc", 0u, a);
+    string_expect_t r2 = init_string("abc", 0u, a);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    string_t *s1 = r1.u.value;
+    string_t *s2 = r2.u.value;
+
+    assert_int_equal(string_compare(s1, s2), (int8_t)0);
+
+    return_string(s1);
+    return_string(s2);
+}
+
+static void test_string_string_compare_less_and_greater(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t r1 = init_string("delta", 0u, a);
+    string_expect_t r2 = init_string("gamma", 0u, a);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    string_t *s1 = r1.u.value;
+    string_t *s2 = r2.u.value;
+
+    assert_int_equal(string_compare(s1, s2), (int8_t)-1);
+    assert_int_equal(string_compare(s2, s1), (int8_t)1);
+
+    return_string(s1);
+    return_string(s2);
+}
+
+static void test_string_string_compare_length_ordering(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t r1 = init_string("abc", 0u, a);
+    string_expect_t r2 = init_string("abcd", 0u, a);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    string_t *s1 = r1.u.value;
+    string_t *s2 = r2.u.value;
+
+    /* "abc" is shorter but equal prefix => less */
+    assert_int_equal(string_compare(s1, s2), (int8_t)-1);
+    assert_int_equal(string_compare(s2, s1), (int8_t)1);
+
+    return_string(s1);
+    return_string(s2);
+}
+
+static void test_string_string_compare_truncated_instances(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    /* "hello" truncated to "he" */
+    string_expect_t r1 = init_string("hello", 2u, a);
+    /* "help" truncated to "he" as well */
+    string_expect_t r2 = init_string("help", 2u, a);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    string_t *s1 = r1.u.value;
+    string_t *s2 = r2.u.value;
+
+    assert_string_equal(const_string(s1), "he");
+    assert_string_equal(const_string(s2), "he");
+
+    assert_int_equal(string_compare(s1, s2), (int8_t)0);
+
+    return_string(s1);
+    return_string(s2);
+}
+
+// static void test_string_string_compare_invalid_args(void **state)
+// {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//
+//     string_expect_t r = init_string("abc", 0u, a);
+//     assert_true(r.has_value);
+//
+//     string_t *s = r.u.value;
+//
+//     assert_int_equal(string_compare(NULL, s), (int8_t)INT8_MIN);
+//     assert_int_equal(string_compare(s, NULL), (int8_t)INT8_MIN);
+//
+//     /* Corrupt str->str for defensive path */
+//     s->str = NULL;
+//     assert_int_equal(string_compare(s, s), (int8_t)INT8_MIN);
+//
+//     /* Don't return_string(s) now (corrupted) */
+// }
+
+
+static void test_string_macro_compare_dispatches_cstr(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* Should dispatch to str_compare(s, "abc") -> 0 */
+    assert_int_equal(compare_string(s, "abc"), (int8_t)0);
+
+    /* Should dispatch to str_compare(s, "abd") -> -1 */
+    assert_int_equal(compare_string(s, "abd"), (int8_t)-1);
+
+    return_string(s);
+}
+
+static void test_string_macro_compare_dispatches_char_ptr(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* Using a non-const char* RHS should still dispatch to str_compare */
+    char rhs_buf[] = "abc";
+    char *rhs = rhs_buf;
+
+    assert_int_equal(compare_string(s, rhs), (int8_t)0);
+
+    return_string(s);
+}
+
+static void test_string_macro_compare_dispatches_string_t(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t r1 = init_string("delta", 0u, a);
+    string_expect_t r2 = init_string("gamma", 0u, a);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    string_t *s1 = r1.u.value;
+    string_t *s2 = r2.u.value;
+
+    /* Should dispatch to string_compare(s1, s2) -> -1 */
+    assert_int_equal(compare_string(s1, s2), (int8_t)-1);
+
+    return_string(s1);
+    return_string(s2);
+}
+
+static void test_string_macro_compare_dispatches_const_string_t(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t r1 = init_string("abc", 0u, a);
+    string_expect_t r2 = init_string("abc", 0u, a);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    string_t *s1 = r1.u.value;
+    string_t *s2 = r2.u.value;
+
+    const string_t *cs2 = (const string_t*)s2;
+
+    /* Should dispatch to string_compare(s1, cs2) -> 0 */
+    assert_int_equal(compare_string(s1, cs2), (int8_t)0);
+
+    return_string(s1);
+    return_string(s2);
+}
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -439,6 +763,25 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_string_pool_concat_macro_dispatches_cstr),
     cmocka_unit_test(test_string_pool_concat_macro_dispatches_string),
 #endif
+
+    cmocka_unit_test(test_string_str_compare_equal),
+    cmocka_unit_test(test_string_str_compare_diff_middle_less),
+    cmocka_unit_test(test_string_str_compare_diff_middle_greater),
+    cmocka_unit_test(test_string_str_compare_bounded_by_string_len_str_longer),
+    cmocka_unit_test(test_string_str_compare_bounded_by_string_len_str_shorter),
+    cmocka_unit_test(test_string_str_compare_truncated_string_instance),
+//    cmocka_unit_test(test_string_str_compare_invalid_args),
+
+    cmocka_unit_test(test_string_string_compare_equal),
+    cmocka_unit_test(test_string_string_compare_less_and_greater),
+    cmocka_unit_test(test_string_string_compare_length_ordering),
+    cmocka_unit_test(test_string_string_compare_truncated_instances),
+//    cmocka_unit_test(test_string_string_compare_invalid_args),
+
+    cmocka_unit_test(test_string_macro_compare_dispatches_cstr),
+    cmocka_unit_test(test_string_macro_compare_dispatches_char_ptr),
+    cmocka_unit_test(test_string_macro_compare_dispatches_string_t),
+    cmocka_unit_test(test_string_macro_compare_dispatches_const_string_t),
 };
 
 const size_t test_string_count = sizeof(test_string) / sizeof(test_string[0]);

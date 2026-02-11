@@ -8,6 +8,56 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <arm_neon.h>
+// ================================================================================ 
+// ================================================================================ 
+
+static inline size_t simd_first_diff_u8(const uint8_t* a,
+                                        const uint8_t* b,
+                                        size_t n) {
+    if (n == 0u) { return 0u; }
+    if ((a == NULL) || (b == NULL)) { return 0u; }
+
+    size_t i = 0u;
+
+    while ((i + 16u) <= n) {
+        /* Load 16 bytes from each */
+        const uint8x16_t va = vld1q_u8(a + i);
+        const uint8x16_t vb = vld1q_u8(b + i);
+
+        /* Byte-wise equality: lanes are 0xFF if equal, 0x00 if not */
+        const uint8x16_t veq = vceqq_u8(va, vb);
+
+        /* Check if ALL lanes are 0xFF without needing AArch64-only reductions.
+           Reinterpret as two 64-bit lanes and check both == UINT64_MAX. */
+        const uint64x2_t eq64 = vreinterpretq_u64_u8(veq);
+
+        if ((vgetq_lane_u64(eq64, 0) != UINT64_MAX) ||
+            (vgetq_lane_u64(eq64, 1) != UINT64_MAX))
+        {
+            /* There is at least one mismatch in this 16-byte block.
+               Find the first mismatch safely with a tiny scalar scan. */
+            for (size_t j = 0u; j < 16u; ++j) {
+                if (a[i + j] != b[i + j]) {
+                    return i + j;
+                }
+            }
+
+            /* Defensive: should not happen if the check above detects mismatch */
+            return i;
+        }
+
+        i += 16u;
+    }
+
+    /* Scalar tail (0..15 bytes) */
+    for (; i < n; ++i) {
+        if (a[i] != b[i]) { return i; }
+    }
+
+    return n;
+}
+// ================================================================================ 
+// ================================================================================ 
 
 /* Build a 16-bit movemask from MSBs of each byte */
 static inline uint32_t csalt_neon_movemask_u8(uint8x16_t v) {

@@ -9,7 +9,42 @@
 #include <stdint.h>
 #include <arm_sve.h>
 #include <string.h>
+// ================================================================================ 
+// ================================================================================ 
 
+static inline size_t simd_first_diff_u8(const uint8_t* a,
+                                        const uint8_t* b,
+                                        size_t n) {
+    if (n == 0u) { return 0u; }
+    if ((a == NULL) || (b == NULL)) { return 0u; }
+
+    size_t i = 0u;
+
+    while (i < n) {
+        const svbool_t p = svwhilelt_b8((uint64_t)i, (uint64_t)n);
+
+        const svuint8_t va = svld1_u8(p, a + i);
+        const svuint8_t vb = svld1_u8(p, b + i);
+
+        const svbool_t eq = svcmpeq_u8(p, va, vb);
+
+        if (svptest_all(p, eq)) {
+            i += (size_t)svcntp_b8(svptrue_b8(), p);
+            continue;
+        }
+
+        const svbool_t mism = svnot_z(p, eq);
+        const svbool_t after_first  = svbrkb_z(p, mism);
+        const svbool_t before_first = svnot_z(p, after_first);
+
+        const size_t off = (size_t)svcntp_b8(svptrue_b8(), before_first);
+        return i + off;
+    }
+
+    return n;
+}
+// ================================================================================ 
+// ================================================================================ 
 static inline size_t simd_last_index_u8_sve2(const unsigned char* s, size_t n, unsigned char c) {
     size_t i = 0, last = SIZE_MAX;
 

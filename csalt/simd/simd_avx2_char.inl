@@ -5,9 +5,61 @@
 #ifndef CSALT_SIMD_AVX2_CHAR_INL
 #define CSALT_SIMD_AVX2_CHAR_INL
 
+#if !defined(__AVX512F__) || !defined(__AVX512BW__)
+  #error "simd_avx512_char.inl requires __AVX512F__ and __AVX512BW__"
+#endif
+
 #include <stddef.h>
 #include <stdint.h>
 #include <immintrin.h>
+// ================================================================================ 
+// ================================================================================ 
+
+/* Return index of least-significant 1-bit in a 16-bit value.
+   Precondition: x != 0. Result: 0..15 */
+static inline unsigned simd_ctz16_(uint16_t x)
+{
+    unsigned idx = 0u;
+    while ((x & (uint16_t)1u) == (uint16_t)0u) {
+        x = (uint16_t)(x >> 1u);
+        ++idx;
+    }
+    return idx;
+}
+
+static inline size_t simd_first_diff_u8(const uint8_t* a,
+                                        const uint8_t* b,
+                                        size_t n)
+{
+    if (n == 0u) { return 0u; }
+    if ((a == NULL) || (b == NULL)) { return 0u; }
+
+    size_t i = 0u;
+
+    while ((i + 16u) <= n) {
+        __m128i va = _mm_loadu_si128((const __m128i*)(const void*)(a + i));
+        __m128i vb = _mm_loadu_si128((const __m128i*)(const void*)(b + i));
+
+        __m128i eq = _mm_cmpeq_epi8(va, vb);
+        uint16_t m = (uint16_t)(unsigned)_mm_movemask_epi8(eq);
+
+        if (m != (uint16_t)0xFFFFu) {
+            uint16_t mism = (uint16_t)((uint16_t)0xFFFFu ^ m);
+            unsigned bit  = simd_ctz16_(mism);
+            return i + (size_t)bit;
+        }
+
+        i += 16u;
+    }
+
+    for (; i < n; ++i) {
+        if (a[i] != b[i]) { return i; }
+    }
+    return n;
+}
+// ================================================================================ 
+// ================================================================================ 
+
 
 static inline int csalt_highbit_u32(uint32_t m) { return 31 - __builtin_clz(m); }
 

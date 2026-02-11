@@ -159,6 +159,18 @@ string_alloc
 .. doxygenfunction:: string_alloc
    :project: csalt
 
+str_compare
+~~~~~~~~~~~
+
+.. doxygenfunction:: str_compare
+   :project: csalt
+
+string_compare
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: string_compare
+   :project: csalt
+
 String Manipulation
 -------------------
 
@@ -187,3 +199,8 @@ concat_string
 .. doxygendefine:: concat_string
    :project: csalt
 
+compare_string
+~~~~~~~~~~~~~~
+
+.. doxygendefine:: compare_string
+   :project: csalt

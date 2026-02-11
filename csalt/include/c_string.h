@@ -365,6 +365,199 @@ bool string_concat(string_t* s, const string_t * str);
  */
 
 #endif /* ARENA_USE_CONVENIENCE_MACROS && !defined(NO_FUNCTION_MACROS) */
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare a bounded string_t against a C string.
+ *
+ * Performs a lexicographical comparison between the contents of
+ * @p s and the null-terminated C string @p str.  The comparison is
+ * **bounded by s->len**, meaning the function never reads beyond the
+ * initialized region of the string_t buffer.
+ *
+ * This function uses a **scalar implementation** to guarantee:
+ * - Deterministic execution
+ * - Strict bounds safety
+ * - MISRA-compatible control flow
+ *
+ * @param s   Pointer to the source string_t to compare.
+ * @param str Pointer to a null-terminated C string.
+ *
+ * @retval INT8_MIN  Invalid argument (NULL pointer or corrupt state).
+ * @retval 0         Strings are equal within the bounded region.
+ * @retval -1        @p s is lexicographically less than @p str.
+ * @retval 1         @p s is lexicographically greater than @p str.
+ *
+ * @note
+ * - Comparison stops at **s->len** or the first differing character.
+ * - The function does **not** read beyond the bounds of @p s.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("alpha", 0, a);
+ * if (r.has_value) {
+ *     string_t* s = r.u.value;
+ *
+ *     int8_t cmp = str_compare(s, "alphabet");
+ *     // cmp == -1  ("alpha" < "alphabet")
+ *
+ *     return_string(s);
+ * }
+ * @endcode
+ */
+int8_t str_compare(const string_t* s, const char *str);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two bounded string_t objects.
+ *
+ * Performs a lexicographical comparison between @p s and @p str,
+ * both of which are bounded string_t instances.
+ *
+ * This function may use **SIMD acceleration** when supported by the
+ * target architecture and enabled at compile time:
+ *
+ * - AVX / AVX2 / AVX-512 on x86
+ * - SSE2 / SSE3 / SSE4.1 on x86
+ * - NEON on ARM
+ * - SVE / SVE2 on ARM
+ *
+ * When SIMD is unavailable, the implementation **falls back to a
+ * fully scalar, MISRA-safe comparison** with identical semantics.
+ *
+ * @param s   Pointer to the first string_t.
+ * @param str Pointer to the second string_t.
+ *
+ * @retval INT8_MIN  Invalid argument (NULL pointer or corrupt state).
+ * @retval 0         Strings are equal.
+ * @retval -1        @p s is lexicographically less than @p str.
+ * @retval 1         @p s is lexicographically greater than @p str.
+ *
+ * @note
+ * - SIMD is used only for **bounded byte comparison** and never reads
+ *   past either string’s initialized region.
+ * - Return values are **architecture-independent**.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r1 = init_string("delta", 0, a);
+ * string_expect_t r2 = init_string("gamma", 0, a);
+ *
+ * if (r1.has_value && r2.has_value) {
+ *     string_t* s1 = r1.u.value;
+ *     string_t* s2 = r2.u.value;
+ *
+ *     int8_t cmp = string_compare(s1, s2);
+ *     // cmp == -1  ("delta" < "gamma")
+ *
+ *     return_string(s1);
+ *     return_string(s2);
+ * }
+ * @endcode
+ */
+int8_t string_compare(const string_t* s, const string_t* str);
+// -------------------------------------------------------------------------------- 
+
+#if defined(ARENA_USE_CONVENIENCE_MACROS) && !defined(NO_FUNCTION_MACROS)
+
+/* Helper: compile-time check (expression-safe) */
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+
+/* RHS type support check for compare_string(dst, src) */
+#define COMPARE_STRING_SUPPORTED_SRC_(x) \
+    _Generic((x), \
+        const char*:      1, \
+        char*:            1, \
+        const string_t*:  1, \
+        string_t*:        1, \
+        default:          0)
+
+/* Enforce supported RHS types at compile time (C11). */
+#define COMPARE_STRING_TYPECHECK_(x) \
+    CSALT_STATIC_ASSERT_EXPR_(COMPARE_STRING_SUPPORTED_SRC_(x), \
+                              compare_string_unsupported_src_type)
+
+/**
+ * @brief Type-safe generic string comparison convenience macro.
+ *
+ * @details
+ * `compare_string(lhs, rhs)` provides a single comparison interface that
+ * selects the correct implementation at **compile time** using the C11
+ * `_Generic` operator.
+ *
+ * Compile-time dispatch rules:
+ *
+ * - If @p rhs is a C string (`const char*` or `char*`), this macro expands to:
+ *   @ref str_compare((const string_t*)lhs, (const char*)rhs)
+ *
+ * - If @p rhs is a string object (`const string_t*` or `string_t*`), this
+ *   macro expands to:
+ *   @ref string_compare((const string_t*)lhs, (const string_t*)rhs)
+ *
+ * In other words, the macro performs **zero runtime type checks** and adds
+ * no dispatch overhead—selection happens entirely at compile time.
+ *
+ * Availability:
+ * - Enabled only when `ARENA_USE_CONVENIENCE_MACROS` is defined, and
+ * - Disabled when `NO_FUNCTION_MACROS` is defined (to support MISRA-style builds).
+ *
+ * @param lhs Pointer to the left-hand @ref string_t (treated as `const string_t*`).
+ * @param rhs Right-hand operand. Must be one of:
+ *            `const char*`, `char*`, `const string_t*`, `string_t*`.
+ *
+ * @return int8_t using the semantics of the selected function:
+ * @retval INT8_MIN Invalid argument / error sentinel (e.g., NULL input).
+ * @retval -1       @p lhs is lexicographically less than @p rhs.
+ * @retval 0        @p lhs is equal to @p rhs.
+ * @retval 1        @p lhs is lexicographically greater than @p rhs.
+ *
+ * @note
+ * If @p rhs is not one of the supported types, this macro triggers a
+ * **compile-time error** in C11 builds via @ref COMPARE_STRING_TYPECHECK_.
+ *
+ * @note
+ * - When dispatching to @ref str_compare, comparison is bounded by `lhs->len`.
+ * - When dispatching to @ref string_compare, the implementation may use
+ *   SIMD acceleration internally (depending on build/architecture), but
+ *   the return semantics remain identical across platforms.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r1 = init_string("alpha", 0u, a);
+ * string_expect_t r2 = init_string("alphabet", 0u, a);
+ *
+ * if (r1.has_value && r2.has_value) {
+ *     string_t* s1 = r1.u.value;
+ *     string_t* s2 = r2.u.value;
+ *
+ *     // Dispatches to str_compare(s1, "alphabet")
+ *     int8_t c1 = compare_string(s1, "alphabet");  // -> -1 
+ *
+ *     // Dispatches to string_compare(s1, s2) 
+ *     int8_t c2 = compare_string(s1, s2);          // -> -1 
+ *
+ *     (void)c1;
+ *     (void)c2;
+ *
+ *     return_string(s1);
+ *     return_string(s2);
+ * }
+ * @endcode
+ */
+#define compare_string(lhs, rhs) \
+    (COMPARE_STRING_TYPECHECK_(rhs), \
+     _Generic((rhs), \
+        const char*:      str_compare, \
+        char*:            str_compare, \
+        const string_t*:  string_compare, \
+        string_t*:        string_compare \
+     )((const string_t*)(lhs), (rhs)))
+
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

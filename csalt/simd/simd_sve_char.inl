@@ -9,7 +9,51 @@
 #include <stdint.h>
 #include <arm_sve.h>
 #include <string.h>
+// ================================================================================ 
+// ================================================================================ 
 
+static inline size_t simd_first_diff_u8(const uint8_t* a,
+                                        const uint8_t* b,
+                                        size_t n) {
+    if (n == 0u) { return 0u; }
+    if ((a == NULL) || (b == NULL)) { return 0u; }
+
+    size_t i = 0u;
+
+    while (i < n) {
+        /* Active lanes for remaining bytes */
+        const svbool_t p = svwhilelt_b8((uint64_t)i, (uint64_t)n);
+
+        /* Load only active lanes */
+        const svuint8_t va = svld1_u8(p, a + i);
+        const svuint8_t vb = svld1_u8(p, b + i);
+
+        /* eq lanes are true where equal (only under p) */
+        const svbool_t eq = svcmpeq_u8(p, va, vb);
+
+        /* If all active lanes are equal, continue */
+        if (svptest_all(p, eq)) {
+            /* advance by the number of active lanes this iteration */
+            i += (size_t)svcntp_b8(svptrue_b8(), p);
+            continue;
+        }
+
+        /* There is a mismatch inside active lanes.
+           Build a predicate that is true from first mismatch onward, then count
+           lanes BEFORE that mismatch. */
+        const svbool_t mism = svnot_z(p, eq);         /* true where mismatch */
+        const svbool_t after_first = svbrkb_z(p, mism); /* true from first mism onwards */
+        const svbool_t before_first = svnot_z(p, after_first); /* true before first mism */
+
+        /* Count bytes before first mismatch among active lanes */
+        const size_t off = (size_t)svcntp_b8(svptrue_b8(), before_first);
+        return i + off;
+    }
+
+    return n;
+}
+// ================================================================================ 
+// ================================================================================ 
 static inline size_t simd_last_index_u8_sve(const unsigned char* s, size_t n, unsigned char c) {
     size_t i = 0, last = SIZE_MAX;
 

@@ -15,6 +15,49 @@
 
 #include <string.h>
 #include "c_string.h"
+
+/* SIMD backend selection for byte/char ops */
+
+#if defined(__AVX512BW__) && defined(__AVX512VL__)
+  #include <immintrin.h>
+  #include "simd_avx512_char.inl"
+
+#elif defined(__AVX2__)
+  #include <immintrin.h>
+  #include "simd_avx2_char.inl"
+
+#elif defined(__AVX__)
+  #include <immintrin.h>
+  #include "simd_avx_char.inl"
+
+#elif defined(__SSE4_1__)
+  #include <immintrin.h>
+  #include "simd_sse41_char.inl"
+
+#elif defined(__SSE3__)
+  #include <immintrin.h>
+  #include "simd_sse3_char.inl"
+
+#elif defined(__SSE2__)
+  #include <immintrin.h>
+  #include "simd_sse2_char.inl"
+
+#elif defined(__ARM_FEATURE_SVE2)
+  #include <arm_sve.h>
+  #include "simd_sve2_char.inl"
+
+#elif defined(__ARM_FEATURE_SVE)
+  #include <arm_sve.h>
+  #include "simd_sve_char.inl"
+
+#elif defined(__ARM_NEON) || defined(__ARM_NEON__)
+  #include <arm_neon.h>
+  #include "simd_neon_char.inl"
+
+#else
+  #include "simd_scalar_char.inl"
+#endif
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -168,6 +211,54 @@ bool str_concat(string_t* s, const char* str) {
 bool string_concat(string_t* s, const string_t* str) {
     if (!str) return false;
     return str_concat(s, const_string(str));
+}
+// -------------------------------------------------------------------------------- 
+
+int8_t str_compare(const string_t* s, const char* str) {
+    if ((s == NULL) || (s->str == NULL) || (str == NULL)) {
+        return ((int8_t)-128);
+    }
+
+    /* Compare up to s->len characters, but stop early if str ends. */
+    for (size_t i = 0u; i < s->len; ++i) {
+        uint8_t const a = (uint8_t)(unsigned char)s->str[i];
+        uint8_t const b = (uint8_t)(unsigned char)str[i];
+
+        /* If C string ended before s did, then s is greater (unless a is also '\0'). */
+        if (b == (uint8_t)0u) {
+            /* If s has '\0' here too, they match through s->len (treat as equal). */
+            return (a == (uint8_t)0u) ? (int8_t)0 : (int8_t)1;
+        }
+
+        if (a < b) { return (int8_t)-1; }
+        if (a > b) { return (int8_t) 1; }
+    }
+
+    /* All s->len characters matched. If str has more chars, s is shorter => less. */
+    return (str[s->len] == '\0') ? (int8_t)0 : (int8_t)-1;
+}
+// --------------------------------------------------------------------------------
+
+int8_t string_compare(const string_t* a, const string_t* b) {
+    if ((a == NULL) || (b == NULL) || (a->str == NULL) || (b->str == NULL)) {
+        return (int8_t)-128; /* STRCMP_ERROR */
+    }
+
+    size_t const n = (a->len < b->len) ? a->len : b->len;
+
+    size_t const k = simd_first_diff_u8((const uint8_t*)a->str,
+                                         (const uint8_t*)b->str,
+                                         n);
+
+    if (k < n) {
+        uint8_t const x = (uint8_t)(unsigned char)a->str[k];
+        uint8_t const y = (uint8_t)(unsigned char)b->str[k];
+        return (x < y) ? (int8_t)-1 : (int8_t)1;
+    }
+
+    if (a->len < b->len) return (int8_t)-1;
+    if (a->len > b->len) return (int8_t)1;
+    return (int8_t)0;
 }
 // ================================================================================
 // ================================================================================
