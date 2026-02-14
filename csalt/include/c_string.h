@@ -558,6 +558,117 @@ int8_t string_compare(const string_t* s, const string_t* str);
      )((const string_t*)(lhs), (rhs)))
 
 #endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Reset a string to the empty state without releasing memory.
+ *
+ * Sets the logical length of the string to zero and, when a backing buffer
+ * exists, writes a null terminator at the first character position.  
+ * This allows subsequent concatenation operations (e.g., @ref str_concat or
+ * @ref string_concat) to begin writing from the start of the buffer while
+ * preserving the previously allocated capacity.
+ *
+ * This operation is **O(1)** and does not invoke the allocator.
+ *
+ * @param str Pointer to the @ref string_t instance to reset.
+ *
+ * @note
+ * - If @p str is `NULL`, the function performs no action.
+ * - If the string has no backing buffer (`str->str == NULL`), the function
+ *   performs no action.
+ * - Capacity remains unchanged; only the logical contents are cleared.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("hello", 0u, a);
+ * if (r.has_value) {
+ *     string_t* s = r.u.value;
+ *
+ *     reset_string(s);
+ *
+ *     // String is now empty but reusable
+ *     str_concat(s, "world");
+ *     printf("%s\n", const_string(s));   // prints "world"
+ *
+ *     return_string(s);
+ * }
+ * @endcode
+ */
+static inline void reset_string(string_t* str) {
+    if (!str || !str->str) {
+        return;
+    }
+    str->len = 0u;
+    str->str[0] = '\0';
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Creates a deep value copy of an existing string.
+ *
+ * Allocates a new @ref string_t instance using the supplied
+ * allocator and copies the character data from the source
+ * string @p s.  
+ *
+ * The copied string:
+ * - Contains identical character contents to @p s
+ * - Has **independent storage** (no shared buffer)
+ * - Uses the provided @p allocator for memory management
+ * - Allocates the **minimal required capacity** of
+ *   `string_size(s) + 1` bytes to store the characters and
+ *   null terminator
+ *
+ * This function performs a *value copy*, not a structural
+ * clone of the original allocation. Any unused capacity in
+ * the source string is **not preserved** in the copy.
+ *
+ * @param s         Source string to copy.
+ * @param allocator Allocator used to create the new string.
+ *
+ * @return string_expect_t
+ * @retval has_value = true
+ *         `.u.value` points to a newly allocated deep copy.
+ * @retval has_value = false
+ *         `.u.error` contains:
+ *         - @ref NULL_POINTER if @p s or `s->str` is NULL
+ *         - Any error propagated from @ref init_string
+ *
+ * @note
+ * - The returned string must be released with
+ *   @ref return_string.
+ * - Modifying the copy does **not** affect the source.
+ * - Suitable for transferring string ownership between
+ *   allocators or subsystems.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r1 = init_string("hello", 0, a);
+ * if (!r1.has_value) {
+ *     return;
+ * }
+ *
+ * string_t* original = r1.u.value;
+ *
+ * string_expect_t r2 = copy_string(original, a);
+ * if (r2.has_value) {
+ *     string_t* copy = r2.u.value;
+ *
+ *     // Independent modification
+ *     str_concat(copy, " world");
+ *
+ *     printf("%s\n", const_string(original)); // "hello"
+ *     printf("%s\n", const_string(copy));     // "hello world"
+ *
+ *     return_string(copy);
+ * }
+ *
+ * return_string(original);
+ * @endcode
+ */
+string_expect_t copy_string(const string_t* s, allocator_vtable_t allocator);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

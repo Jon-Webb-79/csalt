@@ -260,6 +260,12 @@ int8_t string_compare(const string_t* a, const string_t* b) {
     if (a->len > b->len) return (int8_t)1;
     return (int8_t)0;
 }
+// -------------------------------------------------------------------------------- 
+
+string_expect_t copy_string(const string_t* s, allocator_vtable_t allocator) {
+    if (!s || !s->str) return string_error(NULL_POINTER);
+    return init_string(const_string(s), s->len, allocator); 
+}
 // ================================================================================
 // ================================================================================
 // eof

@@ -186,6 +186,18 @@ string_concat
 .. doxygenfunction:: string_concat
    :project: csalt
 
+reset_string
+~~~~~~~~~~~~
+
+.. doxygenfunction:: reset_string
+   :project: csalt
+
+copy_string
+~~~~~~~~~~~
+
+.. doxygenfunction:: copy_string
+   :project: csalt
+
 Generic Macros
 --------------
 

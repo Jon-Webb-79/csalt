@@ -734,6 +734,208 @@ static void test_string_macro_compare_dispatches_const_string_t(void **state)
     return_string(s1);
     return_string(s2);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_string_reset_sets_len_zero_and_nul_terminator(void **state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("hello", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    assert_int_equal(string_size(s), 5);
+    assert_non_null(const_string(s));
+    assert_string_equal(const_string(s), "hello");
+
+    reset_string(s);
+
+    assert_int_equal(string_size(s), 0);
+    assert_non_null(const_string(s));
+    assert_int_equal((unsigned char)const_string(s)[0], 0u);
+    assert_string_equal(const_string(s), "");
+
+    return_string(s);
+}
+
+static void test_string_reset_allows_concat_from_start(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("hello", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    reset_string(s);
+
+    /* Concatenation should start at index 0 after reset */
+    assert_true(str_concat(s, "abc"));
+    assert_string_equal(const_string(s), "abc");
+    assert_int_equal(string_size(s), 3);
+
+    return_string(s);
+}
+
+static void test_string_reset_idempotent(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("x", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    reset_string(s);
+    reset_string(s);
+
+    assert_string_equal(const_string(s), "");
+    assert_int_equal(string_size(s), 0);
+
+    return_string(s);
+}
+
+static void test_string_reset_null_is_safe_noop(void **state)
+{
+    (void)state;
+
+    /* Should not crash */
+    reset_string(NULL);
+}
+
+static void test_string_reset_struct_with_null_buffer_is_safe_noop(void **state)
+{
+    (void)state;
+
+    /* Create a fake string_t with no backing buffer */
+    string_t fake;
+    memset(&fake, 0, sizeof(fake));
+    fake.str = NULL;
+    fake.len = 123u;
+
+    reset_string(&fake);
+
+    /* We expect no crash and no change required; len may remain unchanged
+       depending on your chosen semantics. The important part is: safe. */
+    assert_int_equal(fake.len, 123u);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_string_copy_string_copies_value_and_min_capacity(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    /* Create a source string with slack capacity */
+    string_expect_t rsrc = init_string("hello", 20u, a);
+    assert_true(rsrc.has_value);
+
+    const string_t *src = rsrc.u.value;
+    assert_non_null(src);
+
+    /* Copy (value copy: capacity should be len+1, not src->alloc) */
+    string_expect_t rcpy = copy_string(src, a);
+    assert_true(rcpy.has_value);
+
+    string_t *cpy = rcpy.u.value;
+    assert_non_null(cpy);
+
+    /* Same contents */
+    assert_string_equal(const_string(cpy), "hello");
+    assert_int_equal(string_size(cpy), 5);
+
+    /* Minimal capacity */
+    assert_int_equal(string_alloc(cpy), 6);
+
+    /* Deep copy: different buffers and different objects */
+    assert_ptr_not_equal((void*)cpy, (void*)src);
+    assert_ptr_not_equal((void*)const_string(cpy), (void*)const_string(src));
+
+    return_string((string_t*)src);
+    return_string(cpy);
+}
+
+static void test_string_copy_string_allows_independent_mutation(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rsrc = init_string("abc", 0u, a);
+    assert_true(rsrc.has_value);
+
+    string_t *src = rsrc.u.value;
+
+    string_expect_t rcpy = copy_string(src, a);
+    assert_true(rcpy.has_value);
+
+    string_t *cpy = rcpy.u.value;
+
+    /* Mutate the copy; source should remain unchanged */
+    assert_true(str_concat(cpy, "XYZ"));
+    assert_string_equal(const_string(cpy), "abcXYZ");
+    assert_string_equal(const_string(src), "abc");
+
+    return_string(src);
+    return_string(cpy);
+}
+
+static void test_string_copy_string_empty_string(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rsrc = init_string("", 0u, a);
+    assert_true(rsrc.has_value);
+
+    string_t *src = rsrc.u.value;
+
+    string_expect_t rcpy = copy_string(src, a);
+    assert_true(rcpy.has_value);
+
+    string_t *cpy = rcpy.u.value;
+
+    assert_string_equal(const_string(cpy), "");
+    assert_int_equal(string_size(cpy), 0);
+    assert_int_equal(string_alloc(cpy), 1);
+
+    return_string(src);
+    return_string(cpy);
+}
+
+static void test_string_copy_string_null_input_returns_error(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t r = copy_string(NULL, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+static void test_string_copy_string_null_buffer_returns_error(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    /* Construct a fake string_t with NULL buffer */
+    string_t fake;
+    memset(&fake, 0, sizeof(fake));
+    fake.str = NULL;
+    fake.len = 3u;
+    fake.alloc = 10u;
+
+    string_expect_t r = copy_string(&fake, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
 
 // ================================================================================ 
 // ================================================================================ 
@@ -782,6 +984,18 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_string_macro_compare_dispatches_char_ptr),
     cmocka_unit_test(test_string_macro_compare_dispatches_string_t),
     cmocka_unit_test(test_string_macro_compare_dispatches_const_string_t),
+
+    cmocka_unit_test(test_string_reset_sets_len_zero_and_nul_terminator),
+    cmocka_unit_test(test_string_reset_allows_concat_from_start),
+    cmocka_unit_test(test_string_reset_idempotent),
+    cmocka_unit_test(test_string_reset_null_is_safe_noop),
+    cmocka_unit_test(test_string_reset_struct_with_null_buffer_is_safe_noop),
+
+    cmocka_unit_test(test_string_copy_string_copies_value_and_min_capacity),
+    cmocka_unit_test(test_string_copy_string_allows_independent_mutation),
+    cmocka_unit_test(test_string_copy_string_empty_string),
+    cmocka_unit_test(test_string_copy_string_null_input_returns_error),
+    cmocka_unit_test(test_string_copy_string_null_buffer_returns_error),
 };
 
 const size_t test_string_count = sizeof(test_string) / sizeof(test_string[0]);
