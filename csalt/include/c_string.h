@@ -669,6 +669,80 @@ static inline void reset_string(string_t* str) {
  * @endcode
  */
 string_expect_t copy_string(const string_t* s, allocator_vtable_t allocator);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Checks whether a pointer lies within a string’s allocated buffer.
+ *
+ * Determines if @p ptr points to a memory location inside the
+ * character storage owned by the @ref string_t instance @p s.
+ *
+ * The valid range is:
+ *
+ * `[s->str, s->str + string_alloc(s))`
+ *
+ * This function **does not** verify:
+ * - Whether the pointer references initialized characters
+ * - Whether the pointer aligns to a character boundary
+ * - Whether the allocator globally owns the pointer
+ *
+ * It only checks containment within the string’s allocation.
+ *
+ * @param s   Pointer to the string instance.
+ * @param ptr Pointer to test.
+ *
+ * @retval true  Pointer lies within the string’s allocated buffer.
+ * @retval false Pointer is NULL, string is invalid, or outside range.
+ *
+ * @note
+ * - Safe for defensive validation in low-level APIs.
+ * - Useful before performing pointer arithmetic or in-place mutation.
+ *
+ * @code{.c}
+ * string_expect_t r = init_string("hello", 0, heap_allocator());
+ * if (r.has_value) {
+ *     string_t* s = r.u.value;
+ *
+ *     char* p = s->str + 1;
+ *
+ *     if (is_string_ptr(s, p)) {
+ *         *p = 'a';  // safe mutation
+ *     }
+ *
+ *     return_string(s);
+ * }
+ * @endcode
+ */
+bool is_string_ptr(const string_t* s, const void* ptr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Checks whether a sized memory range lies fully within a string’s allocated buffer.
+ *
+ * Determines whether the range `[ptr, ptr + bytes)` is entirely contained within
+ * the character storage owned by @p s.
+ *
+ * The string's valid allocation range is:
+ * `[s->str, s->str + s->alloc)`.
+ *
+ * This function is useful for validating that an object, sub-buffer, or
+ * typed view fits completely within a string before performing operations
+ * such as parsing, casting, or in-place mutation.
+ *
+ * @param s     Pointer to the string instance.
+ * @param ptr   Pointer to the start of the candidate region.
+ * @param bytes Size (in bytes) of the candidate region.
+ *
+ * @retval true  The entire range lies within the string’s allocated buffer.
+ * @retval false Invalid inputs, overflow, or the range extends خارج the buffer.
+ *
+ * @note
+ * - This checks **allocation containment**, not “used characters” containment.
+ *   If you want containment within initialized characters, bound against `s->len + 1`
+ *   (or `s->len`) instead of `s->alloc`.
+ * - `bytes == 0` returns false to avoid “vacuously true” ranges.
+ */
+bool is_string_ptr_sized(const string_t* s, const void* ptr, size_t bytes);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

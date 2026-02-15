@@ -936,6 +936,235 @@ static void test_string_copy_string_null_buffer_returns_error(void **state)
     assert_false(r.has_value);
     assert_int_equal(r.u.error, NULL_POINTER);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_string_is_string_ptr_null_inputs_return_false(void **state)
+{
+    (void)state;
+
+    assert_false(is_string_ptr(NULL, (const void*)0x1));
+
+    /* valid string pointer but NULL ptr */
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 0u, a);
+    assert_true(r.has_value);
+    string_t *s = r.u.value;
+
+    assert_false(is_string_ptr(s, NULL));
+
+    return_string(s);
+}
+
+static void test_string_is_string_ptr_null_buffer_returns_false(void **state)
+{
+    (void)state;
+
+    string_t fake;
+    memset(&fake, 0, sizeof(fake));
+    fake.str   = NULL;
+    fake.len   = 3u;
+    fake.alloc = 10u;
+
+    assert_false(is_string_ptr(&fake, (const void*)0x1));
+}
+
+static void test_string_is_string_ptr_begin_and_end_boundaries(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    /* Give slack so alloc > len+1 */
+    string_expect_t r = init_string("hello", 20u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* begin is valid */
+    assert_true(is_string_ptr(s, (const void*)s->str));
+
+    /* last byte in allocation is valid */
+    assert_true(is_string_ptr(s, (const void*)(s->str + (s->alloc - 1u))));
+
+    /* one-past-end is invalid */
+    assert_false(is_string_ptr(s, (const void*)(s->str + s->alloc)));
+
+    return_string(s);
+}
+
+static void test_string_is_string_ptr_pointer_before_begin_is_false(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("hello", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* pointer before start (only do this if alloc>0 so subtraction is defined) */
+    assert_true(s->alloc > 0u);
+
+    const char *p = s->str - 1; /* not dereferenced, just compared */
+    assert_false(is_string_ptr(s, (const void*)p));
+
+    return_string(s);
+}
+
+static void test_string_is_string_ptr_inside_slack_region_is_true(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    /* Request slack capacity. Expect alloc == 21 if your init_string stores alloc including NUL */
+    string_expect_t r = init_string("abc", 20u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* Choose a pointer beyond used length but still within allocation */
+    assert_true(s->alloc > (s->len + 1u));
+
+    const char *p = s->str + s->len + 1u; /* first slack byte */
+    assert_true(is_string_ptr(s, (const void*)p));
+
+    return_string(s);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_string_is_string_ptr_sized_null_inputs_return_false(void **state)
+{
+    (void)state;
+
+    assert_false(is_string_ptr_sized(NULL, (const void*)0x1, 1u));
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 0u, a);
+    assert_true(r.has_value);
+    string_t *s = r.u.value;
+
+    assert_false(is_string_ptr_sized(s, NULL, 1u));
+    assert_false(is_string_ptr_sized(s, (const void*)s->str, 0u)); /* bytes==0 => false */
+
+    return_string(s);
+}
+
+static void test_string_is_string_ptr_sized_null_buffer_returns_false(void **state)
+{
+    (void)state;
+
+    string_t fake;
+    memset(&fake, 0, sizeof(fake));
+    fake.str   = NULL;
+    fake.len   = 3u;
+    fake.alloc = 10u;
+
+    assert_false(is_string_ptr_sized(&fake, (const void*)0x1, 1u));
+}
+
+static void test_string_is_string_ptr_sized_range_fits_within_used_region(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("hello", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* "hello\0" is 6 bytes total; check the whole used region fits */
+    assert_true(is_string_ptr_sized(s, (const void*)s->str, s->len + 1u));
+
+    /* also check a sub-range inside */
+    assert_true(is_string_ptr_sized(s, (const void*)(s->str + 2), 2u)); /* "ll" */
+
+    return_string(s);
+}
+
+static void test_string_is_string_ptr_sized_range_fits_within_slack_region(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    /* request slack capacity */
+    string_expect_t r = init_string("abc", 20u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* pick a start beyond used bytes but within alloc */
+    assert_true(s->alloc > (s->len + 1u));
+
+    const char *p = s->str + (s->len + 1u);
+    size_t remaining = s->alloc - (s->len + 1u);
+
+    /* entire slack range should fit */
+    assert_true(is_string_ptr_sized(s, (const void*)p, remaining));
+
+    return_string(s);
+}
+
+static void test_string_is_string_ptr_sized_allows_end_at_one_past_end(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 10u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* Start at last byte, size 1 fits (ends exactly at one-past-end) */
+    assert_true(is_string_ptr_sized(s,
+                                   (const void*)(s->str + (s->alloc - 1u)),
+                                   1u));
+
+    /* Start at begin, size == alloc fits (ends at one-past-end) */
+    assert_true(is_string_ptr_sized(s, (const void*)s->str, s->alloc));
+
+    return_string(s);
+}
+
+static void test_string_is_string_ptr_sized_rejects_range_past_end(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 10u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    /* Start at last byte, size 2 extends past end */
+    assert_false(is_string_ptr_sized(s,
+                                    (const void*)(s->str + (s->alloc - 1u)),
+                                    2u));
+
+    /* Start inside, ask for too much */
+    assert_false(is_string_ptr_sized(s,
+                                    (const void*)(s->str + 3),
+                                    s->alloc)); /* definitely exceeds */
+
+    return_string(s);
+}
+
+static void test_string_is_string_ptr_sized_rejects_pointer_outside_buffer(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string("abc", 0u, a);
+    assert_true(r.has_value);
+
+    string_t *s = r.u.value;
+
+    char other = 0;
+    assert_false(is_string_ptr_sized(s, (const void*)&other, 1u));
+
+    return_string(s);
+}
 
 // ================================================================================ 
 // ================================================================================ 
@@ -996,6 +1225,20 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_string_copy_string_empty_string),
     cmocka_unit_test(test_string_copy_string_null_input_returns_error),
     cmocka_unit_test(test_string_copy_string_null_buffer_returns_error),
+
+    cmocka_unit_test(test_string_is_string_ptr_null_inputs_return_false),
+    cmocka_unit_test(test_string_is_string_ptr_null_buffer_returns_false),
+    cmocka_unit_test(test_string_is_string_ptr_begin_and_end_boundaries),
+    cmocka_unit_test(test_string_is_string_ptr_pointer_before_begin_is_false),
+    cmocka_unit_test(test_string_is_string_ptr_inside_slack_region_is_true),
+
+    cmocka_unit_test(test_string_is_string_ptr_sized_null_inputs_return_false),
+    cmocka_unit_test(test_string_is_string_ptr_sized_null_buffer_returns_false),
+    cmocka_unit_test(test_string_is_string_ptr_sized_range_fits_within_used_region),
+    cmocka_unit_test(test_string_is_string_ptr_sized_range_fits_within_slack_region),
+    cmocka_unit_test(test_string_is_string_ptr_sized_allows_end_at_one_past_end),
+    cmocka_unit_test(test_string_is_string_ptr_sized_rejects_range_past_end),
+    cmocka_unit_test(test_string_is_string_ptr_sized_rejects_pointer_outside_buffer),
 };
 
 const size_t test_string_count = sizeof(test_string) / sizeof(test_string[0]);

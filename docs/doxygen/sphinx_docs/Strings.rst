@@ -171,6 +171,18 @@ string_compare
 .. doxygenfunction:: string_compare
    :project: csalt
 
+is_string_ptr
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: is_string_ptr
+   :project: csalt
+
+is_string_ptr_sized
+~~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: is_string_ptr_sized
+   :project: csalt
+
 String Manipulation
 -------------------
 

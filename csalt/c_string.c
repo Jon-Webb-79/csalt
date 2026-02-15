@@ -266,6 +266,51 @@ string_expect_t copy_string(const string_t* s, allocator_vtable_t allocator) {
     if (!s || !s->str) return string_error(NULL_POINTER);
     return init_string(const_string(s), s->len, allocator); 
 }
+// -------------------------------------------------------------------------------- 
+
+bool is_string_ptr(const string_t* s, const void* ptr) {
+    if ((s == NULL) || (s->str == NULL) || (ptr == NULL)) {
+        return false;
+    }
+
+    uintptr_t const begin = (uintptr_t)(const void*)s->str;
+    uintptr_t const end   = begin + s->alloc;   /* one-past-end */
+    uintptr_t const addr  = (uintptr_t)ptr;
+
+    /* overflow-safe containment check */
+    if (addr < begin) {
+        return false;
+    }
+
+    if (addr >= end) {
+        return false;
+    }
+
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_string_ptr_sized(const string_t* s, const void* ptr, size_t bytes) {
+    if ((s == NULL) || (s->str == NULL) || (ptr == NULL) || (bytes == 0u)) {
+        return false;
+    }
+
+    uintptr_t const begin = (uintptr_t)(const void*)s->str;
+    uintptr_t const end   = begin + s->alloc; /* one-past-end */
+    uintptr_t const p     = (uintptr_t)ptr;
+
+    /* ptr must be within [begin, end) */
+    if ((p < begin) || (p >= end)) {
+        return false;
+    }
+
+    /* Overflow-safe: require bytes <= end - p  (equiv to p+bytes <= end) */
+    if (bytes > (size_t)(end - p)) {
+        return false;
+    }
+
+    return true;
+}
 // ================================================================================
 // ================================================================================
 // eof
