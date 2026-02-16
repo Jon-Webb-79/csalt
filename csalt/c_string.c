@@ -342,27 +342,26 @@ size_t find_substr(const string_t* haystack,
     {
         return SIZE_MAX;
     }
-
     const uint8_t* const hs_base     = (const uint8_t*)(const void*)haystack->str;
-    const uint8_t* const hs_used_end = hs_base + haystack->len; /* exclude terminator */
-
+    const uint8_t* const hs_used_end = hs_base + haystack->len;
+    
     /* Defaults if begin/end omitted */
     if (begin == NULL) { begin = hs_base; }
     if (end   == NULL) { end   = hs_used_end; }
-
+    
     /* begin/end must be inside allocation */
     if (!_range_within_alloc_(haystack, begin, end)) {
         return SIZE_MAX;
     }
-
+    
     /* Clamp to used region (typical string-search semantics) */
     if (begin > hs_used_end) { return SIZE_MAX; }
     if (end   > hs_used_end) { end = hs_used_end; }
     if (begin > end)         { return SIZE_MAX; }
-
+    
     size_t const region_len = (size_t)(end - begin);
     size_t const nlen       = needle->len;
-
+    
     /* Empty needle: define as found at start of region */
     if (nlen == 0u) {
         return 0u;
@@ -370,12 +369,64 @@ size_t find_substr(const string_t* haystack,
     if (nlen > region_len) {
         return SIZE_MAX;
     }
-
+    
     /* Delegate to SIMD/scalar implementation */
-    return simd_find_substr_u8(begin, region_len,
-                               (const uint8_t*)(const void*)needle->str, nlen,
-                               dir);
+    size_t offset_from_search_start = simd_find_substr_u8(begin, region_len,
+                                                          (const uint8_t*)(const void*)needle->str, nlen,
+                                                          dir);
+    
+    /* Convert to offset from string start */
+    if (offset_from_search_start == SIZE_MAX) {
+        return SIZE_MAX;
+    }
+    
+    return (size_t)(begin - hs_base) + offset_from_search_start;
 }
+//
+// size_t find_substr(const string_t* haystack,
+//                    const string_t* needle,
+//                    const uint8_t*  begin,
+//                    const uint8_t*  end,
+//                    direction_t     dir) {
+//     if ((haystack == NULL) || (needle == NULL) ||
+//         (haystack->str == NULL) || (needle->str == NULL))
+//     {
+//         return SIZE_MAX;
+//     }
+//
+//     const uint8_t* const hs_base     = (const uint8_t*)(const void*)haystack->str;
+//     const uint8_t* const hs_used_end = hs_base + haystack->len; /* exclude terminator */
+//
+//     /* Defaults if begin/end omitted */
+//     if (begin == NULL) { begin = hs_base; }
+//     if (end   == NULL) { end   = hs_used_end; }
+//
+//     /* begin/end must be inside allocation */
+//     if (!_range_within_alloc_(haystack, begin, end)) {
+//         return SIZE_MAX;
+//     }
+//
+//     /* Clamp to used region (typical string-search semantics) */
+//     if (begin > hs_used_end) { return SIZE_MAX; }
+//     if (end   > hs_used_end) { end = hs_used_end; }
+//     if (begin > end)         { return SIZE_MAX; }
+//
+//     size_t const region_len = (size_t)(end - begin);
+//     size_t const nlen       = needle->len;
+//
+//     /* Empty needle: define as found at start of region */
+//     if (nlen == 0u) {
+//         return 0u;
+//     }
+//     if (nlen > region_len) {
+//         return SIZE_MAX;
+//     }
+//
+//     /* Delegate to SIMD/scalar implementation */
+//     return simd_find_substr_u8(begin, region_len,
+//                                (const uint8_t*)(const void*)needle->str, nlen,
+//                                dir);
+// }
 // ================================================================================
 // ================================================================================
 // eof

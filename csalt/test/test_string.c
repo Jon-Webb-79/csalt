@@ -1182,7 +1182,7 @@ static void test_string_find_substr_forward_finds_first_occurrence(void **state)
     string_t *n = rn.u.value;
 
     /* "bananana": "ana" occurs at 0-based indices 1, 3, 5.
-       FORWARD should return first => 1. */
+       FORWARD should return first => 1 (absolute position). */
     size_t pos = find_substr(h, n,
                              (const uint8_t*)h->str,
                              (const uint8_t*)h->str + h->len,
@@ -1192,6 +1192,7 @@ static void test_string_find_substr_forward_finds_first_occurrence(void **state)
     return_string(n);
     return_string(h);
 }
+// --------------------------------------------------------------------------------
 
 static void test_string_find_substr_reverse_finds_last_occurrence(void **state)
 {
@@ -1207,7 +1208,7 @@ static void test_string_find_substr_reverse_finds_last_occurrence(void **state)
     assert_true(rn.has_value);
     string_t *n = rn.u.value;
 
-    /* Last occurrence at 0-based index 5. */
+    /* Last occurrence at 0-based index 5 (absolute position). */
     size_t pos = find_substr(h, n,
                              (const uint8_t*)h->str,
                              (const uint8_t*)h->str + h->len,
@@ -1217,6 +1218,7 @@ static void test_string_find_substr_reverse_finds_last_occurrence(void **state)
     return_string(n);
     return_string(h);
 }
+// --------------------------------------------------------------------------------
 
 static void test_string_find_substr_bounded_window_changes_result(void **state)
 {
@@ -1236,17 +1238,18 @@ static void test_string_find_substr_bounded_window_changes_result(void **state)
     const uint8_t *begin = base + 12u;           /* second "hello" */
     const uint8_t *end   = base + h->len;        /* end exclusive */
 
-    /* Within this window, match starts at begin => index 0 within window */
+    /* Within this window, match is at absolute position 12 */
     size_t pos_f = find_substr(h, n, begin, end, FORWARD);
-    assert_int_equal(pos_f, 0u);
+    assert_int_equal(pos_f, 12u);  /* CHANGED: now expects absolute position */
 
-    /* Reverse within same window is also the same "hello" */
+    /* Reverse within same window also finds at absolute position 12 */
     size_t pos_r = find_substr(h, n, begin, end, REVERSE);
-    assert_int_equal(pos_r, 0u);
+    assert_int_equal(pos_r, 12u);  /* CHANGED: now expects absolute position */
 
     return_string(n);
     return_string(h);
 }
+// --------------------------------------------------------------------------------
 
 static void test_string_find_substr_default_begin_end_when_null(void **state)
 {
@@ -1264,14 +1267,15 @@ static void test_string_find_substr_default_begin_end_when_null(void **state)
 
     /* begin/end NULL => defaults to [str, str+len) */
     size_t pos_f = find_substr(h, n, NULL, NULL, FORWARD);
-    assert_int_equal(pos_f, 0u);  /* match at index 0 */
+    assert_int_equal(pos_f, 0u);  /* first "hello" at absolute position 0 */
 
     size_t pos_r = find_substr(h, n, NULL, NULL, REVERSE);
-    assert_int_equal(pos_r, 12u); /* second "hello" at index 12 */
+    assert_int_equal(pos_r, 12u); /* second "hello" at absolute position 12 */
 
     return_string(n);
     return_string(h);
 }
+// --------------------------------------------------------------------------------
 
 static void test_string_find_substr_not_found_returns_size_max(void **state)
 {
@@ -1293,6 +1297,7 @@ static void test_string_find_substr_not_found_returns_size_max(void **state)
     return_string(n);
     return_string(h);
 }
+// --------------------------------------------------------------------------------
 
 static void test_string_find_substr_empty_needle_returns_zero(void **state)
 {
@@ -1309,7 +1314,7 @@ static void test_string_find_substr_empty_needle_returns_zero(void **state)
     assert_true(rn.has_value);
     string_t *n = rn.u.value;
 
-    /* Convention: empty needle matches at the start */
+    /* Convention: empty needle matches at the start (position 0) */
     size_t pos_f = find_substr(h, n, NULL, NULL, FORWARD);
     assert_int_equal(pos_f, 0u);
 
@@ -1319,6 +1324,7 @@ static void test_string_find_substr_empty_needle_returns_zero(void **state)
     return_string(n);
     return_string(h);
 }
+// --------------------------------------------------------------------------------
 
 static void test_string_find_substr_invalid_region_returns_size_max(void **state)
 {
@@ -1342,28 +1348,64 @@ static void test_string_find_substr_invalid_region_returns_size_max(void **state
     return_string(n);
     return_string(h);
 }
-// -------------------------------------------------------------------------------- 
+// --------------------------------------------------------------------------------
 
-static void test_string_find_substr_not_found_returns_zero(void **state)
+static void test_string_find_substr_from_middle_forward(void **state)
 {
     (void)state;
+
     allocator_vtable_t a = heap_allocator();
 
-    string_expect_t rh = init_string("abcdef", 0u, a);
+    string_expect_t rh = init_string("hello world hello", 0u, a);
     assert_true(rh.has_value);
     string_t *h = rh.u.value;
 
-    string_expect_t rn = init_string("xyz", 0u, a);
+    string_expect_t rn = init_string("hello", 0u, a);
     assert_true(rn.has_value);
     string_t *n = rn.u.value;
 
-    size_t pos = find_substr(h, n, NULL, NULL, FORWARD);
-    assert_int_equal(pos, SIZE_MAX);
+    const uint8_t *base  = (const uint8_t*)h->str;
+    const uint8_t *begin = base + 1u;   /* Skip first "hello" */
+    const uint8_t *end   = base + h->len;
+
+    /* Should find second "hello" at absolute position 12 */
+    size_t pos = find_substr(h, n, begin, end, FORWARD);
+    assert_int_equal(pos, 12u);
 
     return_string(n);
     return_string(h);
 }
+// --------------------------------------------------------------------------------
 
+static void test_string_find_substr_exact_window_match(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rh = init_string("hello world", 0u, a);
+    assert_true(rh.has_value);
+    string_t *h = rh.u.value;
+
+    string_expect_t rn = init_string("world", 0u, a);
+    assert_true(rn.has_value);
+    string_t *n = rn.u.value;
+
+    const uint8_t *base  = (const uint8_t*)h->str;
+    const uint8_t *begin = base + 6u;   /* Start of "world" */
+    const uint8_t *end   = base + 11u;  /* End of "world" */
+
+    /* Window exactly contains "world" at absolute position 6 */
+    size_t pos = find_substr(h, n, begin, end, FORWARD);
+    assert_int_equal(pos, 6u);
+
+    return_string(n);
+    return_string(h);
+}
+// --------------------------------------------------------------------------------
+
+// ================================================================================
+// ================================================================================
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1442,7 +1484,11 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_string_find_substr_reverse_finds_last_occurrence),
     cmocka_unit_test(test_string_find_substr_bounded_window_changes_result),
     cmocka_unit_test(test_string_find_substr_default_begin_end_when_null),
-    cmocka_unit_test(test_string_find_substr_not_found_returns_zero),
+    cmocka_unit_test(test_string_find_substr_not_found_returns_size_max),
+    cmocka_unit_test(test_string_find_substr_empty_needle_returns_zero),
+    cmocka_unit_test(test_string_find_substr_invalid_region_returns_size_max),
+    cmocka_unit_test(test_string_find_substr_from_middle_forward),
+    cmocka_unit_test(test_string_find_substr_exact_window_match),
 
 };
 
