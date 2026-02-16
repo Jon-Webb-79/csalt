@@ -743,6 +743,130 @@ bool is_string_ptr(const string_t* s, const void* ptr);
  * - `bytes == 0` returns false to avoid “vacuously true” ranges.
  */
 bool is_string_ptr_sized(const string_t* s, const void* ptr, size_t bytes);
+// -------------------------------------------------------------------------------- 
+
+#ifndef ITER_DIR_H
+#define ITER_DIR_H
+    typedef enum {
+        FORWARD = 0,
+        REVERSE = 1
+    }direction_t;
+#endif /* ITER_DIR_H*/
+
+/**
+ * @brief Finds the first occurrence of a substring within a bounded region.
+ *
+ * Searches for the string @p needle inside the character data of
+ * @p haystack, restricted to the memory range [`begin`, `end`).
+ *
+ * The search direction is controlled by @p dir:
+ * - @ref FORWARD  — scans from `begin` toward `end` and returns the
+ *   earliest match.
+ * - @ref REVERSE  — scans from `end` toward `begin` and returns the
+ *   latest match within the region.
+ *
+ * If @p begin or @p end is `NULL`, the search defaults to the used
+ * character region of the string:
+ *
+ * ```
+ * [haystack->str, haystack->str + haystack->len)
+ * ```
+ *
+ * This function is implemented to take advantage of **SIMD (Single Instruction,
+ * Multiple Data)** instructions when supported by the target architecture.
+ *
+ * At compile time, architecture-specific vectorized implementations may be
+ * selected, including:
+ *
+ * - AVX-512, AVX2, AVX
+ * - SSE4.1, SSE3, SSE2
+ * - ARM NEON
+ * - ARM SVE / SVE2
+ *
+ * When SIMD is available, the search compares **multiple characters in
+ * parallel**, significantly improving performance for:
+ *
+ * - long haystacks
+ * - repeated substring searches
+ * - forward and reverse scans over large buffers
+ *
+ * If no SIMD capability is detected, the function **safely falls back to a
+ * fully portable scalar implementation** with identical semantics.
+ *
+ * SIMD usage is completely **transparent to the caller**:
+ * - No API differences
+ * - No alignment requirements
+ * - No behavioral changes
+ *
+ * The return value is a **1-based offset relative to `begin`**:
+ *
+ * | Return value | Meaning |
+ * |-------------|---------|
+ * | `0`         | Not found or invalid arguments |
+ * | `1`         | Match begins exactly at `begin` |
+ * | `k + 1`     | Match begins `k` bytes after `begin` |
+ *
+ * This convention avoids ambiguity between:
+ * - “not found”, and
+ * - “match at index 0”.
+ *
+ * @param haystack String being searched.
+ * @param needle   Substring to locate.
+ * @param begin    Pointer to start of searchable region inside
+ *                 `haystack->str` (may be `NULL`).
+ * @param end      Pointer to one-past-end of searchable region inside
+ *                 `haystack->str` (may be `NULL`).
+ * @param dir      Search direction: @ref FORWARD or @ref REVERSE.
+ *
+ * @return size_t
+ * @retval 0   Not found or invalid input.
+ * @retval >0  1-based offset of first match relative to `begin`.
+ *
+ * - Region pointers must lie **within the allocated buffer** of
+ *   `haystack`; otherwise the function returns `0`.
+ * - The search is limited to the **used string length**, not slack
+ *   allocation beyond `haystack->len`.
+ * - An empty @p needle is treated as found at the beginning of the
+ *   region and returns `1`.
+ * - SIMD acceleration is **optional and architecture-dependent** but
+ *   never changes correctness.
+ *
+ * @par Example: Forward search
+ * @code{.c}
+ * string_expect_t h = init_string("bananana", 0, heap_allocator());
+ * string_expect_t n = init_string("ana", 0, heap_allocator());
+ *
+ * if (h.has_value && n.has_value) {
+ *     size_t pos = find_substr(h.u.value, n.u.value, NULL, NULL, FORWARD);
+ *     // "ana" first appears at index 1 → return value = 2 (1-based)
+ * }
+ * @endcode
+ *
+ * @par Example: Reverse search
+ * @code{.c}
+ * size_t pos = find_substr(h.u.value, n.u.value, NULL, NULL, REVERSE);
+ * // Last occurrence at index 5 → return value = 6
+ * @endcode
+ *
+ * @par Example: Bounded window search
+ * @code{.c}
+ * const uint8_t* base = (const uint8_t*)h.u.value->str;
+ *
+ * size_t pos = find_substr(
+ *     h.u.value,
+ *     n.u.value,
+ *     base + 3,                 // begin search inside string
+ *     base + h.u.value->len,    // end of used region
+ *     FORWARD);
+ *
+ * // Position is relative to begin, not start of string
+ * @endcode
+ */
+size_t find_substr(const string_t* haystack,
+                   const string_t* needle,
+                   const uint8_t*  begin,
+                   const uint8_t*  end,
+                   direction_t     dir);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

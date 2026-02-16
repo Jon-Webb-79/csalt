@@ -37,6 +37,74 @@ static inline size_t csalt_first_diff_u8(const uint8_t* a,
     }
     return n;
 }
+// -------------------------------------------------------------------------------- 
+
+#ifndef SIZE_MAX
+  #define SIZE_MAX ((size_t)-1)
+#endif
+
+typedef enum {
+    FORWARD = 0,
+    REVERSE = 1
+} direction_t;
+
+/* scalar helper: forward search */
+static inline size_t simd_find_substr_u8_forward_(const uint8_t* hay,
+                                                  size_t hay_len,
+                                                  const uint8_t* needle,
+                                                  size_t needle_len)
+{
+    if ((hay == NULL) || (needle == NULL)) { return SIZE_MAX; }
+    if (needle_len == 0u) { return 0u; }
+    if (needle_len > hay_len) { return SIZE_MAX; }
+
+    uint8_t const first = needle[0];
+
+    for (size_t i = 0u; i <= (hay_len - needle_len); ++i) {
+        if (hay[i] != first) { continue; }
+        if (needle_len == 1u) { return i; }
+        if (memcmp(hay + i + 1u, needle + 1u, needle_len - 1u) == 0) {
+            return i;
+        }
+    }
+    return SIZE_MAX;
+}
+
+/* scalar helper: reverse search (returns last occurrence) */
+static inline size_t simd_find_substr_u8_reverse_(const uint8_t* hay,
+                                                  size_t hay_len,
+                                                  const uint8_t* needle,
+                                                  size_t needle_len)
+{
+    if ((hay == NULL) || (needle == NULL)) { return SIZE_MAX; }
+    if (needle_len == 0u) { return 0u; }
+    if (needle_len > hay_len) { return SIZE_MAX; }
+
+    uint8_t const first = needle[0];
+
+    /* last possible start index */
+    for (size_t i = (hay_len - needle_len) + 1u; i-- > 0u; ) {
+        if (hay[i] != first) { continue; }
+        if (needle_len == 1u) { return i; }
+        if (memcmp(hay + i + 1u, needle + 1u, needle_len - 1u) == 0) {
+            return i;
+        }
+        if (i == 0u) { break; } /* avoid wrap in i-- > 0 loop */
+    }
+    return SIZE_MAX;
+}
+
+static inline size_t simd_find_substr_u8(const uint8_t* hay,
+                                         size_t hay_len,
+                                         const uint8_t* needle,
+                                         size_t needle_len,
+                                         direction_t dir)
+{
+    if (dir == REVERSE) {
+        return simd_find_substr_u8_reverse_(hay, hay_len, needle, needle_len);
+    }
+    return simd_find_substr_u8_forward_(hay, hay_len, needle, needle_len);
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_AVX2_CHAR_INL */

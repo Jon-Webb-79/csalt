@@ -1165,6 +1165,204 @@ static void test_string_is_string_ptr_sized_rejects_pointer_outside_buffer(void 
 
     return_string(s);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_string_find_substr_forward_finds_first_occurrence(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rh = init_string("bananana", 0u, a);
+    assert_true(rh.has_value);
+    string_t *h = rh.u.value;
+
+    string_expect_t rn = init_string("ana", 0u, a);
+    assert_true(rn.has_value);
+    string_t *n = rn.u.value;
+
+    /* "bananana": "ana" occurs at 0-based indices 1, 3, 5.
+       FORWARD should return first => 1. */
+    size_t pos = find_substr(h, n,
+                             (const uint8_t*)h->str,
+                             (const uint8_t*)h->str + h->len,
+                             FORWARD);
+    assert_int_equal(pos, 1u);
+
+    return_string(n);
+    return_string(h);
+}
+
+static void test_string_find_substr_reverse_finds_last_occurrence(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rh = init_string("bananana", 0u, a);
+    assert_true(rh.has_value);
+    string_t *h = rh.u.value;
+
+    string_expect_t rn = init_string("ana", 0u, a);
+    assert_true(rn.has_value);
+    string_t *n = rn.u.value;
+
+    /* Last occurrence at 0-based index 5. */
+    size_t pos = find_substr(h, n,
+                             (const uint8_t*)h->str,
+                             (const uint8_t*)h->str + h->len,
+                             REVERSE);
+    assert_int_equal(pos, 5u);
+
+    return_string(n);
+    return_string(h);
+}
+
+static void test_string_find_substr_bounded_window_changes_result(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rh = init_string("hello world hello", 0u, a);
+    assert_true(rh.has_value);
+    string_t *h = rh.u.value;
+
+    string_expect_t rn = init_string("hello", 0u, a);
+    assert_true(rn.has_value);
+    string_t *n = rn.u.value;
+
+    const uint8_t *base  = (const uint8_t*)h->str;
+    const uint8_t *begin = base + 12u;           /* second "hello" */
+    const uint8_t *end   = base + h->len;        /* end exclusive */
+
+    /* Within this window, match starts at begin => index 0 within window */
+    size_t pos_f = find_substr(h, n, begin, end, FORWARD);
+    assert_int_equal(pos_f, 0u);
+
+    /* Reverse within same window is also the same "hello" */
+    size_t pos_r = find_substr(h, n, begin, end, REVERSE);
+    assert_int_equal(pos_r, 0u);
+
+    return_string(n);
+    return_string(h);
+}
+
+static void test_string_find_substr_default_begin_end_when_null(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rh = init_string("hello world hello", 0u, a);
+    assert_true(rh.has_value);
+    string_t *h = rh.u.value;
+
+    string_expect_t rn = init_string("hello", 0u, a);
+    assert_true(rn.has_value);
+    string_t *n = rn.u.value;
+
+    /* begin/end NULL => defaults to [str, str+len) */
+    size_t pos_f = find_substr(h, n, NULL, NULL, FORWARD);
+    assert_int_equal(pos_f, 0u);  /* match at index 0 */
+
+    size_t pos_r = find_substr(h, n, NULL, NULL, REVERSE);
+    assert_int_equal(pos_r, 12u); /* second "hello" at index 12 */
+
+    return_string(n);
+    return_string(h);
+}
+
+static void test_string_find_substr_not_found_returns_size_max(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rh = init_string("abcdef", 0u, a);
+    assert_true(rh.has_value);
+    string_t *h = rh.u.value;
+
+    string_expect_t rn = init_string("xyz", 0u, a);
+    assert_true(rn.has_value);
+    string_t *n = rn.u.value;
+
+    size_t pos = find_substr(h, n, NULL, NULL, FORWARD);
+    assert_int_equal(pos, SIZE_MAX);
+
+    return_string(n);
+    return_string(h);
+}
+
+static void test_string_find_substr_empty_needle_returns_zero(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rh = init_string("abcdef", 0u, a);
+    assert_true(rh.has_value);
+    string_t *h = rh.u.value;
+
+    /* Empty needle */
+    string_expect_t rn = init_string("", 0u, a);
+    assert_true(rn.has_value);
+    string_t *n = rn.u.value;
+
+    /* Convention: empty needle matches at the start */
+    size_t pos_f = find_substr(h, n, NULL, NULL, FORWARD);
+    assert_int_equal(pos_f, 0u);
+
+    size_t pos_r = find_substr(h, n, NULL, NULL, REVERSE);
+    assert_int_equal(pos_r, 0u);
+
+    return_string(n);
+    return_string(h);
+}
+
+static void test_string_find_substr_invalid_region_returns_size_max(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rh = init_string("abcdef", 0u, a);
+    assert_true(rh.has_value);
+    string_t *h = rh.u.value;
+
+    string_expect_t rn = init_string("bc", 0u, a);
+    assert_true(rn.has_value);
+    string_t *n = rn.u.value;
+
+    /* begin/end not within h->str allocation */
+    uint8_t other_buf[8];
+    size_t pos = find_substr(h, n, other_buf, other_buf + 4u, FORWARD);
+    assert_int_equal(pos, SIZE_MAX);
+
+    return_string(n);
+    return_string(h);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_string_find_substr_not_found_returns_zero(void **state)
+{
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    string_expect_t rh = init_string("abcdef", 0u, a);
+    assert_true(rh.has_value);
+    string_t *h = rh.u.value;
+
+    string_expect_t rn = init_string("xyz", 0u, a);
+    assert_true(rn.has_value);
+    string_t *n = rn.u.value;
+
+    size_t pos = find_substr(h, n, NULL, NULL, FORWARD);
+    assert_int_equal(pos, SIZE_MAX);
+
+    return_string(n);
+    return_string(h);
+}
 
 // ================================================================================ 
 // ================================================================================ 
@@ -1239,6 +1437,13 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_string_is_string_ptr_sized_allows_end_at_one_past_end),
     cmocka_unit_test(test_string_is_string_ptr_sized_rejects_range_past_end),
     cmocka_unit_test(test_string_is_string_ptr_sized_rejects_pointer_outside_buffer),
+
+    cmocka_unit_test(test_string_find_substr_forward_finds_first_occurrence),
+    cmocka_unit_test(test_string_find_substr_reverse_finds_last_occurrence),
+    cmocka_unit_test(test_string_find_substr_bounded_window_changes_result),
+    cmocka_unit_test(test_string_find_substr_default_begin_end_when_null),
+    cmocka_unit_test(test_string_find_substr_not_found_returns_zero),
+
 };
 
 const size_t test_string_count = sizeof(test_string) / sizeof(test_string[0]);

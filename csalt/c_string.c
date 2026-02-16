@@ -311,6 +311,71 @@ bool is_string_ptr_sized(const string_t* s, const void* ptr, size_t bytes) {
 
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline bool _range_within_alloc_(const string_t* s,
+                                        const uint8_t* begin,
+                                        const uint8_t* end) {
+    if ((s == NULL) || (s->str == NULL) || (begin == NULL) || (end == NULL)) {
+        return false;
+    }
+
+    uintptr_t const base = (uintptr_t)(const void*)s->str;
+    uintptr_t const lim  = base + s->alloc;          /* one-past-end of allocation */
+    uintptr_t const b    = (uintptr_t)(const void*)begin;
+    uintptr_t const e    = (uintptr_t)(const void*)end;
+
+    /* monotonic and inside allocation */
+    if ((b < base) || (e < b) || (e > lim)) {
+        return false;
+    }
+    return true;
+}
+
+size_t find_substr(const string_t* haystack,
+                   const string_t* needle,
+                   const uint8_t*  begin,
+                   const uint8_t*  end,
+                   direction_t     dir) {
+    if ((haystack == NULL) || (needle == NULL) ||
+        (haystack->str == NULL) || (needle->str == NULL))
+    {
+        return SIZE_MAX;
+    }
+
+    const uint8_t* const hs_base     = (const uint8_t*)(const void*)haystack->str;
+    const uint8_t* const hs_used_end = hs_base + haystack->len; /* exclude terminator */
+
+    /* Defaults if begin/end omitted */
+    if (begin == NULL) { begin = hs_base; }
+    if (end   == NULL) { end   = hs_used_end; }
+
+    /* begin/end must be inside allocation */
+    if (!_range_within_alloc_(haystack, begin, end)) {
+        return SIZE_MAX;
+    }
+
+    /* Clamp to used region (typical string-search semantics) */
+    if (begin > hs_used_end) { return SIZE_MAX; }
+    if (end   > hs_used_end) { end = hs_used_end; }
+    if (begin > end)         { return SIZE_MAX; }
+
+    size_t const region_len = (size_t)(end - begin);
+    size_t const nlen       = needle->len;
+
+    /* Empty needle: define as found at start of region */
+    if (nlen == 0u) {
+        return 0u;
+    }
+    if (nlen > region_len) {
+        return SIZE_MAX;
+    }
+
+    /* Delegate to SIMD/scalar implementation */
+    return simd_find_substr_u8(begin, region_len,
+                               (const uint8_t*)(const void*)needle->str, nlen,
+                               dir);
+}
 // ================================================================================
 // ================================================================================
 // eof

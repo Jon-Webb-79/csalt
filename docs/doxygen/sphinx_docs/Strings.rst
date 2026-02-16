@@ -183,6 +183,12 @@ is_string_ptr_sized
 .. doxygenfunction:: is_string_ptr_sized
    :project: csalt
 
+find_substr
+~~~~~~~~~~~
+
+.. doxygenfunction:: find_substr
+   :project: csalt
+
 String Manipulation
 -------------------
 
