@@ -382,51 +382,78 @@ size_t find_substr(const string_t* haystack,
     
     return (size_t)(begin - hs_base) + offset_from_search_start;
 }
-//
-// size_t find_substr(const string_t* haystack,
-//                    const string_t* needle,
-//                    const uint8_t*  begin,
-//                    const uint8_t*  end,
-//                    direction_t     dir) {
-//     if ((haystack == NULL) || (needle == NULL) ||
-//         (haystack->str == NULL) || (needle->str == NULL))
-//     {
-//         return SIZE_MAX;
-//     }
-//
-//     const uint8_t* const hs_base     = (const uint8_t*)(const void*)haystack->str;
-//     const uint8_t* const hs_used_end = hs_base + haystack->len; /* exclude terminator */
-//
-//     /* Defaults if begin/end omitted */
-//     if (begin == NULL) { begin = hs_base; }
-//     if (end   == NULL) { end   = hs_used_end; }
-//
-//     /* begin/end must be inside allocation */
-//     if (!_range_within_alloc_(haystack, begin, end)) {
-//         return SIZE_MAX;
-//     }
-//
-//     /* Clamp to used region (typical string-search semantics) */
-//     if (begin > hs_used_end) { return SIZE_MAX; }
-//     if (end   > hs_used_end) { end = hs_used_end; }
-//     if (begin > end)         { return SIZE_MAX; }
-//
-//     size_t const region_len = (size_t)(end - begin);
-//     size_t const nlen       = needle->len;
-//
-//     /* Empty needle: define as found at start of region */
-//     if (nlen == 0u) {
-//         return 0u;
-//     }
-//     if (nlen > region_len) {
-//         return SIZE_MAX;
-//     }
-//
-//     /* Delegate to SIMD/scalar implementation */
-//     return simd_find_substr_u8(begin, region_len,
-//                                (const uint8_t*)(const void*)needle->str, nlen,
-//                                dir);
-// }
+// -------------------------------------------------------------------------------- 
+
+size_t word_count(const string_t* s,
+                  const string_t* word,
+                  const uint8_t*  start,
+                  const uint8_t*  end) {
+    if ((s == NULL) || (s->str == NULL))       return 0;
+    if ((word == NULL) || (word->str == NULL)) return 0;
+
+    /* Prevent infinite loop:
+       find_substr() returns 0 for empty needle */
+    if (word->len == 0u) return 0;
+
+    const uint8_t* const base = (const uint8_t*)(const void*)s->str;
+
+    /* Initialize cursor */
+    const uint8_t* cur = (start != NULL) ? start : base;
+
+    size_t count = 0;
+
+    for (;;) {
+        size_t pos = find_substr(s, word, cur, end, FORWARD);
+        if (pos == SIZE_MAX) break;
+
+        ++count;
+
+        /* Advance past this match (non-overlapping semantics) */
+        cur = base + pos + word->len;
+
+        /* Stop if we've reached or exceeded the end window */
+        if ((end != NULL) && (cur >= end)) break;
+    }
+
+    return count;
+}
+// -------------------------------------------------------------------------------- 
+
+size_t word_count_lit(const string_t* s,
+                      const char*     word,
+                      const uint8_t*  start,
+                      const uint8_t*  end) {
+    if ((s == NULL) || (s->str == NULL)) return 0;
+    if (word == NULL) return 0;
+
+    const size_t wlen = strlen(word);
+    if (wlen == 0u) return 0;
+
+    /* Create a non-owning needle view */
+    string_t needle;
+    needle.str = (char*)(const void*)word;  /* adjust if string_t uses uint8_t* */
+    needle.len = wlen;
+
+    const uint8_t* const base = (const uint8_t*)(const void*)s->str;
+
+    const uint8_t* cur = (start != NULL) ? start : base;
+
+    size_t count = 0;
+
+    for (;;) {
+        size_t pos = find_substr(s, &needle, cur, end, FORWARD);
+        if (pos == SIZE_MAX) break;
+
+        ++count;
+
+        /* Non-overlapping advancement */
+        cur = base + pos + wlen;
+
+        if ((end != NULL) && (cur >= end)) break;
+    }
+
+    return count;
+}
 // ================================================================================
 // ================================================================================
 // eof

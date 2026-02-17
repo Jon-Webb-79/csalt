@@ -1404,8 +1404,298 @@ static void test_string_find_substr_exact_window_match(void **state)
 }
 // --------------------------------------------------------------------------------
 
-// ================================================================================
-// ================================================================================
+/* Helper to create a string_t view over a C string literal/buffer */
+static inline string_t sview(const char *cstr) {
+    string_t s;
+    s.str = (char*)cstr;            /* adjust type if your string_t uses uint8_t* */
+    s.len = (size_t)strlen(cstr);
+    return s;
+}
+
+/* Helper to make a needle view */
+static inline string_t nview(const char *cstr) {
+    string_t s;
+    s.str = (char*)cstr;
+    s.len = (size_t)strlen(cstr);
+    return s;
+}
+
+static void test_word_count_null_s_returns_0(void **state) {
+    (void)state;
+
+    string_t w = nview("hello");
+    assert_int_equal(word_count(NULL, &w, NULL, NULL), 0);
+}
+
+static void test_word_count_null_word_returns_0(void **state) {
+    (void)state;
+
+    string_t s = sview("hello hello");
+    assert_int_equal(word_count(&s, NULL, NULL, NULL), 0);
+}
+
+static void test_word_count_null_str_members_returns_0(void **state) {
+    (void)state;
+
+    string_t s = { .str = NULL, .len = 5 };
+    string_t w = nview("hello");
+    assert_int_equal(word_count(&s, &w, NULL, NULL), 0);
+
+    string_t s2 = sview("hello");
+    string_t w2 = { .str = NULL, .len = 5 };
+    assert_int_equal(word_count(&s2, &w2, NULL, NULL), 0);
+}
+
+static void test_word_count_empty_word_returns_0(void **state) {
+    (void)state;
+
+    string_t s = sview("anything");
+    string_t w = nview("");
+    assert_int_equal(word_count(&s, &w, NULL, NULL), 0);
+}
+
+static void test_word_count_case_sensitive_example(void **state) {
+    (void)state;
+
+    /* Case-sensitive: "Hello" != "hello" */
+    string_t s = sview("Hello my name is jonhello and hello again");
+    string_t w = nview("hello");
+
+    /* Matches: "jonhello" + "hello" => 2 */
+    size_t count = word_count(&s, &w, NULL, NULL);
+    assert_int_equal(count, 2);
+}
+
+static void test_word_count_simple_multiple_occurrences(void **state) {
+    (void)state;
+
+    string_t s = sview("hello hello hello");
+    string_t w = nview("hello");
+    size_t count = word_count(&s, &w, NULL, NULL);
+    assert_int_equal(count, 3);
+}
+
+static void test_word_count_non_overlapping_behavior(void **state) {
+    (void)state;
+
+    /* Non-overlapping semantics: "aaaa" contains "aa" at [0..2) and [2..4) => 2 */
+    string_t s = sview("aaaa");
+    string_t w = nview("aa");
+    size_t count = word_count(&s, &w, NULL, NULL);
+    assert_int_equal(count, 2);
+}
+
+static void test_word_count_window_start_end_limits(void **state) {
+    (void)state;
+
+    const char *txt = "hello hello hello";
+    string_t s = sview(txt);
+    string_t w = nview("hello");
+
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* Count only the middle "hello" by restricting range to " hello " region */
+    /* Layout: "hello(0-4) space(5) hello(6-10) space(11) hello(12-16)" */
+    const uint8_t *start = base + 6;     /* start at middle hello */
+    const uint8_t *end   = base + 11;    /* end right after middle hello */
+
+    assert_int_equal(word_count(&s, &w, start, end), 1);
+
+    /* Range excluding all occurrences */
+    assert_int_equal(word_count(&s, &w, base + 1, base + 4), 0);
+}
+
+static void test_word_count_window_end_null_means_to_end(void **state) {
+    (void)state;
+
+    const char *txt = "xxhello hello";
+    string_t s = sview(txt);
+    string_t w = nview("hello");
+
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* Start at the first 'h', no explicit end => should count both */
+    assert_int_equal(word_count(&s, &w, base + 2, NULL), 2);
+}
+
+static void test_word_count_start_after_end_returns_0(void **state) {
+    (void)state;
+
+    string_t s = sview("hello hello");
+    string_t w = nview("hello");
+
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* start > end should produce 0 (find_substr will reject range) */
+    assert_int_equal(word_count(&s, &w, base + 8, base + 3), 0);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_word_count_lit_null_s_returns_0(void **state) {
+    (void)state;
+    assert_int_equal(word_count_lit(NULL, "hello", NULL, NULL), 0);
+}
+
+static void test_word_count_lit_null_s_str_returns_0(void **state) {
+    (void)state;
+    string_t s = { .str = NULL, .len = 10 };
+    assert_int_equal(word_count_lit(&s, "hello", NULL, NULL), 0);
+}
+
+static void test_word_count_lit_null_word_returns_0(void **state) {
+    (void)state;
+    string_t s = sview("hello hello");
+    assert_int_equal(word_count_lit(&s, NULL, NULL, NULL), 0);
+}
+
+static void test_word_count_lit_empty_word_returns_0(void **state) {
+    (void)state;
+    string_t s = sview("hello hello");
+    assert_int_equal(word_count_lit(&s, "", NULL, NULL), 0);
+}
+
+static void test_word_count_lit_no_matches_returns_0(void **state) {
+    (void)state;
+    string_t s = sview("abcdefg");
+    assert_int_equal(word_count_lit(&s, "hello", NULL, NULL), 0);
+}
+
+static void test_word_count_lit_case_sensitive_example(void **state) {
+    (void)state;
+
+    /* Case-sensitive: "Hello" != "hello" */
+    string_t s = sview("Hello my name is jonhello and hello again");
+
+    /* "hello" matches: "jonhello" + "hello" => 2 */
+    size_t count = word_count_lit(&s, "hello", NULL, NULL);
+    assert_int_equal(count, 2);
+    count = word_count_lit(&s, "Hello", NULL, NULL);
+    /* "Hello" matches only the first "Hello" => 1 */
+    assert_int_equal(count, 1);
+}
+
+static void test_word_count_lit_simple_multiple_occurrences(void **state) {
+    (void)state;
+
+    string_t s = sview("hello hello hello");
+    size_t count = word_count_lit(&s, "hello", NULL, NULL);
+    assert_int_equal(count, 3);
+}
+
+static void test_word_count_lit_non_overlapping_behavior(void **state) {
+    (void)state;
+
+    /* Non-overlapping: "aaaa" with "aa" => 2 (at 0 and 2) */
+    string_t s = sview("aaaa");
+    size_t count = word_count_lit(&s, "aa", NULL, NULL);
+    assert_int_equal(count, 2);
+}
+
+static void test_word_count_lit_overlapping_not_counted(void **state) {
+    (void)state;
+
+    /* If overlapping were allowed, "aaaa"/"aa" could be 3. We expect 2. */
+    string_t s = sview("aaaa");
+    size_t count = word_count_lit(&s, "aa", NULL, NULL);
+    assert_int_equal(count, 2);
+}
+
+static void test_word_count_lit_window_limits_middle_only(void **state) {
+    (void)state;
+
+    const char *txt = "hello hello hello";
+    string_t s = sview(txt);
+
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* Layout:
+       hello(0-4) space(5) hello(6-10) space(11) hello(12-16)
+       Choose [6,11) => exactly middle "hello"
+    */
+    const uint8_t *start = base + 6;
+    const uint8_t *end   = base + 11;
+
+    assert_int_equal(word_count_lit(&s, "hello", start, end), 1);
+}
+
+static void test_word_count_lit_window_excludes_all(void **state) {
+    (void)state;
+
+    const char *txt = "hello hello";
+    string_t s = sview(txt);
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* [1,4) is "ell" - no full match */
+    assert_int_equal(word_count_lit(&s, "hello", base + 1, base + 4), 0);
+}
+
+static void test_word_count_lit_start_and_end_null_defaults(void **state) {
+    (void)state;
+
+    string_t s = sview("xxhello hello");
+    size_t count = word_count_lit(&s, "hello", NULL, NULL);
+    /* start NULL + end NULL => entire string */
+    assert_int_equal(count, 2);
+}
+
+static void test_word_count_lit_start_only_defaults_end(void **state) {
+    (void)state;
+
+    const char *txt = "xxhello hello";
+    string_t s = sview(txt);
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* Start at the first 'h', implicit end => should count both */
+    size_t count = word_count_lit(&s, "hello", base + 2, NULL);
+    assert_int_equal(count, 2);
+}
+
+static void test_word_count_lit_start_after_end_returns_0(void **state) {
+    (void)state;
+
+    string_t s = sview("hello hello");
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* find_substr should reject begin > end => SIZE_MAX => word_count_lit returns 0 */
+    assert_int_equal(word_count_lit(&s, "hello", base + 8, base + 3), 0);
+}
+// -------------------------------------------------------------------------------- 
+
+#if ARENA_USE_CONVENIENCE_MACROS && !defined(NO_FUNCTION_MACROS)
+static void test_count_words_macro_char(void **state) {
+    (void)state;
+    /* Case-sensitive: "Hello" != "hello" */
+    string_t s = sview("Hello my name is jonhello and hello again");
+
+    /* "hello" matches: "jonhello" + "hello" => 2 */
+    size_t count = count_words(&s, "hello", NULL, NULL);
+    assert_int_equal(count, 2);
+    count = count_words(&s, "Hello", NULL, NULL);
+    /* "Hello" matches only the first "Hello" => 1 */
+    assert_int_equal(count, 1);
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_count_words_macro_string(void **state) {
+    (void)state;
+
+    const char *txt = "hello hello hello";
+    string_t s = sview(txt);
+    string_t w = nview("hello");
+
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* Count only the middle "hello" by restricting range to " hello " region */
+    /* Layout: "hello(0-4) space(5) hello(6-10) space(11) hello(12-16)" */
+    const uint8_t *start = base + 6;     /* start at middle hello */
+    const uint8_t *end   = base + 11;    /* end right after middle hello */
+
+    assert_int_equal(count_words(&s, &w, start, end), 1);
+
+    /* Range excluding all occurrences */
+    assert_int_equal(count_words(&s, &w, base + 1, base + 4), 0);
+}
+#endif
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1490,6 +1780,35 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_string_find_substr_from_middle_forward),
     cmocka_unit_test(test_string_find_substr_exact_window_match),
 
+    cmocka_unit_test(test_word_count_null_s_returns_0),
+    cmocka_unit_test(test_word_count_null_word_returns_0),
+    cmocka_unit_test(test_word_count_null_str_members_returns_0),
+    cmocka_unit_test(test_word_count_empty_word_returns_0),
+    cmocka_unit_test(test_word_count_case_sensitive_example),
+    cmocka_unit_test(test_word_count_simple_multiple_occurrences),
+    cmocka_unit_test(test_word_count_non_overlapping_behavior),
+    cmocka_unit_test(test_word_count_window_start_end_limits),
+    cmocka_unit_test(test_word_count_window_end_null_means_to_end),
+    cmocka_unit_test(test_word_count_start_after_end_returns_0),
+
+    cmocka_unit_test(test_word_count_lit_null_s_returns_0),
+    cmocka_unit_test(test_word_count_lit_null_s_str_returns_0),
+    cmocka_unit_test(test_word_count_lit_null_word_returns_0),
+    cmocka_unit_test(test_word_count_lit_empty_word_returns_0),
+    cmocka_unit_test(test_word_count_lit_no_matches_returns_0),
+    cmocka_unit_test(test_word_count_lit_case_sensitive_example),
+    cmocka_unit_test(test_word_count_lit_simple_multiple_occurrences),
+    cmocka_unit_test(test_word_count_lit_non_overlapping_behavior),
+    cmocka_unit_test(test_word_count_lit_overlapping_not_counted),
+    cmocka_unit_test(test_word_count_lit_window_limits_middle_only),
+    cmocka_unit_test(test_word_count_lit_window_excludes_all),
+    cmocka_unit_test(test_word_count_lit_start_and_end_null_defaults),
+    cmocka_unit_test(test_word_count_lit_start_only_defaults_end),
+    cmocka_unit_test(test_word_count_lit_start_after_end_returns_0),
+#if ARENA_USE_CONVENIENCE_MACROS && !defined(NO_FUNCTION_MACROS)
+    cmocka_unit_test(test_count_words_macro_char),
+    cmocka_unit_test(test_count_words_macro_string),
+#endif
 };
 
 const size_t test_string_count = sizeof(test_string) / sizeof(test_string[0]);

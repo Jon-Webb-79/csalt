@@ -216,6 +216,18 @@ copy_string
 .. doxygenfunction:: copy_string
    :project: csalt
 
+word_count
+~~~~~~~~~~
+
+.. doxygenfunction:: word_count 
+   :project: csalt
+
+word_count_lit
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: word_count_lit
+   :project: csalt
+
 Generic Macros
 --------------
 
@@ -233,4 +245,10 @@ compare_string
 ~~~~~~~~~~~~~~
 
 .. doxygendefine:: compare_string
+   :project: csalt
+
+count_words
+~~~~~~~~~~~
+
+.. doxygendefine:: count_words
    :project: csalt

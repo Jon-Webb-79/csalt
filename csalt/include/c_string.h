@@ -867,6 +867,276 @@ size_t find_substr(const string_t* haystack,
                    const uint8_t*  begin,
                    const uint8_t*  end,
                    direction_t     dir);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Count case-sensitive occurrences of a substring within a string range.
+ *
+ * This function counts the number of **non-overlapping, case-sensitive**
+ * occurrences of `word` inside the string `s`, optionally constrained to the
+ * byte range `[start, end)`.
+ *
+ * Internally, this function repeatedly calls `find_substr()` and advances the
+ * search cursor past each successful match, ensuring forward progress and
+ * preventing infinite loops.
+ *
+ * @param s
+ * Pointer to the source string object to be searched.
+ *
+ * @param word
+ * Pointer to the substring to search for.
+ *
+ * @param start
+ * Optional pointer to the beginning of the search region within `s->str`.
+ * If `NULL`, the search begins at the start of the string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the search region.
+ * If `NULL`, the search continues to the end of the used string length.
+ *
+ * @return
+ * The number of **non-overlapping** occurrences of `word` found within the
+ * specified region.
+ *
+ * @retval 0
+ * Returned if:
+ *  - `s == NULL`
+ *  - `s->str == NULL`
+ *  - `word == NULL`
+ *  - `word->str == NULL`
+ *  - `word->len == 0`
+ *  - no matches are found
+ *
+ * @note
+ * - Matching is **case-sensitive**.
+ * - Matches are **substring-based**, not whole-word delimited.
+ *   For example, searching `"hello"` will match `"jonhello"`.
+ * - Occurrences are counted **non-overlapping**.
+ *   To count overlapping matches, advance the cursor by `+1` instead of
+ *   `+word->len` after each match.
+ *
+ * @par Example
+ * @code
+ * allocator_vtable_t a = heap_allocator();
+ * string_expect_t r = init_string("Hello world thisHello is hello again Hello", 45, a);
+ * if (!r.has_value) {
+ *     // handle error
+ * }
+ * string_t* text = r.u.value;
+ *
+ * r = init_string("Hello", 5, a);
+ * if (!r.has_value) {
+ *    // Handle error
+ * }
+ * string_t* word = r.u.value;
+ * size_t count = word_count(text, word, NULL, NULL);
+ *
+ * // count == 2 because matching is case-sensitive:
+ * //   "Hello"
+ * //   "thisHello"
+ * //   "Hello"
+ * //
+ * @endcode
+ *
+ * @see find_substr
+ */
+size_t word_count(const string_t* s,
+                  const string_t* word,
+                  const uint8_t*  start,
+                  const uint8_t*  end);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Count case-sensitive occurrences of a literal substring within a string range.
+ *
+ * This function counts the number of **non-overlapping, case-sensitive**
+ * occurrences of the C string literal `word` inside the string `s`,
+ * optionally constrained to the byte range `[start, end)`.
+ *
+ * Internally, this function constructs a temporary non-owning substring view
+ * and repeatedly calls `find_substr()`, advancing the search cursor past each
+ * successful match to ensure forward progress and prevent infinite loops.
+ *
+ * @param s
+ * Pointer to the source string object to be searched.
+ *
+ * @param word
+ * Pointer to a **NUL-terminated C string literal** representing the substring
+ * to search for.
+ *
+ * @param start
+ * Optional pointer to the beginning of the search region within `s->str`.
+ * If `NULL`, the search begins at the start of the string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the search region.
+ * If `NULL`, the search continues to the end of the used string length.
+ *
+ * @return
+ * The number of **non-overlapping** occurrences of `word` found within the
+ * specified region.
+ *
+ * @retval 0
+ * Returned if:
+ *  - `s == NULL`
+ *  - `s->str == NULL`
+ *  - `word == NULL`
+ *  - `word` is an empty string (`""`)
+ *  - no matches are found
+ *
+ * @note
+ * - Matching is **case-sensitive**.
+ * - Matches are **substring-based**, not whole-word delimited.
+ *   For example, searching `"Hello"` will match `"thisHello"`.
+ * - Occurrences are counted **non-overlapping**.
+ *   To count overlapping matches, advance the cursor by `+1` instead of
+ *   `+strlen(word)` after each match.
+ * - The literal `word` is **not copied**; only a temporary non-owning view
+ *   is created for the duration of the search.
+ *
+ * @par Example
+ * @code
+ * allocator_vtable_t a = heap_allocator();
+ * string_expect_t r = init_string("Hello world thisHello is hello again Hello", 45, a);
+ * if (!r.has_value) {
+ *     // handle error
+ * }
+ * string_t* text = r.u.value;
+ *
+ * size_t count = word_count_lit(text, "Hello", NULL, NULL);
+ *
+ * // count == 3 because matching is case-sensitive:
+ * //   "Hello"
+ * //   "thisHello"
+ * //   "Hello"
+ * //
+ * @endcode
+ *
+ * @see word_count
+ * @see find_substr
+ */
+size_t word_count_lit(const string_t* s,
+                      const char*     word,
+                      const uint8_t*  start,
+                      const uint8_t*  end);
+// -------------------------------------------------------------------------------- 
+
+#if defined(ARENA_USE_CONVENIENCE_MACROS) && !defined(NO_FUNCTION_MACROS)
+
+/* Helper: compile-time check (expression-safe)
+   (If already defined elsewhere, you can remove this duplicate.) */
+#ifndef CSALT_STATIC_ASSERT_EXPR_
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+#endif
+
+/* RHS type support check for count_words(s, word, start, end) */
+#define COUNT_WORDS_SUPPORTED_WORD_(x) \
+    _Generic((x), \
+        const char*:      1, \
+        char*:            1, \
+        const string_t*:  1, \
+        string_t*:        1, \
+        default:          0)
+
+/* Enforce supported word types at compile time (C11). */
+#define COUNT_WORDS_TYPECHECK_(x) \
+    CSALT_STATIC_ASSERT_EXPR_(COUNT_WORDS_SUPPORTED_WORD_(x), \
+                              count_words_unsupported_word_type)
+
+/**
+ * @brief Type-safe generic substring occurrence counting convenience macro.
+ *
+ * @details
+ * `count_words(s, word, start, end)` provides a single counting interface that
+ * selects the correct implementation at **compile time** using the C11
+ * `_Generic` operator.
+ *
+ * Compile-time dispatch rules:
+ *
+ * - If @p word is a C string (`const char*` or `char*`), this macro expands to:
+ *   @ref word_count_lit((const string_t*)s, (const char*)word, start, end)
+ *
+ * - If @p word is a string object (`const string_t*` or `string_t*`), this macro
+ *   expands to:
+ *   @ref word_count((const string_t*)s, (const string_t*)word, start, end)
+ *
+ * In other words, the macro performs **zero runtime type checks** and adds no
+ * dispatch overhead—selection happens entirely at compile time.
+ *
+ * Availability:
+ * - Enabled only when `ARENA_USE_CONVENIENCE_MACROS` is defined, and
+ * - Disabled when `NO_FUNCTION_MACROS` is defined (to support MISRA-style builds).
+ *
+ * @param s
+ * Pointer to the source @ref string_t (treated as `const string_t*`).
+ *
+ * @param word
+ * Substring to search for. Must be one of:
+ * `const char*`, `char*`, `const string_t*`, `string_t*`.
+ *
+ * @param start
+ * Optional pointer to the beginning of the search region within `s->str`.
+ * If `NULL`, the search begins at the start of the string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the search region.
+ * If `NULL`, the search continues to the end of the used string length.
+ *
+ * @return size_t count using the semantics of the selected function.
+ *
+ * @retval 0
+ * Returned if the selected implementation considers the arguments invalid
+ * (e.g., `s == NULL`, `s->str == NULL`, `word == NULL`, empty word, etc.) or if
+ * no matches are found.
+ *
+ * @note
+ * If @p word is not one of the supported types, this macro triggers a
+ * **compile-time error** in C11 builds via @ref COUNT_WORDS_TYPECHECK_.
+ *
+ * @note
+ * Matching is **case-sensitive**. Occurrences are counted **non-overlapping**
+ * by default (implementation-defined by the selected function).
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("Hello world thisHello is hello again Hello", 45u, a);
+ * if (!r.has_value) {
+ *     // handle error
+ * }
+ * string_t* text = r.u.value;
+ *
+ * // Dispatches to word_count_lit(text, "Hello", NULL, NULL)
+ * size_t c1 = count_words(text, "Hello", NULL, NULL);   // -> 3
+ *
+ * // Dispatches to word_count(text, word_obj, NULL, NULL)
+ * string_expect_t r2 = init_string("hello", 0u, a);
+ * if (r2.has_value) {
+ *     string_t* w = r2.u.value;
+ *     size_t c2 = count_words(text, w, NULL, NULL);     // -> 1
+ *     return_string(w);
+ *     (void)c2;
+ * }
+ *
+ * (void)c1;
+ * return_string(text);
+ * @endcode
+ *
+ * @see word_count
+ * @see word_count_lit
+ * @see find_substr
+ */
+#define count_words(s, word, start, end) \
+    (COUNT_WORDS_TYPECHECK_(word), \
+     _Generic((word), \
+        const char*:      word_count_lit, \
+        char*:            word_count_lit, \
+        const string_t*:  word_count, \
+        string_t*:        word_count \
+     )((const string_t*)(s), (word), (start), (end)))
+
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
