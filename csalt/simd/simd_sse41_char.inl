@@ -100,38 +100,65 @@ static inline size_t simd_find_substr_u8(const uint8_t* hay,
 
     const size_t last_start = hay_len - needle_len;
 
+    /* For very small haystacks, a vector load would overread.
+       Handle entirely in scalar to guarantee no OOB reads. */
+    if (hay_len < 16u) {
+        if (dir == FORWARD) {
+            for (size_t i = 0u; i <= last_start; ++i) {
+                if (hay[i] != first) continue;
+                if (needle_len == 1u) return i;
+                if (memcmp(hay + i + 1u, needle + 1u, needle_len - 1u) == 0) {
+                    return i;
+                }
+            }
+            return SIZE_MAX;
+        } else { /* REVERSE */
+            for (size_t i = last_start + 1u; i-- > 0u; ) {
+                if (hay[i] != first) continue;
+                if (needle_len == 1u) return i;
+                if (memcmp(hay + i + 1u, needle + 1u, needle_len - 1u) == 0) {
+                    return i;
+                }
+                if (i == 0u) break;
+            }
+            return SIZE_MAX;
+        }
+    }
+
+    /* hay_len >= 16 from here on */
+
     if (dir == FORWARD) {
         size_t i = 0u;
 
-        while (i <= last_start) {
-            if ((i + 16u) <= hay_len) {
-                __m128i v  = _mm_loadu_si128((const __m128i*)(const void*)(hay + i));
-                __m128i eq = _mm_cmpeq_epi8(v, vfirst);
-                uint16_t mask = (uint16_t)_mm_movemask_epi8(eq);
+        /* Only load at positions i where i+16 <= hay_len */
+        const size_t vec_end = hay_len - 16u;
 
-                while (mask != 0u) {
-                    unsigned bit = csalt_first_bit16(mask);
-                    size_t pos = i + (size_t)bit;
+        while (i <= last_start && i <= vec_end) {
+            __m128i v  = _mm_loadu_si128((const __m128i*)(const void*)(hay + i));
+            __m128i eq = _mm_cmpeq_epi8(v, vfirst);
+            uint16_t mask = (uint16_t)_mm_movemask_epi8(eq);
 
-                    if (pos <= last_start) {
-                        if (needle_len == 1u) { return pos; }
-                        if (memcmp(hay + pos + 1u, needle + 1u, needle_len - 1u) == 0) {
-                            return pos;
-                        }
+            while (mask != 0u) {
+                unsigned bit = csalt_first_bit16(mask);
+                size_t pos = i + (size_t)bit;
+
+                if (pos <= last_start) {
+                    if (needle_len == 1u) { return pos; }
+                    if (memcmp(hay + pos + 1u, needle + 1u, needle_len - 1u) == 0) {
+                        return pos;
                     }
-
-                    mask = (uint16_t)(mask & (uint16_t)(mask - 1u));
                 }
 
-                i += 16u;
-            } else {
-                break;
+                mask = (uint16_t)(mask & (uint16_t)(mask - 1u));
             }
+
+            i += 16u;
         }
 
+        /* Scalar tail for remaining start positions */
         for (; i <= last_start; ++i) {
-            if (hay[i] != first) { continue; }
-            if (needle_len == 1u) { return i; }
+            if (hay[i] != first) continue;
+            if (needle_len == 1u) return i;
             if (memcmp(hay + i + 1u, needle + 1u, needle_len - 1u) == 0) {
                 return i;
             }
@@ -144,18 +171,24 @@ static inline size_t simd_find_substr_u8(const uint8_t* hay,
     {
         size_t i = last_start;
 
-        while (true) {
+        for (;;) {
+            /* Choose a block that contains i but also stays safe for a 16B load */
             size_t block_start = (i >= 15u) ? (i - 15u) : 0u;
+
+            /* Ensure block_start+16 <= hay_len (safe load) */
+            if (block_start + 16u > hay_len) {
+                block_start = hay_len - 16u; /* safe because hay_len >= 16 */
+            }
 
             __m128i v  = _mm_loadu_si128((const __m128i*)(const void*)(hay + block_start));
             __m128i eq = _mm_cmpeq_epi8(v, vfirst);
             uint16_t mask = (uint16_t)_mm_movemask_epi8(eq);
 
-            size_t block_end = block_start + 15u;
-            size_t max_pos   = (i < last_start) ? i : last_start;
+            /* Only keep candidate positions <= max_pos within this block */
+            size_t max_pos = (i < last_start) ? i : last_start;
 
-            if (max_pos < block_end) {
-                unsigned keep = (unsigned)(max_pos - block_start + 1u);
+            if (max_pos < block_start + 15u) {
+                unsigned keep = (unsigned)(max_pos - block_start + 1u); /* 1..16 */
                 if (keep < 16u) {
                     mask = (uint16_t)(mask & (uint16_t)((1u << keep) - 1u));
                 }

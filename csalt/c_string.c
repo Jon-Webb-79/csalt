@@ -384,6 +384,60 @@ size_t find_substr(const string_t* haystack,
 }
 // -------------------------------------------------------------------------------- 
 
+size_t find_substr_lit(const string_t* haystack,
+                       const char*     needle_lit,
+                       const uint8_t*  begin,
+                       const uint8_t*  end,
+                       direction_t     dir) {
+    if ((haystack == NULL) || (haystack->str == NULL) || (needle_lit == NULL)) {
+        return SIZE_MAX;
+    }
+
+    const uint8_t* const hs_base     = (const uint8_t*)(const void*)haystack->str;
+    const uint8_t* const hs_used_end = hs_base + haystack->len;
+
+    /* Defaults if begin/end omitted */
+    if (begin == NULL) { begin = hs_base; }
+    if (end   == NULL) { end   = hs_used_end; }
+
+    /* begin/end must be inside allocation */
+    if (!_range_within_alloc_(haystack, begin, end)) {
+        return SIZE_MAX;
+    }
+
+    /* Clamp to used region (typical string-search semantics) */
+    if (begin > hs_used_end) { return SIZE_MAX; }
+    if (end   > hs_used_end) { end = hs_used_end; }
+    if (begin > end)         { return SIZE_MAX; }
+
+    size_t const region_len = (size_t)(end - begin);
+
+    /* NUL-terminated literal length */
+    size_t const nlen = strlen(needle_lit);
+
+    /* Empty needle: define as found at start of region */
+    if (nlen == 0u) {
+        return (size_t)(begin - hs_base);
+    }
+    if (nlen > region_len) {
+        return SIZE_MAX;
+    }
+
+    /* Delegate to SIMD/scalar implementation */
+    size_t offset_from_search_start =
+        simd_find_substr_u8(begin, region_len,
+                            (const uint8_t*)(const void*)needle_lit, nlen,
+                            dir);
+
+    if (offset_from_search_start == SIZE_MAX) {
+        return SIZE_MAX;
+    }
+
+    /* Convert to offset from string start */
+    return (size_t)(begin - hs_base) + offset_from_search_start;
+}
+// -------------------------------------------------------------------------------- 
+
 size_t word_count(const string_t* s,
                   const string_t* word,
                   const uint8_t*  start,

@@ -1402,23 +1402,158 @@ static void test_string_find_substr_exact_window_match(void **state)
     return_string(n);
     return_string(h);
 }
+// -------------------------------------------------------------------------------- 
+
+static inline string_t sview_alloc(char *buf, size_t used_len, size_t alloc_len) {
+    string_t s;
+    s.str   = buf;
+    s.len   = used_len;
+    s.alloc = alloc_len;
+    return s;
+}
+
+static void test_find_substr_lit_null_haystack_returns_sizemax(void **state) {
+    (void)state;
+    assert_int_equal(find_substr_lit(NULL, "hi", NULL, NULL, FORWARD), SIZE_MAX);
+}
+
+static void test_find_substr_lit_null_haystack_str_returns_sizemax(void **state) {
+    (void)state;
+    string_t s = { .str = NULL, .len = 0, .alloc = 0 };
+    assert_int_equal(find_substr_lit(&s, "hi", NULL, NULL, FORWARD), SIZE_MAX);
+}
+
+static void test_find_substr_lit_null_needle_returns_sizemax(void **state) {
+    (void)state;
+
+    char buf[] = "hello";
+    string_t s = sview_alloc(buf, strlen(buf), sizeof(buf));
+
+    assert_int_equal(find_substr_lit(&s, NULL, NULL, NULL, FORWARD), SIZE_MAX);
+}
+
+static void test_find_substr_lit_empty_needle_returns_begin_offset(void **state) {
+    (void)state;
+
+    char buf[] = "abcdef";
+    string_t s = sview_alloc(buf, strlen(buf), sizeof(buf));
+
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* Empty needle => found at start of region */
+    assert_int_equal(find_substr_lit(&s, "", NULL, NULL, FORWARD), 0u);
+
+    /* If begin is moved, should return offset == (begin - base) */
+    const uint8_t *begin = base + 3;
+    assert_int_equal(find_substr_lit(&s, "", begin, NULL, FORWARD), 3u);
+}
+
+static void test_find_substr_lit_finds_first_occurrence_default_range(void **state) {
+    (void)state;
+
+    char buf[] = "Hello my name is jonhello and hello again";
+    string_t s = sview_alloc(buf, strlen(buf), sizeof(buf));
+
+    /* Case-sensitive search: "hello" occurs first inside "jonhello".
+       "Hello" at the front is different case, so first "hello" begins at:
+       "Hello " (6 chars) + "my " (3) + "name " (5) + "is " (3) + "jon" (3) = 20
+       index 20 is the 'h' in "jonhello".
+    */
+    size_t pos = find_substr_lit(&s, "hello", NULL, NULL, FORWARD);
+    assert_int_equal(pos, 20u);
+}
+
+static void test_find_substr_lit_respects_begin_end_window(void **state) {
+    (void)state;
+
+    char buf[] = "hello hello hello";
+    string_t s = sview_alloc(buf, strlen(buf), sizeof(buf));
+
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* Layout: hello(0-4) space(5) hello(6-10) space(11) hello(12-16) */
+
+    /* Search only middle hello: [6, 11) */
+    const uint8_t *begin = base + 6;
+    const uint8_t *end   = base + 11;
+
+    size_t pos = find_substr_lit(&s, "hello", begin, end, FORWARD);
+    assert_int_equal(pos, 6u);
+
+    /* Search region that excludes any full match */
+    pos = find_substr_lit(&s, "hello", base + 1, base + 4, FORWARD);
+    assert_int_equal(pos, SIZE_MAX);
+}
+
+static void test_find_substr_lit_clamps_end_to_used_len(void **state) {
+    (void)state;
+
+    /* Buffer has extra capacity beyond used length */
+    char buf[64];
+    memset(buf, 0, sizeof(buf));
+    memcpy(buf, "hello world", 11);
+
+    /* used_len = 11, alloc = 64 */
+    string_t s = sview_alloc(buf, 11u, sizeof(buf));
+
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* Provide an end pointer inside allocation but beyond used length.
+       Your function should clamp end to hs_used_end and still succeed. */
+    const uint8_t *end = base + 40; /* within alloc */
+
+    size_t pos = find_substr_lit(&s, "world", NULL, end, FORWARD);
+    assert_int_equal(pos, 6u);
+}
+
+static void test_find_substr_lit_begin_end_outside_alloc_rejected(void **state) {
+    (void)state;
+
+    char buf[] = "hello";
+    string_t s = sview_alloc(buf, strlen(buf), sizeof(buf));
+
+    const uint8_t *base = (const uint8_t*)(const void*)s.str;
+
+    /* end outside allocation => _range_within_alloc_ should reject */
+    const uint8_t *bad_end = base + s.alloc + 1;
+
+    assert_int_equal(find_substr_lit(&s, "he", base, bad_end, FORWARD), SIZE_MAX);
+}
+
 // --------------------------------------------------------------------------------
 
-/* Helper to create a string_t view over a C string literal/buffer */
 static inline string_t sview(const char *cstr) {
     string_t s;
-    s.str = (char*)cstr;            /* adjust type if your string_t uses uint8_t* */
-    s.len = (size_t)strlen(cstr);
+    memset(&s, 0, sizeof s);          // safest: clears all fields
+    s.str = (char*)cstr;
+    s.len = strlen(cstr);
+    s.alloc = s.len + 1;              // include NUL storage (recommended)
     return s;
 }
 
-/* Helper to make a needle view */
 static inline string_t nview(const char *cstr) {
     string_t s;
+    memset(&s, 0, sizeof s);
     s.str = (char*)cstr;
-    s.len = (size_t)strlen(cstr);
+    s.len = strlen(cstr);
+    s.alloc = s.len + 1;
     return s;
 }
+// /* Helper to create a string_t view over a C string literal/buffer */
+// static inline string_t sview(const char *cstr) {
+//     string_t s;
+//     s.str = (char*)cstr;            /* adjust type if your string_t uses uint8_t* */
+//     s.len = (size_t)strlen(cstr);
+//     return s;
+// }
+//
+// /* Helper to make a needle view */
+// static inline string_t nview(const char *cstr) {
+//     string_t s;
+//     s.str = (char*)cstr;
+//     s.len = (size_t)strlen(cstr);
+//     return s;
+// }
 
 static void test_word_count_null_s_returns_0(void **state) {
     (void)state;
@@ -1779,6 +1914,15 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_string_find_substr_invalid_region_returns_size_max),
     cmocka_unit_test(test_string_find_substr_from_middle_forward),
     cmocka_unit_test(test_string_find_substr_exact_window_match),
+
+    cmocka_unit_test(test_find_substr_lit_null_haystack_returns_sizemax),
+    cmocka_unit_test(test_find_substr_lit_null_haystack_str_returns_sizemax),
+    cmocka_unit_test(test_find_substr_lit_null_needle_returns_sizemax),
+    cmocka_unit_test(test_find_substr_lit_empty_needle_returns_begin_offset),
+    cmocka_unit_test(test_find_substr_lit_finds_first_occurrence_default_range),
+    cmocka_unit_test(test_find_substr_lit_respects_begin_end_window),
+    cmocka_unit_test(test_find_substr_lit_clamps_end_to_used_len),
+    cmocka_unit_test(test_find_substr_lit_begin_end_outside_alloc_rejected),
 
     cmocka_unit_test(test_word_count_null_s_returns_0),
     cmocka_unit_test(test_word_count_null_word_returns_0),

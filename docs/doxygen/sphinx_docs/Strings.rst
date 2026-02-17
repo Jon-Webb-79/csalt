@@ -189,6 +189,12 @@ find_substr
 .. doxygenfunction:: find_substr
    :project: csalt
 
+find_substr_lit
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: find_substr_lit
+   :project: csalt
+
 String Manipulation
 -------------------
 
@@ -251,4 +257,10 @@ count_words
 ~~~~~~~~~~~
 
 .. doxygendefine:: count_words
+   :project: csalt
+
+find_substring
+~~~~~~~~~~~~~~
+
+.. doxygendefine:: find_substring
    :project: csalt

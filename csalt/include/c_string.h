@@ -870,6 +870,162 @@ size_t find_substr(const string_t* haystack,
 // -------------------------------------------------------------------------------- 
 
 /**
+ * @brief Find the first occurrence of a literal substring within a string range.
+ *
+ * This function searches for the **first case-sensitive occurrence** of the
+ * NUL-terminated C string `needle_lit` inside the string `haystack`,
+ * optionally constrained to the byte range `[begin, end)`.
+ *
+ * The search semantics match @ref find_substr, but the needle is provided as a
+ * **string literal** instead of a @ref string_t object. Internally, the literal
+ * length is determined via `strlen`, and the search is delegated to the same
+ * SIMD/scalar substring engine used by @ref find_substr.
+ *
+ * @param haystack
+ * Pointer to the source string object to be searched.
+ *
+ * @param needle_lit
+ * Pointer to a **NUL-terminated C string literal** representing the substring
+ * to locate.
+ *
+ * @param begin
+ * Optional pointer to the beginning of the search region within
+ * `haystack->str`.  
+ * If `NULL`, the search begins at the start of the used string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the search region.  
+ * If `NULL`, the search continues to the end of the used string length.
+ *
+ * @param dir
+ * Search direction (implementation-defined; typically forward or reverse).
+ *
+ * @return
+ * Offset in bytes from the beginning of `haystack->str` to the first matching
+ * occurrence of `needle_lit`.
+ *
+ * @retval SIZE_MAX
+ * Returned if:
+ * - `haystack == NULL`
+ * - `haystack->str == NULL`
+ * - `needle_lit == NULL`
+ * - the search range is invalid or outside the allocation
+ * - the literal is not found within the specified region
+ *
+ * @note
+ * - Matching is **case-sensitive** and **substring-based** (not word-delimited).
+ * - The search range `[begin, end)` is validated against the underlying
+ *   allocation and clamped to the **used length** of the string.
+ * - An **empty literal** (`""`) is defined as found at the start of the search
+ *   region and returns the offset corresponding to `begin`.
+ * - The literal is **not copied**; only its length is computed before searching.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("Hello world, hello again", 0u, a);
+ * if (!r.has_value) {
+ *     // handle error
+ * }
+ * string_t* text = r.u.value;
+ *
+ * // Find first lowercase "hello"
+ * size_t pos = find_substr_lit(text, "hello", NULL, NULL, DIR_FWD);
+ *
+ * // pos == 13
+ *
+ * return_string(text);
+ * @endcode
+ *
+ * @see find_substr
+ * @see word_count_lit
+ */
+size_t find_substr_lit(const string_t* haystack,
+                       const char*     needle_lit,
+                       const uint8_t*  begin,
+                       const uint8_t*  end,
+                       direction_t     dir);
+// -------------------------------------------------------------------------------- 
+
+#if defined(ARENA_USE_CONVENIENCE_MACROS) && !defined(NO_FUNCTION_MACROS)
+
+/* Helper: compile-time check (expression-safe)
+   (If already defined elsewhere, you can remove this duplicate.) */
+#ifndef CSALT_STATIC_ASSERT_EXPR_
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+#endif
+
+/* RHS type support check for find_substring(haystack, needle, begin, end, dir) */
+#define FIND_SUBSTR_SUPPORTED_NEEDLE_(x) \
+    _Generic((x), \
+        const char*:      1, \
+        char*:            1, \
+        const string_t*:  1, \
+        string_t*:        1, \
+        default:          0)
+
+/* Enforce supported needle types at compile time (C11). */
+#define FIND_SUBSTR_TYPECHECK_(x) \
+    CSALT_STATIC_ASSERT_EXPR_(FIND_SUBSTR_SUPPORTED_NEEDLE_(x), \
+                              find_substring_unsupported_needle_type)
+
+/**
+ * @brief Type-safe generic substring search convenience macro.
+ *
+ * @details
+ * `find_substring(haystack, needle, begin, end, dir)` selects the correct
+ * substring search implementation at **compile time** using the C11 `_Generic`
+ * operator.
+ *
+ * Compile-time dispatch rules:
+ *
+ * - If @p needle is a C string (`const char*` or `char*`), this macro expands to:
+ *   @ref find_substr_lit((const string_t*)haystack, (const char*)needle, begin, end, dir)
+ *
+ * - If @p needle is a string object (`const string_t*` or `string_t*`), this
+ *   macro expands to:
+ *   @ref find_substr((const string_t*)haystack, (const string_t*)needle, begin, end, dir)
+ *
+ * This macro performs **zero runtime type checks** and adds no dispatch
+ * overhead—selection happens entirely at compile time.
+ *
+ * Availability:
+ * - Enabled only when `ARENA_USE_CONVENIENCE_MACROS` is defined, and
+ * - Disabled when `NO_FUNCTION_MACROS` is defined (to support MISRA-style builds).
+ *
+ * @param haystack Pointer to the source @ref string_t (treated as `const string_t*`).
+ * @param needle   Substring to search for. Supported types:
+ *                 `const char*`, `char*`, `const string_t*`, `string_t*`.
+ * @param begin    Optional start pointer within `haystack->str` (or `NULL`).
+ * @param end      Optional end pointer within `haystack->str` (or `NULL`).
+ * @param dir      Search direction (implementation-defined by underlying functions).
+ *
+ * @return size_t offset from the beginning of `haystack`, or `SIZE_MAX` if not found
+ *         or if arguments are invalid (per the selected implementation).
+ *
+ * @note
+ * If @p needle is not one of the supported types, this macro triggers a
+ * **compile-time error** in C11 builds via @ref FIND_SUBSTR_TYPECHECK_.
+ *
+ * @see find_substr
+ * @see find_substr_lit
+ */
+#define find_substring(haystack, needle, begin, end, dir) \
+    (FIND_SUBSTR_TYPECHECK_(needle), \
+     _Generic((needle), \
+        const char*:      find_substr_lit, \
+        char*:            find_substr_lit, \
+        const string_t*:  find_substr, \
+        string_t*:        find_substr \
+     )((const string_t*)(haystack), (needle), (begin), (end), (dir)))
+
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+
+// -------------------------------------------------------------------------------- 
+
+/**
  * @brief Count case-sensitive occurrences of a substring within a string range.
  *
  * This function counts the number of **non-overlapping, case-sensitive**
