@@ -585,6 +585,54 @@ size_t token_count(const string_t* s,
     return simd_token_count_u8(begin, n,
                               (const char*)(const void*)delim->str, dlen);
 }
+// -------------------------------------------------------------------------------- 
+
+void to_uppercase(string_t* s, uint8_t* start, uint8_t* end) {
+    if ((s == NULL) || (s->str == NULL)) {
+        return;
+    }
+
+    uint8_t* const base     = (uint8_t*)(void*)s->str;
+    uint8_t* const used_end = base + s->len;
+
+    if (start == NULL) { start = base; }
+    if (end   == NULL) { end   = used_end; }
+
+    /* Must be within allocation */
+    if (!_range_within_alloc_(s, start, end)) {
+        return;
+    }
+
+    /* Clamp to used region */
+    if (start > used_end) { return; }
+    if (end   > used_end) { end = used_end; }
+    if (start >= end)     { return; }
+
+    simd_ascii_upper_u8(start, (size_t)(end - start));
+}
+// -------------------------------------------------------------------------------- 
+
+void to_lowercase(string_t* s, uint8_t* start, uint8_t* end) {
+    if ((s == NULL) || (s->str == NULL)) {
+        return;
+    }
+
+    uint8_t* const base     = (uint8_t*)(void*)s->str;
+    uint8_t* const used_end = base + s->len;
+
+    if (start == NULL) { start = base; }
+    if (end   == NULL) { end   = used_end; }
+
+    if (!_range_within_alloc_(s, start, end)) {
+        return;
+    }
+
+    if (start > used_end) { return; }
+    if (end   > used_end) { end = used_end; }
+    if (start >= end)     { return; }
+
+    simd_ascii_lower_u8(start, (size_t)(end - start));
+}
 // ================================================================================
 // ================================================================================
 // eof

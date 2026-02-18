@@ -2070,7 +2070,185 @@ static void test_count_tokens_dispatch_const_string_t_ptr_bounded(void **state)
     return_string(s);
 }
 #endif
+// -------------------------------------------------------------------------------- 
 
+static void assert_str_eq(const string_t* s, const char* expected)
+{
+    assert_non_null(s);
+    assert_non_null(s->str);
+    assert_string_equal(s->str, expected);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Basic full-range conversions                                              */
+/* ------------------------------------------------------------------------- */
+
+static void test_to_uppercase_full_range_ascii_only(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("Hello, world! 123 abc XYZ");
+    to_uppercase(s, NULL, NULL);
+
+    /* Only 'a'..'z' are changed */
+    assert_str_eq(s, "HELLO, WORLD! 123 ABC XYZ");
+
+    return_string(s);
+}
+
+static void test_to_lowercase_full_range_ascii_only(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("Hello, WORLD! 123 abc XYZ");
+    to_lowercase(s, NULL, NULL);
+
+    assert_str_eq(s, "hello, world! 123 abc xyz");
+
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Windowed conversion (start/end)                                           */
+/* ------------------------------------------------------------------------- */
+
+static void test_to_uppercase_window_only_affects_subrange(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("aaa bbb ccc");
+    uint8_t* base = (uint8_t*)(void*)s->str;
+
+    /* Convert only "bbb" (indexes: "aaa " = 4, "bbb" = [4,7)) */
+    to_uppercase(s, base + 4u, base + 7u);
+
+    assert_str_eq(s, "aaa BBB ccc");
+
+    return_string(s);
+}
+
+static void test_to_lowercase_window_only_affects_subrange(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("AAA BBB CCC");
+    uint8_t* base = (uint8_t*)(void*)s->str;
+
+    /* Convert only "BBB" */
+    to_lowercase(s, base + 4u, base + 7u);
+
+    assert_str_eq(s, "AAA bbb CCC");
+
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Non-ASCII bytes unchanged (UTF-8 sequences remain as-is)                  */
+/* ------------------------------------------------------------------------- */
+
+static void test_case_conversion_does_not_modify_non_ascii_bytes(void **state)
+{
+    (void)state;
+
+    /* "é" in UTF-8 = 0xC3 0xA9; should remain unchanged */
+    string_t* s1 = make_string("cafe\xc3\xa9"); /* "café" */
+    to_uppercase(s1, NULL, NULL);
+    /* 'cafe' -> 'CAFE', UTF-8 bytes unchanged */
+    assert_str_eq(s1, "CAFE\xc3\xa9");
+    return_string(s1);
+
+    string_t* s2 = make_string("CAFE\xc3\xa9");
+    to_lowercase(s2, NULL, NULL);
+    assert_str_eq(s2, "cafe\xc3\xa9");
+    return_string(s2);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Edge cases: empty / already converted                                     */
+/* ------------------------------------------------------------------------- */
+
+static void test_case_conversion_empty_string_no_change(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("");
+    to_uppercase(s, NULL, NULL);
+    assert_str_eq(s, "");
+    to_lowercase(s, NULL, NULL);
+    assert_str_eq(s, "");
+
+    return_string(s);
+}
+
+static void test_case_conversion_idempotent(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("abcXYZ");
+    to_uppercase(s, NULL, NULL);
+    assert_str_eq(s, "ABCXYZ");
+    to_uppercase(s, NULL, NULL);
+    assert_str_eq(s, "ABCXYZ");
+
+    to_lowercase(s, NULL, NULL);
+    assert_str_eq(s, "abcxyz");
+    to_lowercase(s, NULL, NULL);
+    assert_str_eq(s, "abcxyz");
+
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Invalid input/range are NO-OP (silent)                                    */
+/* ------------------------------------------------------------------------- */
+
+static void test_case_conversion_null_string_no_crash(void **state)
+{
+    (void)state;
+
+    to_uppercase(NULL, NULL, NULL);
+    to_lowercase(NULL, NULL, NULL);
+}
+
+static void test_case_conversion_invalid_range_no_change(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("abc DEF");
+    uint8_t* base = (uint8_t*)(void*)s->str;
+
+    /* reversed window => no-op */
+    to_uppercase(s, base + 5u, base + 2u);
+    assert_str_eq(s, "abc DEF");
+
+    /* begin outside used region => no-op */
+    to_lowercase(s, base + s->len + 1u, base + s->len + 1u);
+    assert_str_eq(s, "abc DEF");
+
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* End clamped to used length (end inside alloc but beyond len)              */
+/* ------------------------------------------------------------------------- */
+
+static void test_case_conversion_end_clamped_to_used_len(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("abc DEF");
+    uint8_t* base = (uint8_t*)(void*)s->str;
+
+    /* Choose end within allocation but beyond used len. */
+    uint8_t* end = base + (s->alloc ? (s->alloc - 1u) : s->len);
+
+    to_lowercase(s, NULL, end);
+
+    /* "DEF" -> "def" (entire used string affected) */
+    assert_str_eq(s, "abc def");
+
+    return_string(s);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -2213,6 +2391,17 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_count_tokens_dispatch_string_t_ptr),
     cmocka_unit_test(test_count_tokens_dispatch_const_string_t_ptr_bounded),
 #endif
+
+    cmocka_unit_test(test_to_uppercase_full_range_ascii_only),
+    cmocka_unit_test(test_to_lowercase_full_range_ascii_only),
+    cmocka_unit_test(test_to_uppercase_window_only_affects_subrange),
+    cmocka_unit_test(test_to_lowercase_window_only_affects_subrange),
+    cmocka_unit_test(test_case_conversion_does_not_modify_non_ascii_bytes),
+    cmocka_unit_test(test_case_conversion_empty_string_no_change),
+    cmocka_unit_test(test_case_conversion_idempotent),
+    cmocka_unit_test(test_case_conversion_null_string_no_crash),
+    cmocka_unit_test(test_case_conversion_invalid_range_no_change),
+    cmocka_unit_test(test_case_conversion_end_clamped_to_used_len),
 };
 
 const size_t test_string_count = sizeof(test_string) / sizeof(test_string[0]);

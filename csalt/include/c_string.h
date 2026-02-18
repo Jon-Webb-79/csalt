@@ -1569,6 +1569,118 @@ size_t token_count(const string_t* s,
      )((const string_t*)(s), (delim), (begin), (end)))
 
 #endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Convert ASCII lowercase characters to uppercase in-place.
+ *
+ * Converts all bytes in the specified window of @p s from
+ * `'a'..'z'` to `'A'..'Z'` using **ASCII-only** rules.
+ * Bytes outside this range are left unchanged.
+ *
+ * The conversion is performed **in-place** and may be internally
+ * accelerated using SIMD instructions depending on the build
+ * configuration and target architecture.
+ *
+ * @param s
+ * Pointer to the @ref string_t to modify.
+ *
+ * @param start
+ * Optional pointer to the first byte of the conversion window
+ * within `s->str`.  
+ * If `NULL`, conversion begins at the start of the used string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the conversion
+ * window.  
+ * If `NULL`, conversion continues to the end of the used string.
+ *
+ * @note
+ * - The window `[start, end)` must lie within the string allocation.
+ * - If @p end extends beyond the **used length**, it is clamped
+ *   to `s->len`.
+ * - If arguments are invalid or the window is empty, the function
+ *   performs a **silent no-op**.
+ * - Only **ASCII** case conversion is performed.  
+ *   UTF-8 multibyte sequences and locale-dependent characters
+ *   are not modified.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("Hello world", 0u, a);
+ * if (!r.has_value) {
+ *     // handle allocation failure
+ * }
+ *
+ * string_t* s = r.u.value;
+ *
+ * to_uppercase(s, NULL, NULL);
+ * // s->str == "HELLO WORLD"
+ *
+ * return_string(s);
+ * @endcode
+ *
+ * @see to_lowercase
+ */
+void to_uppercase(string_t* s, uint8_t* start, uint8_t* end);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Convert ASCII uppercase characters to lowercase in-place.
+ *
+ * Converts all bytes in the specified window of @p s from
+ * `'A'..'Z'` to `'a'..'z'` using **ASCII-only** rules.
+ * Bytes outside this range are left unchanged.
+ *
+ * The conversion is performed **in-place** and may be internally
+ * accelerated using SIMD instructions depending on the build
+ * configuration and target architecture.
+ *
+ * @param s
+ * Pointer to the @ref string_t to modify.
+ *
+ * @param start
+ * Optional pointer to the first byte of the conversion window
+ * within `s->str`.  
+ * If `NULL`, conversion begins at the start of the used string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the conversion
+ * window.  
+ * If `NULL`, conversion continues to the end of the used string.
+ *
+ * @note
+ * - The window `[start, end)` must lie within the string allocation.
+ * - If @p end extends beyond the **used length**, it is clamped
+ *   to `s->len`.
+ * - If arguments are invalid or the window is empty, the function
+ *   performs a **silent no-op**.
+ * - Only **ASCII** case conversion is performed.  
+ *   UTF-8 multibyte sequences and locale-dependent characters
+ *   are not modified.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("HELLO WORLD", 0u, a);
+ * if (!r.has_value) {
+ *     // handle allocation failure
+ * }
+ *
+ * string_t* s = r.u.value;
+ *
+ * to_lowercase(s, NULL, NULL);
+ * // s->str == "hello world"
+ *
+ * return_string(s);
+ * @endcode
+ *
+ * @see to_uppercase
+ */
+void to_lowercase(string_t* s, uint8_t* start, uint8_t* end);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

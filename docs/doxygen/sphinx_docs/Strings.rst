@@ -246,6 +246,18 @@ token_count_lit
 .. doxygenfunction:: token_count_lit
    :project: csalt
 
+to_uppercase
+~~~~~~~~~~~~
+
+.. doxygenfunction:: to_uppercase
+   :project: csalt
+
+to_lowercase
+~~~~~~~~~~~~
+
+.. doxygenfunction:: to_lowercase
+   :project: csalt
+
 Generic Macros
 --------------
 
