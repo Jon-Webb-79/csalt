@@ -234,6 +234,18 @@ word_count_lit
 .. doxygenfunction:: word_count_lit
    :project: csalt
 
+token_count
+~~~~~~~~~~~
+
+.. doxygenfunction:: token_count
+   :project: csalt
+
+token_count_lit
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: token_count_lit
+   :project: csalt
+
 Generic Macros
 --------------
 
@@ -263,4 +275,10 @@ find_substring
 ~~~~~~~~~~~~~~
 
 .. doxygendefine:: find_substring
+   :project: csalt
+
+count_tokens
+~~~~~~~~~~~~
+
+.. doxygendefine:: count_tokens
    :project: csalt

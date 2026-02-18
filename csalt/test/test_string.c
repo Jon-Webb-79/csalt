@@ -1831,6 +1831,246 @@ static void test_count_words_macro_string(void **state) {
     assert_int_equal(count_words(&s, &w, base + 1, base + 4), 0);
 }
 #endif
+// -------------------------------------------------------------------------------- 
+
+static inline allocator_vtable_t A(void) { return heap_allocator(); }
+
+static inline string_t* make_string(const char* cstr) {
+    allocator_vtable_t a = A();
+    string_expect_t r = init_string(cstr, 0u, a);
+    assert_true(r.has_value);
+    return r.u.value;
+}
+
+/* ------------------------------ token_count_lit ------------------------------ */
+
+static void test_token_count_lit_null_args_return_sizemax(void **state) {
+    (void)state;
+
+    string_t* s = make_string("a b");
+    assert_int_equal(token_count_lit(NULL, " ", NULL, NULL), SIZE_MAX);
+    assert_int_equal(token_count_lit(s, NULL, NULL, NULL), SIZE_MAX);
+
+    return_string(s);
+}
+
+static void test_token_count_lit_empty_window_returns_0(void **state) {
+    (void)state;
+
+    string_t* s = make_string("a b");
+    const uint8_t* base = (const uint8_t*)(const void*)s->str;
+
+    /* begin == end */
+    assert_int_equal(token_count_lit(s, " ", base, base), 0u);
+
+    return_string(s);
+}
+
+static void test_token_count_lit_basic_whitespace(void **state) {
+    (void)state;
+
+    string_t* s = make_string("  hello   world  ");
+    /* delim set: space only */
+    size_t c = token_count_lit(s, " ", NULL, NULL);
+    assert_int_equal(c, 2u);
+
+    return_string(s);
+}
+
+static void test_token_count_lit_multiple_delims_set(void **state) {
+    (void)state;
+
+    string_t* s = make_string("a,b; c\t\nd");
+    /* delim set includes comma, semicolon, space, tab, newline */
+    size_t c = token_count_lit(s, ",; \t\n", NULL, NULL);
+    assert_int_equal(c, 4u);
+
+    return_string(s);
+}
+
+static void test_token_count_lit_no_delims_entire_window_one_token(void **state) {
+    (void)state;
+
+    string_t* s = make_string("abc");
+    /* empty delim set -> whole window is one token if non-empty */
+    size_t c = token_count_lit(s, "", NULL, NULL);
+    assert_int_equal(c, 1u);
+
+    /* but empty window still 0 */
+    const uint8_t* base = (const uint8_t*)(const void*)s->str;
+    c = token_count_lit(s, "", base, base);
+    assert_int_equal(c, 0u);
+
+    return_string(s);
+}
+
+static void test_token_count_lit_bounded_window_treats_begin_as_boundary(void **state) {
+    (void)state;
+
+    /* "a b c" */
+    string_t* s = make_string("a b c");
+    const uint8_t* base = (const uint8_t*)(const void*)s->str;
+
+    /* window starts at 'b' (index 2). We treat window start as delimiter boundary,
+       so tokens in "b c" => 2 */
+    const uint8_t* begin = base + 2u; /* 'b' */
+    const uint8_t* end   = base + s->len;
+    size_t c = token_count_lit(s, " ", begin, end);
+    assert_int_equal(c, 2u);
+
+    return_string(s);
+}
+
+static void test_token_count_lit_end_clamped_to_used_len(void **state) {
+    (void)state;
+
+    string_t* s = make_string("hello world");
+    const uint8_t* base = (const uint8_t*)(const void*)s->str;
+
+    /* end inside allocation but beyond used length:
+       token_count_lit should clamp end to used len and still work. */
+    const uint8_t* end = base + (s->alloc - 1u); /* should be >= used_end, still in alloc */
+    size_t c = token_count_lit(s, " ", NULL, end);
+    assert_int_equal(c, 2u);
+
+    return_string(s);
+}
+
+/* ------------------------------- token_count -------------------------------- */
+
+static void test_token_count_null_args_return_sizemax(void **state) {
+    (void)state;
+
+    string_t* s = make_string("a b");
+    string_t* d = make_string(" ");
+
+    assert_int_equal(token_count(NULL, d, NULL, NULL), SIZE_MAX);
+    assert_int_equal(token_count(s, NULL, NULL, NULL), SIZE_MAX);
+
+    return_string(d);
+    return_string(s);
+}
+
+static void test_token_count_matches_lit_for_same_delims(void **state) {
+    (void)state;
+
+    string_t* s = make_string("a,b; c\t\nd");
+    string_t* d = make_string(",; \t\n");
+
+    size_t c1 = token_count_lit(s, ",; \t\n", NULL, NULL);
+    size_t c2 = token_count(s, d, NULL, NULL);
+    assert_int_equal(c1, c2);
+    assert_int_equal(c2, 4u);
+
+    return_string(d);
+    return_string(s);
+}
+
+static void test_token_count_empty_delim_string_means_one_token_if_nonempty(void **state) {
+    (void)state;
+
+    string_t* s = make_string("abc");
+    string_t* d = make_string(""); /* delim->len == 0 */
+
+    size_t c = token_count(s, d, NULL, NULL);
+    assert_int_equal(c, 1u);
+
+    const uint8_t* base = (const uint8_t*)(const void*)s->str;
+    c = token_count(s, d, base, base); /* empty window */
+    assert_int_equal(c, 0u);
+
+    return_string(d);
+    return_string(s);
+}
+
+static void test_token_count_bounded_window(void **state) {
+    (void)state;
+
+    string_t* s = make_string("one,two,three");
+    string_t* d = make_string(",");
+
+    const uint8_t* base = (const uint8_t*)(const void*)s->str;
+
+    /* window: "two,three" */
+    const uint8_t* begin = base + 4u; /* 't' in "two" */
+    const uint8_t* end   = base + s->len;
+
+    size_t c = token_count(s, d, begin, end);
+    assert_int_equal(c, 2u);
+
+    return_string(d);
+    return_string(s);
+}
+
+static void test_count_tokens_dispatch_const_char_ptr(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("a b  c");
+    /* delim set is space */
+    size_t c = count_tokens(s, " ", NULL, NULL);
+    assert_int_equal(c, 3u);
+
+    return_string(s);
+}
+#if ARENA_USE_CONVENIENCE_MACROS && !defined(NO_FUNCTION_MACROS)
+/* ------------------------------------------------------------------------- */
+/* Macro dispatch to token_count_lit via char*                                */
+/* ------------------------------------------------------------------------- */
+static void test_count_tokens_dispatch_mutable_char_ptr(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("a,b;c");
+    char delims[] = ",;"; /* char* */
+    size_t c = count_tokens(s, delims, NULL, NULL);
+    assert_int_equal(c, 3u);
+
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Macro dispatch to token_count via string_t*                                */
+/* ------------------------------------------------------------------------- */
+static void test_count_tokens_dispatch_string_t_ptr(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("a,b;c");
+    string_t* d = make_string(",;"); /* string_t* */
+
+    size_t c = count_tokens(s, d, NULL, NULL);
+    assert_int_equal(c, 3u);
+
+    return_string(d);
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Macro dispatch to token_count via const string_t* + bounded window params  */
+/* ------------------------------------------------------------------------- */
+static void test_count_tokens_dispatch_const_string_t_ptr_bounded(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("xx a,b;c yy");
+    string_t* d_mut = make_string(",; ");  /* delim set includes comma, semicolon, space */
+    const string_t* d = d_mut;             /* const string_t* */
+
+    const uint8_t* base = (const uint8_t*)(const void*)s->str;
+
+    /* Window: "a,b;c" (starts at index 3) */
+    const uint8_t* begin = base + 3u;
+    const uint8_t* end   = begin + 5u;
+
+    size_t c = count_tokens(s, d, begin, end);
+    assert_int_equal(c, 3u);
+
+    return_string(d_mut);
+    return_string(s);
+}
+#endif
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1952,6 +2192,26 @@ const struct CMUnitTest test_string[] = {
 #if ARENA_USE_CONVENIENCE_MACROS && !defined(NO_FUNCTION_MACROS)
     cmocka_unit_test(test_count_words_macro_char),
     cmocka_unit_test(test_count_words_macro_string),
+#endif
+
+    cmocka_unit_test(test_token_count_lit_null_args_return_sizemax),
+    cmocka_unit_test(test_token_count_lit_empty_window_returns_0),
+    cmocka_unit_test(test_token_count_lit_basic_whitespace),
+    cmocka_unit_test(test_token_count_lit_multiple_delims_set),
+    cmocka_unit_test(test_token_count_lit_no_delims_entire_window_one_token),
+    cmocka_unit_test(test_token_count_lit_bounded_window_treats_begin_as_boundary),
+    cmocka_unit_test(test_token_count_lit_end_clamped_to_used_len),
+
+    cmocka_unit_test(test_token_count_null_args_return_sizemax),
+    cmocka_unit_test(test_token_count_matches_lit_for_same_delims),
+    cmocka_unit_test(test_token_count_empty_delim_string_means_one_token_if_nonempty),
+    cmocka_unit_test(test_token_count_bounded_window),
+
+#if ARENA_USE_CONVENIENCE_MACROS && !defined(NO_FUNCTION_MACROS)
+    cmocka_unit_test(test_count_tokens_dispatch_const_char_ptr),
+    cmocka_unit_test(test_count_tokens_dispatch_mutable_char_ptr),
+    cmocka_unit_test(test_count_tokens_dispatch_string_t_ptr),
+    cmocka_unit_test(test_count_tokens_dispatch_const_string_t_ptr_bounded),
 #endif
 };
 

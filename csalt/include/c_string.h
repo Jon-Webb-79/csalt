@@ -1293,6 +1293,282 @@ size_t word_count_lit(const string_t* s,
      )((const string_t*)(s), (word), (start), (end)))
 
 #endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+ // -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Count tokens in a string using a C-string delimiter set.
+ *
+ * Counts the number of **non-empty tokens** within the specified byte range
+ * of `s`, where tokens are sequences of bytes **not contained** in the
+ * delimiter set `delim`.
+ *
+ * A token start is defined as a transition from:
+ *
+ *     delimiter → non-delimiter
+ *
+ * The beginning of the search window is treated as if it were preceded by a
+ * delimiter, ensuring that a leading non-delimiter byte forms a token.
+ *
+ * The delimiter set is interpreted as the first `strlen(delim)` bytes of the
+ * NUL-terminated C string `delim`.
+ *
+ * @param s
+ * Pointer to the source @ref string_t to analyze.
+ *
+ * @param delim
+ * Pointer to a **NUL-terminated C string** containing delimiter bytes.
+ * Each byte in this string is treated as an independent delimiter.
+ *
+ * @param begin
+ * Optional pointer to the first byte of the search window within `s->str`.
+ * If `NULL`, the search begins at the start of the used string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the search window.
+ * If `NULL`, the search ends at the used length of the string.
+ *
+ * @return
+ * Number of tokens found in the specified window.
+ *
+ * @retval SIZE_MAX
+ * Returned if:
+ * - `s == NULL`
+ * - `s->str == NULL`
+ * - `delim == NULL`
+ * - `[begin,end)` lies outside the string allocation
+ *
+ * @retval 0
+ * Returned if:
+ * - the window is empty
+ * - the window contains only delimiter bytes
+ *
+ * @note
+ * - Matching is **byte-wise** and **case-sensitive**.
+ * - The window `[begin,end)` is validated against the allocation and
+ *   clamped to the **used string length**.
+ * - If `delim` is an empty string (`""`), the entire non-empty window
+ *   is treated as a **single token**.
+ * - SIMD acceleration may be used internally depending on the build
+ *   configuration and target architecture.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("  alpha, beta;gamma  ", 0u, a);
+ * if (!r.has_value) {
+ *     // handle error
+ * }
+ *
+ * string_t* text = r.u.value;
+ *
+ * // Delimiters: space, comma, semicolon
+ * size_t count = token_count_lit(text, " ,;", NULL, NULL);
+ *
+ * // Tokens: "alpha", "beta", "gamma"
+ * // count == 3
+ *
+ * return_string(text);
+ * @endcode
+ *
+ * @see token_count
+ */
+size_t token_count_lit(const string_t* s,
+                       const char*     delim,
+                       const uint8_t*  begin,
+                       const uint8_t*  end);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Count tokens in a string using a @ref string_t delimiter set.
+ *
+ * Counts the number of **non-empty tokens** within the specified byte range
+ * of `s`, where tokens are sequences of bytes **not contained** in the
+ * delimiter set stored in `delim`.
+ *
+ * A token start is defined as a transition from:
+ *
+ *     delimiter → non-delimiter
+ *
+ * The beginning of the search window is treated as if it were preceded by a
+ * delimiter, ensuring that a leading non-delimiter byte forms a token.
+ *
+ * @param s
+ * Pointer to the source @ref string_t to analyze.
+ *
+ * @param delim
+ * Pointer to a @ref string_t containing delimiter bytes.
+ * The delimiter set consists of the first `delim->len` bytes.
+ *
+ * @param begin
+ * Optional pointer to the first byte of the search window within `s->str`.
+ * If `NULL`, the search begins at the start of the used string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the search window.
+ * If `NULL`, the search ends at the used length of the string.
+ *
+ * @return
+ * Number of tokens found in the specified window.
+ *
+ * @retval SIZE_MAX
+ * Returned if:
+ * - `s == NULL`
+ * - `s->str == NULL`
+ * - `delim == NULL`
+ * - `delim->str == NULL`
+ * - `[begin,end)` lies outside the string allocation
+ *
+ * @retval 0
+ * Returned if:
+ * - the window is empty
+ * - the window contains only delimiter bytes
+ *
+ * @note
+ * - Matching is **byte-wise** and **case-sensitive**.
+ * - The window `[begin,end)` is validated against the allocation and
+ *   clamped to the **used string length**.
+ * - If `delim->len == 0`, the entire non-empty window is treated as a
+ *   **single token**.
+ * - SIMD acceleration may be used internally depending on the build
+ *   configuration and target architecture.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r1 = init_string("one|two||three", 0u, a);
+ * string_expect_t r2 = init_string("|", 0u, a);
+ *
+ * if (!r1.has_value || !r2.has_value) {
+ *     // handle error
+ * }
+ *
+ * string_t* text  = r1.u.value;
+ * string_t* delim = r2.u.value;
+ *
+ * size_t count = token_count(text, delim, NULL, NULL);
+ *
+ * // Tokens: "one", "two", "three"
+ * // count == 3
+ *
+ * return_string(delim);
+ * return_string(text);
+ * @endcode
+ *
+ * @see token_count_lit
+ */
+size_t token_count(const string_t* s,
+                   const string_t* delim,
+                   const uint8_t*  begin,
+                   const uint8_t*  end);
+// -------------------------------------------------------------------------------- 
+
+#if defined(ARENA_USE_CONVENIENCE_MACROS) && !defined(NO_FUNCTION_MACROS)
+
+/* ------------------------------------------------------------------------- */
+/* Expression-safe static assert                                             */
+/* ------------------------------------------------------------------------- */
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+
+/* ------------------------------------------------------------------------- */
+/* Supported delimiter RHS types                                             */
+/* ------------------------------------------------------------------------- */
+#define TOKEN_COUNT_SUPPORTED_DELIM_(x) \
+    _Generic((x), \
+        const char*:      1, \
+        char*:            1, \
+        const string_t*:  1, \
+        string_t*:        1, \
+        default:          0)
+
+/* Enforce supported delimiter types at compile time */
+#define TOKEN_COUNT_TYPECHECK_(x) \
+    CSALT_STATIC_ASSERT_EXPR_(TOKEN_COUNT_SUPPORTED_DELIM_(x), \
+                              token_count_unsupported_delim_type)
+
+/**
+ * @brief Type-safe generic token counting convenience macro.
+ *
+ * @details
+ * `count_tokens(s, delim, begin, end)` selects the appropriate token
+ * counting implementation at **compile time** using the C11 `_Generic`
+ * operator.
+ *
+ * Dispatch rules:
+ *
+ * - If @p delim is a C string (`const char*` or `char*`), expands to:
+ *   @ref token_count_lit((const string_t*)s, (const char*)delim, begin, end)
+ *
+ * - If @p delim is a string object (`const string_t*` or `string_t*`),
+ *   expands to:
+ *   @ref token_count((const string_t*)s, (const string_t*)delim, begin, end)
+ *
+ * No runtime type checks are performed; selection occurs entirely at
+ * compile time with **zero dispatch overhead**.
+ *
+ * Availability:
+ * - Enabled only when `ARENA_USE_CONVENIENCE_MACROS` is defined
+ * - Disabled when `NO_FUNCTION_MACROS` is defined
+ *
+ * @param s
+ * Pointer to the source @ref string_t.
+ *
+ * @param delim
+ * Delimiter specification. Must be one of:
+ * - `const char*`
+ * - `char*`
+ * - `const string_t*`
+ * - `string_t*`
+ *
+ * @param begin
+ * Optional pointer to the beginning of the search window.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the search window.
+ *
+ * @return
+ * Number of tokens detected in the specified range.
+ *
+ * @retval SIZE_MAX
+ * Invalid argument or out-of-range window.
+ *
+ * @note
+ * Passing an unsupported delimiter type triggers a **compile-time error**
+ * via @ref TOKEN_COUNT_TYPECHECK_.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("alpha,beta gamma", 0u, a);
+ * assert_true(r.has_value);
+ *
+ * string_t* text = r.u.value;
+ *
+ * // Dispatch → token_count_lit
+ * size_t c1 = count_tokens(text, ", ", NULL, NULL);   // == 2
+ *
+ * string_expect_t d = init_string(", ", 0u, a);
+ * assert_true(d.has_value);
+ *
+ * // Dispatch → token_count
+ * size_t c2 = count_tokens(text, d.u.value, NULL, NULL); // == 2
+ *
+ * return_string(d.u.value);
+ * return_string(text);
+ * @endcode
+ */
+#define count_tokens(s, delim, begin, end) \
+    (TOKEN_COUNT_TYPECHECK_(delim), \
+     _Generic((delim), \
+        const char*:      token_count_lit, \
+        char*:            token_count_lit, \
+        const string_t*:  token_count, \
+        string_t*:        token_count \
+     )((const string_t*)(s), (delim), (begin), (end)))
+
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

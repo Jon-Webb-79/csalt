@@ -105,6 +105,33 @@ static inline size_t simd_find_substr_u8(const uint8_t* hay,
     }
     return simd_find_substr_u8_forward_(hay, hay_len, needle, needle_len);
 }
+// -------------------------------------------------------------------------------- 
+
+size_t simd_token_count_u8(const uint8_t* s, size_t n,
+                           const char* delim, size_t dlen) {
+    if ((s == NULL) || (delim == NULL)) return SIZE_MAX;
+    if (n == 0u) return 0u;
+    if (dlen == 0u) return 1u;
+
+    uint8_t lut[256];
+    memset(lut, 0, sizeof(lut));
+    for (size_t j = 0; j < dlen; ++j) {
+        lut[(unsigned char)delim[j]] = 1u;
+    }
+
+    size_t count = 0u;
+    bool in_token = false;
+
+    for (size_t i = 0u; i < n; ++i) {
+        bool is_delim = (lut[s[i]] != 0u);
+        if (!is_delim) {
+            if (!in_token) { ++count; in_token = true; }
+        } else {
+            in_token = false;
+        }
+    }
+    return count;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_AVX2_CHAR_INL */

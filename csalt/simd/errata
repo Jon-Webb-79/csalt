@@ -2,9 +2,11 @@ AVX2
 AVX512
 AVX 
 NEON
+
 SSE2 
-SSE3 
+SSE3
 SSE41
-scalar
+SVE2 
+
 
 

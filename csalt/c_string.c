@@ -508,6 +508,83 @@ size_t word_count_lit(const string_t* s,
 
     return count;
 }
+// -------------------------------------------------------------------------------- 
+
+size_t token_count_lit(const string_t* s,
+                       const char*     delim,
+                       const uint8_t*  begin,
+                       const uint8_t*  end) {
+    if ((s == NULL) || (s->str == NULL) || (delim == NULL)) {
+        return SIZE_MAX;
+    }
+
+    const uint8_t* const base     = (const uint8_t*)(const void*)s->str;
+    const uint8_t* const used_end = base + s->len;
+
+    /* Defaults if begin/end omitted */
+    if (begin == NULL) { begin = base; }
+    if (end   == NULL) { end   = used_end; }
+
+    /* begin/end must be inside allocation */
+    if (!_range_within_alloc_(s, begin, end)) {
+        return SIZE_MAX;
+    }
+
+    /* Clamp to used region */
+    if (begin > used_end) { return SIZE_MAX; }
+    if (end   > used_end) { end = used_end; }
+    if (begin >= end)     { return 0u; }
+
+    const size_t n    = (size_t)(end - begin);
+    const size_t dlen = strlen(delim);
+
+    /* No delimiters => entire window is 1 token if non-empty */
+    if (dlen == 0u) {
+        return (n == 0u) ? 0u : 1u;
+    }
+
+    return simd_token_count_u8(begin, n, delim, dlen);
+}
+// -------------------------------------------------------------------------------- 
+
+size_t token_count(const string_t* s,
+                   const string_t* delim,
+                   const uint8_t*  begin,
+                   const uint8_t*  end) {
+    if ((s == NULL) || (s->str == NULL) ||
+        (delim == NULL) || (delim->str == NULL))
+    {
+        return SIZE_MAX;
+    }
+
+    const uint8_t* const base     = (const uint8_t*)(const void*)s->str;
+    const uint8_t* const used_end = base + s->len;
+
+    /* Defaults if begin/end omitted */
+    if (begin == NULL) { begin = base; }
+    if (end   == NULL) { end   = used_end; }
+
+    /* begin/end must be inside allocation */
+    if (!_range_within_alloc_(s, begin, end)) {
+        return SIZE_MAX;
+    }
+
+    /* Clamp to used region */
+    if (begin > used_end) { return SIZE_MAX; }
+    if (end   > used_end) { end = used_end; }
+    if (begin >= end)     { return 0u; }
+
+    const size_t n    = (size_t)(end - begin);
+    const size_t dlen = delim->len;
+
+    /* No delimiters => entire window is 1 token if non-empty */
+    if (dlen == 0u) {
+        return (n == 0u) ? 0u : 1u;
+    }
+
+    return simd_token_count_u8(begin, n,
+                              (const char*)(const void*)delim->str, dlen);
+}
 // ================================================================================
 // ================================================================================
 // eof
