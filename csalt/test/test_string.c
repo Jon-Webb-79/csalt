@@ -2432,6 +2432,222 @@ static void test_drop_substring_char_ptr_dispatch(void **state)
 
     return_string(s);
 }
+// -------------------------------------------------------------------------------- 
+
+static void assert_ok(bool ok)
+{
+    assert_true(ok);
+}
+
+static void assert_fail(bool ok)
+{
+    assert_false(ok);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Literal variant via macro (dispatch -> replace_substr_lit)                 */
+/* ------------------------------------------------------------------------- */
+
+static void test_replace_substring_lit_basic_expand(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("red green red blue");
+
+    /* "red" -> "yellow" (grow) */
+    bool ok = replace_substring(s, "red", "yellow", NULL, NULL);
+    assert_ok(ok);
+    assert_s_eq(s, "yellow green yellow blue");
+
+    return_string(s);
+}
+
+static void test_replace_substring_lit_basic_shrink(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("yellow green yellow");
+
+    /* "yellow" -> "red" (shrink) */
+    bool ok = replace_substring(s, "yellow", "red", NULL, NULL);
+    assert_ok(ok);
+    assert_s_eq(s, "red green red");
+
+    return_string(s);
+}
+
+static void test_replace_substring_lit_case_sensitive(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("Hello hello HELLO hello");
+
+    bool ok = replace_substring(s, "hello", "X", NULL, NULL);
+    assert_ok(ok);
+    /* Only lowercase "hello" replaced */
+    assert_s_eq(s, "Hello X HELLO X");
+
+    return_string(s);
+}
+
+static void test_replace_substring_lit_non_overlapping(void **state)
+{
+    (void)state;
+
+    /* "aaaaa" replace "aa" -> "b"
+       non-overlapping matches at 0 and 2 => "bba" */
+    string_t* s = make_string("aaaaa");
+
+    bool ok = replace_substring(s, "aa", "b", NULL, NULL);
+    assert_ok(ok);
+    //printf("%ld\n", string_size(s));
+    assert_s_eq(s, "abb");
+
+    return_string(s);
+}
+
+static void test_replace_substring_lit_no_matches_no_change(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("alpha gamma");
+
+    bool ok = replace_substring(s, "beta", "X", NULL, NULL);
+    assert_ok(ok);
+    assert_s_eq(s, "alpha gamma");
+
+    return_string(s);
+}
+
+static void test_replace_substring_lit_empty_pattern_noop(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("abc");
+
+    bool ok = replace_substring(s, "", "X", NULL, NULL);
+    assert_ok(ok);
+    assert_s_eq(s, "abc");
+
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* string_t variant via macro (dispatch -> replace_substr)                    */
+/* ------------------------------------------------------------------------- */
+
+static void test_replace_substring_string_t_basic_expand(void **state)
+{
+    (void)state;
+
+    string_t* s   = make_string("one two two three");
+    string_t* pat = make_string("two");
+    string_t* rep = make_string("four");
+
+    bool ok = replace_substring(s, pat, rep, NULL, NULL);
+    assert_ok(ok);
+    assert_s_eq(s, "one four four three");
+
+    return_string(rep);
+    return_string(pat);
+    return_string(s);
+}
+
+static void test_replace_substring_string_t_basic_shrink(void **state)
+{
+    (void)state;
+
+    string_t* s   = make_string("one four four three");
+    string_t* pat = make_string("four");
+    string_t* rep = make_string("x");
+
+    bool ok = replace_substring(s, pat, rep, NULL, NULL);
+    assert_ok(ok);
+    assert_s_eq(s, "one x x three");
+
+    return_string(rep);
+    return_string(pat);
+    return_string(s);
+}
+
+static void test_replace_substring_string_t_empty_pattern_noop(void **state)
+{
+    (void)state;
+
+    string_t* s   = make_string("abc");
+    string_t* pat = make_string("");
+    string_t* rep = make_string("X");
+
+    bool ok = replace_substring(s, pat, rep, NULL, NULL);
+    assert_ok(ok);
+    assert_s_eq(s, "abc");
+
+    return_string(rep);
+    return_string(pat);
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Bounded window tests                                                      */
+/* ------------------------------------------------------------------------- */
+
+static void test_replace_substring_bounded_window_changes_only_region(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("keep red drop red keep");
+    uint8_t* base = (uint8_t*)(void*)s->str;
+
+    /* Window over "drop red " portion:
+       "keep red " = 9 chars
+       start at index 9, end at len
+       We'll instead cap end to just before last "keep" to prove boundedness.
+    */
+    uint8_t* begin = base + 9u;                 /* points at 'd' of "drop" */
+    uint8_t* end   = base + (s->len - 4u);      /* exclude trailing "keep" */
+
+    bool ok = replace_substring(s, "red", "BLUE", (char*)begin, (char*)end);
+    assert_ok(ok);
+
+    /* Only the 'red' in "drop red " replaced; earlier "red" unchanged */
+    assert_s_eq(s, "keep red drop BLUE keep");
+
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Invalid range / invalid args                                               */
+/* ------------------------------------------------------------------------- */
+
+static void test_replace_substring_invalid_range_returns_false_and_no_change(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("abc abc");
+    uint8_t* base = (uint8_t*)(void*)s->str;
+
+    /* reversed window => invalid => false */
+    bool ok = replace_substring(s, "abc", "X", (char*)(base + 5u), (char*)(base + 1u));
+    assert_fail(ok);
+
+    /* content unchanged */
+    assert_s_eq(s, "abc abc");
+
+    return_string(s);
+}
+
+static void test_replace_substr_direct_null_args_return_false(void **state)
+{
+    (void)state;
+
+    /* direct underlying call (optional) */
+    bool ok = replace_substr(NULL, NULL, NULL, NULL, NULL);
+    assert_fail(ok);
+
+    ok = replace_substr_lit(NULL, NULL, NULL, NULL, NULL);
+    assert_fail(ok);
+}
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -2596,6 +2812,19 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_drop_substring_empty_needle_no_change_string_t),
     cmocka_unit_test(test_drop_substring_empty_needle_no_change_lit),
     cmocka_unit_test(test_drop_substring_char_ptr_dispatch),
+
+    cmocka_unit_test(test_replace_substring_lit_basic_expand),
+    cmocka_unit_test(test_replace_substring_lit_basic_shrink),
+    cmocka_unit_test(test_replace_substring_lit_case_sensitive),
+    cmocka_unit_test(test_replace_substring_lit_non_overlapping),
+    cmocka_unit_test(test_replace_substring_lit_no_matches_no_change),
+    cmocka_unit_test(test_replace_substring_lit_empty_pattern_noop),
+    cmocka_unit_test(test_replace_substring_string_t_basic_expand),
+    cmocka_unit_test(test_replace_substring_string_t_basic_shrink),
+    cmocka_unit_test(test_replace_substring_string_t_empty_pattern_noop),
+    cmocka_unit_test(test_replace_substring_bounded_window_changes_only_region),
+    cmocka_unit_test(test_replace_substring_invalid_range_returns_false_and_no_change),
+    cmocka_unit_test(test_replace_substr_direct_null_args_return_false),
 };
 
 const size_t test_string_count = sizeof(test_string) / sizeof(test_string[0]);

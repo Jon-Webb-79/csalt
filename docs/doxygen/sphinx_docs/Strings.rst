@@ -270,6 +270,18 @@ drop_substr_lit
 .. doxygenfunction:: drop_substr_lit
    :project: csalt
 
+replace_substr
+~~~~~~~~~~~~~~
+
+.. doxygenfunction:: replace_substr
+   :project: csalt
+
+replace_substr_lit
+~~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: replace_substr_lit
+   :project: csalt
+
 Generic Macros
 --------------
 
@@ -311,4 +323,10 @@ drop_substring
 ~~~~~~~~~~~~~~
 
 .. doxygendefine:: drop_substring
+   :project: csalt
+
+replace_substring
+~~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: replace_substring
    :project: csalt

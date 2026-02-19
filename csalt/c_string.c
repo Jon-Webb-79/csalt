@@ -768,6 +768,383 @@ void drop_substr(string_t* s,
         if (begin > end) break;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+static bool _string_reserve_(string_t* s, size_t new_used_len) {
+    /* new_used_len excludes NUL; alloc must be >= new_used_len+1 */
+    size_t need = new_used_len + 1u;
+    if (need <= s->alloc) return true;
+    //if (!s->allocator) return false;
+
+
+    void_ptr_expect_t p = s->allocator.reallocate(s->allocator.ctx, 
+                                                  s->str, 
+                                                  s->alloc, 
+                                                  need, 
+                                                  false);
+    if (!p.has_value) return false;
+    s->str = (char*)p.u.value;
+    s->alloc = need;
+    return true;
+}
+
+/**
+ * @brief Replace all non-overlapping occurrences of a literal substring in-place.
+ *
+ * Replaces every **case-sensitive, non-overlapping** occurrence of the
+ * NUL-terminated C string @p pattern with @p replace_string inside the
+ * byte window `[min_ptr, max_ptr)` of @p string.
+ *
+ * The replacement is performed **in-place** using allocator-aware resizing:
+ *
+ * 1. The number of matches is determined using @ref word_count_lit.
+ * 2. The final string length is computed before modification.
+ * 3. If necessary, the string buffer is **reallocated once** via the
+ *    associated allocator.
+ * 4. Matches are processed using **reverse search** (@ref find_substr_lit with
+ *    `REVERSE`) to minimize the total amount of `memmove` shifting.
+ *
+ * @param string
+ * Pointer to the destination @ref string_t to modify.
+ *
+ * @param pattern
+ * NUL-terminated substring to search for.
+ *
+ * @param replace_string
+ * NUL-terminated replacement substring.
+ *
+ * @param min_ptr
+ * Optional pointer to the first byte of the replacement window within
+ * `string->str`.  
+ * If `NULL`, the window begins at the start of the used string.
+ *
+ * @param max_ptr
+ * Optional pointer to one-past-the-last byte of the replacement window.  
+ * If `NULL`, the window extends to the end of the used string.
+ *
+ * @return
+ * `true` if the operation completed successfully or no replacements were
+ * required.  
+ * `false` if:
+ * - any argument is invalid
+ * - the window lies outside the string allocation
+ * - memory reallocation fails
+ *
+ * @note
+ * - Matching is **case-sensitive** and **substring-based**.
+ * - Replacements are **non-overlapping**.
+ * - The window is interpreted as `[min_ptr, max_ptr)` (end exclusive).
+ * - The terminating NUL byte is always preserved.
+ * - On failure, the original string contents remain unchanged.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("red green red blue", 0u, a);
+ * if (!r.has_value) {
+ *     // handle allocation failure
+ * }
+ *
+ * string_t* s = r.u.value;
+ *
+ * replace_substr_lit(s, "red", "yellow", NULL, NULL);
+ * // Result: "yellow green yellow blue"
+ *
+ * return_string(s);
+ * @endcode
+ *
+ * @see replace_substr
+ * @see find_substr_lit
+ * @see word_count_lit
+ */
+bool replace_substr_lit(string_t* s,
+                        const char* pattern,
+                        const char* replace_string,
+                        uint8_t* begin,
+                        uint8_t* end) {
+    if ((s == NULL) || (s->str == NULL) || (pattern == NULL) || (replace_string == NULL)) {
+        return false;
+    }
+
+    uint8_t* base     = (uint8_t*)(void*)s->str;
+    uint8_t* used_end = base + s->len;          /* end exclusive */
+
+    /* defaults */
+    if (begin == NULL) begin = base;
+    if (end   == NULL) end   = used_end;
+
+    /* validate allocation bounds; then clamp to used region */
+    if (!_range_within_alloc_(s, begin, end)) return false;
+
+    if (begin > used_end) return false;
+    if (end   > used_end) end = used_end;
+    if (begin >= end)     return true;          /* empty window => nothing to do */
+
+    size_t pat_len = strlen(pattern);
+    if (pat_len == 0u) return true;             /* define empty pattern as no-op */
+
+    size_t rep_len = strlen(replace_string);
+
+    /* 1) count matches in window */
+    size_t k = word_count_lit(s, pattern, begin, end);
+    if (k == 0u) return true;
+
+    /* 2) compute new length after replacement */
+    size_t window_len = (size_t)(end - begin);
+    /* guaranteed: pat_len <= window_len if k>0 */
+    size_t new_window_len = window_len + k * (rep_len - pat_len);
+    size_t prefix_len = (size_t)(begin - base);
+    size_t suffix_len = (size_t)(used_end - end);
+
+    size_t new_len = prefix_len + new_window_len + suffix_len;
+
+    /* 3) ensure capacity (single grow) */
+    if (!_string_reserve_(s, new_len)) return false;
+
+    /* IMPORTANT: base pointers may have moved after realloc */
+    base     = (uint8_t*)(void*)s->str;
+    begin    = base + prefix_len;
+    end      = begin + window_len;              /* old window end in original content */
+    used_end = base + s->len;
+
+    /* 4) do replacements from right-to-left in the ORIGINAL window content */
+    /* We'll update s->len as we go; compute the final used_end after edits. */
+    size_t cur_len = s->len;
+    //size_t delta   = rep_len - pat_len;         /* may be negative via wrap; handle separately */
+
+    /* We keep a moving "search_end" that corresponds to the original content window. */
+    uint8_t* search_end = end;
+
+    for (size_t t = 0; t < k; ++t) {
+        size_t hit_off = find_substr_lit(s, pattern, begin, search_end, REVERSE);
+        if (hit_off == SIZE_MAX) {
+            /* Should not happen if word_count_lit and find_substr_lit agree */
+            break;
+        }
+
+        uint8_t* hit = base + hit_off;
+
+        /* Position immediately after the match in current buffer */
+        size_t after_match_off = hit_off + pat_len;
+
+        /* Shift tail to make room (or close gap), including NUL. */
+        if (rep_len != pat_len) {
+            /* Tail begins after the matched pattern */
+            size_t bytes_tail = (cur_len + 1u) - after_match_off; /* +1 includes NUL */
+
+            if (rep_len > pat_len) {
+                size_t grow = rep_len - pat_len;
+                memmove(hit + rep_len, base + after_match_off, bytes_tail);
+                cur_len += grow;
+            } else {
+                size_t shrink = pat_len - rep_len;
+                memmove(hit + rep_len, base + after_match_off, bytes_tail);
+                cur_len -= shrink;
+            }
+        }
+
+        /* Copy replacement bytes into the gap */
+        if (rep_len != 0u) {
+            memcpy(hit, replace_string, rep_len);
+        }
+
+        /* Next reverse search should not re-find this same region.
+           Set search_end to hit (end-exclusive), so next search is left of this hit. */
+        search_end = hit;
+
+        if (search_end <= begin) break;
+    }
+
+    s->len = cur_len;
+    s->str[s->len] = '\0';
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Replace all non-overlapping occurrences of a substring in-place.
+ *
+ * Replaces every **case-sensitive, non-overlapping** occurrence of
+ * @p pattern with @p replace_string inside the byte window
+ * `[min_ptr, max_ptr)` of @p string.
+ *
+ * This function is the @ref string_t-based counterpart to
+ * @ref replace_substr_lit and follows the same allocator-aware algorithm:
+ *
+ * 1. Match count determined using @ref word_count.
+ * 2. Final length computed before modification.
+ * 3. Buffer resized **once** via the string’s allocator if required.
+ * 4. Replacement performed using **reverse search** (@ref find_substr with
+ *    `REVERSE`) to minimize memory movement.
+ *
+ * @param string
+ * Pointer to the destination @ref string_t to modify.
+ *
+ * @param pattern
+ * Substring to search for.
+ *
+ * @param replace_string
+ * Replacement substring.
+ *
+ * @param min_ptr
+ * Optional pointer to the first byte of the replacement window within
+ * `string->str`.  
+ * If `NULL`, the window begins at the start of the used string.
+ *
+ * @param max_ptr
+ * Optional pointer to one-past-the-last byte of the replacement window.  
+ * If `NULL`, the window extends to the end of the used string.
+ *
+ * @return
+ * `true` if the operation completed successfully or no replacements were
+ * required.  
+ * `false` if:
+ * - any argument is invalid
+ * - the window lies outside the string allocation
+ * - memory reallocation fails
+ *
+ * @note
+ * - Matching is **case-sensitive** and **substring-based**.
+ * - Replacements are **non-overlapping**.
+ * - The window is interpreted as `[min_ptr, max_ptr)` (end exclusive).
+ * - The terminating NUL byte is preserved.
+ * - On failure, the original string contents remain unchanged.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r1 = init_string("one two two three", 0u, a);
+ * string_expect_t r2 = init_string("two", 0u, a);
+ * string_expect_t r3 = init_string("four", 0u, a);
+ *
+ * if (r1.has_value && r2.has_value && r3.has_value) {
+ *     string_t* s   = r1.u.value;
+ *     string_t* pat = r2.u.value;
+ *     string_t* rep = r3.u.value;
+ *
+ *     replace_substr(s, pat, rep, NULL, NULL);
+ *     // Result: "one four four three"
+ *
+ *     return_string(rep);
+ *     return_string(pat);
+ *     return_string(s);
+ * }
+ * @endcode
+ *
+ * @see replace_substr_lit
+ * @see find_substr
+ * @see word_count
+ */
+bool replace_substr(string_t* s,
+                    const string_t* pattern,
+                    const string_t* replace_string,
+                    char* min_ptr,
+                    char* max_ptr) {
+    if ((s == NULL) || (s->str == NULL) ||
+        (pattern == NULL) || (pattern->str == NULL) ||
+        (replace_string == NULL) || (replace_string->str == NULL))
+    {
+        return false;
+    }
+
+    /* Define empty pattern as no-op */
+    size_t const pat_len = pattern->len;
+    if (pat_len == 0u) return true;
+
+    size_t const rep_len = replace_string->len;
+
+    uint8_t* base_u     = (uint8_t*)(void*)s->str;
+    uint8_t* used_end_u = base_u + s->len;                 /* end-exclusive */
+
+    /* defaults */
+    if (min_ptr == NULL) min_ptr = s->str;
+    if (max_ptr == NULL) max_ptr = s->str + s->len;        /* end-exclusive */
+
+    uint8_t* begin_u = (uint8_t*)(void*)min_ptr;
+    uint8_t* end_u   = (uint8_t*)(void*)max_ptr;
+
+    /* Validate begin/end are within allocation, then clamp to used */
+    if (!_range_within_alloc_(s, begin_u, end_u)) return false;
+
+    if (begin_u > used_end_u) return false;
+    if (end_u   > used_end_u) end_u = used_end_u;
+    if (begin_u >= end_u)     return true;                 /* empty window => nothing */
+
+    size_t const window_len = (size_t)(end_u - begin_u);
+    if (window_len < pat_len) return true;
+
+    /* 1) count matches */
+    size_t const k = word_count(s, pattern, begin_u, end_u);
+    if (k == 0u) return true;
+
+    /* 2) compute final new length */
+    size_t const prefix_len = (size_t)(begin_u - base_u);
+    size_t const suffix_len = (size_t)(used_end_u - end_u);
+
+    /* new_window_len = window_len + k*(rep_len - pat_len) */
+    size_t new_window_len;
+    if (rep_len >= pat_len) {
+        new_window_len = window_len + k * (rep_len - pat_len);
+    } else {
+        new_window_len = window_len - k * (pat_len - rep_len);
+    }
+
+    size_t const new_len = prefix_len + new_window_len + suffix_len;
+
+    /* 3) reserve/grow once if needed */
+    if (!_string_reserve_(s, new_len)) return false;
+
+    /* Rebase pointers after possible realloc */
+    base_u     = (uint8_t*)(void*)s->str;
+    begin_u    = base_u + prefix_len;
+    end_u      = begin_u + window_len;     /* end of original content window */
+    used_end_u = base_u + s->len;
+
+    /* 4) replace right-to-left to minimize memmove in worst cases */
+    size_t cur_len = s->len;
+    uint8_t* search_end = end_u;           /* end-exclusive */
+
+    for (size_t t = 0; t < k; ++t) {
+        size_t hit_off = find_substr(s, pattern, begin_u, search_end, REVERSE);
+        if (hit_off == SIZE_MAX) break; /* should not happen if count and find agree */
+
+        uint8_t* hit_u = base_u + hit_off;
+
+        /* offset just after the matched pattern in current buffer */
+        size_t after_match_off = hit_off + pat_len;
+
+        /* shift tail (including NUL) if sizes differ */
+        if (rep_len != pat_len) {
+            size_t const bytes_tail = (cur_len + 1u) - after_match_off;
+
+            if (rep_len > pat_len) {
+                size_t const grow = rep_len - pat_len;
+                memmove(hit_u + rep_len, base_u + after_match_off, bytes_tail);
+                cur_len += grow;
+            } else {
+                size_t const shrink = pat_len - rep_len;
+                memmove(hit_u + rep_len, base_u + after_match_off, bytes_tail);
+                cur_len -= shrink;
+            }
+        }
+
+        /* copy replacement bytes */
+        if (rep_len != 0u) {
+            memcpy(hit_u, replace_string->str, rep_len);
+        }
+
+        /* Next reverse search stays strictly left of this hit */
+        search_end = hit_u;
+        if (search_end <= begin_u) break;
+    }
+
+    s->len = cur_len;
+    s->str[s->len] = '\0';
+
+    return true;
+}
 // ================================================================================
 // ================================================================================
 // eof

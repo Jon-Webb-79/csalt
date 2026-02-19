@@ -1918,6 +1918,327 @@ void drop_substr(string_t* s, const string_t* substring, uint8_t* min_ptr, uint8
      )((string_t*)(s), (needle), (begin), (end)))
 
 #endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Replace all non-overlapping occurrences of a literal substring in-place.
+ *
+ * Replaces every **case-sensitive, non-overlapping** occurrence of the
+ * NUL-terminated C string @p pattern with @p replace_string inside the
+ * byte window `[min_ptr, max_ptr)` of @p string.
+ *
+ * The operation is performed **in-place** using allocator-aware resizing:
+ *
+ * 1. The number of matches is determined using @ref word_count_lit.
+ * 2. The final required string length is computed before modification.
+ * 3. If necessary, the buffer is **reallocated once** via the string’s
+ *    associated allocator.
+ * 4. Matches are processed using **reverse search**
+ *    (@ref find_substr_lit with `REVERSE`) to minimize the total
+ *    `memmove` cost.
+ *
+ * @param string
+ * Pointer to the destination @ref string_t to modify.
+ *
+ * @param pattern
+ * NUL-terminated substring to search for.
+ *
+ * @param replace_string
+ * NUL-terminated replacement substring.
+ *
+ * @param min_ptr
+ * Optional pointer to the first byte of the replacement window within
+ * `string->str`.  
+ * If `NULL`, the window begins at the start of the used string.
+ *
+ * @param max_ptr
+ * Optional pointer to one-past-the-last byte of the replacement window.  
+ * If `NULL`, the window extends to the end of the used string.
+ *
+ * @return
+ * `true` if the operation completed successfully or no replacements were
+ * required.  
+ * `false` if:
+ * - any argument is invalid
+ * - the window lies outside the string allocation
+ * - memory reallocation fails
+ *
+ * @note
+ * - Matching is **case-sensitive** and **substring-based**.
+ * - Replacements are **non-overlapping**.
+ * - The window is interpreted as `[min_ptr, max_ptr)` (end exclusive).
+ * - The terminating NUL byte is always preserved.
+ * - On failure, the original string contents remain unchanged.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("red green red blue", 0u, a);
+ * if (!r.has_value) {
+ *     // handle allocation failure
+ * }
+ *
+ * string_t* s = r.u.value;
+ *
+ * replace_substr_lit(s, "red", "yellow", NULL, NULL);
+ * // Result: "yellow green yellow blue"
+ *
+ * return_string(s);
+ * @endcode
+ *
+ * @see replace_substr
+ * @see find_substr_lit
+ * @see word_count_lit
+ */
+bool replace_substr_lit(string_t* string, const char* pattern, const char* replace_string,
+                        uint8_t* min_ptr, uint8_t* max_ptr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Replace all non-overlapping occurrences of a substring in-place.
+ *
+ * Replaces every **case-sensitive, non-overlapping** occurrence of
+ * @p pattern with @p replace_string inside the byte window
+ * `[min_ptr, max_ptr)` of @p string.
+ *
+ * This function is the @ref string_t-based counterpart to
+ * @ref replace_substr_lit and follows the same allocator-aware algorithm:
+ *
+ * 1. Match count determined using @ref word_count.
+ * 2. Final length computed before modification.
+ * 3. Buffer resized **once** via the string’s allocator if required.
+ * 4. Replacement performed using **reverse search**
+ *    (@ref find_substr with `REVERSE`) to minimize memory movement.
+ *
+ * @param string
+ * Pointer to the destination @ref string_t to modify.
+ *
+ * @param pattern
+ * Substring to search for.
+ *
+ * @param replace_string
+ * Replacement substring.
+ *
+ * @param min_ptr
+ * Optional pointer to the first byte of the replacement window within
+ * `string->str`.  
+ * If `NULL`, the window begins at the start of the used string.
+ *
+ * @param max_ptr
+ * Optional pointer to one-past-the-last byte of the replacement window.  
+ * If `NULL`, the window extends to the end of the used string.
+ *
+ * @return
+ * `true` if the operation completed successfully or no replacements were
+ * required.  
+ * `false` if:
+ * - any argument is invalid
+ * - the window lies outside the string allocation
+ * - memory reallocation fails
+ *
+ * @note
+ * - Matching is **case-sensitive** and **substring-based**.
+ * - Replacements are **non-overlapping**.
+ * - The window is interpreted as `[min_ptr, max_ptr)` (end exclusive).
+ * - The terminating NUL byte is preserved.
+ * - On failure, the original string contents remain unchanged.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r1 = init_string("one two two three", 0u, a);
+ * string_expect_t r2 = init_string("two", 0u, a);
+ * string_expect_t r3 = init_string("four", 0u, a);
+ *
+ * if (r1.has_value && r2.has_value && r3.has_value) {
+ *     string_t* s   = r1.u.value;
+ *     string_t* pat = r2.u.value;
+ *     string_t* rep = r3.u.value;
+ *
+ *     replace_substr(s, pat, rep, NULL, NULL);
+ *     // Result: "one four four three"
+ *
+ *     return_string(rep);
+ *     return_string(pat);
+ *     return_string(s);
+ * }
+ * @endcode
+ *
+ * @see replace_substr_lit
+ * @see find_substr
+ * @see word_count
+ */
+bool replace_substr(string_t* string, const string_t* pattern, const string_t* replace_string,
+                    char* min_ptr, char* max_ptr);
+// -------------------------------------------------------------------------------- 
+
+#if defined(ARENA_USE_CONVENIENCE_MACROS) && !defined(NO_FUNCTION_MACROS)
+
+static inline bool _replace_substring_lit_wrap_(string_t* s,
+                                               const void* pat,
+                                               const void* rep,
+                                               void* minp,
+                                               void* maxp)
+{
+    return replace_substr_lit(s,
+                              (const char*)pat,
+                              (const char*)rep,
+                              (uint8_t*)minp,
+                              (uint8_t*)maxp);
+}
+
+static inline bool _replace_substring_str_wrap_(string_t* s,
+                                               const void* pat,
+                                               const void* rep,
+                                               void* minp,
+                                               void* maxp)
+{
+    return replace_substr(s,
+                          (const string_t*)pat,
+                          (const string_t*)rep,
+                          (char*)minp,
+                          (char*)maxp);
+}
+
+
+/* Helper: compile-time check (expression-safe) */
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+
+#define REPLACE_SUBSTRING_IS_LIT_(x) \
+    _Generic((x), const char*: 1, char*: 1, default: 0)
+
+#define REPLACE_SUBSTRING_IS_STR_(x) \
+    _Generic((x), const string_t*: 1, string_t*: 1, default: 0)
+
+#define REPLACE_SUBSTRING_SUPPORTED_(x) \
+    _Generic((x), \
+        const char*:      1, \
+        char*:            1, \
+        const string_t*:  1, \
+        string_t*:        1, \
+        default:          0)
+
+#define REPLACE_SUBSTRING_PATTERN_TYPECHECK_(x) \
+    CSALT_STATIC_ASSERT_EXPR_(REPLACE_SUBSTRING_SUPPORTED_(x), \
+                              replace_substring_unsupported_pattern_type)
+
+#define REPLACE_SUBSTRING_REPL_TYPECHECK_(x) \
+    CSALT_STATIC_ASSERT_EXPR_(REPLACE_SUBSTRING_SUPPORTED_(x), \
+                              replace_substring_unsupported_replacement_type)
+
+#define REPLACE_SUBSTRING_CATEGORY_MATCH_(pat, rep) \
+    CSALT_STATIC_ASSERT_EXPR_( \
+        (REPLACE_SUBSTRING_IS_LIT_(pat) && REPLACE_SUBSTRING_IS_LIT_(rep)) || \
+        (REPLACE_SUBSTRING_IS_STR_(pat) && REPLACE_SUBSTRING_IS_STR_(rep)), \
+        replace_substring_pattern_and_replacement_type_mismatch)
+
+/**
+ * @brief Type-safe generic substring replacement convenience macro.
+ *
+ * @details
+ * `replace_substring(s, pattern, replacement, min_ptr, max_ptr)` provides a
+ * single replacement interface that selects the correct implementation at
+ * **compile time** using the C11 `_Generic` operator.
+ *
+ * Dispatch rules:
+ *
+ * - If @p pattern (and @p replacement) are C strings (`const char*` or `char*`),
+ *   this macro expands to:
+ *   @ref replace_substr_lit((string_t*)s, (const char*)pattern, (const char*)replacement,
+ *                           (uint8_t*)min_ptr, (uint8_t*)max_ptr)
+ *
+ * - If @p pattern (and @p replacement) are string objects (`const string_t*` or `string_t*`),
+ *   this macro expands to:
+ *   @ref replace_substr((string_t*)s, (const string_t*)pattern, (const string_t*)replacement,
+ *                       (char*)min_ptr, (char*)max_ptr)
+ *
+ * The macro enforces at compile time that:
+ * - @p pattern is one of: `const char*`, `char*`, `const string_t*`, `string_t*`
+ * - @p replacement is one of the same supported types
+ * - @p pattern and @p replacement belong to the same category (both literal, or both string objects)
+ *
+ * Availability:
+ * - Enabled only when `ARENA_USE_CONVENIENCE_MACROS` is defined, and
+ * - Disabled when `NO_FUNCTION_MACROS` is defined (to support MISRA-style builds).
+ *
+ * @param s
+ * Pointer to the destination @ref string_t to modify.
+ *
+ * @param pattern
+ * Substring pattern to search for (literal or @ref string_t).
+ *
+ * @param replacement
+ * Replacement substring (must match the category of @p pattern).
+ *
+ * @param min_ptr
+ * Optional pointer to the first byte of the replacement window within `s->str`.
+ * Pass `NULL` to start at the beginning of the used string.
+ *
+ * @param max_ptr
+ * Optional pointer to one-past-the-last byte of the replacement window.
+ * Pass `NULL` to end at the used length of the string.
+ *
+ * @return
+ * `true`/`false` as returned by the selected underlying function.
+ *
+ * @note
+ * The window `[min_ptr, max_ptr)` is interpreted as **end-exclusive**.
+ * Both underlying implementations validate that the window lies within the
+ * string allocation and clamp to the used length.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * // Literal version
+ * string_expect_t r = init_string("red green red", 0u, a);
+ * assert_true(r.has_value);
+ * string_t* s = r.u.value;
+ *
+ * // Dispatches to replace_substr_lit(...)
+ * (void)replace_substring(s, "red", "blue", NULL, NULL);
+ * // s->str == "blue green blue"
+ *
+ * return_string(s);
+ *
+ * // string_t version
+ * string_expect_t r1 = init_string("one two two", 0u, a);
+ * string_expect_t r2 = init_string("two", 0u, a);
+ * string_expect_t r3 = init_string("four", 0u, a);
+ *
+ * if (r1.has_value && r2.has_value && r3.has_value) {
+ *     string_t* t   = r1.u.value;
+ *     string_t* pat = r2.u.value;
+ *     string_t* rep = r3.u.value;
+ *
+ *     // Dispatches to replace_substr(...)
+ *     (void)replace_substring(t, pat, rep, NULL, NULL);
+ *     // t->str == "one four four"
+ *
+ *     return_string(rep);
+ *     return_string(pat);
+ *     return_string(t);
+ * }
+ * @endcode
+ *
+ * @see replace_substr
+ * @see replace_substr_lit
+ */
+#define replace_substring(s, pattern, replacement, min_ptr, max_ptr) \
+    (REPLACE_SUBSTRING_PATTERN_TYPECHECK_(pattern), \
+     REPLACE_SUBSTRING_REPL_TYPECHECK_(replacement), \
+     REPLACE_SUBSTRING_CATEGORY_MATCH_(pattern, replacement), \
+     _Generic((pattern), \
+        const char*:      _replace_substring_lit_wrap_, \
+        char*:            _replace_substring_lit_wrap_, \
+        const string_t*:  _replace_substring_str_wrap_, \
+        string_t*:        _replace_substring_str_wrap_ \
+     )((string_t*)(s), (const void*)(pattern), (const void*)(replacement), \
+       (void*)(min_ptr), (void*)(max_ptr)))
+
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
 
 // ================================================================================ 
 // ================================================================================ 
