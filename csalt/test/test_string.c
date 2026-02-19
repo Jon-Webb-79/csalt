@@ -2249,6 +2249,189 @@ static void test_case_conversion_end_clamped_to_used_len(void **state)
 
     return_string(s);
 }
+// -------------------------------------------------------------------------------- 
+
+static void assert_s_eq(const string_t* s, const char* expected)
+{
+    assert_non_null(s);
+    assert_non_null(s->str);
+    assert_string_equal(s->str, expected);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Macro dispatch: literal needle (const char*)                               */
+/* ------------------------------------------------------------------------- */
+
+static void test_drop_substring_lit_removes_all_occurrences_and_trailing_space(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("alpha beta beta gamma");
+
+    /* dispatch -> drop_substr_lit */
+    drop_substring(s, "beta", NULL, NULL);
+
+    /* With “drop one trailing space after match”: both "beta " removed twice */
+    assert_s_eq(s, "alpha gamma");
+
+    return_string(s);
+}
+
+static void test_drop_substring_lit_substring_matching_not_word_delimited(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("xxHELLOxx hello xxhello");
+
+    /* remove "hello" (case-sensitive): matches only lowercase "hello" in " hello " and "xxhello" */
+    drop_substring(s, "hello", NULL, NULL);
+
+    /* Input: "xxHELLOxx hello xxhello"
+       Remove "hello" in middle (and trailing space if present),
+       Remove "hello" in "xxhello" (no trailing space to remove).
+       Result depends on exactly one-space removal rule:
+         - Middle "hello" is followed by space => remove "hello " leaving "xxHELLOxx xxhello"
+         - Then remove "hello" from "xxhello" => "xxHELLOxx xx"
+    */
+    assert_s_eq(s, "xxHELLOxx xx");
+
+    return_string(s);
+}
+
+static void test_drop_substring_lit_overlapping_is_non_overlapping(void **state)
+{
+    (void)state;
+
+    /* "aaaaa", remove "aa" non-overlapping => remove at 0 and then at 2 => leaves "a" */
+    string_t* s = make_string("aaaaa");
+
+    drop_substring(s, "aa", NULL, NULL);
+    assert_s_eq(s, "a");
+
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Macro dispatch: string_t needle (string_t*)                                */
+/* ------------------------------------------------------------------------- */
+
+static void test_drop_substring_string_t_removes_all_occurrences(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("one two two three");
+    string_t* n = make_string("two");
+
+    /* dispatch -> drop_substr */
+    drop_substring(s, n, NULL, NULL);
+
+    assert_s_eq(s, "one three");
+
+    return_string(n);
+    return_string(s);
+}
+
+static void test_drop_substring_const_string_t_dispatch(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("foo bar bar baz");
+    string_t* n_mut = make_string("bar");
+    const string_t* n = n_mut; /* const string_t* dispatch */
+
+    drop_substring(s, n, NULL, NULL);
+
+    assert_s_eq(s, "foo baz");
+
+    return_string(n_mut);
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Bounded window tests (also exercises find+range+clamp behavior)            */
+/* ------------------------------------------------------------------------- */
+
+static void test_drop_substring_bounded_window_only_affects_region(void **state)
+{
+    (void)state;
+
+    /* Only drop inside the middle region */
+    string_t* s = make_string("keep beta drop beta keep");
+    uint8_t* base = (uint8_t*)(void*)s->str;
+
+    /* Window over "drop beta" portion.
+       String indexes: "keep " = 5, "beta " = 5..10, "drop " = 10..15, "beta " = 15..20, "keep" starts at 20
+       We’ll window [10, 20) == "drop beta "
+    */
+    uint8_t* begin = base + 10u;
+    uint8_t* end   = base + 20u;
+
+    drop_substring(s, "beta", begin, end);
+
+    /* Only the "beta " within the window should be removed.
+       Original: "keep beta drop beta keep"
+       Window removal removes the second "beta " => "keep beta drop keep"
+    */
+    assert_s_eq(s, "keep beta drop keep");
+
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* No-op / edge cases via macro                                               */
+/* ------------------------------------------------------------------------- */
+
+static void test_drop_substring_no_matches_no_change(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("alpha gamma");
+
+    drop_substring(s, "beta", NULL, NULL);
+    assert_s_eq(s, "alpha gamma");
+
+    return_string(s);
+}
+
+static void test_drop_substring_empty_needle_no_change_string_t(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("abc");
+    string_t* empty = make_string(""); /* substring->len == 0 */
+
+    drop_substring(s, empty, NULL, NULL);
+    assert_s_eq(s, "abc");
+
+    return_string(empty);
+    return_string(s);
+}
+
+static void test_drop_substring_empty_needle_no_change_lit(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("abc");
+
+    drop_substring(s, "", NULL, NULL);
+    assert_s_eq(s, "abc");
+
+    return_string(s);
+}
+
+/* Optional: macro accepts char* (not just const char*) */
+static void test_drop_substring_char_ptr_dispatch(void **state)
+{
+    (void)state;
+
+    string_t* s = make_string("x y y z");
+    char needle[] = "y";
+
+    drop_substring(s, needle, NULL, NULL);
+    assert_s_eq(s, "x z");
+
+    return_string(s);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -2402,6 +2585,17 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_case_conversion_null_string_no_crash),
     cmocka_unit_test(test_case_conversion_invalid_range_no_change),
     cmocka_unit_test(test_case_conversion_end_clamped_to_used_len),
+
+    cmocka_unit_test(test_drop_substring_lit_removes_all_occurrences_and_trailing_space),
+    cmocka_unit_test(test_drop_substring_lit_substring_matching_not_word_delimited),
+    cmocka_unit_test(test_drop_substring_lit_overlapping_is_non_overlapping),
+    cmocka_unit_test(test_drop_substring_string_t_removes_all_occurrences),
+    cmocka_unit_test(test_drop_substring_const_string_t_dispatch),
+    cmocka_unit_test(test_drop_substring_bounded_window_only_affects_region),
+    cmocka_unit_test(test_drop_substring_no_matches_no_change),
+    cmocka_unit_test(test_drop_substring_empty_needle_no_change_string_t),
+    cmocka_unit_test(test_drop_substring_empty_needle_no_change_lit),
+    cmocka_unit_test(test_drop_substring_char_ptr_dispatch),
 };
 
 const size_t test_string_count = sizeof(test_string) / sizeof(test_string[0]);

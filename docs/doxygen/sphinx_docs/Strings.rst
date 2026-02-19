@@ -258,6 +258,18 @@ to_lowercase
 .. doxygenfunction:: to_lowercase
    :project: csalt
 
+drop_substr
+~~~~~~~~~~~
+
+.. doxygenfunction:: drop_substr
+   :project: csalt
+
+drop_substr_lit
+~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: drop_substr_lit
+   :project: csalt
+
 Generic Macros
 --------------
 
@@ -293,4 +305,10 @@ count_tokens
 ~~~~~~~~~~~~
 
 .. doxygendefine:: count_tokens
+   :project: csalt
+
+drop_substring
+~~~~~~~~~~~~~~
+
+.. doxygendefine:: drop_substring
    :project: csalt

@@ -633,6 +633,141 @@ void to_lowercase(string_t* s, uint8_t* start, uint8_t* end) {
 
     simd_ascii_lower_u8(start, (size_t)(end - start));
 }
+// -------------------------------------------------------------------------------- 
+
+void drop_substr_lit(string_t* s,
+                     const char* substring,
+                     uint8_t* begin,
+                     uint8_t* end) {
+    if ((s == NULL) || (s->str == NULL) || (substring == NULL)) return;
+
+    uint8_t* const base     = (uint8_t*)(void*)s->str;
+    uint8_t* used_end = base + s->len;         /* end exclusive */
+
+    size_t const n = strlen(substring);
+    if (n == 0u) return;                             /* define empty needle as no-op */
+
+    /* defaults */
+    if (begin == NULL) begin = base;
+    if (end   == NULL) end   = used_end;
+
+    /* validate against allocation, then clamp to used region */
+    if (!_range_within_alloc_(s, begin, end)) return;
+
+    if (begin > used_end) return;
+    if (end   > used_end) end = used_end;
+    if (begin >= end) return;
+
+    /* We search in REVERSE order to minimize memmove sizes. */
+    while (true) {
+        size_t region_len = (size_t)(end - begin);
+        if (region_len < n) break;
+
+        size_t hit_off = find_substr_lit(s, substring, begin, end, REVERSE);
+        if (hit_off == SIZE_MAX) break;
+
+        /* hit pointer (still valid at this moment) */
+        uint8_t* hit = base + hit_off;
+
+        /* Ensure the match is fully inside current used content */
+        if ((hit_off + n) > s->len) break; /* should not happen if find_substr_lit is correct */
+
+        size_t drop_len = n;
+
+        /* Optional: also drop ONE trailing space after the match */
+        if ((hit_off + drop_len) < s->len) {
+            if (base[hit_off + drop_len] == (uint8_t)' ') {
+                drop_len += 1u;
+            }
+        }
+
+        /* Move suffix INCLUDING terminating NUL (assuming s->str is NUL-terminated) */
+        size_t const src_off = hit_off + drop_len;
+        size_t const bytes_to_move = (s->len + 1u) - src_off; /* +1 includes '\0' */
+        memmove(hit, base + src_off, bytes_to_move);
+
+        s->len -= drop_len;
+
+        /* Adjust window end to remain within new used_end */
+        used_end = base + s->len; /* (recompute conceptually; base unchanged) */
+
+        if (end > used_end) end = used_end;
+
+        /* Ensure end is still >= begin */
+        if (begin > end) break;
+
+        /* Continue searching reverse within [begin,end) */
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+void drop_substr(string_t* s,
+                 const string_t* substring,
+                 uint8_t* begin,
+                 uint8_t* end) {
+    /* ---------- basic validation ---------- */
+    if ((s == NULL) || (s->str == NULL) ||
+        (substring == NULL) || (substring->str == NULL))
+    {
+        return;
+    }
+
+    uint8_t* const base     = (uint8_t*)(void*)s->str;
+    uint8_t*       used_end = base + s->len;   /* end-exclusive */
+
+    size_t const n = substring->len;
+    if (n == 0u) return;                       /* empty needle = no-op */
+
+    /* ---------- default window ---------- */
+    if (begin == NULL) begin = base;
+    if (end   == NULL) end   = used_end;
+
+    /* ---------- validate allocation range ---------- */
+    if (!_range_within_alloc_(s, begin, end)) return;
+
+    /* ---------- clamp to used region ---------- */
+    if (begin > used_end) return;
+    if (end   > used_end) end = used_end;
+    if (begin >= end) return;
+
+    /* ---------- reverse-search removal loop ---------- */
+    for (;;) {
+        size_t const region_len = (size_t)(end - begin);
+        if (region_len < n) break;
+
+        size_t hit_off = find_substr(s, substring, begin, end, REVERSE);
+        if (hit_off == SIZE_MAX) break;
+
+        /* pointer to hit */
+        uint8_t* hit = base + hit_off;
+
+        /* safety: match must be fully inside used length */
+        if ((hit_off + n) > s->len) break;
+
+        size_t drop_len = n;
+
+        /* ---------- optional: drop ONE trailing ASCII space ---------- */
+        if ((hit_off + drop_len) < s->len) {
+            if (base[hit_off + drop_len] == (uint8_t)' ') {
+                drop_len += 1u;
+            }
+        }
+
+        /* ---------- shift suffix left (include terminating NUL) ---------- */
+        size_t const src_off        = hit_off + drop_len;
+        size_t const bytes_to_move  = (s->len + 1u) - src_off;
+
+        memmove(hit, base + src_off, bytes_to_move);
+
+        /* ---------- shrink logical length ---------- */
+        s->len -= drop_len;
+        used_end = base + s->len;
+
+        /* ---------- clamp window end to new used length ---------- */
+        if (end > used_end) end = used_end;
+        if (begin > end) break;
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof

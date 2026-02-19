@@ -1681,6 +1681,244 @@ void to_uppercase(string_t* s, uint8_t* start, uint8_t* end);
  * @see to_uppercase
  */
 void to_lowercase(string_t* s, uint8_t* start, uint8_t* end);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Remove all non-overlapping occurrences of a C-string literal substring.
+ *
+ * This function behaves identically to @ref drop_substr, except the substring
+ * is provided as a **NUL-terminated C string literal** rather than a
+ * @ref string_t object.
+ *
+ * Each non-overlapping occurrence of @p substring found within the window
+ * `[begin, end)` of @p s is removed **in-place** by shifting the remaining
+ * suffix left, preserving the terminating NUL byte.
+ *
+ * Matches are processed using a **reverse search** strategy to minimize
+ * the total amount of memory movement required.
+ *
+ * If a single ASCII space `' '` immediately follows a removed occurrence,
+ * that space is also removed.
+ *
+ * @param s
+ * Pointer to the destination @ref string_t to modify.
+ *
+ * @param substring
+ * NUL-terminated C string containing the substring to remove.
+ *
+ * @param begin
+ * Optional pointer to the first byte of the search window within `s->str`.  
+ * If `NULL`, the window begins at the start of the used string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the search window.  
+ * If `NULL`, the window extends to the end of the used string.
+ *
+ * @note
+ * - The window `[begin, end)` must lie within the string allocation.
+ * - If @p end exceeds the **used length**, it is clamped to `s->len`.
+ * - If arguments are invalid, the function performs a **silent no-op**.
+ * - Matches are **case-sensitive** and **substring-based**.
+ * - Only **one trailing ASCII space** is removed per match.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("one two two three", 0u, a);
+ * if (r.has_value) {
+ *     string_t* text = r.u.value;
+ *
+ *     drop_substr_lit(text, "two", NULL, NULL);
+ *     // Result: "one three"
+ *
+ *     return_string(text);
+ * }
+ * @endcode
+ *
+ * @see drop_substr
+ * @see find_substr_lit
+ */
+void drop_substr_lit(string_t* s, const char* substring, uint8_t* min_ptr, uint8_t* max_ptr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Remove all non-overlapping occurrences of a substring within a window.
+ *
+ * This function removes every **non-overlapping** occurrence of @p substring
+ * from the string @p s that lies within the byte range `[begin, end)`.
+ *
+ * Removal is performed **in-place** by shifting the remaining suffix of the
+ * string left using `memmove`, preserving the terminating NUL byte and
+ * maintaining valid C-string semantics.
+ *
+ * To minimize data movement, matches are located using a **reverse search**
+ * strategy so that shrinking operations occur from right-to-left.
+ *
+ * After each removal, if a single ASCII space `' '` immediately follows the
+ * removed substring, that space is also removed.  
+ * (This helps avoid leaving double-spaces when removing words.)
+ *
+ * @param s
+ * Pointer to the destination @ref string_t to modify.
+ *
+ * @param substring
+ * Pointer to the substring to remove.
+ *
+ * @param begin
+ * Optional pointer to the first byte of the search window within `s->str`.  
+ * If `NULL`, the window begins at the start of the used string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the search window.  
+ * If `NULL`, the window extends to the end of the used string.
+ *
+ * @note
+ * - The window `[begin, end)` must lie within the string allocation.
+ * - If @p end exceeds the **used length**, it is clamped to `s->len`.
+ * - If arguments are invalid, the function performs a **silent no-op**.
+ * - Matches are **substring-based**, not word-delimited.
+ * - Only **one trailing ASCII space** is removed per match.
+ *
+ * @par Example
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r1 = init_string("alpha beta beta gamma", 0u, a);
+ * string_expect_t r2 = init_string("beta", 0u, a);
+ *
+ * if (r1.has_value && r2.has_value) {
+ *     string_t* text = r1.u.value;
+ *     string_t* word = r2.u.value;
+ *
+ *     drop_substr(text, word, NULL, NULL);
+ *     // Result: "alpha gamma"
+ *
+ *     return_string(word);
+ *     return_string(text);
+ * }
+ * @endcode
+ *
+ * @see drop_substr_lit
+ * @see find_substr
+ */
+void drop_substr(string_t* s, const string_t* substring, uint8_t* min_ptr, uint8_t* max_ptr);
+// -------------------------------------------------------------------------------- 
+
+#if defined(ARENA_USE_CONVENIENCE_MACROS) && !defined(NO_FUNCTION_MACROS)
+
+/* Helper: compile-time check (expression-safe) */
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+
+/* RHS type support check for drop_substring(s, needle, ...) */
+#define DROP_SUBSTRING_SUPPORTED_NEEDLE_(x) \
+    _Generic((x), \
+        const char*:      1, \
+        char*:            1, \
+        const string_t*:  1, \
+        string_t*:        1, \
+        default:          0)
+
+/* Enforce supported RHS types at compile time (C11). */
+#define DROP_SUBSTRING_TYPECHECK_(x) \
+    CSALT_STATIC_ASSERT_EXPR_(DROP_SUBSTRING_SUPPORTED_NEEDLE_(x), \
+                              drop_substring_unsupported_needle_type)
+
+/**
+ * @brief Type-safe generic substring removal convenience macro.
+ *
+ * @details
+ * `drop_substring(s, needle, begin, end)` provides a single interface for
+ * removing all occurrences of a substring from a @ref string_t within the
+ * byte window `[begin, end)`. The correct implementation is selected at
+ * **compile time** using the C11 `_Generic` operator.
+ *
+ * Dispatch rules:
+ *
+ * - If @p needle is a C string (`const char*` or `char*`), this macro expands to:
+ *   @ref drop_substr_lit((string_t*)s, (const char*)needle, begin, end)
+ *
+ * - If @p needle is a string object (`const string_t*` or `string_t*`), this
+ *   macro expands to:
+ *   @ref drop_substr((string_t*)s, (const string_t*)needle, begin, end)
+ *
+ * In other words, the macro performs **zero runtime type checks** and adds
+ * no dispatch overhead—selection happens entirely at compile time.
+ *
+ * Availability:
+ * - Enabled only when `ARENA_USE_CONVENIENCE_MACROS` is defined, and
+ * - Disabled when `NO_FUNCTION_MACROS` is defined (to support MISRA-style builds).
+ *
+ * @param s
+ * Pointer to the destination @ref string_t to modify.
+ *
+ * @param needle
+ * Substring to remove. Must be one of:
+ * `const char*`, `char*`, `const string_t*`, `string_t*`.
+ *
+ * @param begin
+ * Optional pointer to the first byte of the removal window within `s->str`.
+ * Pass `NULL` to start at the beginning of the used string.
+ *
+ * @param end
+ * Optional pointer to one-past-the-last byte of the removal window.
+ * Pass `NULL` to end at the used length of the string.
+ *
+ * @note
+ * If @p needle is not one of the supported types, this macro triggers a
+ * **compile-time error** in C11 builds via @ref DROP_SUBSTRING_TYPECHECK_.
+ *
+ * @note
+ * The behavior (non-overlapping removal, reverse search optimization, optional
+ * removal of a single trailing ASCII space after each match, window clamping)
+ * is defined by the selected underlying function:
+ * - @ref drop_substr
+ * - @ref drop_substr_lit
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("alpha beta beta gamma", 0u, a);
+ * assert_true(r.has_value);
+ * string_t* text = r.u.value;
+ *
+ * // Dispatches to drop_substr_lit(text, "beta", NULL, NULL)
+ * drop_substring(text, "beta", NULL, NULL);
+ * // text->str == "alpha gamma"
+ *
+ * // Rebuild input for the string_t needle example:
+ * return_string(text);
+ * r = init_string("alpha beta beta gamma", 0u, a);
+ * assert_true(r.has_value);
+ * text = r.u.value;
+ *
+ * string_expect_t rn = init_string("beta", 0u, a);
+ * assert_true(rn.has_value);
+ * string_t* needle = rn.u.value;
+ *
+ * // Dispatches to drop_substr(text, needle, NULL, NULL)
+ * drop_substring(text, needle, NULL, NULL);
+ * // text->str == "alpha gamma"
+ *
+ * return_string(needle);
+ * return_string(text);
+ * @endcode
+ *
+ * @see drop_substr
+ * @see drop_substr_lit
+ */
+#define drop_substring(s, needle, begin, end) \
+    (DROP_SUBSTRING_TYPECHECK_(needle), \
+     _Generic((needle), \
+        const char*:      drop_substr_lit, \
+        char*:            drop_substr_lit, \
+        const string_t*:  drop_substr, \
+        string_t*:        drop_substr \
+     )((string_t*)(s), (needle), (begin), (end)))
+
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
