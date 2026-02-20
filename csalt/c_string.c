@@ -1145,6 +1145,100 @@ bool replace_substr(string_t* s,
 
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+string_expect_t pop_str_token(string_t* s,
+                              const string_t* token,
+                              allocator_vtable_t allocator) {
+    if ((s == NULL) || (s->str == NULL)) {
+        return string_error(NULL_POINTER);
+    }
+    if ((token == NULL) || (token->str == NULL)) {
+        return string_error(NULL_POINTER);
+    }
+    if (token->len == 0u) {
+        return string_error(INVALID_ARG);
+    }
+    if (s->len == 0u) {
+        return string_error(PRECONDITION_FAIL);
+    }
+
+    size_t const tlen = token->len;
+
+    /* Find last occurrence within used region */
+    size_t const pos = find_substr(s, token, NULL, NULL, REVERSE);
+    if (pos == SIZE_MAX) {
+        return string_error(PRECONDITION_FAIL); /* token not found */
+    }
+
+    /* Compute RHS (to the right of token) */
+    size_t const rhs_start = pos + tlen;
+    if (rhs_start > s->len) {
+        return string_error(PRECONDITION_FAIL); /* defensive */
+    }
+
+    size_t const rhs_len = s->len - rhs_start;
+    const char* rhs_ptr  = s->str + rhs_start;
+
+    /* Copy RHS into a new string (using provided allocator) */
+    string_expect_t out = init_string(rhs_ptr, rhs_len, allocator);
+    if (!out.has_value) {
+        return out; /* propagate allocation failure */
+    }
+
+    /* Shrink original string to exclude token and RHS */
+    s->len = pos;
+    s->str[s->len] = '\0';
+
+    return out;
+}
+// -------------------------------------------------------------------------------- 
+
+string_expect_t pop_str_token_lit(string_t* s,
+                                 const char* token,
+                                 allocator_vtable_t allocator) {
+    if ((s == NULL) || (s->str == NULL)) {
+        return string_error(NULL_POINTER);
+    }
+    if ((token == NULL) || (token[0] == '\0')) {
+        return string_error(INVALID_ARG);
+    }
+    if (s->len == 0u) {
+        return string_error(PRECONDITION_FAIL);
+    }
+
+    size_t const tlen = strlen(token);
+    if (tlen == 0u) {
+        return string_error(INVALID_ARG);
+    }
+
+    /* Find last occurrence within used region */
+    size_t const pos = find_substr_lit(s, token, NULL, NULL, REVERSE);
+    if (pos == SIZE_MAX) {
+        return string_error(PRECONDITION_FAIL); /* token not found */
+    }
+
+    /* Compute RHS (to the right of token) */
+    size_t const rhs_start = pos + tlen;
+    if (rhs_start > s->len) {
+        return string_error(PRECONDITION_FAIL); /* defensive */
+    }
+
+    size_t const rhs_len = s->len - rhs_start;
+    const char* rhs_ptr  = s->str + rhs_start;
+
+    /* Copy RHS into a new string (using provided allocator) */
+    string_expect_t out = init_string(rhs_ptr, rhs_len, allocator);
+    if (!out.has_value) {
+        return out; /* propagate allocation failure */
+    }
+
+    /* Shrink original string to exclude token and RHS */
+    s->len = pos;
+    s->str[s->len] = '\0';
+
+    return out;
+}
 // ================================================================================
 // ================================================================================
 // eof

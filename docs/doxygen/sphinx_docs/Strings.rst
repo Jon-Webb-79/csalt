@@ -282,6 +282,18 @@ replace_substr_lit
 .. doxygenfunction:: replace_substr_lit
    :project: csalt
 
+pop_str_token_lit
+~~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_str_token_lit
+   :project: csalt
+
+pop_str_token
+~~~~~~~~~~~~~
+
+.. doxygenfunction:: pop_str_token
+   :project: csalt
+
 Generic Macros
 --------------
 
@@ -329,4 +341,10 @@ replace_substring
 ~~~~~~~~~~~~~~~~~
 
 .. doxygendefine:: replace_substring
+   :project: csalt
+
+pop_string_token
+~~~~~~~~~~~~~~~~
+
+.. doxygendefine:: pop_string_token
    :project: csalt

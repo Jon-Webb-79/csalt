@@ -2239,7 +2239,286 @@ static inline bool _replace_substring_str_wrap_(string_t* s,
        (void*)(min_ptr), (void*)(max_ptr)))
 
 #endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+// -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Pop the substring to the right of the last string_t token occurrence.
+ *
+ * @details
+ * Searches for the **last (reverse) occurrence** of the substring specified
+ * by @p token within the used portion of @p s.
+ *
+ * If found:
+ * 1. The substring strictly to the right of the token is copied into a new
+ *    @ref string_t using the supplied @p allocator.
+ * 2. The original string @p s is truncated at the beginning of the token.
+ *
+ * The token itself is removed from @p s.
+ *
+ * Example:
+ *
+ *   Input string:   "one::two::three"
+ *   Token:          "::"
+ *
+ *   Result:
+ *     Returned string -> "three"
+ *     Modified input  -> "one::two"
+ *
+ * Matching is case-sensitive.
+ *
+ * @param s
+ * Pointer to the source @ref string_t to modify.
+ *
+ * @param token
+ * Pointer to a @ref string_t representing the token substring.
+ * Must not be `NULL`, and must have non-zero length.
+ *
+ * @param allocator
+ * Allocator used to construct the returned string.
+ *
+ * @return
+ * A @ref string_expect_t containing:
+ *
+ * @retval has_value == true
+ * A newly allocated string containing the substring to the right of the
+ * last token occurrence.
+ *
+ * @retval has_value == false
+ * If:
+ * - `s == NULL`
+ * - `s->str == NULL`
+ * - `token == NULL`
+ * - `token->str == NULL`
+ * - `token->len == 0`
+ * - token is not found in `s`
+ * - allocation fails
+ *
+ * @note
+ * - The original string is modified only if the token is found.
+ * - The returned string must be released by the caller.
+ * - The search is performed using @ref find_substr in REVERSE mode.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t rs = init_string("path/to/file.txt", 0u, a);
+ * string_expect_t rt = init_string("/", 0u, a);
+ *
+ * if (rs.has_value && rt.has_value) {
+ *     string_t* s = rs.u.value;
+ *     string_t* t = rt.u.value;
+ *
+ *     string_expect_t out = pop_str_token(s, t, a);
+ *     assert_true(out.has_value);
+ *
+ *     // out.u.value->str == "file.txt"
+ *     // s->str == "path/to"
+ *
+ *     return_string(out.u.value);
+ *     return_string(t);
+ *     return_string(s);
+ * }
+ * @endcode
+ *
+ * @see pop_str_token_lit
+ * @see find_substr
+ */
+string_expect_t pop_str_token(string_t* s, 
+                              const string_t* token, 
+                              allocator_vtable_t allocator);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Pop the substring to the right of the last literal token occurrence.
+ *
+ * @details
+ * Searches for the **last (reverse) occurrence** of the C string literal
+ * `token` within the used portion of @p s. If found, all characters strictly
+ * to the right of the token are:
+ *
+ * 1. Copied into a newly allocated @ref string_t (using the supplied
+ *    @p allocator), and
+ * 2. Removed from @p s by shrinking its logical length and resetting the
+ *    null terminator.
+ *
+ * The token itself is also removed from @p s.
+ *
+ * Example:
+ *
+ *   Input string:   "alpha/beta/gamma"
+ *   Token:          "/"
+ *
+ *   Result:
+ *     Returned string -> "gamma"
+ *     Modified input  -> "alpha/beta"
+ *
+ * Matching is case-sensitive.
+ *
+ * @param s
+ * Pointer to the source @ref string_t to modify.
+ *
+ * @param token
+ * Null-terminated C string literal representing the token.
+ * Must not be `NULL` or empty.
+ *
+ * @param allocator
+ * Allocator used to construct the returned string.
+ *
+ * @return
+ * A @ref string_expect_t containing:
+ *
+ * @retval has_value == true
+ * A newly allocated string containing the substring to the right of the
+ * last token occurrence.
+ *
+ * @retval has_value == false
+ * If:
+ * - `s == NULL`
+ * - `s->str == NULL`
+ * - `token == NULL`
+ * - `token` is empty
+ * - token is not found in `s`
+ * - allocation fails
+ *
+ * @note
+ * - The original string is modified only if the token is found.
+ * - The returned string is independent and must be released by the caller.
+ * - The search is performed using @ref find_substr_lit in REVERSE mode.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("red/green/blue", 0u, a);
+ * assert_true(r.has_value);
+ *
+ * string_t* s = r.u.value;
+ *
+ * string_expect_t popped = pop_str_token_lit(s, "/", a);
+ * assert_true(popped.has_value);
+ *
+ * // popped.u.value->str == "blue"
+ * // s->str == "red/green"
+ *
+ * return_string(popped.u.value);
+ * return_string(s);
+ * @endcode
+ *
+ * @see pop_str_token
+ * @see find_substr_lit
+ */
+string_expect_t pop_str_token_lit(string_t* s, 
+                                  const char* token, 
+                                  allocator_vtable_t allocator);
+// -------------------------------------------------------------------------------- 
+
+#if defined(ARENA_USE_CONVENIENCE_MACROS) && !defined(NO_FUNCTION_MACROS)
+
+/* Helper: compile-time check (expression-safe) */
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+
+/* Supported token types for pop_string_token(s, token, allocator) */
+#define POP_STRING_TOKEN_SUPPORTED_(x) \
+    _Generic((x), \
+        const char*:      1, \
+        char*:            1, \
+        const string_t*:  1, \
+        string_t*:        1, \
+        default:          0)
+
+#define POP_STRING_TOKEN_TYPECHECK_(x) \
+    CSALT_STATIC_ASSERT_EXPR_(POP_STRING_TOKEN_SUPPORTED_(x), \
+                              pop_string_token_unsupported_token_type)
+
+/* Internal wrappers unify the callable signature for _Generic selection */
+static inline string_expect_t _pop_string_token_lit_wrap_(string_t* s,
+                                                          const void* token,
+                                                          allocator_vtable_t a)
+{
+    return pop_str_token_lit(s, (const char*)token, a);
+}
+
+static inline string_expect_t _pop_string_token_str_wrap_(string_t* s,
+                                                          const void* token,
+                                                          allocator_vtable_t a)
+{
+    return pop_str_token(s, (const string_t*)token, a);
+}
+
+/**
+ * @brief Type-safe generic token pop convenience macro.
+ *
+ * @details
+ * `pop_string_token(s, token, allocator)` selects the correct implementation
+ * at **compile time** using the C11 `_Generic` operator.
+ *
+ * Dispatch rules:
+ * - If @p token is a C string (`const char*` or `char*`), dispatch to
+ *   @ref pop_str_token_lit.
+ * - If @p token is a string object (`const string_t*` or `string_t*`), dispatch
+ *   to @ref pop_str_token.
+ *
+ * This macro performs **no runtime type checks** and adds no dispatch overhead.
+ *
+ * Availability:
+ * - Enabled only when `ARENA_USE_CONVENIENCE_MACROS` is defined, and
+ * - Disabled when `NO_FUNCTION_MACROS` is defined.
+ *
+ * @param s
+ * Pointer to the source @ref string_t to modify.
+ *
+ * @param token
+ * Token to search for (literal or @ref string_t).
+ * Must be one of: `const char*`, `char*`, `const string_t*`, `string_t*`.
+ *
+ * @param allocator
+ * Allocator used to construct the returned string.
+ *
+ * @return
+ * A @ref string_expect_t as returned by the selected underlying function.
+ *
+ * @note
+ * If @p token is not a supported type, this macro triggers a **compile-time error**
+ * in C11 builds.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ * string_expect_t r = init_string("a/b/c", 0u, a);
+ * assert_true(r.has_value);
+ * string_t* s = r.u.value;
+ *
+ * // Dispatches to pop_str_token_lit(s, "/", a)
+ * string_expect_t out1 = pop_string_token(s, "/", a);
+ * assert_true(out1.has_value);
+ * // out1.u.value->str == "c"
+ * // s->str == "a/b"
+ * return_string(out1.u.value);
+ *
+ * string_expect_t rt = init_string("/", 0u, a);
+ * assert_true(rt.has_value);
+ * string_t* tok = rt.u.value;
+ *
+ * // Dispatches to pop_str_token(s, tok, a)
+ * string_expect_t out2 = pop_string_token(s, tok, a);
+ * (void)out2;
+ *
+ * return_string(tok);
+ * return_string(s);
+ * @endcode
+ *
+ * @see pop_str_token_lit
+ * @see pop_str_token
+ */
+#define pop_string_token(s, token, allocator) \
+    (POP_STRING_TOKEN_TYPECHECK_(token), \
+     _Generic((token), \
+        const char*:      _pop_string_token_lit_wrap_, \
+        char*:            _pop_string_token_lit_wrap_, \
+        const string_t*:  _pop_string_token_str_wrap_, \
+        string_t*:        _pop_string_token_str_wrap_ \
+     )((string_t*)(s), (const void*)(token), (allocator)))
+
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

@@ -2647,7 +2647,188 @@ static void test_replace_substr_direct_null_args_return_false(void **state)
     ok = replace_substr_lit(NULL, NULL, NULL, NULL, NULL);
     assert_fail(ok);
 }
+// -------------------------------------------------------------------------------- 
 
+static string_t* make_token_str(const char* cstr)
+{
+    return make_string(cstr);
+}
+
+// static void assert_s_eq(const string_t* s, const char* expected)
+// {
+//     assert_non_null(s);
+//     assert_non_null(s->str);
+//     assert_string_equal(s->str, expected);
+// }
+
+/* ------------------------------------------------------------------------- */
+/* Literal token (macro dispatch -> pop_str_token_lit)                        */
+/* ------------------------------------------------------------------------- */
+
+static void test_pop_string_token_lit_basic(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_t* s = make_string("red/green/blue");
+
+    string_expect_t out = pop_string_token(s, "/", a);
+    assert_true(out.has_value);
+    assert_non_null(out.u.value);
+
+    /* Returned RHS and modified input */
+    assert_s_eq(out.u.value, "blue");
+    assert_s_eq(s, "red/green");
+
+    return_string(out.u.value);
+    return_string(s);
+}
+
+static void test_pop_string_token_lit_multi_char_token(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_t* s = make_string("one::two::three");
+
+    string_expect_t out = pop_string_token(s, "::", a);
+    assert_true(out.has_value);
+
+    assert_s_eq(out.u.value, "three");
+    assert_s_eq(s, "one::two");
+
+    return_string(out.u.value);
+    return_string(s);
+}
+
+static void test_pop_string_token_lit_token_at_end_returns_empty_rhs(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_t* s = make_string("a/b/");
+
+    string_expect_t out = pop_string_token(s, "/", a);
+    assert_true(out.has_value);
+
+    /* RHS is empty because token is last */
+    assert_s_eq(out.u.value, "");
+    /* LHS is truncated before the last token */
+    assert_s_eq(s, "a/b");
+
+    return_string(out.u.value);
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* string_t token (macro dispatch -> pop_str_token)                           */
+/* ------------------------------------------------------------------------- */
+
+static void test_pop_string_token_string_t_basic(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_t* s   = make_string("path/to/file.txt");
+    string_t* tok = make_token_str("/");
+
+    string_expect_t out = pop_string_token(s, tok, a);
+    assert_true(out.has_value);
+
+    assert_s_eq(out.u.value, "file.txt");
+    assert_s_eq(s, "path/to");
+
+    return_string(out.u.value);
+    return_string(tok);
+    return_string(s);
+}
+
+static void test_pop_string_token_string_t_multi_char(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_t* s   = make_string("a--b--c--d");
+    string_t* tok = make_token_str("--");
+
+    string_expect_t out = pop_string_token(s, tok, a);
+    assert_true(out.has_value);
+
+    assert_s_eq(out.u.value, "d");
+    assert_s_eq(s, "a--b--c");
+
+    return_string(out.u.value);
+    return_string(tok);
+    return_string(s);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Error / edge behavior (still through the macro)                            */
+/* ------------------------------------------------------------------------- */
+
+static void test_pop_string_token_not_found_returns_error(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_t* s = make_string("alpha beta gamma");
+
+    string_expect_t out = pop_string_token(s, "/", a);
+    assert_false(out.has_value);
+
+    /* String should be unchanged on failure */
+    assert_s_eq(s, "alpha beta gamma");
+
+    return_string(s);
+}
+
+static void test_pop_string_token_empty_token_literal_returns_error(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_t* s = make_string("abc/def");
+
+    string_expect_t out = pop_string_token(s, "", a);
+    assert_false(out.has_value);
+
+    /* unchanged */
+    assert_s_eq(s, "abc/def");
+
+    return_string(s);
+}
+
+static void test_pop_string_token_empty_token_string_t_returns_error(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_t* s   = make_string("abc/def");
+    string_t* tok = make_token_str("");
+
+    string_expect_t out = pop_string_token(s, tok, a);
+    assert_false(out.has_value);
+
+    assert_s_eq(s, "abc/def");
+
+    return_string(tok);
+    return_string(s);
+}
+
+static void test_pop_string_token_empty_source_returns_error(void **state)
+{
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    string_t* s = make_string("");
+
+    string_expect_t out = pop_string_token(s, "/", a);
+    assert_false(out.has_value);
+
+    assert_s_eq(s, "");
+
+    return_string(s);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -2825,6 +3006,16 @@ const struct CMUnitTest test_string[] = {
     cmocka_unit_test(test_replace_substring_bounded_window_changes_only_region),
     cmocka_unit_test(test_replace_substring_invalid_range_returns_false_and_no_change),
     cmocka_unit_test(test_replace_substr_direct_null_args_return_false),
+
+    cmocka_unit_test(test_pop_string_token_lit_basic),
+    cmocka_unit_test(test_pop_string_token_lit_multi_char_token),
+    cmocka_unit_test(test_pop_string_token_lit_token_at_end_returns_empty_rhs),
+    cmocka_unit_test(test_pop_string_token_string_t_basic),
+    cmocka_unit_test(test_pop_string_token_string_t_multi_char),
+    cmocka_unit_test(test_pop_string_token_not_found_returns_error),
+    cmocka_unit_test(test_pop_string_token_empty_token_literal_returns_error),
+    cmocka_unit_test(test_pop_string_token_empty_token_string_t_returns_error),
+    cmocka_unit_test(test_pop_string_token_empty_source_returns_error),
 };
 
 const size_t test_string_count = sizeof(test_string) / sizeof(test_string[0]);
