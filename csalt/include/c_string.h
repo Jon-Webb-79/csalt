@@ -2519,6 +2519,12 @@ static inline string_expect_t _pop_string_token_str_wrap_(string_t* s,
      )((string_t*)(s), (const void*)(token), (allocator)))
 
 #endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+// -------------------------------------------------------------------------------- 
+
+static inline void fprint_string(FILE* stream, const string_t* s) {
+    if (!stream || !s || !s->str) return;
+    fwrite(s->str, 1u, s->len, stream);
+}
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
