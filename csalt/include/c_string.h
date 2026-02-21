@@ -99,6 +99,64 @@ string_expect_t init_string(const char* cstr, size_t capacity_bytes, allocator_v
 // -------------------------------------------------------------------------------- 
 
 /**
+ * @brief Safely retrieve a character from a string at a given index.
+ *
+ * @details
+ * Returns the character at position @p index within the logical contents
+ * of the string @p s. The index must satisfy:
+ *
+ *     0 <= index < s->len
+ *
+ * If the index is out of bounds, or if @p s or `s->str` is `NULL`,
+ * this function returns the null character (`'\0'`).
+ *
+ * The logical string length (`s->len`) is authoritative. The null
+ * terminator stored at `s->str[s->len]` is considered an implementation
+ * detail and is **not** treated as a valid character.
+ *
+ * @param s
+ * Pointer to the source @ref string_t.
+ *
+ * @param index
+ * Zero-based character index.
+ *
+ * @return
+ * The character at the specified index if valid.
+ *
+ * - This function does **not** distinguish between an out-of-bounds
+ *   access and a valid embedded `'\0'` character.
+ * - For applications requiring explicit error signaling, consider
+ *   using a boolean-return variant with an output parameter.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string("hello", 0u, a);
+ * if (r.has_value) {
+ *     string_t* s = r.u.value;
+ *
+ *     char c0 = get_string_index(s, 0);  // 'h'
+ *     char c4 = get_string_index(s, 4);  // 'o'
+ *     char c5 = get_string_index(s, 5);  // '\0' (out of bounds)
+ *
+ *     return_string(s);
+ * }
+ * @endcode
+ */
+static inline char get_string_index(const string_t* s, size_t index) {
+    if ((s == NULL) || (s->str == NULL)) {
+        return '\0';
+    }
+
+    if (index >= s->len) {
+        return '\0';
+    }
+
+    return s->str[index];
+}
+// -------------------------------------------------------------------------------- 
+
+/**
  * @brief Retrieve the internal null-terminated C string.
  *
  * Returns a pointer to the underlying character buffer owned by the

@@ -141,6 +141,12 @@ return_string
 Utility Functions 
 -----------------
 
+get_string_index
+~~~~~~~~~~~~~~~~
+
+.. doxygenfunction:: get_string_index
+   :project: csalt
+
 const_string 
 ~~~~~~~~~~~~
 
