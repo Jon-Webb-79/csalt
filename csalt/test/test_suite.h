@@ -102,6 +102,11 @@ extern const size_t test_slab_allocator_count;
 
 extern const struct CMUnitTest test_string[];
 extern const size_t test_string_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_dtypes[];
+extern const size_t test_dtypes_count;
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

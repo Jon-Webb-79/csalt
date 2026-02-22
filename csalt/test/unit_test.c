@@ -45,6 +45,7 @@ int main(void) {
         {"Buddy Allocator",  test_buddy_allocator, test_buddy_allocator_count},
         {"Slab Allocator",  test_slab_allocator, test_slab_allocator_count},
         {"String Implementation", test_string, test_string_count},
+        {"Types Implementation", test_dtypes, test_dtypes_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);

@@ -136,6 +136,7 @@ The following are areas for future improvement in the code base
    :maxdepth: 1
    :caption: Modules:
 
+    c_types <Types>
     c_error <Error>
     c_allocator <Allocator>
     c_string <Strings>
