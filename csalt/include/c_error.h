@@ -18,6 +18,7 @@
 // ================================================================================ 
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 #ifndef ARENA_USE_CONVENIENCE_MACROS
@@ -491,6 +492,114 @@ typedef struct {
         error_code_t error;
     } u;
 } void_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        size_t value;
+        error_code_t error;
+    } u;
+} size_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        float value;
+        error_code_t error;
+    } u;
+} float_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        double value;
+        error_code_t error;
+    } u;
+} double_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        long double value;
+        error_code_t error;
+    } u;
+} ldouble_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        uint8_t value;
+        error_code_t error;
+    } u;
+} uint8_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        int8_t value;
+        error_code_t error;
+    } u;
+} int8_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        uint16_t value;
+        error_code_t error;
+    } u;
+} uint16_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        int16_t value;
+        error_code_t error;
+    } u;
+} int16_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        uint32_t value;
+        error_code_t error;
+    } u;
+} uint32_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        int32_t value;
+        error_code_t error;
+    } u;
+} int32_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        uint64_t value;
+        error_code_t error;
+    } u;
+} uint64_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        int64_t value;
+        error_code_t error;
+    } u;
+} int64_expect_t;
 // -------------------------------------------------------------------------------- 
 
 /**

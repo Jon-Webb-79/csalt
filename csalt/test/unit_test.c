@@ -46,6 +46,7 @@ int main(void) {
         {"Slab Allocator",  test_slab_allocator, test_slab_allocator_count},
         {"String Implementation", test_string, test_string_count},
         {"Types Implementation", test_dtypes, test_dtypes_count},
+        {"Uint8 Array", test_uint8_array, test_uint8_array_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);
