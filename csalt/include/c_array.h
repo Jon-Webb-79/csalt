@@ -64,6 +64,16 @@ typedef struct {
         error_code_t error;
     } u;
 } array_expect_t;
+// -------------------------------------------------------------------------------- 
+
+#ifndef ITER_DIR_H
+#define ITER_DIR_H
+    typedef enum {
+        FORWARD = 0,
+        REVERSE = 1
+    }direction_t;
+#endif /* ITER_DIR_H*/
+
 // ================================================================================
 // Initialization and teardown
 // ================================================================================
@@ -534,6 +544,38 @@ bool is_array_full(const array_t* array);
  *         - EMPTY        if array->len < 2 (nothing to reverse)
  */
 error_code_t reverse_array(array_t* array);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Sort the elements of the array in place using an introsort strategy.
+ *
+ * Implements median-of-three quicksort with an insertion sort fallback for
+ * partitions of fewer than 10 elements and tail-call optimisation to bound
+ * stack depth. The sort is not stable — equal elements may change relative
+ * order. The algorithm is generic: it operates on raw bytes using data_size
+ * as the element stride and delegates all comparisons to the caller-supplied
+ * comparator.
+ *
+ * The comparator follows the same convention as qsort(3):
+ *   - Returns < 0 if the element at a should come before the element at b.
+ *   - Returns   0 if the elements are equal.
+ *   - Returns > 0 if the element at a should come after the element at b.
+ * When direction is REVERSE the comparator result is negated internally so
+ * the caller always writes a natural ascending comparator regardless of
+ * direction.
+ *
+ * @param array  Pointer to the target array. Must not be NULL.
+ * @param cmp    Comparator function. Must not be NULL. Receives pointers to
+ *               two elements within the array's data buffer.
+ * @param dir    FORWARD for ascending order, REVERSE for descending.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if array or cmp is NULL
+ *         - EMPTY        if array->len < 2 (nothing to sort)
+ */
+error_code_t sort_array(array_t* array,
+                         int    (*cmp)(const void*, const void*),
+                         direction_t dir);
 // -------------------------------------------------------------------------------- 
 
 /**

@@ -2510,7 +2510,337 @@ static void test_contains_end_out_of_bounds_returns_out_of_bounds(void** state) 
 
     return_uint8_array(arr);
 }
+// ================================================================================
+// Group 17: sort_uint8_array
+// ================================================================================
 
+static void test_sort_forward_basic_order(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, FORWARD), NO_ERROR);
+
+    uint8_t expected[] = { 10, 20, 30 };
+    uint8_t out = 0;
+    for (int i = 0; i < 3; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, (int)expected[i]);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_reverse_basic_order(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, REVERSE), NO_ERROR);
+
+    uint8_t expected[] = { 30, 20, 10 };
+    uint8_t out = 0;
+    for (int i = 0; i < 3; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, (int)expected[i]);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_forward_already_sorted(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, FORWARD), NO_ERROR);
+
+    uint8_t expected[] = { 10, 20, 30 };
+    uint8_t out = 0;
+    for (int i = 0; i < 3; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, (int)expected[i]);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_forward_reverse_sorted_input(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 50), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 40), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, FORWARD), NO_ERROR);
+
+    uint8_t expected[] = { 10, 20, 30, 40, 50 };
+    uint8_t out = 0;
+    for (int i = 0; i < 5; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, (int)expected[i]);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_does_not_change_len(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, FORWARD), NO_ERROR);
+
+    assert_int_equal((int)uint8_array_size(arr), 3);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_forward_with_duplicates(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, FORWARD), NO_ERROR);
+
+    uint8_t expected[] = { 10, 10, 20, 30, 30 };
+    uint8_t out = 0;
+    for (int i = 0; i < 5; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, (int)expected[i]);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_reverse_with_duplicates(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, REVERSE), NO_ERROR);
+
+    uint8_t expected[] = { 30, 30, 20, 10, 10 };
+    uint8_t out = 0;
+    for (int i = 0; i < 5; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, (int)expected[i]);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_all_same_values(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    for (int i = 0; i < 5; i++) {
+        assert_int_equal(push_back_uint8_array(arr, 42), NO_ERROR);
+    }
+    assert_int_equal(sort_uint8_array(arr, FORWARD), NO_ERROR);
+
+    uint8_t out = 0;
+    for (int i = 0; i < 5; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, 42);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_forward_two_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, FORWARD), NO_ERROR);
+
+    uint8_t out = 0;
+    assert_int_equal(get_uint8_array_index(arr, 0, &out), NO_ERROR);
+    assert_int_equal((int)out, 10);
+    assert_int_equal(get_uint8_array_index(arr, 1, &out), NO_ERROR);
+    assert_int_equal((int)out, 20);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_forward_min_max_values(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 255), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 128), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr,   0), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr,   1), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, FORWARD), NO_ERROR);
+
+    uint8_t expected[] = { 0, 1, 128, 255 };
+    uint8_t out = 0;
+    for (int i = 0; i < 4; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, (int)expected[i]);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_forward_large_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    /* 64 elements forces the quicksort path — well above the insertion threshold */
+    uint8_array_expect_t r = init_uint8_array(64, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    /* Push values 63 down to 0 (reverse order) */
+    for (int i = 63; i >= 0; i--) {
+        assert_int_equal(push_back_uint8_array(arr, (uint8_t)i), NO_ERROR);
+    }
+    assert_int_equal(sort_uint8_array(arr, FORWARD), NO_ERROR);
+
+    uint8_t out = 0;
+    for (int i = 0; i < 64; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, i);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_reverse_large_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(64, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    /* Push values 0 up to 63 (ascending order) */
+    for (int i = 0; i < 64; i++) {
+        assert_int_equal(push_back_uint8_array(arr, (uint8_t)i), NO_ERROR);
+    }
+    assert_int_equal(sort_uint8_array(arr, REVERSE), NO_ERROR);
+
+    uint8_t out = 0;
+    for (int i = 0; i < 64; i++) {
+        assert_int_equal(get_uint8_array_index(arr, (size_t)i, &out), NO_ERROR);
+        assert_int_equal((int)out, 63 - i);
+    }
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_single_element_returns_empty(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 42), NO_ERROR);
+    assert_int_equal(sort_uint8_array(arr, FORWARD), EMPTY);
+
+    /* Value must be untouched */
+    uint8_t out = 0;
+    assert_int_equal(get_uint8_array_index(arr, 0, &out), NO_ERROR);
+    assert_int_equal((int)out, 42);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_empty_array_returns_empty(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(sort_uint8_array(arr, FORWARD), EMPTY);
+
+    return_uint8_array(arr);
+}
+// -------------------------------------------------------------------------------- 
+
+// --------------------------------------------------------------------------------
+
+static void test_sort_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(sort_uint8_array(NULL, FORWARD), NULL_POINTER);
+}
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -2678,6 +3008,23 @@ const struct CMUnitTest test_uint8_array[] = {
     cmocka_unit_test(test_contains_null_array_returns_null_pointer),
     cmocka_unit_test(test_contains_start_equal_end_returns_invalid_arg),
     cmocka_unit_test(test_contains_end_out_of_bounds_returns_out_of_bounds),
+
+    /* Group 17: sort_uint8_array */
+    cmocka_unit_test(test_sort_forward_basic_order),
+    cmocka_unit_test(test_sort_reverse_basic_order),
+    cmocka_unit_test(test_sort_forward_already_sorted),
+    cmocka_unit_test(test_sort_forward_reverse_sorted_input),
+    cmocka_unit_test(test_sort_does_not_change_len),
+    cmocka_unit_test(test_sort_forward_with_duplicates),
+    cmocka_unit_test(test_sort_reverse_with_duplicates),
+    cmocka_unit_test(test_sort_all_same_values),
+    cmocka_unit_test(test_sort_forward_two_elements),
+    cmocka_unit_test(test_sort_forward_min_max_values),
+    cmocka_unit_test(test_sort_forward_large_array),
+    cmocka_unit_test(test_sort_reverse_large_array),
+    cmocka_unit_test(test_sort_single_element_returns_empty),
+    cmocka_unit_test(test_sort_empty_array_returns_empty),
+    cmocka_unit_test(test_sort_null_array_returns_null_pointer),
 };
 
 const size_t test_uint8_array_count = sizeof(test_uint8_array) / sizeof(test_uint8_array[0]);

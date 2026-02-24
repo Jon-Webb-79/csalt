@@ -155,6 +155,16 @@ error_code_t reverse_uint8_array(uint8_array_t* array) {
     if (array == NULL) return NULL_POINTER;
     return reverse_array(&array->base);
 }
+// -------------------------------------------------------------------------------- 
+
+static int _cmp_uint8(const void* a, const void* b) {
+    return (int)(*(const uint8_t*)a) - (int)(*(const uint8_t*)b);
+}
+
+error_code_t sort_uint8_array(uint8_array_t* array, direction_t dir) {
+    if (array == NULL) return NULL_POINTER;
+    return sort_array(&array->base, _cmp_uint8, dir);
+}
 // ================================================================================
 // Search
 // ================================================================================

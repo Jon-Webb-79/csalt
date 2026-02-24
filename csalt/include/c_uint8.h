@@ -54,7 +54,6 @@ typedef struct {
         error_code_t   error;
     } u;
 } uint8_array_expect_t;
-
 // ================================================================================
 // Initialization and teardown
 // ================================================================================
@@ -290,76 +289,49 @@ uint8_array_expect_t slice_uint8_array(const uint8_array_t* src,
  *         - EMPTY        if array->base.len < 2
  */
 error_code_t reverse_uint8_array(uint8_array_t* array);
-// ================================================================================
-// Search
-// ================================================================================
+// -------------------------------------------------------------------------------- 
 
 /**
- * @brief Search for the first occurrence of value in [start, end).
+ * @brief Sort the elements of the array in place.
+ *
+ * Uses the generic sort_array implementation with a built-in unsigned byte
+ * comparator. The caller does not need to supply a comparator. Ascending
+ * order (FORWARD) sorts smallest value first; descending (REVERSE) sorts
+ * largest value first.
  *
  * @param array  Must not be NULL.
- * @param value  Value to search for.
- * @param start  Inclusive start index.
- * @param end    Exclusive end index. Must be > start and <= array->base.len.
+ * @param dir    FORWARD for ascending, REVERSE for descending.
  *
- * @return size_expect_t with the index of the first match on success, or
- *         u.error set to one of:
- *         - NULL_POINTER  if array is NULL
- *         - INVALID_ARG   if start >= end
- *         - OUT_OF_BOUNDS if end > array->base.len
- *         - NOT_FOUND     if no match exists in [start, end)
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if array is NULL
+ *         - EMPTY        if array->base.len < 2 (nothing to sort)
  */
-size_expect_t uint8_array_contains(const uint8_array_t* array,
-                                    uint8_t              value,
-                                    size_t               start,
-                                    size_t               end);
+error_code_t sort_uint8_array(uint8_array_t* array, direction_t dir);
 // ================================================================================
 // Introspection
 // ================================================================================
 
-/**
- * @brief Return the number of elements stored in the array.
- * @return 0 if array is NULL.
- */
+size_expect_t uint8_array_contains(const uint8_array_t* array,
+                                    uint8_t              value,
+                                    size_t               start,
+                                    size_t               end);
+// -------------------------------------------------------------------------------- 
+
 size_t uint8_array_size(const uint8_array_t* array);
 // --------------------------------------------------------------------------------
 
-/**
- * @brief Return the allocated capacity in elements.
- * @return 0 if array is NULL.
- */
 size_t uint8_array_alloc(const uint8_array_t* array);
 // --------------------------------------------------------------------------------
 
-/**
- * @brief Return the size of one element in bytes (always 1 for uint8_t).
- * @return 0 if array is NULL.
- */
 size_t uint8_array_data_size(const uint8_array_t* array);
 // --------------------------------------------------------------------------------
 
-/**
- * @brief Return true if the array contains no elements.
- * @return true if array is NULL or len == 0.
- */
 bool is_uint8_array_empty(const uint8_array_t* array);
 // --------------------------------------------------------------------------------
 
-/**
- * @brief Return true if the array is at full capacity.
- * @return true if array is NULL or len == alloc.
- */
 bool is_uint8_array_full(const uint8_array_t* array);
 // --------------------------------------------------------------------------------
 
-/**
- * @brief Return true if ptr is a valid element-aligned pointer into the
- *        live region of the array's data buffer.
- *
- * @param array  The array to check against.
- * @param ptr    Pointer to test.
- * @return false if either argument is NULL or ptr is out of bounds.
- */
 bool is_uint8_array_ptr(const uint8_array_t* array, const uint8_t* ptr);
 // ================================================================================ 
 // ================================================================================ 
