@@ -461,6 +461,35 @@ to this construct.
            } u;                                     \
        } name
 
+Defied Expected Structures 
+--------------------------
+The following versions of the ``DEFINE_EXPECTED_TUPE`` macros are pre defined 
+in the ``c_error.h`` file. 
+
+.. code-block:: text 
+
+   uint8_t       uint8_expect_t 
+   int8_t        int8_expect_t 
+   uint32_t      uint32_expect_t 
+   int32_t       int32_expect_t 
+   uint64_t      uint64_expect_t 
+   int64_t       int64_expect_t 
+   float         float_expect_t 
+   double        double_expect_t 
+   long double   ldouble_expect_t
+   void*         void_ptr_expect_t 
+   uint8_t*      uint8_ptr_expect_t 
+   int8_t*       int8_ptr_expect_t 
+   uint16_t*     uint16_ptr_expect_t 
+   int16_t*      int16_ptr_expect_t 
+   uint32_t*     uint32_ptr_expect_t 
+   int32_t*      int32_ptr_expect_t 
+   uint64_t*     uint64_ptr_expect_t 
+   int64_t*      int64_ptr_expect_t 
+   float*        float_ptr_expect_t 
+   double*       double_ptr_expect_t 
+   long double*  ldouble_ptr_expect_t
+
 DEFINE_EXPECTED_TYPE 
 --------------------
 

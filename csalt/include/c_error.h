@@ -602,6 +602,105 @@ typedef struct {
 } int64_expect_t;
 // -------------------------------------------------------------------------------- 
 
+typedef struct {
+    bool has_value;
+    union {
+        uint8_t* value;
+        error_code_t error;
+    } u;
+} uint8_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        int8_t* value;
+        error_code_t error;
+    } u;
+} int8_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        uint16_t* value;
+        error_code_t error;
+    } u;
+} uint16_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        int16_t* value;
+        error_code_t error;
+    } u;
+} int16_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        uint32_t* value;
+        error_code_t error;
+    } u;
+} uint32_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        int32_t* value;
+        error_code_t error;
+    } u;
+} int32_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        uint64_t* value;
+        error_code_t error;
+    } u;
+} uint64_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        int64_t* value;
+        error_code_t error;
+    } u;
+} int64_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        float* value;
+        error_code_t error;
+    } u;
+} float_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        double* value;
+        error_code_t error;
+    } u;
+} double_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    bool has_value;
+    union {
+        long double* value;
+        error_code_t error;
+    } u;
+} ldouble_ptr_expect_t;
+// -------------------------------------------------------------------------------- 
+
 /**
  * @def EXPECTED_OK(TypeName, vexpr)
  * @brief Constructs a success result for an expected-type value.
