@@ -2835,11 +2835,557 @@ static void test_sort_empty_array_returns_empty(void** state) {
 }
 // -------------------------------------------------------------------------------- 
 
-// --------------------------------------------------------------------------------
-
 static void test_sort_null_array_returns_null_pointer(void** state) {
     (void)state;
     assert_int_equal(sort_uint8_array(NULL, FORWARD), NULL_POINTER);
+}
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// Group 18: uint8_array_binary_search
+// ================================================================================
+
+static void test_bsearch_finds_value_with_sort(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 40), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 30, true);
+    assert_true(sr.has_value);
+    /* After sort arr is [10,20,30,40]; 30 is at index 2 */
+    assert_int_equal((int)sr.u.value, 2);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_finds_value_presorted(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 40), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 20, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_returns_first_of_duplicates(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    /* Push unsorted so sort flag is exercised */
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 10, true);
+    assert_true(sr.has_value);
+    /* After sort [10,10,20,30]; first 10 is at index 0 */
+    assert_int_equal((int)sr.u.value, 0);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_finds_first_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 10, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_finds_last_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 30, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 2);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_not_found_returns_not_found(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 99, false);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_sort_persists_after_call(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 50), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    uint8_array_binary_search(arr, 10, true);
+
+    /* Verify the array is in sorted order afterward */
+    uint8_t val = 0;
+    assert_int_equal(get_uint8_array_index(arr, 0, &val), NO_ERROR);
+    assert_int_equal((int)val, 10);
+    assert_int_equal(get_uint8_array_index(arr, 1, &val), NO_ERROR);
+    assert_int_equal((int)val, 30);
+    assert_int_equal(get_uint8_array_index(arr, 2, &val), NO_ERROR);
+    assert_int_equal((int)val, 50);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_min_value_found(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr,   0), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 128), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 255), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 0, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_max_value_found(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr,   0), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 128), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 255), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 255, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 2);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_single_element_found(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 42), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 42, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_single_element_not_found(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 42), NO_ERROR);
+
+    size_expect_t sr = uint8_array_binary_search(arr, 99, false);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_empty_array_returns_empty(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    size_expect_t sr = uint8_array_binary_search(arr, 10, false);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, EMPTY);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bsearch_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t sr = uint8_array_binary_search(NULL, 10, false);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NULL_POINTER);
+}
+
+// ================================================================================
+// Group 19: uint8_array_binary_bracket
+// ================================================================================
+
+static void test_bracket_exact_match_lower_equals_upper(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 40), NO_ERROR);
+
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 30, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 2);
+    assert_int_equal((int)br.u.value.upper, 2);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_exact_match_first_occurrence(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    /* [10, 20, 20, 30] — two copies of 20 */
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 20, false);
+    assert_true(br.has_value);
+    /* First occurrence of 20 is at index 1; lower == upper == 1 */
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 1);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_value_between_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 50), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 70), NO_ERROR);
+
+    /* 40 sits between 30 (index 1) and 50 (index 2) */
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 40, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 2);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_lower_not_equal_upper_when_between(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 40), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 50), NO_ERROR);
+
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 30, false);
+    assert_true(br.has_value);
+    /* lower != upper confirms this is a gap result, not an exact match */
+    assert_true(br.u.value.lower != br.u.value.upper);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_value_at_minimum(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    /* 10 is the minimum — exact match, lower == upper == 0 */
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 10, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 0);
+    assert_int_equal((int)br.u.value.upper, 0);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_value_at_maximum(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    /* 30 is the maximum — exact match, lower == upper == 2 */
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 30, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 2);
+    assert_int_equal((int)br.u.value.upper, 2);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_below_minimum_returns_not_found(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 5, false);
+    assert_false(br.has_value);
+    assert_int_equal(br.u.error, NOT_FOUND);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_above_maximum_returns_not_found(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 99, false);
+    assert_false(br.has_value);
+    assert_int_equal(br.u.error, NOT_FOUND);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_with_sort_flag(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    /* Push unsorted */
+    assert_int_equal(push_back_uint8_array(arr, 50), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 40), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 20), NO_ERROR);
+
+    /* 30 is between 20 and 40 after sorting */
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 30, true);
+    assert_true(br.has_value);
+    /* After sort [10,20,40,50]; 20 at index 1, 40 at index 2 */
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 2);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_sort_persists_after_call(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 50), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 10), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(arr, 30), NO_ERROR);
+
+    uint8_array_binary_bracket(arr, 20, true);
+
+    /* Verify sorted order persists */
+    uint8_t val = 0;
+    assert_int_equal(get_uint8_array_index(arr, 0, &val), NO_ERROR);
+    assert_int_equal((int)val, 10);
+    assert_int_equal(get_uint8_array_index(arr, 1, &val), NO_ERROR);
+    assert_int_equal((int)val, 30);
+    assert_int_equal(get_uint8_array_index(arr, 2, &val), NO_ERROR);
+    assert_int_equal((int)val, 50);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_single_element_exact_match(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 42), NO_ERROR);
+
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 42, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 0);
+    assert_int_equal((int)br.u.value.upper, 0);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_single_element_out_of_range(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint8_array(arr, 42), NO_ERROR);
+
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 99, false);
+    assert_false(br.has_value);
+    assert_int_equal(br.u.error, NOT_FOUND);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_empty_array_returns_empty(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint8_array_t* arr = r.u.value;
+
+    bracket_expect_t br = uint8_array_binary_bracket(arr, 10, false);
+    assert_false(br.has_value);
+    assert_int_equal(br.u.error, EMPTY);
+
+    return_uint8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_bracket_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    bracket_expect_t br = uint8_array_binary_bracket(NULL, 10, false);
+    assert_false(br.has_value);
+    assert_int_equal(br.u.error, NULL_POINTER);
 }
 // ================================================================================
 // Test runner
@@ -3025,6 +3571,37 @@ const struct CMUnitTest test_uint8_array[] = {
     cmocka_unit_test(test_sort_single_element_returns_empty),
     cmocka_unit_test(test_sort_empty_array_returns_empty),
     cmocka_unit_test(test_sort_null_array_returns_null_pointer),
+
+    /* Group 18: uint8_array_binary_search */
+    cmocka_unit_test(test_bsearch_finds_value_with_sort),
+    cmocka_unit_test(test_bsearch_finds_value_presorted),
+    cmocka_unit_test(test_bsearch_returns_first_of_duplicates),
+    cmocka_unit_test(test_bsearch_finds_first_element),
+    cmocka_unit_test(test_bsearch_finds_last_element),
+    cmocka_unit_test(test_bsearch_not_found_returns_not_found),
+    cmocka_unit_test(test_bsearch_sort_persists_after_call),
+    cmocka_unit_test(test_bsearch_min_value_found),
+    cmocka_unit_test(test_bsearch_max_value_found),
+    cmocka_unit_test(test_bsearch_single_element_found),
+    cmocka_unit_test(test_bsearch_single_element_not_found),
+    cmocka_unit_test(test_bsearch_empty_array_returns_empty),
+    cmocka_unit_test(test_bsearch_null_array_returns_null_pointer),
+
+    /* Group 19: uint8_array_binary_bracket */
+    cmocka_unit_test(test_bracket_exact_match_lower_equals_upper),
+    cmocka_unit_test(test_bracket_exact_match_first_occurrence),
+    cmocka_unit_test(test_bracket_value_between_elements),
+    cmocka_unit_test(test_bracket_lower_not_equal_upper_when_between),
+    cmocka_unit_test(test_bracket_value_at_minimum),
+    cmocka_unit_test(test_bracket_value_at_maximum),
+    cmocka_unit_test(test_bracket_below_minimum_returns_not_found),
+    cmocka_unit_test(test_bracket_above_maximum_returns_not_found),
+    cmocka_unit_test(test_bracket_with_sort_flag),
+    cmocka_unit_test(test_bracket_sort_persists_after_call),
+    cmocka_unit_test(test_bracket_single_element_exact_match),
+    cmocka_unit_test(test_bracket_single_element_out_of_range),
+    cmocka_unit_test(test_bracket_empty_array_returns_empty),
+    cmocka_unit_test(test_bracket_null_array_returns_null_pointer),
 };
 
 const size_t test_uint8_array_count = sizeof(test_uint8_array) / sizeof(test_uint8_array[0]);

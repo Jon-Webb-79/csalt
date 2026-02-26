@@ -761,6 +761,129 @@ error_code_t sort_array(array_t* array,
 }
 // -------------------------------------------------------------------------------- 
 
+size_expect_t binary_search_array(array_t*    array,
+                                   const void* needle,
+                                   int       (*cmp)(const void*, const void*),
+                                   bool        sort,
+                                   dtype_id_t  dtype) {
+    if (array == NULL || needle == NULL || cmp == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (dtype != array->dtype)
+        return (size_expect_t){ .has_value = false, .u.error = TYPE_MISMATCH };
+    if (array->len == 0u)
+        return (size_expect_t){ .has_value = false, .u.error = EMPTY };
+
+    if (sort)
+        _quicksort(array->data, 0u, array->len - 1u, array->data_size, cmp, FORWARD);
+
+    /* Standard binary search */
+    size_t lo  = 0u;
+    size_t hi  = array->len - 1u;
+    size_t mid = 0u;
+    bool   found = false;
+
+    while (lo <= hi) {
+        mid = lo + (hi - lo) / 2u;
+        int c = cmp(array->data + mid * array->data_size, needle);
+
+        if (c == 0) {
+            found = true;
+            break;
+        } else if (c < 0) {
+            lo = mid + 1u;
+        } else {
+            if (mid == 0u) break;   /* prevent size_t underflow */
+            hi = mid - 1u;
+        }
+    }
+
+    if (!found)
+        return (size_expect_t){ .has_value = false, .u.error = NOT_FOUND };
+
+    /* Scan leftward to the first occurrence */
+    while (mid > 0u &&
+           cmp(array->data + (mid - 1u) * array->data_size, needle) == 0)
+        mid--;
+
+    return (size_expect_t){ .has_value = true, .u.value = mid };
+}
+
+// -------------------------------------------------------------------------------- 
+
+bracket_expect_t binary_bracket_array(array_t*    array,
+                                       const void* needle,
+                                       int       (*cmp)(const void*, const void*),
+                                       bool        sort,
+                                       dtype_id_t  dtype) {
+    if (array == NULL || needle == NULL || cmp == NULL)
+        return (bracket_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (dtype != array->dtype)
+        return (bracket_expect_t){ .has_value = false, .u.error = TYPE_MISMATCH };
+    if (array->len == 0u)
+        return (bracket_expect_t){ .has_value = false, .u.error = EMPTY };
+
+    if (sort)
+        _quicksort(array->data, 0u, array->len - 1u, array->data_size, cmp, FORWARD);
+
+    /* Check needle is within [min, max] of the sorted array */
+    if (cmp(needle, array->data) < 0 ||
+        cmp(needle, array->data + (array->len - 1u) * array->data_size) > 0)
+        return (bracket_expect_t){ .has_value = false, .u.error = NOT_FOUND };
+
+    /*
+     * Upper-bound search: find the first index where element >= needle.
+     * After the loop, lo is the index of the first element >= needle.
+     */
+    size_t lo = 0u;
+    size_t hi = array->len;
+
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2u;
+        if (cmp(array->data + mid * array->data_size, needle) < 0)
+            lo = mid + 1u;
+        else
+            hi = mid;
+    }
+    /* lo == index of first element >= needle */
+    size_t upper = lo;
+
+    /*
+     * Lower-bound search: find one past the last index where element <= needle.
+     * After the loop, lo - 1 is the index of the last element <= needle.
+     */
+    lo = 0u;
+    hi = array->len;
+
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2u;
+        if (cmp(array->data + mid * array->data_size, needle) <= 0)
+            lo = mid + 1u;
+        else
+            hi = mid;
+    }
+    /* lo - 1 == index of last element <= needle */
+    size_t lower = lo - 1u;
+
+    /*
+     * If needle exists in the array, data[upper] == needle (the first element
+     * >= needle equals needle). Scan leftward from upper to guarantee the first
+     * occurrence is returned, then set lower == upper for the exact-match signal.
+     */
+    if (cmp(array->data + upper * array->data_size, needle) == 0) {
+        while (upper > 0u &&
+               cmp(array->data + (upper - 1u) * array->data_size, needle) == 0)
+            upper--;
+        lower = upper;
+    }
+
+    return (bracket_expect_t){
+        .has_value       = true,
+        .u.value.lower   = lower,
+        .u.value.upper   = upper
+    };
+}
+// -------------------------------------------------------------------------------- 
+
 bool is_array_ptr(const array_t* array, const void* ptr) {
     if (array == NULL || !array->data || ptr == NULL) return false;
 

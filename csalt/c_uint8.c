@@ -165,6 +165,25 @@ error_code_t sort_uint8_array(uint8_array_t* array, direction_t dir) {
     if (array == NULL) return NULL_POINTER;
     return sort_array(&array->base, _cmp_uint8, dir);
 }
+// -------------------------------------------------------------------------------- 
+
+size_expect_t uint8_array_binary_search(uint8_array_t* array,
+                                         uint8_t        value,
+                                         bool           sort) {
+    if (array == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    return binary_search_array(&array->base, &value, _cmp_uint8, sort, UINT8_TYPE);
+}
+
+// --------------------------------------------------------------------------------
+
+bracket_expect_t uint8_array_binary_bracket(uint8_array_t* array,
+                                             uint8_t        value,
+                                             bool           sort) {
+    if (array == NULL)
+        return (bracket_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    return binary_bracket_array(&array->base, &value, _cmp_uint8, sort, UINT8_TYPE);
+}
 // ================================================================================
 // Search
 // ================================================================================

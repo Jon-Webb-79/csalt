@@ -701,6 +701,18 @@ typedef struct {
 } ldouble_ptr_expect_t;
 // -------------------------------------------------------------------------------- 
 
+typedef struct {
+    bool   has_value;
+    union {
+        struct {
+            size_t lower;  /* index of largest element <= value  */
+            size_t upper;  /* index of smallest element >= value */
+        } value;
+        error_code_t error;
+    } u;
+} bracket_expect_t;
+// -------------------------------------------------------------------------------- 
+
 /**
  * @def EXPECTED_OK(TypeName, vexpr)
  * @brief Constructs a success result for an expected-type value.

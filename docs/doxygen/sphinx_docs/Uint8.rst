@@ -120,6 +120,10 @@ Search
 
 .. doxygenfunction:: uint8_array_contains
 
+.. doxygenfunction:: uint8_array_binary_search 
+
+.. doxygenfunction:: uint8_array_binary_bracket
+
 Introspection
 -------------
 

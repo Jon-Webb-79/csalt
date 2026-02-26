@@ -776,6 +776,123 @@ error_code_t reverse_uint8_array(uint8_array_t* array);
  * @endcode
  */
 error_code_t sort_uint8_array(uint8_array_t* array, direction_t dir);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Search for the first occurrence of value using binary search.
+ *
+ * Uses a built-in unsigned byte comparator — the caller does not need to
+ * supply one. When sort is true the array is sorted in place in ascending
+ * order before searching; the sorted order persists after the call. When
+ * sort is false the array must already be sorted in ascending order.
+ * After any matching element is found the implementation scans leftward to
+ * return the index of the first occurrence, consistent with
+ * uint8_array_contains.
+ *
+ * @param array  Pointer to the array to search. Must not be NULL.
+ * @param value  The uint8_t value to search for.
+ * @param sort   If true, sort the array in place before searching.
+ *               If false, the array must already be sorted ascending.
+ *
+ * @return size_expect_t with has_value true and u.value holding the
+ *         zero-based index of the first match on success. On failure
+ *         has_value is false and u.error is one of:
+ *         - NULL_POINTER  if array is NULL
+ *         - EMPTY         if the array contains no elements
+ *         - NOT_FOUND     if value does not exist in the array
+ *
+ * @code{.c}
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
+ *     if (!result.has_value) { return; }
+ *     uint8_array_t* arr = result.u.value;
+ *
+ *     push_back_uint8_array(arr, 40);
+ *     push_back_uint8_array(arr, 10);
+ *     push_back_uint8_array(arr, 10);
+ *     push_back_uint8_array(arr, 30);
+ *     push_back_uint8_array(arr, 20);
+ *     // arr contains [40, 10, 10, 30, 20].
+ *
+ *     // sort == true: arr is sorted in place to [10, 10, 20, 30, 40].
+ *     size_expect_t r = uint8_array_binary_search(arr, 10, true);
+ *     // r.has_value == true, r.u.value == 0 (first of two 10s).
+ *
+ *     // arr is now sorted; sort == false is safe for subsequent calls.
+ *     r = uint8_array_binary_search(arr, 30, false);
+ *     // r.has_value == true, r.u.value == 3.
+ *
+ *     r = uint8_array_binary_search(arr, 99, false);
+ *     // r.has_value == false, r.u.error == NOT_FOUND.
+ *
+ *     return_uint8_array(arr);
+ * @endcode
+ */
+size_expect_t uint8_array_binary_search(uint8_array_t* array,
+                                         uint8_t        value,
+                                         bool           sort);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Find the bracketing indices around value using binary search.
+ *
+ * Locates the largest element <= value (lower bound) and the smallest
+ * element >= value (upper bound) within the array. If value exists in
+ * the array u.value.lower == u.value.upper and both point to the first
+ * occurrence. If value is outside the range [min, max] of the array's
+ * values the call returns has_value false with NOT_FOUND.
+ *
+ * Uses a built-in unsigned byte comparator. When sort is true the array
+ * is sorted in place in ascending order before searching; the sorted order
+ * persists after the call. When sort is false the array must already be
+ * sorted in ascending order.
+ *
+ * @param array  Pointer to the array to search. Must not be NULL.
+ * @param value  The uint8_t value to bracket.
+ * @param sort   If true, sort the array in place before searching.
+ *               If false, the array must already be sorted ascending.
+ *
+ * @return bracket_expect_t with has_value true on success:
+ *           u.value.lower — index of the largest element  <= value.
+ *           u.value.upper — index of the smallest element >= value.
+ *           lower == upper indicates value was found exactly; both
+ *           point to the first occurrence.
+ *         On failure has_value is false and u.error is one of:
+ *         - NULL_POINTER  if array is NULL
+ *         - EMPTY         if the array contains no elements
+ *         - NOT_FOUND     if value is outside [min, max] of the array
+ *
+ * @code{.c}
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
+ *     if (!result.has_value) { return; }
+ *     uint8_array_t* arr = result.u.value;
+ *
+ *     push_back_uint8_array(arr, 10);
+ *     push_back_uint8_array(arr, 30);
+ *     push_back_uint8_array(arr, 50);
+ *     push_back_uint8_array(arr, 70);
+ *     // arr contains [10, 30, 50, 70] (already sorted).
+ *
+ *     // Value exists exactly — lower == upper, both at first occurrence.
+ *     bracket_expect_t r = uint8_array_binary_bracket(arr, 30, false);
+ *     // r.has_value == true, r.u.value.lower == 1, r.u.value.upper == 1.
+ *
+ *     // Value falls between elements.
+ *     r = uint8_array_binary_bracket(arr, 40, false);
+ *     // r.has_value == true, r.u.value.lower == 1 (30), upper == 2 (50).
+ *
+ *     // Value outside range returns NOT_FOUND.
+ *     r = uint8_array_binary_bracket(arr, 5, false);
+ *     // r.has_value == false, r.u.error == NOT_FOUND.
+ *
+ *     return_uint8_array(arr);
+ * @endcode
+ */
+bracket_expect_t uint8_array_binary_bracket(uint8_array_t* array,
+                                             uint8_t        value,
+                                             bool           sort);
 // ================================================================================
 // Introspection
 // ================================================================================

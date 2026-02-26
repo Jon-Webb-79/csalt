@@ -475,6 +475,90 @@ size_expect_t array_contains(const array_t* array,
                              size_t        start,
                              size_t        end,
                              dtype_id_t    dtype);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Search for the first occurrence of needle using binary search.
+ *
+ * When sort is true the array is sorted in place before searching using the
+ * provided comparator — the sorted order persists after the call. When sort
+ * is false the array must already be sorted in ascending order according to
+ * cmp; behaviour is undefined if it is not. After locating any matching
+ * element the implementation scans leftward to guarantee the index of the
+ * first occurrence is returned, consistent with array_contains.
+ *
+ * The comparator follows the qsort(3) convention:
+ *   - Returns < 0 if a should sort before b.
+ *   - Returns   0 if a and b are equal.
+ *   - Returns > 0 if a should sort after b.
+ *
+ * @param array  Pointer to the array to search. Must not be NULL.
+ * @param needle Pointer to the value to search for. Must not be NULL.
+ *               Must point to exactly array->data_size bytes.
+ * @param cmp    Comparator function. Must not be NULL.
+ * @param sort   If true, sort the array in place before searching.
+ *               If false, the array must already be sorted ascending by cmp.
+ * @param dtype  Type identifier. Must match array->dtype.
+ *
+ * @return size_expect_t with has_value true and the index of the first match
+ *         on success. On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER  if array, needle, or cmp is NULL
+ *         - TYPE_MISMATCH if dtype != array->dtype
+ *         - EMPTY         if array->len == 0
+ *         - NOT_FOUND     if no matching element exists in the array
+ */
+size_expect_t binary_search_array(array_t*    array,
+                                   const void* needle,
+                                   int       (*cmp)(const void*, const void*),
+                                   bool        sort,
+                                   dtype_id_t  dtype);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the bracketing indices around needle using binary search.
+ *
+ * Locates the largest element <= needle (lower bound) and the smallest
+ * element >= needle (upper bound) in the array. If needle exists in the array
+ * the first occurrence is returned as both lower and upper (lower == upper).
+ * If needle falls below the minimum element or above the maximum element the
+ * call returns has_value false with NOT_FOUND — the bracket is undefined when
+ * needle is outside the range of the array's values.
+ *
+ * When sort is true the array is sorted in place before searching using the
+ * provided comparator — the sorted order persists after the call. When sort
+ * is false the array must already be sorted in ascending order according to
+ * cmp; behaviour is undefined if it is not.
+ *
+ * The comparator follows the qsort(3) convention:
+ *   - Returns < 0 if a should sort before b.
+ *   - Returns   0 if a and b are equal.
+ *   - Returns > 0 if a should sort after b.
+ *
+ * @param array  Pointer to the array to search. Must not be NULL.
+ * @param needle Pointer to the value to bracket. Must not be NULL.
+ *               Must point to exactly array->data_size bytes.
+ * @param cmp    Comparator function. Must not be NULL.
+ * @param sort   If true, sort the array in place before searching.
+ *               If false, the array must already be sorted ascending by cmp.
+ * @param dtype  Type identifier. Must match array->dtype.
+ *
+ * @return bracket_expect_t with has_value true on success:
+ *           u.value.lower — index of the largest element  <= needle.
+ *           u.value.upper — index of the smallest element >= needle.
+ *           lower == upper indicates needle was found exactly; both point
+ *           to the first occurrence.
+ *         On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER  if array, needle, or cmp is NULL
+ *         - TYPE_MISMATCH if dtype != array->dtype
+ *         - EMPTY         if array->len == 0
+ *         - NOT_FOUND     if needle is outside [min, max] of the array
+ */
+bracket_expect_t binary_bracket_array(array_t*    array,
+                                       const void* needle,
+                                       int       (*cmp)(const void*, const void*),
+                                       bool        sort,
+                                       dtype_id_t  dtype);
+
 // ================================================================================
 // Introspection
 // ================================================================================

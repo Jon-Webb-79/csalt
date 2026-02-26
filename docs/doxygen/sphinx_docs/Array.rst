@@ -131,6 +131,10 @@ Algorithms
 
 .. doxygenfunction:: sort_array
 
+.. doxygenfunction:: binary_search_array 
+
+.. doxygenfunction:: binary_bracket_array
+
 .. note::
 
    ``sort_array`` requires a caller-supplied comparator following the same
