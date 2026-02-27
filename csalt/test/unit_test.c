@@ -51,6 +51,7 @@ int main(void) {
         {"Uint16 Array", test_uint16_array, test_uint16_array_count},
         {"Int16 Array", test_int16_array, test_int16_array_count},
         {"Uint32 Array", test_uint32_array, test_uint32_array_count},
+        {"Int32 Array", test_int32_array, test_int32_array_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);

@@ -134,6 +134,11 @@ extern const struct CMUnitTest test_uint32_array[];
 extern const size_t test_uint32_array_count;
 // ================================================================================
 // ================================================================================
+
+extern const struct CMUnitTest test_int32_array[];
+extern const size_t test_int32_array_count;
+// ================================================================================
+// ================================================================================
 #ifdef __cplusplus
 }
 #endif

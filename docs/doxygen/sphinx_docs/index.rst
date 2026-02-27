@@ -145,6 +145,7 @@ The following are areas for future improvement in the code base
     c_uint16 <Uint16>
     c_int16 <Int16>
     c_uint32 <Uint32>
+    c_int32 <Int32>
     c_array <Array>
     
 Indices and tables
