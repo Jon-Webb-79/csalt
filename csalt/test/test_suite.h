@@ -112,6 +112,11 @@ extern const size_t test_dtypes_count;
 
 extern const struct CMUnitTest test_uint8_array[];
 extern const size_t test_uint8_array_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_int8_array[];
+extern const size_t test_int8_array_count;
 // ================================================================================
 // ================================================================================
 #ifdef __cplusplus

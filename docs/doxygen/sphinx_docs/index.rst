@@ -141,10 +141,7 @@ The following are areas for future improvement in the code base
     c_allocator <Allocator>
     c_string <Strings>
     c_uint8 <Uint8>
-    c_ldouble <LDouble>
-    c_double <Double>
-    c_float <Float>
-    c_int <Int>
+    c_int8 <Int8>
     c_array <Array>
     
 Indices and tables

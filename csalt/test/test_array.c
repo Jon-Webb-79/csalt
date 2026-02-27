@@ -29,6 +29,7 @@
 #include "c_allocator.h"
 #include "c_dtypes.h"
 #include "c_uint8.h"
+#include "c_int8.h"
 
 // ================================================================================
 // Group 1: init_uint8_array
@@ -3605,6 +3606,938 @@ const struct CMUnitTest test_uint8_array[] = {
 };
 
 const size_t test_uint8_array_count = sizeof(test_uint8_array) / sizeof(test_uint8_array[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+// ================================================================================
+// Group 1: init_int8_array
+// ================================================================================
+
+// ================================================================================
+// Group 1: init_int8_array
+// ================================================================================
+
+static void test_int8_init_null_allocate_fn_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    int8_array_expect_t r = init_int8_array(8, false, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_init_returns_valid_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(8, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_int_equal((int)int8_array_size(r.u.value), 0);
+    assert_int_equal((int)int8_array_alloc(r.u.value), 8);
+    return_int8_array(r.u.value);
+}
+
+// ================================================================================
+// Group 2: return_int8_array
+// ================================================================================
+
+static void test_int8_return_null_is_safe(void** state) {
+    (void)state;
+    return_int8_array(NULL);   /* must not crash */
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_return_valid_array_does_not_crash(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    return_int8_array(r.u.value);   /* must not crash */
+}
+
+// ================================================================================
+// Group 3: push_back_int8_array
+// ================================================================================
+
+static void test_int8_push_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_back_int8_array(NULL, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_push_back_appends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_int8_array(arr, -10), NO_ERROR);
+    assert_int_equal(push_back_int8_array(arr,   0), NO_ERROR);
+    assert_int_equal(push_back_int8_array(arr,  10), NO_ERROR);
+    assert_int_equal((int)int8_array_size(arr), 3);
+
+    int8_t val = 0;
+    get_int8_array_index(arr, 0, &val);  assert_int_equal((int)val, -10);
+    get_int8_array_index(arr, 2, &val);  assert_int_equal((int)val,  10);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 4: push_front_int8_array
+// ================================================================================
+
+static void test_int8_push_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_front_int8_array(NULL, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_push_front_prepends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, 10);
+    push_front_int8_array(arr, -10);
+    /* arr is [-10, 10] */
+
+    int8_t val = 0;
+    get_int8_array_index(arr, 0, &val);
+    assert_int_equal((int)val, -10);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 5: push_at_int8_array
+// ================================================================================
+
+static void test_int8_push_at_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_at_int8_array(NULL, 0, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_push_at_inserts_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,  10);
+    push_at_int8_array(arr, 1, 0);
+    /* arr is [-10, 0, 10] */
+
+    int8_t val = 0;
+    get_int8_array_index(arr, 1, &val);
+    assert_int_equal((int)val, 0);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 6: get_int8_array_index
+// ================================================================================
+
+static void test_int8_get_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    int8_t val = 0;
+    assert_int_equal(get_int8_array_index(NULL, 0, &val), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_get_returns_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, -128);
+    push_back_int8_array(arr,    0);
+    push_back_int8_array(arr,  127);
+
+    int8_t val = 0;
+    assert_int_equal(get_int8_array_index(arr, 0, &val), NO_ERROR);
+    assert_int_equal((int)val, -128);
+    assert_int_equal(get_int8_array_index(arr, 2, &val), NO_ERROR);
+    assert_int_equal((int)val, 127);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 7: pop_back_int8_array
+// ================================================================================
+
+static void test_int8_pop_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_int8_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_pop_back_removes_last_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,  10);
+
+    int8_t val = 0;
+    assert_int_equal(pop_back_int8_array(arr, &val), NO_ERROR);
+    assert_int_equal((int)val, 10);
+    assert_int_equal((int)int8_array_size(arr), 1);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 8: pop_front_int8_array
+// ================================================================================
+
+static void test_int8_pop_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_int8_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_pop_front_removes_first_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,  10);
+
+    int8_t val = 0;
+    assert_int_equal(pop_front_int8_array(arr, &val), NO_ERROR);
+    assert_int_equal((int)val, -10);
+    assert_int_equal((int)int8_array_size(arr), 1);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 9: pop_any_int8_array
+// ================================================================================
+
+static void test_int8_pop_any_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_any_int8_array(NULL, NULL, 0), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_pop_any_removes_element_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,   0);
+    push_back_int8_array(arr,  10);
+
+    int8_t val = 0;
+    assert_int_equal(pop_any_int8_array(arr, &val, 1), NO_ERROR);
+    assert_int_equal((int)val, 0);
+    assert_int_equal((int)int8_array_size(arr), 2);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 10: clear_int8_array
+// ================================================================================
+
+static void test_int8_clear_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(clear_int8_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_clear_resets_len_to_zero(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,  10);
+    assert_int_equal(clear_int8_array(arr), NO_ERROR);
+    assert_int_equal((int)int8_array_size(arr), 0);
+    assert_int_equal((int)int8_array_alloc(arr), 4);   /* capacity retained */
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 11: set_int8_array_index
+// ================================================================================
+
+static void test_int8_set_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_int8_array_index(NULL, 0, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_set_overwrites_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, 10);
+    assert_int_equal(set_int8_array_index(arr, 0, -99), NO_ERROR);
+
+    int8_t val = 0;
+    get_int8_array_index(arr, 0, &val);
+    assert_int_equal((int)val, -99);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 12: copy_int8_array
+// ================================================================================
+
+static void test_int8_copy_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = copy_int8_array(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_copy_produces_independent_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* src = r.u.value;
+
+    push_back_int8_array(src, -10);
+    push_back_int8_array(src,  10);
+
+    int8_array_expect_t cr = copy_int8_array(src, alloc);
+    assert_true(cr.has_value);
+    int8_array_t* dst = cr.u.value;
+
+    /* Mutate src and confirm dst is unaffected */
+    set_int8_array_index(src, 0, 99);
+    int8_t val = 0;
+    get_int8_array_index(dst, 0, &val);
+    assert_int_equal((int)val, -10);
+
+    return_int8_array(src);
+    return_int8_array(dst);
+}
+
+// ================================================================================
+// Group 13: concat_int8_array
+// ================================================================================
+
+static void test_int8_concat_null_dst_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* src = r.u.value;
+    assert_int_equal(concat_int8_array(NULL, src), NULL_POINTER);
+    return_int8_array(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_concat_appends_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r1 = init_int8_array(8, false, alloc);
+    int8_array_expect_t r2 = init_int8_array(4, false, alloc);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+    int8_array_t* dst = r1.u.value;
+    int8_array_t* src = r2.u.value;
+
+    push_back_int8_array(dst, -10);
+    push_back_int8_array(src,  10);
+
+    assert_int_equal(concat_int8_array(dst, src), NO_ERROR);
+    assert_int_equal((int)int8_array_size(dst), 2);
+
+    int8_t val = 0;
+    get_int8_array_index(dst, 1, &val);
+    assert_int_equal((int)val, 10);
+
+    return_int8_array(dst);
+    return_int8_array(src);
+}
+
+// ================================================================================
+// Group 14: slice_int8_array
+// ================================================================================
+
+static void test_int8_slice_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = slice_int8_array(NULL, 0, 1, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_slice_returns_correct_subrange(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(8, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* src = r.u.value;
+
+    push_back_int8_array(src, -20);
+    push_back_int8_array(src, -10);
+    push_back_int8_array(src,   0);
+    push_back_int8_array(src,  10);
+    push_back_int8_array(src,  20);
+
+    int8_array_expect_t sr = slice_int8_array(src, 1, 4, alloc);
+    assert_true(sr.has_value);
+    int8_array_t* slc = sr.u.value;
+    assert_int_equal((int)int8_array_size(slc), 3);
+
+    int8_t val = 0;
+    get_int8_array_index(slc, 0, &val);  assert_int_equal((int)val, -10);
+    get_int8_array_index(slc, 1, &val);  assert_int_equal((int)val,   0);
+    get_int8_array_index(slc, 2, &val);  assert_int_equal((int)val,  10);
+
+    return_int8_array(src);
+    return_int8_array(slc);
+}
+
+// ================================================================================
+// Group 15: reverse_int8_array
+// ================================================================================
+
+static void test_int8_reverse_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(reverse_int8_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_reverse_reverses_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,   0);
+    push_back_int8_array(arr,  10);
+
+    assert_int_equal(reverse_int8_array(arr), NO_ERROR);
+
+    int8_t val = 0;
+    get_int8_array_index(arr, 0, &val);  assert_int_equal((int)val,  10);
+    get_int8_array_index(arr, 2, &val);  assert_int_equal((int)val, -10);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 16: sort_int8_array
+// ================================================================================
+
+static void test_int8_sort_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(sort_int8_array(NULL, FORWARD), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_sort_forward_orders_signed_values(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(8, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr,  10);
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,   0);
+
+    assert_int_equal(sort_int8_array(arr, FORWARD), NO_ERROR);
+
+    int8_t val = 0;
+    get_int8_array_index(arr, 0, &val);  assert_int_equal((int)val, -10);
+    get_int8_array_index(arr, 1, &val);  assert_int_equal((int)val,   0);
+    get_int8_array_index(arr, 2, &val);  assert_int_equal((int)val,  10);
+
+    return_int8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_sort_reverse_orders_signed_values(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(8, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr,   0);
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,  10);
+
+    assert_int_equal(sort_int8_array(arr, REVERSE), NO_ERROR);
+
+    int8_t val = 0;
+    get_int8_array_index(arr, 0, &val);  assert_int_equal((int)val,  10);
+    get_int8_array_index(arr, 1, &val);  assert_int_equal((int)val,   0);
+    get_int8_array_index(arr, 2, &val);  assert_int_equal((int)val, -10);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 17: int8_array_contains
+// ================================================================================
+
+static void test_int8_contains_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = int8_array_contains(NULL, 0, 0, 1);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_contains_finds_negative_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr,  10);
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,   0);
+
+    size_expect_t sr = int8_array_contains(arr, -10, 0, 3);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 18: int8_array_binary_search
+// ================================================================================
+
+static void test_int8_binary_search_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = int8_array_binary_search(NULL, 0, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_binary_search_finds_value_with_sort(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(8, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr,  10);
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,   0);
+    push_back_int8_array(arr,  20);
+
+    /* sort == true: arr becomes [-10, 0, 10, 20] */
+    size_expect_t sr = int8_array_binary_search(arr, -10, true);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    return_int8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_binary_search_signed_comparator_correct(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(8, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    /* Already sorted: [-20, -10, 0, 10, 20] */
+    push_back_int8_array(arr, -20);
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,   0);
+    push_back_int8_array(arr,  10);
+    push_back_int8_array(arr,  20);
+
+    size_expect_t sr = int8_array_binary_search(arr, -10, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    sr = int8_array_binary_search(arr, 20, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 4);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 19: int8_array_binary_bracket
+// ================================================================================
+
+static void test_int8_binary_bracket_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    bracket_expect_t r = int8_array_binary_bracket(NULL, 0, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_binary_bracket_exact_match(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(8, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, -20);
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,   0);
+    push_back_int8_array(arr,  10);
+
+    bracket_expect_t br = int8_array_binary_bracket(arr, -10, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 1);
+
+    return_int8_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_binary_bracket_signed_gap(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(8, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    /* [-20, -10, 10, 20] — gap between -10 and 10 */
+    push_back_int8_array(arr, -20);
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,  10);
+    push_back_int8_array(arr,  20);
+
+    /* 0 falls in the gap */
+    bracket_expect_t br = int8_array_binary_bracket(arr, 0, false);
+    assert_true(br.has_value);
+    /* lower = first element >= 0 = index 2 (value 10)  */
+    /* upper = last  element <= 0 = index 1 (value -10) */
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 2);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 20: int8_array_size
+// ================================================================================
+
+static void test_int8_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)int8_array_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_size_reflects_push_count(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    assert_int_equal((int)int8_array_size(arr), 0);
+    push_back_int8_array(arr, -1);
+    push_back_int8_array(arr,  1);
+    assert_int_equal((int)int8_array_size(arr), 2);
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 21: int8_array_alloc
+// ================================================================================
+
+static void test_int8_alloc_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)int8_array_alloc(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_alloc_matches_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(16, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)int8_array_alloc(r.u.value), 16);
+    return_int8_array(r.u.value);
+}
+
+// ================================================================================
+// Group 22: int8_array_data_size
+// ================================================================================
+
+static void test_int8_data_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)int8_array_data_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_data_size_is_one(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)int8_array_data_size(r.u.value), 1);
+    return_int8_array(r.u.value);
+}
+
+// ================================================================================
+// Group 23: is_int8_array_empty
+// ================================================================================
+
+static void test_int8_empty_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_int8_array_empty(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_empty_reflects_contents(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(4, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    assert_true(is_int8_array_empty(arr));
+    push_back_int8_array(arr, -1);
+    assert_false(is_int8_array_empty(arr));
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 24: is_int8_array_full
+// ================================================================================
+
+static void test_int8_full_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_int8_array_full(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_full_reflects_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(2, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    assert_false(is_int8_array_full(arr));
+    push_back_int8_array(arr, -1);
+    push_back_int8_array(arr,  1);
+    assert_true(is_int8_array_full(arr));
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Group 25: is_int8_array_ptr
+// ================================================================================
+
+static void test_int8_is_ptr_null_array_returns_false(void** state) {
+    (void)state;
+    int8_t val = 0;
+    assert_false(is_int8_array_ptr(NULL, &val));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_is_ptr_valid_and_invalid(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_array_expect_t r = init_int8_array(8, false, alloc);
+    assert_true(r.has_value);
+    int8_array_t* arr = r.u.value;
+
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr,   0);
+    push_back_int8_array(arr,  10);
+
+    const int8_t* first = (const int8_t*)arr->base.data;
+    const int8_t* last  = first + 2;
+    const int8_t* spare = first + 3;   /* beyond live region */
+
+    assert_true (is_int8_array_ptr(arr, first));
+    assert_true (is_int8_array_ptr(arr, last));
+    assert_false(is_int8_array_ptr(arr, spare));
+    assert_false(is_int8_array_ptr(arr, NULL));
+
+    return_int8_array(arr);
+}
+
+// ================================================================================
+// Test runner
+// ================================================================================
+
+const struct CMUnitTest test_int8_array[] = {
+
+    /* Group 1: init_int8_array */
+    cmocka_unit_test(test_int8_init_null_allocate_fn_fails),
+    cmocka_unit_test(test_int8_init_returns_valid_array),
+
+    /* Group 2: return_int8_array */
+    cmocka_unit_test(test_int8_return_null_is_safe),
+    cmocka_unit_test(test_int8_return_valid_array_does_not_crash),
+
+    /* Group 3: push_back_int8_array */
+    cmocka_unit_test(test_int8_push_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_push_back_appends_value),
+
+    /* Group 4: push_front_int8_array */
+    cmocka_unit_test(test_int8_push_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_push_front_prepends_value),
+
+    /* Group 5: push_at_int8_array */
+    cmocka_unit_test(test_int8_push_at_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_push_at_inserts_at_index),
+
+    /* Group 6: get_int8_array_index */
+    cmocka_unit_test(test_int8_get_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_get_returns_correct_value),
+
+    /* Group 7: pop_back_int8_array */
+    cmocka_unit_test(test_int8_pop_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_pop_back_removes_last_element),
+
+    /* Group 8: pop_front_int8_array */
+    cmocka_unit_test(test_int8_pop_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_pop_front_removes_first_element),
+
+    /* Group 9: pop_any_int8_array */
+    cmocka_unit_test(test_int8_pop_any_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_pop_any_removes_element_at_index),
+
+    /* Group 10: clear_int8_array */
+    cmocka_unit_test(test_int8_clear_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_clear_resets_len_to_zero),
+
+    /* Group 11: set_int8_array_index */
+    cmocka_unit_test(test_int8_set_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_set_overwrites_element),
+
+    /* Group 12: copy_int8_array */
+    cmocka_unit_test(test_int8_copy_null_src_returns_null_pointer),
+    cmocka_unit_test(test_int8_copy_produces_independent_array),
+
+    /* Group 13: concat_int8_array */
+    cmocka_unit_test(test_int8_concat_null_dst_returns_null_pointer),
+    cmocka_unit_test(test_int8_concat_appends_elements),
+
+    /* Group 14: slice_int8_array */
+    cmocka_unit_test(test_int8_slice_null_src_returns_null_pointer),
+    cmocka_unit_test(test_int8_slice_returns_correct_subrange),
+
+    /* Group 15: reverse_int8_array */
+    cmocka_unit_test(test_int8_reverse_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_reverse_reverses_elements),
+
+    /* Group 16: sort_int8_array */
+    cmocka_unit_test(test_int8_sort_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_sort_forward_orders_signed_values),
+    cmocka_unit_test(test_int8_sort_reverse_orders_signed_values),
+
+    /* Group 17: int8_array_contains */
+    cmocka_unit_test(test_int8_contains_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_contains_finds_negative_value),
+
+    /* Group 18: int8_array_binary_search */
+    cmocka_unit_test(test_int8_binary_search_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_binary_search_finds_value_with_sort),
+    cmocka_unit_test(test_int8_binary_search_signed_comparator_correct),
+
+    /* Group 19: int8_array_binary_bracket */
+    cmocka_unit_test(test_int8_binary_bracket_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int8_binary_bracket_exact_match),
+    cmocka_unit_test(test_int8_binary_bracket_signed_gap),
+
+    /* Group 20: int8_array_size */
+    cmocka_unit_test(test_int8_size_null_returns_zero),
+    cmocka_unit_test(test_int8_size_reflects_push_count),
+
+    /* Group 21: int8_array_alloc */
+    cmocka_unit_test(test_int8_alloc_null_returns_zero),
+    cmocka_unit_test(test_int8_alloc_matches_capacity),
+
+    /* Group 22: int8_array_data_size */
+    cmocka_unit_test(test_int8_data_size_null_returns_zero),
+    cmocka_unit_test(test_int8_data_size_is_one),
+
+    /* Group 23: is_int8_array_empty */
+    cmocka_unit_test(test_int8_empty_null_returns_true),
+    cmocka_unit_test(test_int8_empty_reflects_contents),
+
+    /* Group 24: is_int8_array_full */
+    cmocka_unit_test(test_int8_full_null_returns_true),
+    cmocka_unit_test(test_int8_full_reflects_capacity),
+
+    /* Group 25: is_int8_array_ptr */
+    cmocka_unit_test(test_int8_is_ptr_null_array_returns_false),
+    cmocka_unit_test(test_int8_is_ptr_valid_and_invalid),
+};
+const size_t test_int8_array_count = sizeof(test_int8_array) / sizeof(test_int8_array[0]);
 // ================================================================================
 // ================================================================================
 // eof
