@@ -39,7 +39,7 @@ the trade-offs between them.
 
 .. code-block:: c
 
-   #include "int8_array.h"
+   #include "c_int8.h"
 
    /* Choose an allocator — see :ref:`allocator_file` for all options. */
    allocator_vtable_t alloc = heap_allocator();

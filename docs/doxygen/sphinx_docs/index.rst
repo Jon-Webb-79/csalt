@@ -143,6 +143,7 @@ The following are areas for future improvement in the code base
     c_uint8 <Uint8>
     c_int8 <Int8>
     c_uint16 <Uint16>
+    c_int16 <Int16>
     c_array <Array>
     
 Indices and tables

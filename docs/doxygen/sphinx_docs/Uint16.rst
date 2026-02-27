@@ -39,7 +39,7 @@ the trade-offs between them.
 
 .. code-block:: c
 
-   #include "uint16_array.h"
+   #include "c_uint16.h"
 
    /* Choose an allocator — see :ref:`allocator_file` for all options. */
    allocator_vtable_t alloc = heap_allocator();

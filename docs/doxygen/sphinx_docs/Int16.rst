@@ -1,9 +1,9 @@
-.. _uint8:
+.. _int16:
 
 ****************
-uint8_t Overview
+int16_t Overview
 ****************
-The ``uint8_t`` family of data structures in csalt provides type-safe,
+The ``int16_t`` family of data structures in csalt provides type-safe,
 allocator-agnostic containers for 8-bit unsigned integer data.  Every
 structure wraps the generic ``array_t`` engine from ``c_array.h`` with the
 element type fixed to ``UINT8_TYPE`` at initialisation, eliminating the need
@@ -23,9 +23,9 @@ field distinguishes success from failure, while in-place mutations return an
 :c:type:`error_code_t` directly.  Callers must always check the result
 before using the value.
 
-uint8_t Array
+int16_t Array
 =============
-A :c:type:`uint8_array_t` is an ordered sequence of ``uint8_t`` values
+A :c:type:`int16_array_t` is an ordered sequence of ``int16_t`` values
 backed by a contiguous heap-allocated buffer.  It supports O(1) amortised
 append, O(n) insert and remove at arbitrary positions, SIMD-accelerated
 reverse and search, and an in-place comparison sort.  It is implemented as
@@ -39,108 +39,108 @@ the trade-offs between them.
 
 .. code-block:: c
 
-   #include "c_uint8.h"
+   #include "c_int16.h"
 
    /* Choose an allocator — see :ref:`allocator_file` for all options. */
    allocator_vtable_t alloc = heap_allocator();
 
-   uint8_array_expect_t r = init_uint8_array(8, true, alloc);
+   int16_array_expect_t r = init_int16_array(8, true, alloc);
    if (!r.has_value) { /* handle r.u.error */ }
-   uint8_array_t* arr = r.u.value;
+   int16_array_t* arr = r.u.value;
 
-   push_back_uint8_array(arr, 30);
-   push_back_uint8_array(arr, 10);
-   push_back_uint8_array(arr, 20);
+   push_back_int16_array(arr, 30);
+   push_back_int16_array(arr, 10);
+   push_back_int16_array(arr, 20);
 
-   sort_uint8_array(arr, FORWARD);   /* arr is now [10, 20, 30] */
+   sort_int16_array(arr, FORWARD);   /* arr is now [10, 20, 30] */
 
-   return_uint8_array(arr);
+   return_int16_array(arr);
 
 Structs
 -------
 
-.. doxygenstruct:: uint8_array_t
+.. doxygenstruct:: int16_array_t
    :members:
 
-.. doxygenstruct:: uint8_array_expect_t
+.. doxygenstruct:: int16_array_expect_t
    :members:
 
 Initialisation and Teardown
 ---------------------------
 
-.. doxygenfunction:: init_uint8_array
+.. doxygenfunction:: init_int16_array
 
-.. doxygenfunction:: return_uint8_array
+.. doxygenfunction:: return_int16_array
 
 Push Operations
 ---------------
 
-.. doxygenfunction:: push_back_uint8_array
+.. doxygenfunction:: push_back_int16_array
 
-.. doxygenfunction:: push_front_uint8_array
+.. doxygenfunction:: push_front_int16_array
 
-.. doxygenfunction:: push_at_uint8_array
+.. doxygenfunction:: push_at_int16_array
 
 Get and Set
 -----------
 
-.. doxygenfunction:: get_uint8_array_index
+.. doxygenfunction:: get_int16_array_index
 
-.. doxygenfunction:: set_uint8_array_index
+.. doxygenfunction:: set_int16_array_index
 
 Pop Operations
 --------------
 
-.. doxygenfunction:: pop_back_uint8_array
+.. doxygenfunction:: pop_back_int16_array
 
-.. doxygenfunction:: pop_front_uint8_array
+.. doxygenfunction:: pop_front_int16_array
 
-.. doxygenfunction:: pop_any_uint8_array
+.. doxygenfunction:: pop_any_int16_array
 
 Utility Operations
 ------------------
 
-.. doxygenfunction:: clear_uint8_array
+.. doxygenfunction:: clear_int16_array
 
-.. doxygenfunction:: copy_uint8_array
+.. doxygenfunction:: copy_int16_array
 
-.. doxygenfunction:: concat_uint8_array
+.. doxygenfunction:: concat_int16_array
 
-.. doxygenfunction:: slice_uint8_array
+.. doxygenfunction:: slice_int16_array
 
 Algorithms
 ----------
 
-.. doxygenfunction:: reverse_uint8_array
+.. doxygenfunction:: reverse_int16_array
 
-.. doxygenfunction:: sort_uint8_array
+.. doxygenfunction:: sort_int16_array
 
 Search
 ------
 
-.. doxygenfunction:: uint8_array_contains
+.. doxygenfunction:: int16_array_contains
 
-.. doxygenfunction:: uint8_array_binary_search 
+.. doxygenfunction:: int16_array_binary_search 
 
-.. doxygenfunction:: uint8_array_binary_bracket
+.. doxygenfunction:: int16_array_binary_bracket
 
 Introspection
 -------------
 
-.. doxygenfunction:: uint8_array_size
+.. doxygenfunction:: int16_array_size
 
-.. doxygenfunction:: uint8_array_alloc
+.. doxygenfunction:: int16_array_alloc
 
-.. doxygenfunction:: uint8_array_data_size
+.. doxygenfunction:: int16_array_data_size
 
-.. doxygenfunction:: is_uint8_array_empty
+.. doxygenfunction:: is_int16_array_empty
 
-.. doxygenfunction:: is_uint8_array_full
+.. doxygenfunction:: is_int16_array_full
 
-.. doxygenfunction:: is_uint8_array_ptr
+.. doxygenfunction:: is_int16_array_ptr
 
-uint8_t Dictionary 
+int16_t Dictionary 
 ==================
 
-uint8_t Matrix 
+int16_t Matrix 
 ==============
