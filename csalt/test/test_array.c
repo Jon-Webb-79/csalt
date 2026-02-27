@@ -30,6 +30,7 @@
 #include "c_dtypes.h"
 #include "c_uint8.h"
 #include "c_int8.h"
+#include "c_uint16.h"
 
 // ================================================================================
 // Group 1: init_uint8_array
@@ -4538,6 +4539,940 @@ const struct CMUnitTest test_int8_array[] = {
     cmocka_unit_test(test_int8_is_ptr_valid_and_invalid),
 };
 const size_t test_int8_array_count = sizeof(test_int8_array) / sizeof(test_int8_array[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+// ================================================================================
+// Group 1: init_uint16_array
+// ================================================================================
+
+static void test_uint16_init_null_allocate_fn_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    uint16_array_expect_t r = init_uint16_array(8, false, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_init_returns_valid_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(8, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_int_equal((int)uint16_array_size(r.u.value), 0);
+    assert_int_equal((int)uint16_array_alloc(r.u.value), 8);
+    return_uint16_array(r.u.value);
+}
+
+// ================================================================================
+// Group 2: return_uint16_array
+// ================================================================================
+
+static void test_uint16_return_null_is_safe(void** state) {
+    (void)state;
+    return_uint16_array(NULL);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_return_valid_array_does_not_crash(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    return_uint16_array(r.u.value);
+}
+
+// ================================================================================
+// Group 3: push_back_uint16_array
+// ================================================================================
+
+static void test_uint16_push_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_back_uint16_array(NULL, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_push_back_appends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint16_array(arr, 100), NO_ERROR);
+    assert_int_equal(push_back_uint16_array(arr, 200), NO_ERROR);
+    assert_int_equal(push_back_uint16_array(arr, 300), NO_ERROR);
+    assert_int_equal((int)uint16_array_size(arr), 3);
+
+    uint16_t val = 0;
+    get_uint16_array_index(arr, 0, &val);  assert_int_equal((int)val, 100);
+    get_uint16_array_index(arr, 2, &val);  assert_int_equal((int)val, 300);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 4: push_front_uint16_array
+// ================================================================================
+
+static void test_uint16_push_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_front_uint16_array(NULL, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_push_front_prepends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 200);
+    push_front_uint16_array(arr, 100);
+    /* arr is [100, 200] */
+
+    uint16_t val = 0;
+    get_uint16_array_index(arr, 0, &val);
+    assert_int_equal((int)val, 100);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 5: push_at_uint16_array
+// ================================================================================
+
+static void test_uint16_push_at_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_at_uint16_array(NULL, 0, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_push_at_inserts_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 300);
+    push_at_uint16_array(arr, 1, 200);
+    /* arr is [100, 200, 300] */
+
+    uint16_t val = 0;
+    get_uint16_array_index(arr, 1, &val);
+    assert_int_equal((int)val, 200);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 6: get_uint16_array_index
+// ================================================================================
+
+static void test_uint16_get_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    uint16_t val = 0;
+    assert_int_equal(get_uint16_array_index(NULL, 0, &val), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_get_returns_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr,     0);
+    push_back_uint16_array(arr, 32768);
+    push_back_uint16_array(arr, 65535);
+
+    uint16_t val = 0;
+    assert_int_equal(get_uint16_array_index(arr, 0, &val), NO_ERROR);
+    assert_int_equal((int)val, 0);
+    assert_int_equal(get_uint16_array_index(arr, 2, &val), NO_ERROR);
+    assert_int_equal((int)val, 65535);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 7: pop_back_uint16_array
+// ================================================================================
+
+static void test_uint16_pop_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_uint16_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_pop_back_removes_last_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+
+    uint16_t val = 0;
+    assert_int_equal(pop_back_uint16_array(arr, &val), NO_ERROR);
+    assert_int_equal((int)val, 200);
+    assert_int_equal((int)uint16_array_size(arr), 1);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 8: pop_front_uint16_array
+// ================================================================================
+
+static void test_uint16_pop_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_uint16_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_pop_front_removes_first_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+
+    uint16_t val = 0;
+    assert_int_equal(pop_front_uint16_array(arr, &val), NO_ERROR);
+    assert_int_equal((int)val, 100);
+    assert_int_equal((int)uint16_array_size(arr), 1);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 9: pop_any_uint16_array
+// ================================================================================
+
+static void test_uint16_pop_any_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_any_uint16_array(NULL, NULL, 0), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_pop_any_removes_element_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+    push_back_uint16_array(arr, 300);
+
+    uint16_t val = 0;
+    assert_int_equal(pop_any_uint16_array(arr, &val, 1), NO_ERROR);
+    assert_int_equal((int)val, 200);
+    assert_int_equal((int)uint16_array_size(arr), 2);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 10: clear_uint16_array
+// ================================================================================
+
+static void test_uint16_clear_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(clear_uint16_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_clear_resets_len_to_zero(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+    assert_int_equal(clear_uint16_array(arr), NO_ERROR);
+    assert_int_equal((int)uint16_array_size(arr), 0);
+    assert_int_equal((int)uint16_array_alloc(arr), 4);   /* capacity retained */
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 11: set_uint16_array_index
+// ================================================================================
+
+static void test_uint16_set_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_uint16_array_index(NULL, 0, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_set_overwrites_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    assert_int_equal(set_uint16_array_index(arr, 0, 65535), NO_ERROR);
+
+    uint16_t val = 0;
+    get_uint16_array_index(arr, 0, &val);
+    assert_int_equal((int)val, 65535);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 12: copy_uint16_array
+// ================================================================================
+
+static void test_uint16_copy_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = copy_uint16_array(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_copy_produces_independent_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* src = r.u.value;
+
+    push_back_uint16_array(src, 100);
+    push_back_uint16_array(src, 200);
+
+    uint16_array_expect_t cr = copy_uint16_array(src, alloc);
+    assert_true(cr.has_value);
+    uint16_array_t* dst = cr.u.value;
+
+    set_uint16_array_index(src, 0, 999);
+    uint16_t val = 0;
+    get_uint16_array_index(dst, 0, &val);
+    assert_int_equal((int)val, 100);
+
+    return_uint16_array(src);
+    return_uint16_array(dst);
+}
+
+// ================================================================================
+// Group 13: concat_uint16_array
+// ================================================================================
+
+static void test_uint16_concat_null_dst_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* src = r.u.value;
+    assert_int_equal(concat_uint16_array(NULL, src), NULL_POINTER);
+    return_uint16_array(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_concat_appends_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r1 = init_uint16_array(8, false, alloc);
+    uint16_array_expect_t r2 = init_uint16_array(4, false, alloc);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+    uint16_array_t* dst = r1.u.value;
+    uint16_array_t* src = r2.u.value;
+
+    push_back_uint16_array(dst, 100);
+    push_back_uint16_array(src, 200);
+
+    assert_int_equal(concat_uint16_array(dst, src), NO_ERROR);
+    assert_int_equal((int)uint16_array_size(dst), 2);
+
+    uint16_t val = 0;
+    get_uint16_array_index(dst, 1, &val);
+    assert_int_equal((int)val, 200);
+
+    return_uint16_array(dst);
+    return_uint16_array(src);
+}
+
+// ================================================================================
+// Group 14: slice_uint16_array
+// ================================================================================
+
+static void test_uint16_slice_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = slice_uint16_array(NULL, 0, 1, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_slice_returns_correct_subrange(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* src = r.u.value;
+
+    push_back_uint16_array(src, 100);
+    push_back_uint16_array(src, 200);
+    push_back_uint16_array(src, 300);
+    push_back_uint16_array(src, 400);
+    push_back_uint16_array(src, 500);
+
+    uint16_array_expect_t sr = slice_uint16_array(src, 1, 4, alloc);
+    assert_true(sr.has_value);
+    uint16_array_t* slc = sr.u.value;
+    assert_int_equal((int)uint16_array_size(slc), 3);
+
+    uint16_t val = 0;
+    get_uint16_array_index(slc, 0, &val);  assert_int_equal((int)val, 200);
+    get_uint16_array_index(slc, 1, &val);  assert_int_equal((int)val, 300);
+    get_uint16_array_index(slc, 2, &val);  assert_int_equal((int)val, 400);
+
+    return_uint16_array(src);
+    return_uint16_array(slc);
+}
+
+// ================================================================================
+// Group 15: reverse_uint16_array
+// ================================================================================
+
+static void test_uint16_reverse_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(reverse_uint16_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_reverse_reverses_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+    push_back_uint16_array(arr, 300);
+
+    assert_int_equal(reverse_uint16_array(arr), NO_ERROR);
+
+    uint16_t val = 0;
+    get_uint16_array_index(arr, 0, &val);  assert_int_equal((int)val, 300);
+    get_uint16_array_index(arr, 2, &val);  assert_int_equal((int)val, 100);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 16: sort_uint16_array
+// ================================================================================
+
+static void test_uint16_sort_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(sort_uint16_array(NULL, FORWARD), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_sort_forward_basic(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 300);
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+
+    assert_int_equal(sort_uint16_array(arr, FORWARD), NO_ERROR);
+
+    uint16_t val = 0;
+    get_uint16_array_index(arr, 0, &val);  assert_int_equal((int)val, 100);
+    get_uint16_array_index(arr, 1, &val);  assert_int_equal((int)val, 200);
+    get_uint16_array_index(arr, 2, &val);  assert_int_equal((int)val, 300);
+
+    return_uint16_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_sort_comparator_safe_near_max(void** state) {
+    (void)state;
+    /*
+     * A subtract-based comparator would compute (int)(1 - 65535) = -65534,
+     * which is negative and would appear correct, but (int)(65535 - 1) = 65534
+     * which is also correct. The real failure mode is on platforms where
+     * unsigned subtraction wraps and the result is cast to a signed type that
+     * cannot represent it. Using the pair (1, 65535) confirms the comparator
+     * produces strictly negative for 1 < 65535 regardless of implementation.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 65535);
+    push_back_uint16_array(arr,     1);
+    push_back_uint16_array(arr, 32768);
+
+    assert_int_equal(sort_uint16_array(arr, FORWARD), NO_ERROR);
+
+    uint16_t val = 0;
+    get_uint16_array_index(arr, 0, &val);  assert_int_equal((int)val,     1);
+    get_uint16_array_index(arr, 1, &val);  assert_int_equal((int)val, 32768);
+    get_uint16_array_index(arr, 2, &val);  assert_int_equal((int)val, 65535);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 17: uint16_array_contains
+// ================================================================================
+
+static void test_uint16_contains_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = uint16_array_contains(NULL, 0, 0, 1);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_contains_finds_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+    push_back_uint16_array(arr, 300);
+
+    size_expect_t sr = uint16_array_contains(arr, 200, 0, 3);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 18: uint16_array_binary_search
+// ================================================================================
+
+static void test_uint16_binary_search_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = uint16_array_binary_search(NULL, 0, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_binary_search_finds_value_with_sort(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 300);
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+    push_back_uint16_array(arr, 400);
+
+    /* sort == true: arr becomes [100, 200, 300, 400] */
+    size_expect_t sr = uint16_array_binary_search(arr, 300, true);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 2);
+
+    return_uint16_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_binary_search_comparator_safe_near_max(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    /* Already sorted */
+    push_back_uint16_array(arr,     1);
+    push_back_uint16_array(arr, 32768);
+    push_back_uint16_array(arr, 65534);
+    push_back_uint16_array(arr, 65535);
+
+    size_expect_t sr = uint16_array_binary_search(arr, 65535, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 3);
+
+    sr = uint16_array_binary_search(arr, 1, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 19: uint16_array_binary_bracket
+// ================================================================================
+
+static void test_uint16_binary_bracket_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    bracket_expect_t r = uint16_array_binary_bracket(NULL, 0, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_binary_bracket_exact_match(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+    push_back_uint16_array(arr, 300);
+    push_back_uint16_array(arr, 400);
+
+    bracket_expect_t br = uint16_array_binary_bracket(arr, 200, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 1);
+
+    return_uint16_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_binary_bracket_comparator_safe_near_max(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    /* [1, 32768, 65535] — gap between 32768 and 65535 */
+    push_back_uint16_array(arr,     1);
+    push_back_uint16_array(arr, 32768);
+    push_back_uint16_array(arr, 65535);
+
+    /* 40000 falls in the gap */
+    bracket_expect_t br = uint16_array_binary_bracket(arr, 40000, false);
+    assert_true(br.has_value);
+    /* lower = first element >= 40000 = index 2 (value 65535) */
+    /* upper = last  element <= 40000 = index 1 (value 32768) */
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 2);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 20: uint16_array_size
+// ================================================================================
+
+static void test_uint16_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)uint16_array_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_size_reflects_push_count(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    assert_int_equal((int)uint16_array_size(arr), 0);
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+    assert_int_equal((int)uint16_array_size(arr), 2);
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 21: uint16_array_alloc
+// ================================================================================
+
+static void test_uint16_alloc_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)uint16_array_alloc(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_alloc_matches_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(16, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)uint16_array_alloc(r.u.value), 16);
+    return_uint16_array(r.u.value);
+}
+
+// ================================================================================
+// Group 22: uint16_array_data_size
+// ================================================================================
+
+static void test_uint16_data_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)uint16_array_data_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_data_size_is_two(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)uint16_array_data_size(r.u.value), 2);
+    return_uint16_array(r.u.value);
+}
+
+// ================================================================================
+// Group 23: is_uint16_array_empty
+// ================================================================================
+
+static void test_uint16_empty_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_uint16_array_empty(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_empty_reflects_contents(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    assert_true(is_uint16_array_empty(arr));
+    push_back_uint16_array(arr, 100);
+    assert_false(is_uint16_array_empty(arr));
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 24: is_uint16_array_full
+// ================================================================================
+
+static void test_uint16_full_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_uint16_array_full(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_full_reflects_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(2, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    assert_false(is_uint16_array_full(arr));
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+    assert_true(is_uint16_array_full(arr));
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Group 25: is_uint16_array_ptr
+// ================================================================================
+
+static void test_uint16_is_ptr_null_array_returns_false(void** state) {
+    (void)state;
+    uint16_t val = 0;
+    assert_false(is_uint16_array_ptr(NULL, &val));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_is_ptr_valid_and_invalid(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint16_array_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 100);
+    push_back_uint16_array(arr, 200);
+    push_back_uint16_array(arr, 300);
+
+    const uint16_t* first = (const uint16_t*)arr->base.data;
+    const uint16_t* last  = first + 2;
+    const uint16_t* spare = first + 3;   /* beyond live region */
+
+    assert_true (is_uint16_array_ptr(arr, first));
+    assert_true (is_uint16_array_ptr(arr, last));
+    assert_false(is_uint16_array_ptr(arr, spare));
+    assert_false(is_uint16_array_ptr(arr, NULL));
+
+    return_uint16_array(arr);
+}
+
+// ================================================================================
+// Test runner
+// ================================================================================
+
+const struct CMUnitTest test_uint16_array[] = {
+
+    /* Group 1: init_uint16_array */
+    cmocka_unit_test(test_uint16_init_null_allocate_fn_fails),
+    cmocka_unit_test(test_uint16_init_returns_valid_array),
+
+    /* Group 2: return_uint16_array */
+    cmocka_unit_test(test_uint16_return_null_is_safe),
+    cmocka_unit_test(test_uint16_return_valid_array_does_not_crash),
+
+    /* Group 3: push_back_uint16_array */
+    cmocka_unit_test(test_uint16_push_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_push_back_appends_value),
+
+    /* Group 4: push_front_uint16_array */
+    cmocka_unit_test(test_uint16_push_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_push_front_prepends_value),
+
+    /* Group 5: push_at_uint16_array */
+    cmocka_unit_test(test_uint16_push_at_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_push_at_inserts_at_index),
+
+    /* Group 6: get_uint16_array_index */
+    cmocka_unit_test(test_uint16_get_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_get_returns_correct_value),
+
+    /* Group 7: pop_back_uint16_array */
+    cmocka_unit_test(test_uint16_pop_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_pop_back_removes_last_element),
+
+    /* Group 8: pop_front_uint16_array */
+    cmocka_unit_test(test_uint16_pop_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_pop_front_removes_first_element),
+
+    /* Group 9: pop_any_uint16_array */
+    cmocka_unit_test(test_uint16_pop_any_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_pop_any_removes_element_at_index),
+
+    /* Group 10: clear_uint16_array */
+    cmocka_unit_test(test_uint16_clear_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_clear_resets_len_to_zero),
+
+    /* Group 11: set_uint16_array_index */
+    cmocka_unit_test(test_uint16_set_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_set_overwrites_element),
+
+    /* Group 12: copy_uint16_array */
+    cmocka_unit_test(test_uint16_copy_null_src_returns_null_pointer),
+    cmocka_unit_test(test_uint16_copy_produces_independent_array),
+
+    /* Group 13: concat_uint16_array */
+    cmocka_unit_test(test_uint16_concat_null_dst_returns_null_pointer),
+    cmocka_unit_test(test_uint16_concat_appends_elements),
+
+    /* Group 14: slice_uint16_array */
+    cmocka_unit_test(test_uint16_slice_null_src_returns_null_pointer),
+    cmocka_unit_test(test_uint16_slice_returns_correct_subrange),
+
+    /* Group 15: reverse_uint16_array */
+    cmocka_unit_test(test_uint16_reverse_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_reverse_reverses_elements),
+
+    /* Group 16: sort_uint16_array */
+    cmocka_unit_test(test_uint16_sort_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_sort_forward_basic),
+    cmocka_unit_test(test_uint16_sort_comparator_safe_near_max),
+
+    /* Group 17: uint16_array_contains */
+    cmocka_unit_test(test_uint16_contains_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_contains_finds_value),
+
+    /* Group 18: uint16_array_binary_search */
+    cmocka_unit_test(test_uint16_binary_search_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_binary_search_finds_value_with_sort),
+    cmocka_unit_test(test_uint16_binary_search_comparator_safe_near_max),
+
+    /* Group 19: uint16_array_binary_bracket */
+    cmocka_unit_test(test_uint16_binary_bracket_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint16_binary_bracket_exact_match),
+    cmocka_unit_test(test_uint16_binary_bracket_comparator_safe_near_max),
+
+    /* Group 20: uint16_array_size */
+    cmocka_unit_test(test_uint16_size_null_returns_zero),
+    cmocka_unit_test(test_uint16_size_reflects_push_count),
+
+    /* Group 21: uint16_array_alloc */
+    cmocka_unit_test(test_uint16_alloc_null_returns_zero),
+    cmocka_unit_test(test_uint16_alloc_matches_capacity),
+
+    /* Group 22: uint16_array_data_size */
+    cmocka_unit_test(test_uint16_data_size_null_returns_zero),
+    cmocka_unit_test(test_uint16_data_size_is_two),
+
+    /* Group 23: is_uint16_array_empty */
+    cmocka_unit_test(test_uint16_empty_null_returns_true),
+    cmocka_unit_test(test_uint16_empty_reflects_contents),
+
+    /* Group 24: is_uint16_array_full */
+    cmocka_unit_test(test_uint16_full_null_returns_true),
+    cmocka_unit_test(test_uint16_full_reflects_capacity),
+
+    /* Group 25: is_uint16_array_ptr */
+    cmocka_unit_test(test_uint16_is_ptr_null_array_returns_false),
+    cmocka_unit_test(test_uint16_is_ptr_valid_and_invalid),
+};
+
+const size_t test_uint16_array_count = sizeof(test_uint16_array) / sizeof(test_uint16_array[0]);
 // ================================================================================
 // ================================================================================
 // eof

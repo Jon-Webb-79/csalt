@@ -48,6 +48,7 @@ int main(void) {
         {"Types Implementation", test_dtypes, test_dtypes_count},
         {"Uint8 Array", test_uint8_array, test_uint8_array_count},
         {"Int8 Array", test_int8_array, test_int8_array_count},
+        {"Uint16 Array", test_uint16_array, test_uint16_array_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);
