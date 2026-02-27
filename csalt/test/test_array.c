@@ -32,7 +32,7 @@
 #include "c_int8.h"
 #include "c_uint16.h"
 #include "c_int16.h"
-
+#include "c_uint32.h"
 // ================================================================================
 // Group 1: init_uint8_array
 // ================================================================================
@@ -6404,6 +6404,937 @@ const struct CMUnitTest test_int16_array[] = {
     cmocka_unit_test(test_int16_is_ptr_valid_and_invalid),
 };
 const size_t test_int16_array_count = sizeof(test_int16_array) / sizeof(test_int16_array[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+// ================================================================================
+// Group 1: init_uint32_array
+// ================================================================================
+
+static void test_uint32_init_null_allocate_fn_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    uint32_array_expect_t r = init_uint32_array(8, false, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_init_returns_valid_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(8, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_int_equal((int)uint32_array_size(r.u.value), 0);
+    assert_int_equal((int)uint32_array_alloc(r.u.value), 8);
+    return_uint32_array(r.u.value);
+}
+
+// ================================================================================
+// Group 2: return_uint32_array
+// ================================================================================
+
+static void test_uint32_return_null_is_safe(void** state) {
+    (void)state;
+    return_uint32_array(NULL);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_return_valid_array_does_not_crash(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    return_uint32_array(r.u.value);
+}
+
+// ================================================================================
+// Group 3: push_back_uint32_array
+// ================================================================================
+
+static void test_uint32_push_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_back_uint32_array(NULL, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_push_back_appends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_uint32_array(arr, 1000), NO_ERROR);
+    assert_int_equal(push_back_uint32_array(arr, 2000), NO_ERROR);
+    assert_int_equal(push_back_uint32_array(arr, 3000), NO_ERROR);
+    assert_int_equal((int)uint32_array_size(arr), 3);
+
+    uint32_t val = 0;
+    get_uint32_array_index(arr, 0, &val);  assert_int_equal((int)val, 1000);
+    get_uint32_array_index(arr, 2, &val);  assert_int_equal((int)val, 3000);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 4: push_front_uint32_array
+// ================================================================================
+
+static void test_uint32_push_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_front_uint32_array(NULL, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_push_front_prepends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 2000);
+    push_front_uint32_array(arr, 1000);
+    /* arr is [1000, 2000] */
+
+    uint32_t val = 0;
+    get_uint32_array_index(arr, 0, &val);
+    assert_int_equal((int)val, 1000);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 5: push_at_uint32_array
+// ================================================================================
+
+static void test_uint32_push_at_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_at_uint32_array(NULL, 0, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_push_at_inserts_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 3000);
+    push_at_uint32_array(arr, 1, 2000);
+    /* arr is [1000, 2000, 3000] */
+
+    uint32_t val = 0;
+    get_uint32_array_index(arr, 1, &val);
+    assert_int_equal((int)val, 2000);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 6: get_uint32_array_index
+// ================================================================================
+
+static void test_uint32_get_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    uint32_t val = 0;
+    assert_int_equal(get_uint32_array_index(NULL, 0, &val), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_get_returns_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr,          0u);
+    push_back_uint32_array(arr, 2147483648u);
+    push_back_uint32_array(arr, 4294967295u);
+
+    uint32_t val = 0;
+    assert_int_equal(get_uint32_array_index(arr, 0, &val), NO_ERROR);
+    assert_true(val == 0u);
+    assert_int_equal(get_uint32_array_index(arr, 2, &val), NO_ERROR);
+    assert_true(val == 4294967295u);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 7: pop_back_uint32_array
+// ================================================================================
+
+static void test_uint32_pop_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_uint32_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_pop_back_removes_last_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+
+    uint32_t val = 0;
+    assert_int_equal(pop_back_uint32_array(arr, &val), NO_ERROR);
+    assert_int_equal((int)val, 2000);
+    assert_int_equal((int)uint32_array_size(arr), 1);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 8: pop_front_uint32_array
+// ================================================================================
+
+static void test_uint32_pop_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_uint32_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_pop_front_removes_first_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+
+    uint32_t val = 0;
+    assert_int_equal(pop_front_uint32_array(arr, &val), NO_ERROR);
+    assert_int_equal((int)val, 1000);
+    assert_int_equal((int)uint32_array_size(arr), 1);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 9: pop_any_uint32_array
+// ================================================================================
+
+static void test_uint32_pop_any_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_any_uint32_array(NULL, NULL, 0), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_pop_any_removes_element_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+    push_back_uint32_array(arr, 3000);
+
+    uint32_t val = 0;
+    assert_int_equal(pop_any_uint32_array(arr, &val, 1), NO_ERROR);
+    assert_int_equal((int)val, 2000);
+    assert_int_equal((int)uint32_array_size(arr), 2);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 10: clear_uint32_array
+// ================================================================================
+
+static void test_uint32_clear_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(clear_uint32_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_clear_resets_len_to_zero(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+    assert_int_equal(clear_uint32_array(arr), NO_ERROR);
+    assert_int_equal((int)uint32_array_size(arr), 0);
+    assert_int_equal((int)uint32_array_alloc(arr), 4);   /* capacity retained */
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 11: set_uint32_array_index
+// ================================================================================
+
+static void test_uint32_set_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_uint32_array_index(NULL, 0, 1), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_set_overwrites_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000u);
+    assert_int_equal(set_uint32_array_index(arr, 0, 4294967295u), NO_ERROR);
+
+    uint32_t val = 0;
+    get_uint32_array_index(arr, 0, &val);
+    assert_true(val == 4294967295u);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 12: copy_uint32_array
+// ================================================================================
+
+static void test_uint32_copy_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = copy_uint32_array(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_copy_produces_independent_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* src = r.u.value;
+
+    push_back_uint32_array(src, 1000);
+    push_back_uint32_array(src, 2000);
+
+    uint32_array_expect_t cr = copy_uint32_array(src, alloc);
+    assert_true(cr.has_value);
+    uint32_array_t* dst = cr.u.value;
+
+    set_uint32_array_index(src, 0, 999);
+    uint32_t val = 0;
+    get_uint32_array_index(dst, 0, &val);
+    assert_int_equal((int)val, 1000);
+
+    return_uint32_array(src);
+    return_uint32_array(dst);
+}
+
+// ================================================================================
+// Group 13: concat_uint32_array
+// ================================================================================
+
+static void test_uint32_concat_null_dst_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* src = r.u.value;
+    assert_int_equal(concat_uint32_array(NULL, src), NULL_POINTER);
+    return_uint32_array(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_concat_appends_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r1 = init_uint32_array(8, false, alloc);
+    uint32_array_expect_t r2 = init_uint32_array(4, false, alloc);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+    uint32_array_t* dst = r1.u.value;
+    uint32_array_t* src = r2.u.value;
+
+    push_back_uint32_array(dst, 1000);
+    push_back_uint32_array(src, 2000);
+
+    assert_int_equal(concat_uint32_array(dst, src), NO_ERROR);
+    assert_int_equal((int)uint32_array_size(dst), 2);
+
+    uint32_t val = 0;
+    get_uint32_array_index(dst, 1, &val);
+    assert_int_equal((int)val, 2000);
+
+    return_uint32_array(dst);
+    return_uint32_array(src);
+}
+
+// ================================================================================
+// Group 14: slice_uint32_array
+// ================================================================================
+
+static void test_uint32_slice_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = slice_uint32_array(NULL, 0, 1, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_slice_returns_correct_subrange(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* src = r.u.value;
+
+    push_back_uint32_array(src, 1000);
+    push_back_uint32_array(src, 2000);
+    push_back_uint32_array(src, 3000);
+    push_back_uint32_array(src, 4000);
+    push_back_uint32_array(src, 5000);
+
+    uint32_array_expect_t sr = slice_uint32_array(src, 1, 4, alloc);
+    assert_true(sr.has_value);
+    uint32_array_t* slc = sr.u.value;
+    assert_int_equal((int)uint32_array_size(slc), 3);
+
+    uint32_t val = 0;
+    get_uint32_array_index(slc, 0, &val);  assert_int_equal((int)val, 2000);
+    get_uint32_array_index(slc, 1, &val);  assert_int_equal((int)val, 3000);
+    get_uint32_array_index(slc, 2, &val);  assert_int_equal((int)val, 4000);
+
+    return_uint32_array(src);
+    return_uint32_array(slc);
+}
+
+// ================================================================================
+// Group 15: reverse_uint32_array
+// ================================================================================
+
+static void test_uint32_reverse_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(reverse_uint32_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_reverse_reverses_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+    push_back_uint32_array(arr, 3000);
+
+    assert_int_equal(reverse_uint32_array(arr), NO_ERROR);
+
+    uint32_t val = 0;
+    get_uint32_array_index(arr, 0, &val);  assert_int_equal((int)val, 3000);
+    get_uint32_array_index(arr, 2, &val);  assert_int_equal((int)val, 1000);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 16: sort_uint32_array
+// ================================================================================
+
+static void test_uint32_sort_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(sort_uint32_array(NULL, FORWARD), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_sort_forward_basic(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 3000);
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+
+    assert_int_equal(sort_uint32_array(arr, FORWARD), NO_ERROR);
+
+    uint32_t val = 0;
+    get_uint32_array_index(arr, 0, &val);  assert_int_equal((int)val, 1000);
+    get_uint32_array_index(arr, 1, &val);  assert_int_equal((int)val, 2000);
+    get_uint32_array_index(arr, 2, &val);  assert_int_equal((int)val, 3000);
+
+    return_uint32_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_sort_comparator_safe_near_max(void** state) {
+    (void)state;
+    /*
+     * A subtract-based comparator (int)(a - b) is broken for uint32_t: the
+     * difference (4294967295 - 1) = 4294967294, which overflows int on any
+     * platform where int is 32 bits, producing an undefined or wrong result.
+     * The three-way comparison (va > vb) - (va < vb) is always correct.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 4294967295u);
+    push_back_uint32_array(arr,          1u);
+    push_back_uint32_array(arr, 2147483648u);
+
+    assert_int_equal(sort_uint32_array(arr, FORWARD), NO_ERROR);
+
+    uint32_t val = 0;
+    get_uint32_array_index(arr, 0, &val);  assert_true(val ==          1u);
+    get_uint32_array_index(arr, 1, &val);  assert_true(val == 2147483648u);
+    get_uint32_array_index(arr, 2, &val);  assert_true(val == 4294967295u);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 17: uint32_array_contains
+// ================================================================================
+
+static void test_uint32_contains_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = uint32_array_contains(NULL, 0, 0, 1);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_contains_finds_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+    push_back_uint32_array(arr, 3000);
+
+    size_expect_t sr = uint32_array_contains(arr, 2000, 0, 3);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 18: uint32_array_binary_search
+// ================================================================================
+
+static void test_uint32_binary_search_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = uint32_array_binary_search(NULL, 0, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_binary_search_finds_value_with_sort(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 3000);
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+    push_back_uint32_array(arr, 4000);
+
+    /* sort == true: arr becomes [1000, 2000, 3000, 4000] */
+    size_expect_t sr = uint32_array_binary_search(arr, 3000, true);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 2);
+
+    return_uint32_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_binary_search_comparator_safe_near_max(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    /* Already sorted */
+    push_back_uint32_array(arr,          1u);
+    push_back_uint32_array(arr, 2147483648u);
+    push_back_uint32_array(arr, 4294967294u);
+    push_back_uint32_array(arr, 4294967295u);
+
+    size_expect_t sr = uint32_array_binary_search(arr, 4294967295u, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 3);
+
+    sr = uint32_array_binary_search(arr, 1u, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 19: uint32_array_binary_bracket
+// ================================================================================
+
+static void test_uint32_binary_bracket_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    bracket_expect_t r = uint32_array_binary_bracket(NULL, 0, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_binary_bracket_exact_match(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+    push_back_uint32_array(arr, 3000);
+    push_back_uint32_array(arr, 4000);
+
+    bracket_expect_t br = uint32_array_binary_bracket(arr, 2000, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 1);
+
+    return_uint32_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_binary_bracket_comparator_safe_near_max(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    /* [1, 2147483648u, 4294967295u] — gap between 2147483648u and 4294967295u */
+    push_back_uint32_array(arr,          1u);
+    push_back_uint32_array(arr, 2147483648u);
+    push_back_uint32_array(arr, 4294967295u);
+
+    /* 3000000000u falls in the gap */
+    bracket_expect_t br = uint32_array_binary_bracket(arr, 3000000000u, false);
+    assert_true(br.has_value);
+    /* lower = first element >= 3000000000u = index 2 (value 4294967295u) */
+    /* upper = last  element <= 3000000000u = index 1 (value 2147483648u) */
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 2);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 20: uint32_array_size
+// ================================================================================
+
+static void test_uint32_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)uint32_array_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_size_reflects_push_count(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    assert_int_equal((int)uint32_array_size(arr), 0);
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+    assert_int_equal((int)uint32_array_size(arr), 2);
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 21: uint32_array_alloc
+// ================================================================================
+
+static void test_uint32_alloc_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)uint32_array_alloc(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_alloc_matches_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(16, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)uint32_array_alloc(r.u.value), 16);
+    return_uint32_array(r.u.value);
+}
+
+// ================================================================================
+// Group 22: uint32_array_data_size
+// ================================================================================
+
+static void test_uint32_data_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)uint32_array_data_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_data_size_is_four(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)uint32_array_data_size(r.u.value), 4);
+    return_uint32_array(r.u.value);
+}
+
+// ================================================================================
+// Group 23: is_uint32_array_empty
+// ================================================================================
+
+static void test_uint32_empty_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_uint32_array_empty(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_empty_reflects_contents(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    assert_true(is_uint32_array_empty(arr));
+    push_back_uint32_array(arr, 1000);
+    assert_false(is_uint32_array_empty(arr));
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 24: is_uint32_array_full
+// ================================================================================
+
+static void test_uint32_full_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_uint32_array_full(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_full_reflects_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(2, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    assert_false(is_uint32_array_full(arr));
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+    assert_true(is_uint32_array_full(arr));
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Group 25: is_uint32_array_ptr
+// ================================================================================
+
+static void test_uint32_is_ptr_null_array_returns_false(void** state) {
+    (void)state;
+    uint32_t val = 0;
+    assert_false(is_uint32_array_ptr(NULL, &val));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_is_ptr_valid_and_invalid(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 1000);
+    push_back_uint32_array(arr, 2000);
+    push_back_uint32_array(arr, 3000);
+
+    const uint32_t* first = (const uint32_t*)arr->base.data;
+    const uint32_t* last  = first + 2;
+    const uint32_t* spare = first + 3;   /* beyond live region */
+
+    assert_true (is_uint32_array_ptr(arr, first));
+    assert_true (is_uint32_array_ptr(arr, last));
+    assert_false(is_uint32_array_ptr(arr, spare));
+    assert_false(is_uint32_array_ptr(arr, NULL));
+
+    return_uint32_array(arr);
+}
+
+// ================================================================================
+// Test runner
+// ================================================================================
+
+const struct CMUnitTest test_uint32_array[] = {
+
+    /* Group 1: init_uint32_array */
+    cmocka_unit_test(test_uint32_init_null_allocate_fn_fails),
+    cmocka_unit_test(test_uint32_init_returns_valid_array),
+
+    /* Group 2: return_uint32_array */
+    cmocka_unit_test(test_uint32_return_null_is_safe),
+    cmocka_unit_test(test_uint32_return_valid_array_does_not_crash),
+
+    /* Group 3: push_back_uint32_array */
+    cmocka_unit_test(test_uint32_push_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_push_back_appends_value),
+
+    /* Group 4: push_front_uint32_array */
+    cmocka_unit_test(test_uint32_push_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_push_front_prepends_value),
+
+    /* Group 5: push_at_uint32_array */
+    cmocka_unit_test(test_uint32_push_at_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_push_at_inserts_at_index),
+
+    /* Group 6: get_uint32_array_index */
+    cmocka_unit_test(test_uint32_get_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_get_returns_correct_value),
+
+    /* Group 7: pop_back_uint32_array */
+    cmocka_unit_test(test_uint32_pop_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_pop_back_removes_last_element),
+
+    /* Group 8: pop_front_uint32_array */
+    cmocka_unit_test(test_uint32_pop_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_pop_front_removes_first_element),
+
+    /* Group 9: pop_any_uint32_array */
+    cmocka_unit_test(test_uint32_pop_any_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_pop_any_removes_element_at_index),
+
+    /* Group 10: clear_uint32_array */
+    cmocka_unit_test(test_uint32_clear_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_clear_resets_len_to_zero),
+
+    /* Group 11: set_uint32_array_index */
+    cmocka_unit_test(test_uint32_set_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_set_overwrites_element),
+
+    /* Group 12: copy_uint32_array */
+    cmocka_unit_test(test_uint32_copy_null_src_returns_null_pointer),
+    cmocka_unit_test(test_uint32_copy_produces_independent_array),
+
+    /* Group 13: concat_uint32_array */
+    cmocka_unit_test(test_uint32_concat_null_dst_returns_null_pointer),
+    cmocka_unit_test(test_uint32_concat_appends_elements),
+
+    /* Group 14: slice_uint32_array */
+    cmocka_unit_test(test_uint32_slice_null_src_returns_null_pointer),
+    cmocka_unit_test(test_uint32_slice_returns_correct_subrange),
+
+    /* Group 15: reverse_uint32_array */
+    cmocka_unit_test(test_uint32_reverse_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_reverse_reverses_elements),
+
+    /* Group 16: sort_uint32_array */
+    cmocka_unit_test(test_uint32_sort_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_sort_forward_basic),
+    cmocka_unit_test(test_uint32_sort_comparator_safe_near_max),
+
+    /* Group 17: uint32_array_contains */
+    cmocka_unit_test(test_uint32_contains_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_contains_finds_value),
+
+    /* Group 18: uint32_array_binary_search */
+    cmocka_unit_test(test_uint32_binary_search_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_binary_search_finds_value_with_sort),
+    cmocka_unit_test(test_uint32_binary_search_comparator_safe_near_max),
+
+    /* Group 19: uint32_array_binary_bracket */
+    cmocka_unit_test(test_uint32_binary_bracket_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_binary_bracket_exact_match),
+    cmocka_unit_test(test_uint32_binary_bracket_comparator_safe_near_max),
+
+    /* Group 20: uint32_array_size */
+    cmocka_unit_test(test_uint32_size_null_returns_zero),
+    cmocka_unit_test(test_uint32_size_reflects_push_count),
+
+    /* Group 21: uint32_array_alloc */
+    cmocka_unit_test(test_uint32_alloc_null_returns_zero),
+    cmocka_unit_test(test_uint32_alloc_matches_capacity),
+
+    /* Group 22: uint32_array_data_size */
+    cmocka_unit_test(test_uint32_data_size_null_returns_zero),
+    cmocka_unit_test(test_uint32_data_size_is_four),
+
+    /* Group 23: is_uint32_array_empty */
+    cmocka_unit_test(test_uint32_empty_null_returns_true),
+    cmocka_unit_test(test_uint32_empty_reflects_contents),
+
+    /* Group 24: is_uint32_array_full */
+    cmocka_unit_test(test_uint32_full_null_returns_true),
+    cmocka_unit_test(test_uint32_full_reflects_capacity),
+
+    /* Group 25: is_uint32_array_ptr */
+    cmocka_unit_test(test_uint32_is_ptr_null_array_returns_false),
+    cmocka_unit_test(test_uint32_is_ptr_valid_and_invalid),
+};
+const size_t test_uint32_array_count = sizeof(test_uint32_array) / sizeof(test_uint32_array[0]);
 // ================================================================================
 // ================================================================================
 // eof
