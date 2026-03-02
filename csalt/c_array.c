@@ -896,6 +896,132 @@ bool is_array_ptr(const array_t* array, const void* ptr) {
     /* Verify the pointer falls on an element boundary */
     return ((size_t)(p - start) % array->data_size) == 0u;
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// array_min
+// ================================================================================
+
+size_expect_t array_min(const array_t* array,
+                        int          (*cmp)(const void*, const void*),
+                        dtype_id_t     dtype) {
+    if (array == NULL || cmp == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (dtype != array->dtype)
+        return (size_expect_t){ .has_value = false, .u.error = TYPE_MISMATCH };
+    if (array->len == 0u)
+        return (size_expect_t){ .has_value = false, .u.error = EMPTY };
+
+    size_t idx = simd_min_uint8(array->data, array->len, array->data_size, cmp);
+    return (size_expect_t){ .has_value = true, .u.value = idx };
+}
+
+// ================================================================================
+// array_max
+// ================================================================================
+
+size_expect_t array_max(const array_t* array,
+                        int          (*cmp)(const void*, const void*),
+                        dtype_id_t     dtype) {
+    if (array == NULL || cmp == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (dtype != array->dtype)
+        return (size_expect_t){ .has_value = false, .u.error = TYPE_MISMATCH };
+    if (array->len == 0u)
+        return (size_expect_t){ .has_value = false, .u.error = EMPTY };
+
+    size_t idx = simd_max_uint8(array->data, array->len, array->data_size, cmp);
+    return (size_expect_t){ .has_value = true, .u.value = idx };
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t array_sum(const array_t* array,
+                       void*          accum,
+                       void         (*add)(void* accum, const void* element),
+                       dtype_id_t     dtype) {
+    if (array == NULL || accum == NULL || add == NULL)
+        return NULL_POINTER;
+    if (dtype != array->dtype)
+        return TYPE_MISMATCH;
+    if (array->len == 0u)
+        return EMPTY;
+
+    simd_sum_uint8(array->data, array->len, array->data_size, accum, add);
+    return NO_ERROR;
+}
+
+// ================================================================================
+// cumulative_array
+// ================================================================================
+
+array_expect_t cumulative_array(const array_t*     src,
+                                void             (*add)(void* accum,
+                                                        const void* element),
+                                allocator_vtable_t alloc_v,
+                                dtype_id_t         dtype) {
+    if (src == NULL || add == NULL || alloc_v.allocate == NULL)
+        return (array_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (dtype != src->dtype)
+        return (array_expect_t){ .has_value = false, .u.error = TYPE_MISMATCH };
+    if (src->len == 0u)
+        return (array_expect_t){ .has_value = false, .u.error = EMPTY };
+
+    /* Allocate the output array_t struct */
+    void_ptr_expect_t struct_result = alloc_v.allocate(
+        alloc_v.ctx, sizeof(array_t), true
+    );
+    if (struct_result.has_value == false)
+        return (array_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
+
+    array_t* dst = (array_t*)struct_result.u.value;
+
+    /* Allocate the output data buffer sized exactly to src->len elements */
+    void_ptr_expect_t data_result = alloc_v.allocate(
+        alloc_v.ctx, src->len * src->data_size, false
+    );
+    if (data_result.has_value == false) {
+        alloc_v.return_element(alloc_v.ctx, dst);
+        return (array_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+    }
+
+    dst->data      = (uint8_t*)data_result.u.value;
+    dst->len       = src->len;
+    dst->alloc     = src->len;
+    dst->data_size = src->data_size;
+    dst->dtype     = src->dtype;
+    dst->growth    = false;   /* result is a fixed-length snapshot */
+    dst->alloc_v   = alloc_v;
+
+    /*
+     * Prefix-sum pass.
+     *
+     * result[0] = src[0]  (copy seed element verbatim — no identity required).
+     * result[i] = result[i-1] + src[i]  for i >= 1.
+     *
+     * We keep a pointer (accum_ptr) that always points to the most recently
+     * written output element. On each iteration we copy it into the next output
+     * slot first, then call add() in place so the output slot becomes the new
+     * running total. This avoids a separate stack buffer for the accumulator.
+     */
+    const size_t ds = src->data_size;
+
+    /* Seed: output[0] = input[0] */
+    memcpy(dst->data, src->data, ds);
+
+    for (size_t i = 1u; i < src->len; i++) {
+        uint8_t*       out_elem  = dst->data + i * ds;
+        const uint8_t* prev_elem = dst->data + (i - 1u) * ds;
+        const uint8_t* src_elem  = src->data + i * ds;
+
+        /* Copy previous cumulative value into current output slot */
+        memcpy(out_elem, prev_elem, ds);
+
+        /* Add current input element into the output slot in place */
+        add(out_elem, src_elem);
+    }
+
+    return (array_expect_t){ .has_value = true, .u.value = dst };
+}
 // ================================================================================
 // ================================================================================
 // eof

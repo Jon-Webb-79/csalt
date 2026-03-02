@@ -1122,6 +1122,124 @@ bool is_uint32_array_full(const uint32_array_t* array);
  * @endcode
  */
 bool is_uint32_array_ptr(const uint32_array_t* array, const uint32_t* ptr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the index of the minimum element in the array.
+ *
+ * Scans all elements using an unsigned 32-bit comparison and returns the index
+ * of the element with the smallest value. When two or more elements share the
+ * minimum value, the index of the first occurrence (lowest index) is returned,
+ * consistent with the behaviour of uint32_array_contains. The array is not
+ * modified. The scan dispatches to the best SIMD horizontal-reduction path
+ * available at compile time and falls back to a scalar loop on unsupported
+ * targets.
+ *
+ * @param array  Pointer to the array to scan. Must not be NULL and must
+ *               contain at least one element.
+ *
+ * @return size_expect_t with has_value true and u.value == index of the
+ *         minimum element on success. On failure, has_value is false and
+ *         u.error is one of:
+ *         - NULL_POINTER  if array is NULL
+ *         - EMPTY         if array->base.len == 0
+ *
+ * @code
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     uint32_array_expect_t result = init_uint32_array(8, false, alloc);
+ *     if (!result.has_value) { return; }
+ *     uint32_array_t* arr = result.u.value;
+ *
+ *     push_back_uint32_array(arr, 70000u);
+ *     push_back_uint32_array(arr, 10000u);
+ *     push_back_uint32_array(arr, 40000u);
+ *     // arr contains [70000, 10000, 40000].
+ *
+ *     size_expect_t r = uint32_array_min(arr);
+ *     // r.has_value == true, r.u.value == 1  (value 10000 is at index 1).
+ *
+ *     return_uint32_array(arr);
+ * @endcode
+ */
+size_expect_t uint32_array_min(const uint32_array_t* array);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Find the index of the maximum element in the array.
+ *
+ * Scans all elements using an unsigned 32-bit comparison and returns the index
+ * of the element with the largest value. When two or more elements share the
+ * maximum value, the index of the first occurrence (lowest index) is returned,
+ * consistent with the behaviour of uint32_array_contains. The array is not
+ * modified. The scan dispatches to the best SIMD horizontal-reduction path
+ * available at compile time and falls back to a scalar loop on unsupported
+ * targets.
+ *
+ * @param array  Pointer to the array to scan. Must not be NULL and must
+ *               contain at least one element.
+ *
+ * @return size_expect_t with has_value true and u.value == index of the
+ *         maximum element on success. On failure, has_value is false and
+ *         u.error is one of:
+ *         - NULL_POINTER  if array is NULL
+ *         - EMPTY         if array->base.len == 0
+ *
+ * @code
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     uint32_array_expect_t result = init_uint32_array(8, false, alloc);
+ *     if (!result.has_value) { return; }
+ *     uint32_array_t* arr = result.u.value;
+ *
+ *     push_back_uint32_array(arr, 70000u);
+ *     push_back_uint32_array(arr, 10000u);
+ *     push_back_uint32_array(arr, 40000u);
+ *     // arr contains [70000, 10000, 40000].
+ *
+ *     size_expect_t r = uint32_array_max(arr);
+ *     // r.has_value == true, r.u.value == 0  (value 70000 is at index 0).
+ *
+ *     return_uint32_array(arr);
+ * @endcode
+ */
+size_expect_t uint32_array_max(const uint32_array_t* array);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Sum all elements and return the result as a uint32_t.
+ *
+ * Iterates over every element and accumulates the total in a uint32_t. The
+ * inner loop dispatches to the best SIMD load path available at compile time.
+ *
+ * Overflow: the accumulator is a uint32_t. If the true sum exceeds UINT32_MAX
+ * the result wraps modulo 2^32. The caller is responsible for ensuring the
+ * array is small enough that overflow will not occur.
+ *
+ * @param array  Pointer to the array to sum. Must not be NULL.
+ *
+ * @return uint32_expect_t with has_value true and u.value == the sum on
+ *         success. On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER  if array is NULL
+ *         - EMPTY         if array->base.len == 0
+ *
+ * @code
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     uint32_array_expect_t result = init_uint32_array(8, false, alloc);
+ *     if (!result.has_value) { return; }
+ *     uint32_array_t* arr = result.u.value;
+ *
+ *     push_back_uint32_array(arr, 100000u);
+ *     push_back_uint32_array(arr, 200000u);
+ *     push_back_uint32_array(arr, 300000u);
+ *     // arr contains [100000, 200000, 300000].
+ *
+ *     uint32_expect_t r = uint32_array_sum(arr);
+ *     // r.has_value == true, r.u.value == 600000.
+ *
+ *     return_uint32_array(arr);
+ * @endcode
+ */
+uint32_expect_t uint32_array_sum(const uint32_array_t* array);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

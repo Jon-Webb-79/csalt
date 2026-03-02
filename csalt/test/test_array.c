@@ -8157,7 +8157,174 @@ static void test_int32_is_ptr_valid_and_invalid(void** state) {
 
     return_int32_array(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+// ================================================================================
+// Group 26: int32_array_min
+// ================================================================================
+
+static void test_int32_min_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = int32_array_min(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_min_returns_index_of_smallest(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_array_expect_t r = init_int32_array(8, false, alloc);
+    assert_true(r.has_value);
+    int32_array_t* arr = r.u.value;
+
+    push_back_int32_array(arr, 3000);
+    push_back_int32_array(arr, 1000);   /* minimum at index 1 */
+    push_back_int32_array(arr, 2000);
+    /* arr: [3000, 1000, 2000] */
+
+    size_expect_t result = int32_array_min(arr);
+    assert_true(result.has_value);
+    assert_int_equal((int)result.u.value, 1);
+
+    return_int32_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_min_negative_values_and_first_occurrence(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_array_expect_t r = init_int32_array(8, false, alloc);
+    assert_true(r.has_value);
+    int32_array_t* arr = r.u.value;
+
+    /* Span the full signed range; INT32_MIN is the minimum. */
+    push_back_int32_array(arr,         0);
+    push_back_int32_array(arr,  INT32_MAX);
+    push_back_int32_array(arr,  INT32_MIN);  /* minimum at index 2 */
+    push_back_int32_array(arr,        -1);
+    push_back_int32_array(arr,  INT32_MIN);  /* duplicate — first occurrence wins */
+    /* arr: [0, INT32_MAX, INT32_MIN, -1, INT32_MIN] */
+
+    size_expect_t result = int32_array_min(arr);
+    assert_true(result.has_value);
+    assert_int_equal((int)result.u.value, 2);  /* first INT32_MIN is at index 2 */
+
+    return_int32_array(arr);
+}
+
+// ================================================================================
+// Group 27: int32_array_max
+// ================================================================================
+
+static void test_int32_max_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = int32_array_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_max_returns_index_of_largest(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_array_expect_t r = init_int32_array(8, false, alloc);
+    assert_true(r.has_value);
+    int32_array_t* arr = r.u.value;
+
+    push_back_int32_array(arr, 2000);
+    push_back_int32_array(arr, 3000);   /* maximum at index 1 */
+    push_back_int32_array(arr, 1000);
+    /* arr: [2000, 3000, 1000] */
+
+    size_expect_t result = int32_array_max(arr);
+    assert_true(result.has_value);
+    assert_int_equal((int)result.u.value, 1);
+
+    return_int32_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_max_negative_values_and_first_occurrence(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_array_expect_t r = init_int32_array(8, false, alloc);
+    assert_true(r.has_value);
+    int32_array_t* arr = r.u.value;
+
+    /* Span the full signed range; INT32_MAX is the maximum. */
+    push_back_int32_array(arr,        -1);
+    push_back_int32_array(arr,  INT32_MIN);
+    push_back_int32_array(arr,  INT32_MAX);  /* maximum at index 2 */
+    push_back_int32_array(arr,         0);
+    push_back_int32_array(arr,  INT32_MAX);  /* duplicate — first occurrence wins */
+    /* arr: [-1, INT32_MIN, INT32_MAX, 0, INT32_MAX] */
+
+    size_expect_t result = int32_array_max(arr);
+    assert_true(result.has_value);
+    assert_int_equal((int)result.u.value, 2);  /* first INT32_MAX is at index 2 */
+
+    return_int32_array(arr);
+}
+
+// ================================================================================
+// Group 28: int32_array_sum
+// ================================================================================
+
+static void test_int32_sum_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    int32_expect_t r = int32_array_sum(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_sum_returns_correct_total(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_array_expect_t r = init_int32_array(8, false, alloc);
+    assert_true(r.has_value);
+    int32_array_t* arr = r.u.value;
+
+    push_back_int32_array(arr, 10000);
+    push_back_int32_array(arr, 20000);
+    push_back_int32_array(arr, 30000);
+    /* arr: [10000, 20000, 30000], sum == 60000 */
+
+    int32_expect_t result = int32_array_sum(arr);
+    assert_true(result.has_value);
+    assert_true(result.u.value == 60000);
+
+    return_int32_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_sum_mixed_signs_cancel(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_array_expect_t r = init_int32_array(8, false, alloc);
+    assert_true(r.has_value);
+    int32_array_t* arr = r.u.value;
+
+    /* Positive and negative values; sum should be zero. */
+    push_back_int32_array(arr,  100000);
+    push_back_int32_array(arr, -100000);
+    push_back_int32_array(arr,   50000);
+    push_back_int32_array(arr,  -50000);
+    /* arr: [100000, -100000, 50000, -50000], sum == 0 */
+
+    int32_expect_t result = int32_array_sum(arr);
+    assert_true(result.has_value);
+    assert_true(result.u.value == 0);
+
+    return_int32_array(arr);
+}
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -8266,6 +8433,20 @@ const struct CMUnitTest test_int32_array[] = {
     /* Group 25: is_int32_array_ptr */
     cmocka_unit_test(test_int32_is_ptr_null_array_returns_false),
     cmocka_unit_test(test_int32_is_ptr_valid_and_invalid),
+
+    cmocka_unit_test(test_int32_min_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int32_min_returns_index_of_smallest),
+    cmocka_unit_test(test_int32_min_negative_values_and_first_occurrence),
+
+    /* Group 27: int32_array_max */
+    cmocka_unit_test(test_int32_max_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int32_max_returns_index_of_largest),
+    cmocka_unit_test(test_int32_max_negative_values_and_first_occurrence),
+
+    /* Group 28: int32_array_sum */
+    cmocka_unit_test(test_int32_sum_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int32_sum_returns_correct_total),
+    cmocka_unit_test(test_int32_sum_mixed_signs_cancel),
 };
 const size_t test_int32_array_count = sizeof(test_int32_array) / sizeof(test_int32_array[0]);
 // ================================================================================

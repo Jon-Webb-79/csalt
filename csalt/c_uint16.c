@@ -263,6 +263,21 @@ bool is_uint16_array_ptr(const uint16_array_t* array, const uint16_t* ptr) {
     if (array == NULL) return false;
     return is_array_ptr(&array->base, ptr);
 }
+// -------------------------------------------------------------------------------- 
+
+size_expect_t uint16_array_min(const uint16_array_t* array) {
+    if (array == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    return array_min(&array->base, _cmp_uint16, UINT16_TYPE);
+}
+
+// --------------------------------------------------------------------------------
+
+size_expect_t uint16_array_max(const uint16_array_t* array) {
+    if (array == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    return array_max(&array->base, _cmp_uint16, UINT16_TYPE);
+}
 // ================================================================================
 // ================================================================================
 // eof

@@ -235,6 +235,22 @@ bool is_uint8_array_ptr(const uint8_array_t* array, const uint8_t* ptr) {
     if (array == NULL) return false;
     return is_array_ptr(&array->base, ptr);
 }
+// ================================================================================ 
+// ================================================================================ 
+
+size_expect_t uint8_array_min(const uint8_array_t* array) {
+    if (array == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    return array_min(&array->base, _cmp_uint8, UINT8_TYPE);
+}
+
+// --------------------------------------------------------------------------------
+
+size_expect_t uint8_array_max(const uint8_array_t* array) {
+    if (array == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    return array_max(&array->base, _cmp_uint8, UINT8_TYPE);
+}
 // ================================================================================
 // ================================================================================
 // eof

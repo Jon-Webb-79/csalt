@@ -1135,6 +1135,87 @@ bool is_int8_array_full(const int8_array_t* array);
  * @endcode
  */
 bool is_int8_array_ptr(const int8_array_t* array, const int8_t* ptr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the index of the minimum element in the array.
+ *
+ * Scans all elements using an unsigned byte comparison and returns the index
+ * of the element with the smallest value. When two or more elements share the
+ * minimum value, the index of the first occurrence (lowest index) is returned,
+ * consistent with the behaviour of int8_array_contains. The array is not
+ * modified. The scan dispatches to the best SIMD horizontal-reduction path
+ * available at compile time (AVX-512, AVX2, AVX, SSE4.1, SSSE3, SSE2, SVE2,
+ * SVE, NEON) and falls back to a scalar loop on unsupported targets.
+ *
+ * @param array  Pointer to the array to scan. Must not be NULL and must
+ *               contain at least one element.
+ *
+ * @return size_expect_t with has_value true and u.value == index of the
+ *         minimum element on success. On failure, has_value is false and
+ *         u.error is one of:
+ *         - NULL_POINTER  if array is NULL
+ *         - EMPTY         if array->base.len == 0
+ *
+ * @code
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     int8_array_expect_t result = init_int8_array(8, false, alloc);
+ *     if (!result.has_value) { return; }
+ *     int8_array_t* arr = result.u.value;
+ *
+ *     push_back_int8_array(arr, 50);
+ *     push_back_int8_array(arr, 10);
+ *     push_back_int8_array(arr, 30);
+ *     // arr contains [50, 10, 30].
+ *
+ *     size_expect_t r = int8_array_min(arr);
+ *     // r.has_value == true, r.u.value == 1  (value 10 is at index 1).
+ *
+ *     return_int8_array(arr);
+ * @endcode
+ */
+size_expect_t int8_array_min(const int8_array_t* array);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Find the index of the maximum element in the array.
+ *
+ * Scans all elements using an unsigned byte comparison and returns the index
+ * of the element with the largest value. When two or more elements share the
+ * maximum value, the index of the first occurrence (lowest index) is returned,
+ * consistent with the behaviour of int8_array_contains. The array is not
+ * modified. The scan dispatches to the best SIMD horizontal-reduction path
+ * available at compile time (AVX-512, AVX2, AVX, SSE4.1, SSSE3, SSE2, SVE2,
+ * SVE, NEON) and falls back to a scalar loop on unsupported targets.
+ *
+ * @param array  Pointer to the array to scan. Must not be NULL and must
+ *               contain at least one element.
+ *
+ * @return size_expect_t with has_value true and u.value == index of the
+ *         maximum element on success. On failure, has_value is false and
+ *         u.error is one of:
+ *         - NULL_POINTER  if array is NULL
+ *         - EMPTY         if array->base.len == 0
+ *
+ * @code
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     int8_array_expect_t result = init_int8_array(8, false, alloc);
+ *     if (!result.has_value) { return; }
+ *     int8_array_t* arr = result.u.value;
+ *
+ *     push_back_int8_array(arr, 50);
+ *     push_back_int8_array(arr, 10);
+ *     push_back_int8_array(arr, 30);
+ *     // arr contains [50, 10, 30].
+ *
+ *     size_expect_t r = int8_array_max(arr);
+ *     // r.has_value == true, r.u.value == 0  (value 50 is at index 0).
+ *
+ *     return_int8_array(arr);
+ * @endcode
+ */
+size_expect_t int8_array_max(const int8_array_t* array);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

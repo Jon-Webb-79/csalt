@@ -682,6 +682,202 @@ error_code_t sort_array(array_t* array,
  *         region, false otherwise (including when either argument is NULL).
  */
 bool is_array_ptr(const array_t* array, const void* ptr);
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// Reduction operations
+// ================================================================================
+
+/**
+ * @brief Find the index of the minimum element using a caller-supplied comparator.
+ *
+ * Scans all len elements and returns the index of the element for which cmp
+ * returns the most negative result against every other element. When two or
+ * more elements compare equal as the minimum, the index of the first one
+ * (lowest index) is returned, consistent with the behaviour of array_contains.
+ * The array is not modified.
+ *
+ * The comparator follows the qsort(3) convention:
+ *   - Returns < 0 if a should sort before b  (a is "smaller").
+ *   - Returns   0 if a and b are equal.
+ *   - Returns > 0 if a should sort after b   (a is "larger").
+ *
+ * The inner scan dispatches to a SIMD fast path for element sizes of 1, 2, 4,
+ * and 8 bytes when a compatible instruction set is detected at compile time.
+ * All other element sizes fall back to the scalar comparator loop.
+ *
+ * @param array  Pointer to the array to scan. Must not be NULL.
+ * @param cmp    Comparator function. Must not be NULL. Receives pointers to two
+ *               elements within the array's data buffer.
+ * @param dtype  Type identifier. Must match array->dtype.
+ *
+ * @return size_expect_t with has_value true and u.value == index of the minimum
+ *         element on success. On failure, has_value is false and u.error is:
+ *         - NULL_POINTER  if array or cmp is NULL
+ *         - TYPE_MISMATCH if dtype != array->dtype
+ *         - EMPTY         if array->len == 0
+ *
+ * @code
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     // Assume arr is a uint16_array_t already populated with [300, 100, 200].
+ *     // Use the typed wrapper min instead — this documents the generic layer.
+ *     static int cmp_u16(const void* a, const void* b) {
+ *         uint16_t va = *(const uint16_t*)a, vb = *(const uint16_t*)b;
+ *         return (va > vb) - (va < vb);
+ *     }
+ *     size_expect_t r = array_min(&arr->base, cmp_u16, UINT16_TYPE);
+ *     // r.has_value == true, r.u.value == 1  (value 100 is at index 1).
+ * @endcode
+ */
+size_expect_t array_min(const array_t* array,
+                        int          (*cmp)(const void*, const void*),
+                        dtype_id_t     dtype);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Find the index of the maximum element using a caller-supplied comparator.
+ *
+ * Scans all len elements and returns the index of the element for which cmp
+ * returns the most positive result against every other element. When two or
+ * more elements compare equal as the maximum, the index of the first one
+ * (lowest index) is returned, consistent with the behaviour of array_contains.
+ * The array is not modified.
+ *
+ * The comparator follows the qsort(3) convention:
+ *   - Returns < 0 if a should sort before b  (a is "smaller").
+ *   - Returns   0 if a and b are equal.
+ *   - Returns > 0 if a should sort after b   (a is "larger").
+ *
+ * The inner scan dispatches to a SIMD fast path for element sizes of 1, 2, 4,
+ * and 8 bytes when a compatible instruction set is detected at compile time.
+ * All other element sizes fall back to the scalar comparator loop.
+ *
+ * @param array  Pointer to the array to scan. Must not be NULL.
+ * @param cmp    Comparator function. Must not be NULL. Receives pointers to two
+ *               elements within the array's data buffer.
+ * @param dtype  Type identifier. Must match array->dtype.
+ *
+ * @return size_expect_t with has_value true and u.value == index of the maximum
+ *         element on success. On failure, has_value is false and u.error is:
+ *         - NULL_POINTER  if array or cmp is NULL
+ *         - TYPE_MISMATCH if dtype != array->dtype
+ *         - EMPTY         if array->len == 0
+ *
+ * @code
+ *     // Continuing the example above:
+ *     size_expect_t r = array_max(&arr->base, cmp_u16, UINT16_TYPE);
+ *     // r.has_value == true, r.u.value == 0  (value 300 is at index 0).
+ * @endcode
+ */
+size_expect_t array_max(const array_t* array,
+                        int          (*cmp)(const void*, const void*),
+                        dtype_id_t     dtype);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Accumulate all elements into a caller-provided buffer using add.
+ *
+ * Iterates over all len elements and calls add(accum, &element) once per
+ * element. The caller is responsible for:
+ *   1. Providing accum pointing to a buffer large enough to hold one element
+ *      of the type being accumulated (or a wider accumulator type if the add
+ *      function widens internally).
+ *   2. Initialising *accum to the identity value for the addition operation
+ *      (e.g. 0 for integer/float summation) before calling this function.
+ *   3. Reading the final result from *accum after the call returns.
+ *
+ * The add callback signature is:
+ *   void add(void* accum, const void* element)
+ * where accum points to the running total and element points to the current
+ * array element. Both pointers are guaranteed non-NULL during the callback.
+ *
+ * The inner loop dispatches to a SIMD fast path for element sizes of 1, 2, 4,
+ * and 8 bytes when a compatible instruction set is detected at compile time,
+ * using the SIMD path to load batches and then calling add on each loaded
+ * scalar. For all other element sizes the loop falls back to scalar iteration.
+ *
+ * @param array  Pointer to the array to sum. Must not be NULL.
+ * @param accum  Pointer to the accumulator buffer. Must not be NULL.
+ *               Must remain valid for the duration of the call.
+ * @param add    Callback that adds one element into *accum. Must not be NULL.
+ * @param dtype  Type identifier. Must match array->dtype.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER  if array, accum, or add is NULL
+ *         - TYPE_MISMATCH if dtype != array->dtype
+ *         - EMPTY         if array->len == 0
+ *
+ * @code
+ *     // Sum a uint16_array_t containing [100, 200, 300].
+ *     static void add_u16(void* accum, const void* elem) {
+ *         *(uint32_t*)accum += *(const uint16_t*)elem;
+ *     }
+ *     uint32_t total = 0;
+ *     array_sum(&arr->base, &total, add_u16, UINT16_TYPE);
+ *     // total == 600.
+ * @endcode
+ */
+error_code_t array_sum(const array_t* array,
+                       void*          accum,
+                       void         (*add)(void* accum, const void* element),
+                       dtype_id_t     dtype);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Allocate a new array holding the cumulative (prefix) sum of src.
+ *
+ * Allocates a new array_t of the same dtype and len as src and fills it so
+ * that result[i] = src[0] + src[1] + ... + src[i]. The result is computed
+ * using the caller-supplied add callback, which has the same signature as for
+ * array_sum. The caller is responsible for calling return_array on the
+ * returned array when it is no longer needed.
+ *
+ * The first element of the output is always a copy of src[0] regardless of
+ * any accumulator identity — the function does not require the caller to
+ * supply an identity element. Each subsequent output element is produced by
+ * calling add(out_ptr, src_ptr) where out_ptr points to the previous output
+ * element and src_ptr points to the current input element, then copying the
+ * updated accumulator into the output slot.
+ *
+ * @param src      Pointer to the input array. Must not be NULL.
+ * @param add      Callback that adds one element into an accumulator.
+ *                 Must not be NULL. The accumulator is always an element of
+ *                 the same type as src (not a wider type): add(accum, elem)
+ *                 where *accum is a src-typed value being updated in place.
+ * @param alloc_v  Allocator vtable for the new output array.
+ *                 alloc_v.allocate must not be NULL.
+ * @param dtype    Type identifier. Must match src->dtype.
+ *
+ * @return array_expect_t with has_value true and a valid array_t* on success.
+ *         The returned array has the same dtype, data_size, len, and alloc as
+ *         src, and growth is false (the result is a fixed-length snapshot).
+ *         On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER  if src, add, or alloc_v.allocate is NULL
+ *         - TYPE_MISMATCH if dtype != src->dtype
+ *         - EMPTY         if src->len == 0
+ *         - BAD_ALLOC     if the allocator fails to allocate the output struct
+ *         - OUT_OF_MEMORY if the allocator fails to allocate the output buffer
+ *
+ * @code
+ *     // Cumulative sum of a uint16_array_t containing [1, 2, 3, 4].
+ *     static void add_u16(void* accum, const void* elem) {
+ *         *(uint16_t*)accum += *(const uint16_t*)elem;
+ *     }
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     array_expect_t r = cumulative_array(&arr->base, add_u16, alloc, UINT16_TYPE);
+ *     // result contains [1, 3, 6, 10].
+ *     return_array(r.u.value);
+ * @endcode
+ */
+array_expect_t cumulative_array(const array_t*     src,
+                                void             (*add)(void* accum,
+                                                        const void* element),
+                                allocator_vtable_t alloc_v,
+                                dtype_id_t         dtype);
+
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

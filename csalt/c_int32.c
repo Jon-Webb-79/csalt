@@ -268,6 +268,36 @@ bool is_int32_array_ptr(const int32_array_t* array, const int32_t* ptr) {
     if (array == NULL) return false;
     return is_array_ptr(&array->base, ptr);
 }
+// -------------------------------------------------------------------------------- 
+
+size_expect_t int32_array_min(const int32_array_t* array) {
+    if (array == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    return array_min(&array->base, _cmp_int32, INT32_TYPE);
+}
+
+// --------------------------------------------------------------------------------
+
+size_expect_t int32_array_max(const int32_array_t* array) {
+    if (array == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    return array_max(&array->base, _cmp_int32, INT32_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+static void _add_int32(void* accum, const void* element) {
+    *(int32_t*)accum += *(const int32_t*)element;
+}
+
+int32_expect_t int32_array_sum(const int32_array_t* array) {
+    if (array == NULL)
+        return (int32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    int32_t total = 0;
+    error_code_t err = array_sum(&array->base, &total, _add_int32, INT32_TYPE);
+    if (err != NO_ERROR)
+        return (int32_expect_t){ .has_value = false, .u.error = err };
+    return (int32_expect_t){ .has_value = true, .u.value = total };
+}
 // ================================================================================
 // ================================================================================
 // eof
