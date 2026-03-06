@@ -268,18 +268,32 @@ bool is_int16_array_ptr(const int16_array_t* array, const int16_t* ptr) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_expect_t int16_array_min(const int16_array_t* array) {
+int16_expect_t int16_array_min(const int16_array_t* array) {
     if (array == NULL)
-        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    return array_min(&array->base, _cmp_int16, INT16_TYPE);
+        return (int16_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    size_expect_t idx = array_min(&array->base, _cmp_int16, INT16_TYPE);
+    if (!idx.has_value)
+        return (int16_expect_t){ .has_value = false, .u.error = idx.u.error };
+    int16_t val = 0;
+    error_code_t err = get_array_index(&array->base, idx.u.value, &val, INT16_TYPE);
+    if (err != NO_ERROR)
+        return (int16_expect_t){ .has_value = false, .u.error = err };
+    return (int16_expect_t){ .has_value = true, .u.value = val };
 }
 
 // --------------------------------------------------------------------------------
 
-size_expect_t int16_array_max(const int16_array_t* array) {
+int16_expect_t int16_array_max(const int16_array_t* array) {
     if (array == NULL)
-        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    return array_max(&array->base, _cmp_int16, INT16_TYPE);
+        return (int16_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    size_expect_t idx = array_max(&array->base, _cmp_int16, INT16_TYPE);
+    if (!idx.has_value)
+        return (int16_expect_t){ .has_value = false, .u.error = idx.u.error };
+    int16_t val = 0;
+    error_code_t err = get_array_index(&array->base, idx.u.value, &val, INT16_TYPE);
+    if (err != NO_ERROR)
+        return (int16_expect_t){ .has_value = false, .u.error = err };
+    return (int16_expect_t){ .has_value = true, .u.value = val };
 }
 // ================================================================================
 // ================================================================================

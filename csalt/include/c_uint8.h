@@ -1177,22 +1177,22 @@ bool is_uint8_array_ptr(const uint8_array_t* array, const uint8_t* ptr);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Find the index of the minimum element in the array.
+ * @brief Find the minimum value in the array.
  *
- * Scans all elements using an unsigned byte comparison and returns the index
- * of the element with the smallest value. When two or more elements share the
- * minimum value, the index of the first occurrence (lowest index) is returned,
- * consistent with the behaviour of uint8_array_contains. The array is not
- * modified. The scan dispatches to the best SIMD horizontal-reduction path
- * available at compile time (AVX-512, AVX2, AVX, SSE4.1, SSSE3, SSE2, SVE2,
- * SVE, NEON) and falls back to a scalar loop on unsupported targets.
+ * Scans all elements using an unsigned byte comparison and returns the
+ * smallest value found. When two or more elements share the minimum value
+ * the value of the first occurrence is returned, consistent with the
+ * behaviour of uint8_array_contains. The array is not modified. The scan
+ * dispatches to the best SIMD horizontal-reduction path available at compile
+ * time (AVX-512, AVX2, AVX, SSE4.1, SSSE3, SSE2, SVE2, SVE, NEON) and
+ * falls back to a scalar loop on unsupported targets.
  *
  * @param array  Pointer to the array to scan. Must not be NULL and must
  *               contain at least one element.
  *
- * @return size_expect_t with has_value true and u.value == index of the
- *         minimum element on success. On failure, has_value is false and
- *         u.error is one of:
+ * @return uint8_expect_t with has_value true and u.value == the minimum
+ *         element on success. On failure, has_value is false and u.error
+ *         is one of:
  *         - NULL_POINTER  if array is NULL
  *         - EMPTY         if array->base.len == 0
  *
@@ -1207,33 +1207,33 @@ bool is_uint8_array_ptr(const uint8_array_t* array, const uint8_t* ptr);
  *     push_back_uint8_array(arr, 30);
  *     // arr contains [50, 10, 30].
  *
- *     size_expect_t r = uint8_array_min(arr);
- *     // r.has_value == true, r.u.value == 1  (value 10 is at index 1).
+ *     uint8_expect_t r = uint8_array_min(arr);
+ *     // r.has_value == true, r.u.value == 10.
  *
  *     return_uint8_array(arr);
  * @endcode
  */
-size_expect_t uint8_array_min(const uint8_array_t* array);
+uint8_expect_t uint8_array_min(const uint8_array_t* array);
 
 // --------------------------------------------------------------------------------
 
 /**
- * @brief Find the index of the maximum element in the array.
+ * @brief Find the maximum value in the array.
  *
- * Scans all elements using an unsigned byte comparison and returns the index
- * of the element with the largest value. When two or more elements share the
- * maximum value, the index of the first occurrence (lowest index) is returned,
- * consistent with the behaviour of uint8_array_contains. The array is not
- * modified. The scan dispatches to the best SIMD horizontal-reduction path
- * available at compile time (AVX-512, AVX2, AVX, SSE4.1, SSSE3, SSE2, SVE2,
- * SVE, NEON) and falls back to a scalar loop on unsupported targets.
+ * Scans all elements using an unsigned byte comparison and returns the
+ * largest value found. When two or more elements share the maximum value
+ * the value of the first occurrence is returned, consistent with the
+ * behaviour of uint8_array_contains. The array is not modified. The scan
+ * dispatches to the best SIMD horizontal-reduction path available at compile
+ * time (AVX-512, AVX2, AVX, SSE4.1, SSSE3, SSE2, SVE2, SVE, NEON) and
+ * falls back to a scalar loop on unsupported targets.
  *
  * @param array  Pointer to the array to scan. Must not be NULL and must
  *               contain at least one element.
  *
- * @return size_expect_t with has_value true and u.value == index of the
- *         maximum element on success. On failure, has_value is false and
- *         u.error is one of:
+ * @return uint8_expect_t with has_value true and u.value == the maximum
+ *         element on success. On failure, has_value is false and u.error
+ *         is one of:
  *         - NULL_POINTER  if array is NULL
  *         - EMPTY         if array->base.len == 0
  *
@@ -1248,13 +1248,13 @@ size_expect_t uint8_array_min(const uint8_array_t* array);
  *     push_back_uint8_array(arr, 30);
  *     // arr contains [50, 10, 30].
  *
- *     size_expect_t r = uint8_array_max(arr);
- *     // r.has_value == true, r.u.value == 0  (value 50 is at index 0).
+ *     uint8_expect_t r = uint8_array_max(arr);
+ *     // r.has_value == true, r.u.value == 50.
  *
  *     return_uint8_array(arr);
  * @endcode
  */
-size_expect_t uint8_array_max(const uint8_array_t* array);
+uint8_expect_t uint8_array_max(const uint8_array_t* array);
 
 // ================================================================================ 
 // ================================================================================ 

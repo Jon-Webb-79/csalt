@@ -165,3 +165,7 @@ dereferencing it.
 .. doxygenfunction:: is_array_full
 
 .. doxygenfunction:: is_array_ptr
+
+.. doxygenfunction:: array_max 
+
+.. doxygenfunction:: array_min

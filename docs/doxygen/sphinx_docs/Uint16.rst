@@ -139,6 +139,10 @@ Introspection
 
 .. doxygenfunction:: is_uint16_array_ptr
 
+.. doxygenfunction:: uint16_array_max
+
+.. doxygenfunction:: uint16_array_min
+
 uint16_t Dictionary 
 ===================
 

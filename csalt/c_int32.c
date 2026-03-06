@@ -270,18 +270,32 @@ bool is_int32_array_ptr(const int32_array_t* array, const int32_t* ptr) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_expect_t int32_array_min(const int32_array_t* array) {
+int32_expect_t int32_array_min(const int32_array_t* array) {
     if (array == NULL)
-        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    return array_min(&array->base, _cmp_int32, INT32_TYPE);
+        return (int32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    size_expect_t idx = array_min(&array->base, _cmp_int32, INT32_TYPE);
+    if (!idx.has_value)
+        return (int32_expect_t){ .has_value = false, .u.error = idx.u.error };
+    int32_t val = 0;
+    error_code_t err = get_array_index(&array->base, idx.u.value, &val, INT32_TYPE);
+    if (err != NO_ERROR)
+        return (int32_expect_t){ .has_value = false, .u.error = err };
+    return (int32_expect_t){ .has_value = true, .u.value = val };
 }
 
 // --------------------------------------------------------------------------------
 
-size_expect_t int32_array_max(const int32_array_t* array) {
+int32_expect_t int32_array_max(const int32_array_t* array) {
     if (array == NULL)
-        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    return array_max(&array->base, _cmp_int32, INT32_TYPE);
+        return (int32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    size_expect_t idx = array_max(&array->base, _cmp_int32, INT32_TYPE);
+    if (!idx.has_value)
+        return (int32_expect_t){ .has_value = false, .u.error = idx.u.error };
+    int32_t val = 0;
+    error_code_t err = get_array_index(&array->base, idx.u.value, &val, INT32_TYPE);
+    if (err != NO_ERROR)
+        return (int32_expect_t){ .has_value = false, .u.error = err };
+    return (int32_expect_t){ .has_value = true, .u.value = val };
 }
 // -------------------------------------------------------------------------------- 
 

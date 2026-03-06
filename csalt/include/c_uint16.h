@@ -1125,22 +1125,21 @@ bool is_uint16_array_ptr(const uint16_array_t* array, const uint16_t* ptr);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Find the index of the minimum element in the array.
+ * @brief Find the minimum value in the array.
  *
- * Scans all elements using an unsigned 16-bit comparison and returns the index
- * of the element with the smallest value. When two or more elements share the
- * minimum value, the index of the first occurrence (lowest index) is returned,
- * consistent with the behaviour of uint16_array_contains. The array is not
- * modified. The scan dispatches to the best SIMD horizontal-reduction path
- * available at compile time and falls back to a scalar loop on unsupported
- * targets.
+ * Scans all elements using an unsigned 16-bit comparison and returns the
+ * smallest value found. When two or more elements share the minimum value the
+ * value of the first occurrence is returned, consistent with the behaviour of
+ * uint16_array_contains. The array is not modified. The scan dispatches to
+ * the best SIMD horizontal-reduction path available at compile time and falls
+ * back to a scalar loop on unsupported targets.
  *
  * @param array  Pointer to the array to scan. Must not be NULL and must
  *               contain at least one element.
  *
- * @return size_expect_t with has_value true and u.value == index of the
- *         minimum element on success. On failure, has_value is false and
- *         u.error is one of:
+ * @return uint16_expect_t with has_value true and u.value == the minimum
+ *         element on success. On failure, has_value is false and u.error
+ *         is one of:
  *         - NULL_POINTER  if array is NULL
  *         - EMPTY         if array->base.len == 0
  *
@@ -1155,54 +1154,41 @@ bool is_uint16_array_ptr(const uint16_array_t* array, const uint16_t* ptr);
  *     push_back_uint16_array(arr, 200);
  *     // arr contains [300, 100, 200].
  *
- *     size_expect_t r = uint16_array_min(arr);
- *     // r.has_value == true, r.u.value == 1  (value 100 is at index 1).
+ *     uint16_expect_t r = uint16_array_min(arr);
+ *     // r.has_value == true, r.u.value == 100.
  *
  *     return_uint16_array(arr);
  * @endcode
  */
-size_expect_t uint16_array_min(const uint16_array_t* array);
+uint16_expect_t uint16_array_min(const uint16_array_t* array);
 
 // --------------------------------------------------------------------------------
 
 /**
- * @brief Find the index of the maximum element in the array.
+ * @brief Find the maximum value in the array.
  *
- * Scans all elements using an unsigned 16-bit comparison and returns the index
- * of the element with the largest value. When two or more elements share the
- * maximum value, the index of the first occurrence (lowest index) is returned,
- * consistent with the behaviour of uint16_array_contains. The array is not
- * modified. The scan dispatches to the best SIMD horizontal-reduction path
- * available at compile time and falls back to a scalar loop on unsupported
- * targets.
+ * Scans all elements using an unsigned 16-bit comparison and returns the
+ * largest value found. When two or more elements share the maximum value the
+ * value of the first occurrence is returned, consistent with the behaviour of
+ * uint16_array_contains. The array is not modified. The scan dispatches to
+ * the best SIMD horizontal-reduction path available at compile time and falls
+ * back to a scalar loop on unsupported targets.
  *
  * @param array  Pointer to the array to scan. Must not be NULL and must
  *               contain at least one element.
  *
- * @return size_expect_t with has_value true and u.value == index of the
- *         maximum element on success. On failure, has_value is false and
- *         u.error is one of:
+ * @return uint16_expect_t with has_value true and u.value == the maximum
+ *         element on success. On failure, has_value is false and u.error
+ *         is one of:
  *         - NULL_POINTER  if array is NULL
  *         - EMPTY         if array->base.len == 0
  *
  * @code
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint16_array_expect_t result = init_uint16_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint16_array_t* arr = result.u.value;
- *
- *     push_back_uint16_array(arr, 300);
- *     push_back_uint16_array(arr, 100);
- *     push_back_uint16_array(arr, 200);
- *     // arr contains [300, 100, 200].
- *
- *     size_expect_t r = uint16_array_max(arr);
- *     // r.has_value == true, r.u.value == 0  (value 300 is at index 0).
- *
- *     return_uint16_array(arr);
+ *     uint16_expect_t r = uint16_array_max(arr);
+ *     // r.has_value == true, r.u.value == 300.
  * @endcode
  */
-size_expect_t uint16_array_max(const uint16_array_t* array);
+uint16_expect_t uint16_array_max(const uint16_array_t* array);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

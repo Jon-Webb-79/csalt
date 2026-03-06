@@ -139,6 +139,10 @@ Introspection
 
 .. doxygenfunction:: is_int8_array_ptr
 
+.. doxygenfunction:: int8_array_max
+
+.. doxygenfunction:: int8_array_min
+
 int8_t Dictionary 
 =================
 

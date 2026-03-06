@@ -259,18 +259,32 @@ bool is_int8_array_ptr(const int8_array_t* array, const int8_t* ptr) {
 }
 // -------------------------------------------------------------------------------- 
 
-size_expect_t int8_array_min(const int8_array_t* array) {
+int8_expect_t int8_array_min(const int8_array_t* array) {
     if (array == NULL)
-        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    return array_min(&array->base, _cmp_int8, INT8_TYPE);
+        return (int8_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    size_expect_t idx = array_min(&array->base, _cmp_int8, INT8_TYPE);
+    if (!idx.has_value)
+        return (int8_expect_t){ .has_value = false, .u.error = idx.u.error };
+    int8_t val = 0;
+    error_code_t err = get_array_index(&array->base, idx.u.value, &val, INT8_TYPE);
+    if (err != NO_ERROR)
+        return (int8_expect_t){ .has_value = false, .u.error = err };
+    return (int8_expect_t){ .has_value = true, .u.value = val };
 }
 
 // --------------------------------------------------------------------------------
 
-size_expect_t int8_array_max(const int8_array_t* array) {
+int8_expect_t int8_array_max(const int8_array_t* array) {
     if (array == NULL)
-        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    return array_max(&array->base, _cmp_int8, INT8_TYPE);
+        return (int8_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    size_expect_t idx = array_max(&array->base, _cmp_int8, INT8_TYPE);
+    if (!idx.has_value)
+        return (int8_expect_t){ .has_value = false, .u.error = idx.u.error };
+    int8_t val = 0;
+    error_code_t err = get_array_index(&array->base, idx.u.value, &val, INT8_TYPE);
+    if (err != NO_ERROR)
+        return (int8_expect_t){ .has_value = false, .u.error = err };
+    return (int8_expect_t){ .has_value = true, .u.value = val };
 }
 // ================================================================================
 // ================================================================================
