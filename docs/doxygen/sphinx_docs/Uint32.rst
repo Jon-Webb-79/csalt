@@ -72,6 +72,8 @@ Initialisation and Teardown
 
 .. doxygenfunction:: return_uint32_array
 
+.. doxygenfunction:: cumulative_uint32_array
+
 Push Operations
 ---------------
 

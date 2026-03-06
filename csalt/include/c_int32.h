@@ -1216,6 +1216,55 @@ int32_expect_t int32_array_max(const int32_array_t* array);
  * @endcode
  */
 int32_expect_t int32_array_sum(const int32_array_t* array);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compute the prefix sum of an int32 array into a new int32 array.
+ *
+ * Allocates a new int32_array_t of the same length as @p src and fills it
+ * with the inclusive prefix sum: output[0] == src[0], and output[i] ==
+ * output[i-1] + src[i] for every subsequent index. @p src is not modified.
+ *
+ * Overflow: each element is accumulated in an int32_t. If the running total
+ * exceeds INT32_MAX or falls below INT32_MIN it wraps with signed overflow.
+ * The caller is responsible for ensuring the values remain within range.
+ *
+ * The output array is owned by the caller and must be freed with
+ * return_int32_array when no longer needed.
+ *
+ * @param src    Source array to scan. Must not be NULL and must contain at
+ *               least one element.
+ * @param alloc  Allocator used for the output array.
+ *
+ * @return int32_array_expect_t with has_value true and u.value pointing to
+ *         the newly allocated output array on success. On failure, has_value
+ *         is false and u.error is one of:
+ *         - NULL_POINTER  if src is NULL
+ *         - EMPTY         if src contains no elements
+ *         - BAD_ALLOC     if the output struct allocation failed
+ *         - OUT_OF_MEMORY if the output data buffer allocation failed
+ *
+ * @code
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     int32_array_expect_t r = init_int32_array(8, false, alloc);
+ *     if (!r.has_value) { return; }
+ *     int32_array_t* src = r.u.value;
+ *
+ *     push_back_int32_array(src, 1000);
+ *     push_back_int32_array(src, 2000);
+ *     push_back_int32_array(src, 3000);
+ *     push_back_int32_array(src, 4000);
+ *     // src contains [1000, 2000, 3000, 4000].
+ *
+ *     int32_array_expect_t cr = cumulative_int32_array(src, alloc);
+ *     // cr.u.value contains [1000, 3000, 6000, 10000].
+ *
+ *     return_int32_array(src);
+ *     return_int32_array(cr.u.value);
+ * @endcode
+ */
+int32_array_expect_t cumulative_int32_array(const int32_array_t* src,
+                                            allocator_vtable_t   alloc);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

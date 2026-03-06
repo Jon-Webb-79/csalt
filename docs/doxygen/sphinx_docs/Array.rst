@@ -74,6 +74,8 @@ Initialisation and Teardown
 
 .. doxygenfunction:: return_array
 
+.. doxygenfunction:: cumulative_array 
+
 Push Operations
 ---------------
 
@@ -169,3 +171,5 @@ dereferencing it.
 .. doxygenfunction:: array_max 
 
 .. doxygenfunction:: array_min
+
+.. doxygenfunction:: array_sum

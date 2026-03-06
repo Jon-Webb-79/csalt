@@ -7225,7 +7225,70 @@ static void test_uint32_is_ptr_valid_and_invalid(void** state) {
 
     return_uint32_array(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+static void test_uint32_cumulative_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = cumulative_uint32_array(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_cumulative_produces_prefix_sum(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(8, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* src = r.u.value;
+
+    push_back_uint32_array(src, 1000u);
+    push_back_uint32_array(src, 2000u);
+    push_back_uint32_array(src, 3000u);
+    push_back_uint32_array(src, 4000u);
+    /* src: [1000, 2000, 3000, 4000]
+     * expected output: [1000, 3000, 6000, 10000] */
+
+    uint32_array_expect_t cr = cumulative_uint32_array(src, alloc);
+    assert_true(cr.has_value);
+    uint32_array_t* dst = cr.u.value;
+    assert_int_equal((int)uint32_array_size(dst), 4);
+
+    uint32_t val = 0;
+    get_uint32_array_index(dst, 0, &val);  assert_true(val ==  1000u);
+    get_uint32_array_index(dst, 1, &val);  assert_true(val ==  3000u);
+    get_uint32_array_index(dst, 2, &val);  assert_true(val ==  6000u);
+    get_uint32_array_index(dst, 3, &val);  assert_true(val == 10000u);
+
+    return_uint32_array(src);
+    return_uint32_array(dst);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_cumulative_single_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_array_expect_t r = init_uint32_array(4, false, alloc);
+    assert_true(r.has_value);
+    uint32_array_t* src = r.u.value;
+
+    push_back_uint32_array(src, 42000u);
+    /* src: [42000] — output must equal input verbatim */
+
+    uint32_array_expect_t cr = cumulative_uint32_array(src, alloc);
+    assert_true(cr.has_value);
+    uint32_array_t* dst = cr.u.value;
+    assert_int_equal((int)uint32_array_size(dst), 1);
+
+    uint32_t val = 0;
+    get_uint32_array_index(dst, 0, &val);  assert_true(val == 42000u);
+
+    return_uint32_array(src);
+    return_uint32_array(dst);
+}
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -7334,6 +7397,11 @@ const struct CMUnitTest test_uint32_array[] = {
     /* Group 25: is_uint32_array_ptr */
     cmocka_unit_test(test_uint32_is_ptr_null_array_returns_false),
     cmocka_unit_test(test_uint32_is_ptr_valid_and_invalid),
+
+    /* Group 26: cumulative_uint32_array */
+    cmocka_unit_test(test_uint32_cumulative_null_array_returns_null_pointer),
+    cmocka_unit_test(test_uint32_cumulative_produces_prefix_sum),
+    cmocka_unit_test(test_uint32_cumulative_single_element),
 };
 const size_t test_uint32_array_count = sizeof(test_uint32_array) / sizeof(test_uint32_array[0]);
 // ================================================================================ 
@@ -8323,6 +8391,78 @@ static void test_int32_sum_mixed_signs_cancel(void** state) {
 
     return_int32_array(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_int32_cumulative_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_array_expect_t r = cumulative_int32_array(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_cumulative_produces_prefix_sum(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_array_expect_t r = init_int32_array(8, false, alloc);
+    assert_true(r.has_value);
+    int32_array_t* src = r.u.value;
+
+    push_back_int32_array(src, 1000);
+    push_back_int32_array(src, 2000);
+    push_back_int32_array(src, 3000);
+    push_back_int32_array(src, 4000);
+    /* src: [1000, 2000, 3000, 4000]
+     * expected output: [1000, 3000, 6000, 10000] */
+
+    int32_array_expect_t cr = cumulative_int32_array(src, alloc);
+    assert_true(cr.has_value);
+    int32_array_t* dst = cr.u.value;
+    assert_int_equal((int)int32_array_size(dst), 4);
+
+    int32_t val = 0;
+    get_int32_array_index(dst, 0, &val);  assert_true(val ==  1000);
+    get_int32_array_index(dst, 1, &val);  assert_true(val ==  3000);
+    get_int32_array_index(dst, 2, &val);  assert_true(val ==  6000);
+    get_int32_array_index(dst, 3, &val);  assert_true(val == 10000);
+
+    return_int32_array(src);
+    return_int32_array(dst);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_cumulative_mixed_signs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_array_expect_t r = init_int32_array(8, false, alloc);
+    assert_true(r.has_value);
+    int32_array_t* src = r.u.value;
+
+    push_back_int32_array(src,  5000);
+    push_back_int32_array(src, -3000);
+    push_back_int32_array(src,  2000);
+    push_back_int32_array(src, -1000);
+    /* src: [5000, -3000, 2000, -1000]
+     * expected output: [5000, 2000, 4000, 3000] */
+
+    int32_array_expect_t cr = cumulative_int32_array(src, alloc);
+    assert_true(cr.has_value);
+    int32_array_t* dst = cr.u.value;
+    assert_int_equal((int)int32_array_size(dst), 4);
+
+    int32_t val = 0;
+    get_int32_array_index(dst, 0, &val);  assert_true(val == 5000);
+    get_int32_array_index(dst, 1, &val);  assert_true(val == 2000);
+    get_int32_array_index(dst, 2, &val);  assert_true(val == 4000);
+    get_int32_array_index(dst, 3, &val);  assert_true(val == 3000);
+
+    return_int32_array(src);
+    return_int32_array(dst);
+}
+
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -8445,6 +8585,11 @@ const struct CMUnitTest test_int32_array[] = {
     cmocka_unit_test(test_int32_sum_null_array_returns_null_pointer),
     cmocka_unit_test(test_int32_sum_returns_correct_total),
     cmocka_unit_test(test_int32_sum_mixed_signs_cancel), 
+
+    /* Group 29: cumulative_int32_array */
+    cmocka_unit_test(test_int32_cumulative_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int32_cumulative_produces_prefix_sum),
+    cmocka_unit_test(test_int32_cumulative_mixed_signs),
    };
 const size_t test_int32_array_count = sizeof(test_int32_array) / sizeof(test_int32_array[0]);
 // ================================================================================

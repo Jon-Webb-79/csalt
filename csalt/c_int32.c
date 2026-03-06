@@ -312,6 +312,18 @@ int32_expect_t int32_array_sum(const int32_array_t* array) {
         return (int32_expect_t){ .has_value = false, .u.error = err };
     return (int32_expect_t){ .has_value = true, .u.value = total };
 }
+// -------------------------------------------------------------------------------- 
+
+int32_array_expect_t cumulative_int32_array(const int32_array_t* src,
+                                            allocator_vtable_t   alloc) {
+    if (src == NULL)
+        return (int32_array_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    array_expect_t r = cumulative_array(&src->base, _add_int32, alloc, INT32_TYPE);
+    if (!r.has_value)
+        return (int32_array_expect_t){ .has_value = false, .u.error = r.u.error };
+    return (int32_array_expect_t){ .has_value = true,
+                                   .u.value   = (int32_array_t*)r.u.value };
+}
 // ================================================================================
 // ================================================================================
 // eof
