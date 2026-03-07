@@ -25,6 +25,7 @@
 #include <setjmp.h>
 #include <stdarg.h>
 #include <cmocka.h>
+#include <math.h>
 
 #include "c_allocator.h"
 #include "c_dtypes.h"
@@ -36,6 +37,7 @@
 #include "c_int32.h"
 #include "c_uint64.h"
 #include "c_int64.h"
+#include "c_float.h"
 // ================================================================================
 // Group 1: init_uint8_array
 // ================================================================================
@@ -10969,6 +10971,1557 @@ const struct CMUnitTest test_int64_array[] = {
     cmocka_unit_test(test_int64_cumulative_mixed_signs),
 };
 const size_t test_int64_array_count = sizeof(test_int64_array) / sizeof(test_int64_array[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+/* Tolerance-free equality for exact binary fractions used in tests. */
+#define ASSERT_FLOAT_EXACT(a, b) assert_true((a) == (b))
+
+// ================================================================================
+// Group 1: init_float_array
+// ================================================================================
+
+static void test_float_init_null_allocate_fn_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    float_array_expect_t r = init_float_array(8, false, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_init_returns_valid_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_int_equal((int)float_array_size(r.u.value), 0);
+    assert_int_equal((int)float_array_alloc(r.u.value), 8);
+    return_float_array(r.u.value);
+}
+
+// ================================================================================
+// Group 2: return_float_array
+// ================================================================================
+
+static void test_float_return_null_is_safe(void** state) {
+    (void)state;
+    return_float_array(NULL);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_return_valid_array_does_not_crash(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    return_float_array(r.u.value);
+}
+
+// ================================================================================
+// Group 3: push_back_float_array
+// ================================================================================
+
+static void test_float_push_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_back_float_array(NULL, 1.0f), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_push_back_appends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_float_array(arr, -1.0f), NO_ERROR);
+    assert_int_equal(push_back_float_array(arr,  0.0f), NO_ERROR);
+    assert_int_equal(push_back_float_array(arr,  1.0f), NO_ERROR);
+    assert_int_equal((int)float_array_size(arr), 3);
+
+    float val = 0.0f;
+    get_float_array_index(arr, 0, &val);  ASSERT_FLOAT_EXACT(val, -1.0f);
+    get_float_array_index(arr, 2, &val);  ASSERT_FLOAT_EXACT(val,  1.0f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 4: push_front_float_array
+// ================================================================================
+
+static void test_float_push_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_front_float_array(NULL, 1.0f), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_push_front_prepends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,  2.0f);
+    push_front_float_array(arr, 1.0f);
+    /* arr is [1.0, 2.0] */
+
+    float val = 0.0f;
+    get_float_array_index(arr, 0, &val);
+    ASSERT_FLOAT_EXACT(val, 1.0f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 5: push_at_float_array
+// ================================================================================
+
+static void test_float_push_at_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_at_float_array(NULL, 0, 1.0f), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_push_at_inserts_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 3.0f);
+    push_at_float_array(arr, 1, 2.0f);
+    /* arr is [1.0, 2.0, 3.0] */
+
+    float val = 0.0f;
+    get_float_array_index(arr, 1, &val);
+    ASSERT_FLOAT_EXACT(val, 2.0f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 6: get_float_array_index
+// ================================================================================
+
+static void test_float_get_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    float val = 0.0f;
+    assert_int_equal(get_float_array_index(NULL, 0, &val), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_get_returns_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, -1.5f);
+    push_back_float_array(arr,  0.0f);
+    push_back_float_array(arr,  1.5f);
+
+    float val = 0.0f;
+    assert_int_equal(get_float_array_index(arr, 0, &val), NO_ERROR);
+    ASSERT_FLOAT_EXACT(val, -1.5f);
+    assert_int_equal(get_float_array_index(arr, 2, &val), NO_ERROR);
+    ASSERT_FLOAT_EXACT(val,  1.5f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 7: pop_back_float_array
+// ================================================================================
+
+static void test_float_pop_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_float_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_pop_back_removes_last_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+
+    float val = 0.0f;
+    assert_int_equal(pop_back_float_array(arr, &val), NO_ERROR);
+    ASSERT_FLOAT_EXACT(val, 2.0f);
+    assert_int_equal((int)float_array_size(arr), 1);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 8: pop_front_float_array
+// ================================================================================
+
+static void test_float_pop_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_float_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_pop_front_removes_first_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+
+    float val = 0.0f;
+    assert_int_equal(pop_front_float_array(arr, &val), NO_ERROR);
+    ASSERT_FLOAT_EXACT(val, 1.0f);
+    assert_int_equal((int)float_array_size(arr), 1);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 9: pop_any_float_array
+// ================================================================================
+
+static void test_float_pop_any_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_any_float_array(NULL, NULL, 0), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_pop_any_removes_element_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+    push_back_float_array(arr, 3.0f);
+
+    float val = 0.0f;
+    assert_int_equal(pop_any_float_array(arr, &val, 1), NO_ERROR);
+    ASSERT_FLOAT_EXACT(val, 2.0f);
+    assert_int_equal((int)float_array_size(arr), 2);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 10: clear_float_array
+// ================================================================================
+
+static void test_float_clear_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(clear_float_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_clear_resets_len_to_zero(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+    assert_int_equal(clear_float_array(arr), NO_ERROR);
+    assert_int_equal((int)float_array_size(arr), 0);
+    assert_int_equal((int)float_array_alloc(arr), 4);   /* capacity retained */
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 11: set_float_array_index
+// ================================================================================
+
+static void test_float_set_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_float_array_index(NULL, 0, 1.0f), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_set_overwrites_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 1.0f);
+    assert_int_equal(set_float_array_index(arr, 0, -99.5f), NO_ERROR);
+
+    float val = 0.0f;
+    get_float_array_index(arr, 0, &val);
+    ASSERT_FLOAT_EXACT(val, -99.5f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 12: copy_float_array
+// ================================================================================
+
+static void test_float_copy_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = copy_float_array(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_copy_produces_independent_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* src = r.u.value;
+
+    push_back_float_array(src, 1.0f);
+    push_back_float_array(src, 2.0f);
+
+    float_array_expect_t cr = copy_float_array(src, alloc);
+    assert_true(cr.has_value);
+    float_array_t* dst = cr.u.value;
+
+    /* Mutating src must not affect the copy */
+    set_float_array_index(src, 0, 999.0f);
+    float val = 0.0f;
+    get_float_array_index(dst, 0, &val);
+    ASSERT_FLOAT_EXACT(val, 1.0f);
+
+    return_float_array(src);
+    return_float_array(dst);
+}
+
+// ================================================================================
+// Group 13: concat_float_array
+// ================================================================================
+
+static void test_float_concat_null_dst_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* src = r.u.value;
+    assert_int_equal(concat_float_array(NULL, src), NULL_POINTER);
+    return_float_array(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_concat_appends_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r1 = init_float_array(8, false, alloc);
+    float_array_expect_t r2 = init_float_array(4, false, alloc);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+    float_array_t* dst = r1.u.value;
+    float_array_t* src = r2.u.value;
+
+    push_back_float_array(dst, 1.0f);
+    push_back_float_array(src, 2.0f);
+
+    assert_int_equal(concat_float_array(dst, src), NO_ERROR);
+    assert_int_equal((int)float_array_size(dst), 2);
+
+    float val = 0.0f;
+    get_float_array_index(dst, 1, &val);
+    ASSERT_FLOAT_EXACT(val, 2.0f);
+
+    return_float_array(dst);
+    return_float_array(src);
+}
+
+// ================================================================================
+// Group 14: slice_float_array
+// ================================================================================
+
+static void test_float_slice_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = slice_float_array(NULL, 0, 1, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_slice_returns_correct_subrange(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* src = r.u.value;
+
+    push_back_float_array(src, 1.0f);
+    push_back_float_array(src, 2.0f);
+    push_back_float_array(src, 3.0f);
+    push_back_float_array(src, 4.0f);
+    push_back_float_array(src, 5.0f);
+
+    float_array_expect_t sr = slice_float_array(src, 1, 4, alloc);
+    assert_true(sr.has_value);
+    float_array_t* slc = sr.u.value;
+    assert_int_equal((int)float_array_size(slc), 3);
+
+    float val = 0.0f;
+    get_float_array_index(slc, 0, &val);  ASSERT_FLOAT_EXACT(val, 2.0f);
+    get_float_array_index(slc, 1, &val);  ASSERT_FLOAT_EXACT(val, 3.0f);
+    get_float_array_index(slc, 2, &val);  ASSERT_FLOAT_EXACT(val, 4.0f);
+
+    return_float_array(src);
+    return_float_array(slc);
+}
+
+// ================================================================================
+// Group 15: reverse_float_array
+// ================================================================================
+
+static void test_float_reverse_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(reverse_float_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_reverse_reverses_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+    push_back_float_array(arr, 3.0f);
+
+    assert_int_equal(reverse_float_array(arr), NO_ERROR);
+
+    float val = 0.0f;
+    get_float_array_index(arr, 0, &val);  ASSERT_FLOAT_EXACT(val, 3.0f);
+    get_float_array_index(arr, 2, &val);  ASSERT_FLOAT_EXACT(val, 1.0f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 16: sort_float_array
+// ================================================================================
+
+static void test_float_sort_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(sort_float_array(NULL, FORWARD), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_sort_forward_basic(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,  3.0f);
+    push_back_float_array(arr, -1.5f);
+    push_back_float_array(arr,  2.5f);
+
+    assert_int_equal(sort_float_array(arr, FORWARD), NO_ERROR);
+
+    float val = 0.0f;
+    get_float_array_index(arr, 0, &val);  ASSERT_FLOAT_EXACT(val, -1.5f);
+    get_float_array_index(arr, 1, &val);  ASSERT_FLOAT_EXACT(val,  2.5f);
+    get_float_array_index(arr, 2, &val);  ASSERT_FLOAT_EXACT(val,  3.0f);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_sort_negative_values_and_infinity(void** state) {
+    (void)state;
+    /*
+     * IEEE 754 total order for finite floats and infinities:
+     *   -INFINITY < negative finite values < 0.0 < positive finite values < INFINITY
+     *
+     * The three-way comparator (va > vb) - (va < vb) handles infinities
+     * correctly because the relational operators are defined for infinities
+     * by IEEE 754.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,  1.0f);
+    push_back_float_array(arr, -INFINITY);
+    push_back_float_array(arr, -1.0f);
+    push_back_float_array(arr,  INFINITY);
+    push_back_float_array(arr,  0.0f);
+
+    assert_int_equal(sort_float_array(arr, FORWARD), NO_ERROR);
+
+    float val = 0.0f;
+    get_float_array_index(arr, 0, &val);  assert_true(isinf(val) && val < 0.0f);
+    get_float_array_index(arr, 1, &val);  ASSERT_FLOAT_EXACT(val, -1.0f);
+    get_float_array_index(arr, 2, &val);  ASSERT_FLOAT_EXACT(val,  0.0f);
+    get_float_array_index(arr, 3, &val);  ASSERT_FLOAT_EXACT(val,  1.0f);
+    get_float_array_index(arr, 4, &val);  assert_true(isinf(val) && val > 0.0f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 17: float_array_contains
+// ================================================================================
+
+static void test_float_contains_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = float_array_contains(NULL, 0.0f, 0, 1, 0.0f, 0.0f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_contains_negative_tolerance_returns_invalid_arg(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+    push_back_float_array(arr, 1.0f);
+
+    size_expect_t sr = float_array_contains(arr, 1.0f, 0, 1, -0.1f, 0.0f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, INVALID_ARG);
+
+    sr = float_array_contains(arr, 1.0f, 0, 1, 0.0f, -0.1f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, INVALID_ARG);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_contains_exact_mode_finds_value(void** state) {
+    (void)state;
+    /*
+     * Exact mode (both tolerances 0.0f): bitwise equality.
+     * -0.0f and +0.0f have different bit patterns so they do NOT match.
+     * NaN != NaN so a stored NaN is never found.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, -1.0f);
+    push_back_float_array(arr,  2.5f);
+    push_back_float_array(arr, -3.0f);
+    push_back_float_array(arr,  0.0f);  /* +0.0f */
+
+    /* Value present — found at correct index. */
+    size_expect_t sr = float_array_contains(arr, 2.5f, 0, 4, 0.0f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    /* Searching for -0.0f must NOT find +0.0f at index 3. */
+    sr = float_array_contains(arr, -0.0f, 0, 4, 0.0f, 0.0f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    /* Searching for +0.0f must find it at index 3. */
+    sr = float_array_contains(arr, 0.0f, 0, 4, 0.0f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 3);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_contains_absolute_tolerance(void** state) {
+    (void)state;
+    /*
+     * Absolute mode (rel_tol == 0.0f): match when |element - needle| <= abs_tol.
+     * arr: [0.0, 1.0, 2.0, 3.0]
+     * Searching for 1.05 with abs_tol 0.1 should find index 1 (|1.0 - 1.05| = 0.05).
+     * Searching for 1.5  with abs_tol 0.1 should NOT find anything (gap is 0.5).
+     * -0.0f and +0.0f now match each other because |(-0.0f) - 0.0f| = 0.0 <= tol.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 0.0f);
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+    push_back_float_array(arr, 3.0f);
+
+    size_expect_t sr = float_array_contains(arr, 1.05f, 0, 4, 0.1f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    sr = float_array_contains(arr, 1.5f, 0, 4, 0.1f, 0.0f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    /* -0.0f vs +0.0f: diff == 0.0 <= abs_tol, so they match in tolerance mode. */
+    sr = float_array_contains(arr, -0.0f, 0, 1, 1e-9f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_contains_relative_tolerance(void** state) {
+    (void)state;
+    /*
+     * Relative mode (abs_tol == 0.0f): match when
+     *   |element - needle| <= rel_tol * max(|element|, |needle|).
+     *
+     * arr: [100.0, 1000.0, 10000.0]
+     * rel_tol 0.01 (1%):
+     *   needle 1005.0 vs 1000.0: |diff|=5, threshold=0.01*max(1000,1005)=10.05 — match
+     *   needle  110.0 vs  100.0: |diff|=10, threshold=0.01*max(100,110)=1.1    — no match
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,   100.0f);
+    push_back_float_array(arr,  1000.0f);
+    push_back_float_array(arr, 10000.0f);
+
+    size_expect_t sr = float_array_contains(arr, 1005.0f, 0, 3, 0.0f, 0.01f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    sr = float_array_contains(arr, 110.0f, 0, 3, 0.0f, 0.01f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_contains_combined_tolerance(void** state) {
+    (void)state;
+    /*
+     * Combined mode (both > 0.0f): threshold = max(abs_tol, rel_tol * max(|e|,|n|)).
+     *
+     * This ensures abs_tol acts as a floor near zero where pure relative
+     * tolerance collapses.
+     *
+     * arr: [0.0, 1000.0]
+     * needle = 0.0, abs_tol = 1e-4, rel_tol = 0.01
+     *   For element 0.0:   diff=0, threshold=max(1e-4, 0.01*0)=1e-4 — match
+     *   For element 1000:  diff=1000, threshold=max(1e-4, 0.01*1000)=10 — no match
+     *
+     * Confirm abs_tol floor: needle = 1e-7 (tiny), abs_tol = 1e-4
+     *   element 0.0: diff=1e-7, threshold >= 1e-4 — match (abs_tol rescues near zero)
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,    0.0f);
+    push_back_float_array(arr, 1000.0f);
+
+    /* Combined — element 0.0 matches needle 0.0 */
+    size_expect_t sr = float_array_contains(arr, 0.0f, 0, 2, 1e-4f, 0.01f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    /* abs_tol floor: needle 1e-7 is within abs_tol of element 0.0 */
+    sr = float_array_contains(arr, 1e-7f, 0, 1, 1e-4f, 0.01f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    /* Pure relative alone would miss this — confirm abs_tol is doing the work */
+    sr = float_array_contains(arr, 1e-7f, 0, 1, 0.0f, 0.01f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    return_float_array(arr);
+}
+
+
+// ================================================================================
+// Group 18: float_array_binary_search
+// ================================================================================
+
+static void test_float_binary_search_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = float_array_binary_search(NULL, 0.0f, false, 0.0f, 0.0f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_binary_search_negative_tolerance_returns_invalid_arg(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+    push_back_float_array(arr, 1.0f);
+
+    size_expect_t sr = float_array_binary_search(arr, 1.0f, false, -0.1f, 0.0f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, INVALID_ARG);
+
+    sr = float_array_binary_search(arr, 1.0f, false, 0.0f, -0.1f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, INVALID_ARG);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_binary_search_exact_finds_value_with_sort(void** state) {
+    (void)state;
+    /*
+     * Exact mode (both tolerances 0.0f): confirms the sort path and that the
+     * first occurrence of a duplicate is returned.
+     * arr (unsorted): [3.0, -1.5, 2.5, 2.5, 4.0]
+     * After sort:     [-1.5, 2.5, 2.5, 3.0, 4.0]
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,  3.0f);
+    push_back_float_array(arr, -1.5f);
+    push_back_float_array(arr,  2.5f);
+    push_back_float_array(arr,  2.5f);
+    push_back_float_array(arr,  4.0f);
+
+    size_expect_t sr = float_array_binary_search(arr, 2.5f, true, 0.0f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);   /* first of the two 2.5 entries */
+
+    sr = float_array_binary_search(arr, 99.0f, false, 0.0f, 0.0f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_binary_search_exact_negative_and_infinity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    /* Already sorted: [-INFINITY, -1.0, 0.0, 1.0, INFINITY] */
+    push_back_float_array(arr, -INFINITY);
+    push_back_float_array(arr,    -1.0f);
+    push_back_float_array(arr,     0.0f);
+    push_back_float_array(arr,     1.0f);
+    push_back_float_array(arr,  INFINITY);
+
+    size_expect_t sr = float_array_binary_search(arr, -INFINITY, false, 0.0f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    sr = float_array_binary_search(arr, INFINITY, false, 0.0f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 4);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_binary_search_absolute_tolerance(void** state) {
+    (void)state;
+    /*
+     * Absolute tolerance: match when |element - needle| <= abs_tol.
+     *
+     * arr (sorted): [0.0, 1.0, 2.0, 3.0, 4.0]
+     *
+     * needle=1.3, abs_tol=0.5: elements 1.0 (diff=0.3) and 2.0 (diff=0.7)
+     *   — only 1.0 qualifies; first (lowest) match is index 1.
+     *
+     * needle=1.5, abs_tol=0.5: elements 1.0 (diff=0.5) and 2.0 (diff=0.5)
+     *   — both qualify; lowest index is 1.
+     *
+     * needle=5.0, abs_tol=0.1: nothing within range → NOT_FOUND.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 0.0f);
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+    push_back_float_array(arr, 3.0f);
+    push_back_float_array(arr, 4.0f);
+
+    size_expect_t sr = float_array_binary_search(arr, 1.3f, false, 0.5f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    sr = float_array_binary_search(arr, 1.5f, false, 0.5f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    sr = float_array_binary_search(arr, 5.0f, false, 0.1f, 0.0f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_binary_search_relative_tolerance(void** state) {
+    (void)state;
+    /*
+     * Relative tolerance: match when |element - needle| <=
+     *   rel_tol * max(|element|, |needle|).
+     *
+     * arr (sorted): [100.0, 1000.0, 10000.0]
+     * rel_tol = 0.01 (1%):
+     *   needle=1005.0: threshold = 0.01 * max(1000, 1005) = 10.05
+     *     1000.0: diff=5   <= 10.05 → match at index 1
+     *   needle=115.0:  threshold = 0.01 * max(100, 115)  = 1.15
+     *     100.0:  diff=15  >  1.15  → no match → NOT_FOUND
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,   100.0f);
+    push_back_float_array(arr,  1000.0f);
+    push_back_float_array(arr, 10000.0f);
+
+    size_expect_t sr = float_array_binary_search(arr, 1005.0f, false, 0.0f, 0.01f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    sr = float_array_binary_search(arr, 115.0f, false, 0.0f, 0.01f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_binary_search_combined_tolerance(void** state) {
+    (void)state;
+    /*
+     * Combined tolerance: threshold = max(abs_tol,
+     *                                     rel_tol * max(|element|, |needle|)).
+     * abs_tol acts as a floor so the threshold doesn't collapse near zero.
+     *
+     * arr (sorted): [0.0, 0.001, 1000.0]
+     * abs_tol=1e-3, rel_tol=0.01:
+     *   needle=0.0: threshold = max(1e-3, 0.01*0) = 1e-3
+     *     0.0:   diff=0    <= 1e-3 → match at index 0
+     *     0.001: diff=1e-3 <= 1e-3 → also within tolerance; lowest is index 0
+     *
+     * needle=1e-6 (tiny): threshold >= abs_tol=1e-3 (floor saves near zero)
+     *     0.0:   diff=1e-6 <= 1e-3 → match at index 0
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,    0.0f);
+    push_back_float_array(arr,    0.001f);
+    push_back_float_array(arr, 1000.0f);
+
+    size_expect_t sr = float_array_binary_search(arr, 0.0f, false, 1e-3f, 0.01f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    sr = float_array_binary_search(arr, 1e-6f, false, 1e-3f, 0.01f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_binary_search_fanout_lands_between_values(void** state) {
+    (void)state;
+    /*
+     * The bisection may land at a position where no exact match exists but a
+     * tolerant match is nearby.  This test places needle between two elements
+     * that are both within abs_tol, verifying the fan-out finds the lower one.
+     *
+     * arr (sorted): [1.0, 2.0, 3.0, 4.0]
+     * needle=2.4, abs_tol=0.5:
+     *   bisection lands at index 2 (3.0), diff=0.6 > 0.5 — no exact match
+     *   fan-out left: index 1 (2.0), diff=0.4 <= 0.5 → match, best=1
+     *                 index 0 (1.0), diff=1.4 >  0.5 → stop
+     *   lowest match is index 1.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+    push_back_float_array(arr, 3.0f);
+    push_back_float_array(arr, 4.0f);
+
+    size_expect_t sr = float_array_binary_search(arr, 2.4f, false, 0.5f, 0.0f);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    /* needle far outside range → NOT_FOUND even with generous tolerance */
+    sr = float_array_binary_search(arr, 100.0f, false, 0.5f, 0.0f);
+    assert_false(sr.has_value);
+    assert_int_equal(sr.u.error, NOT_FOUND);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 19: float_array_binary_bracket
+// ================================================================================
+
+static void test_float_binary_bracket_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    bracket_expect_t r = float_array_binary_bracket(NULL, 0.0f, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_binary_bracket_exact_match(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, -2.0f);
+    push_back_float_array(arr, -1.0f);
+    push_back_float_array(arr,  1.0f);
+    push_back_float_array(arr,  2.0f);
+
+    bracket_expect_t br = float_array_binary_bracket(arr, -1.0f, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 1);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_binary_bracket_gap_between_values(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    /* [-2.0, -1.0, 1.0, 2.0] — gap between -1.0 and 1.0 */
+    push_back_float_array(arr, -2.0f);
+    push_back_float_array(arr, -1.0f);
+    push_back_float_array(arr,  1.0f);
+    push_back_float_array(arr,  2.0f);
+
+    /* 0.0 falls in the gap */
+    bracket_expect_t br = float_array_binary_bracket(arr, 0.0f, false);
+    assert_true(br.has_value);
+    /* lower = first element >= 0.0 = index 2 (value  1.0) */
+    /* upper = last  element <= 0.0 = index 1 (value -1.0) */
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 2);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 20: float_array_size
+// ================================================================================
+
+static void test_float_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)float_array_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_size_reflects_push_count(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    assert_int_equal((int)float_array_size(arr), 0);
+    push_back_float_array(arr, -1.0f);
+    push_back_float_array(arr,  2.0f);
+    assert_int_equal((int)float_array_size(arr), 2);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 21: float_array_alloc
+// ================================================================================
+
+static void test_float_alloc_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)float_array_alloc(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_alloc_matches_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(16, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)float_array_alloc(r.u.value), 16);
+    return_float_array(r.u.value);
+}
+
+// ================================================================================
+// Group 22: float_array_data_size
+// ================================================================================
+
+static void test_float_data_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)float_array_data_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_data_size_is_four(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)float_array_data_size(r.u.value), 4);
+    return_float_array(r.u.value);
+}
+
+// ================================================================================
+// Group 23: is_float_array_empty
+// ================================================================================
+
+static void test_float_empty_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_float_array_empty(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_empty_reflects_contents(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(4, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    assert_true(is_float_array_empty(arr));
+    push_back_float_array(arr, 1.0f);
+    assert_false(is_float_array_empty(arr));
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 24: is_float_array_full
+// ================================================================================
+
+static void test_float_full_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_float_array_full(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_full_reflects_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(2, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    assert_false(is_float_array_full(arr));
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+    assert_true(is_float_array_full(arr));
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 25: is_float_array_ptr
+// ================================================================================
+
+static void test_float_is_ptr_null_array_returns_false(void** state) {
+    (void)state;
+    float val = 0.0f;
+    assert_false(is_float_array_ptr(NULL, &val));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_is_ptr_valid_and_invalid(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+    push_back_float_array(arr, 3.0f);
+
+    const float* first = (const float*)arr->base.data;
+    const float* last  = first + 2;
+    const float* spare = first + 3;   /* beyond live region */
+
+    assert_true (is_float_array_ptr(arr, first));
+    assert_true (is_float_array_ptr(arr, last));
+    assert_false(is_float_array_ptr(arr, spare));
+    assert_false(is_float_array_ptr(arr, NULL));
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 26: float_array_min
+// ================================================================================
+
+static void test_float_min_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    float_expect_t r = float_array_min(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_min_returns_smallest_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,  3.0f);
+    push_back_float_array(arr, -1.5f);
+    push_back_float_array(arr,  2.5f);
+    /* arr: [3.0, -1.5, 2.5] — minimum is -1.5 */
+
+    float_expect_t result = float_array_min(arr);
+    assert_true(result.has_value);
+    ASSERT_FLOAT_EXACT(result.u.value, -1.5f);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_min_negative_infinity_wins(void** state) {
+    (void)state;
+    /*
+     * -INFINITY is less than every finite float under IEEE 754.
+     * The comparator (va > vb) - (va < vb) handles this correctly because
+     * the relational operators are defined for infinities by the standard.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,       0.0f);
+    push_back_float_array(arr,    1000.0f);
+    push_back_float_array(arr, -INFINITY);
+    push_back_float_array(arr,      -1.0f);
+    /* arr: [0.0, 1000.0, -INFINITY, -1.0] */
+
+    float_expect_t result = float_array_min(arr);
+    assert_true(result.has_value);
+    assert_true(isinf(result.u.value) && result.u.value < 0.0f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 27: float_array_max
+// ================================================================================
+
+static void test_float_max_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    float_expect_t r = float_array_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_max_returns_largest_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr, -2.0f);
+    push_back_float_array(arr,  3.5f);
+    push_back_float_array(arr,  1.0f);
+    /* arr: [-2.0, 3.5, 1.0] — maximum is 3.5 */
+
+    float_expect_t result = float_array_max(arr);
+    assert_true(result.has_value);
+    ASSERT_FLOAT_EXACT(result.u.value, 3.5f);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_max_positive_infinity_wins(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,      -1.0f);
+    push_back_float_array(arr, -INFINITY);
+    push_back_float_array(arr,  INFINITY);
+    push_back_float_array(arr,       0.0f);
+    /* arr: [-1.0, -INFINITY, INFINITY, 0.0] */
+
+    float_expect_t result = float_array_max(arr);
+    assert_true(result.has_value);
+    assert_true(isinf(result.u.value) && result.u.value > 0.0f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 28: float_array_sum
+// ================================================================================
+
+static void test_float_sum_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    float_expect_t r = float_array_sum(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_sum_returns_correct_total(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,  1.0f);
+    push_back_float_array(arr, -2.5f);
+    push_back_float_array(arr,  3.5f);
+    /* arr: [1.0, -2.5, 3.5], sum == 2.0 (exact in binary) */
+
+    float_expect_t result = float_array_sum(arr);
+    assert_true(result.has_value);
+    ASSERT_FLOAT_EXACT(result.u.value, 2.0f);
+
+    return_float_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_sum_cancelling_values(void** state) {
+    (void)state;
+    /*
+     * All values are exact binary fractions so the sum is exact (0.0f).
+     * This confirms the accumulator is genuinely a float and that
+     * negative contributions are handled correctly.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* arr = r.u.value;
+
+    push_back_float_array(arr,  4.0f);
+    push_back_float_array(arr, -4.0f);
+    push_back_float_array(arr,  0.5f);
+    push_back_float_array(arr, -0.5f);
+    /* arr: [4.0, -4.0, 0.5, -0.5], sum == 0.0 */
+
+    float_expect_t result = float_array_sum(arr);
+    assert_true(result.has_value);
+    ASSERT_FLOAT_EXACT(result.u.value, 0.0f);
+
+    return_float_array(arr);
+}
+
+// ================================================================================
+// Group 29: cumulative_float_array
+// ================================================================================
+
+static void test_float_cumulative_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = cumulative_float_array(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_cumulative_produces_prefix_sum(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* src = r.u.value;
+
+    push_back_float_array(src, 1.0f);
+    push_back_float_array(src, 2.0f);
+    push_back_float_array(src, 3.0f);
+    push_back_float_array(src, 4.0f);
+    /* src: [1.0, 2.0, 3.0, 4.0]
+     * expected output: [1.0, 3.0, 6.0, 10.0] — all exact binary fractions */
+
+    float_array_expect_t cr = cumulative_float_array(src, alloc);
+    assert_true(cr.has_value);
+    float_array_t* dst = cr.u.value;
+    assert_int_equal((int)float_array_size(dst), 4);
+
+    float val = 0.0f;
+    get_float_array_index(dst, 0, &val);  ASSERT_FLOAT_EXACT(val,  1.0f);
+    get_float_array_index(dst, 1, &val);  ASSERT_FLOAT_EXACT(val,  3.0f);
+    get_float_array_index(dst, 2, &val);  ASSERT_FLOAT_EXACT(val,  6.0f);
+    get_float_array_index(dst, 3, &val);  ASSERT_FLOAT_EXACT(val, 10.0f);
+
+    return_float_array(src);
+    return_float_array(dst);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_cumulative_mixed_signs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_array_expect_t r = init_float_array(8, false, alloc);
+    assert_true(r.has_value);
+    float_array_t* src = r.u.value;
+
+    push_back_float_array(src,  4.0f);
+    push_back_float_array(src, -2.0f);
+    push_back_float_array(src,  1.0f);
+    push_back_float_array(src, -0.5f);
+    /* src: [4.0, -2.0, 1.0, -0.5]
+     * expected output: [4.0, 2.0, 3.0, 2.5] — all exact binary fractions */
+
+    float_array_expect_t cr = cumulative_float_array(src, alloc);
+    assert_true(cr.has_value);
+    float_array_t* dst = cr.u.value;
+    assert_int_equal((int)float_array_size(dst), 4);
+
+    float val = 0.0f;
+    get_float_array_index(dst, 0, &val);  ASSERT_FLOAT_EXACT(val, 4.0f);
+    get_float_array_index(dst, 1, &val);  ASSERT_FLOAT_EXACT(val, 2.0f);
+    get_float_array_index(dst, 2, &val);  ASSERT_FLOAT_EXACT(val, 3.0f);
+    get_float_array_index(dst, 3, &val);  ASSERT_FLOAT_EXACT(val, 2.5f);
+
+    return_float_array(src);
+    return_float_array(dst);
+}
+
+// ================================================================================
+// Test runner
+// ================================================================================
+
+const struct CMUnitTest test_float_array[] = {
+
+    /* Group 1: init_float_array */
+    cmocka_unit_test(test_float_init_null_allocate_fn_fails),
+    cmocka_unit_test(test_float_init_returns_valid_array),
+
+    /* Group 2: return_float_array */
+    cmocka_unit_test(test_float_return_null_is_safe),
+    cmocka_unit_test(test_float_return_valid_array_does_not_crash),
+
+    /* Group 3: push_back_float_array */
+    cmocka_unit_test(test_float_push_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_push_back_appends_value),
+
+    /* Group 4: push_front_float_array */
+    cmocka_unit_test(test_float_push_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_push_front_prepends_value),
+
+    /* Group 5: push_at_float_array */
+    cmocka_unit_test(test_float_push_at_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_push_at_inserts_at_index),
+
+    /* Group 6: get_float_array_index */
+    cmocka_unit_test(test_float_get_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_get_returns_correct_value),
+
+    /* Group 7: pop_back_float_array */
+    cmocka_unit_test(test_float_pop_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_pop_back_removes_last_element),
+
+    /* Group 8: pop_front_float_array */
+    cmocka_unit_test(test_float_pop_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_pop_front_removes_first_element),
+
+    /* Group 9: pop_any_float_array */
+    cmocka_unit_test(test_float_pop_any_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_pop_any_removes_element_at_index),
+
+    /* Group 10: clear_float_array */
+    cmocka_unit_test(test_float_clear_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_clear_resets_len_to_zero),
+
+    /* Group 11: set_float_array_index */
+    cmocka_unit_test(test_float_set_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_set_overwrites_element),
+
+    /* Group 12: copy_float_array */
+    cmocka_unit_test(test_float_copy_null_src_returns_null_pointer),
+    cmocka_unit_test(test_float_copy_produces_independent_array),
+
+    /* Group 13: concat_float_array */
+    cmocka_unit_test(test_float_concat_null_dst_returns_null_pointer),
+    cmocka_unit_test(test_float_concat_appends_elements),
+
+    /* Group 14: slice_float_array */
+    cmocka_unit_test(test_float_slice_null_src_returns_null_pointer),
+    cmocka_unit_test(test_float_slice_returns_correct_subrange),
+
+    /* Group 15: reverse_float_array */
+    cmocka_unit_test(test_float_reverse_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_reverse_reverses_elements),
+
+    /* Group 16: sort_float_array */
+    cmocka_unit_test(test_float_sort_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_sort_forward_basic),
+    cmocka_unit_test(test_float_sort_negative_values_and_infinity),
+
+    /* Group 17: float_array_contains */
+    cmocka_unit_test(test_float_contains_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_contains_negative_tolerance_returns_invalid_arg),
+    cmocka_unit_test(test_float_contains_exact_mode_finds_value),
+    cmocka_unit_test(test_float_contains_absolute_tolerance),
+    cmocka_unit_test(test_float_contains_relative_tolerance),
+    cmocka_unit_test(test_float_contains_combined_tolerance),
+
+    /* Group 18: float_array_binary_search */
+    cmocka_unit_test(test_float_binary_bracket_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_binary_bracket_exact_match),
+    cmocka_unit_test(test_float_binary_bracket_gap_between_values),
+   
+    /* Group 19: float_array_binary_bracket */
+    cmocka_unit_test(test_float_binary_bracket_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_binary_bracket_exact_match),
+    cmocka_unit_test(test_float_binary_bracket_gap_between_values),
+
+    /* Group 20: float_array_size */
+    cmocka_unit_test(test_float_size_null_returns_zero),
+    cmocka_unit_test(test_float_size_reflects_push_count),
+
+    /* Group 21: float_array_alloc */
+    cmocka_unit_test(test_float_alloc_null_returns_zero),
+    cmocka_unit_test(test_float_alloc_matches_capacity),
+
+    /* Group 22: float_array_data_size */
+    cmocka_unit_test(test_float_data_size_null_returns_zero),
+    cmocka_unit_test(test_float_data_size_is_four),
+
+    /* Group 23: is_float_array_empty */
+    cmocka_unit_test(test_float_empty_null_returns_true),
+    cmocka_unit_test(test_float_empty_reflects_contents),
+
+    /* Group 24: is_float_array_full */
+    cmocka_unit_test(test_float_full_null_returns_true),
+    cmocka_unit_test(test_float_full_reflects_capacity),
+
+    /* Group 25: is_float_array_ptr */
+    cmocka_unit_test(test_float_is_ptr_null_array_returns_false),
+    cmocka_unit_test(test_float_is_ptr_valid_and_invalid),
+
+    /* Group 26: float_array_min */
+    cmocka_unit_test(test_float_min_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_min_returns_smallest_value),
+    cmocka_unit_test(test_float_min_negative_infinity_wins),
+
+    /* Group 27: float_array_max */
+    cmocka_unit_test(test_float_max_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_max_returns_largest_value),
+    cmocka_unit_test(test_float_max_positive_infinity_wins),
+
+    /* Group 28: float_array_sum */
+    cmocka_unit_test(test_float_sum_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_sum_returns_correct_total),
+    cmocka_unit_test(test_float_sum_cancelling_values),
+
+    /* Group 29: cumulative_float_array */
+    cmocka_unit_test(test_float_cumulative_null_array_returns_null_pointer),
+    cmocka_unit_test(test_float_cumulative_produces_prefix_sum),
+    cmocka_unit_test(test_float_cumulative_mixed_signs),
+};
+const size_t test_float_array_count = sizeof(test_float_array) / sizeof(test_float_array[0]);
 // ================================================================================
 // ================================================================================
 // eof
