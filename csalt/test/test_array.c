@@ -35,6 +35,7 @@
 #include "c_uint32.h"
 #include "c_int32.h"
 #include "c_uint64.h"
+#include "c_int64.h"
 // ================================================================================
 // Group 1: init_uint8_array
 // ================================================================================
@@ -9776,6 +9777,1198 @@ const struct CMUnitTest test_uint64_array[] = {
     cmocka_unit_test(test_uint64_cumulative_single_element),
 };
 const size_t test_uint64_array_count = sizeof(test_uint64_array) / sizeof(test_uint64_array[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+// ================================================================================
+// Group 1: init_int64_array
+// ================================================================================
+
+static void test_int64_init_null_allocate_fn_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    int64_array_expect_t r = init_int64_array(8, false, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_init_returns_valid_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_int_equal((int)int64_array_size(r.u.value), 0);
+    assert_int_equal((int)int64_array_alloc(r.u.value), 8);
+    return_int64_array(r.u.value);
+}
+
+// ================================================================================
+// Group 2: return_int64_array
+// ================================================================================
+
+static void test_int64_return_null_is_safe(void** state) {
+    (void)state;
+    return_int64_array(NULL);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_return_valid_array_does_not_crash(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    return_int64_array(r.u.value);
+}
+
+// ================================================================================
+// Group 3: push_back_int64_array
+// ================================================================================
+
+static void test_int64_push_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_back_int64_array(NULL, 1LL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_push_back_appends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    assert_int_equal(push_back_int64_array(arr, -1000LL), NO_ERROR);
+    assert_int_equal(push_back_int64_array(arr,     0LL), NO_ERROR);
+    assert_int_equal(push_back_int64_array(arr,  1000LL), NO_ERROR);
+    assert_int_equal((int)int64_array_size(arr), 3);
+
+    int64_t val = 0;
+    get_int64_array_index(arr, 0, &val);  assert_true(val == -1000LL);
+    get_int64_array_index(arr, 2, &val);  assert_true(val ==  1000LL);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 4: push_front_int64_array
+// ================================================================================
+
+static void test_int64_push_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_front_int64_array(NULL, 1LL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_push_front_prepends_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr,  2000LL);
+    push_front_int64_array(arr, 1000LL);
+    /* arr is [1000, 2000] */
+
+    int64_t val = 0;
+    get_int64_array_index(arr, 0, &val);
+    assert_true(val == 1000LL);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 5: push_at_int64_array
+// ================================================================================
+
+static void test_int64_push_at_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_at_int64_array(NULL, 0, 1LL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_push_at_inserts_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, 1000LL);
+    push_back_int64_array(arr, 3000LL);
+    push_at_int64_array(arr, 1, 2000LL);
+    /* arr is [1000, 2000, 3000] */
+
+    int64_t val = 0;
+    get_int64_array_index(arr, 1, &val);
+    assert_true(val == 2000LL);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 6: get_int64_array_index
+// ================================================================================
+
+static void test_int64_get_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    int64_t val = 0;
+    assert_int_equal(get_int64_array_index(NULL, 0, &val), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_get_returns_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, INT64_MIN);
+    push_back_int64_array(arr,       0LL);
+    push_back_int64_array(arr, INT64_MAX);
+
+    int64_t val = 0;
+    assert_int_equal(get_int64_array_index(arr, 0, &val), NO_ERROR);
+    assert_true(val == INT64_MIN);
+    assert_int_equal(get_int64_array_index(arr, 2, &val), NO_ERROR);
+    assert_true(val == INT64_MAX);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 7: pop_back_int64_array
+// ================================================================================
+
+static void test_int64_pop_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_int64_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_pop_back_removes_last_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, 1000LL);
+    push_back_int64_array(arr, 2000LL);
+
+    int64_t val = 0;
+    assert_int_equal(pop_back_int64_array(arr, &val), NO_ERROR);
+    assert_true(val == 2000LL);
+    assert_int_equal((int)int64_array_size(arr), 1);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 8: pop_front_int64_array
+// ================================================================================
+
+static void test_int64_pop_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_int64_array(NULL, NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_pop_front_removes_first_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, 1000LL);
+    push_back_int64_array(arr, 2000LL);
+
+    int64_t val = 0;
+    assert_int_equal(pop_front_int64_array(arr, &val), NO_ERROR);
+    assert_true(val == 1000LL);
+    assert_int_equal((int)int64_array_size(arr), 1);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 9: pop_any_int64_array
+// ================================================================================
+
+static void test_int64_pop_any_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_any_int64_array(NULL, NULL, 0), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_pop_any_removes_element_at_index(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, 1000LL);
+    push_back_int64_array(arr, 2000LL);
+    push_back_int64_array(arr, 3000LL);
+
+    int64_t val = 0;
+    assert_int_equal(pop_any_int64_array(arr, &val, 1), NO_ERROR);
+    assert_true(val == 2000LL);
+    assert_int_equal((int)int64_array_size(arr), 2);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 10: clear_int64_array
+// ================================================================================
+
+static void test_int64_clear_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(clear_int64_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_clear_resets_len_to_zero(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, 1000LL);
+    push_back_int64_array(arr, 2000LL);
+    assert_int_equal(clear_int64_array(arr), NO_ERROR);
+    assert_int_equal((int)int64_array_size(arr), 0);
+    assert_int_equal((int)int64_array_alloc(arr), 4);   /* capacity retained */
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 11: set_int64_array_index
+// ================================================================================
+
+static void test_int64_set_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_int64_array_index(NULL, 0, 1LL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_set_overwrites_element(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, 1000LL);
+    assert_int_equal(set_int64_array_index(arr, 0, INT64_MIN), NO_ERROR);
+
+    int64_t val = 0;
+    get_int64_array_index(arr, 0, &val);
+    assert_true(val == INT64_MIN);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 12: copy_int64_array
+// ================================================================================
+
+static void test_int64_copy_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = copy_int64_array(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_copy_produces_independent_array(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* src = r.u.value;
+
+    push_back_int64_array(src, 1000LL);
+    push_back_int64_array(src, 2000LL);
+
+    int64_array_expect_t cr = copy_int64_array(src, alloc);
+    assert_true(cr.has_value);
+    int64_array_t* dst = cr.u.value;
+
+    /* Mutating src must not affect the copy */
+    set_int64_array_index(src, 0, 999LL);
+    int64_t val = 0;
+    get_int64_array_index(dst, 0, &val);
+    assert_true(val == 1000LL);
+
+    return_int64_array(src);
+    return_int64_array(dst);
+}
+
+// ================================================================================
+// Group 13: concat_int64_array
+// ================================================================================
+
+static void test_int64_concat_null_dst_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* src = r.u.value;
+    assert_int_equal(concat_int64_array(NULL, src), NULL_POINTER);
+    return_int64_array(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_concat_appends_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r1 = init_int64_array(8, false, alloc);
+    int64_array_expect_t r2 = init_int64_array(4, false, alloc);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+    int64_array_t* dst = r1.u.value;
+    int64_array_t* src = r2.u.value;
+
+    push_back_int64_array(dst, 1000LL);
+    push_back_int64_array(src, 2000LL);
+
+    assert_int_equal(concat_int64_array(dst, src), NO_ERROR);
+    assert_int_equal((int)int64_array_size(dst), 2);
+
+    int64_t val = 0;
+    get_int64_array_index(dst, 1, &val);
+    assert_true(val == 2000LL);
+
+    return_int64_array(dst);
+    return_int64_array(src);
+}
+
+// ================================================================================
+// Group 14: slice_int64_array
+// ================================================================================
+
+static void test_int64_slice_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = slice_int64_array(NULL, 0, 1, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_slice_returns_correct_subrange(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* src = r.u.value;
+
+    push_back_int64_array(src, 1000LL);
+    push_back_int64_array(src, 2000LL);
+    push_back_int64_array(src, 3000LL);
+    push_back_int64_array(src, 4000LL);
+    push_back_int64_array(src, 5000LL);
+
+    int64_array_expect_t sr = slice_int64_array(src, 1, 4, alloc);
+    assert_true(sr.has_value);
+    int64_array_t* slc = sr.u.value;
+    assert_int_equal((int)int64_array_size(slc), 3);
+
+    int64_t val = 0;
+    get_int64_array_index(slc, 0, &val);  assert_true(val == 2000LL);
+    get_int64_array_index(slc, 1, &val);  assert_true(val == 3000LL);
+    get_int64_array_index(slc, 2, &val);  assert_true(val == 4000LL);
+
+    return_int64_array(src);
+    return_int64_array(slc);
+}
+
+// ================================================================================
+// Group 15: reverse_int64_array
+// ================================================================================
+
+static void test_int64_reverse_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(reverse_int64_array(NULL), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_reverse_reverses_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, 1000LL);
+    push_back_int64_array(arr, 2000LL);
+    push_back_int64_array(arr, 3000LL);
+
+    assert_int_equal(reverse_int64_array(arr), NO_ERROR);
+
+    int64_t val = 0;
+    get_int64_array_index(arr, 0, &val);  assert_true(val == 3000LL);
+    get_int64_array_index(arr, 2, &val);  assert_true(val == 1000LL);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 16: sort_int64_array
+// ================================================================================
+
+static void test_int64_sort_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(sort_int64_array(NULL, FORWARD), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_sort_forward_basic(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr,  3000LL);
+    push_back_int64_array(arr, -1000LL);
+    push_back_int64_array(arr,  2000LL);
+
+    assert_int_equal(sort_int64_array(arr, FORWARD), NO_ERROR);
+
+    int64_t val = 0;
+    get_int64_array_index(arr, 0, &val);  assert_true(val == -1000LL);
+    get_int64_array_index(arr, 1, &val);  assert_true(val ==  2000LL);
+    get_int64_array_index(arr, 2, &val);  assert_true(val ==  3000LL);
+
+    return_int64_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_sort_comparator_correct_signed(void** state) {
+    (void)state;
+    /*
+     * A subtract-based comparator overflows for int64_t: the difference
+     * INT64_MIN - INT64_MAX is outside the range of int64_t and produces
+     * undefined behaviour. The three-way comparison (va > vb) - (va < vb)
+     * is always correct regardless of magnitude.
+     */
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, INT64_MAX);
+    push_back_int64_array(arr,      0LL);
+    push_back_int64_array(arr, INT64_MIN);
+
+    assert_int_equal(sort_int64_array(arr, FORWARD), NO_ERROR);
+
+    int64_t val = 0;
+    get_int64_array_index(arr, 0, &val);  assert_true(val == INT64_MIN);
+    get_int64_array_index(arr, 1, &val);  assert_true(val == 0LL);
+    get_int64_array_index(arr, 2, &val);  assert_true(val == INT64_MAX);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 17: int64_array_contains
+// ================================================================================
+
+static void test_int64_contains_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = int64_array_contains(NULL, 0LL, 0, 1);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_contains_finds_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, -1000LL);
+    push_back_int64_array(arr,  2000LL);
+    push_back_int64_array(arr, -3000LL);
+
+    size_expect_t sr = int64_array_contains(arr, 2000LL, 0, 3);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 1);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 18: int64_array_binary_search
+// ================================================================================
+
+static void test_int64_binary_search_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = int64_array_binary_search(NULL, 0LL, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_binary_search_finds_value_with_sort(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr,  3000LL);
+    push_back_int64_array(arr, -1000LL);
+    push_back_int64_array(arr,  2000LL);
+    push_back_int64_array(arr,  4000LL);
+
+    /* sort == true: arr becomes [-1000, 2000, 3000, 4000] */
+    size_expect_t sr = int64_array_binary_search(arr, 3000LL, true);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 2);
+
+    return_int64_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_binary_search_comparator_correct_signed(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    /* Already sorted across the full signed range */
+    push_back_int64_array(arr, INT64_MIN);
+    push_back_int64_array(arr,      -1LL);
+    push_back_int64_array(arr,       0LL);
+    push_back_int64_array(arr, INT64_MAX);
+
+    size_expect_t sr = int64_array_binary_search(arr, INT64_MIN, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 0);
+
+    sr = int64_array_binary_search(arr, INT64_MAX, false);
+    assert_true(sr.has_value);
+    assert_int_equal((int)sr.u.value, 3);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 19: int64_array_binary_bracket
+// ================================================================================
+
+static void test_int64_binary_bracket_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    bracket_expect_t r = int64_array_binary_bracket(NULL, 0LL, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_binary_bracket_exact_match(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, -2000LL);
+    push_back_int64_array(arr, -1000LL);
+    push_back_int64_array(arr,  1000LL);
+    push_back_int64_array(arr,  2000LL);
+
+    bracket_expect_t br = int64_array_binary_bracket(arr, -1000LL, false);
+    assert_true(br.has_value);
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 1);
+
+    return_int64_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_binary_bracket_comparator_correct_signed(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    /* [INT64_MIN, -1000, 1000, INT64_MAX] — gap between -1000 and 1000 */
+    push_back_int64_array(arr, INT64_MIN);
+    push_back_int64_array(arr,   -1000LL);
+    push_back_int64_array(arr,    1000LL);
+    push_back_int64_array(arr, INT64_MAX);
+
+    /* 0 falls in the gap */
+    bracket_expect_t br = int64_array_binary_bracket(arr, 0LL, false);
+    assert_true(br.has_value);
+    /* lower = first element >= 0 = index 2 (value  1000) */
+    /* upper = last  element <= 0 = index 1 (value -1000) */
+    assert_int_equal((int)br.u.value.lower, 1);
+    assert_int_equal((int)br.u.value.upper, 2);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 20: int64_array_size
+// ================================================================================
+
+static void test_int64_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)int64_array_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_size_reflects_push_count(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    assert_int_equal((int)int64_array_size(arr), 0);
+    push_back_int64_array(arr, -1000LL);
+    push_back_int64_array(arr,  2000LL);
+    assert_int_equal((int)int64_array_size(arr), 2);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 21: int64_array_alloc
+// ================================================================================
+
+static void test_int64_alloc_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)int64_array_alloc(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_alloc_matches_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(16, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)int64_array_alloc(r.u.value), 16);
+    return_int64_array(r.u.value);
+}
+
+// ================================================================================
+// Group 22: int64_array_data_size
+// ================================================================================
+
+static void test_int64_data_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)int64_array_data_size(NULL), 0);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_data_size_is_eight(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)int64_array_data_size(r.u.value), 8);
+    return_int64_array(r.u.value);
+}
+
+// ================================================================================
+// Group 23: is_int64_array_empty
+// ================================================================================
+
+static void test_int64_empty_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_int64_array_empty(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_empty_reflects_contents(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(4, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    assert_true(is_int64_array_empty(arr));
+    push_back_int64_array(arr, -1000LL);
+    assert_false(is_int64_array_empty(arr));
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 24: is_int64_array_full
+// ================================================================================
+
+static void test_int64_full_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_int64_array_full(NULL));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_full_reflects_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(2, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    assert_false(is_int64_array_full(arr));
+    push_back_int64_array(arr, -1000LL);
+    push_back_int64_array(arr,  2000LL);
+    assert_true(is_int64_array_full(arr));
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 25: is_int64_array_ptr
+// ================================================================================
+
+static void test_int64_is_ptr_null_array_returns_false(void** state) {
+    (void)state;
+    int64_t val = 0;
+    assert_false(is_int64_array_ptr(NULL, &val));
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_is_ptr_valid_and_invalid(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, 1000LL);
+    push_back_int64_array(arr, 2000LL);
+    push_back_int64_array(arr, 3000LL);
+    /* arr contains [1000, 2000, 3000], len == 3, alloc == 8 */
+
+    const int64_t* first = (const int64_t*)arr->base.data;
+    const int64_t* last  = first + 2;
+    const int64_t* spare = first + 3;   /* beyond live region */
+
+    assert_true (is_int64_array_ptr(arr, first));
+    assert_true (is_int64_array_ptr(arr, last));
+    assert_false(is_int64_array_ptr(arr, spare));
+    assert_false(is_int64_array_ptr(arr, NULL));
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 26: int64_array_min
+// ================================================================================
+
+static void test_int64_min_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    int64_expect_t r = int64_array_min(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_min_returns_smallest_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr,  3000000LL);
+    push_back_int64_array(arr, -1000000LL);
+    push_back_int64_array(arr,  2000000LL);
+    /* arr: [3000000, -1000000, 2000000] — minimum is -1000000 */
+
+    int64_expect_t result = int64_array_min(arr);
+    assert_true(result.has_value);
+    assert_true(result.u.value == -1000000LL);
+
+    return_int64_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_min_negative_values_and_boundary(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    /* Span the full signed range; INT64_MIN must be returned. */
+    push_back_int64_array(arr,       0LL);
+    push_back_int64_array(arr, INT64_MAX);
+    push_back_int64_array(arr, INT64_MIN);
+    push_back_int64_array(arr,      -1LL);
+    /* arr: [0, INT64_MAX, INT64_MIN, -1] */
+
+    int64_expect_t result = int64_array_min(arr);
+    assert_true(result.has_value);
+    assert_true(result.u.value == INT64_MIN);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 27: int64_array_max
+// ================================================================================
+
+static void test_int64_max_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    int64_expect_t r = int64_array_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_max_returns_largest_value(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr, -2000000LL);
+    push_back_int64_array(arr,  3000000LL);
+    push_back_int64_array(arr,  1000000LL);
+    /* arr: [-2000000, 3000000, 1000000] — maximum is 3000000 */
+
+    int64_expect_t result = int64_array_max(arr);
+    assert_true(result.has_value);
+    assert_true(result.u.value == 3000000LL);
+
+    return_int64_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_max_negative_values_and_boundary(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    /* Span the full signed range; INT64_MAX must be returned. */
+    push_back_int64_array(arr,      -1LL);
+    push_back_int64_array(arr, INT64_MIN);
+    push_back_int64_array(arr, INT64_MAX);
+    push_back_int64_array(arr,       0LL);
+    /* arr: [-1, INT64_MIN, INT64_MAX, 0] */
+
+    int64_expect_t result = int64_array_max(arr);
+    assert_true(result.has_value);
+    assert_true(result.u.value == INT64_MAX);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 28: int64_array_sum
+// ================================================================================
+
+static void test_int64_sum_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    int64_expect_t r = int64_array_sum(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_sum_returns_correct_total(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr,  1000000000LL);
+    push_back_int64_array(arr, -2000000000LL);
+    push_back_int64_array(arr,  3000000000LL);
+    /* arr: [1000000000, -2000000000, 3000000000], sum == 2000000000 */
+
+    int64_expect_t result = int64_array_sum(arr);
+    assert_true(result.has_value);
+    assert_true(result.u.value == 2000000000LL);
+
+    return_int64_array(arr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_sum_mixed_signs_cancel(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* arr = r.u.value;
+
+    push_back_int64_array(arr,  100000000000LL);
+    push_back_int64_array(arr, -100000000000LL);
+    push_back_int64_array(arr,   50000000000LL);
+    push_back_int64_array(arr,  -50000000000LL);
+    /* arr: [1e11, -1e11, 5e10, -5e10], sum == 0 */
+
+    int64_expect_t result = int64_array_sum(arr);
+    assert_true(result.has_value);
+    assert_true(result.u.value == 0LL);
+
+    return_int64_array(arr);
+}
+
+// ================================================================================
+// Group 29: cumulative_int64_array
+// ================================================================================
+
+static void test_int64_cumulative_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = cumulative_int64_array(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_cumulative_produces_prefix_sum(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* src = r.u.value;
+
+    push_back_int64_array(src, 1000LL);
+    push_back_int64_array(src, 2000LL);
+    push_back_int64_array(src, 3000LL);
+    push_back_int64_array(src, 4000LL);
+    /* src: [1000, 2000, 3000, 4000]
+     * expected output: [1000, 3000, 6000, 10000] */
+
+    int64_array_expect_t cr = cumulative_int64_array(src, alloc);
+    assert_true(cr.has_value);
+    int64_array_t* dst = cr.u.value;
+    assert_int_equal((int)int64_array_size(dst), 4);
+
+    int64_t val = 0;
+    get_int64_array_index(dst, 0, &val);  assert_true(val ==  1000LL);
+    get_int64_array_index(dst, 1, &val);  assert_true(val ==  3000LL);
+    get_int64_array_index(dst, 2, &val);  assert_true(val ==  6000LL);
+    get_int64_array_index(dst, 3, &val);  assert_true(val == 10000LL);
+
+    return_int64_array(src);
+    return_int64_array(dst);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_cumulative_mixed_signs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int64_array_expect_t r = init_int64_array(8, false, alloc);
+    assert_true(r.has_value);
+    int64_array_t* src = r.u.value;
+
+    push_back_int64_array(src,  5000000000LL);
+    push_back_int64_array(src, -3000000000LL);
+    push_back_int64_array(src,  2000000000LL);
+    push_back_int64_array(src, -1000000000LL);
+    /* src: [5e9, -3e9, 2e9, -1e9]
+     * expected output: [5e9, 2e9, 4e9, 3e9] */
+
+    int64_array_expect_t cr = cumulative_int64_array(src, alloc);
+    assert_true(cr.has_value);
+    int64_array_t* dst = cr.u.value;
+    assert_int_equal((int)int64_array_size(dst), 4);
+
+    int64_t val = 0;
+    get_int64_array_index(dst, 0, &val);  assert_true(val ==  5000000000LL);
+    get_int64_array_index(dst, 1, &val);  assert_true(val ==  2000000000LL);
+    get_int64_array_index(dst, 2, &val);  assert_true(val ==  4000000000LL);
+    get_int64_array_index(dst, 3, &val);  assert_true(val ==  3000000000LL);
+
+    return_int64_array(src);
+    return_int64_array(dst);
+}
+
+// ================================================================================
+// Test runner
+// ================================================================================
+
+const struct CMUnitTest test_int64_array[] = {
+
+    /* Group 1: init_int64_array */
+    cmocka_unit_test(test_int64_init_null_allocate_fn_fails),
+    cmocka_unit_test(test_int64_init_returns_valid_array),
+
+    /* Group 2: return_int64_array */
+    cmocka_unit_test(test_int64_return_null_is_safe),
+    cmocka_unit_test(test_int64_return_valid_array_does_not_crash),
+
+    /* Group 3: push_back_int64_array */
+    cmocka_unit_test(test_int64_push_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_push_back_appends_value),
+
+    /* Group 4: push_front_int64_array */
+    cmocka_unit_test(test_int64_push_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_push_front_prepends_value),
+
+    /* Group 5: push_at_int64_array */
+    cmocka_unit_test(test_int64_push_at_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_push_at_inserts_at_index),
+
+    /* Group 6: get_int64_array_index */
+    cmocka_unit_test(test_int64_get_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_get_returns_correct_value),
+
+    /* Group 7: pop_back_int64_array */
+    cmocka_unit_test(test_int64_pop_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_pop_back_removes_last_element),
+
+    /* Group 8: pop_front_int64_array */
+    cmocka_unit_test(test_int64_pop_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_pop_front_removes_first_element),
+
+    /* Group 9: pop_any_int64_array */
+    cmocka_unit_test(test_int64_pop_any_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_pop_any_removes_element_at_index),
+
+    /* Group 10: clear_int64_array */
+    cmocka_unit_test(test_int64_clear_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_clear_resets_len_to_zero),
+
+    /* Group 11: set_int64_array_index */
+    cmocka_unit_test(test_int64_set_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_set_overwrites_element),
+
+    /* Group 12: copy_int64_array */
+    cmocka_unit_test(test_int64_copy_null_src_returns_null_pointer),
+    cmocka_unit_test(test_int64_copy_produces_independent_array),
+
+    /* Group 13: concat_int64_array */
+    cmocka_unit_test(test_int64_concat_null_dst_returns_null_pointer),
+    cmocka_unit_test(test_int64_concat_appends_elements),
+
+    /* Group 14: slice_int64_array */
+    cmocka_unit_test(test_int64_slice_null_src_returns_null_pointer),
+    cmocka_unit_test(test_int64_slice_returns_correct_subrange),
+
+    /* Group 15: reverse_int64_array */
+    cmocka_unit_test(test_int64_reverse_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_reverse_reverses_elements),
+
+    /* Group 16: sort_int64_array */
+    cmocka_unit_test(test_int64_sort_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_sort_forward_basic),
+    cmocka_unit_test(test_int64_sort_comparator_correct_signed),
+
+    /* Group 17: int64_array_contains */
+    cmocka_unit_test(test_int64_contains_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_contains_finds_value),
+
+    /* Group 18: int64_array_binary_search */
+    cmocka_unit_test(test_int64_binary_search_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_binary_search_finds_value_with_sort),
+    cmocka_unit_test(test_int64_binary_search_comparator_correct_signed),
+
+    /* Group 19: int64_array_binary_bracket */
+    cmocka_unit_test(test_int64_binary_bracket_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_binary_bracket_exact_match),
+    cmocka_unit_test(test_int64_binary_bracket_comparator_correct_signed),
+
+    /* Group 20: int64_array_size */
+    cmocka_unit_test(test_int64_size_null_returns_zero),
+    cmocka_unit_test(test_int64_size_reflects_push_count),
+
+    /* Group 21: int64_array_alloc */
+    cmocka_unit_test(test_int64_alloc_null_returns_zero),
+    cmocka_unit_test(test_int64_alloc_matches_capacity),
+
+    /* Group 22: int64_array_data_size */
+    cmocka_unit_test(test_int64_data_size_null_returns_zero),
+    cmocka_unit_test(test_int64_data_size_is_eight),
+
+    /* Group 23: is_int64_array_empty */
+    cmocka_unit_test(test_int64_empty_null_returns_true),
+    cmocka_unit_test(test_int64_empty_reflects_contents),
+
+    /* Group 24: is_int64_array_full */
+    cmocka_unit_test(test_int64_full_null_returns_true),
+    cmocka_unit_test(test_int64_full_reflects_capacity),
+
+    /* Group 25: is_int64_array_ptr */
+    cmocka_unit_test(test_int64_is_ptr_null_array_returns_false),
+    cmocka_unit_test(test_int64_is_ptr_valid_and_invalid),
+
+    /* Group 26: int64_array_min */
+    cmocka_unit_test(test_int64_min_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_min_returns_smallest_value),
+    cmocka_unit_test(test_int64_min_negative_values_and_boundary),
+
+    /* Group 27: int64_array_max */
+    cmocka_unit_test(test_int64_max_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_max_returns_largest_value),
+    cmocka_unit_test(test_int64_max_negative_values_and_boundary),
+
+    /* Group 28: int64_array_sum */
+    cmocka_unit_test(test_int64_sum_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_sum_returns_correct_total),
+    cmocka_unit_test(test_int64_sum_mixed_signs_cancel),
+
+    /* Group 29: cumulative_int64_array */
+    cmocka_unit_test(test_int64_cumulative_null_array_returns_null_pointer),
+    cmocka_unit_test(test_int64_cumulative_produces_prefix_sum),
+    cmocka_unit_test(test_int64_cumulative_mixed_signs),
+};
+const size_t test_int64_array_count = sizeof(test_int64_array) / sizeof(test_int64_array[0]);
 // ================================================================================
 // ================================================================================
 // eof
