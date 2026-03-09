@@ -9,42 +9,46 @@
 // ================================================================================ 
 // ================================================================================ 
 
+static inline uint8x16_t _neon_reverse_bytes(uint8x16_t v) {
+    /* vrev64q_u8: reverse bytes within each 64-bit half */
+    v = vrev64q_u8(v);
+    /* Swap the two 64-bit halves to complete the full 128-bit reversal */
+    return vcombine_u8(vget_high_u8(v), vget_low_u8(v));
+}
+
+// ================================================================================
+// Public interface
+// ================================================================================
+
 static void simd_reverse_uint8(uint8_t* data, size_t len, size_t data_size) {
     if (data == NULL || len < 2u || data_size == 0u) return;
 
-    if (data_size <= 16u && (16u % data_size == 0u)) {
-        /* Query the hardware vector length in bytes at runtime */
-        size_t vl          = svcntb();
-        size_t elems_per_vec = vl / data_size;
-
+    if (data_size < 16u && (16u % data_size == 0u)) {
         size_t lo = 0u;
         size_t hi = len - 1u;
+        size_t elems_per_reg = 16u / data_size;
 
-        while (lo < hi && (hi - lo + 1u) >= 2u * elems_per_vec) {
-            uint8_t* lo_ptr = data + lo * data_size;
-            uint8_t* hi_ptr = data + hi * data_size;
-
-            svbool_t pg = svptrue_b8();
-
-            svuint8_t vlo = svld1_u8(pg, lo_ptr);
-            svuint8_t vhi = svld1_u8(pg, hi_ptr);
-
-            /* svrev_u8 reverses all active bytes within the vector */
-            vlo = svrev_u8(vlo);
-            vhi = svrev_u8(vhi);
-
-            svst1_u8(pg, hi_ptr, vlo);
-            svst1_u8(pg, lo_ptr, vhi);
-
-            lo += elems_per_vec;
-            hi -= elems_per_vec;
-        }
-
-        /* Scalar remainder */
-        uint8_t tmp[256];
         while (lo < hi) {
             uint8_t* lo_ptr = data + lo * data_size;
             uint8_t* hi_ptr = data + hi * data_size;
+
+            if ((hi - lo + 1u) >= 2u * elems_per_reg) {
+                uint8x16_t vlo = vld1q_u8(lo_ptr);
+                uint8x16_t vhi = vld1q_u8(hi_ptr);
+
+                vlo = _neon_reverse_bytes(vlo);
+                vhi = _neon_reverse_bytes(vhi);
+
+                vst1q_u8(hi_ptr, vlo);
+                vst1q_u8(lo_ptr, vhi);
+
+                lo += elems_per_reg;
+                hi -= elems_per_reg;
+                continue;
+            }
+
+            /* Scalar remainder */
+            uint8_t tmp[16];
             memcpy(tmp,    lo_ptr, data_size);
             memcpy(lo_ptr, hi_ptr, data_size);
             memcpy(hi_ptr, tmp,    data_size);
@@ -54,7 +58,7 @@ static void simd_reverse_uint8(uint8_t* data, size_t len, size_t data_size) {
         return;
     }
 
-    /* Scalar fallback for non-aligned element sizes */
+    /* Scalar fallback */
     size_t lo = 0u;
     size_t hi = len - 1u;
     uint8_t tmp[256];

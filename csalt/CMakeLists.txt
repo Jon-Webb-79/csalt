@@ -64,6 +64,7 @@ set(CSALT_SOURCES
   c_int64.c
   c_float.c
   c_double.c
+  c_ldouble.c
 )
 
 set(CSALT_PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)

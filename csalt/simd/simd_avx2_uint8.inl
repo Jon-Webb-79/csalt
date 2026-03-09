@@ -38,7 +38,7 @@ static inline __m256i _avx2_reverse_bytes(__m256i v) {
 static void simd_reverse_uint8(uint8_t* data, size_t len, size_t data_size) {
     if (data == NULL || len < 2u || data_size == 0u) return;
 
-    if (data_size <= 32u && (32u % data_size == 0u)) {
+    if (data_size < 32u && (32u % data_size == 0u)) {
         size_t lo = 0u;
         size_t hi = len - 1u;
         size_t elems_per_reg = 32u / data_size;

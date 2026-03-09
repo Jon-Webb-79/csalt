@@ -157,6 +157,11 @@ extern const size_t test_float_array_count;
 
 extern const struct CMUnitTest test_double_array[];
 extern const size_t test_double_array_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_ldouble_array[];
+extern const size_t test_ldouble_array_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus
