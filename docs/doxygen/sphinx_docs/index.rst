@@ -124,6 +124,7 @@ The following are areas for future improvement in the code base
     c_uint64 <Uint64>
     c_int64 <Int64>
     c_float <Float>
+    c_double <Double>
     c_array <Array>
     
 Indices and tables

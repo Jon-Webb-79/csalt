@@ -1,4 +1,5 @@
-*************
+EADME.rst
+
 CSalt Library 
 *************
 
@@ -74,53 +75,28 @@ String ``string_t``
 * Provides functions for standard string operations 
 * Provides an iterator for access methods
 
-Dynamic Vector
---------------
+Vector
+------
+* Utilizes allocators from the ``c_allocator.h`` file or user developed custom 
+  allocators to manage memory.
 * Automatically manages memory allocation and resizing
 * Maintains size and capacity information
 * Provides safe element access with bounds checking
 * Supports efficient append and insert operations
-
-Static Array Wrapper
---------------------
-* Provides bounds-checked access to fixed-size arrays
-* Prevents buffer overflows through runtime checks
-* Maintains actual element count for partially filled arrays
-* Offers safe iteration and access methods
+* Functions to support advanced options such as sort, binary search, min, max, etc.
 
 Dictionary
 ----------
-* Maps string keys to values
-* Handles memory management for both keys and values
-* Provides efficient key lookup
-* Supports dynamic addition and removal of entries
-* a dictionary for management of data primitives and a dictionary for arrays of primitives
+* To be developed
 
 Matrix
 ------
-
-**NOTE:** The matrix implementation in this package is being updated for a more intuitive interface.
-
-The matrix module provides adaptive storage for two-dimensional matrices, with
-automatic conversion between dense and sparse formats based on size and sparsity characteristics.
-
-Supported formats:
-
-* **Dense Matrix** — row-major, with optional initialization tracking for missing values
-* **Coordinate List (COO)** — stores only non-zero entries with explicit row and column indices
-* **Compressed Sparse Row (CSR)** — optimized for fast row-based access and memory efficiency
-* **Compressed Sparse Column (CSC)** - optimized for dast column-based access and memory efficiency
-
-Typical use cases include large engineering calculations (e.g., PDEs, FEM solvers) where the 
-storage and access pattern of matrices must adapt to the structure of the data.
+* To be developed
 
 Work Forward
 ============
 The following are areas for future improvement in the code base 
 
-* Update all documentation to link to Doxygen doc strings (IN PROGRESS)
-* Incorporate ErrorCode enums and related error handling into all data structures and functions (IN PROGRESS)
-* Refactor entire Matrix code base
 * Test on a wider array of platforms and compilers to exercise all SIMD instruction sets 
 * Increase robustness of edge cases for unit tests 
 * Refactor string_t type to handle non ASCI data 
