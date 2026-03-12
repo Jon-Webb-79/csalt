@@ -60,6 +60,7 @@ typedef uint32_t dtype_id_t;
 #define UINT64_TYPE    13u  /**< Unsigned 64-bit integer (uint64_t)               */
 #define BOOL_TYPE      14u  /**< Boolean type (bool)                              */
 #define SIZE_T_TYPE    15u  /**< Unsigned size type (size_t)                      */
+#define STRING_TYPE    16u /**<String type (string_t)                             */
 /** @} */
 
 /**

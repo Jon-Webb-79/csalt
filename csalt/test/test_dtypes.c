@@ -262,7 +262,6 @@ static void test_lookup_unknown_type_returns_null(void** state) {
 static void test_lookup_reserved_range_returns_null(void** state) {
     (void)state;
     assert_true(init_dtype_registry());
-    assert_null(lookup_dtype(16u));
     assert_null(lookup_dtype(500u));
     assert_null(lookup_dtype(999u));
 }
@@ -395,7 +394,6 @@ static void test_large_user_type_id_is_valid(void** state) {
 static void test_reserved_range_not_auto_registered(void** state) {
     (void)state;
     assert_true(init_dtype_registry());
-    assert_null(lookup_dtype(16u));
     assert_null(lookup_dtype(500u));
     assert_null(lookup_dtype(999u));
 }

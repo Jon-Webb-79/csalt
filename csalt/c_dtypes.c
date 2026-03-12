@@ -14,6 +14,7 @@
 // Include modules here
 
 #include "c_dtypes.h"
+#include "c_string.h"
 #include <stdio.h>
 // ================================================================================ 
 // ================================================================================ 
@@ -43,7 +44,8 @@ bool init_dtype_registry(void) {
         { INT64_TYPE,   sizeof(int64_t),        "int64_t"       },
         { UINT64_TYPE,  sizeof(uint64_t),       "uint64_t"      },
         { BOOL_TYPE,    sizeof(bool),           "bool"          },
-        { SIZE_T_TYPE,  sizeof(size_t),         "size_t"        },  // was missing
+        { SIZE_T_TYPE,  sizeof(size_t),         "size_t"        },  
+        { STRING_TYPE, sizeof(string_t),        "string_t"      },
     };
     size_t num_builtins = sizeof(builtins) / sizeof(builtins[0]);
     for (size_t i = 0u; i < num_builtins; i++) {

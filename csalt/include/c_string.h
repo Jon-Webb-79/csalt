@@ -34,6 +34,7 @@
 
 #include "c_error.h"
 #include "c_allocator.h"
+#include "c_array.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -2583,6 +2584,522 @@ static inline void fprint_string(FILE* stream, const string_t* s) {
     if (!stream || !s || !s->str) return;
     fwrite(s->str, 1u, s->len, stream);
 }
+// ================================================================================ 
+// ================================================================================ 
+
+/**
+ * @brief A type-safe dynamic array of owned string_t* pointers.
+ *
+ * Wraps array_t with the element type fixed to STRING_TYPE and
+ * data_size == sizeof(string_t*) at initialization.  Each slot in the
+ * backing buffer holds one string_t* pointer.  The array **owns** every
+ * string_t it points to: push operations store a freshly allocated
+ * string_t* produced by init_string or copy_string, and return_str_array
+ * calls return_string on every live pointer before freeing the array.
+ *
+ * Ownership rules
+ * ---------------
+ * - push_back_str / push_front_str / push_at_str   — deep-copy src via
+ *   copy_string; the caller retains ownership of the original string_t*.
+ * - push_back_lit / push_front_lit / push_at_lit   — allocate a new string_t*
+ *   from a C-string literal via init_string.
+ * - get_str_array_index                            — returns a *borrowed*
+ *   string_t*.  Valid until the next mutation.  Do NOT call return_string.
+ * - pop_back / pop_front / pop_any                 — remove the slot and
+ *   transfer ownership to the caller (*out) or discard (out == NULL).
+ * - set_str_array_index_str / set_str_array_index_lit — release the old
+ *   pointer before writing the new one.
+ * - return_str_array                               — call return_string on
+ *   every live pointer, then free the array.
+ *
+ * Sorting, contains, and binary_search use lexicographic order via
+ * str_compare.  No SIMD is applied to string comparisons.
+ */
+typedef struct {
+    array_t            base;   /**< Backing generic array (data_size == sizeof(string_t*)). */
+    allocator_vtable_t alloc;  /**< Forwarded to init_string / copy_string on every push.  */
+} str_array_t;
+ 
+// ================================================================================
+// Expected type
+// ================================================================================
+ 
+/** @brief Expected return type for str_array_t init and copy. */
+typedef struct {
+    bool has_value;
+    union {
+        str_array_t* value;
+        error_code_t error;
+    } u;
+} str_array_expect_t;
+ 
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+ 
+/**
+ * @brief Initialize a new heap-allocated str_array_t.
+ *
+ * The element size is sizeof(string_t*).  The supplied allocator is stored
+ * and forwarded to every subsequent string allocation.
+ *
+ * @param capacity  Initial element capacity.  Must be > 0.
+ * @param growth    true to allow automatic buffer growth on overflow.
+ * @param alloc_v   Allocator vtable.  alloc_v.allocate must not be NULL.
+ *
+ * @return str_array_expect_t with has_value true on success.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *     str_array_expect_t r = init_str_array(8, true, a);
+ *     if (!r.has_value) { handle error }
+ *     str_array_t* arr = r.u.value;
+ *     push_back_lit(arr, "hello");
+ *     return_str_array(arr);
+ * @endcode
+ */
+str_array_expect_t init_str_array(size_t             capacity,
+                                  bool               growth,
+                                  allocator_vtable_t alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Release all memory owned by a str_array_t.
+ *
+ * Calls return_string on every live string_t* pointer, then frees the
+ * backing buffer and the str_array_t struct itself.
+ *
+ * Passing NULL is safe and performs no action.
+ */
+void return_str_array(str_array_t* array);
+ 
+// ================================================================================
+// Push — string_t* source
+// ================================================================================
+ 
+/**
+ * @brief Deep-copy src and append the result to the end of the array.  O(1) amort.
+ *
+ * The new string_t* is produced by copy_string(src, array->alloc).
+ * The caller retains ownership of src.
+ *
+ * @param array  Must not be NULL.
+ * @param src    Source string_t*.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, CAPACITY_OVERFLOW, or OUT_OF_MEMORY.
+ */
+error_code_t push_back_str(str_array_t* array, const string_t* src);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Deep-copy src and prepend the result to the front of the array.  O(n).
+ *
+ * @param array  Must not be NULL.
+ * @param src    Source string_t*.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, CAPACITY_OVERFLOW, or OUT_OF_MEMORY.
+ */
+error_code_t push_front_str(str_array_t* array, const string_t* src);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Deep-copy src and insert the result at index.  O(n).
+ *
+ * @param array  Must not be NULL.
+ * @param index  Must be <= array->base.len.
+ * @param src    Source string_t*.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, OUT_OF_BOUNDS, CAPACITY_OVERFLOW, or
+ *         OUT_OF_MEMORY.
+ */
+error_code_t push_at_str(str_array_t* array, size_t index, const string_t* src);
+ 
+// ================================================================================
+// Push — C-string literal source
+// ================================================================================
+ 
+/**
+ * @brief Allocate a new string_t from a literal and append it.  O(1) amort.
+ *
+ * Calls init_string(lit, 0, array->alloc) and stores the resulting pointer.
+ *
+ * @param array  Must not be NULL.
+ * @param lit    Null-terminated C string.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, CAPACITY_OVERFLOW, or OUT_OF_MEMORY.
+ */
+error_code_t push_back_lit(str_array_t* array, const char* lit);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Allocate a new string_t from a literal and prepend it.  O(n).
+ *
+ * @param array  Must not be NULL.
+ * @param lit    Null-terminated C string.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, CAPACITY_OVERFLOW, or OUT_OF_MEMORY.
+ */
+error_code_t push_front_lit(str_array_t* array, const char* lit);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Allocate a new string_t from a literal and insert at index.  O(n).
+ *
+ * @param array  Must not be NULL.
+ * @param index  Must be <= array->base.len.
+ * @param lit    Null-terminated C string.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, OUT_OF_BOUNDS, CAPACITY_OVERFLOW, or
+ *         OUT_OF_MEMORY.
+ */
+error_code_t push_at_lit(str_array_t* array, size_t index, const char* lit);
+ 
+// ================================================================================
+// Convenience macros — type-safe generic push
+// ================================================================================
+ 
+#if defined(ARENA_USE_CONVENIENCE_MACROS) && !defined(NO_FUNCTION_MACROS)
+ 
+/* Expression-safe static assertion — valid inside any expression context. */
+#ifndef CSALT_STATIC_ASSERT_EXPR_
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+#endif
+ 
+/* Returns 1 if x is a supported push source type, else 0. */
+#define _STR_ARRAY_PUSH_SUPPORTED_(x) \
+    _Generic((x),                     \
+        const char*:     1,           \
+        char*:           1,           \
+        const string_t*: 1,           \
+        string_t*:       1,           \
+        default:         0)
+ 
+/* Triggers a compile-time error for unsupported source types. */
+#define _STR_ARRAY_PUSH_TYPECHECK_(x)                         \
+    CSALT_STATIC_ASSERT_EXPR_(_STR_ARRAY_PUSH_SUPPORTED_(x),  \
+                              push_string_unsupported_src_type)
+ 
+/**
+ * @brief Type-safe generic append to a str_array_t.
+ *
+ * Dispatches at compile time:
+ *   const char* / char*          → push_back_lit(arr, src)
+ *   const string_t* / string_t*  → push_back_str(arr, src)
+ *
+ * Any other source type is a compile-time error.
+ *
+ * @param arr  Destination str_array_t*.
+ * @param src  Value to append (C-string literal or string_t*).
+ * @return error_code_t from the selected function.
+ */
+#define push_back_string(arr, src)                  \
+    (_STR_ARRAY_PUSH_TYPECHECK_(src),               \
+     _Generic((src),                                \
+        const char*:     push_back_lit,             \
+        char*:           push_back_lit,             \
+        const string_t*: push_back_str,             \
+        string_t*:       push_back_str              \
+     )((arr), (src)))
+ 
+/**
+ * @brief Type-safe generic prepend to a str_array_t.
+ *
+ * Dispatches at compile time:
+ *   const char* / char*          → push_front_lit(arr, src)
+ *   const string_t* / string_t*  → push_front_str(arr, src)
+ *
+ * @param arr  Destination str_array_t*.
+ * @param src  Value to prepend (C-string literal or string_t*).
+ * @return error_code_t from the selected function.
+ */
+#define push_front_string(arr, src)                 \
+    (_STR_ARRAY_PUSH_TYPECHECK_(src),               \
+     _Generic((src),                                \
+        const char*:     push_front_lit,            \
+        char*:           push_front_lit,            \
+        const string_t*: push_front_str,            \
+        string_t*:       push_front_str             \
+     )((arr), (src)))
+ 
+/**
+ * @brief Type-safe generic indexed insert into a str_array_t.
+ *
+ * Dispatches at compile time:
+ *   const char* / char*          → push_at_lit(arr, index, src)
+ *   const string_t* / string_t*  → push_at_str(arr, index, src)
+ *
+ * @param arr    Destination str_array_t*.
+ * @param index  Insertion position.  Must be <= arr->base.len.
+ * @param src    Value to insert (C-string literal or string_t*).
+ * @return error_code_t from the selected function.
+ */
+#define push_at_string(arr, index, src)             \
+    (_STR_ARRAY_PUSH_TYPECHECK_(src),               \
+     _Generic((src),                                \
+        const char*:     push_at_lit,               \
+        char*:           push_at_lit,               \
+        const string_t*: push_at_str,               \
+        string_t*:       push_at_str                \
+     )((arr), (index), (src)))
+ 
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+ 
+// ================================================================================
+// Get
+// ================================================================================
+ 
+/**
+ * @brief Return a borrowed pointer to the string_t* stored at index.  O(1).
+ *
+ * *out is a borrowed reference valid only until the next mutation of the
+ * array.  Do NOT call return_string on *out — the array owns the string.
+ *
+ * @param array  Must not be NULL.
+ * @param index  Must be < array->base.len.
+ * @param out    Must not be NULL.  Receives the borrowed string_t*.
+ *
+ * @return NO_ERROR, NULL_POINTER, or OUT_OF_BOUNDS.
+ */
+error_code_t get_str_array_index(const str_array_t* array,
+                                 size_t             index,
+                                 string_t**         out);
+ 
+// ================================================================================
+// Pop operations
+// ================================================================================
+
+/**
+ * @brief Remove and release the last element.  O(1).
+ *
+ * Calls return_string on the removed pointer.  If the caller needs the
+ * value, retrieve it with get_str_array_index before calling this function.
+ *
+ * @param array  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, or EMPTY.
+ */
+error_code_t pop_back_str_array(str_array_t* array);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Remove and release the first element.  O(n).
+ *
+ * Calls return_string on the removed pointer.  If the caller needs the
+ * value, retrieve it with get_str_array_index before calling this function.
+ *
+ * @param array  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, or EMPTY.
+ */
+error_code_t pop_front_str_array(str_array_t* array);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Remove and release the element at index.  O(n).
+ *
+ * Calls return_string on the removed pointer.  If the caller needs the
+ * value, retrieve it with get_str_array_index before calling this function.
+ *
+ * @param array  Must not be NULL.
+ * @param index  Must be < array->base.len.
+ *
+ * @return NO_ERROR, NULL_POINTER, EMPTY, or OUT_OF_BOUNDS.
+ */
+error_code_t pop_any_str_array(str_array_t* array, size_t index);
+/**
+ * @brief Remove the last element and optionally transfer ownership.  O(1).
+ *
+ * If out is non-NULL, the string_t* is written to *out and the caller must
+ * eventually call return_string(*out).  If out is NULL, return_string is
+ * called immediately.
+ *
+ * @param array  Must not be NULL.
+ * @param out    Receives the string_t*, or NULL to discard.
+ *
+ * @return NO_ERROR, NULL_POINTER, or EMPTY.
+ */
+// ================================================================================
+// Utility operations
+// ================================================================================
+ 
+/**
+ * @brief Call return_string on every element and reset len to 0.  O(n).
+ *
+ * The backing buffer is retained for reuse.
+ *
+ * @return NO_ERROR or NULL_POINTER.
+ */
+error_code_t clear_str_array(str_array_t* array);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Replace the element at index with a deep copy of src.  O(1).
+ *
+ * Calls return_string on the displaced pointer before writing the new one.
+ *
+ * @param array  Must not be NULL.
+ * @param index  Must be < array->base.len.
+ * @param src    Source to copy.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, OUT_OF_BOUNDS, or OUT_OF_MEMORY.
+ */
+error_code_t set_str_array_index_str(str_array_t*    array,
+                                     size_t          index,
+                                     const string_t* src);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Replace the element at index with a string built from lit.  O(1).
+ *
+ * Calls return_string on the displaced pointer before writing the new one.
+ *
+ * @param array  Must not be NULL.
+ * @param index  Must be < array->base.len.
+ * @param lit    Null-terminated C string.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, OUT_OF_BOUNDS, or OUT_OF_MEMORY.
+ */
+error_code_t set_str_array_index_lit(str_array_t* array,
+                                     size_t       index,
+                                     const char*  lit);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Allocate an independent deep copy of src.
+ *
+ * Every slot is copied via copy_string using alloc_v.
+ *
+ * @return str_array_expect_t with has_value true on success.
+ */
+str_array_expect_t copy_str_array(const str_array_t* src,
+                                  allocator_vtable_t alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Reverse the order of all pointer slots in place.  O(n).
+ *
+ * Swaps pointer values only; the string_t structs and their buffers are
+ * not touched.
+ *
+ * @return NO_ERROR or NULL_POINTER.
+ */
+error_code_t reverse_str_array(str_array_t* array);
+ 
+// ================================================================================
+// Sort
+// ================================================================================
+ 
+/**
+ * @brief Sort elements lexicographically (ascending or descending).
+ *
+ * Uses str_compare internally.  O(n log n) average.
+ *
+ * @param array  Must not be NULL.
+ * @param dir    FORWARD for a…z, REVERSE for z…a.
+ *
+ * @return NO_ERROR, NULL_POINTER, or EMPTY.
+ */
+error_code_t sort_str_array(str_array_t* array, direction_t dir);
+ 
+// ================================================================================
+// Search
+// ================================================================================
+ 
+/**
+ * @brief Linear search for the first element equal to value in [start, end).
+ *
+ * @param array  Must not be NULL.
+ * @param value  String to search for.  Must not be NULL.
+ * @param start  First index (inclusive).
+ * @param end    One past the last index.  Must be > start and <= base.len.
+ *
+ * @return size_expect_t: has_value true + u.value on success, or
+ *         NULL_POINTER / INVALID_ARG / OUT_OF_BOUNDS / NOT_FOUND on failure.
+ */
+size_expect_t str_array_contains_str(const str_array_t* array,
+                                     const string_t*    value,
+                                     size_t             start,
+                                     size_t             end);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Linear search for the first element equal to lit in [start, end).
+ *
+ * @param array  Must not be NULL.
+ * @param lit    C string to search for.  Must not be NULL.
+ * @param start  First index (inclusive).
+ * @param end    One past the last index.  Must be > start and <= base.len.
+ *
+ * @return size_expect_t: has_value true on success, NOT_FOUND on failure.
+ */
+size_expect_t str_array_contains_lit(const str_array_t* array,
+                                     const char*        lit,
+                                     size_t             start,
+                                     size_t             end);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Binary search for the lowest-index element equal to value.
+ *
+ * @param array  Must not be NULL.
+ * @param value  String to find.  Must not be NULL.
+ * @param sort   true to sort ascending before searching.
+ *
+ * @return size_expect_t: has_value true on success, or NULL_POINTER / EMPTY /
+ *         NOT_FOUND on failure.
+ */
+size_expect_t str_array_binary_search_str(str_array_t*    array,
+                                          const string_t* value,
+                                          bool            sort);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Binary search for the lowest-index element equal to lit.
+ *
+ * @param array  Must not be NULL.
+ * @param lit    C string to find.  Must not be NULL.
+ * @param sort   true to sort ascending before searching.
+ *
+ * @return size_expect_t: has_value true on success, or NULL_POINTER / EMPTY /
+ *         NOT_FOUND on failure.
+ */
+size_expect_t str_array_binary_search_lit(str_array_t* array,
+                                          const char*  lit,
+                                          bool         sort);
+ 
+// ================================================================================
+// Introspection
+// ================================================================================
+ 
+/** @brief Number of elements stored.  Returns 0 if array is NULL. */
+size_t str_array_size(const str_array_t* array);
+ 
+/** @brief Allocated capacity in elements.  Returns 0 if NULL. */
+size_t str_array_alloc(const str_array_t* array);
+ 
+/** @brief Slot size in bytes (sizeof(string_t*)).  Returns 0 if NULL. */
+size_t str_array_data_size(const str_array_t* array);
+ 
+/** @brief true if array is NULL or has no elements. */
+bool is_str_array_empty(const str_array_t* array);
+ 
+/** @brief true if array is NULL or len == alloc. */
+bool is_str_array_full(const str_array_t* array);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

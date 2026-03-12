@@ -1239,6 +1239,545 @@ string_expect_t pop_str_token_lit(string_t* s,
 
     return out;
 }
+// ================================================================================ 
+// ================================================================================ 
+
+/*
+ * Read the string_t* stored in slot index of the backing buffer.
+ * The backing buffer holds sizeof(string_t*) bytes per slot.
+ * No bounds checking — callers must validate index before calling.
+ */
+static inline string_t* _read_slot(const str_array_t* array, size_t index) {
+    string_t* ptr;
+    memcpy(&ptr,
+           array->base.data + index * sizeof(string_t*),
+           sizeof(string_t*));
+    return ptr;
+}
+ 
+/*
+ * Write a string_t* into slot index of the backing buffer.
+ */
+static inline void _write_slot(str_array_t* array, size_t index, string_t* ptr) {
+    memcpy(array->base.data + index * sizeof(string_t*),
+           &ptr,
+           sizeof(string_t*));
+}
+ 
+/*
+ * qsort-compatible comparator for string_t* slots.
+ * a and b point to string_t* values stored in the buffer.
+ * Returns {-1, 0, 1} via str_compare, or 0 on NULL.
+ */
+static int _cmp_slot(const void* a, const void* b) {
+    string_t* sa;
+    string_t* sb;
+    memcpy(&sa, a, sizeof(string_t*));
+    memcpy(&sb, b, sizeof(string_t*));
+    if (sa == NULL && sb == NULL) return  0;
+    if (sa == NULL)               return -1;
+    if (sb == NULL)               return  1;
+    return (int)str_compare(sa, const_string(sb));
+}
+ 
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+ 
+str_array_expect_t init_str_array(size_t             capacity,
+                                  bool               growth,
+                                  allocator_vtable_t alloc_v) {
+    void_ptr_expect_t sa_r = alloc_v.allocate(alloc_v.ctx,
+                                               sizeof(str_array_t), false);
+    if (!sa_r.has_value)
+        return (str_array_expect_t){ .has_value = false,
+                                     .u.error   = OUT_OF_MEMORY };
+    str_array_t* sa = (str_array_t*)sa_r.u.value;
+ 
+    void_ptr_expect_t buf_r = alloc_v.allocate(alloc_v.ctx,
+                                                capacity * sizeof(string_t*),
+                                                false);
+    if (!buf_r.has_value) {
+        alloc_v.return_element(alloc_v.ctx, sa);
+        return (str_array_expect_t){ .has_value = false,
+                                     .u.error   = OUT_OF_MEMORY };
+    }
+ 
+    sa->base.data      = (uint8_t*)buf_r.u.value;
+    sa->base.len       = 0u;
+    sa->base.alloc     = capacity;
+    sa->base.data_size = sizeof(string_t*);
+    sa->base.dtype     = STRING_TYPE;
+    sa->base.growth    = growth;
+    sa->base.alloc_v   = alloc_v;
+    sa->alloc          = alloc_v;
+ 
+    return (str_array_expect_t){ .has_value = true, .u.value = sa };
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+void return_str_array(str_array_t* array) {
+    if (array == NULL) return;
+ 
+    /* Release every owned string_t. */
+    for (size_t i = 0u; i < array->base.len; i++) {
+        return_string(_read_slot(array, i));
+    }
+ 
+    /* Free the backing buffer, then the wrapper struct. */
+    array->base.alloc_v.return_element(array->base.alloc_v.ctx,
+                                        array->base.data);
+    array->base.alloc_v.return_element(array->base.alloc_v.ctx, array);
+}
+ 
+// ================================================================================
+// Internal growth helper
+// ================================================================================
+ 
+/*
+ * Grow the backing buffer by doubling capacity when it is full and
+ * growth is enabled.  Returns NO_ERROR if growth was not needed or
+ * succeeded, CAPACITY_OVERFLOW if growth is disabled and the array is full.
+ */
+static error_code_t _ensure_capacity(str_array_t* array) {
+    if (array->base.len < array->base.alloc) return NO_ERROR;
+    if (!array->base.growth)                 return CAPACITY_OVERFLOW;
+ 
+    size_t new_cap = array->base.alloc * 2u;
+    if (new_cap < array->base.alloc) return LENGTH_OVERFLOW;   /* overflow */
+ 
+    void_ptr_expect_t r = array->base.alloc_v.allocate(array->base.alloc_v.ctx,
+                                                         new_cap * sizeof(string_t*),
+                                                         false);
+    if (!r.has_value) return OUT_OF_MEMORY;
+    void* new_buf = r.u.value;
+ 
+    memcpy(new_buf, array->base.data,
+           array->base.len * sizeof(string_t*));
+ 
+    array->base.alloc_v.return_element(array->base.alloc_v.ctx,
+                                        array->base.data);
+    array->base.data  = new_buf;
+    array->base.alloc = new_cap;
+    return NO_ERROR;
+}
+ 
+// ================================================================================
+// Internal push shared path
+// ================================================================================
+ 
+/*
+ * Validate string_expect_t, grow if needed, then write ptr into the slot
+ * chosen by the position tag (0 = back, 1 = front, 2 = at index).
+ *
+ * On failure the newly allocated string_t is released so nothing leaks.
+ */
+typedef enum { _POS_BACK = 0, _POS_FRONT = 1, _POS_AT = 2 } _push_pos_t;
+ 
+static error_code_t _do_push(str_array_t*    array,
+                              string_expect_t se,
+                              _push_pos_t     pos,
+                              size_t          index) {
+    if (!se.has_value) return se.u.error;
+ 
+    string_t* new_ptr = se.u.value;
+ 
+    error_code_t err = _ensure_capacity(array);
+    if (err != NO_ERROR) {
+        return_string(new_ptr);
+        return err;
+    }
+ 
+    size_t len = array->base.len;
+ 
+    if (pos == _POS_BACK) {
+        _write_slot(array, len, new_ptr);
+    } else if (pos == _POS_FRONT) {
+        if (len > 0u) {
+            memmove(array->base.data + sizeof(string_t*),
+                    array->base.data,
+                    len * sizeof(string_t*));
+        }
+        _write_slot(array, 0u, new_ptr);
+    } else {
+        /* _POS_AT — index already validated by caller */
+        if (index > len) {
+            return_string(new_ptr);
+            return OUT_OF_BOUNDS;
+        }
+        if (index < len) {
+            memmove(array->base.data + (index + 1u) * sizeof(string_t*),
+                    array->base.data + index        * sizeof(string_t*),
+                    (len - index) * sizeof(string_t*));
+        }
+        _write_slot(array, index, new_ptr);
+    }
+ 
+    array->base.len++;
+    return NO_ERROR;
+}
+ 
+// ================================================================================
+// Push — string_t* source
+// ================================================================================
+ 
+error_code_t push_back_str(str_array_t* array, const string_t* src) {
+    if (array == NULL || src == NULL) return NULL_POINTER;
+    return _do_push(array, copy_string(src, array->alloc), _POS_BACK, 0u);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t push_front_str(str_array_t* array, const string_t* src) {
+    if (array == NULL || src == NULL) return NULL_POINTER;
+    return _do_push(array, copy_string(src, array->alloc), _POS_FRONT, 0u);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t push_at_str(str_array_t* array, size_t index, const string_t* src) {
+    if (array == NULL || src == NULL) return NULL_POINTER;
+    if (index > array->base.len)      return OUT_OF_BOUNDS;
+    return _do_push(array, copy_string(src, array->alloc), _POS_AT, index);
+}
+ 
+// ================================================================================
+// Push — C-string literal source
+// ================================================================================
+ 
+error_code_t push_back_lit(str_array_t* array, const char* lit) {
+    if (array == NULL || lit == NULL) return NULL_POINTER;
+    return _do_push(array, init_string(lit, 0u, array->alloc), _POS_BACK, 0u);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t push_front_lit(str_array_t* array, const char* lit) {
+    if (array == NULL || lit == NULL) return NULL_POINTER;
+    return _do_push(array, init_string(lit, 0u, array->alloc), _POS_FRONT, 0u);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t push_at_lit(str_array_t* array, size_t index, const char* lit) {
+    if (array == NULL || lit == NULL) return NULL_POINTER;
+    if (index > array->base.len)      return OUT_OF_BOUNDS;
+    return _do_push(array, init_string(lit, 0u, array->alloc), _POS_AT, index);
+}
+ 
+// ================================================================================
+// Get
+// ================================================================================
+ 
+error_code_t get_str_array_index(const str_array_t* array,
+                                 size_t             index,
+                                 string_t**         out) {
+    if (array == NULL || out == NULL) return NULL_POINTER;
+    if (index >= array->base.len)     return OUT_OF_BOUNDS;
+    *out = _read_slot(array, index);
+    return NO_ERROR;
+}
+ 
+// ================================================================================
+// Pop — shared implementation
+// ================================================================================
+ 
+static error_code_t _pop_at(str_array_t* array, size_t index) {
+    if (array == NULL)            return NULL_POINTER;
+    if (array->base.len == 0u)    return EMPTY;
+    if (index >= array->base.len) return OUT_OF_BOUNDS;
+ 
+    /* Release the owned string_t. */
+    return_string(_read_slot(array, index));
+ 
+    /* Compact: shift slots above index down by one. */
+    size_t tail = array->base.len - index - 1u;
+    if (tail > 0u) {
+        memmove(array->base.data + index        * sizeof(string_t*),
+                array->base.data + (index + 1u) * sizeof(string_t*),
+                tail * sizeof(string_t*));
+    }
+    array->base.len--;
+    return NO_ERROR;
+}
+ 
+error_code_t pop_back_str_array(str_array_t* array) {
+    if (array == NULL)          return NULL_POINTER;
+    if (array->base.len == 0u)  return EMPTY;
+    return _pop_at(array, array->base.len - 1u);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t pop_front_str_array(str_array_t* array) {
+    if (array == NULL)          return NULL_POINTER;
+    if (array->base.len == 0u)  return EMPTY;
+    return _pop_at(array, 0u);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t pop_any_str_array(str_array_t* array, size_t index) {
+    return _pop_at(array, index);
+}
+ 
+// ================================================================================
+// Utility operations
+// ================================================================================
+ 
+error_code_t clear_str_array(str_array_t* array) {
+    if (array == NULL) return NULL_POINTER;
+    for (size_t i = 0u; i < array->base.len; i++) {
+        return_string(_read_slot(array, i));
+    }
+    array->base.len = 0u;
+    return NO_ERROR;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/*
+ * Shared set-slot path: validates bounds, releases the old pointer,
+ * then writes the new one.  On failure from init/copy the new pointer
+ * is released so nothing leaks.
+ */
+static error_code_t _set_slot(str_array_t* array, size_t index,
+                               string_expect_t se) {
+    if (!se.has_value) return se.u.error;
+    if (array == NULL) {
+        return_string(se.u.value);
+        return NULL_POINTER;
+    }
+    if (index >= array->base.len) {
+        return_string(se.u.value);
+        return OUT_OF_BOUNDS;
+    }
+ 
+    /* Release the displaced pointer. */
+    return_string(_read_slot(array, index));
+ 
+    /* Write the new one. */
+    _write_slot(array, index, se.u.value);
+    return NO_ERROR;
+}
+ 
+error_code_t set_str_array_index_str(str_array_t*    array,
+                                     size_t          index,
+                                     const string_t* src) {
+    if (array == NULL || src == NULL) return NULL_POINTER;
+    return _set_slot(array, index, copy_string(src, array->alloc));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t set_str_array_index_lit(str_array_t* array,
+                                     size_t       index,
+                                     const char*  lit) {
+    if (array == NULL || lit == NULL) return NULL_POINTER;
+    return _set_slot(array, index, init_string(lit, 0u, array->alloc));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+str_array_expect_t copy_str_array(const str_array_t* src,
+                                  allocator_vtable_t alloc_v) {
+    if (src == NULL)
+        return (str_array_expect_t){ .has_value = false,
+                                     .u.error   = NULL_POINTER };
+ 
+    size_t cap = src->base.len > 0u ? src->base.len : 1u;
+    str_array_expect_t dr = init_str_array(cap, src->base.growth, alloc_v);
+    if (!dr.has_value) return dr;
+ 
+    str_array_t* dst = dr.u.value;
+    for (size_t i = 0u; i < src->base.len; i++) {
+        error_code_t err = push_back_str(dst, _read_slot(src, i));
+        if (err != NO_ERROR) {
+            return_str_array(dst);
+            return (str_array_expect_t){ .has_value = false, .u.error = err };
+        }
+    }
+    return (str_array_expect_t){ .has_value = true, .u.value = dst };
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t reverse_str_array(str_array_t* array) {
+    if (array == NULL) return NULL_POINTER;
+    if (array->base.len < 2u) return NO_ERROR;
+ 
+    size_t lo = 0u;
+    size_t hi = array->base.len - 1u;
+    string_t* tmp;
+ 
+    while (lo < hi) {
+        tmp = _read_slot(array, lo);
+        _write_slot(array, lo, _read_slot(array, hi));
+        _write_slot(array, hi, tmp);
+        lo++;
+        hi--;
+    }
+    return NO_ERROR;
+}
+ 
+// ================================================================================
+// Sort
+// ================================================================================
+ 
+error_code_t sort_str_array(str_array_t* array, direction_t dir) {
+    if (array == NULL)          return NULL_POINTER;
+    if (array->base.len == 0u)  return EMPTY;
+    return sort_array(&array->base, _cmp_slot, dir);
+}
+ 
+// ================================================================================
+// Search — shared binary-search core
+// ================================================================================
+ 
+static size_expect_t _bsearch(str_array_t* array,
+                               const char*  needle,
+                               bool         do_sort) {
+    if (array == NULL || needle == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (array->base.len == 0u)
+        return (size_expect_t){ .has_value = false, .u.error = EMPTY };
+ 
+    if (do_sort)
+        sort_array(&array->base, _cmp_slot, FORWARD);
+ 
+    size_t lo = 0u;
+    size_t hi = array->base.len - 1u;
+ 
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2u;
+        string_t* s = _read_slot(array, mid);
+        int c = (s == NULL) ? -1 : (int)str_compare(s, needle);
+        if      (c < 0) { lo = mid + 1u; }
+        else if (c > 0) { if (mid == 0u) { lo = hi + 1u; break; } hi = mid; }
+        else            { lo = hi = mid; break; }
+    }
+ 
+    if (lo > hi)
+        return (size_expect_t){ .has_value = false, .u.error = NOT_FOUND };
+ 
+    /* Confirm the landing position is actually a match. */
+    string_t* landed = _read_slot(array, lo);
+    if (landed == NULL || str_compare(landed, needle) != 0)
+        return (size_expect_t){ .has_value = false, .u.error = NOT_FOUND };
+ 
+    /* Fan left to find the lowest-index match. */
+    size_t best = lo;
+    while (best > 0u) {
+        string_t* prev = _read_slot(array, best - 1u);
+        if (prev != NULL && str_compare(prev, needle) == 0) {
+            best--;
+        } else {
+            break;
+        }
+    }
+    return (size_expect_t){ .has_value = true, .u.value = best };
+}
+ 
+// ================================================================================
+// Search — contains
+// ================================================================================
+ 
+size_expect_t str_array_contains_str(const str_array_t* array,
+                                     const string_t*    value,
+                                     size_t             start,
+                                     size_t             end) {
+    if (array == NULL || value == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (start >= end)
+        return (size_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    if (end > array->base.len)
+        return (size_expect_t){ .has_value = false, .u.error = OUT_OF_BOUNDS };
+ 
+    const char* needle = const_string(value);
+    if (needle == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+ 
+    for (size_t i = start; i < end; i++) {
+        string_t* s = _read_slot(array, i);
+        if (s != NULL && str_compare(s, needle) == 0)
+            return (size_expect_t){ .has_value = true, .u.value = i };
+    }
+    return (size_expect_t){ .has_value = false, .u.error = NOT_FOUND };
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_expect_t str_array_contains_lit(const str_array_t* array,
+                                     const char*        lit,
+                                     size_t             start,
+                                     size_t             end) {
+    if (array == NULL || lit == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (start >= end)
+        return (size_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    if (end > array->base.len)
+        return (size_expect_t){ .has_value = false, .u.error = OUT_OF_BOUNDS };
+ 
+    for (size_t i = start; i < end; i++) {
+        string_t* s = _read_slot(array, i);
+        if (s != NULL && str_compare(s, lit) == 0)
+            return (size_expect_t){ .has_value = true, .u.value = i };
+    }
+    return (size_expect_t){ .has_value = false, .u.error = NOT_FOUND };
+}
+ 
+// ================================================================================
+// Search — binary search
+// ================================================================================
+ 
+size_expect_t str_array_binary_search_str(str_array_t*    array,
+                                          const string_t* value,
+                                          bool            sort) {
+    if (value == NULL)
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    return _bsearch(array, const_string(value), sort);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_expect_t str_array_binary_search_lit(str_array_t* array,
+                                          const char*  lit,
+                                          bool         sort) {
+    return _bsearch(array, lit, sort);
+}
+ 
+// ================================================================================
+// Introspection
+// ================================================================================
+ 
+size_t str_array_size(const str_array_t* array) {
+    return (array == NULL) ? 0u : array->base.len;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_t str_array_alloc(const str_array_t* array) {
+    return (array == NULL) ? 0u : array->base.alloc;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_t str_array_data_size(const str_array_t* array) {
+    return (array == NULL) ? 0u : array->base.data_size;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool is_str_array_empty(const str_array_t* array) {
+    return (array == NULL) || (array->base.len == 0u);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool is_str_array_full(const str_array_t* array) {
+    return (array == NULL) || (array->base.len >= array->base.alloc);
+}
 // ================================================================================
 // ================================================================================
 // eof
