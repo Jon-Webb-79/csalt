@@ -1283,10 +1283,14 @@ static int _cmp_slot(const void* a, const void* b) {
 // ================================================================================
 // Initialization and teardown
 // ================================================================================
- 
+
 str_array_expect_t init_str_array(size_t             capacity,
                                   bool               growth,
                                   allocator_vtable_t alloc_v) {
+    if (alloc_v.allocate == NULL || alloc_v.return_element == NULL)
+        return (str_array_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (capacity == 0u)
+        return (str_array_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     void_ptr_expect_t sa_r = alloc_v.allocate(alloc_v.ctx,
                                                sizeof(str_array_t), false);
     if (!sa_r.has_value)
@@ -1469,16 +1473,25 @@ error_code_t push_at_lit(str_array_t* array, size_t index, const char* lit) {
 // ================================================================================
 // Get
 // ================================================================================
- 
-error_code_t get_str_array_index(const str_array_t* array,
-                                 size_t             index,
-                                 string_t**         out) {
-    if (array == NULL || out == NULL) return NULL_POINTER;
-    if (index >= array->base.len)     return OUT_OF_BOUNDS;
-    *out = _read_slot(array, index);
-    return NO_ERROR;
+
+
+string_expect_t get_str_array_index(const str_array_t* array, size_t index) {
+    if (array == NULL)
+        return (string_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (index >= array->base.len)
+        return (string_expect_t){ .has_value = false, .u.error = OUT_OF_BOUNDS };
+    return copy_string(_read_slot(array, index), array->alloc);
 }
  
+// --------------------------------------------------------------------------------
+ 
+string_expect_t get_str_array_ptr(const str_array_t* array, size_t index) {
+    if (array == NULL)
+        return (string_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (index >= array->base.len)
+        return (string_expect_t){ .has_value = false, .u.error = OUT_OF_BOUNDS };
+    return (string_expect_t){ .has_value = true, .u.value = _read_slot(array, index) };
+}
 // ================================================================================
 // Pop — shared implementation
 // ================================================================================
@@ -1777,6 +1790,167 @@ bool is_str_array_empty(const str_array_t* array) {
  
 bool is_str_array_full(const str_array_t* array) {
     return (array == NULL) || (array->base.len >= array->base.alloc);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+// ================================================================================
+// Tokenization — helpers
+// ================================================================================
+ 
+/*
+ * Resolve and validate a [begin, end) window against a string_t's buffer.
+ * - NULL begin  -> s->str
+ * - NULL end    -> s->str + s->len
+ * Both pointers must lie within [s->str, s->str + s->len].
+ * Returns true on success and writes the resolved pointers to out_begin, out_end.
+ */
+static bool _resolve_window(const string_t*   s,
+                             const uint8_t*    begin,
+                             const uint8_t*    end,
+                             const uint8_t**   out_begin,
+                             const uint8_t**   out_end) {
+    const uint8_t* base  = (const uint8_t*)s->str;
+    const uint8_t* limit = base + s->len;
+ 
+    const uint8_t* b = (begin != NULL) ? begin : base;
+    const uint8_t* e = (end   != NULL) ? end   : limit;
+ 
+    if (b < base || b > limit) return false;
+    if (e < base || e > limit) return false;
+    if (b > e)                 return false;
+ 
+    *out_begin = b;
+    *out_end   = e;
+    return true;
+}
+ 
+// ================================================================================
+// ================================================================================
+// Tokenization — character-set delimiter
+// ================================================================================
+ 
+/*
+ * Returns true if byte `c` is present in the null-terminated set `delim_set`.
+ */
+static bool _in_delim_set(uint8_t c, const char* delim_set) {
+    for (const char* p = delim_set; *p != '\0'; ++p) {
+        if ((uint8_t)*p == c) return true;
+    }
+    return false;
+}
+ 
+/*
+ * Core character-set tokenizer.
+ *
+ * Walks [win_begin, win_end) byte by byte.  Any byte present in delim_set
+ * acts as a single-character separator.  Every inter-separator segment
+ * (including empty ones produced by consecutive separators) is pushed into
+ * the output array as an owned deep copy.
+ *
+ * Pre-sizing: token_count_lit counts how many bytes in the window belong to
+ * the delimiter set, giving us (count + 1) segments.
+ */
+static str_array_expect_t _delim_tokenize(const char*        delim_set,
+                                          const uint8_t*     win_begin,
+                                          const uint8_t*     win_end,
+                                          allocator_vtable_t alloc_v) {
+    /* Use a modest initial capacity and let growth=true handle resizing.
+     * Avoids depending on token_count_lit's counting semantics matching
+     * _in_delim_set's character-set semantics exactly. */
+    str_array_expect_t ar = init_str_array(8u, true, alloc_v);
+    if (!ar.has_value) return ar;
+    str_array_t* dst = ar.u.value;
+ 
+    const uint8_t* seg_start = win_begin;
+ 
+    for (const uint8_t* p = win_begin; p <= win_end; ++p) {
+        bool is_delim = (p < win_end) && _in_delim_set(*p, delim_set);
+        bool is_end   = (p == win_end);
+ 
+        if (is_delim || is_end) {
+            size_t seg_len = (size_t)(p - seg_start);
+ 
+            /* init_string may use strlen on the source pointer, so we must
+             * provide a properly null-terminated copy of the segment rather
+             * than pointing into the middle of the original buffer. */
+            void_ptr_expect_t tmp_r = alloc_v.allocate(alloc_v.ctx,
+                                                        seg_len + 1u, false);
+            if (!tmp_r.has_value) {
+                return_str_array(dst);
+                return (str_array_expect_t){ .has_value = false,
+                                             .u.error   = OUT_OF_MEMORY };
+            }
+            char* tmp = (char*)tmp_r.u.value;
+            memcpy(tmp, seg_start, seg_len);
+            tmp[seg_len] = '\0';
+ 
+            string_expect_t se = init_string(tmp, seg_len, alloc_v);
+            alloc_v.return_element(alloc_v.ctx, tmp);
+            if (!se.has_value) {
+                return_str_array(dst);
+                return (str_array_expect_t){ .has_value = false,
+                                             .u.error   = OUT_OF_MEMORY };
+            }
+ 
+            error_code_t err = _do_push(dst, se, _POS_BACK, 0u);
+            if (err != NO_ERROR) {
+                return_str_array(dst);
+                return (str_array_expect_t){ .has_value = false,
+                                             .u.error   = err };
+            }
+ 
+            seg_start = p + 1u;
+        }
+    }
+ 
+    return (str_array_expect_t){ .has_value = true, .u.value = dst };
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+str_array_expect_t string_delim_array_lit(const string_t*    s,
+                                          const char*        delim_set,
+                                          const uint8_t*     begin,
+                                          const uint8_t*     end,
+                                          allocator_vtable_t alloc_v) {
+    if (s == NULL || s->str == NULL || delim_set == NULL)
+        return (str_array_expect_t){ .has_value = false,
+                                     .u.error   = NULL_POINTER };
+    if (delim_set[0] == '\0')
+        return (str_array_expect_t){ .has_value = false,
+                                     .u.error   = INVALID_ARG };
+ 
+    const uint8_t* wb;
+    const uint8_t* we;
+    if (!_resolve_window(s, begin, end, &wb, &we))
+        return (str_array_expect_t){ .has_value = false,
+                                     .u.error   = INVALID_ARG };
+ 
+    return _delim_tokenize(delim_set, wb, we, alloc_v);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+str_array_expect_t string_delim_array_str(const string_t*    s,
+                                          const string_t*    delim_set,
+                                          const uint8_t*     begin,
+                                          const uint8_t*     end,
+                                          allocator_vtable_t alloc_v) {
+    if (s == NULL || s->str == NULL || delim_set == NULL || delim_set->str == NULL)
+        return (str_array_expect_t){ .has_value = false,
+                                     .u.error   = NULL_POINTER };
+    if (delim_set->len == 0u)
+        return (str_array_expect_t){ .has_value = false,
+                                     .u.error   = INVALID_ARG };
+ 
+    const uint8_t* wb;
+    const uint8_t* we;
+    if (!_resolve_window(s, begin, end, &wb, &we))
+        return (str_array_expect_t){ .has_value = false,
+                                     .u.error   = INVALID_ARG };
+ 
+    return _delim_tokenize(delim_set->str, wb, we, alloc_v);
 }
 // ================================================================================
 // ================================================================================

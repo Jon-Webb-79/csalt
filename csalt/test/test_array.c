@@ -40,6 +40,7 @@
 #include "c_float.h"
 #include "c_double.h"
 #include "c_ldouble.h"
+#include "c_string.h"
 // ================================================================================
 // Group 1: init_uint8_array
 // ================================================================================
@@ -15713,6 +15714,1488 @@ const struct CMUnitTest test_ldouble_array[] = {
 };
 
 const size_t test_ldouble_array_count = sizeof(test_ldouble_array) / sizeof(test_ldouble_array[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+/* Build a heap str_array_t with growth enabled. */
+static str_array_t* _make_array(size_t cap) {
+    allocator_vtable_t a = heap_allocator();
+    str_array_expect_t r = init_str_array(cap, true, a);
+    assert_true(r.has_value);
+    return r.u.value;
+}
+ 
+/* Build a string_t* from a literal using the heap allocator. */
+static string_t* _make_str(const char* lit) {
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t r = init_string(lit, 0u, a);
+    assert_true(r.has_value);
+    return r.u.value;
+}
+ 
+// ================================================================================
+// Group 1: init_str_array
+// ================================================================================
+ 
+static void test_str_init_null_allocate_fn_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    str_array_expect_t r = init_str_array(8, false, bad);
+    assert_false(r.has_value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_init_returns_valid_array(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    str_array_expect_t r = init_str_array(8, false, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_int_equal((int)str_array_size(r.u.value), 0);
+    assert_int_equal((int)str_array_alloc(r.u.value), 8);
+    return_str_array(r.u.value);
+}
+ 
+// ================================================================================
+// Group 2: return_str_array
+// ================================================================================
+ 
+static void test_str_return_null_is_safe(void** state) {
+    (void)state;
+    return_str_array(NULL);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_return_releases_owned_strings(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "alpha"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "beta"),  NO_ERROR);
+    return_str_array(arr);   /* must not crash or leak */
+}
+ 
+// ================================================================================
+// Group 3: push_back_str
+// ================================================================================
+ 
+static void test_str_push_back_str_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    string_t* s = _make_str("x");
+    assert_int_equal(push_back_str(NULL, s), NULL_POINTER);
+    return_string(s);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_back_str_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_str(arr, NULL), NULL_POINTER);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_back_str_deep_copy_independent(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_t*    s   = _make_str("hello");
+ 
+    assert_int_equal(push_back_str(arr, s), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 1);
+ 
+    /* Mutate the original — stored copy must be unaffected. */
+    str_concat(s, " world");
+ 
+    string_expect_t g = get_str_array_index(arr, 0);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "hello");
+    return_string(g.u.value);
+ 
+    return_string(s);
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 4: push_front_str
+// ================================================================================
+ 
+static void test_str_push_front_str_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    string_t* s = _make_str("x");
+    assert_int_equal(push_front_str(NULL, s), NULL_POINTER);
+    return_string(s);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_front_str_prepends_correctly(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_t*    a   = _make_str("alpha");
+    string_t*    b   = _make_str("beta");
+ 
+    assert_int_equal(push_back_str(arr, a),  NO_ERROR);
+    assert_int_equal(push_front_str(arr, b), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 2);
+ 
+    string_expect_t g0 = get_str_array_index(arr, 0);
+    string_expect_t g1 = get_str_array_index(arr, 1);
+    assert_true(g0.has_value);
+    assert_true(g1.has_value);
+    assert_string_equal(const_string(g0.u.value), "beta");
+    assert_string_equal(const_string(g1.u.value), "alpha");
+    return_string(g0.u.value);
+    return_string(g1.u.value);
+ 
+    return_string(a);
+    return_string(b);
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 5: push_at_str
+// ================================================================================
+ 
+static void test_str_push_at_str_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    string_t* s = _make_str("x");
+    assert_int_equal(push_at_str(NULL, 0, s), NULL_POINTER);
+    return_string(s);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_at_str_out_of_bounds_returns_error(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_t*    s   = _make_str("x");
+    assert_int_equal(push_at_str(arr, 5, s), OUT_OF_BOUNDS);
+    return_string(s);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_at_str_inserts_at_correct_position(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_t*    a   = _make_str("alpha");
+    string_t*    b   = _make_str("beta");
+    string_t*    c   = _make_str("gamma");
+ 
+    assert_int_equal(push_back_str(arr, a), NO_ERROR);
+    assert_int_equal(push_back_str(arr, c), NO_ERROR);
+    assert_int_equal(push_at_str(arr, 1, b), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 3);
+ 
+    string_expect_t g1 = get_str_array_index(arr, 1);
+    assert_true(g1.has_value);
+    assert_string_equal(const_string(g1.u.value), "beta");
+    return_string(g1.u.value);
+ 
+    return_string(a);
+    return_string(b);
+    return_string(c);
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 6: push_back_lit
+// ================================================================================
+ 
+static void test_str_push_back_lit_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_back_lit(NULL, "x"), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_back_lit_null_lit_returns_null_pointer(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, NULL), NULL_POINTER);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_back_lit_stores_correct_value(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "one"),   NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "two"),   NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "three"), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 3);
+ 
+    string_expect_t g = get_str_array_index(arr, 1);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "two");
+    return_string(g.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 7: push_front_lit
+// ================================================================================
+ 
+static void test_str_push_front_lit_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_front_lit(NULL, "x"), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_front_lit_prepends_correctly(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr,  "second"), NO_ERROR);
+    assert_int_equal(push_front_lit(arr, "first"),  NO_ERROR);
+ 
+    string_expect_t g = get_str_array_index(arr, 0);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "first");
+    return_string(g.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 8: push_at_lit
+// ================================================================================
+ 
+static void test_str_push_at_lit_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(push_at_lit(NULL, 0, "x"), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_at_lit_out_of_bounds_returns_error(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_at_lit(arr, 9, "x"), OUT_OF_BOUNDS);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_push_at_lit_inserts_at_correct_position(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "a"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "c"), NO_ERROR);
+    assert_int_equal(push_at_lit(arr, 1, "b"), NO_ERROR);
+ 
+    string_expect_t g0 = get_str_array_index(arr, 0);
+    string_expect_t g1 = get_str_array_index(arr, 1);
+    string_expect_t g2 = get_str_array_index(arr, 2);
+    assert_true(g0.has_value && g1.has_value && g2.has_value);
+    assert_string_equal(const_string(g0.u.value), "a");
+    assert_string_equal(const_string(g1.u.value), "b");
+    assert_string_equal(const_string(g2.u.value), "c");
+    return_string(g0.u.value);
+    return_string(g1.u.value);
+    return_string(g2.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 9: get_str_array_index (owned deep copy)
+// ================================================================================
+ 
+static void test_str_get_index_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    string_expect_t r = get_str_array_index(NULL, 0);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_get_index_out_of_bounds_returns_error(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_expect_t r = get_str_array_index(arr, 0);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, OUT_OF_BOUNDS);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_get_index_returns_independent_copy(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "original"), NO_ERROR);
+ 
+    string_expect_t g = get_str_array_index(arr, 0);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "original");
+ 
+    /* Mutate the copy — array's stored value must be unaffected. */
+    str_concat(g.u.value, "-modified");
+ 
+    string_expect_t g2 = get_str_array_ptr(arr, 0);
+    assert_true(g2.has_value);
+    assert_string_equal(const_string(g2.u.value), "original");
+ 
+    return_string(g.u.value);
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 10: get_str_array_ptr (borrowed pointer)
+// ================================================================================
+ 
+static void test_str_get_ptr_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    string_expect_t r = get_str_array_ptr(NULL, 0);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_get_ptr_out_of_bounds_returns_error(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_expect_t r = get_str_array_ptr(arr, 0);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, OUT_OF_BOUNDS);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_get_ptr_returns_correct_value_without_copy(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "alpha"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "beta"),  NO_ERROR);
+ 
+    string_expect_t g = get_str_array_ptr(arr, 1);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "beta");
+    /* do NOT call return_string on g.u.value */
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 11: pop_back_str_array
+// ================================================================================
+ 
+static void test_str_pop_back_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_str_array(NULL), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_pop_back_empty_array_returns_empty(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(pop_back_str_array(arr), EMPTY);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_pop_back_removes_last_element(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "one"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "two"), NO_ERROR);
+    assert_int_equal(pop_back_str_array(arr), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 1);
+ 
+    string_expect_t g = get_str_array_index(arr, 0);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "one");
+    return_string(g.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 12: pop_front_str_array
+// ================================================================================
+ 
+static void test_str_pop_front_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_str_array(NULL), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_pop_front_empty_array_returns_empty(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(pop_front_str_array(arr), EMPTY);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_pop_front_removes_first_element(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "alpha"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "beta"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "gamma"), NO_ERROR);
+    assert_int_equal(pop_front_str_array(arr), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 2);
+ 
+    string_expect_t g = get_str_array_index(arr, 0);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "beta");
+    return_string(g.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 13: pop_any_str_array
+// ================================================================================
+ 
+static void test_str_pop_any_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(pop_any_str_array(NULL, 0), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_pop_any_out_of_bounds_returns_error(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "x"), NO_ERROR);
+    assert_int_equal(pop_any_str_array(arr, 5), OUT_OF_BOUNDS);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_pop_any_removes_middle_element(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "a"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "b"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "c"), NO_ERROR);
+    assert_int_equal(pop_any_str_array(arr, 1), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 2);
+ 
+    string_expect_t g0 = get_str_array_index(arr, 0);
+    string_expect_t g1 = get_str_array_index(arr, 1);
+    assert_true(g0.has_value && g1.has_value);
+    assert_string_equal(const_string(g0.u.value), "a");
+    assert_string_equal(const_string(g1.u.value), "c");
+    return_string(g0.u.value);
+    return_string(g1.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 14: clear_str_array
+// ================================================================================
+ 
+static void test_str_clear_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(clear_str_array(NULL), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_clear_releases_elements_and_resets_len(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "x"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "y"), NO_ERROR);
+    assert_int_equal(clear_str_array(arr), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 0);
+ 
+    /* Buffer retained — can push again immediately. */
+    assert_int_equal(push_back_lit(arr, "z"), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 1);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 15: set_str_array_index_str
+// ================================================================================
+ 
+static void test_str_set_index_str_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    string_t* s = _make_str("x");
+    assert_int_equal(set_str_array_index_str(NULL, 0, s), NULL_POINTER);
+    return_string(s);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_set_index_str_out_of_bounds_returns_error(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_t*    s   = _make_str("x");
+    assert_int_equal(set_str_array_index_str(arr, 0, s), OUT_OF_BOUNDS);
+    return_string(s);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_set_index_str_replaces_value(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_t*    s   = _make_str("replacement");
+    assert_int_equal(push_back_lit(arr, "original"), NO_ERROR);
+    assert_int_equal(set_str_array_index_str(arr, 0, s), NO_ERROR);
+ 
+    string_expect_t g = get_str_array_index(arr, 0);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "replacement");
+    return_string(g.u.value);
+ 
+    return_string(s);
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 16: set_str_array_index_lit
+// ================================================================================
+ 
+static void test_str_set_index_lit_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_str_array_index_lit(NULL, 0, "x"), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_set_index_lit_out_of_bounds_returns_error(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(set_str_array_index_lit(arr, 0, "x"), OUT_OF_BOUNDS);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_set_index_lit_replaces_value(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "old"), NO_ERROR);
+    assert_int_equal(set_str_array_index_lit(arr, 0, "new"), NO_ERROR);
+ 
+    string_expect_t g = get_str_array_index(arr, 0);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "new");
+    return_string(g.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 17: copy_str_array
+// ================================================================================
+ 
+static void test_str_copy_null_src_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    str_array_expect_t r = copy_str_array(NULL, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_copy_produces_independent_array(void** state) {
+    (void)state;
+    allocator_vtable_t a   = heap_allocator();
+    str_array_t*       src = _make_array(4);
+    assert_int_equal(push_back_lit(src, "apple"),  NO_ERROR);
+    assert_int_equal(push_back_lit(src, "banana"), NO_ERROR);
+ 
+    str_array_expect_t cr = copy_str_array(src, a);
+    assert_true(cr.has_value);
+    str_array_t* dst = cr.u.value;
+ 
+    assert_int_equal((int)str_array_size(dst), 2);
+ 
+    /* Modify the source — copy must be unaffected. */
+    assert_int_equal(set_str_array_index_lit(src, 0, "cherry"), NO_ERROR);
+ 
+    string_expect_t g = get_str_array_index(dst, 0);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "apple");
+    return_string(g.u.value);
+ 
+    return_str_array(src);
+    return_str_array(dst);
+}
+ 
+// ================================================================================
+// Group 18: reverse_str_array
+// ================================================================================
+ 
+static void test_str_reverse_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(reverse_str_array(NULL), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_reverse_single_element_is_no_op(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "only"), NO_ERROR);
+    assert_int_equal(reverse_str_array(arr), NO_ERROR);
+ 
+    string_expect_t g = get_str_array_index(arr, 0);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "only");
+    return_string(g.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_reverse_inverts_order(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "first"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "second"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "third"),  NO_ERROR);
+    assert_int_equal(reverse_str_array(arr), NO_ERROR);
+ 
+    string_expect_t g0 = get_str_array_index(arr, 0);
+    string_expect_t g2 = get_str_array_index(arr, 2);
+    assert_true(g0.has_value && g2.has_value);
+    assert_string_equal(const_string(g0.u.value), "third");
+    assert_string_equal(const_string(g2.u.value), "first");
+    return_string(g0.u.value);
+    return_string(g2.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 19: sort_str_array
+// ================================================================================
+ 
+static void test_str_sort_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(sort_str_array(NULL, FORWARD), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_sort_forward_ascending(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "zebra"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "apple"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "mango"),  NO_ERROR);
+    assert_int_equal(sort_str_array(arr, FORWARD), NO_ERROR);
+ 
+    string_expect_t g0 = get_str_array_index(arr, 0);
+    string_expect_t g2 = get_str_array_index(arr, 2);
+    assert_true(g0.has_value && g2.has_value);
+    assert_string_equal(const_string(g0.u.value), "apple");
+    assert_string_equal(const_string(g2.u.value), "zebra");
+    return_string(g0.u.value);
+    return_string(g2.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_sort_reverse_descending(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "apple"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "zebra"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "mango"),  NO_ERROR);
+    assert_int_equal(sort_str_array(arr, REVERSE), NO_ERROR);
+ 
+    string_expect_t g0 = get_str_array_index(arr, 0);
+    string_expect_t g2 = get_str_array_index(arr, 2);
+    assert_true(g0.has_value && g2.has_value);
+    assert_string_equal(const_string(g0.u.value), "zebra");
+    assert_string_equal(const_string(g2.u.value), "apple");
+    return_string(g0.u.value);
+    return_string(g2.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 20: str_array_contains_str
+// ================================================================================
+ 
+static void test_str_contains_str_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    string_t*     s = _make_str("x");
+    size_expect_t r = str_array_contains_str(NULL, s, 0, 1);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+    return_string(s);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_contains_str_finds_existing_value(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_t*    s   = _make_str("beta");
+    assert_int_equal(push_back_lit(arr, "alpha"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "beta"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "gamma"), NO_ERROR);
+ 
+    size_expect_t r = str_array_contains_str(arr, s, 0, 3);
+    assert_true(r.has_value);
+    assert_int_equal((int)r.u.value, 1);
+ 
+    return_string(s);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_contains_str_not_found_returns_error(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    string_t*    s   = _make_str("delta");
+    assert_int_equal(push_back_lit(arr, "alpha"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "beta"),  NO_ERROR);
+ 
+    size_expect_t r = str_array_contains_str(arr, s, 0, 2);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NOT_FOUND);
+ 
+    return_string(s);
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 21: str_array_contains_lit
+// ================================================================================
+ 
+static void test_str_contains_lit_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = str_array_contains_lit(NULL, "x", 0, 1);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_contains_lit_case_sensitive_no_match(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "Hello"), NO_ERROR);
+ 
+    /* Lowercase "hello" must NOT match "Hello". */
+    size_expect_t r = str_array_contains_lit(arr, "hello", 0, 1);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NOT_FOUND);
+ 
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_contains_lit_finds_value(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "one"),   NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "two"),   NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "three"), NO_ERROR);
+ 
+    size_expect_t r = str_array_contains_lit(arr, "three", 0, 3);
+    assert_true(r.has_value);
+    assert_int_equal((int)r.u.value, 2);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 22: str_array_binary_search_str
+// ================================================================================
+ 
+static void test_str_bsearch_str_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    string_t*     s = _make_str("x");
+    size_expect_t r = str_array_binary_search_str(NULL, s, false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+    return_string(s);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_bsearch_str_finds_value_with_sort(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(8);
+    string_t*    s   = _make_str("mango");
+    assert_int_equal(push_back_lit(arr, "zebra"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "apple"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "mango"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "banana"), NO_ERROR);
+ 
+    size_expect_t r = str_array_binary_search_str(arr, s, true);
+    assert_true(r.has_value);
+ 
+    /* Confirm the element at the returned index is correct. */
+    string_expect_t g = get_str_array_index(arr, r.u.value);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "mango");
+    return_string(g.u.value);
+ 
+    return_string(s);
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_bsearch_str_returns_lowest_index_for_duplicates(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(8);
+    string_t*    s   = _make_str("beta");
+    assert_int_equal(push_back_lit(arr, "alpha"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "beta"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "beta"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "gamma"), NO_ERROR);
+ 
+    /* Array is already sorted — no sort needed. */
+    size_expect_t r = str_array_binary_search_str(arr, s, false);
+    assert_true(r.has_value);
+    assert_int_equal((int)r.u.value, 1);
+ 
+    return_string(s);
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 23: str_array_binary_search_lit
+// ================================================================================
+ 
+static void test_str_bsearch_lit_null_array_returns_null_pointer(void** state) {
+    (void)state;
+    size_expect_t r = str_array_binary_search_lit(NULL, "x", false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_bsearch_lit_not_found_returns_error(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "alpha"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "beta"),  NO_ERROR);
+ 
+    size_expect_t r = str_array_binary_search_lit(arr, "delta", false);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NOT_FOUND);
+ 
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_bsearch_lit_finds_with_sort(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal(push_back_lit(arr, "cherry"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "apple"),  NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "banana"), NO_ERROR);
+ 
+    size_expect_t r = str_array_binary_search_lit(arr, "banana", true);
+    assert_true(r.has_value);
+ 
+    string_expect_t g = get_str_array_index(arr, r.u.value);
+    assert_true(g.has_value);
+    assert_string_equal(const_string(g.u.value), "banana");
+    return_string(g.u.value);
+ 
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 24: str_array_size
+// ================================================================================
+ 
+static void test_str_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)str_array_size(NULL), 0);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_size_reflects_push_count(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal((int)str_array_size(arr), 0);
+    assert_int_equal(push_back_lit(arr, "a"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "b"), NO_ERROR);
+    assert_int_equal((int)str_array_size(arr), 2);
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 25: str_array_alloc
+// ================================================================================
+ 
+static void test_str_alloc_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)str_array_alloc(NULL), 0);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_alloc_matches_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    str_array_expect_t r = init_str_array(16, false, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_alloc(r.u.value), 16);
+    return_str_array(r.u.value);
+}
+ 
+// ================================================================================
+// Group 26: str_array_data_size
+// ================================================================================
+ 
+static void test_str_data_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)str_array_data_size(NULL), 0);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_data_size_is_pointer_size(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_int_equal((int)str_array_data_size(arr), (int)sizeof(string_t*));
+    return_str_array(arr);
+}
+ 
+// ================================================================================
+// Group 27: is_str_array_empty / is_str_array_full
+// ================================================================================
+ 
+static void test_str_empty_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_str_array_empty(NULL));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_empty_reflects_contents(void** state) {
+    (void)state;
+    str_array_t* arr = _make_array(4);
+    assert_true(is_str_array_empty(arr));
+    assert_int_equal(push_back_lit(arr, "x"), NO_ERROR);
+    assert_false(is_str_array_empty(arr));
+    return_str_array(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_full_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_str_array_full(NULL));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_str_full_reflects_capacity(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    str_array_expect_t r = init_str_array(2, false, a);
+    assert_true(r.has_value);
+    str_array_t* arr = r.u.value;
+ 
+    assert_false(is_str_array_full(arr));
+    assert_int_equal(push_back_lit(arr, "a"), NO_ERROR);
+    assert_int_equal(push_back_lit(arr, "b"), NO_ERROR);
+    assert_true(is_str_array_full(arr));
+ 
+    return_str_array(arr);
+}
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// Group 28: string_delim_array — macro dispatches to _lit for const char*
+// ================================================================================
+ 
+/* Basic split on two distinct delimiter characters */
+static void test_delim_macro_lit_basic(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string("one,two;three", 0u, a);
+    assert_true(rs.has_value);
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, ",;", NULL, NULL, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 3);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    string_expect_t e2 = get_str_array_index(r.u.value, 2u);
+    assert_string_equal(const_string(e0.u.value), "one");
+    assert_string_equal(const_string(e1.u.value), "two");
+    assert_string_equal(const_string(e2.u.value), "three");
+    return_string(e0.u.value); return_string(e1.u.value); return_string(e2.u.value);
+    return_str_array(r.u.value);
+    return_string(rs.u.value);
+}
+ 
+/* Single delimiter character — same behaviour as strtok with one separator */
+static void test_delim_macro_lit_single_char(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string("a:b:c", 0u, a);
+    assert_true(rs.has_value);
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, ":", NULL, NULL, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 3);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    string_expect_t e2 = get_str_array_index(r.u.value, 2u);
+    assert_string_equal(const_string(e0.u.value), "a");
+    assert_string_equal(const_string(e1.u.value), "b");
+    assert_string_equal(const_string(e2.u.value), "c");
+    return_string(e0.u.value); return_string(e1.u.value); return_string(e2.u.value);
+    return_str_array(r.u.value);
+    return_string(rs.u.value);
+}
+ 
+/* Consecutive delimiters produce an empty string between them */
+static void test_delim_macro_lit_consecutive_delimiters(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string("a,,b", 0u, a);
+    assert_true(rs.has_value);
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, ",", NULL, NULL, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 3);
+
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    fprint_string(stdout, e1.u.value);
+    assert_string_equal(const_string(e1.u.value), "");
+    // return_string(e1.u.value);
+    // return_str_array(r.u.value);
+    // return_string(rs.u.value);
+}
+ 
+/* Leading delimiter produces empty string as first element */
+static void test_delim_macro_lit_leading_delimiter(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string(",hello", 0u, a);
+    assert_true(rs.has_value);
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, ",", NULL, NULL, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 2);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    assert_string_equal(const_string(e0.u.value), "");
+    assert_string_equal(const_string(e1.u.value), "hello");
+    return_string(e0.u.value); return_string(e1.u.value);
+    return_str_array(r.u.value);
+    return_string(rs.u.value);
+}
+ 
+/* Trailing delimiter produces empty string as last element */
+static void test_delim_macro_lit_trailing_delimiter(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string("hello,", 0u, a);
+    assert_true(rs.has_value);
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, ",", NULL, NULL, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 2);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    assert_string_equal(const_string(e0.u.value), "hello");
+    assert_string_equal(const_string(e1.u.value), "");
+    return_string(e0.u.value); return_string(e1.u.value);
+    return_str_array(r.u.value);
+    return_string(rs.u.value);
+}
+ 
+/* No delimiter found — entire string returned as single element */
+static void test_delim_macro_lit_no_match(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string("noddelimiters", 0u, a);
+    assert_true(rs.has_value);
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, ",;", NULL, NULL, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 1);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    assert_string_equal(const_string(e0.u.value), "noddelimiters");
+    return_string(e0.u.value);
+    return_str_array(r.u.value);
+    return_string(rs.u.value);
+}
+ 
+/* NULL source returns NULL_POINTER error */
+static void test_delim_macro_lit_null_source_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    str_array_expect_t r = string_delim_array((string_t*)NULL, ",", NULL, NULL, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+/* Empty delimiter set returns INVALID_ARG */
+static void test_delim_macro_lit_empty_set_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string("hello", 0u, a);
+    assert_true(rs.has_value);
+    str_array_expect_t r = string_delim_array(rs.u.value, "", NULL, NULL, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+    return_string(rs.u.value);
+}
+ 
+// ================================================================================
+// Group 29: string_delim_array — macro dispatches to _str for string_t*
+// ================================================================================
+ 
+/* Basic split using string_t delimiter set */
+static void test_delim_macro_str_basic(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs  = init_string("x:y-z", 0u, a);
+    string_expect_t rds = init_string(":-", 0u, a);
+    assert_true(rs.has_value); assert_true(rds.has_value);
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, rds.u.value, NULL, NULL, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 3);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    string_expect_t e2 = get_str_array_index(r.u.value, 2u);
+    assert_string_equal(const_string(e0.u.value), "x");
+    assert_string_equal(const_string(e1.u.value), "y");
+    assert_string_equal(const_string(e2.u.value), "z");
+    return_string(e0.u.value); return_string(e1.u.value); return_string(e2.u.value);
+    return_str_array(r.u.value);
+    return_string(rds.u.value); return_string(rs.u.value);
+}
+ 
+/* Results are independent deep copies — mutating source does not affect array */
+static void test_delim_macro_str_elements_are_deep_copies(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs  = init_string("hello,world", 0u, a);
+    string_expect_t rds = init_string(",", 0u, a);
+    assert_true(rs.has_value); assert_true(rds.has_value);
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, rds.u.value, NULL, NULL, a);
+    assert_true(r.has_value);
+ 
+    /* Overwrite source string buffer */
+    memset(rs.u.value->str, 'X', rs.u.value->len);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    assert_string_equal(const_string(e0.u.value), "hello");
+    assert_string_equal(const_string(e1.u.value), "world");
+    return_string(e0.u.value); return_string(e1.u.value);
+    return_str_array(r.u.value);
+    return_string(rds.u.value); return_string(rs.u.value);
+}
+ 
+/* NULL string_t delimiter returns NULL_POINTER */
+static void test_delim_macro_str_null_delim_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string("hello", 0u, a);
+    assert_true(rs.has_value);
+    str_array_expect_t r = string_delim_array(rs.u.value, (string_t*)NULL,
+                                              NULL, NULL, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+    return_string(rs.u.value);
+}
+ 
+// ================================================================================
+// Group 30: string_delim_array — windowed
+// ================================================================================
+ 
+/* begin window trims the left side */
+static void test_delim_macro_windowed_begin(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    /* "SKIP,one,two" — start window 5 bytes in, past "SKIP," */
+    string_expect_t rs = init_string("SKIP,one,two", 0u, a);
+    assert_true(rs.has_value);
+    const uint8_t* begin = (const uint8_t*)rs.u.value->str + 5u;
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, ",", begin, NULL, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 2);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    assert_string_equal(const_string(e0.u.value), "one");
+    assert_string_equal(const_string(e1.u.value), "two");
+    return_string(e0.u.value); return_string(e1.u.value);
+    return_str_array(r.u.value);
+    return_string(rs.u.value);
+}
+ 
+/* end window trims the right side */
+static void test_delim_macro_windowed_end(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    /* "one,two,SKIP" — end window 7 bytes in, before ",SKIP" */
+    string_expect_t rs = init_string("one,two,SKIP", 0u, a);
+    assert_true(rs.has_value);
+    const uint8_t* end = (const uint8_t*)rs.u.value->str + 7u;
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, ",", NULL, end, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 2);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    assert_string_equal(const_string(e0.u.value), "one");
+    assert_string_equal(const_string(e1.u.value), "two");
+    return_string(e0.u.value); return_string(e1.u.value);
+    return_str_array(r.u.value);
+    return_string(rs.u.value);
+}
+ 
+/* begin and end together isolate a middle segment */
+static void test_delim_macro_windowed_both(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    /* "SKIP,one,two,SKIP" — window [5, 12): "one,two" */
+    string_expect_t rs = init_string("SKIP,one,two,SKIP", 0u, a);
+    assert_true(rs.has_value);
+    const uint8_t* begin = (const uint8_t*)rs.u.value->str + 5u;
+    const uint8_t* end   = (const uint8_t*)rs.u.value->str + 12u;
+ 
+    str_array_expect_t r = string_delim_array(rs.u.value, ",", begin, end, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)str_array_size(r.u.value), 2);
+ 
+    string_expect_t e0 = get_str_array_index(r.u.value, 0u);
+    string_expect_t e1 = get_str_array_index(r.u.value, 1u);
+    assert_string_equal(const_string(e0.u.value), "one");
+    assert_string_equal(const_string(e1.u.value), "two");
+    return_string(e0.u.value); return_string(e1.u.value);
+    return_str_array(r.u.value);
+    return_string(rs.u.value);
+}
+ 
+/* begin > end is an invalid window — returns INVALID_ARG */
+static void test_delim_macro_windowed_invalid_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string("hello", 0u, a);
+    assert_true(rs.has_value);
+    const uint8_t* b = (const uint8_t*)rs.u.value->str + 4u;
+    const uint8_t* e = (const uint8_t*)rs.u.value->str + 1u;
+    str_array_expect_t r = string_delim_array(rs.u.value, ",", b, e, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+    return_string(rs.u.value);
+}
+ 
+/* Pointer outside string bounds — returns INVALID_ARG */
+static void test_delim_macro_windowed_out_of_bounds_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    string_expect_t rs = init_string("hello", 0u, a);
+    assert_true(rs.has_value);
+    /* Point one byte before the string buffer */
+    const uint8_t* b = (const uint8_t*)rs.u.value->str - 1u;
+    str_array_expect_t r = string_delim_array(rs.u.value, ",", b, NULL, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+    return_string(rs.u.value);
+}
+// ================================================================================
+// main
+// ================================================================================
+ 
+const struct CMUnitTest test_string_array[] = {
+
+    /* Group 1: init_str_array */
+    cmocka_unit_test(test_str_init_null_allocate_fn_fails),
+    cmocka_unit_test(test_str_init_returns_valid_array),
+
+    /* Group 2: return_str_array */
+    cmocka_unit_test(test_str_return_null_is_safe),
+    cmocka_unit_test(test_str_return_releases_owned_strings),
+
+    /* Group 3: push_back_str */
+    cmocka_unit_test(test_str_push_back_str_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_push_back_str_null_src_returns_null_pointer),
+    cmocka_unit_test(test_str_push_back_str_deep_copy_independent),
+
+    /* Group 4: push_front_str */
+    cmocka_unit_test(test_str_push_front_str_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_push_front_str_prepends_correctly),
+
+    /* Group 5: push_at_str */
+    cmocka_unit_test(test_str_push_at_str_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_push_at_str_out_of_bounds_returns_error),
+    cmocka_unit_test(test_str_push_at_str_inserts_at_correct_position),
+
+    /* Group 6: push_back_lit */
+    cmocka_unit_test(test_str_push_back_lit_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_push_back_lit_null_lit_returns_null_pointer),
+    cmocka_unit_test(test_str_push_back_lit_stores_correct_value),
+
+    /* Group 7: push_front_lit */
+    cmocka_unit_test(test_str_push_front_lit_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_push_front_lit_prepends_correctly),
+
+    /* Group 8: push_at_lit */
+    cmocka_unit_test(test_str_push_at_lit_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_push_at_lit_out_of_bounds_returns_error),
+    cmocka_unit_test(test_str_push_at_lit_inserts_at_correct_position),
+
+    /* Group 9: get_str_array_index */
+    cmocka_unit_test(test_str_get_index_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_get_index_out_of_bounds_returns_error),
+    cmocka_unit_test(test_str_get_index_returns_independent_copy),
+
+    /* Group 10: get_str_array_ptr */
+    cmocka_unit_test(test_str_get_ptr_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_get_ptr_out_of_bounds_returns_error),
+    cmocka_unit_test(test_str_get_ptr_returns_correct_value_without_copy),
+
+    /* Group 11: pop_back_str_array */
+    cmocka_unit_test(test_str_pop_back_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_pop_back_empty_array_returns_empty),
+    cmocka_unit_test(test_str_pop_back_removes_last_element),
+
+    /* Group 12: pop_front_str_array */
+    cmocka_unit_test(test_str_pop_front_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_pop_front_empty_array_returns_empty),
+    cmocka_unit_test(test_str_pop_front_removes_first_element),
+
+    /* Group 13: pop_any_str_array */
+    cmocka_unit_test(test_str_pop_any_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_pop_any_out_of_bounds_returns_error),
+    cmocka_unit_test(test_str_pop_any_removes_middle_element),
+
+    /* Group 14: clear_str_array */
+    cmocka_unit_test(test_str_clear_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_clear_releases_elements_and_resets_len),
+
+    /* Group 15: set_str_array_index_str */
+    cmocka_unit_test(test_str_set_index_str_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_set_index_str_out_of_bounds_returns_error),
+    cmocka_unit_test(test_str_set_index_str_replaces_value),
+
+    /* Group 16: set_str_array_index_lit */
+    cmocka_unit_test(test_str_set_index_lit_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_set_index_lit_out_of_bounds_returns_error),
+    cmocka_unit_test(test_str_set_index_lit_replaces_value),
+
+    /* Group 17: copy_str_array */
+    cmocka_unit_test(test_str_copy_null_src_returns_null_pointer),
+    cmocka_unit_test(test_str_copy_produces_independent_array),
+
+    /* Group 18: reverse_str_array */
+    cmocka_unit_test(test_str_reverse_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_reverse_single_element_is_no_op),
+    cmocka_unit_test(test_str_reverse_inverts_order),
+
+    /* Group 19: sort_str_array */
+    cmocka_unit_test(test_str_sort_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_sort_forward_ascending),
+    cmocka_unit_test(test_str_sort_reverse_descending),
+
+    /* Group 20: str_array_contains_str */
+    cmocka_unit_test(test_str_contains_str_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_contains_str_finds_existing_value),
+    cmocka_unit_test(test_str_contains_str_not_found_returns_error),
+
+    /* Group 21: str_array_contains_lit */
+    cmocka_unit_test(test_str_contains_lit_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_contains_lit_case_sensitive_no_match),
+    cmocka_unit_test(test_str_contains_lit_finds_value),
+
+    /* Group 22: str_array_binary_search_str */
+    cmocka_unit_test(test_str_bsearch_str_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_bsearch_str_finds_value_with_sort),
+    cmocka_unit_test(test_str_bsearch_str_returns_lowest_index_for_duplicates),
+
+    /* Group 23: str_array_binary_search_lit */
+    cmocka_unit_test(test_str_bsearch_lit_null_array_returns_null_pointer),
+    cmocka_unit_test(test_str_bsearch_lit_not_found_returns_error),
+    cmocka_unit_test(test_str_bsearch_lit_finds_with_sort),
+
+    /* Group 24: str_array_size */
+    cmocka_unit_test(test_str_size_null_returns_zero),
+    cmocka_unit_test(test_str_size_reflects_push_count),
+
+    /* Group 25: str_array_alloc */
+    cmocka_unit_test(test_str_alloc_null_returns_zero),
+    cmocka_unit_test(test_str_alloc_matches_capacity),
+
+    /* Group 26: str_array_data_size */
+    cmocka_unit_test(test_str_data_size_null_returns_zero),
+    cmocka_unit_test(test_str_data_size_is_pointer_size),
+
+    /* Group 27: is_str_array_empty / is_str_array_full */
+    cmocka_unit_test(test_str_empty_null_returns_true),
+    cmocka_unit_test(test_str_empty_reflects_contents),
+    cmocka_unit_test(test_str_full_null_returns_true),
+    cmocka_unit_test(test_str_full_reflects_capacity),
+
+    /* Group 28: string_delim_array macro — _lit dispatch */
+    cmocka_unit_test(test_delim_macro_lit_basic),
+    cmocka_unit_test(test_delim_macro_lit_single_char),
+    cmocka_unit_test(test_delim_macro_lit_consecutive_delimiters),
+    cmocka_unit_test(test_delim_macro_lit_leading_delimiter),
+    cmocka_unit_test(test_delim_macro_lit_trailing_delimiter),
+    cmocka_unit_test(test_delim_macro_lit_no_match),
+    cmocka_unit_test(test_delim_macro_lit_null_source_fails),
+    cmocka_unit_test(test_delim_macro_lit_empty_set_fails),
+
+    /* Group 29: string_delim_array macro — _str dispatch */
+    cmocka_unit_test(test_delim_macro_str_basic),
+    cmocka_unit_test(test_delim_macro_str_elements_are_deep_copies),
+    cmocka_unit_test(test_delim_macro_str_null_delim_fails),
+
+    /* Group 30: string_delim_array macro — windowed */
+    cmocka_unit_test(test_delim_macro_windowed_begin),
+    cmocka_unit_test(test_delim_macro_windowed_end),
+    cmocka_unit_test(test_delim_macro_windowed_both),
+    cmocka_unit_test(test_delim_macro_windowed_invalid_fails),
+    cmocka_unit_test(test_delim_macro_windowed_out_of_bounds_fails),
+};
+const size_t test_string_array_count = sizeof(test_string_array) / sizeof(test_string_array[0]);
 // ================================================================================
 // ================================================================================
 // eof

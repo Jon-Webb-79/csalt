@@ -57,6 +57,7 @@ int main(void) {
         {"Float Array", test_float_array, test_float_array_count},
         {"Double Array", test_double_array, test_double_array_count},
         {"Long Double Array", test_ldouble_array, test_ldouble_array_count},
+        {"String Array", test_string_array, test_string_array_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);

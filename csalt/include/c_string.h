@@ -2853,23 +2853,59 @@ error_code_t push_at_lit(str_array_t* array, size_t index, const char* lit);
 // ================================================================================
 // Get
 // ================================================================================
- 
+
 /**
- * @brief Return a borrowed pointer to the string_t* stored at index.  O(1).
+ * @brief Return a deep copy of the string_t at index.
  *
- * *out is a borrowed reference valid only until the next mutation of the
- * array.  Do NOT call return_string on *out — the array owns the string.
+ * Allocates an independent string_t via copy_string using the array's
+ * own allocator.  The caller owns the returned string_t and must
+ * eventually call return_string on it.
  *
  * @param array  Must not be NULL.
  * @param index  Must be < array->base.len.
- * @param out    Must not be NULL.  Receives the borrowed string_t*.
  *
- * @return NO_ERROR, NULL_POINTER, or OUT_OF_BOUNDS.
+ * @return string_expect_t: has_value true + u.value on success, or
+ *         has_value false + u.error (NULL_POINTER, OUT_OF_BOUNDS, or
+ *         OUT_OF_MEMORY) on failure.
+ *
+ * @code
+ *     string_expect_t r = get_str_array_index(arr, 2);
+ *     if (r.has_value) {
+ *         printf("%s\n", const_string(r.u.value));
+ *         return_string(r.u.value);
+ *     }
+ * @endcode
  */
-error_code_t get_str_array_index(const str_array_t* array,
-                                 size_t             index,
-                                 string_t**         out);
- 
+string_expect_t get_str_array_index(const str_array_t* array, size_t index);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a borrowed pointer to the string_t at index wrapped in
+ *        string_expect_t.  O(1).
+ *
+ * Unlike get_str_array_index, no allocation is performed.  The returned
+ * pointer points directly into the array's internal storage and is valid
+ * only until the next mutation of the array.
+ *
+ * @warning Do NOT call return_string on the returned pointer — the array
+ *          retains ownership of the string_t.
+ *
+ * @param array  Must not be NULL.
+ * @param index  Must be < array->base.len.
+ *
+ * @return string_expect_t: has_value true + u.value (borrowed) on success,
+ *         or has_value false + u.error (NULL_POINTER or OUT_OF_BOUNDS) on
+ *         failure.
+ *
+ * @code
+ *     string_expect_t r = get_str_array_ptr(arr, 2);
+ *     if (r.has_value) {
+ *         printf("%s\n", const_string(r.u.value));
+ *         // do NOT call return_string(r.u.value)
+ *     }
+ * @endcode
+ */
+string_expect_t get_str_array_ptr(const str_array_t* array, size_t index);
 // ================================================================================
 // Pop operations
 // ================================================================================
@@ -3100,6 +3136,129 @@ bool is_str_array_empty(const str_array_t* array);
  
 /** @brief true if array is NULL or len == alloc. */
 bool is_str_array_full(const str_array_t* array);
+// ================================================================================ 
+// ================================================================================ 
+
+// ================================================================================
+// Tokenization — character-set delimiter
+// ================================================================================
+ 
+/**
+ * @brief Split a window of @p s on any character found in a C-string delimiter set.
+ *
+ * Scans the half-open window [@p begin, @p end) byte by byte.  Any byte whose
+ * value appears anywhere in @p delim_set acts as a single-character separator.
+ * Unlike string_token_array_lit(), consecutive delimiter characters each produce
+ * their own split (yielding empty strings between them), matching strtok_r
+ * semantics with the difference that empty tokens ARE returned.
+ *
+ * Example: s = "a,b;;c", delim_set = ",;" → ["a", "b", "", "c"]
+ *
+ * @param s          Source string.  Must not be NULL.
+ * @param delim_set  Null-terminated set of delimiter characters.
+ *                   Must not be NULL or empty.
+ * @param begin      Start of the search window, or NULL for the string start.
+ * @param end        One-past-end of the search window, or NULL for string end.
+ * @param alloc_v    Allocator for the array and all element strings.
+ *
+ * @return str_array_expect_t with has_value true on success, or has_value false
+ *         with u.error set to NULL_POINTER, INVALID_ARG, or OUT_OF_MEMORY.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *     string_expect_t rs = init_string("one,two;three", 0u, a);
+ *     str_array_expect_t r = string_delim_array_lit(rs.u.value, ",;", NULL, NULL, a);
+ *     // r.u.value contains ["one", "two", "three"]
+ * @endcode
+ *
+ * @see string_delim_array
+ * @see string_delim_array_str
+ */
+str_array_expect_t string_delim_array_lit(const string_t*    s,
+                                          const char*        delim_set,
+                                          const uint8_t*     begin,
+                                          const uint8_t*     end,
+                                          allocator_vtable_t alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Split a window of @p s on any character found in a string_t delimiter set.
+ *
+ * Identical semantics to string_delim_array_lit() but the delimiter set is
+ * supplied as a @ref string_t.  Every byte in @p delim_set->str acts as a
+ * single-character separator.
+ *
+ * @param s          Source string.  Must not be NULL.
+ * @param delim_set  Delimiter character set as string_t.  Must not be NULL and
+ *                   must have len > 0.
+ * @param begin      Start of the search window, or NULL for the string start.
+ * @param end        One-past-end of the search window, or NULL for string end.
+ * @param alloc_v    Allocator for the array and all element strings.
+ *
+ * @return str_array_expect_t with has_value true on success, or has_value false
+ *         with u.error set to NULL_POINTER, INVALID_ARG, or OUT_OF_MEMORY.
+ *
+ * @see string_delim_array_lit
+ */
+str_array_expect_t string_delim_array_str(const string_t*    s,
+                                          const string_t*    delim_set,
+                                          const uint8_t*     begin,
+                                          const uint8_t*     end,
+                                          allocator_vtable_t alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+#if defined(ARENA_USE_CONVENIENCE_MACROS) && !defined(NO_FUNCTION_MACROS)
+ 
+/* Expression-safe static assertion (shared with other macro families). */
+#ifndef CSALT_STATIC_ASSERT_EXPR_
+#define CSALT_STATIC_ASSERT_EXPR_(cond, name) \
+    ((void)sizeof(char[(cond) ? 1 : -1]))
+#endif
+ 
+/* Supported delimiter types for both tokenizer macros. */
+#define _STR_TOK_DELIM_SUPPORTED_(x) \
+    _Generic((x),                    \
+        const char*:     1,          \
+        char*:           1,          \
+        const string_t*: 1,          \
+        string_t*:       1,          \
+        default:         0)
+ 
+#define _STR_TOK_TYPECHECK_(x)                                    \
+    CSALT_STATIC_ASSERT_EXPR_(_STR_TOK_DELIM_SUPPORTED_(x),       \
+                              string_token_array_unsupported_token_type)
+ 
+#define _STR_DELIM_TYPECHECK_(x)                                  \
+    CSALT_STATIC_ASSERT_EXPR_(_STR_TOK_DELIM_SUPPORTED_(x),       \
+                              string_delim_array_unsupported_delim_type)
+ 
+/**
+ * @brief Type-generic character-set-delimiter tokenizer.
+ *
+ * Dispatches at compile time to string_delim_array_lit() or
+ * string_delim_array_str() based on the type of @p delim_set.
+ *
+ *   const char* / char*          -> string_delim_array_lit(s, delim_set, begin, end, alloc_v)
+ *   const string_t* / string_t*  -> string_delim_array_str(s, delim_set, begin, end, alloc_v)
+ *
+ * @param s          Source string_t*.
+ * @param delim_set  Character set delimiter (C-string or string_t*).
+ * @param begin      Window start pointer, or NULL for string start.
+ * @param end        Window end pointer, or NULL for string end.
+ * @param alloc_v    Allocator.
+ */
+#define string_delim_array(s, delim_set, begin, end, alloc_v) \
+    (_STR_DELIM_TYPECHECK_(delim_set),                         \
+     _Generic((delim_set),                                     \
+        const char*:     string_delim_array_lit,               \
+        char*:           string_delim_array_lit,               \
+        const string_t*: string_delim_array_str,               \
+        string_t*:       string_delim_array_str                \
+     )((s), (delim_set), (begin), (end), (alloc_v)))
+ 
+#endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
