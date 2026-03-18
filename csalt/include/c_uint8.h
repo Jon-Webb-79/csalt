@@ -18,8 +18,10 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "c_array.h"
+#include "c_dict.h"
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -1255,7 +1257,716 @@ uint8_expect_t uint8_array_min(const uint8_array_t* array);
  * @endcode
  */
 uint8_expect_t uint8_array_max(const uint8_array_t* array);
+// ================================================================================ 
+// ================================================================================ 
 
+/**
+ * @brief A dictionary that maps null-terminated C-string keys to uint8_t values.
+ *
+ * This is a typedef alias for @ref dict_t with the convention that
+ * @c data_size is always @c sizeof(uint8_t) and @c dtype is always
+ * @c UINT8_TYPE.  Do not use the raw @ref dict_t API directly on a
+ * @c uint8_dict_t — always go through the functions declared in this header
+ * so that the type constraints are enforced.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *     uint8_dict_expect_t r = init_uint8_dict(16, true, a);
+ *     if (!r.has_value) { // handle r.u.error }
+ *     uint8_dict_t* d = r.u.value;
+ *
+ *     insert_uint8_dict(d, "red",   255u, a);
+ *     insert_uint8_dict(d, "green", 128u, a);
+ *     insert_uint8_dict(d, "blue",    0u, a);
+ *
+ *     uint8_t v;
+ *     get_uint8_dict_value(d, "green", &v);   // v == 128
+ *
+ *     return_uint8_dict(d);
+ * @endcode
+ */
+typedef dict_t uint8_dict_t;
+ 
+/**
+ * @brief Expected return type for @ref init_uint8_dict and
+ *        @ref copy_uint8_dict.
+ *
+ * Check @c has_value before using @c u.value.  On failure @c u.error
+ * contains the relevant @ref error_code_t.
+ */
+typedef struct {
+    bool has_value;
+    union {
+        uint8_dict_t* value;
+        error_code_t  error;
+    } u;
+} uint8_dict_expect_t;
+ 
+// ================================================================================
+// Iterator type
+// ================================================================================
+ 
+/**
+ * @brief Typed iterator callback for @ref foreach_uint8_dict.
+ *
+ * @param key       Null-terminated C-string key (points into the dict's
+ *                  internal storage — do not free or store beyond the
+ *                  callback).
+ * @param key_len   Length of @p key in bytes, excluding the null terminator.
+ * @param value     The uint8_t value associated with @p key.
+ * @param user_data Caller-supplied context pointer passed unchanged from
+ *                  @ref foreach_uint8_dict; may be NULL.
+ *
+ * @code
+ *     static void print_entry(const char* key, size_t key_len,
+ *                             uint8_t value, void* ud) {
+ *         (void)ud;
+ *         printf("  %.*s => %u\n", (int)key_len, key, (unsigned)value);
+ *     }
+ *     foreach_uint8_dict(d, print_entry, NULL);
+ * @endcode
+ */
+typedef void (*uint8_dict_iter_fn)(const char* key,
+                                   size_t      key_len,
+                                   uint8_t     value,
+                                   void*       user_data);
+ 
+// ================================================================================
+// Initialisation and teardown
+// ================================================================================
+ 
+/**
+ * @brief Allocate and initialise a new uint8_dict_t.
+ *
+ * The underlying @ref dict_t is created with @c data_size = sizeof(uint8_t)
+ * and @c dtype = UINT8_TYPE.  The bucket count is rounded up to the next
+ * power of two internally.
+ *
+ * @param capacity  Initial bucket count.  Must be > 0.
+ * @param growth    If true the table resizes automatically when the load
+ *                  factor exceeds 0.75.
+ * @param alloc_v   Allocator for all internal memory.  @c alloc_v.allocate
+ *                  must not be NULL.
+ *
+ * @return @ref uint8_dict_expect_t with @c has_value true on success.
+ *         On failure @c u.error is one of NULL_POINTER, INVALID_ARG, or
+ *         OUT_OF_MEMORY.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *
+ *     // Create a small dict with automatic growth enabled
+ *     uint8_dict_expect_t r = init_uint8_dict(8, true, a);
+ *     if (!r.has_value) {
+ *         fprintf(stderr, "init failed: %d\n", r.u.error);
+ *         return;
+ *     }
+ *     uint8_dict_t* d = r.u.value;
+ *
+ *     insert_uint8_dict(d, "alpha", 1u, a);
+ *     insert_uint8_dict(d, "beta",  2u, a);
+ *
+ *     return_uint8_dict(d);
+ * @endcode
+ */
+uint8_dict_expect_t init_uint8_dict(size_t             capacity,
+                                    bool               growth,
+                                    allocator_vtable_t alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Release all memory owned by a uint8_dict_t.
+ *
+ * Frees every node (key copy + value byte), the bucket array, and the
+ * dict struct itself.  Passing NULL is safe and performs no action.
+ *
+ * @param dict  Dictionary to release.
+ *
+ * @code
+ *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
+ *     insert_uint8_dict(d, "x", 42u, a);
+ *     // ... use the dict ...
+ *     return_uint8_dict(d);   // d must not be used after this point
+ * @endcode
+ */
+void return_uint8_dict(uint8_dict_t* dict);
+ 
+// ================================================================================
+// Insert
+// ================================================================================
+ 
+/**
+ * @brief Insert a null-terminated string key with a uint8_t value.
+ *
+ * The key length is measured with @c strlen(key).  The key bytes are copied
+ * into the dict's own storage — the caller may free or reuse @p key
+ * immediately after this call returns.
+ *
+ * If the key already exists the insertion is rejected and INVALID_ARG is
+ * returned.  To overwrite an existing value use @ref update_uint8_dict.
+ *
+ * @param dict    Must not be NULL.
+ * @param key     Null-terminated C-string key.  Must not be NULL.
+ * @param value   The uint8_t value to store.
+ * @param alloc_v Allocator used to allocate the new node.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG (duplicate key),
+ *         CAPACITY_OVERFLOW (growth == false and table is full), or
+ *         OUT_OF_MEMORY.
+ *
+ * @code
+ *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
+ *
+ *     insert_uint8_dict(d, "level",  5u, a);   // OK
+ *     insert_uint8_dict(d, "health", 100u, a); // OK
+ *
+ *     // Duplicate key — returns INVALID_ARG, dict is unchanged
+ *     error_code_t err = insert_uint8_dict(d, "level", 99u, a);
+ *     assert(err == INVALID_ARG);
+ *
+ *     return_uint8_dict(d);
+ * @endcode
+ */
+error_code_t insert_uint8_dict(uint8_dict_t*      dict,
+                                const char*        key,
+                                uint8_t            value,
+                                allocator_vtable_t alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Insert a bounded key (explicit length) with a uint8_t value.
+ *
+ * Identical to @ref insert_uint8_dict but the key length is supplied by the
+ * caller rather than measured with @c strlen.  This is useful when:
+ * - The key is a sub-string of a larger buffer and is not null-terminated at
+ *   the desired boundary.
+ * - You want to avoid the @c strlen scan on a key whose length is already
+ *   known.
+ *
+ * @param dict    Must not be NULL.
+ * @param key     Pointer to the first byte of the key.  Must not be NULL.
+ * @param key_len Number of bytes in the key.  Must be > 0.
+ * @param value   The uint8_t value to store.
+ * @param alloc_v Allocator used to allocate the new node.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG, CAPACITY_OVERFLOW, or
+ *         OUT_OF_MEMORY.
+ *
+ * @code
+ *     // Key is a sub-string: "hello world", take only "hello" (5 bytes)
+ *     const char* buf = "hello world";
+ *     insert_uint8_dict_n(d, buf, 5, 77u, a);
+ *
+ *     uint8_t v;
+ *     // Retrieve using the same bounded key
+ *     get_uint8_dict_value_n(d, buf, 5, &v);   // v == 77
+ * @endcode
+ */
+error_code_t insert_uint8_dict_n(uint8_dict_t*      dict,
+                                  const char*        key,
+                                  size_t             key_len,
+                                  uint8_t            value,
+                                  allocator_vtable_t alloc_v);
+ 
+// ================================================================================
+// Pop (remove and retrieve)
+// ================================================================================
+ 
+/**
+ * @brief Remove the entry for a null-terminated key and return its value.
+ *
+ * If the key is found the node is freed and the stored value is written into
+ * @p out_value (if non-NULL).  If the key is not found @p out_value is not
+ * written.
+ *
+ * @param dict       Must not be NULL.
+ * @param key        Null-terminated C-string key.  Must not be NULL.
+ * @param out_value  Destination for the removed value, or NULL to discard.
+ *
+ * @return NO_ERROR, NULL_POINTER, or NOT_FOUND.
+ *
+ * @code
+ *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
+ *     insert_uint8_dict(d, "score", 42u, a);
+ *
+ *     uint8_t removed;
+ *     error_code_t err = pop_uint8_dict(d, "score", &removed);
+ *     assert(err == NO_ERROR && removed == 42u);
+ *
+ *     // Key is gone — next pop returns NOT_FOUND
+ *     err = pop_uint8_dict(d, "score", NULL);
+ *     assert(err == NOT_FOUND);
+ *
+ *     return_uint8_dict(d);
+ * @endcode
+ */
+error_code_t pop_uint8_dict(uint8_dict_t* dict,
+                             const char*   key,
+                             uint8_t*      out_value);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Remove the entry for a bounded key and return its value.
+ *
+ * Identical to @ref pop_uint8_dict but the key length is supplied explicitly.
+ *
+ * @param dict       Must not be NULL.
+ * @param key        Pointer to the key bytes.  Must not be NULL.
+ * @param key_len    Number of bytes in the key.  Must be > 0.
+ * @param out_value  Destination for the removed value, or NULL to discard.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG, or NOT_FOUND.
+ *
+ * @code
+ *     const char* buf = "score_total";
+ *     insert_uint8_dict_n(d, buf, 5, 99u, a);   // key = "score"
+ *
+ *     uint8_t v;
+ *     pop_uint8_dict_n(d, buf, 5, &v);           // removes "score", v == 99
+ * @endcode
+ */
+error_code_t pop_uint8_dict_n(uint8_dict_t* dict,
+                               const char*   key,
+                               size_t        key_len,
+                               uint8_t*      out_value);
+ 
+// ================================================================================
+// Update
+// ================================================================================
+ 
+/**
+ * @brief Overwrite the value of an existing null-terminated key.
+ *
+ * No allocation is performed.  If the key does not exist NOT_FOUND is
+ * returned and the dict is unchanged.  To insert a new entry use
+ * @ref insert_uint8_dict.
+ *
+ * @param dict   Must not be NULL.
+ * @param key    Null-terminated C-string key.  Must not be NULL.
+ * @param value  New uint8_t value to store.
+ *
+ * @return NO_ERROR, NULL_POINTER, or NOT_FOUND.
+ *
+ * @code
+ *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
+ *     insert_uint8_dict(d, "lives", 3u, a);
+ *
+ *     update_uint8_dict(d, "lives", 2u);   // decrement
+ *
+ *     uint8_t v;
+ *     get_uint8_dict_value(d, "lives", &v);
+ *     assert(v == 2u);
+ *
+ *     return_uint8_dict(d);
+ * @endcode
+ */
+error_code_t update_uint8_dict(uint8_dict_t* dict,
+                                const char*   key,
+                                uint8_t       value);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Overwrite the value of an existing bounded key.
+ *
+ * Identical to @ref update_uint8_dict but the key length is supplied
+ * explicitly, avoiding a @c strlen call.
+ *
+ * @param dict     Must not be NULL.
+ * @param key      Pointer to the key bytes.  Must not be NULL.
+ * @param key_len  Number of bytes in the key.  Must be > 0.
+ * @param value    New uint8_t value to store.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG, or NOT_FOUND.
+ *
+ * @code
+ *     const char* buf = "lives_total";
+ *     insert_uint8_dict_n(d, buf, 5, 3u, a);   // key = "lives"
+ *     update_uint8_dict_n(d, buf, 5, 2u);       // update "lives" to 2
+ * @endcode
+ */
+error_code_t update_uint8_dict_n(uint8_dict_t* dict,
+                                  const char*   key,
+                                  size_t        key_len,
+                                  uint8_t       value);
+ 
+// ================================================================================
+// Lookup
+// ================================================================================
+ 
+/**
+ * @brief Copy the value for a null-terminated key into a caller-supplied
+ *        variable.
+ *
+ * @param dict       Must not be NULL.
+ * @param key        Null-terminated C-string key.  Must not be NULL.
+ * @param out_value  Destination for the retrieved value.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, or NOT_FOUND.
+ *
+ * @code
+ *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
+ *     insert_uint8_dict(d, "brightness", 200u, a);
+ *
+ *     uint8_t v;
+ *     if (get_uint8_dict_value(d, "brightness", &v) == NO_ERROR) {
+ *         printf("brightness = %u\n", (unsigned)v);
+ *     }
+ *
+ *     return_uint8_dict(d);
+ * @endcode
+ */
+error_code_t get_uint8_dict_value(const uint8_dict_t* dict,
+                                   const char*         key,
+                                   uint8_t*            out_value);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Copy the value for a bounded key into a caller-supplied variable.
+ *
+ * Identical to @ref get_uint8_dict_value but the key length is supplied
+ * explicitly.
+ *
+ * @param dict       Must not be NULL.
+ * @param key        Pointer to the key bytes.  Must not be NULL.
+ * @param key_len    Number of bytes in the key.  Must be > 0.
+ * @param out_value  Destination for the retrieved value.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG, or NOT_FOUND.
+ *
+ * @code
+ *     const char* buf = "brightness_max";
+ *     insert_uint8_dict_n(d, buf, 10, 200u, a);   // key = "brightness"
+ *
+ *     uint8_t v;
+ *     get_uint8_dict_value_n(d, buf, 10, &v);      // v == 200
+ * @endcode
+ */
+error_code_t get_uint8_dict_value_n(const uint8_dict_t* dict,
+                                     const char*         key,
+                                     size_t              key_len,
+                                     uint8_t*            out_value);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Return a read-only pointer directly into the node's value byte for
+ *        a null-terminated key.
+ *
+ * The pointer is valid until the next mutation of the dict.  The caller must
+ * not free it or write through it.  Use @ref get_uint8_dict_value when a
+ * copy is preferred.
+ *
+ * @param dict  Must not be NULL.
+ * @param key   Null-terminated C-string key.  Must not be NULL.
+ *
+ * @return Pointer to the stored uint8_t on success, NULL if not found or on
+ *         error.
+ *
+ * @code
+ *     insert_uint8_dict(d, "flags", 0b00110101, a);
+ *
+ *     const uint8_t* p = get_uint8_dict_ptr(d, "flags");
+ *     if (p) printf("flags = 0x%02X\n", *p);
+ *     // Do not store p — it may be invalidated by the next insert or pop.
+ * @endcode
+ */
+const uint8_t* get_uint8_dict_ptr(const uint8_dict_t* dict, const char* key);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Return a read-only pointer directly into the node's value byte for
+ *        a bounded key.
+ *
+ * Identical to @ref get_uint8_dict_ptr but the key length is supplied
+ * explicitly.
+ *
+ * @param dict     Must not be NULL.
+ * @param key      Pointer to the key bytes.  Must not be NULL.
+ * @param key_len  Number of bytes in the key.  Must be > 0.
+ *
+ * @return Pointer to the stored uint8_t on success, NULL if not found or on
+ *         error.
+ *
+ * @code
+ *     const char* buf = "flags_extended";
+ *     insert_uint8_dict_n(d, buf, 5, 0xAB, a);   // key = "flags"
+ *
+ *     const uint8_t* p = get_uint8_dict_ptr_n(d, buf, 5);
+ *     if (p) printf("flags = 0x%02X\n", *p);
+ * @endcode
+ */
+const uint8_t* get_uint8_dict_ptr_n(const uint8_dict_t* dict,
+                                     const char*         key,
+                                     size_t              key_len);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Test whether a null-terminated key exists in the dict.
+ *
+ * @param dict  Must not be NULL.
+ * @param key   Null-terminated C-string key.  Must not be NULL.
+ *
+ * @return true if the key exists, false otherwise (including on error).
+ *
+ * @code
+ *     insert_uint8_dict(d, "active", 1u, a);
+ *
+ *     if (has_uint8_dict_key(d, "active"))
+ *         printf("active is set\n");
+ *
+ *     if (!has_uint8_dict_key(d, "inactive"))
+ *         printf("inactive is not set\n");
+ * @endcode
+ */
+bool has_uint8_dict_key(const uint8_dict_t* dict, const char* key);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Test whether a bounded key exists in the dict.
+ *
+ * Identical to @ref has_uint8_dict_key but the key length is supplied
+ * explicitly.
+ *
+ * @param dict     Must not be NULL.
+ * @param key      Pointer to the key bytes.  Must not be NULL.
+ * @param key_len  Number of bytes in the key.  Must be > 0.
+ *
+ * @return true if the key exists, false otherwise.
+ *
+ * @code
+ *     const char* buf = "active_flag";
+ *     insert_uint8_dict_n(d, buf, 6, 1u, a);   // key = "active"
+ *     assert(has_uint8_dict_key_n(d, buf, 6));
+ * @endcode
+ */
+bool has_uint8_dict_key_n(const uint8_dict_t* dict,
+                           const char*         key,
+                           size_t              key_len);
+ 
+// ================================================================================
+// Utility
+// ================================================================================
+ 
+/**
+ * @brief Remove all entries without freeing the dict or its bucket array.
+ *
+ * All nodes are freed via the dict's stored allocator.  The bucket array is
+ * retained and zeroed, ready for reuse.  @c len and @c hash_size are reset
+ * to 0.
+ *
+ * @param dict  Must not be NULL.
+ *
+ * @return NO_ERROR or NULL_POINTER.
+ *
+ * @code
+ *     insert_uint8_dict(d, "a", 1u, a);
+ *     insert_uint8_dict(d, "b", 2u, a);
+ *     assert(uint8_dict_hash_size(d) == 2);
+ *
+ *     clear_uint8_dict(d);
+ *     assert(uint8_dict_hash_size(d) == 0);
+ *
+ *     // The dict is still usable after clear
+ *     insert_uint8_dict(d, "c", 3u, a);
+ * @endcode
+ */
+error_code_t clear_uint8_dict(uint8_dict_t* dict);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Allocate a deep copy of a uint8_dict_t.
+ *
+ * All nodes are copied into a fresh bucket array of the same capacity.  The
+ * new dict uses @p alloc_v for all of its allocations.
+ *
+ * @param src     Must not be NULL.
+ * @param alloc_v Allocator for the new dict and its nodes.
+ *
+ * @return @ref uint8_dict_expect_t with @c has_value true on success.
+ *
+ * @code
+ *     uint8_dict_t* orig = init_uint8_dict(8, true, a).u.value;
+ *     insert_uint8_dict(orig, "x", 10u, a);
+ *     insert_uint8_dict(orig, "y", 20u, a);
+ *
+ *     uint8_dict_expect_t cr = copy_uint8_dict(orig, a);
+ *     assert(cr.has_value);
+ *     uint8_dict_t* copy = cr.u.value;
+ *
+ *     // The copy is independent — mutating orig does not affect copy
+ *     update_uint8_dict(orig, "x", 99u);
+ *     uint8_t v;
+ *     get_uint8_dict_value(copy, "x", &v);
+ *     assert(v == 10u);
+ *
+ *     return_uint8_dict(copy);
+ *     return_uint8_dict(orig);
+ * @endcode
+ */
+uint8_dict_expect_t copy_uint8_dict(const uint8_dict_t* src,
+                                    allocator_vtable_t  alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Merge two uint8_dict_t instances into a new dict.
+ *
+ * All entries from @p a are inserted first.  Entries from @p b are then
+ * processed:
+ * - If the key does not exist in the result it is inserted.
+ * - If the key already exists and @p overwrite is true the value from @p b
+ *   replaces the value from @p a.
+ * - If the key already exists and @p overwrite is false the value from @p a
+ *   is kept.
+ *
+ * Neither source dict is modified.
+ *
+ * @param a          First source dict.  Must not be NULL.
+ * @param b          Second source dict.  Must not be NULL.
+ * @param overwrite  If true, @p b's values win on key conflicts.
+ * @param alloc_v    Allocator for the new dict.
+ *
+ * @return @ref uint8_dict_expect_t with @c has_value true on success.
+ *
+ * @code
+ *     uint8_dict_t* da = init_uint8_dict(8, true, a).u.value;
+ *     uint8_dict_t* db = init_uint8_dict(8, true, a).u.value;
+ *
+ *     insert_uint8_dict(da, "shared", 10u, a);
+ *     insert_uint8_dict(da, "only_a", 1u,  a);
+ *     insert_uint8_dict(db, "shared", 99u, a);
+ *     insert_uint8_dict(db, "only_b", 2u,  a);
+ *
+ *     // Merge without overwrite — "shared" keeps da's value of 10
+ *     uint8_dict_expect_t mr = merge_uint8_dict(da, db, false, a);
+ *     uint8_t v;
+ *     get_uint8_dict_value(mr.u.value, "shared", &v);
+ *     assert(v == 10u);
+ *     get_uint8_dict_value(mr.u.value, "only_b", &v);
+ *     assert(v == 2u);
+ *
+ *     return_uint8_dict(mr.u.value);
+ *     return_uint8_dict(da);
+ *     return_uint8_dict(db);
+ * @endcode
+ */
+uint8_dict_expect_t merge_uint8_dict(const uint8_dict_t* a,
+                                     const uint8_dict_t* b,
+                                     bool                overwrite,
+                                     allocator_vtable_t  alloc_v);
+ 
+// ================================================================================
+// Iteration
+// ================================================================================
+ 
+/**
+ * @brief Call @p fn once for every entry in the dict.
+ *
+ * Traversal order follows bucket order, which is not guaranteed to match
+ * insertion order.  The callback receives the key as a null-terminated
+ * C-string pointer (into internal storage), its length, and the uint8_t
+ * value.  The callback must not insert or remove entries during traversal.
+ *
+ * @param dict       Must not be NULL.
+ * @param fn         Typed callback.  Must not be NULL.
+ * @param user_data  Passed unchanged to @p fn; may be NULL.
+ *
+ * @return NO_ERROR or NULL_POINTER.
+ *
+ * @code
+ *     static void print_entry(const char* key, size_t key_len,
+ *                             uint8_t value, void* ud) {
+ *         (void)key_len; (void)ud;
+ *         printf("  %s = %u\n", key, (unsigned)value);
+ *     }
+ *
+ *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
+ *     insert_uint8_dict(d, "r", 255u, a);
+ *     insert_uint8_dict(d, "g", 128u, a);
+ *     insert_uint8_dict(d, "b",   0u, a);
+ *
+ *     foreach_uint8_dict(d, print_entry, NULL);
+ *     // Output (order may vary):
+ *     //   r = 255
+ *     //   g = 128
+ *     //   b = 0
+ *
+ *     return_uint8_dict(d);
+ * @endcode
+ */
+error_code_t foreach_uint8_dict(const uint8_dict_t* dict,
+                                 uint8_dict_iter_fn  fn,
+                                 void*               user_data);
+ 
+// ================================================================================
+// Introspection
+// ================================================================================
+ 
+/**
+ * @brief Number of occupied buckets (chains with at least one entry).
+ *
+ * Returns 0 if @p dict is NULL.
+ *
+ * @code
+ *     insert_uint8_dict(d, "a", 1u, a);
+ *     insert_uint8_dict(d, "b", 2u, a);
+ *     printf("occupied buckets: %zu\n", uint8_dict_size(d));
+ * @endcode
+ */
+size_t uint8_dict_size(const uint8_dict_t* dict);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Total number of key-value pairs stored.
+ *
+ * Returns 0 if @p dict is NULL.
+ *
+ * @code
+ *     insert_uint8_dict(d, "a", 1u, a);
+ *     insert_uint8_dict(d, "b", 2u, a);
+ *     assert(uint8_dict_hash_size(d) == 2);
+ * @endcode
+ */
+size_t uint8_dict_hash_size(const uint8_dict_t* dict);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Number of buckets currently allocated.
+ *
+ * Returns 0 if @p dict is NULL.
+ *
+ * @code
+ *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
+ *     // alloc is rounded up to next power of two >= 8
+ *     assert(uint8_dict_alloc(d) >= 8);
+ * @endcode
+ */
+size_t uint8_dict_alloc(const uint8_dict_t* dict);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief true if @p dict is NULL or contains no entries.
+ *
+ * @code
+ *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
+ *     assert(is_uint8_dict_empty(d));
+ *     insert_uint8_dict(d, "x", 1u, a);
+ *     assert(!is_uint8_dict_empty(d));
+ * @endcode
+ */
+bool is_uint8_dict_empty(const uint8_dict_t* dict);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

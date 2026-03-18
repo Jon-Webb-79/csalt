@@ -17,6 +17,7 @@
 #include <stdarg.h>  // va_list (needed by cmocka)
 #include <setjmp.h>  // jmp_buf (needed by cmocka)
 #include <stddef.h>  // size_t
+#include <setjmp.h>
 #include <cmocka.h>
 
 #ifdef __cplusplus
@@ -167,6 +168,11 @@ extern const size_t test_ldouble_array_count;
 
 extern const struct CMUnitTest test_string_array[];
 extern const size_t test_string_array_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_uint8_dict[];
+extern const size_t test_uint8_dict_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus

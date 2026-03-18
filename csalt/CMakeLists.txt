@@ -54,6 +54,7 @@ set(CSALT_SOURCES
   c_string.c
   c_error.c
   c_array.c
+  c_dict.c
   c_uint8.c
   c_int8.c
   c_uint16.c

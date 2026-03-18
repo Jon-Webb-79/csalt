@@ -146,5 +146,173 @@ Introspection
 uint8_t Dictionary 
 ==================
 
+A ``uint8_dict_t`` is a hash dictionary that maps C-string keys to
+``uint8_t`` values.  It is a type-safe wrapper around the generic
+dict engine described in :ref:`c_dict`, with the value type fixed to
+``sizeof(uint8_t)`` and ``dtype`` fixed to ``UINT8_TYPE`` at initialisation.
+ 
+Keys are null-terminated C-strings.  Every function is available in two
+forms: a plain variant that measures the key length with ``strlen``, and an
+``_n`` variant that accepts an explicit ``size_t key_len`` argument.  The
+``_n`` variants are useful when the key is a sub-string of a larger buffer,
+when its length is already known and the ``strlen`` scan is unnecessary, or
+when the key contains embedded null bytes.
+ 
+The dict does not store a pointer to the caller's key — it copies the key
+bytes into its own allocator-managed storage on every insert.  The caller
+may free or reuse the key memory immediately after any dict call returns.
+ 
+The dict does not have a default allocator.  An
+:c:type:`allocator_vtable_t` must be supplied to :c:func:`init_uint8_dict`
+and to every :c:func:`insert_uint8_dict` call.  All other operations use
+the allocator that was stored at initialisation time.  See
+:ref:`allocator_file` for available allocators and the trade-offs between
+them.
+ 
+.. code-block:: c
+ 
+   #include "uint8_dict.h"
+ 
+   /* Choose an allocator — see :ref:`allocator_file` for all options. */
+   allocator_vtable_t a = heap_allocator();
+ 
+   uint8_dict_expect_t r = init_uint8_dict(16, true, a);
+   if (!r.has_value) { /* handle r.u.error */ }
+   uint8_dict_t* d = r.u.value;
+ 
+   insert_uint8_dict(d, "red",   255u, a);
+   insert_uint8_dict(d, "green", 128u, a);
+   insert_uint8_dict(d, "blue",    0u, a);
+ 
+   uint8_t v;
+   get_uint8_dict_value(d, "green", &v);   /* v == 128 */
+ 
+   update_uint8_dict(d, "red", 200u);
+ 
+   pop_uint8_dict(d, "blue", NULL);        /* removes "blue", discards value */
+ 
+   return_uint8_dict(d);
+ 
+Plain vs ``_n`` Variants
+------------------------
+ 
+Every function that takes a key is available in two forms.
+ 
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+ 
+   * - Plain variant
+     - ``_n`` variant
+   * - ``insert_uint8_dict(d, key, value, a)``
+     - ``insert_uint8_dict_n(d, key, key_len, value, a)``
+   * - ``pop_uint8_dict(d, key, out)``
+     - ``pop_uint8_dict_n(d, key, key_len, out)``
+   * - ``update_uint8_dict(d, key, value)``
+     - ``update_uint8_dict_n(d, key, key_len, value)``
+   * - ``get_uint8_dict_value(d, key, out)``
+     - ``get_uint8_dict_value_n(d, key, key_len, out)``
+   * - ``get_uint8_dict_ptr(d, key)``
+     - ``get_uint8_dict_ptr_n(d, key, key_len)``
+   * - ``has_uint8_dict_key(d, key)``
+     - ``has_uint8_dict_key_n(d, key, key_len)``
+ 
+The ``_n`` variants are particularly useful for splitting on sub-strings
+without constructing a null-terminated copy:
+ 
+.. code-block:: c
+ 
+   /* Buffer holds "brightness_max" but we only want "brightness" (10 bytes). */
+   const char* buf = "brightness_max";
+   insert_uint8_dict_n(d, buf, 10, 200u, a);
+ 
+   uint8_t v;
+   get_uint8_dict_value_n(d, buf, 10, &v);   /* v == 200 */
+   get_uint8_dict_value(d, "brightness", &v); /* same key — also v == 200 */
+ 
+Structs
+-------
+ 
+.. note::
+ 
+   ``uint8_dict_t`` is a ``typedef`` alias for :c:struct:`dict_t`.  All
+   internal fields are documented under :c:struct:`dict_t` in
+   :ref:`c_dict`.  The ``data_size`` field is always ``sizeof(uint8_t)``
+   and the ``dtype`` field is always ``UINT8_TYPE``.
+ 
+.. doxygenstruct:: uint8_dict_expect_t
+   :members:
+ 
+Initialisation and Teardown
+---------------------------
+ 
+.. doxygenfunction:: init_uint8_dict
+.. doxygenfunction:: return_uint8_dict
+ 
+Insert
+------
+ 
+.. doxygenfunction:: insert_uint8_dict
+.. doxygenfunction:: insert_uint8_dict_n
+ 
+Pop
+---
+ 
+.. doxygenfunction:: pop_uint8_dict
+.. doxygenfunction:: pop_uint8_dict_n
+ 
+Update
+------
+ 
+.. doxygenfunction:: update_uint8_dict
+.. doxygenfunction:: update_uint8_dict_n
+ 
+Lookup
+------
+ 
+.. doxygenfunction:: get_uint8_dict_value
+.. doxygenfunction:: get_uint8_dict_value_n
+.. doxygenfunction:: get_uint8_dict_ptr
+.. doxygenfunction:: get_uint8_dict_ptr_n
+.. doxygenfunction:: has_uint8_dict_key
+.. doxygenfunction:: has_uint8_dict_key_n
+ 
+Utility Operations
+------------------
+ 
+.. doxygenfunction:: clear_uint8_dict
+.. doxygenfunction:: copy_uint8_dict
+.. doxygenfunction:: merge_uint8_dict
+ 
+Iteration
+---------
+ 
+:c:func:`foreach_uint8_dict` visits every entry in bucket order (which is
+not guaranteed to match insertion order).  The callback receives the key as
+a null-terminated ``const char*`` pointer into the dict's internal storage,
+the key length, the ``uint8_t`` value, and an optional caller-supplied
+context pointer.  The callback must not insert or remove entries during
+traversal.
+ 
+.. code-block:: c
+ 
+   static void print_entry(const char* key, size_t key_len,
+                            uint8_t value, void* ud) {
+       (void)key_len; (void)ud;
+       printf("  %s = %u\n", key, (unsigned)value);
+   }
+ 
+   foreach_uint8_dict(d, print_entry, NULL);
+ 
+.. doxygenfunction:: foreach_uint8_dict
+ 
+Introspection
+-------------
+ 
+.. doxygenfunction:: uint8_dict_size
+.. doxygenfunction:: uint8_dict_hash_size
+.. doxygenfunction:: uint8_dict_alloc
+.. doxygenfunction:: is_uint8_dict_empty
+
 uint8_t Matrix 
 ==============
