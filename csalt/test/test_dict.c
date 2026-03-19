@@ -24,6 +24,8 @@
 #include "c_uint64.h"
 #include "c_int64.h"
 #include "c_float.h"
+#include "c_double.h"
+#include "c_ldouble.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -7469,6 +7471,1641 @@ const struct CMUnitTest test_float_dict[] = {
 };
  
 const size_t test_float_dict_count = sizeof(test_float_dict) / sizeof(test_float_dict[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+
+static double_dict_t* _make_double_dict(size_t cap) {
+    allocator_vtable_t a = heap_allocator();
+    double_dict_expect_t r = init_double_dict(cap, true, a);
+    assert_true(r.has_value);
+    return r.u.value;
+}
+ 
+typedef struct { int count; double sum; } _dd_iter_ctx_t;
+ 
+static void _dd_sum_iter(const char* key, size_t key_len,
+                          double value, void* ud) {
+    (void)key; (void)key_len;
+    _dd_iter_ctx_t* c = (_dd_iter_ctx_t*)ud;
+    c->count++;
+    c->sum += value;
+}
+ 
+// ================================================================================
+// Group 1: init_double_dict / return_double_dict
+// ================================================================================
+ 
+static void test_dd_init_null_allocator_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    double_dict_expect_t r = init_double_dict(8, true, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+static void test_dd_init_zero_capacity_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_expect_t r = init_double_dict(0, true, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+ 
+static void test_dd_init_data_size_is_eight_bytes(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal((int)dict_data_size(d), 8);
+    return_double_dict(d);
+}
+ 
+static void test_dd_init_dtype_is_float(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal((int)d->dtype, (int)DOUBLE_TYPE);
+    return_double_dict(d);
+}
+ 
+static void test_dd_return_null_is_safe(void** state) {
+    (void)state;
+    return_double_dict(NULL);
+}
+ 
+// ================================================================================
+// Group 2: insert_double_dict
+// ================================================================================
+ 
+static void test_dd_insert_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    assert_int_equal(insert_double_dict(NULL, "k", 1u, a), NULL_POINTER);
+}
+ 
+static void test_dd_insert_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(insert_double_dict(d, NULL, 1u, a), NULL_POINTER);
+    return_double_dict(d);
+}
+ 
+static void test_dd_insert_duplicate_returns_invalid_arg(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(insert_double_dict(d, "k", 1u, a), NO_ERROR);
+    assert_int_equal(insert_double_dict(d, "k", 2u, a), INVALID_ARG);
+    assert_int_equal((int)double_dict_hash_size(d), 1);
+    return_double_dict(d);
+}
+ 
+static void test_dd_insert_stores_zero(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(insert_double_dict(d, "zero", 0.0, a), NO_ERROR);
+    double v = 99.0;
+    assert_int_equal(get_double_dict_value(d, "zero", &v), NO_ERROR);
+    assert_true(v == 0.0);
+    return_double_dict(d);
+}
+ 
+static void test_dd_insert_stores_double_extremes(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(insert_double_dict(d, "max",  DBL_MAX, a), NO_ERROR);
+    assert_int_equal(insert_double_dict(d, "min", -DBL_MAX, a), NO_ERROR);
+    assert_int_equal(insert_double_dict(d, "tiny", DBL_MIN, a), NO_ERROR);
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value(d, "max", &v), NO_ERROR);
+    assert_true(v == DBL_MAX);
+    assert_int_equal(get_double_dict_value(d, "min", &v), NO_ERROR);
+    assert_true(v == -DBL_MAX);
+    assert_int_equal(get_double_dict_value(d, "tiny", &v), NO_ERROR);
+    assert_true(v == DBL_MIN);
+    return_double_dict(d);
+}
+ 
+static void test_dd_insert_stores_signed_double(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(insert_double_dict(d, "pi",      3.141592653589793, a), NO_ERROR);
+    assert_int_equal(insert_double_dict(d, "gravity", 9.80665,           a), NO_ERROR);
+    assert_int_equal(insert_double_dict(d, "neg",    -1.5,               a), NO_ERROR);
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value(d, "pi", &v), NO_ERROR);
+    assert_true(v == 3.141592653589793);
+    assert_int_equal(get_double_dict_value(d, "gravity", &v), NO_ERROR);
+    assert_true(v == 9.80665);
+    assert_int_equal(get_double_dict_value(d, "neg", &v), NO_ERROR);
+    assert_true(v == -1.5);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 3: insert_double_dict_n
+// ================================================================================
+ 
+static void test_dd_insert_n_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(insert_double_dict_n(d, NULL, 3, 1.0, a), NULL_POINTER);
+    return_double_dict(d);
+}
+ 
+static void test_dd_insert_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(insert_double_dict_n(d, "k", 0, 1.0, a), INVALID_ARG);
+    return_double_dict(d);
+}
+ 
+static void test_dd_insert_n_uses_only_specified_bytes(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    /* "speed_max" — insert only "speed" (5 bytes) with value c (m/s) */
+    const char* buf = "speed_max";
+    assert_int_equal(insert_double_dict_n(d, buf, 5, 299792458.0, a), NO_ERROR);
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value_n(d, buf, 5, &v), NO_ERROR);
+    assert_true(v == 299792458.0);
+    /* Full buffer key "speed_max" is different — not found */
+    assert_int_equal(get_double_dict_value_n(d, buf, 9, &v), NOT_FOUND);
+    /* Plain null-terminated lookup also works */
+    assert_int_equal(get_double_dict_value(d, "speed", &v), NO_ERROR);
+    assert_true(v == 299792458.0);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 4: pop_double_dict
+// ================================================================================
+ 
+static void test_dd_pop_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    double v;
+    assert_int_equal(pop_double_dict(NULL, "k", &v), NULL_POINTER);
+}
+ 
+static void test_dd_pop_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    double v;
+    assert_int_equal(pop_double_dict(d, NULL, &v), NULL_POINTER);
+    return_double_dict(d);
+}
+ 
+static void test_dd_pop_missing_key_returns_not_found(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(pop_double_dict(d, "missing", NULL), NOT_FOUND);
+    return_double_dict(d);
+}
+ 
+static void test_dd_pop_returns_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "gravity", 9.80665, a);
+    double v = 0.0;
+    assert_int_equal(pop_double_dict(d, "gravity", &v), NO_ERROR);
+    assert_true(v == 9.80665);
+    assert_int_equal((int)double_dict_hash_size(d), 0);
+    return_double_dict(d);
+}
+ 
+static void test_dd_pop_null_out_value_discards_safely(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "x", 1.0, a);
+    assert_int_equal(pop_double_dict(d, "x", NULL), NO_ERROR);
+    assert_int_equal((int)double_dict_hash_size(d), 0);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 5: pop_double_dict_n
+// ================================================================================
+ 
+static void test_dd_pop_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(pop_double_dict_n(d, "k", 0, NULL), INVALID_ARG);
+    return_double_dict(d);
+}
+ 
+static void test_dd_pop_n_removes_bounded_key(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    const char* buf = "speed_max";
+    insert_double_dict_n(d, buf, 5, 299792458.0, a);   /* key = "speed" */
+    double v = 0.0;
+    assert_int_equal(pop_double_dict_n(d, buf, 5, &v), NO_ERROR);
+    assert_true(v == 299792458.0);
+    assert_int_equal((int)double_dict_hash_size(d), 0);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 6: update_double_dict
+// ================================================================================
+ 
+static void test_dd_update_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(update_double_dict(NULL, "k", 1u), NULL_POINTER);
+}
+ 
+static void test_dd_update_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(update_double_dict(d, NULL, 1u), NULL_POINTER);
+    return_double_dict(d);
+}
+ 
+static void test_dd_update_missing_key_returns_not_found(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(update_double_dict(d, "missing", 1u), NOT_FOUND);
+    return_double_dict(d);
+}
+ 
+static void test_dd_update_overwrites_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "gravity", 9.80665, a);
+    assert_int_equal(update_double_dict(d, "gravity", 1.62), NO_ERROR);
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value(d, "gravity", &v), NO_ERROR);
+    assert_true(v == 1.62);
+    assert_int_equal((int)double_dict_hash_size(d), 1);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 7: update_double_dict_n
+// ================================================================================
+ 
+static void test_dd_update_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(update_double_dict_n(d, "k", 0, 1u), INVALID_ARG);
+    return_double_dict(d);
+}
+ 
+static void test_dd_update_n_updates_bounded_key(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    const char* buf = "speed_max";
+    insert_double_dict_n(d, buf, 5, 299792458.0, a);   /* key = "speed" */
+    assert_int_equal(update_double_dict_n(d, buf, 5, 0.0), NO_ERROR);
+    double v = 1.0;
+    assert_int_equal(get_double_dict_value_n(d, buf, 5, &v), NO_ERROR);
+    assert_true(v == 0.0);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 8: get_double_dict_value
+// ================================================================================
+ 
+static void test_dd_get_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    double v;
+    assert_int_equal(get_double_dict_value(NULL, "k", &v), NULL_POINTER);
+}
+ 
+static void test_dd_get_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    double v;
+    assert_int_equal(get_double_dict_value(d, NULL, &v), NULL_POINTER);
+    return_double_dict(d);
+}
+ 
+static void test_dd_get_null_out_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "k", 1.0, a);
+    assert_int_equal(get_double_dict_value(d, "k", NULL), NULL_POINTER);
+    return_double_dict(d);
+}
+ 
+static void test_dd_get_missing_key_returns_not_found(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    double v;
+    assert_int_equal(get_double_dict_value(d, "missing", &v), NOT_FOUND);
+    return_double_dict(d);
+}
+ 
+static void test_dd_get_retrieves_extremes(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "pi",      3.141592653589793, a);
+    insert_double_dict(d, "neg",    -2.718281828459045, a);
+    insert_double_dict(d, "zero",    0.0,               a);
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value(d, "pi", &v), NO_ERROR);
+    assert_true(v == 3.141592653589793);
+    assert_int_equal(get_double_dict_value(d, "neg", &v), NO_ERROR);
+    assert_true(v == -2.718281828459045);
+    assert_int_equal(get_double_dict_value(d, "zero", &v), NO_ERROR);
+    assert_true(v == 0.0);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 9: get_double_dict_value_n
+// ================================================================================
+ 
+static void test_dd_get_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    double v;
+    assert_int_equal(get_double_dict_value_n(d, "k", 0, &v), INVALID_ARG);
+    return_double_dict(d);
+}
+ 
+static void test_dd_get_n_retrieves_bounded_key(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    const char* buf = "speed_max";
+    insert_double_dict_n(d, buf, 5, 299792458.0, a);   /* key = "speed" */
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value_n(d, buf, 5, &v), NO_ERROR);
+    assert_true(v == 299792458.0);
+    assert_int_equal(get_double_dict_value_n(d, buf, 9, &v), NOT_FOUND);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 10: get_double_dict_ptr
+// ================================================================================
+ 
+static void test_dd_ptr_null_dict_returns_null(void** state) {
+    (void)state;
+    assert_null(get_double_dict_ptr(NULL, "k"));
+}
+ 
+static void test_dd_ptr_null_key_returns_null(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_null(get_double_dict_ptr(d, NULL));
+    return_double_dict(d);
+}
+ 
+static void test_dd_ptr_missing_returns_null(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_null(get_double_dict_ptr(d, "missing"));
+    return_double_dict(d);
+}
+ 
+static void test_dd_ptr_points_to_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "port", 8080u, a);
+    const double* p = get_double_dict_ptr(d, "port");
+    assert_non_null(p);
+    assert_int_equal((int)*p, 8080);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 11: get_double_dict_ptr_n
+// ================================================================================
+ 
+static void test_dd_ptr_n_zero_len_returns_null(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_null(get_double_dict_ptr_n(d, "k", 0));
+    return_double_dict(d);
+}
+ 
+static void test_dd_ptr_n_points_to_bounded_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    const char* buf = "port_http";
+    insert_double_dict_n(d, buf, 4, 8080u, a);   /* key = "port" */
+    const double* p = get_double_dict_ptr_n(d, buf, 4);
+    assert_non_null(p);
+    assert_int_equal((int)*p, 8080);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 12: has_double_dict_key
+// ================================================================================
+ 
+static void test_dd_has_null_dict_returns_false(void** state) {
+    (void)state;
+    assert_false(has_double_dict_key(NULL, "k"));
+}
+ 
+static void test_dd_has_null_key_returns_false(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_false(has_double_dict_key(d, NULL));
+    return_double_dict(d);
+}
+ 
+static void test_dd_has_present_and_absent(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "present", 1.0, a);
+    assert_true(has_double_dict_key(d, "present"));
+    assert_false(has_double_dict_key(d, "absent"));
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 13: has_double_dict_key_n
+// ================================================================================
+ 
+static void test_dd_has_n_zero_len_returns_false(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_false(has_double_dict_key_n(d, "k", 0));
+    return_double_dict(d);
+}
+ 
+static void test_dd_has_n_distinguishes_by_length(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict_n(d, "abc", 2, 1.0, a);   /* key = "ab" */
+    insert_double_dict_n(d, "abc", 3, 2.0, a);   /* key = "abc" */
+    assert_true(has_double_dict_key_n(d, "abc", 2));
+    assert_true(has_double_dict_key_n(d, "abc", 3));
+    assert_false(has_double_dict_key_n(d, "abc", 1));
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 14: clear_double_dict
+// ================================================================================
+ 
+static void test_dd_clear_null_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(clear_double_dict(NULL), NULL_POINTER);
+}
+ 
+static void test_dd_clear_resets_and_is_reusable(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "a", 1.0, a);
+    insert_double_dict(d, "b", 2.0, a);
+    assert_int_equal(clear_double_dict(d), NO_ERROR);
+    assert_int_equal((int)double_dict_hash_size(d), 0);
+    assert_true(is_double_dict_empty(d));
+    assert_int_equal(insert_double_dict(d, "a", 3.141592653589793, a), NO_ERROR);
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value(d, "a", &v), NO_ERROR);
+    assert_true(v == 3.141592653589793);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 15: copy_double_dict
+// ================================================================================
+ 
+static void test_dd_copy_null_src_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_expect_t r = copy_double_dict(NULL, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+static void test_dd_copy_is_independent(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* orig = _make_double_dict(4);
+    insert_double_dict(orig, "x", 3.141592653589793, a);
+    insert_double_dict(orig, "y", 9.80665, a);
+ 
+    double_dict_expect_t cr = copy_double_dict(orig, a);
+    assert_true(cr.has_value);
+ 
+    update_double_dict(orig, "x", DBL_MAX);
+ 
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value(cr.u.value, "x", &v), NO_ERROR);
+    assert_true(v == 3.141592653589793);
+    assert_int_equal((int)double_dict_hash_size(cr.u.value), 2);
+ 
+    return_double_dict(cr.u.value);
+    return_double_dict(orig);
+}
+ 
+// ================================================================================
+// Group 16: merge_double_dict
+// ================================================================================
+ 
+static void test_dd_merge_null_first_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    double_dict_expect_t r = merge_double_dict(NULL, d, false, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+    return_double_dict(d);
+}
+ 
+static void test_dd_merge_no_overwrite_keeps_first_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* da = _make_double_dict(4);
+    double_dict_t* db = _make_double_dict(4);
+    insert_double_dict(da, "shared", 3.141592653589793, a);
+    insert_double_dict(db, "shared", 9.80665, a);
+    insert_double_dict(db, "new",    1.62, a);
+ 
+    double_dict_expect_t mr = merge_double_dict(da, db, false, a);
+    assert_true(mr.has_value);
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value(mr.u.value, "shared", &v), NO_ERROR);
+    assert_true(v == 3.141592653589793);
+    assert_int_equal(get_double_dict_value(mr.u.value, "new", &v), NO_ERROR);
+    assert_true(v == 1.62);
+ 
+    return_double_dict(mr.u.value);
+    return_double_dict(da);
+    return_double_dict(db);
+}
+ 
+static void test_dd_merge_overwrite_uses_second_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* da = _make_double_dict(4);
+    double_dict_t* db = _make_double_dict(4);
+    insert_double_dict(da, "shared", 3.141592653589793, a);
+    insert_double_dict(db, "shared", 9.80665, a);
+ 
+    double_dict_expect_t mr = merge_double_dict(da, db, true, a);
+    assert_true(mr.has_value);
+    double v = 0.0;
+    assert_int_equal(get_double_dict_value(mr.u.value, "shared", &v), NO_ERROR);
+    assert_true(v == 9.80665);
+ 
+    return_double_dict(mr.u.value);
+    return_double_dict(da);
+    return_double_dict(db);
+}
+ 
+// ================================================================================
+// Group 17: foreach_double_dict
+// ================================================================================
+ 
+static void test_dd_foreach_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(foreach_double_dict(NULL, _dd_sum_iter, NULL),
+                     NULL_POINTER);
+}
+ 
+static void test_dd_foreach_null_fn_returns_null_pointer(void** state) {
+    (void)state;
+    double_dict_t* d = _make_double_dict(4);
+    assert_int_equal(foreach_double_dict(d, NULL, NULL), NULL_POINTER);
+    return_double_dict(d);
+}
+ 
+static void test_dd_foreach_correct_sum(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "a", 1.0, a);
+    insert_double_dict(d, "b", 2.0, a);
+    insert_double_dict(d, "c", 3.0, a);
+    _dd_iter_ctx_t ctx = { 0, 0.0 };
+    assert_int_equal(foreach_double_dict(d, _dd_sum_iter, &ctx), NO_ERROR);
+    assert_int_equal(ctx.count, 3);
+    assert_true(ctx.sum == 6.0);
+    return_double_dict(d);
+}
+ 
+static void test_dd_foreach_delivers_negative_double(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    insert_double_dict(d, "pos",  1.5, a);
+    insert_double_dict(d, "neg", -2.5, a);
+    _dd_iter_ctx_t ctx = { 0, 0.0 };
+    foreach_double_dict(d, _dd_sum_iter, &ctx);
+    assert_int_equal(ctx.count, 2);
+    /* 1.5 + (-2.5) == -1.0 */
+    assert_true(ctx.sum == -1.0);
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 18: introspection
+// ================================================================================
+ 
+static void test_dd_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)double_dict_size(NULL), 0);
+}
+ 
+static void test_dd_hash_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)double_dict_hash_size(NULL), 0);
+}
+ 
+static void test_dd_alloc_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)double_dict_alloc(NULL), 0);
+}
+ 
+static void test_dd_is_empty_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_double_dict_empty(NULL));
+}
+ 
+static void test_dd_is_empty_reflects_contents(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_t* d = _make_double_dict(4);
+    assert_true(is_double_dict_empty(d));
+    insert_double_dict(d, "x", 1u, a);
+    assert_false(is_double_dict_empty(d));
+    pop_double_dict(d, "x", NULL);
+    assert_true(is_double_dict_empty(d));
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// Group 19: growth stress
+// ================================================================================
+ 
+static void test_dd_growth_values_survive_resize(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    double_dict_expect_t r = init_double_dict(2, true, a);
+    assert_true(r.has_value);
+    double_dict_t* d = r.u.value;
+ 
+    for (int i = 0; i < 200; i++) {
+        char key[16];
+        snprintf(key, sizeof(key), "k%d", i);
+        double val = (float_t)(i * 300u);   /* exercises > 255 values */
+        assert_int_equal(insert_double_dict(d, key, val, a), NO_ERROR);
+    }
+    assert_int_equal((int)double_dict_hash_size(d), 200);
+ 
+    for (int i = 0; i < 200; i++) {
+        char key[16];
+        snprintf(key, sizeof(key), "k%d", i);
+        float_t expected = (float_t)(i * 300u);
+        double v = 0u;
+        assert_int_equal(get_double_dict_value(d, key, &v), NO_ERROR);
+        assert_true(v == expected);
+    }
+ 
+    return_double_dict(d);
+}
+ 
+// ================================================================================
+// main
+// ================================================================================
+ 
+const struct CMUnitTest test_double_dict[] = {
+
+    /* Group 1: init / return */
+    cmocka_unit_test(test_dd_init_null_allocator_fails),
+    cmocka_unit_test(test_dd_init_zero_capacity_fails),
+    cmocka_unit_test(test_dd_init_data_size_is_eight_bytes),
+    cmocka_unit_test(test_dd_init_dtype_is_float),
+    cmocka_unit_test(test_dd_return_null_is_safe),
+
+    /* Group 2: insert */
+    cmocka_unit_test(test_dd_insert_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_dd_insert_null_key_returns_null_pointer),
+    cmocka_unit_test(test_dd_insert_duplicate_returns_invalid_arg),
+    cmocka_unit_test(test_dd_insert_stores_zero),
+    cmocka_unit_test(test_dd_insert_stores_double_extremes),
+    cmocka_unit_test(test_dd_insert_stores_signed_double),
+
+    /* Group 3: insert_n */
+    cmocka_unit_test(test_dd_insert_n_null_key_returns_null_pointer),
+    cmocka_unit_test(test_dd_insert_n_zero_len_returns_invalid_arg),
+    cmocka_unit_test(test_dd_insert_n_uses_only_specified_bytes),
+
+    /* Group 4: pop */
+    cmocka_unit_test(test_dd_pop_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_dd_pop_null_key_returns_null_pointer),
+    cmocka_unit_test(test_dd_pop_missing_key_returns_not_found),
+    cmocka_unit_test(test_dd_pop_returns_correct_value),
+    cmocka_unit_test(test_dd_pop_null_out_value_discards_safely),
+
+    /* Group 5: pop_n */
+    cmocka_unit_test(test_dd_pop_n_zero_len_returns_invalid_arg),
+    cmocka_unit_test(test_dd_pop_n_removes_bounded_key),
+
+    /* Group 6: update */
+    cmocka_unit_test(test_dd_update_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_dd_update_null_key_returns_null_pointer),
+    cmocka_unit_test(test_dd_update_missing_key_returns_not_found),
+    cmocka_unit_test(test_dd_update_overwrites_value),
+
+    /* Group 7: update_n */
+    cmocka_unit_test(test_dd_update_n_zero_len_returns_invalid_arg),
+    cmocka_unit_test(test_dd_update_n_updates_bounded_key),
+
+    /* Group 8: get_value */
+    cmocka_unit_test(test_dd_get_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_dd_get_null_key_returns_null_pointer),
+    cmocka_unit_test(test_dd_get_null_out_returns_null_pointer),
+    cmocka_unit_test(test_dd_get_missing_key_returns_not_found),
+    cmocka_unit_test(test_dd_get_retrieves_extremes),
+
+    /* Group 9: get_value_n */
+    cmocka_unit_test(test_dd_get_n_zero_len_returns_invalid_arg),
+    cmocka_unit_test(test_dd_get_n_retrieves_bounded_key),
+
+    /* Group 10: get_ptr */
+    cmocka_unit_test(test_dd_ptr_null_dict_returns_null),
+    cmocka_unit_test(test_dd_ptr_null_key_returns_null),
+    cmocka_unit_test(test_dd_ptr_missing_returns_null),
+    cmocka_unit_test(test_dd_ptr_points_to_correct_value),
+
+    /* Group 11: get_ptr_n */
+    cmocka_unit_test(test_dd_ptr_n_zero_len_returns_null),
+    cmocka_unit_test(test_dd_ptr_n_points_to_bounded_value),
+
+    /* Group 12: has_key */
+    cmocka_unit_test(test_dd_has_null_dict_returns_false),
+    cmocka_unit_test(test_dd_has_null_key_returns_false),
+    cmocka_unit_test(test_dd_has_present_and_absent),
+
+    /* Group 13: has_key_n */
+    cmocka_unit_test(test_dd_has_n_zero_len_returns_false),
+    cmocka_unit_test(test_dd_has_n_distinguishes_by_length),
+
+    /* Group 14: clear */
+    cmocka_unit_test(test_dd_clear_null_returns_null_pointer),
+    cmocka_unit_test(test_dd_clear_resets_and_is_reusable),
+
+    /* Group 15: copy */
+    cmocka_unit_test(test_dd_copy_null_src_fails),
+    cmocka_unit_test(test_dd_copy_is_independent),
+
+    /* Group 16: merge */
+    cmocka_unit_test(test_dd_merge_null_first_fails),
+    cmocka_unit_test(test_dd_merge_no_overwrite_keeps_first_value),
+    cmocka_unit_test(test_dd_merge_overwrite_uses_second_value),
+
+    /* Group 17: foreach */
+    cmocka_unit_test(test_dd_foreach_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_dd_foreach_null_fn_returns_null_pointer),
+    cmocka_unit_test(test_dd_foreach_correct_sum),
+    cmocka_unit_test(test_dd_foreach_delivers_negative_double),
+
+    /* Group 18: introspection */
+    cmocka_unit_test(test_dd_size_null_returns_zero),
+    cmocka_unit_test(test_dd_hash_size_null_returns_zero),
+    cmocka_unit_test(test_dd_alloc_null_returns_zero),
+    cmocka_unit_test(test_dd_is_empty_null_returns_true),
+    cmocka_unit_test(test_dd_is_empty_reflects_contents),
+
+    /* Group 19: growth stress */
+    cmocka_unit_test(test_dd_growth_values_survive_resize),
+
+};
+const size_t test_double_dict_count = sizeof(test_double_dict) / sizeof(test_double_dict[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+static ldouble_dict_t* _make_ldouble_dict(size_t cap) {
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_expect_t r = init_ldouble_dict(cap, true, a);
+    assert_true(r.has_value);
+    return r.u.value;
+}
+ 
+typedef struct { int count; long double sum; } _ld_iter_ctx_t;
+ 
+static void _ld_sum_iter(const char* key, size_t key_len,
+                          long double value, void* ud) {
+    (void)key; (void)key_len;
+    _ld_iter_ctx_t* c = (_ld_iter_ctx_t*)ud;
+    c->count++;
+    c->sum += value;
+}
+ 
+// ================================================================================
+// Group 1: init_ldouble_dict / return_ldouble_dict
+// ================================================================================
+ 
+static void test_ld_init_null_allocator_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    ldouble_dict_expect_t r = init_ldouble_dict(8, true, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+static void test_ld_init_zero_capacity_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_expect_t r = init_ldouble_dict(0, true, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+ 
+static void test_ld_init_data_size_is_sizeof_long_double(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal((int)dict_data_size(d), (int)sizeof(long double));
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_init_dtype_is_float(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal((int)d->dtype, (int)LDOUBLE_TYPE);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_return_null_is_safe(void** state) {
+    (void)state;
+    return_ldouble_dict(NULL);
+}
+ 
+// ================================================================================
+// Group 2: insert_ldouble_dict
+// ================================================================================
+ 
+static void test_ld_insert_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    assert_int_equal(insert_ldouble_dict(NULL, "k", 1u, a), NULL_POINTER);
+}
+ 
+static void test_ld_insert_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(insert_ldouble_dict(d, NULL, 1u, a), NULL_POINTER);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_insert_duplicate_returns_invalid_arg(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(insert_ldouble_dict(d, "k", 1u, a), NO_ERROR);
+    assert_int_equal(insert_ldouble_dict(d, "k", 2u, a), INVALID_ARG);
+    assert_int_equal((int)ldouble_dict_hash_size(d), 1);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_insert_stores_zero(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(insert_ldouble_dict(d, "zero", 0.0L, a), NO_ERROR);
+    long double v = 99.0L;
+    assert_int_equal(get_ldouble_dict_value(d, "zero", &v), NO_ERROR);
+    assert_true(v == 0.0L);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_insert_stores_ldouble_extremes(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(insert_ldouble_dict(d, "max",  LDBL_MAX, a), NO_ERROR);
+    assert_int_equal(insert_ldouble_dict(d, "min", -LDBL_MAX, a), NO_ERROR);
+    assert_int_equal(insert_ldouble_dict(d, "tiny", LDBL_MIN, a), NO_ERROR);
+    long double v = 0.0L;
+    assert_int_equal(get_ldouble_dict_value(d, "max", &v), NO_ERROR);
+    assert_true(v == LDBL_MAX);
+    assert_int_equal(get_ldouble_dict_value(d, "min", &v), NO_ERROR);
+    assert_true(v == -LDBL_MAX);
+    assert_int_equal(get_ldouble_dict_value(d, "tiny", &v), NO_ERROR);
+    assert_true(v == LDBL_MIN);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_insert_stores_signed_ldouble(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(insert_ldouble_dict(d, "pi",      3.14159265358979323846L, a), NO_ERROR);
+    assert_int_equal(insert_ldouble_dict(d, "gravity", 9.80665L,                a), NO_ERROR);
+    assert_int_equal(insert_ldouble_dict(d, "neg",    -1.5L,                    a), NO_ERROR);
+    long double v = 0.0L;
+    assert_int_equal(get_ldouble_dict_value(d, "pi", &v), NO_ERROR);
+    assert_true(v == 3.14159265358979323846L);
+    assert_int_equal(get_ldouble_dict_value(d, "gravity", &v), NO_ERROR);
+    assert_true(v == 9.80665L);
+    assert_int_equal(get_ldouble_dict_value(d, "neg", &v), NO_ERROR);
+    assert_true(v == -1.5L);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 3: insert_ldouble_dict_n
+// ================================================================================
+ 
+static void test_ld_insert_n_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(insert_ldouble_dict_n(d, NULL, 3, 1.0, a), NULL_POINTER);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_insert_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(insert_ldouble_dict_n(d, "k", 0, 1.0, a), INVALID_ARG);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_insert_n_uses_only_specified_bytes(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    /* "speed_max" — insert only "speed" (5 bytes) with value c (m/s) */
+    const char* buf = "speed_max";
+    assert_int_equal(insert_ldouble_dict_n(d, buf, 5, 299792458.0, a), NO_ERROR);
+    long double v = 0.0;
+    assert_int_equal(get_ldouble_dict_value_n(d, buf, 5, &v), NO_ERROR);
+    assert_true(v == 299792458.0);
+    /* Full buffer key "speed_max" is different — not found */
+    assert_int_equal(get_ldouble_dict_value_n(d, buf, 9, &v), NOT_FOUND);
+    /* Plain null-terminated lookup also works */
+    assert_int_equal(get_ldouble_dict_value(d, "speed", &v), NO_ERROR);
+    assert_true(v == 299792458.0);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 4: pop_ldouble_dict
+// ================================================================================
+ 
+static void test_ld_pop_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    long double v;
+    assert_int_equal(pop_ldouble_dict(NULL, "k", &v), NULL_POINTER);
+}
+ 
+static void test_ld_pop_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    long double v;
+    assert_int_equal(pop_ldouble_dict(d, NULL, &v), NULL_POINTER);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_pop_missing_key_returns_not_found(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(pop_ldouble_dict(d, "missing", NULL), NOT_FOUND);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_pop_returns_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "gravity", 9.80665, a);
+    long double v = 0.0;
+    assert_int_equal(pop_ldouble_dict(d, "gravity", &v), NO_ERROR);
+    assert_true(v == 9.80665);
+    assert_int_equal((int)ldouble_dict_hash_size(d), 0);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_pop_null_out_value_discards_safely(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "x", 1.0, a);
+    assert_int_equal(pop_ldouble_dict(d, "x", NULL), NO_ERROR);
+    assert_int_equal((int)ldouble_dict_hash_size(d), 0);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 5: pop_ldouble_dict_n
+// ================================================================================
+ 
+static void test_ld_pop_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(pop_ldouble_dict_n(d, "k", 0, NULL), INVALID_ARG);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_pop_n_removes_bounded_key(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    const char* buf = "speed_max";
+    insert_ldouble_dict_n(d, buf, 5, 299792458.0, a);   /* key = "speed" */
+    long double v = 0.0;
+    assert_int_equal(pop_ldouble_dict_n(d, buf, 5, &v), NO_ERROR);
+    assert_true(v == 299792458.0);
+    assert_int_equal((int)ldouble_dict_hash_size(d), 0);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 6: update_ldouble_dict
+// ================================================================================
+ 
+static void test_ld_update_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(update_ldouble_dict(NULL, "k", 1u), NULL_POINTER);
+}
+ 
+static void test_ld_update_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(update_ldouble_dict(d, NULL, 1u), NULL_POINTER);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_update_missing_key_returns_not_found(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(update_ldouble_dict(d, "missing", 1u), NOT_FOUND);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_update_overwrites_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "gravity", 9.80665, a);
+    assert_int_equal(update_ldouble_dict(d, "gravity", 1.62), NO_ERROR);
+    long double v = 0.0;
+    assert_int_equal(get_ldouble_dict_value(d, "gravity", &v), NO_ERROR);
+    assert_true(v == 1.62);
+    assert_int_equal((int)ldouble_dict_hash_size(d), 1);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 7: update_ldouble_dict_n
+// ================================================================================
+ 
+static void test_ld_update_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(update_ldouble_dict_n(d, "k", 0, 1u), INVALID_ARG);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_update_n_updates_bounded_key(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    const char* buf = "speed_max";
+    insert_ldouble_dict_n(d, buf, 5, 299792458.0, a);   /* key = "speed" */
+    assert_int_equal(update_ldouble_dict_n(d, buf, 5, 0.0), NO_ERROR);
+    long double v = 1.0;
+    assert_int_equal(get_ldouble_dict_value_n(d, buf, 5, &v), NO_ERROR);
+    assert_true(v == 0.0);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 8: get_ldouble_dict_value
+// ================================================================================
+ 
+static void test_ld_get_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    long double v;
+    assert_int_equal(get_ldouble_dict_value(NULL, "k", &v), NULL_POINTER);
+}
+ 
+static void test_ld_get_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    long double v;
+    assert_int_equal(get_ldouble_dict_value(d, NULL, &v), NULL_POINTER);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_get_null_out_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "k", 1.0, a);
+    assert_int_equal(get_ldouble_dict_value(d, "k", NULL), NULL_POINTER);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_get_missing_key_returns_not_found(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    long double v;
+    assert_int_equal(get_ldouble_dict_value(d, "missing", &v), NOT_FOUND);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_get_retrieves_extremes(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "pi",      3.14159265358979323846L,  a);
+    insert_ldouble_dict(d, "neg",    -2.71828182845904523536L,  a);
+    insert_ldouble_dict(d, "zero",    0.0L,                     a);
+    long double v = 0.0L;
+    assert_int_equal(get_ldouble_dict_value(d, "pi", &v), NO_ERROR);
+    assert_true(v == 3.14159265358979323846L);
+    assert_int_equal(get_ldouble_dict_value(d, "neg", &v), NO_ERROR);
+    assert_true(v == -2.71828182845904523536L);
+    assert_int_equal(get_ldouble_dict_value(d, "zero", &v), NO_ERROR);
+    assert_true(v == 0.0L);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 9: get_ldouble_dict_value_n
+// ================================================================================
+ 
+static void test_ld_get_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    long double v;
+    assert_int_equal(get_ldouble_dict_value_n(d, "k", 0, &v), INVALID_ARG);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_get_n_retrieves_bounded_key(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    const char* buf = "speed_max";
+    insert_ldouble_dict_n(d, buf, 5, 299792458.0, a);   /* key = "speed" */
+    long double v = 0.0;
+    assert_int_equal(get_ldouble_dict_value_n(d, buf, 5, &v), NO_ERROR);
+    assert_true(v == 299792458.0);
+    assert_int_equal(get_ldouble_dict_value_n(d, buf, 9, &v), NOT_FOUND);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 10: get_ldouble_dict_ptr
+// ================================================================================
+ 
+static void test_ld_ptr_null_dict_returns_null(void** state) {
+    (void)state;
+    assert_null(get_ldouble_dict_ptr(NULL, "k"));
+}
+ 
+static void test_ld_ptr_null_key_returns_null(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_null(get_ldouble_dict_ptr(d, NULL));
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_ptr_missing_returns_null(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_null(get_ldouble_dict_ptr(d, "missing"));
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_ptr_points_to_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "port", 8080u, a);
+    const long double* p = get_ldouble_dict_ptr(d, "port");
+    assert_non_null(p);
+    assert_int_equal((int)*p, 8080);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 11: get_ldouble_dict_ptr_n
+// ================================================================================
+ 
+static void test_ld_ptr_n_zero_len_returns_null(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_null(get_ldouble_dict_ptr_n(d, "k", 0));
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_ptr_n_points_to_bounded_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    const char* buf = "port_http";
+    insert_ldouble_dict_n(d, buf, 4, 8080u, a);   /* key = "port" */
+    const long double* p = get_ldouble_dict_ptr_n(d, buf, 4);
+    assert_non_null(p);
+    assert_int_equal((int)*p, 8080);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 12: has_ldouble_dict_key
+// ================================================================================
+ 
+static void test_ld_has_null_dict_returns_false(void** state) {
+    (void)state;
+    assert_false(has_ldouble_dict_key(NULL, "k"));
+}
+ 
+static void test_ld_has_null_key_returns_false(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_false(has_ldouble_dict_key(d, NULL));
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_has_present_and_absent(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "present", 1.0, a);
+    assert_true(has_ldouble_dict_key(d, "present"));
+    assert_false(has_ldouble_dict_key(d, "absent"));
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 13: has_ldouble_dict_key_n
+// ================================================================================
+ 
+static void test_ld_has_n_zero_len_returns_false(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_false(has_ldouble_dict_key_n(d, "k", 0));
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_has_n_distinguishes_by_length(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict_n(d, "abc", 2, 1.0L, a);   /* key = "ab" */
+    insert_ldouble_dict_n(d, "abc", 3, 2.0L, a);   /* key = "abc" */
+    assert_true(has_ldouble_dict_key_n(d, "abc", 2));
+    assert_true(has_ldouble_dict_key_n(d, "abc", 3));
+    assert_false(has_ldouble_dict_key_n(d, "abc", 1));
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 14: clear_ldouble_dict
+// ================================================================================
+ 
+static void test_ld_clear_null_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(clear_ldouble_dict(NULL), NULL_POINTER);
+}
+ 
+static void test_ld_clear_resets_and_is_reusable(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "a", 1.0, a);
+    insert_ldouble_dict(d, "b", 2.0, a);
+    assert_int_equal(clear_ldouble_dict(d), NO_ERROR);
+    assert_int_equal((int)ldouble_dict_hash_size(d), 0);
+    assert_true(is_ldouble_dict_empty(d));
+    assert_int_equal(insert_ldouble_dict(d, "a", 3.141592653589793, a), NO_ERROR);
+    long double v = 0.0;
+    assert_int_equal(get_ldouble_dict_value(d, "a", &v), NO_ERROR);
+    assert_true(v == 3.141592653589793);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 15: copy_ldouble_dict
+// ================================================================================
+ 
+static void test_ld_copy_null_src_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_expect_t r = copy_ldouble_dict(NULL, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+static void test_ld_copy_is_independent(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* orig = _make_ldouble_dict(4);
+    insert_ldouble_dict(orig, "x", 3.141592653589793, a);
+    insert_ldouble_dict(orig, "y", 9.80665, a);
+ 
+    ldouble_dict_expect_t cr = copy_ldouble_dict(orig, a);
+    assert_true(cr.has_value);
+ 
+    update_ldouble_dict(orig, "x", LDBL_MAX);
+ 
+    long double v = 0.0;
+    assert_int_equal(get_ldouble_dict_value(cr.u.value, "x", &v), NO_ERROR);
+    assert_true(v == 3.141592653589793);
+    assert_int_equal((int)ldouble_dict_hash_size(cr.u.value), 2);
+ 
+    return_ldouble_dict(cr.u.value);
+    return_ldouble_dict(orig);
+}
+ 
+// ================================================================================
+// Group 16: merge_ldouble_dict
+// ================================================================================
+ 
+static void test_ld_merge_null_first_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    ldouble_dict_expect_t r = merge_ldouble_dict(NULL, d, false, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_merge_no_overwrite_keeps_first_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* da = _make_ldouble_dict(4);
+    ldouble_dict_t* db = _make_ldouble_dict(4);
+    insert_ldouble_dict(da, "shared", 3.141592653589793, a);
+    insert_ldouble_dict(db, "shared", 9.80665, a);
+    insert_ldouble_dict(db, "new",    1.62, a);
+ 
+    ldouble_dict_expect_t mr = merge_ldouble_dict(da, db, false, a);
+    assert_true(mr.has_value);
+    long double v = 0.0;
+    assert_int_equal(get_ldouble_dict_value(mr.u.value, "shared", &v), NO_ERROR);
+    assert_true(v == 3.141592653589793);
+    assert_int_equal(get_ldouble_dict_value(mr.u.value, "new", &v), NO_ERROR);
+    assert_true(v == 1.62);
+ 
+    return_ldouble_dict(mr.u.value);
+    return_ldouble_dict(da);
+    return_ldouble_dict(db);
+}
+ 
+static void test_ld_merge_overwrite_uses_second_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* da = _make_ldouble_dict(4);
+    ldouble_dict_t* db = _make_ldouble_dict(4);
+    insert_ldouble_dict(da, "shared", 3.141592653589793, a);
+    insert_ldouble_dict(db, "shared", 9.80665, a);
+ 
+    ldouble_dict_expect_t mr = merge_ldouble_dict(da, db, true, a);
+    assert_true(mr.has_value);
+    long double v = 0.0;
+    assert_int_equal(get_ldouble_dict_value(mr.u.value, "shared", &v), NO_ERROR);
+    assert_true(v == 9.80665);
+ 
+    return_ldouble_dict(mr.u.value);
+    return_ldouble_dict(da);
+    return_ldouble_dict(db);
+}
+ 
+// ================================================================================
+// Group 17: foreach_ldouble_dict
+// ================================================================================
+ 
+static void test_ld_foreach_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(foreach_ldouble_dict(NULL, _ld_sum_iter, NULL),
+                     NULL_POINTER);
+}
+ 
+static void test_ld_foreach_null_fn_returns_null_pointer(void** state) {
+    (void)state;
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_int_equal(foreach_ldouble_dict(d, NULL, NULL), NULL_POINTER);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_foreach_correct_sum(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "a", 1.0, a);
+    insert_ldouble_dict(d, "b", 2.0, a);
+    insert_ldouble_dict(d, "c", 3.0, a);
+    _ld_iter_ctx_t ctx = { 0, 0.0L };
+    assert_int_equal(foreach_ldouble_dict(d, _ld_sum_iter, &ctx), NO_ERROR);
+    assert_int_equal(ctx.count, 3);
+    assert_true(ctx.sum == 6.0);
+    return_ldouble_dict(d);
+}
+ 
+static void test_ld_foreach_delivers_negative_ldouble(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    insert_ldouble_dict(d, "pos",  1.5L, a);
+    insert_ldouble_dict(d, "neg", -2.5L, a);
+    _ld_iter_ctx_t ctx = { 0, 0.0L };
+    foreach_ldouble_dict(d, _ld_sum_iter, &ctx);
+    assert_int_equal(ctx.count, 2);
+    /* 1.5L + (-2.5L) == -1.0L */
+    assert_true(ctx.sum == -1.0L);
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 18: introspection
+// ================================================================================
+ 
+static void test_ld_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)ldouble_dict_size(NULL), 0);
+}
+ 
+static void test_ld_hash_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)ldouble_dict_hash_size(NULL), 0);
+}
+ 
+static void test_ld_alloc_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)ldouble_dict_alloc(NULL), 0);
+}
+ 
+static void test_ld_is_empty_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_ldouble_dict_empty(NULL));
+}
+ 
+static void test_ld_is_empty_reflects_contents(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_t* d = _make_ldouble_dict(4);
+    assert_true(is_ldouble_dict_empty(d));
+    insert_ldouble_dict(d, "x", 1u, a);
+    assert_false(is_ldouble_dict_empty(d));
+    pop_ldouble_dict(d, "x", NULL);
+    assert_true(is_ldouble_dict_empty(d));
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// Group 19: growth stress
+// ================================================================================
+ 
+static void test_ld_growth_values_survive_resize(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    ldouble_dict_expect_t r = init_ldouble_dict(2, true, a);
+    assert_true(r.has_value);
+    ldouble_dict_t* d = r.u.value;
+ 
+    for (int i = 0; i < 200; i++) {
+        char key[16];
+        snprintf(key, sizeof(key), "k%d", i);
+        long double val = (float_t)(i * 300u);   /* exercises > 255 values */
+        assert_int_equal(insert_ldouble_dict(d, key, val, a), NO_ERROR);
+    }
+    assert_int_equal((int)ldouble_dict_hash_size(d), 200);
+ 
+    for (int i = 0; i < 200; i++) {
+        char key[16];
+        snprintf(key, sizeof(key), "k%d", i);
+        float_t expected = (float_t)(i * 300u);
+        long double v = 0u;
+        assert_int_equal(get_ldouble_dict_value(d, key, &v), NO_ERROR);
+        assert_true(v == expected);
+    }
+ 
+    return_ldouble_dict(d);
+}
+ 
+// ================================================================================
+// main
+// ================================================================================
+ 
+    const struct CMUnitTest test_ldouble_dict[] = {
+ 
+        /* Group 1: init / return */
+        cmocka_unit_test(test_ld_init_null_allocator_fails),
+        cmocka_unit_test(test_ld_init_zero_capacity_fails),
+        cmocka_unit_test(test_ld_init_data_size_is_sizeof_long_double),
+        cmocka_unit_test(test_ld_init_dtype_is_float),
+        cmocka_unit_test(test_ld_return_null_is_safe),
+ 
+        /* Group 2: insert */
+        cmocka_unit_test(test_ld_insert_null_dict_returns_null_pointer),
+        cmocka_unit_test(test_ld_insert_null_key_returns_null_pointer),
+        cmocka_unit_test(test_ld_insert_duplicate_returns_invalid_arg),
+        cmocka_unit_test(test_ld_insert_stores_zero),
+        cmocka_unit_test(test_ld_insert_stores_ldouble_extremes),
+        cmocka_unit_test(test_ld_insert_stores_signed_ldouble),
+ 
+        /* Group 3: insert_n */
+        cmocka_unit_test(test_ld_insert_n_null_key_returns_null_pointer),
+        cmocka_unit_test(test_ld_insert_n_zero_len_returns_invalid_arg),
+        cmocka_unit_test(test_ld_insert_n_uses_only_specified_bytes),
+ 
+        /* Group 4: pop */
+        cmocka_unit_test(test_ld_pop_null_dict_returns_null_pointer),
+        cmocka_unit_test(test_ld_pop_null_key_returns_null_pointer),
+        cmocka_unit_test(test_ld_pop_missing_key_returns_not_found),
+        cmocka_unit_test(test_ld_pop_returns_correct_value),
+        cmocka_unit_test(test_ld_pop_null_out_value_discards_safely),
+ 
+        /* Group 5: pop_n */
+        cmocka_unit_test(test_ld_pop_n_zero_len_returns_invalid_arg),
+        cmocka_unit_test(test_ld_pop_n_removes_bounded_key),
+ 
+        /* Group 6: update */
+        cmocka_unit_test(test_ld_update_null_dict_returns_null_pointer),
+        cmocka_unit_test(test_ld_update_null_key_returns_null_pointer),
+        cmocka_unit_test(test_ld_update_missing_key_returns_not_found),
+        cmocka_unit_test(test_ld_update_overwrites_value),
+ 
+        /* Group 7: update_n */
+        cmocka_unit_test(test_ld_update_n_zero_len_returns_invalid_arg),
+        cmocka_unit_test(test_ld_update_n_updates_bounded_key),
+ 
+        /* Group 8: get_value */
+        cmocka_unit_test(test_ld_get_null_dict_returns_null_pointer),
+        cmocka_unit_test(test_ld_get_null_key_returns_null_pointer),
+        cmocka_unit_test(test_ld_get_null_out_returns_null_pointer),
+        cmocka_unit_test(test_ld_get_missing_key_returns_not_found),
+        cmocka_unit_test(test_ld_get_retrieves_extremes),
+ 
+        /* Group 9: get_value_n */
+        cmocka_unit_test(test_ld_get_n_zero_len_returns_invalid_arg),
+        cmocka_unit_test(test_ld_get_n_retrieves_bounded_key),
+ 
+        /* Group 10: get_ptr */
+        cmocka_unit_test(test_ld_ptr_null_dict_returns_null),
+        cmocka_unit_test(test_ld_ptr_null_key_returns_null),
+        cmocka_unit_test(test_ld_ptr_missing_returns_null),
+        cmocka_unit_test(test_ld_ptr_points_to_correct_value),
+ 
+        /* Group 11: get_ptr_n */
+        cmocka_unit_test(test_ld_ptr_n_zero_len_returns_null),
+        cmocka_unit_test(test_ld_ptr_n_points_to_bounded_value),
+ 
+        /* Group 12: has_key */
+        cmocka_unit_test(test_ld_has_null_dict_returns_false),
+        cmocka_unit_test(test_ld_has_null_key_returns_false),
+        cmocka_unit_test(test_ld_has_present_and_absent),
+ 
+        /* Group 13: has_key_n */
+        cmocka_unit_test(test_ld_has_n_zero_len_returns_false),
+        cmocka_unit_test(test_ld_has_n_distinguishes_by_length),
+ 
+        /* Group 14: clear */
+        cmocka_unit_test(test_ld_clear_null_returns_null_pointer),
+        cmocka_unit_test(test_ld_clear_resets_and_is_reusable),
+ 
+        /* Group 15: copy */
+        cmocka_unit_test(test_ld_copy_null_src_fails),
+        cmocka_unit_test(test_ld_copy_is_independent),
+ 
+        /* Group 16: merge */
+        cmocka_unit_test(test_ld_merge_null_first_fails),
+        cmocka_unit_test(test_ld_merge_no_overwrite_keeps_first_value),
+        cmocka_unit_test(test_ld_merge_overwrite_uses_second_value),
+ 
+        /* Group 17: foreach */
+        cmocka_unit_test(test_ld_foreach_null_dict_returns_null_pointer),
+        cmocka_unit_test(test_ld_foreach_null_fn_returns_null_pointer),
+        cmocka_unit_test(test_ld_foreach_correct_sum),
+        cmocka_unit_test(test_ld_foreach_delivers_negative_ldouble),
+ 
+        /* Group 18: introspection */
+        cmocka_unit_test(test_ld_size_null_returns_zero),
+        cmocka_unit_test(test_ld_hash_size_null_returns_zero),
+        cmocka_unit_test(test_ld_alloc_null_returns_zero),
+        cmocka_unit_test(test_ld_is_empty_null_returns_true),
+        cmocka_unit_test(test_ld_is_empty_reflects_contents),
+ 
+        /* Group 19: growth stress */
+        cmocka_unit_test(test_ld_growth_values_survive_resize),
+ 
+    };
+const size_t test_ldouble_dict_count = sizeof(test_ldouble_dict) / sizeof(test_ldouble_dict[0]);
 // ================================================================================
 // ================================================================================
 // eof

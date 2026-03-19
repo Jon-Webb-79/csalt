@@ -67,6 +67,8 @@ int main(void) {
         {"Uint64 Dict", test_uint64_dict, test_uint64_dict_count},
         {"Int64 Dict", test_int64_dict, test_int64_dict_count},
         {"Float Dict", test_float_dict, test_float_dict_count},
+        {"Double Dict", test_double_dict, test_double_dict_count},
+        {"LDouble Dict", test_ldouble_dict, test_ldouble_dict_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);

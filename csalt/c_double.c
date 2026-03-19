@@ -11,7 +11,7 @@
 // ================================================================================
 // ================================================================================
 // Include modules here
-
+#include <string.h>
 #include "c_double.h"
 
 #if defined(__AVX512F__)
@@ -368,6 +368,237 @@ bool is_double_array_full(const double_array_t* array) {
 bool is_double_array_ptr(const double_array_t* array, const double* ptr) {
     if (array == NULL) return false;
     return is_array_ptr(&array->base, ptr);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+static inline dict_key_t _key(const char* s, size_t len) {
+    return (dict_key_t){ .data = s, .len = len };
+}
+ 
+// ================================================================================
+// Initialisation and teardown
+// ================================================================================
+ 
+double_dict_expect_t init_double_dict(size_t             capacity,
+                                      bool               growth,
+                                      allocator_vtable_t alloc_v) {
+    dict_expect_t r = init_dict(capacity, sizeof(double),
+                                DOUBLE_TYPE, growth, alloc_v);
+    if (!r.has_value)
+        return (double_dict_expect_t){ .has_value = false,
+                                       .u.error   = r.u.error };
+ 
+    return (double_dict_expect_t){ .has_value = true,
+                                    .u.value   = r.u.value };
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+void return_double_dict(double_dict_t* dict) {
+    return_dict(dict);
+}
+ 
+// ================================================================================
+// Insert
+// ================================================================================
+ 
+error_code_t insert_double_dict(double_dict_t*     dict,
+                                 const char*        key,
+                                 double           value,
+                                 allocator_vtable_t alloc_v) {
+    if (key == NULL) return NULL_POINTER;
+    return insert_dict(dict, _key(key, strlen(key)), &value, alloc_v);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t insert_double_dict_n(double_dict_t*     dict,
+                                   const char*        key,
+                                   size_t             key_len,
+                                   double           value,
+                                   allocator_vtable_t alloc_v) {
+    if (key == NULL) return NULL_POINTER;
+    if (key_len == 0u) return INVALID_ARG;
+    return insert_dict(dict, _key(key, key_len), &value, alloc_v);
+}
+ 
+// ================================================================================
+// Pop
+// ================================================================================
+ 
+error_code_t pop_double_dict(double_dict_t* dict,
+                              const char*    key,
+                              double*      out_value) {
+    if (key == NULL) return NULL_POINTER;
+    return pop_dict(dict, _key(key, strlen(key)), out_value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t pop_double_dict_n(double_dict_t* dict,
+                                const char*    key,
+                                size_t         key_len,
+                                double*      out_value) {
+    if (key == NULL) return NULL_POINTER;
+    if (key_len == 0u) return INVALID_ARG;
+    return pop_dict(dict, _key(key, key_len), out_value);
+}
+ 
+// ================================================================================
+// Update
+// ================================================================================
+ 
+error_code_t update_double_dict(double_dict_t* dict,
+                                 const char*    key,
+                                 double       value) {
+    if (key == NULL) return NULL_POINTER;
+    return update_dict(dict, _key(key, strlen(key)), &value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t update_double_dict_n(double_dict_t* dict,
+                                   const char*    key,
+                                   size_t         key_len,
+                                   double       value) {
+    if (key == NULL) return NULL_POINTER;
+    if (key_len == 0u) return INVALID_ARG;
+    return update_dict(dict, _key(key, key_len), &value);
+}
+ 
+// ================================================================================
+// Lookup
+// ================================================================================
+ 
+error_code_t get_double_dict_value(const double_dict_t* dict,
+                                    const char*          key,
+                                    double*            out_value) {
+    if (key == NULL) return NULL_POINTER;
+    return get_dict_value(dict, _key(key, strlen(key)), out_value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t get_double_dict_value_n(const double_dict_t* dict,
+                                      const char*          key,
+                                      size_t               key_len,
+                                      double*            out_value) {
+    if (key == NULL) return NULL_POINTER;
+    if (key_len == 0u) return INVALID_ARG;
+    return get_dict_value(dict, _key(key, key_len), out_value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+const double* get_double_dict_ptr(const double_dict_t* dict, const char* key) {
+    if (key == NULL) return NULL;
+    return (const double*)get_dict_value_ptr(dict, _key(key, strlen(key)));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+const double* get_double_dict_ptr_n(const double_dict_t* dict,
+                                       const char*          key,
+                                       size_t               key_len) {
+    if (key == NULL || key_len == 0u) return NULL;
+    return (const double*)get_dict_value_ptr(dict, _key(key, key_len));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool has_double_dict_key(const double_dict_t* dict, const char* key) {
+    if (key == NULL) return false;
+    return has_dict_key(dict, _key(key, strlen(key)));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool has_double_dict_key_n(const double_dict_t* dict,
+                            const char*          key,
+                            size_t               key_len) {
+    if (key == NULL || key_len == 0u) return false;
+    return has_dict_key(dict, _key(key, key_len));
+}
+ 
+// ================================================================================
+// Utility
+// ================================================================================
+ 
+error_code_t clear_double_dict(double_dict_t* dict) {
+    return clear_dict(dict);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+double_dict_expect_t copy_double_dict(const double_dict_t* src,
+                                      allocator_vtable_t   alloc_v) {
+    dict_expect_t r = copy_dict(src, alloc_v);
+    if (!r.has_value)
+        return (double_dict_expect_t){ .has_value = false,
+                                       .u.error   = r.u.error };
+ 
+    return (double_dict_expect_t){ .has_value = true,
+                                    .u.value   = r.u.value };
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+double_dict_expect_t merge_double_dict(const double_dict_t* a,
+                                       const double_dict_t* b,
+                                       bool                 overwrite,
+                                       allocator_vtable_t   alloc_v) {
+    dict_expect_t r = merge_dict(a, b, overwrite, alloc_v);
+    if (!r.has_value)
+        return (double_dict_expect_t){ .has_value = false,
+                                       .u.error   = r.u.error };
+ 
+    return (double_dict_expect_t){ .has_value = true,
+                                    .u.value   = r.u.value };
+}
+ 
+// ================================================================================
+// Iteration
+// ================================================================================
+ 
+typedef struct {
+    double_dict_iter_fn typed_fn;
+    void*               user_data;
+} _double_iter_ctx_t;
+ 
+static void _double_iter_shim(dict_entry_t e, void* ctx) {
+    const _double_iter_ctx_t* c = (const _double_iter_ctx_t*)ctx;
+    double value;
+    memcpy(&value, e.value, sizeof(double));
+    c->typed_fn((const char*)e.key, e.key_len, value, c->user_data);
+}
+ 
+error_code_t foreach_double_dict(const double_dict_t* dict,
+                                  double_dict_iter_fn  fn,
+                                  void*                user_data) {
+    if (fn == NULL) return NULL_POINTER;
+    _double_iter_ctx_t ctx = { .typed_fn = fn, .user_data = user_data };
+    return foreach_dict(dict, _double_iter_shim, &ctx);
+}
+ 
+// ================================================================================
+// Introspection
+// ================================================================================
+ 
+size_t double_dict_size(const double_dict_t* dict) {
+    return dict_size(dict);
+}
+ 
+size_t double_dict_hash_size(const double_dict_t* dict) {
+    return dict_hash_size(dict);
+}
+ 
+size_t double_dict_alloc(const double_dict_t* dict) {
+    return dict_alloc(dict);
+}
+ 
+bool is_double_dict_empty(const double_dict_t* dict) {
+    return is_dict_empty(dict);
 }
 
 // ================================================================================

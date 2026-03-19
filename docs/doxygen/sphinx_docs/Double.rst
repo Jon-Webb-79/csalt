@@ -147,6 +147,188 @@ Introspection
 
 double Dictionary 
 =================
+A ``double_dict_t`` is a hash dictionary that maps C-string keys to ``double``
+values.  It is a type-safe wrapper around the generic dict engine described
+in :ref:`c_dict`, with the value type fixed to ``sizeof(double)`` and
+``dtype`` fixed to ``DOUBLE_TYPE`` at initialisation.
+ 
+Keys are null-terminated C-strings.  Every function is available in two
+forms: a plain variant that measures the key length with ``strlen``, and an
+``_n`` variant that accepts an explicit ``size_t key_len`` argument.  The
+``_n`` variants are useful when the key is a sub-string of a larger buffer,
+when its length is already known and the ``strlen`` scan is unnecessary, or
+when the key contains embedded null bytes.
+ 
+The dict does not store a pointer to the caller's key — it copies the key
+bytes into its own allocator-managed storage on every insert.  The caller
+may free or reuse the key memory immediately after any dict call returns.
+ 
+The dict does not have a default allocator.  An
+:c:type:`allocator_vtable_t` must be supplied to :c:func:`init_double_dict`
+and to every :c:func:`insert_double_dict` call.  All other operations use
+the allocator that was stored at initialisation time.  See
+:ref:`allocator_file` for available allocators and the trade-offs between
+them.
+ 
+.. code-block:: c
+ 
+   #include "double_dict.h"
+ 
+   /* Choose an allocator — see :ref:`allocator_file` for all options. */
+   allocator_vtable_t a = heap_allocator();
+ 
+   double_dict_expect_t r = init_double_dict(16, true, a);
+   if (!r.has_value) { /* handle r.u.error */ }
+   double_dict_t* d = r.u.value;
+ 
+   insert_double_dict(d, "pi",      3.141592653589793, a);
+   insert_double_dict(d, "gravity", 9.80665,           a);
+   insert_double_dict(d, "zero",    0.0,               a);
+ 
+   double v;
+   get_double_dict_value(d, "pi", &v);   /* v == 3.141592653589793 */
+ 
+   update_double_dict(d, "zero", -1.0);
+ 
+   pop_double_dict(d, "gravity", NULL);  /* removes "gravity", discards value */
+ 
+   return_double_dict(d);
+ 
+Plain vs ``_n`` Variants
+------------------------
+ 
+Every function that takes a key is available in two forms.
+ 
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+ 
+   * - Plain variant
+     - ``_n`` variant
+   * - ``insert_double_dict(d, key, value, a)``
+     - ``insert_double_dict_n(d, key, key_len, value, a)``
+   * - ``pop_double_dict(d, key, out)``
+     - ``pop_double_dict_n(d, key, key_len, out)``
+   * - ``update_double_dict(d, key, value)``
+     - ``update_double_dict_n(d, key, key_len, value)``
+   * - ``get_double_dict_value(d, key, out)``
+     - ``get_double_dict_value_n(d, key, key_len, out)``
+   * - ``get_double_dict_ptr(d, key)``
+     - ``get_double_dict_ptr_n(d, key, key_len)``
+   * - ``has_double_dict_key(d, key)``
+     - ``has_double_dict_key_n(d, key, key_len)``
+ 
+The ``_n`` variants are particularly useful for splitting on sub-strings
+without constructing a null-terminated copy:
+ 
+.. code-block:: c
+ 
+   /* Buffer holds "scale_factor" but we only want "scale" (5 bytes). */
+   const char* buf = "scale_factor";
+   insert_double_dict_n(d, buf, 5, 0.123456789012345, a);
+ 
+   double v;
+   get_double_dict_value_n(d, buf, 5, &v);   /* v == 0.123456789012345 */
+   get_double_dict_value(d, "scale", &v);     /* same key — also v == 0.123456789012345 */
+ 
+Structs
+-------
+ 
+.. note::
+ 
+   ``double_dict_t`` is a ``typedef`` alias for :c:struct:`dict_t`.  All
+   internal fields are documented under :c:struct:`dict_t` in
+   :ref:`c_dict`.  The ``data_size`` field is always ``sizeof(double)``
+   (8 bytes) and the ``dtype`` field is always ``DOUBLE_TYPE``.
+ 
+.. doxygenstruct:: double_dict_expect_t
+   :members:
+ 
+Initialisation and Teardown
+---------------------------
+ 
+.. doxygenfunction:: init_double_dict
+.. doxygenfunction:: return_double_dict
+ 
+Insert
+------
+ 
+.. doxygenfunction:: insert_double_dict
+.. doxygenfunction:: insert_double_dict_n
+ 
+Pop
+---
+ 
+.. doxygenfunction:: pop_double_dict
+.. doxygenfunction:: pop_double_dict_n
+ 
+Update
+------
+ 
+.. doxygenfunction:: update_double_dict
+.. doxygenfunction:: update_double_dict_n
+ 
+Lookup
+------
+ 
+.. doxygenfunction:: get_double_dict_value
+.. doxygenfunction:: get_double_dict_value_n
+.. doxygenfunction:: get_double_dict_ptr
+.. doxygenfunction:: get_double_dict_ptr_n
+.. doxygenfunction:: has_double_dict_key
+.. doxygenfunction:: has_double_dict_key_n
+ 
+Utility Operations
+------------------
+ 
+.. doxygenfunction:: clear_double_dict
+.. doxygenfunction:: copy_double_dict
+.. doxygenfunction:: merge_double_dict
+ 
+Iteration
+---------
+ 
+:c:func:`foreach_double_dict` visits every entry in bucket order (which is
+not guaranteed to match insertion order).  The callback receives the key as
+a null-terminated ``const char*`` pointer into the dict's internal storage,
+the key length, the ``double`` value, and an optional caller-supplied context
+pointer.  The callback must not insert or remove entries during traversal.
+ 
+.. note::
+ 
+   Values are stored and retrieved as exact IEEE 754 bit patterns via
+   ``memcpy``.  No epsilon tolerance is applied — equality comparisons
+   between stored and retrieved values are exact.  As with :ref:`float`, NaN
+   values can be stored and retrieved bitwise, but cannot be looked up
+   reliably because ``NaN != NaN`` by definition.
+ 
+   Use ``%.15g`` or the ``%g`` specifier with sufficient precision when
+   printing ``double`` values, or the ``PRId64``-style macros are not
+   applicable — use ``printf("%.15g", v)`` directly.  A ``double``
+   accumulator is sufficient for summing ``double`` values, but be aware
+   that adding many values of the same sign can accumulate rounding error;
+   prefer Kahan summation for high-precision work.
+ 
+.. code-block:: c
+ 
+   static void print_entry(const char* key, size_t key_len,
+                            double value, void* ud) {
+       (void)key_len; (void)ud;
+       printf("  %s = %.15g\n", key, value);
+   }
+ 
+   foreach_double_dict(d, print_entry, NULL);
+ 
+.. doxygenfunction:: foreach_double_dict
+ 
+Introspection
+-------------
+ 
+.. doxygenfunction:: double_dict_size
+.. doxygenfunction:: double_dict_hash_size
+.. doxygenfunction:: double_dict_alloc
+.. doxygenfunction:: is_double_dict_empty
+
 
 double Matrix 
 =============
