@@ -183,6 +183,11 @@ extern const size_t test_int8_dict_count;
 
 extern const struct CMUnitTest test_uint16_dict[];
 extern const size_t test_uint16_dict_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_int16_dict[];
+extern const size_t test_int16_dict_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus

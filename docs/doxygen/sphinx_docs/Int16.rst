@@ -145,6 +145,173 @@ Introspection
 
 int16_t Dictionary 
 ==================
+An ``int16_dict_t`` is a hash dictionary that maps C-string keys to
+``int16_t`` values.  It is a type-safe wrapper around the generic
+dict engine described in :ref:`c_dict`, with the value type fixed to
+``sizeof(int16_t)`` and ``dtype`` fixed to ``INT16_TYPE`` at initialisation.
+ 
+Keys are null-terminated C-strings.  Every function is available in two
+forms: a plain variant that measures the key length with ``strlen``, and an
+``_n`` variant that accepts an explicit ``size_t key_len`` argument.  The
+``_n`` variants are useful when the key is a sub-string of a larger buffer,
+when its length is already known and the ``strlen`` scan is unnecessary, or
+when the key contains embedded null bytes.
+ 
+The dict does not store a pointer to the caller's key — it copies the key
+bytes into its own allocator-managed storage on every insert.  The caller
+may free or reuse the key memory immediately after any dict call returns.
+ 
+The dict does not have a default allocator.  An
+:c:type:`allocator_vtable_t` must be supplied to :c:func:`init_int16_dict`
+and to every :c:func:`insert_int16_dict` call.  All other operations use
+the allocator that was stored at initialisation time.  See
+:ref:`allocator_file` for available allocators and the trade-offs between
+them.
+ 
+.. code-block:: c
+ 
+   #include "int16_dict.h"
+ 
+   /* Choose an allocator — see :ref:`allocator_file` for all options. */
+   allocator_vtable_t a = heap_allocator();
+ 
+   int16_dict_expect_t r = init_int16_dict(16, true, a);
+   if (!r.has_value) { /* handle r.u.error */ }
+   int16_dict_t* d = r.u.value;
+ 
+   insert_int16_dict(d, "temp_min", -273, a);
+   insert_int16_dict(d, "temp_max",  100, a);
+   insert_int16_dict(d, "altitude",  -50, a);
+ 
+   int16_t v;
+   get_int16_dict_value(d, "temp_min", &v);   /* v == -273 */
+ 
+   update_int16_dict(d, "altitude", -100);
+ 
+   pop_int16_dict(d, "temp_max", NULL);        /* removes "temp_max", discards value */
+ 
+   return_int16_dict(d);
+ 
+Plain vs ``_n`` Variants
+------------------------
+ 
+Every function that takes a key is available in two forms.
+ 
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+ 
+   * - Plain variant
+     - ``_n`` variant
+   * - ``insert_int16_dict(d, key, value, a)``
+     - ``insert_int16_dict_n(d, key, key_len, value, a)``
+   * - ``pop_int16_dict(d, key, out)``
+     - ``pop_int16_dict_n(d, key, key_len, out)``
+   * - ``update_int16_dict(d, key, value)``
+     - ``update_int16_dict_n(d, key, key_len, value)``
+   * - ``get_int16_dict_value(d, key, out)``
+     - ``get_int16_dict_value_n(d, key, key_len, out)``
+   * - ``get_int16_dict_ptr(d, key)``
+     - ``get_int16_dict_ptr_n(d, key, key_len)``
+   * - ``has_int16_dict_key(d, key)``
+     - ``has_int16_dict_key_n(d, key, key_len)``
+ 
+The ``_n`` variants are particularly useful for splitting on sub-strings
+without constructing a null-terminated copy:
+ 
+.. code-block:: c
+ 
+   /* Buffer holds "delta_fine" but we only want "delta" (5 bytes). */
+   const char* buf = "delta_fine";
+   insert_int16_dict_n(d, buf, 5, -500, a);
+ 
+   int16_t v;
+   get_int16_dict_value_n(d, buf, 5, &v);   /* v == -500 */
+   get_int16_dict_value(d, "delta", &v);     /* same key — also v == -500 */
+ 
+Structs
+-------
+ 
+.. note::
+ 
+   ``int16_dict_t`` is a ``typedef`` alias for :c:struct:`dict_t`.  All
+   internal fields are documented under :c:struct:`dict_t` in
+   :ref:`c_dict`.  The ``data_size`` field is always ``sizeof(int16_t)``
+   and the ``dtype`` field is always ``INT16_TYPE``.
+ 
+.. doxygenstruct:: int16_dict_expect_t
+   :members:
+ 
+Initialisation and Teardown
+---------------------------
+ 
+.. doxygenfunction:: init_int16_dict
+.. doxygenfunction:: return_int16_dict
+ 
+Insert
+------
+ 
+.. doxygenfunction:: insert_int16_dict
+.. doxygenfunction:: insert_int16_dict_n
+ 
+Pop
+---
+ 
+.. doxygenfunction:: pop_int16_dict
+.. doxygenfunction:: pop_int16_dict_n
+ 
+Update
+------
+ 
+.. doxygenfunction:: update_int16_dict
+.. doxygenfunction:: update_int16_dict_n
+ 
+Lookup
+------
+ 
+.. doxygenfunction:: get_int16_dict_value
+.. doxygenfunction:: get_int16_dict_value_n
+.. doxygenfunction:: get_int16_dict_ptr
+.. doxygenfunction:: get_int16_dict_ptr_n
+.. doxygenfunction:: has_int16_dict_key
+.. doxygenfunction:: has_int16_dict_key_n
+ 
+Utility Operations
+------------------
+ 
+.. doxygenfunction:: clear_int16_dict
+.. doxygenfunction:: copy_int16_dict
+.. doxygenfunction:: merge_int16_dict
+ 
+Iteration
+---------
+ 
+:c:func:`foreach_int16_dict` visits every entry in bucket order (which is
+not guaranteed to match insertion order).  The callback receives the key as
+a null-terminated ``const char*`` pointer into the dict's internal storage,
+the key length, the ``int16_t`` value, and an optional caller-supplied
+context pointer.  The callback must not insert or remove entries during
+traversal.
+ 
+.. code-block:: c
+ 
+   static void print_entry(const char* key, size_t key_len,
+                            int16_t value, void* ud) {
+       (void)key_len; (void)ud;
+       printf("  %s = %d\n", key, (int)value);
+   }
+ 
+   foreach_int16_dict(d, print_entry, NULL);
+ 
+.. doxygenfunction:: foreach_int16_dict
+ 
+Introspection
+-------------
+ 
+.. doxygenfunction:: int16_dict_size
+.. doxygenfunction:: int16_dict_hash_size
+.. doxygenfunction:: int16_dict_alloc
+.. doxygenfunction:: is_int16_dict_empty
 
 int16_t Matrix 
 ==============
