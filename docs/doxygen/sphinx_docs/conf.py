@@ -16,12 +16,58 @@
 #sys.path.insert(0, os.path.abspath('../../../src'))
 
 # -- Project info ------------------------------------------------------------
+# project = 'csalt-lib'
+# copyright = '2025, Jonathan A. Webb'
+# author = 'Jonathan A. Webb'
+# release = '0.0.2'
+#
+# # -- General configuration ---------------------------------------------------
+# extensions = [
+#     "sphinx.ext.todo",
+#     "sphinx.ext.viewcode",
+#     "sphinx.ext.autodoc",
+#     "sphinx.ext.autosummary",
+#     "sphinx.ext.githubpages",
+#     "sphinx_copybutton",
+#     "breathe",
+# ]
+#
+# # Sphinx: replace deprecated autodoc_default_flags with autodoc_default_options
+# autodoc_member_order = "groupwise"
+# autodoc_default_options = {"members": True, "show-inheritance": True}
+# autosummary_generate = True
+#
+# # Breathe configuration
+# from pathlib import Path
+# HERE = Path(__file__).parent.resolve()
+# DOXYGEN_XML_DIR = HERE.parent / "build" / "xml"   # docs/_build/doxygen/xml
+#
+# breathe_default_project = "csalt"
+# breathe_domain_by_extension = {"h": "c", "c": "c"}
+# breathe_projects = {"csalt": str(DOXYGEN_XML_DIR)}
+#
+# # Optional sanity check: prints a hint during Sphinx build if XML is missing
+# if not DOXYGEN_XML_DIR.exists():
+#     print(f"[conf.py] WARNING: Doxygen XML not found at {DOXYGEN_XML_DIR}. "
+#           f"Run 'doxygen Doxyfile' before building Sphinx.")
+#     
+# templates_path = ["_templates"]
+# exclude_patterns = []
+#
+# # -- Options for HTML output -------------------------------------------------
+# html_theme = "sphinx_rtd_theme"
+#
+# html_theme_options = {
+#     "navigation_depth": 4
+# }
+
 project = 'csalt-lib'
 copyright = '2025, Jonathan A. Webb'
 author = 'Jonathan A. Webb'
 release = '0.0.2'
 
 # -- General configuration ---------------------------------------------------
+
 extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
@@ -32,32 +78,51 @@ extensions = [
     "breathe",
 ]
 
-# Sphinx: replace deprecated autodoc_default_flags with autodoc_default_options
-autodoc_member_order = "groupwise"
-autodoc_default_options = {"members": True, "show-inheritance": True}
-autosummary_generate = True
-
-# Breathe configuration
-from pathlib import Path
-HERE = Path(__file__).parent.resolve()
-DOXYGEN_XML_DIR = HERE.parent / "build" / "xml"   # docs/_build/doxygen/xml
-
-breathe_default_project = "csalt"
-breathe_domain_by_extension = {"h": "c", "c": "c"}
-breathe_projects = {"csalt": str(DOXYGEN_XML_DIR)}
-
-# Optional sanity check: prints a hint during Sphinx build if XML is missing
-if not DOXYGEN_XML_DIR.exists():
-    print(f"[conf.py] WARNING: Doxygen XML not found at {DOXYGEN_XML_DIR}. "
-          f"Run 'doxygen Doxyfile' before building Sphinx.")
-    
 templates_path = ["_templates"]
 exclude_patterns = []
 
-# -- Options for HTML output -------------------------------------------------
-html_theme = "sphinx_rtd_theme"
+# Sphinx behavior
+autodoc_member_order = "groupwise"
+autodoc_default_options = {
+    "members": True,
+    "show-inheritance": True,
+}
+autosummary_generate = True
+todo_include_todos = True
 
+# -- Breathe / Doxygen configuration -----------------------------------------
+
+from pathlib import Path
+
+HERE = Path(__file__).parent.resolve()
+DOXYGEN_XML_DIR = HERE.parent / "build" / "xml"
+
+breathe_default_project = "csalt"
+breathe_projects = {
+    "csalt": str(DOXYGEN_XML_DIR),
+}
+
+# Tell Breathe that .c files are implementation files so it prefers header
+# declarations when resolving .. doxygenfunction:: directives.
+breathe_implementation_filename_extensions = [".c", ".cc", ".cpp"]
+
+# Map file extensions to the C domain
+breathe_domain_by_extension = {
+    "h": "c",
+    "c": "c",
+}
+
+# Optional sanity check
+if not DOXYGEN_XML_DIR.exists():
+    print(
+        f"[conf.py] WARNING: Doxygen XML not found at {DOXYGEN_XML_DIR}. "
+        "Run 'doxygen Doxyfile' before building Sphinx."
+    )
+
+# -- Options for HTML output -------------------------------------------------
+
+html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    "navigation_depth": 4
+    "navigation_depth": 4,
 }
 

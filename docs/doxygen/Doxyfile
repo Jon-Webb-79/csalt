@@ -2215,6 +2215,10 @@ PREDEFINED          += __STDC_VERSION__=201710L
 # Ensure the “no generic” macro is not set
 PREDEFINED          += __STDC_NO_GENERIC__=0
 PREDEFINED          += DOXYGEN
+PREDEFINED          += ARENA_ENABLE_DYNAMIC=1
+PREDEFINED          += POOL_ENABLE_DYNAMIC=1
+PREDEFINED          += BUDDY_ENABLE=1
+PREDEFINED          += ARENA_USE_CONVENIENCE_MACROS
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
