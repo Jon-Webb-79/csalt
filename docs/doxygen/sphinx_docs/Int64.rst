@@ -147,6 +147,184 @@ Introspection
 
 int64_t Dictionary 
 ==================
+An ``int64_dict_t`` is a hash dictionary that maps C-string keys to
+``int64_t`` values.  It is a type-safe wrapper around the generic
+dict engine described in :ref:`c_dict`, with the value type fixed to
+``sizeof(int64_t)`` and ``dtype`` fixed to ``INT64_TYPE`` at initialisation.
+ 
+Keys are null-terminated C-strings.  Every function is available in two
+forms: a plain variant that measures the key length with ``strlen``, and an
+``_n`` variant that accepts an explicit ``size_t key_len`` argument.  The
+``_n`` variants are useful when the key is a sub-string of a larger buffer,
+when its length is already known and the ``strlen`` scan is unnecessary, or
+when the key contains embedded null bytes.
+ 
+The dict does not store a pointer to the caller's key — it copies the key
+bytes into its own allocator-managed storage on every insert.  The caller
+may free or reuse the key memory immediately after any dict call returns.
+ 
+The dict does not have a default allocator.  An
+:c:type:`allocator_vtable_t` must be supplied to :c:func:`init_int64_dict`
+and to every :c:func:`insert_int64_dict` call.  All other operations use
+the allocator that was stored at initialisation time.  See
+:ref:`allocator_file` for available allocators and the trade-offs between
+them.
+ 
+.. code-block:: c
+ 
+   #include "int64_dict.h"
+ 
+   /* Choose an allocator — see :ref:`allocator_file` for all options. */
+   allocator_vtable_t a = heap_allocator();
+ 
+   int64_dict_expect_t r = init_int64_dict(16, true, a);
+   if (!r.has_value) { /* handle r.u.error */ }
+   int64_dict_t* d = r.u.value;
+ 
+   insert_int64_dict(d, "depth",   -10994000LL, a);   /* Mariana Trench, mm */
+   insert_int64_dict(d, "balance", INT64_MIN,   a);
+   insert_int64_dict(d, "offset",  0LL,         a);
+ 
+   int64_t v;
+   get_int64_dict_value(d, "depth", &v);   /* v == -10994000 */
+ 
+   update_int64_dict(d, "offset", -1000000000000LL);
+ 
+   pop_int64_dict(d, "balance", NULL);     /* removes "balance", discards value */
+ 
+   return_int64_dict(d);
+ 
+Plain vs ``_n`` Variants
+------------------------
+ 
+Every function that takes a key is available in two forms.
+ 
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+ 
+   * - Plain variant
+     - ``_n`` variant
+   * - ``insert_int64_dict(d, key, value, a)``
+     - ``insert_int64_dict_n(d, key, key_len, value, a)``
+   * - ``pop_int64_dict(d, key, out)``
+     - ``pop_int64_dict_n(d, key, key_len, out)``
+   * - ``update_int64_dict(d, key, value)``
+     - ``update_int64_dict_n(d, key, key_len, value)``
+   * - ``get_int64_dict_value(d, key, out)``
+     - ``get_int64_dict_value_n(d, key, key_len, out)``
+   * - ``get_int64_dict_ptr(d, key)``
+     - ``get_int64_dict_ptr_n(d, key, key_len)``
+   * - ``has_int64_dict_key(d, key)``
+     - ``has_int64_dict_key_n(d, key, key_len)``
+ 
+The ``_n`` variants are particularly useful for splitting on sub-strings
+without constructing a null-terminated copy:
+ 
+.. code-block:: c
+ 
+   /* Buffer holds "delta_total" but we only want "delta" (5 bytes). */
+   const char* buf = "delta_total";
+   insert_int64_dict_n(d, buf, 5, -500000000000LL, a);
+ 
+   int64_t v;
+   get_int64_dict_value_n(d, buf, 5, &v);   /* v == -500000000000 */
+   get_int64_dict_value(d, "delta", &v);     /* same key — also v == -500000000000 */
+ 
+Structs
+-------
+ 
+.. note::
+ 
+   ``int64_dict_t`` is a ``typedef`` alias for :c:struct:`dict_t`.  All
+   internal fields are documented under :c:struct:`dict_t` in
+   :ref:`c_dict`.  The ``data_size`` field is always ``sizeof(int64_t)``
+   (8 bytes) and the ``dtype`` field is always ``INT64_TYPE``.
+ 
+.. doxygenstruct:: int64_dict_expect_t
+   :members:
+ 
+Initialisation and Teardown
+---------------------------
+ 
+.. doxygenfunction:: init_int64_dict
+.. doxygenfunction:: return_int64_dict
+ 
+Insert
+------
+ 
+.. doxygenfunction:: insert_int64_dict
+.. doxygenfunction:: insert_int64_dict_n
+ 
+Pop
+---
+ 
+.. doxygenfunction:: pop_int64_dict
+.. doxygenfunction:: pop_int64_dict_n
+ 
+Update
+------
+ 
+.. doxygenfunction:: update_int64_dict
+.. doxygenfunction:: update_int64_dict_n
+ 
+Lookup
+------
+ 
+.. doxygenfunction:: get_int64_dict_value
+.. doxygenfunction:: get_int64_dict_value_n
+.. doxygenfunction:: get_int64_dict_ptr
+.. doxygenfunction:: get_int64_dict_ptr_n
+.. doxygenfunction:: has_int64_dict_key
+.. doxygenfunction:: has_int64_dict_key_n
+ 
+Utility Operations
+------------------
+ 
+.. doxygenfunction:: clear_int64_dict
+.. doxygenfunction:: copy_int64_dict
+.. doxygenfunction:: merge_int64_dict
+ 
+Iteration
+---------
+ 
+:c:func:`foreach_int64_dict` visits every entry in bucket order (which is
+not guaranteed to match insertion order).  The callback receives the key as
+a null-terminated ``const char*`` pointer into the dict's internal storage,
+the key length, the ``int64_t`` value, and an optional caller-supplied
+context pointer.  The callback must not insert or remove entries during
+traversal.
+ 
+.. note::
+ 
+   ``int64_t`` values cannot be safely passed to ``printf`` as ``%d`` — use
+   the ``%lld`` specifier with a cast to ``long long``, or the ``PRId64``
+   macro from ``<inttypes.h>``.  When accumulating ``int64_t`` values inside
+   an iterator callback, use a ``long long`` (or larger) accumulator and keep
+   running totals within the signed 64-bit range to avoid undefined overflow
+   behaviour.
+ 
+.. code-block:: c
+ 
+   #include <inttypes.h>
+ 
+   static void print_entry(const char* key, size_t key_len,
+                            int64_t value, void* ud) {
+       (void)key_len; (void)ud;
+       printf("  %s = %" PRId64 "\n", key, value);
+   }
+ 
+   foreach_int64_dict(d, print_entry, NULL);
+ 
+.. doxygenfunction:: foreach_int64_dict
+ 
+Introspection
+-------------
+ 
+.. doxygenfunction:: int64_dict_size
+.. doxygenfunction:: int64_dict_hash_size
+.. doxygenfunction:: int64_dict_alloc
+.. doxygenfunction:: is_int64_dict_empty
 
 int64_t Matrix 
 ==============
