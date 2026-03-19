@@ -19,6 +19,7 @@
 #include "c_int8.h"
 #include "c_uint16.h"
 #include "c_int16.h"
+#include "c_uint32.h"
 
 
 #include <stdint.h>
@@ -3429,9 +3430,810 @@ const struct CMUnitTest test_int16_dict[] = {
     cmocka_unit_test(test_i16d_growth_values_survive_resize),
 
 };
-
-
 const size_t test_int16_dict_count = sizeof(test_int16_dict) / sizeof(test_int16_dict[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+static uint32_dict_t* _make_uint32_dict(size_t cap) {
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_expect_t r = init_uint32_dict(cap, true, a);
+    assert_true(r.has_value);
+    return r.u.value;
+}
+ 
+typedef struct { int count; uint64_t sum; } _u32d_iter_ctx_t;
+ 
+static void _u32d_sum_iter(const char* key, size_t key_len,
+                            uint32_t value, void* ud) {
+    (void)key; (void)key_len;
+    _u32d_iter_ctx_t* c = (_u32d_iter_ctx_t*)ud;
+    c->count++;
+    c->sum += (uint64_t)value;
+}
+ 
+// ================================================================================
+// Group 1: init_uint32_dict / return_uint32_dict
+// ================================================================================
+ 
+static void test_u32d_init_null_allocator_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    uint32_dict_expect_t r = init_uint32_dict(8, true, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+static void test_u32d_init_zero_capacity_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_expect_t r = init_uint32_dict(0, true, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+ 
+static void test_u32d_init_data_size_is_four_bytes(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal((int)dict_data_size(d), 4);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_init_dtype_is_uint32(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal((int)d->dtype, (int)UINT32_TYPE);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_return_null_is_safe(void** state) {
+    (void)state;
+    return_uint32_dict(NULL);
+}
+ 
+// ================================================================================
+// Group 2: insert_uint32_dict
+// ================================================================================
+ 
+static void test_u32d_insert_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    assert_int_equal(insert_uint32_dict(NULL, "k", 1u, a), NULL_POINTER);
+}
+ 
+static void test_u32d_insert_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(insert_uint32_dict(d, NULL, 1u, a), NULL_POINTER);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_insert_duplicate_returns_invalid_arg(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(insert_uint32_dict(d, "k", 1u, a), NO_ERROR);
+    assert_int_equal(insert_uint32_dict(d, "k", 2u, a), INVALID_ARG);
+    assert_int_equal((int)uint32_dict_hash_size(d), 1);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_insert_stores_zero(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(insert_uint32_dict(d, "zero", 0u, a), NO_ERROR);
+    uint32_t v = 99u;
+    assert_int_equal(get_uint32_dict_value(d, "zero", &v), NO_ERROR);
+    assert_int_equal((int)v, 0);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_insert_stores_max(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(insert_uint32_dict(d, "max", UINT32_MAX, a), NO_ERROR);
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value(d, "max", &v), NO_ERROR);
+    assert_int_equal((int)v, (int)UINT32_MAX);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_insert_stores_midrange(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(insert_uint32_dict(d, "pixels", 2073600u, a), NO_ERROR);
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value(d, "pixels", &v), NO_ERROR);
+    assert_int_equal((int)v, (int)2073600u);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 3: insert_uint32_dict_n
+// ================================================================================
+ 
+static void test_u32d_insert_n_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(insert_uint32_dict_n(d, NULL, 3, 1u, a), NULL_POINTER);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_insert_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(insert_uint32_dict_n(d, "k", 0, 1u, a), INVALID_ARG);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_insert_n_uses_only_specified_bytes(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    /* "count_total" — insert only "count" (5 bytes) with value 1000000 */
+    const char* buf = "count_total";
+    assert_int_equal(insert_uint32_dict_n(d, buf, 5, 1000000u, a), NO_ERROR);
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value_n(d, buf, 5, &v), NO_ERROR);
+    assert_int_equal((int)v, (int)1000000u);
+    /* Full buffer key "count_total" is different — not found */
+    assert_int_equal(get_uint32_dict_value_n(d, buf, 11, &v), NOT_FOUND);
+    /* Plain null-terminated lookup also works */
+    assert_int_equal(get_uint32_dict_value(d, "count", &v), NO_ERROR);
+    assert_int_equal((int)v, (int)1000000u);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 4: pop_uint32_dict
+// ================================================================================
+ 
+static void test_u32d_pop_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    uint32_t v;
+    assert_int_equal(pop_uint32_dict(NULL, "k", &v), NULL_POINTER);
+}
+ 
+static void test_u32d_pop_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    uint32_t v;
+    assert_int_equal(pop_uint32_dict(d, NULL, &v), NULL_POINTER);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_pop_missing_key_returns_not_found(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(pop_uint32_dict(d, "missing", NULL), NOT_FOUND);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_pop_returns_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "size", 4096u, a);
+    uint32_t v = 0u;
+    assert_int_equal(pop_uint32_dict(d, "size", &v), NO_ERROR);
+    assert_int_equal((int)v, (int)4096u);
+    assert_int_equal((int)uint32_dict_hash_size(d), 0);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_pop_null_out_value_discards_safely(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "x", 100000u, a);
+    assert_int_equal(pop_uint32_dict(d, "x", NULL), NO_ERROR);
+    assert_int_equal((int)uint32_dict_hash_size(d), 0);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 5: pop_uint32_dict_n
+// ================================================================================
+ 
+static void test_u32d_pop_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(pop_uint32_dict_n(d, "k", 0, NULL), INVALID_ARG);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_pop_n_removes_bounded_key(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    const char* buf = "count_total";
+    insert_uint32_dict_n(d, buf, 5, 1000000u, a);   /* key = "count" */
+    uint32_t v = 0u;
+    assert_int_equal(pop_uint32_dict_n(d, buf, 5, &v), NO_ERROR);
+    assert_int_equal((int)v, (int)1000000u);
+    assert_int_equal((int)uint32_dict_hash_size(d), 0);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 6: update_uint32_dict
+// ================================================================================
+ 
+static void test_u32d_update_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(update_uint32_dict(NULL, "k", 1u), NULL_POINTER);
+}
+ 
+static void test_u32d_update_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(update_uint32_dict(d, NULL, 1u), NULL_POINTER);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_update_missing_key_returns_not_found(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(update_uint32_dict(d, "missing", 1u), NOT_FOUND);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_update_overwrites_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "size", 4096u, a);
+    assert_int_equal(update_uint32_dict(d, "size", 8192u), NO_ERROR);
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value(d, "size", &v), NO_ERROR);
+    assert_int_equal((int)v, (int)8192u);
+    assert_int_equal((int)uint32_dict_hash_size(d), 1);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 7: update_uint32_dict_n
+// ================================================================================
+ 
+static void test_u32d_update_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(update_uint32_dict_n(d, "k", 0, 1u), INVALID_ARG);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_update_n_updates_bounded_key(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    const char* buf = "count_total";
+    insert_uint32_dict_n(d, buf, 5, 4096u, a);   /* key = "count" */
+    assert_int_equal(update_uint32_dict_n(d, buf, 5, 8192u), NO_ERROR);
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value_n(d, buf, 5, &v), NO_ERROR);
+    assert_int_equal((int)v, (int)8192u);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 8: get_uint32_dict_value
+// ================================================================================
+ 
+static void test_u32d_get_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    uint32_t v;
+    assert_int_equal(get_uint32_dict_value(NULL, "k", &v), NULL_POINTER);
+}
+ 
+static void test_u32d_get_null_key_returns_null_pointer(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    uint32_t v;
+    assert_int_equal(get_uint32_dict_value(d, NULL, &v), NULL_POINTER);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_get_null_out_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "k", 100000u, a);
+    assert_int_equal(get_uint32_dict_value(d, "k", NULL), NULL_POINTER);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_get_missing_key_returns_not_found(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    uint32_t v;
+    assert_int_equal(get_uint32_dict_value(d, "missing", &v), NOT_FOUND);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_get_retrieves_extremes(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "min",  0u,         a);
+    insert_uint32_dict(d, "max",  UINT32_MAX, a);
+    insert_uint32_dict(d, "mid",  32768u,     a);
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value(d, "min", &v), NO_ERROR);
+    assert_int_equal((int)v, 0);
+    assert_int_equal(get_uint32_dict_value(d, "max", &v), NO_ERROR);
+    assert_int_equal((int)v, (int)UINT32_MAX);
+    assert_int_equal(get_uint32_dict_value(d, "mid", &v), NO_ERROR);
+    assert_int_equal((int)v, 32768);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 9: get_uint32_dict_value_n
+// ================================================================================
+ 
+static void test_u32d_get_n_zero_len_returns_invalid_arg(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    uint32_t v;
+    assert_int_equal(get_uint32_dict_value_n(d, "k", 0, &v), INVALID_ARG);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_get_n_retrieves_bounded_key(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    const char* buf = "count_total";
+    insert_uint32_dict_n(d, buf, 5, 1000000u, a);   /* key = "count" */
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value_n(d, buf, 5, &v), NO_ERROR);
+    assert_int_equal((int)v, (int)1000000u);
+    assert_int_equal(get_uint32_dict_value_n(d, buf, 11, &v), NOT_FOUND);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 10: get_uint32_dict_ptr
+// ================================================================================
+ 
+static void test_u32d_ptr_null_dict_returns_null(void** state) {
+    (void)state;
+    assert_null(get_uint32_dict_ptr(NULL, "k"));
+}
+ 
+static void test_u32d_ptr_null_key_returns_null(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_null(get_uint32_dict_ptr(d, NULL));
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_ptr_missing_returns_null(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_null(get_uint32_dict_ptr(d, "missing"));
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_ptr_points_to_correct_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "flags", 0xDEADBEEFu, a);
+    const uint32_t* p = get_uint32_dict_ptr(d, "flags");
+    assert_non_null(p);
+    assert_int_equal((int)(unsigned)*p, (int)(unsigned)0xDEADBEEFu);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 11: get_uint32_dict_ptr_n
+// ================================================================================
+ 
+static void test_u32d_ptr_n_zero_len_returns_null(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_null(get_uint32_dict_ptr_n(d, "k", 0));
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_ptr_n_points_to_bounded_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    const char* buf = "count_total";
+    insert_uint32_dict_n(d, buf, 5, 1000000u, a);   /* key = "count" */
+    const uint32_t* p = get_uint32_dict_ptr_n(d, buf, 5);
+    assert_non_null(p);
+    assert_int_equal((int)(unsigned)*p, (int)(unsigned)1000000u);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 12: has_uint32_dict_key
+// ================================================================================
+ 
+static void test_u32d_has_null_dict_returns_false(void** state) {
+    (void)state;
+    assert_false(has_uint32_dict_key(NULL, "k"));
+}
+ 
+static void test_u32d_has_null_key_returns_false(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_false(has_uint32_dict_key(d, NULL));
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_has_present_and_absent(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "present", 100000u, a);
+    assert_true(has_uint32_dict_key(d, "present"));
+    assert_false(has_uint32_dict_key(d, "absent"));
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 13: has_uint32_dict_key_n
+// ================================================================================
+ 
+static void test_u32d_has_n_zero_len_returns_false(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_false(has_uint32_dict_key_n(d, "k", 0));
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_has_n_distinguishes_by_length(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict_n(d, "abc", 2, 100000u, a);   /* key = "ab" */
+    insert_uint32_dict_n(d, "abc", 3, 200000u, a);   /* key = "abc" */
+    assert_true(has_uint32_dict_key_n(d, "abc", 2));
+    assert_true(has_uint32_dict_key_n(d, "abc", 3));
+    assert_false(has_uint32_dict_key_n(d, "abc", 1));
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 14: clear_uint32_dict
+// ================================================================================
+ 
+static void test_u32d_clear_null_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(clear_uint32_dict(NULL), NULL_POINTER);
+}
+ 
+static void test_u32d_clear_resets_and_is_reusable(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "a", 100000u, a);
+    insert_uint32_dict(d, "b", 200000u, a);
+    assert_int_equal(clear_uint32_dict(d), NO_ERROR);
+    assert_int_equal((int)uint32_dict_hash_size(d), 0);
+    assert_true(is_uint32_dict_empty(d));
+    assert_int_equal(insert_uint32_dict(d, "a", 999999u, a), NO_ERROR);
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value(d, "a", &v), NO_ERROR);
+    assert_int_equal((int)(unsigned)v, (int)(unsigned)999999u);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 15: copy_uint32_dict
+// ================================================================================
+ 
+static void test_u32d_copy_null_src_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_expect_t r = copy_uint32_dict(NULL, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+static void test_u32d_copy_is_independent(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* orig = _make_uint32_dict(4);
+    insert_uint32_dict(orig, "x", 1000000u, a);
+    insert_uint32_dict(orig, "y", 2000000u, a);
+ 
+    uint32_dict_expect_t cr = copy_uint32_dict(orig, a);
+    assert_true(cr.has_value);
+ 
+    update_uint32_dict(orig, "x", 0xFFFFFFFFu);
+ 
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value(cr.u.value, "x", &v), NO_ERROR);
+    assert_int_equal((int)(unsigned)v, (int)(unsigned)1000000u);
+    assert_int_equal((int)uint32_dict_hash_size(cr.u.value), 2);
+ 
+    return_uint32_dict(cr.u.value);
+    return_uint32_dict(orig);
+}
+ 
+// ================================================================================
+// Group 16: merge_uint32_dict
+// ================================================================================
+ 
+static void test_u32d_merge_null_first_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    uint32_dict_expect_t r = merge_uint32_dict(NULL, d, false, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_merge_no_overwrite_keeps_first_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* da = _make_uint32_dict(4);
+    uint32_dict_t* db = _make_uint32_dict(4);
+    insert_uint32_dict(da, "shared", 1000000u, a);
+    insert_uint32_dict(db, "shared", 9999999u, a);
+    insert_uint32_dict(db, "new",    5000000u, a);
+ 
+    uint32_dict_expect_t mr = merge_uint32_dict(da, db, false, a);
+    assert_true(mr.has_value);
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value(mr.u.value, "shared", &v), NO_ERROR);
+    assert_int_equal((int)(unsigned)v, (int)(unsigned)1000000u);
+    assert_int_equal(get_uint32_dict_value(mr.u.value, "new", &v), NO_ERROR);
+    assert_int_equal((int)(unsigned)v, (int)(unsigned)5000000u);
+ 
+    return_uint32_dict(mr.u.value);
+    return_uint32_dict(da);
+    return_uint32_dict(db);
+}
+ 
+static void test_u32d_merge_overwrite_uses_second_value(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* da = _make_uint32_dict(4);
+    uint32_dict_t* db = _make_uint32_dict(4);
+    insert_uint32_dict(da, "shared", 1000000u, a);
+    insert_uint32_dict(db, "shared", 9999999u, a);
+ 
+    uint32_dict_expect_t mr = merge_uint32_dict(da, db, true, a);
+    assert_true(mr.has_value);
+    uint32_t v = 0u;
+    assert_int_equal(get_uint32_dict_value(mr.u.value, "shared", &v), NO_ERROR);
+    assert_int_equal((int)(unsigned)v, (int)(unsigned)9999999u);
+ 
+    return_uint32_dict(mr.u.value);
+    return_uint32_dict(da);
+    return_uint32_dict(db);
+}
+ 
+// ================================================================================
+// Group 17: foreach_uint32_dict
+// ================================================================================
+ 
+static void test_u32d_foreach_null_dict_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(foreach_uint32_dict(NULL, _u32d_sum_iter, NULL),
+                     NULL_POINTER);
+}
+ 
+static void test_u32d_foreach_null_fn_returns_null_pointer(void** state) {
+    (void)state;
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_int_equal(foreach_uint32_dict(d, NULL, NULL), NULL_POINTER);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_foreach_correct_sum(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "a", 1000000u, a);
+    insert_uint32_dict(d, "b", 2000000u, a);
+    insert_uint32_dict(d, "c", 3000000u, a);
+    _u32d_iter_ctx_t ctx = { 0, 0u };
+    assert_int_equal(foreach_uint32_dict(d, _u32d_sum_iter, &ctx), NO_ERROR);
+    assert_int_equal(ctx.count, 3);
+    assert_int_equal((int)(unsigned long long)ctx.sum, 6000000);
+    return_uint32_dict(d);
+}
+ 
+static void test_u32d_foreach_delivers_uint32_max(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    insert_uint32_dict(d, "top", UINT32_MAX, a);
+    _u32d_iter_ctx_t ctx = { 0, 0u };
+    foreach_uint32_dict(d, _u32d_sum_iter, &ctx);
+    assert_int_equal(ctx.count, 1);
+    assert_int_equal((int)ctx.sum, (int)UINT32_MAX);
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 18: introspection
+// ================================================================================
+ 
+static void test_u32d_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)uint32_dict_size(NULL), 0);
+}
+ 
+static void test_u32d_hash_size_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)uint32_dict_hash_size(NULL), 0);
+}
+ 
+static void test_u32d_alloc_null_returns_zero(void** state) {
+    (void)state;
+    assert_int_equal((int)uint32_dict_alloc(NULL), 0);
+}
+ 
+static void test_u32d_is_empty_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_uint32_dict_empty(NULL));
+}
+ 
+static void test_u32d_is_empty_reflects_contents(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_t* d = _make_uint32_dict(4);
+    assert_true(is_uint32_dict_empty(d));
+    insert_uint32_dict(d, "x", 1u, a);
+    assert_false(is_uint32_dict_empty(d));
+    pop_uint32_dict(d, "x", NULL);
+    assert_true(is_uint32_dict_empty(d));
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// Group 19: growth stress
+// ================================================================================
+ 
+static void test_u32d_growth_values_survive_resize(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint32_dict_expect_t r = init_uint32_dict(2, true, a);
+    assert_true(r.has_value);
+    uint32_dict_t* d = r.u.value;
+ 
+    for (int i = 0; i < 200; i++) {
+        char key[16];
+        snprintf(key, sizeof(key), "k%d", i);
+        uint32_t val = (uint32_t)(i * 70000u);   /* exercises > UINT16_MAX values */
+        assert_int_equal(insert_uint32_dict(d, key, val, a), NO_ERROR);
+    }
+    assert_int_equal((int)uint32_dict_hash_size(d), 200);
+ 
+    for (int i = 0; i < 200; i++) {
+        char key[16];
+        snprintf(key, sizeof(key), "k%d", i);
+        uint32_t expected = (uint32_t)(i * 70000u);
+        uint32_t v = 0u;
+        assert_int_equal(get_uint32_dict_value(d, key, &v), NO_ERROR);
+        assert_int_equal((int)(unsigned)v, (int)(unsigned)expected);
+    }
+ 
+    return_uint32_dict(d);
+}
+ 
+// ================================================================================
+// main
+// ================================================================================
+ 
+const struct CMUnitTest test_uint32_dict[] = {
+
+    /* Group 1: init / return */
+    cmocka_unit_test(test_u32d_init_null_allocator_fails),
+    cmocka_unit_test(test_u32d_init_zero_capacity_fails),
+    cmocka_unit_test(test_u32d_init_data_size_is_four_bytes),
+    cmocka_unit_test(test_u32d_init_dtype_is_uint32),
+    cmocka_unit_test(test_u32d_return_null_is_safe),
+
+    /* Group 2: insert */
+    cmocka_unit_test(test_u32d_insert_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_u32d_insert_null_key_returns_null_pointer),
+    cmocka_unit_test(test_u32d_insert_duplicate_returns_invalid_arg),
+    cmocka_unit_test(test_u32d_insert_stores_zero),
+    cmocka_unit_test(test_u32d_insert_stores_max),
+    cmocka_unit_test(test_u32d_insert_stores_midrange),
+
+    /* Group 3: insert_n */
+    cmocka_unit_test(test_u32d_insert_n_null_key_returns_null_pointer),
+    cmocka_unit_test(test_u32d_insert_n_zero_len_returns_invalid_arg),
+    cmocka_unit_test(test_u32d_insert_n_uses_only_specified_bytes),
+
+    /* Group 4: pop */
+    cmocka_unit_test(test_u32d_pop_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_u32d_pop_null_key_returns_null_pointer),
+    cmocka_unit_test(test_u32d_pop_missing_key_returns_not_found),
+    cmocka_unit_test(test_u32d_pop_returns_correct_value),
+    cmocka_unit_test(test_u32d_pop_null_out_value_discards_safely),
+
+    /* Group 5: pop_n */
+    cmocka_unit_test(test_u32d_pop_n_zero_len_returns_invalid_arg),
+    cmocka_unit_test(test_u32d_pop_n_removes_bounded_key),
+
+    /* Group 6: update */
+    cmocka_unit_test(test_u32d_update_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_u32d_update_null_key_returns_null_pointer),
+    cmocka_unit_test(test_u32d_update_missing_key_returns_not_found),
+    cmocka_unit_test(test_u32d_update_overwrites_value),
+
+    /* Group 7: update_n */
+    cmocka_unit_test(test_u32d_update_n_zero_len_returns_invalid_arg),
+    cmocka_unit_test(test_u32d_update_n_updates_bounded_key),
+
+    /* Group 8: get_value */
+    cmocka_unit_test(test_u32d_get_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_u32d_get_null_key_returns_null_pointer),
+    cmocka_unit_test(test_u32d_get_null_out_returns_null_pointer),
+    cmocka_unit_test(test_u32d_get_missing_key_returns_not_found),
+    cmocka_unit_test(test_u32d_get_retrieves_extremes),
+
+    /* Group 9: get_value_n */
+    cmocka_unit_test(test_u32d_get_n_zero_len_returns_invalid_arg),
+    cmocka_unit_test(test_u32d_get_n_retrieves_bounded_key),
+
+    /* Group 10: get_ptr */
+    cmocka_unit_test(test_u32d_ptr_null_dict_returns_null),
+    cmocka_unit_test(test_u32d_ptr_null_key_returns_null),
+    cmocka_unit_test(test_u32d_ptr_missing_returns_null),
+    cmocka_unit_test(test_u32d_ptr_points_to_correct_value),
+
+    /* Group 11: get_ptr_n */
+    cmocka_unit_test(test_u32d_ptr_n_zero_len_returns_null),
+    cmocka_unit_test(test_u32d_ptr_n_points_to_bounded_value),
+
+    /* Group 12: has_key */
+    cmocka_unit_test(test_u32d_has_null_dict_returns_false),
+    cmocka_unit_test(test_u32d_has_null_key_returns_false),
+    cmocka_unit_test(test_u32d_has_present_and_absent),
+
+    /* Group 13: has_key_n */
+    cmocka_unit_test(test_u32d_has_n_zero_len_returns_false),
+    cmocka_unit_test(test_u32d_has_n_distinguishes_by_length),
+
+    /* Group 14: clear */
+    cmocka_unit_test(test_u32d_clear_null_returns_null_pointer),
+    cmocka_unit_test(test_u32d_clear_resets_and_is_reusable),
+
+    /* Group 15: copy */
+    cmocka_unit_test(test_u32d_copy_null_src_fails),
+    cmocka_unit_test(test_u32d_copy_is_independent),
+
+    /* Group 16: merge */
+    cmocka_unit_test(test_u32d_merge_null_first_fails),
+    cmocka_unit_test(test_u32d_merge_no_overwrite_keeps_first_value),
+    cmocka_unit_test(test_u32d_merge_overwrite_uses_second_value),
+
+    /* Group 17: foreach */
+    cmocka_unit_test(test_u32d_foreach_null_dict_returns_null_pointer),
+    cmocka_unit_test(test_u32d_foreach_null_fn_returns_null_pointer),
+    cmocka_unit_test(test_u32d_foreach_correct_sum),
+    cmocka_unit_test(test_u32d_foreach_delivers_uint32_max),
+
+    /* Group 18: introspection */
+    cmocka_unit_test(test_u32d_size_null_returns_zero),
+    cmocka_unit_test(test_u32d_hash_size_null_returns_zero),
+    cmocka_unit_test(test_u32d_alloc_null_returns_zero),
+    cmocka_unit_test(test_u32d_is_empty_null_returns_true),
+    cmocka_unit_test(test_u32d_is_empty_reflects_contents),
+
+    /* Group 19: growth stress */
+    cmocka_unit_test(test_u32d_growth_values_survive_resize),
+
+};
+const size_t test_uint32_dict_count = sizeof(test_uint32_dict) / sizeof(test_uint32_dict[0]);
 // ================================================================================
 // ================================================================================
 // eof

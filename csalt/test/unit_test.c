@@ -62,6 +62,7 @@ int main(void) {
         {"Int8 Dict", test_int8_dict, test_int8_dict_count},
         {"Uint16 Dict", test_uint16_dict, test_uint16_dict_count},
         {"Int16 Dict", test_int16_dict, test_int16_dict_count},
+        {"UInt32 Dict", test_uint32_dict, test_uint32_dict_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);
