@@ -59,6 +59,7 @@ int main(void) {
         {"Long Double Array", test_ldouble_array, test_ldouble_array_count},
         {"String Array", test_string_array, test_string_array_count},
         {"Uint8 Dict", test_uint8_dict, test_uint8_dict_count},
+        {"Int8 Dict", test_int8_dict, test_int8_dict_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);

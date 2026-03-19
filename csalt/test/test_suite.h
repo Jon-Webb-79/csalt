@@ -173,6 +173,11 @@ extern const size_t test_string_array_count;
 
 extern const struct CMUnitTest test_uint8_dict[];
 extern const size_t test_uint8_dict_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_int8_dict[];
+extern const size_t test_int8_dict_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus
