@@ -147,6 +147,184 @@ Introspection
 
 float Dictionary 
 ================
+A ``float_dict_t`` is a hash dictionary that maps C-string keys to ``float``
+values.  It is a type-safe wrapper around the generic dict engine described
+in :ref:`c_dict`, with the value type fixed to ``sizeof(float)`` and
+``dtype`` fixed to ``FLOAT_TYPE`` at initialisation.
+ 
+Keys are null-terminated C-strings.  Every function is available in two
+forms: a plain variant that measures the key length with ``strlen``, and an
+``_n`` variant that accepts an explicit ``size_t key_len`` argument.  The
+``_n`` variants are useful when the key is a sub-string of a larger buffer,
+when its length is already known and the ``strlen`` scan is unnecessary, or
+when the key contains embedded null bytes.
+ 
+The dict does not store a pointer to the caller's key — it copies the key
+bytes into its own allocator-managed storage on every insert.  The caller
+may free or reuse the key memory immediately after any dict call returns.
+ 
+The dict does not have a default allocator.  An
+:c:type:`allocator_vtable_t` must be supplied to :c:func:`init_float_dict`
+and to every :c:func:`insert_float_dict` call.  All other operations use
+the allocator that was stored at initialisation time.  See
+:ref:`allocator_file` for available allocators and the trade-offs between
+them.
+ 
+.. code-block:: c
+ 
+   #include "float_dict.h"
+ 
+   /* Choose an allocator — see :ref:`allocator_file` for all options. */
+   allocator_vtable_t a = heap_allocator();
+ 
+   float_dict_expect_t r = init_float_dict(16, true, a);
+   if (!r.has_value) { /* handle r.u.error */ }
+   float_dict_t* d = r.u.value;
+ 
+   insert_float_dict(d, "pi",      3.14159265f, a);
+   insert_float_dict(d, "gravity", 9.80665f,    a);
+   insert_float_dict(d, "zero",    0.0f,        a);
+ 
+   float v;
+   get_float_dict_value(d, "pi", &v);   /* v == 3.14159265f */
+ 
+   update_float_dict(d, "zero", -1.0f);
+ 
+   pop_float_dict(d, "gravity", NULL);  /* removes "gravity", discards value */
+ 
+   return_float_dict(d);
+ 
+Plain vs ``_n`` Variants
+------------------------
+ 
+Every function that takes a key is available in two forms.
+ 
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+ 
+   * - Plain variant
+     - ``_n`` variant
+   * - ``insert_float_dict(d, key, value, a)``
+     - ``insert_float_dict_n(d, key, key_len, value, a)``
+   * - ``pop_float_dict(d, key, out)``
+     - ``pop_float_dict_n(d, key, key_len, out)``
+   * - ``update_float_dict(d, key, value)``
+     - ``update_float_dict_n(d, key, key_len, value)``
+   * - ``get_float_dict_value(d, key, out)``
+     - ``get_float_dict_value_n(d, key, key_len, out)``
+   * - ``get_float_dict_ptr(d, key)``
+     - ``get_float_dict_ptr_n(d, key, key_len)``
+   * - ``has_float_dict_key(d, key)``
+     - ``has_float_dict_key_n(d, key, key_len)``
+ 
+The ``_n`` variants are particularly useful for splitting on sub-strings
+without constructing a null-terminated copy:
+ 
+.. code-block:: c
+ 
+   /* Buffer holds "scale_factor" but we only want "scale" (5 bytes). */
+   const char* buf = "scale_factor";
+   insert_float_dict_n(d, buf, 5, 0.5f, a);
+ 
+   float v;
+   get_float_dict_value_n(d, buf, 5, &v);   /* v == 0.5f */
+   get_float_dict_value(d, "scale", &v);     /* same key — also v == 0.5f */
+ 
+Structs
+-------
+ 
+.. note::
+ 
+   ``float_dict_t`` is a ``typedef`` alias for :c:struct:`dict_t`.  All
+   internal fields are documented under :c:struct:`dict_t` in
+   :ref:`c_dict`.  The ``data_size`` field is always ``sizeof(float)``
+   (4 bytes) and the ``dtype`` field is always ``FLOAT_TYPE``.
+ 
+.. doxygenstruct:: float_dict_expect_t
+   :members:
+ 
+Initialisation and Teardown
+---------------------------
+ 
+.. doxygenfunction:: init_float_dict
+.. doxygenfunction:: return_float_dict
+ 
+Insert
+------
+ 
+.. doxygenfunction:: insert_float_dict
+.. doxygenfunction:: insert_float_dict_n
+ 
+Pop
+---
+ 
+.. doxygenfunction:: pop_float_dict
+.. doxygenfunction:: pop_float_dict_n
+ 
+Update
+------
+ 
+.. doxygenfunction:: update_float_dict
+.. doxygenfunction:: update_float_dict_n
+ 
+Lookup
+------
+ 
+.. doxygenfunction:: get_float_dict_value
+.. doxygenfunction:: get_float_dict_value_n
+.. doxygenfunction:: get_float_dict_ptr
+.. doxygenfunction:: get_float_dict_ptr_n
+.. doxygenfunction:: has_float_dict_key
+.. doxygenfunction:: has_float_dict_key_n
+ 
+Utility Operations
+------------------
+ 
+.. doxygenfunction:: clear_float_dict
+.. doxygenfunction:: copy_float_dict
+.. doxygenfunction:: merge_float_dict
+ 
+Iteration
+---------
+ 
+:c:func:`foreach_float_dict` visits every entry in bucket order (which is
+not guaranteed to match insertion order).  The callback receives the key as
+a null-terminated ``const char*`` pointer into the dict's internal storage,
+the key length, the ``float`` value, and an optional caller-supplied context
+pointer.  The callback must not insert or remove entries during traversal.
+ 
+.. note::
+ 
+   Values are stored and retrieved as exact IEEE 754 bit patterns via
+   ``memcpy``.  No epsilon tolerance is applied — equality comparisons
+   between stored and retrieved values are exact.  If you insert a NaN,
+   you will retrieve that same NaN bit pattern; however, NaN keys cannot
+   be looked up reliably because ``NaN != NaN`` by definition, so avoid
+   using NaN as a stored value if equality checks matter downstream.
+ 
+   When accumulating ``float`` values inside an iterator callback, use a
+   ``double`` accumulator to reduce rounding error.
+ 
+.. code-block:: c
+ 
+   static void print_entry(const char* key, size_t key_len,
+                            float value, void* ud) {
+       (void)key_len; (void)ud;
+       printf("  %s = %f\n", key, value);
+   }
+ 
+   foreach_float_dict(d, print_entry, NULL);
+ 
+.. doxygenfunction:: foreach_float_dict
+ 
+Introspection
+-------------
+ 
+.. doxygenfunction:: float_dict_size
+.. doxygenfunction:: float_dict_hash_size
+.. doxygenfunction:: float_dict_alloc
+.. doxygenfunction:: is_float_dict_empty
 
 float Matrix 
 ============

@@ -208,6 +208,11 @@ extern const size_t test_uint64_dict_count;
 
 extern const struct CMUnitTest test_int64_dict[];
 extern const size_t test_int64_dict_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_float_dict[];
+extern const size_t test_float_dict_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus

@@ -11,7 +11,7 @@
 // ================================================================================
 // ================================================================================
 // Include modules here
-
+#include <string.h>
 #include "c_float.h"
 
 #if defined(__AVX512F__)
@@ -381,6 +381,237 @@ bool is_float_array_full(const float_array_t* array) {
 bool is_float_array_ptr(const float_array_t* array, const float* ptr) {
     if (array == NULL) return false;
     return is_array_ptr(&array->base, ptr);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+static inline dict_key_t _key(const char* s, size_t len) {
+    return (dict_key_t){ .data = s, .len = len };
+}
+ 
+// ================================================================================
+// Initialisation and teardown
+// ================================================================================
+ 
+float_dict_expect_t init_float_dict(size_t             capacity,
+                                      bool               growth,
+                                      allocator_vtable_t alloc_v) {
+    dict_expect_t r = init_dict(capacity, sizeof(float_t),
+                                FLOAT_TYPE, growth, alloc_v);
+    if (!r.has_value)
+        return (float_dict_expect_t){ .has_value = false,
+                                       .u.error   = r.u.error };
+ 
+    return (float_dict_expect_t){ .has_value = true,
+                                    .u.value   = r.u.value };
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+void return_float_dict(float_dict_t* dict) {
+    return_dict(dict);
+}
+ 
+// ================================================================================
+// Insert
+// ================================================================================
+ 
+error_code_t insert_float_dict(float_dict_t*     dict,
+                                 const char*        key,
+                                 float_t           value,
+                                 allocator_vtable_t alloc_v) {
+    if (key == NULL) return NULL_POINTER;
+    return insert_dict(dict, _key(key, strlen(key)), &value, alloc_v);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t insert_float_dict_n(float_dict_t*     dict,
+                                   const char*        key,
+                                   size_t             key_len,
+                                   float_t           value,
+                                   allocator_vtable_t alloc_v) {
+    if (key == NULL) return NULL_POINTER;
+    if (key_len == 0u) return INVALID_ARG;
+    return insert_dict(dict, _key(key, key_len), &value, alloc_v);
+}
+ 
+// ================================================================================
+// Pop
+// ================================================================================
+ 
+error_code_t pop_float_dict(float_dict_t* dict,
+                              const char*    key,
+                              float_t*      out_value) {
+    if (key == NULL) return NULL_POINTER;
+    return pop_dict(dict, _key(key, strlen(key)), out_value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t pop_float_dict_n(float_dict_t* dict,
+                                const char*    key,
+                                size_t         key_len,
+                                float_t*      out_value) {
+    if (key == NULL) return NULL_POINTER;
+    if (key_len == 0u) return INVALID_ARG;
+    return pop_dict(dict, _key(key, key_len), out_value);
+}
+ 
+// ================================================================================
+// Update
+// ================================================================================
+ 
+error_code_t update_float_dict(float_dict_t* dict,
+                                 const char*    key,
+                                 float_t       value) {
+    if (key == NULL) return NULL_POINTER;
+    return update_dict(dict, _key(key, strlen(key)), &value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t update_float_dict_n(float_dict_t* dict,
+                                   const char*    key,
+                                   size_t         key_len,
+                                   float_t       value) {
+    if (key == NULL) return NULL_POINTER;
+    if (key_len == 0u) return INVALID_ARG;
+    return update_dict(dict, _key(key, key_len), &value);
+}
+ 
+// ================================================================================
+// Lookup
+// ================================================================================
+ 
+error_code_t get_float_dict_value(const float_dict_t* dict,
+                                    const char*          key,
+                                    float_t*            out_value) {
+    if (key == NULL) return NULL_POINTER;
+    return get_dict_value(dict, _key(key, strlen(key)), out_value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t get_float_dict_value_n(const float_dict_t* dict,
+                                      const char*          key,
+                                      size_t               key_len,
+                                      float_t*            out_value) {
+    if (key == NULL) return NULL_POINTER;
+    if (key_len == 0u) return INVALID_ARG;
+    return get_dict_value(dict, _key(key, key_len), out_value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+const float_t* get_float_dict_ptr(const float_dict_t* dict, const char* key) {
+    if (key == NULL) return NULL;
+    return (const float_t*)get_dict_value_ptr(dict, _key(key, strlen(key)));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+const float_t* get_float_dict_ptr_n(const float_dict_t* dict,
+                                       const char*          key,
+                                       size_t               key_len) {
+    if (key == NULL || key_len == 0u) return NULL;
+    return (const float_t*)get_dict_value_ptr(dict, _key(key, key_len));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool has_float_dict_key(const float_dict_t* dict, const char* key) {
+    if (key == NULL) return false;
+    return has_dict_key(dict, _key(key, strlen(key)));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool has_float_dict_key_n(const float_dict_t* dict,
+                            const char*          key,
+                            size_t               key_len) {
+    if (key == NULL || key_len == 0u) return false;
+    return has_dict_key(dict, _key(key, key_len));
+}
+ 
+// ================================================================================
+// Utility
+// ================================================================================
+ 
+error_code_t clear_float_dict(float_dict_t* dict) {
+    return clear_dict(dict);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+float_dict_expect_t copy_float_dict(const float_dict_t* src,
+                                      allocator_vtable_t   alloc_v) {
+    dict_expect_t r = copy_dict(src, alloc_v);
+    if (!r.has_value)
+        return (float_dict_expect_t){ .has_value = false,
+                                       .u.error   = r.u.error };
+ 
+    return (float_dict_expect_t){ .has_value = true,
+                                    .u.value   = r.u.value };
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+float_dict_expect_t merge_float_dict(const float_dict_t* a,
+                                       const float_dict_t* b,
+                                       bool                 overwrite,
+                                       allocator_vtable_t   alloc_v) {
+    dict_expect_t r = merge_dict(a, b, overwrite, alloc_v);
+    if (!r.has_value)
+        return (float_dict_expect_t){ .has_value = false,
+                                       .u.error   = r.u.error };
+ 
+    return (float_dict_expect_t){ .has_value = true,
+                                    .u.value   = r.u.value };
+}
+ 
+// ================================================================================
+// Iteration
+// ================================================================================
+ 
+typedef struct {
+    float_dict_iter_fn typed_fn;
+    void*               user_data;
+} _float_iter_ctx_t;
+ 
+static void _float_iter_shim(dict_entry_t e, void* ctx) {
+    const _float_iter_ctx_t* c = (const _float_iter_ctx_t*)ctx;
+    float_t value;
+    memcpy(&value, e.value, sizeof(float_t));
+    c->typed_fn((const char*)e.key, e.key_len, value, c->user_data);
+}
+ 
+error_code_t foreach_float_dict(const float_dict_t* dict,
+                                  float_dict_iter_fn  fn,
+                                  void*                user_data) {
+    if (fn == NULL) return NULL_POINTER;
+    _float_iter_ctx_t ctx = { .typed_fn = fn, .user_data = user_data };
+    return foreach_dict(dict, _float_iter_shim, &ctx);
+}
+ 
+// ================================================================================
+// Introspection
+// ================================================================================
+ 
+size_t float_dict_size(const float_dict_t* dict) {
+    return dict_size(dict);
+}
+ 
+size_t float_dict_hash_size(const float_dict_t* dict) {
+    return dict_hash_size(dict);
+}
+ 
+size_t float_dict_alloc(const float_dict_t* dict) {
+    return dict_alloc(dict);
+}
+ 
+bool is_float_dict_empty(const float_dict_t* dict) {
+    return is_dict_empty(dict);
 }
 // ================================================================================
 // ================================================================================
