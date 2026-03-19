@@ -19,6 +19,7 @@
 #include <stdbool.h>
 
 #include "c_array.h"
+#include "c_dict.h"
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -1265,6 +1266,677 @@ int32_expect_t int32_array_sum(const int32_array_t* array);
  */
 int32_array_expect_t cumulative_int32_array(const int32_array_t* src,
                                             allocator_vtable_t   alloc);
+// ================================================================================ 
+// ================================================================================ 
+
+/**
+ * @brief A dictionary that maps null-terminated C-string keys to int32_t values.
+ *
+ * This is a typedef alias for @ref dict_t with the convention that
+ * @c data_size is always @c sizeof(int32_t) (4 bytes) and @c dtype is
+ * always @c INT32_TYPE.  Do not use the raw @ref dict_t API directly on a
+ * @c int32_dict_t — always go through the functions declared in this header
+ * so that the type constraints are enforced.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *     int32_dict_expect_t r = init_int32_dict(16, true, a);
+ *     if (!r.has_value) { // handle r.u.error }
+ *     int32_dict_t* d = r.u.value;
+ *
+ *     insert_int32_dict(d, "width",  1920u, a);
+ *     insert_int32_dict(d, "height", 1080u, a);
+ *     insert_int32_dict(d, "depth",    32u, a);
+ *
+ *     int32_t v;
+ *     get_int32_dict_value(d, "width", &v);   // v == 1920
+ *
+ *     return_int32_dict(d);
+ * @endcode
+ */
+typedef dict_t int32_dict_t;
+ 
+/**
+ * @brief Expected return type for @ref init_int32_dict and
+ *        @ref copy_int32_dict.
+ *
+ * Check @c has_value before using @c u.value.  On failure @c u.error
+ * contains the relevant @ref error_code_t.
+ */
+typedef struct {
+    bool has_value;
+    union {
+        int32_dict_t* value;
+        error_code_t   error;
+    } u;
+} int32_dict_expect_t;
+ 
+// ================================================================================
+// Iterator type
+// ================================================================================
+ 
+/**
+ * @brief Typed iterator callback for @ref foreach_int32_dict.
+ *
+ * @param key       Null-terminated C-string key (points into the dict's
+ *                  internal storage — do not free or store beyond the
+ *                  callback).
+ * @param key_len   Length of @p key in bytes, excluding the null terminator.
+ * @param value     The int32_t value associated with @p key.
+ * @param user_data Caller-supplied context pointer passed unchanged from
+ *                  @ref foreach_int32_dict; may be NULL.
+ *
+ * @code
+ *     static void print_entry(const char* key, size_t key_len,
+ *                             int32_t value, void* ud) {
+ *         (void)ud;
+ *         printf("  %.*s => %u\n", (int)key_len, key, (unsigned)value);
+ *     }
+ *     foreach_int32_dict(d, print_entry, NULL);
+ * @endcode
+ */
+typedef void (*int32_dict_iter_fn)(const char* key,
+                                    size_t      key_len,
+                                    int32_t    value,
+                                    void*       user_data);
+ 
+// ================================================================================
+// Initialisation and teardown
+// ================================================================================
+ 
+/**
+ * @brief Allocate and initialise a new int32_dict_t.
+ *
+ * The underlying @ref dict_t is created with @c data_size = sizeof(int32_t)
+ * and @c dtype = INT32_TYPE.  The bucket count is rounded up to the next
+ * power of two internally.
+ *
+ * @param capacity  Initial bucket count.  Must be > 0.
+ * @param growth    If true the table resizes automatically when the load
+ *                  factor exceeds 0.75.
+ * @param alloc_v   Allocator for all internal memory.  @c alloc_v.allocate
+ *                  must not be NULL.
+ *
+ * @return @ref int32_dict_expect_t with @c has_value true on success.
+ *         On failure @c u.error is one of NULL_POINTER, INVALID_ARG, or
+ *         OUT_OF_MEMORY.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *
+ *     int32_dict_expect_t r = init_int32_dict(8, true, a);
+ *     if (!r.has_value) {
+ *         fprintf(stderr, "init failed: %d\n", r.u.error);
+ *         return;
+ *     }
+ *     int32_dict_t* d = r.u.value;
+ *
+ *     insert_int32_dict(d, "port",  8080u, a);
+ *     insert_int32_dict(d, "range", 1024u, a);
+ *
+ *     return_int32_dict(d);
+ * @endcode
+ */
+int32_dict_expect_t init_int32_dict(size_t             capacity,
+                                      bool               growth,
+                                      allocator_vtable_t alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Release all memory owned by a int32_dict_t.
+ *
+ * Frees every node (key copy + value buffer), the bucket array, and the
+ * dict struct itself.  Passing NULL is safe and performs no action.
+ *
+ * @param dict  Dictionary to release.
+ *
+ * @code
+ *     int32_dict_t* d = init_int32_dict(8, true, a).u.value;
+ *     insert_int32_dict(d, "x", 1000u, a);
+ *     // ... use the dict ...
+ *     return_int32_dict(d);   // d must not be used after this point
+ * @endcode
+ */
+void return_int32_dict(int32_dict_t* dict);
+ 
+// ================================================================================
+// Insert
+// ================================================================================
+ 
+/**
+ * @brief Insert a null-terminated string key with a int32_t value.
+ *
+ * The key length is measured with @c strlen(key).  The key bytes are copied
+ * into the dict's own storage — the caller may free or reuse @p key
+ * immediately after this call returns.
+ *
+ * If the key already exists the insertion is rejected and INVALID_ARG is
+ * returned.  To overwrite an existing value use @ref update_int32_dict.
+ *
+ * @param dict    Must not be NULL.
+ * @param key     Null-terminated C-string key.  Must not be NULL.
+ * @param value   The int32_t value to store.
+ * @param alloc_v Allocator used to allocate the new node.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG (duplicate key),
+ *         CAPACITY_OVERFLOW (growth == false and table is full), or
+ *         OUT_OF_MEMORY.
+ *
+ * @code
+ *     int32_dict_t* d = init_int32_dict(8, true, a).u.value;
+ *
+ *     insert_int32_dict(d, "width",  1920u, a);   // OK
+ *     insert_int32_dict(d, "height", 1080u, a);   // OK
+ *
+ *     // Duplicate key — returns INVALID_ARG, dict is unchanged
+ *     error_code_t err = insert_int32_dict(d, "width", 800u, a);
+ *     assert(err == INVALID_ARG);
+ *
+ *     return_int32_dict(d);
+ * @endcode
+ */
+error_code_t insert_int32_dict(int32_dict_t*     dict,
+                                 const char*        key,
+                                 int32_t           value,
+                                 allocator_vtable_t alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Insert a bounded key (explicit length) with a int32_t value.
+ *
+ * Identical to @ref insert_int32_dict but the key length is supplied by the
+ * caller rather than measured with @c strlen.  Useful when the key is a
+ * sub-string of a larger buffer or when the length is already known.
+ *
+ * @param dict    Must not be NULL.
+ * @param key     Pointer to the first byte of the key.  Must not be NULL.
+ * @param key_len Number of bytes in the key.  Must be > 0.
+ * @param value   The int32_t value to store.
+ * @param alloc_v Allocator used to allocate the new node.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG, CAPACITY_OVERFLOW, or
+ *         OUT_OF_MEMORY.
+ *
+ * @code
+ *     // Key is a sub-string: "width_max", take only "width" (5 bytes)
+ *     const char* buf = "width_max";
+ *     insert_int32_dict_n(d, buf, 5, 1920u, a);
+ *
+ *     int32_t v;
+ *     get_int32_dict_value_n(d, buf, 5, &v);   // v == 1920
+ * @endcode
+ */
+error_code_t insert_int32_dict_n(int32_dict_t*     dict,
+                                   const char*        key,
+                                   size_t             key_len,
+                                   int32_t           value,
+                                   allocator_vtable_t alloc_v);
+ 
+// ================================================================================
+// Pop (remove and retrieve)
+// ================================================================================
+ 
+/**
+ * @brief Remove the entry for a null-terminated key and return its value.
+ *
+ * If the key is found the node is freed and the stored value is written into
+ * @p out_value (if non-NULL).  If the key is not found @p out_value is not
+ * written.
+ *
+ * @param dict       Must not be NULL.
+ * @param key        Null-terminated C-string key.  Must not be NULL.
+ * @param out_value  Destination for the removed value, or NULL to discard.
+ *
+ * @return NO_ERROR, NULL_POINTER, or NOT_FOUND.
+ *
+ * @code
+ *     int32_dict_t* d = init_int32_dict(8, true, a).u.value;
+ *     insert_int32_dict(d, "port", 8080u, a);
+ *
+ *     int32_t removed;
+ *     error_code_t err = pop_int32_dict(d, "port", &removed);
+ *     assert(err == NO_ERROR && removed == 8080u);
+ *
+ *     // Key is gone — next pop returns NOT_FOUND
+ *     err = pop_int32_dict(d, "port", NULL);
+ *     assert(err == NOT_FOUND);
+ *
+ *     return_int32_dict(d);
+ * @endcode
+ */
+error_code_t pop_int32_dict(int32_dict_t* dict,
+                              const char*    key,
+                              int32_t*      out_value);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Remove the entry for a bounded key and return its value.
+ *
+ * Identical to @ref pop_int32_dict but the key length is supplied explicitly.
+ *
+ * @param dict       Must not be NULL.
+ * @param key        Pointer to the key bytes.  Must not be NULL.
+ * @param key_len    Number of bytes in the key.  Must be > 0.
+ * @param out_value  Destination for the removed value, or NULL to discard.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG, or NOT_FOUND.
+ *
+ * @code
+ *     const char* buf = "port_http";
+ *     insert_int32_dict_n(d, buf, 4, 8080u, a);   // key = "port"
+ *
+ *     int32_t v;
+ *     pop_int32_dict_n(d, buf, 4, &v);             // removes "port", v == 8080
+ * @endcode
+ */
+error_code_t pop_int32_dict_n(int32_dict_t* dict,
+                                const char*    key,
+                                size_t         key_len,
+                                int32_t*      out_value);
+ 
+// ================================================================================
+// Update
+// ================================================================================
+ 
+/**
+ * @brief Overwrite the value of an existing null-terminated key.
+ *
+ * No allocation is performed.  If the key does not exist NOT_FOUND is
+ * returned and the dict is unchanged.  To insert a new entry use
+ * @ref insert_int32_dict.
+ *
+ * @param dict   Must not be NULL.
+ * @param key    Null-terminated C-string key.  Must not be NULL.
+ * @param value  New int32_t value to store.
+ *
+ * @return NO_ERROR, NULL_POINTER, or NOT_FOUND.
+ *
+ * @code
+ *     int32_dict_t* d = init_int32_dict(8, true, a).u.value;
+ *     insert_int32_dict(d, "port", 8080u, a);
+ *
+ *     update_int32_dict(d, "port", 443u);
+ *
+ *     int32_t v;
+ *     get_int32_dict_value(d, "port", &v);
+ *     assert(v == 443u);
+ *
+ *     return_int32_dict(d);
+ * @endcode
+ */
+error_code_t update_int32_dict(int32_dict_t* dict,
+                                 const char*    key,
+                                 int32_t       value);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Overwrite the value of an existing bounded key.
+ *
+ * Identical to @ref update_int32_dict but the key length is supplied
+ * explicitly.
+ *
+ * @param dict     Must not be NULL.
+ * @param key      Pointer to the key bytes.  Must not be NULL.
+ * @param key_len  Number of bytes in the key.  Must be > 0.
+ * @param value    New int32_t value to store.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG, or NOT_FOUND.
+ *
+ * @code
+ *     const char* buf = "port_http";
+ *     insert_int32_dict_n(d, buf, 4, 8080u, a);   // key = "port"
+ *     update_int32_dict_n(d, buf, 4, 443u);        // update "port" to 443
+ * @endcode
+ */
+error_code_t update_int32_dict_n(int32_dict_t* dict,
+                                   const char*    key,
+                                   size_t         key_len,
+                                   int32_t       value);
+ 
+// ================================================================================
+// Lookup
+// ================================================================================
+ 
+/**
+ * @brief Copy the value for a null-terminated key into a caller-supplied
+ *        variable.
+ *
+ * @param dict       Must not be NULL.
+ * @param key        Null-terminated C-string key.  Must not be NULL.
+ * @param out_value  Destination for the retrieved value.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, or NOT_FOUND.
+ *
+ * @code
+ *     int32_dict_t* d = init_int32_dict(8, true, a).u.value;
+ *     insert_int32_dict(d, "width", 1920u, a);
+ *
+ *     int32_t v;
+ *     if (get_int32_dict_value(d, "width", &v) == NO_ERROR)
+ *         printf("width = %u\n", (unsigned)v);
+ *
+ *     return_int32_dict(d);
+ * @endcode
+ */
+error_code_t get_int32_dict_value(const int32_dict_t* dict,
+                                    const char*          key,
+                                    int32_t*            out_value);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Copy the value for a bounded key into a caller-supplied variable.
+ *
+ * Identical to @ref get_int32_dict_value but the key length is supplied
+ * explicitly.
+ *
+ * @param dict       Must not be NULL.
+ * @param key        Pointer to the key bytes.  Must not be NULL.
+ * @param key_len    Number of bytes in the key.  Must be > 0.
+ * @param out_value  Destination for the retrieved value.  Must not be NULL.
+ *
+ * @return NO_ERROR, NULL_POINTER, INVALID_ARG, or NOT_FOUND.
+ *
+ * @code
+ *     const char* buf = "width_max";
+ *     insert_int32_dict_n(d, buf, 5, 1920u, a);   // key = "width"
+ *
+ *     int32_t v;
+ *     get_int32_dict_value_n(d, buf, 5, &v);       // v == 1920
+ * @endcode
+ */
+error_code_t get_int32_dict_value_n(const int32_dict_t* dict,
+                                      const char*          key,
+                                      size_t               key_len,
+                                      int32_t*            out_value);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Return a read-only pointer directly into the node's value buffer for
+ *        a null-terminated key.
+ *
+ * The pointer is valid until the next mutation of the dict.  The caller must
+ * not free it or write through it.
+ *
+ * @param dict  Must not be NULL.
+ * @param key   Null-terminated C-string key.  Must not be NULL.
+ *
+ * @return Pointer to the stored int32_t on success, NULL if not found or on
+ *         error.
+ *
+ * @code
+ *     insert_int32_dict(d, "port", 8080u, a);
+ *
+ *     const int32_t* p = get_int32_dict_ptr(d, "port");
+ *     if (p) printf("port = %u\n", (unsigned)*p);
+ *     // Do not store p — it may be invalidated by the next insert or pop.
+ * @endcode
+ */
+const int32_t* get_int32_dict_ptr(const int32_dict_t* dict, const char* key);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Return a read-only pointer directly into the node's value buffer for
+ *        a bounded key.
+ *
+ * Identical to @ref get_int32_dict_ptr but the key length is supplied
+ * explicitly.
+ *
+ * @param dict     Must not be NULL.
+ * @param key      Pointer to the key bytes.  Must not be NULL.
+ * @param key_len  Number of bytes in the key.  Must be > 0.
+ *
+ * @return Pointer to the stored int32_t on success, NULL if not found or on
+ *         error.
+ *
+ * @code
+ *     const char* buf = "port_http";
+ *     insert_int32_dict_n(d, buf, 4, 8080u, a);   // key = "port"
+ *
+ *     const int32_t* p = get_int32_dict_ptr_n(d, buf, 4);
+ *     if (p) printf("port = %u\n", (unsigned)*p);
+ * @endcode
+ */
+const int32_t* get_int32_dict_ptr_n(const int32_dict_t* dict,
+                                       const char*          key,
+                                       size_t               key_len);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Test whether a null-terminated key exists in the dict.
+ *
+ * @param dict  Must not be NULL.
+ * @param key   Null-terminated C-string key.  Must not be NULL.
+ *
+ * @return true if the key exists, false otherwise (including on error).
+ *
+ * @code
+ *     insert_int32_dict(d, "active", 1u, a);
+ *
+ *     if (has_int32_dict_key(d, "active"))
+ *         printf("active is set\n");
+ * @endcode
+ */
+bool has_int32_dict_key(const int32_dict_t* dict, const char* key);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Test whether a bounded key exists in the dict.
+ *
+ * Identical to @ref has_int32_dict_key but the key length is supplied
+ * explicitly.
+ *
+ * @param dict     Must not be NULL.
+ * @param key      Pointer to the key bytes.  Must not be NULL.
+ * @param key_len  Number of bytes in the key.  Must be > 0.
+ *
+ * @return true if the key exists, false otherwise.
+ *
+ * @code
+ *     const char* buf = "active_flag";
+ *     insert_int32_dict_n(d, buf, 6, 1u, a);   // key = "active"
+ *     assert(has_int32_dict_key_n(d, buf, 6));
+ * @endcode
+ */
+bool has_int32_dict_key_n(const int32_dict_t* dict,
+                            const char*          key,
+                            size_t               key_len);
+ 
+// ================================================================================
+// Utility
+// ================================================================================
+ 
+/**
+ * @brief Remove all entries without freeing the dict or its bucket array.
+ *
+ * All nodes are freed via the dict's stored allocator.  The bucket array is
+ * retained and zeroed, ready for reuse.  @c len and @c hash_size are reset
+ * to 0.
+ *
+ * @param dict  Must not be NULL.
+ *
+ * @return NO_ERROR or NULL_POINTER.
+ *
+ * @code
+ *     insert_int32_dict(d, "a", 100u, a);
+ *     insert_int32_dict(d, "b", 200u, a);
+ *     assert(int32_dict_hash_size(d) == 2);
+ *
+ *     clear_int32_dict(d);
+ *     assert(int32_dict_hash_size(d) == 0);
+ *
+ *     // The dict is still usable after clear
+ *     insert_int32_dict(d, "c", 300u, a);
+ * @endcode
+ */
+error_code_t clear_int32_dict(int32_dict_t* dict);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Allocate a deep copy of a int32_dict_t.
+ *
+ * All nodes are copied into a fresh bucket array of the same capacity.  The
+ * new dict uses @p alloc_v for all of its allocations.
+ *
+ * @param src     Must not be NULL.
+ * @param alloc_v Allocator for the new dict and its nodes.
+ *
+ * @return @ref int32_dict_expect_t with @c has_value true on success.
+ *
+ * @code
+ *     int32_dict_t* orig = init_int32_dict(8, true, a).u.value;
+ *     insert_int32_dict(orig, "x", 1000u, a);
+ *     insert_int32_dict(orig, "y", 2000u, a);
+ *
+ *     int32_dict_expect_t cr = copy_int32_dict(orig, a);
+ *     assert(cr.has_value);
+ *     int32_dict_t* copy = cr.u.value;
+ *
+ *     // The copy is independent — mutating orig does not affect copy
+ *     update_int32_dict(orig, "x", 9999u);
+ *     int32_t v;
+ *     get_int32_dict_value(copy, "x", &v);
+ *     assert(v == 1000u);
+ *
+ *     return_int32_dict(copy);
+ *     return_int32_dict(orig);
+ * @endcode
+ */
+int32_dict_expect_t copy_int32_dict(const int32_dict_t* src,
+                                      allocator_vtable_t   alloc_v);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Merge two int32_dict_t instances into a new dict.
+ *
+ * All entries from @p a are inserted first.  Entries from @p b are then
+ * processed:
+ * - If the key does not exist in the result it is inserted.
+ * - If the key already exists and @p overwrite is true the value from @p b
+ *   replaces the value from @p a.
+ * - If the key already exists and @p overwrite is false the value from @p a
+ *   is kept.
+ *
+ * Neither source dict is modified.
+ *
+ * @param a          First source dict.  Must not be NULL.
+ * @param b          Second source dict.  Must not be NULL.
+ * @param overwrite  If true, @p b's values win on key conflicts.
+ * @param alloc_v    Allocator for the new dict.
+ *
+ * @return @ref int32_dict_expect_t with @c has_value true on success.
+ *
+ * @code
+ *     int32_dict_t* da = init_int32_dict(8, true, a).u.value;
+ *     int32_dict_t* db = init_int32_dict(8, true, a).u.value;
+ *
+ *     insert_int32_dict(da, "shared", 100u, a);
+ *     insert_int32_dict(da, "only_a",   1u, a);
+ *     insert_int32_dict(db, "shared", 999u, a);
+ *     insert_int32_dict(db, "only_b",   2u, a);
+ *
+ *     // Merge without overwrite — "shared" keeps da's value of 100
+ *     int32_dict_expect_t mr = merge_int32_dict(da, db, false, a);
+ *     int32_t v;
+ *     get_int32_dict_value(mr.u.value, "shared", &v);
+ *     assert(v == 100u);
+ *
+ *     return_int32_dict(mr.u.value);
+ *     return_int32_dict(da);
+ *     return_int32_dict(db);
+ * @endcode
+ */
+int32_dict_expect_t merge_int32_dict(const int32_dict_t* a,
+                                       const int32_dict_t* b,
+                                       bool                 overwrite,
+                                       allocator_vtable_t   alloc_v);
+ 
+// ================================================================================
+// Iteration
+// ================================================================================
+ 
+/**
+ * @brief Call @p fn once for every entry in the dict.
+ *
+ * Traversal order follows bucket order, which is not guaranteed to match
+ * insertion order.  The callback receives the key as a null-terminated
+ * C-string pointer (into internal storage), its length, and the int32_t
+ * value.  The callback must not insert or remove entries during traversal.
+ *
+ * @param dict       Must not be NULL.
+ * @param fn         Typed callback.  Must not be NULL.
+ * @param user_data  Passed unchanged to @p fn; may be NULL.
+ *
+ * @return NO_ERROR or NULL_POINTER.
+ *
+ * @code
+ *     static void print_entry(const char* key, size_t key_len,
+ *                             int32_t value, void* ud) {
+ *         (void)key_len; (void)ud;
+ *         printf("  %s = %u\n", key, (unsigned)value);
+ *     }
+ *
+ *     int32_dict_t* d = init_int32_dict(8, true, a).u.value;
+ *     insert_int32_dict(d, "width",  1920u, a);
+ *     insert_int32_dict(d, "height", 1080u, a);
+ *
+ *     foreach_int32_dict(d, print_entry, NULL);
+ *     // Output (order may vary):
+ *     //   width = 1920
+ *     //   height = 1080
+ *
+ *     return_int32_dict(d);
+ * @endcode
+ */
+error_code_t foreach_int32_dict(const int32_dict_t* dict,
+                                  int32_dict_iter_fn  fn,
+                                  void*                user_data);
+ 
+// ================================================================================
+// Introspection
+// ================================================================================
+ 
+/**
+ * @brief Number of occupied buckets (chains with at least one entry).
+ *
+ * Returns 0 if @p dict is NULL.
+ */
+size_t int32_dict_size(const int32_dict_t* dict);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Total number of key-value pairs stored.
+ *
+ * Returns 0 if @p dict is NULL.
+ */
+size_t int32_dict_hash_size(const int32_dict_t* dict);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Number of buckets currently allocated.
+ *
+ * Returns 0 if @p dict is NULL.
+ */
+size_t int32_dict_alloc(const int32_dict_t* dict);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief true if @p dict is NULL or contains no entries.
+ */
+bool is_int32_dict_empty(const int32_dict_t* dict);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
