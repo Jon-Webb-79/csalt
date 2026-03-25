@@ -59,8 +59,8 @@ Implementation Details
 
 The library provides these container types:
 
-Allocators
-----------
+Allocators (``allocator_vtable_v``)
+-----------------------------------
 
 * Fast linear bump-pointer allocation (``arena_t``)
 * Fixed-size block allocator for small, uniform objects (``pool_t``)
@@ -68,15 +68,15 @@ Allocators
 * Power-of-two buddy allocator (``buddy_t``) 
 * High-throughput slab allocator for fixed-size objects (``slab_t``)
 
-String ``string_t``
------------------
+String (``string_t``)
+---------------------
 * A dynamically allocated string implementation 
 * Automatically manages memory during string operations 
 * Provides functions for standard string operations 
 * Provides an iterator for access methods
 
-Vector
-------
+Array (``array_t``)
+-------------------
 * Utilizes allocators from the ``c_allocator.h`` file or user developed custom 
   allocators to manage memory.
 * Automatically manages memory allocation and resizing
@@ -85,9 +85,26 @@ Vector
 * Supports efficient append and insert operations
 * Functions to support advanced options such as sort, binary search, min, max, etc.
 
-Dictionary
-----------
-* To be developed
+Dictionary (``dict_t``)
+-----------------------
+* Utilizes allocators from the ``c_allocator.h`` file or user developed custom
+  allocators to manage memory.
+* Hash table using MurmurHash3-inspired byte-span hashing over arbitrary key
+  lengths, with power-of-two bucket counts and separate chaining for collision
+  resolution.
+* Supports any fixed-size value type via a generic ``data_size`` parameter;
+  typed wrappers (``uint8_dict_t``, ``int32_dict_t``, ``float_dict_t``, etc.)
+  fix the value type at initialisation and enforce it through the API.
+* Keys are null-terminated C-strings copied into internal allocator-managed
+  storage on every insert; the caller may free or reuse key memory immediately.
+* Both plain (null-terminated) and ``_n`` (explicit-length) variants are
+  provided for every key-taking function.
+* Automatically resizes when the load factor exceeds 0.75, provided the dict
+  was initialised with ``growth = true``; fixed-capacity mode is also
+  supported.
+* Supports insert, pop, update, value retrieval by copy, direct pointer access,
+  membership test, clear, deep copy, merge (with or without overwrite), and
+  bucket-order iteration via a typed callback.
 
 Matrix
 ------
