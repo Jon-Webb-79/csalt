@@ -223,6 +223,11 @@ extern const size_t test_double_dict_count;
 
 extern const struct CMUnitTest test_ldouble_dict[];
 extern const size_t test_ldouble_dict_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_slist[];
+extern const size_t test_slist_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus

@@ -111,6 +111,30 @@ Dictionary (``dict_t``)
 * Supports insert, pop, update, value retrieval by copy, direct pointer access,
   membership test, clear, deep copy, merge (with or without overwrite), and
   bucket-order iteration via a typed callback.
+
+Linked List (``slist_t``)
+-------------------------
+
+* Utilizes allocators from the ``c_allocator.h`` file or user-developed custom
+  allocators to manage memory for the list header, node slab, and any overflow
+  allocations.
+* Stores values as fixed-size byte buffers with a user-specified ``data_size``
+  and associated ``dtype_id_t`` for type identification.
+* Nodes store data inline (no secondary allocation), improving cache locality
+  and reducing pointer indirection during traversal.
+* Uses a hybrid allocation strategy:
+  - Pre-allocated contiguous node slab for fast, cache-friendly access
+  - Optional overflow allocation for additional nodes when capacity is exceeded
+* Provides O(1) insertion at the front and back, with O(n) traversal-based
+  access and insertion at arbitrary positions.
+* Supports safe element access and retrieval via copy semantics (no direct
+  exposure of internal node storage).
+* Designed as a generic container — users are expected to define their own
+  typed wrappers for domain-specific data structures using ``c_dtypes.h``.
+* Provides iteration support via callback functions for traversal without
+  exposing internal node structure.
+* Supports standard list operations including push (front, back, index),
+  pop (front, back, index), search, and introspection.
  
 
 Matrix
@@ -146,6 +170,7 @@ The following are areas for future improvement in the code base
     c_ldouble <LDouble>
     c_array <Array>
     c_dict <Dict>
+    c_list <List>
     
 Indices and tables
 ==================
