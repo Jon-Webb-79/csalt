@@ -20,50 +20,118 @@
 // ================================================================================
 // Internal helpers
 // ================================================================================
- 
+
 static inline size_t _node_stride(size_t data_size) {
     size_t raw   = sizeof(sNode) + data_size;
     size_t align = _Alignof(sNode);
     return (raw + align - 1u) & ~(align - 1u);
 }
- 
+// --------------------------------------------------------------------------------
+
 static inline bool _ptr_in_slab(const slist_t* l, const sNode* node) {
     const uint8_t* p  = (const uint8_t*)node;
     const uint8_t* lo = l->slab;
     const uint8_t* hi = l->slab + l->slab_cap * _node_stride(l->data_size);
     return p >= lo && p < hi;
 }
- 
+// --------------------------------------------------------------------------------
+
+static inline void _push_slab_free(slist_t* l, sNode* node) {
+    if (!l || !node) return;
+
+    node->next   = l->slab_free;
+    l->slab_free = node;
+    l->slab_free_count++;
+}
+// --------------------------------------------------------------------------------
+
+static inline sNode* _pop_slab_free(slist_t* l) {
+    if (!l || !l->slab_free) return NULL;
+
+    sNode* node  = l->slab_free;
+    l->slab_free = l->slab_free->next;
+    node->next   = NULL;
+
+    if (l->slab_free_count > 0u)
+        l->slab_free_count--;
+
+    return node;
+}
+// --------------------------------------------------------------------------------
+
 static sNode* _alloc_node(slist_t* l) {
-    if (l->slab_used < l->slab_cap) {
-        sNode* node = (sNode*)(l->slab + l->slab_used * _node_stride(l->data_size));
-        node->next  = NULL;
-        l->slab_used++;
+    if (!l) return NULL;
+
+    /* 1. Reuse recycled slab node first */
+    if (l->slab_free) {
+        sNode* node = _pop_slab_free(l);
+        if (node) {
+            l->slab_used++;
+        }
         return node;
     }
- 
+
+    /*
+     * 2. Consume a fresh slab slot.
+     *
+     * slab_used       = currently live slab-backed nodes
+     * slab_free_count = previously used but currently free slab nodes
+     *
+     * Their sum is therefore the number of slab slots that have been touched
+     * so far, which is the correct next fresh slot index.
+     */
+    {
+        size_t touched = l->slab_used + l->slab_free_count;
+        if (touched < l->slab_cap) {
+            sNode* node = (sNode*)(l->slab + touched * _node_stride(l->data_size));
+            node->next  = NULL;
+            l->slab_used++;
+            return node;
+        }
+    }
+
+    /* 3. Fall back to overflow allocation */
     if (!l->allow_overflow)
         return NULL;
- 
+
     size_t            sz = sizeof(sNode) + l->data_size;
     void_ptr_expect_t r  = l->alloc_v.allocate(l->alloc_v.ctx, sz, /*zeroed=*/true);
     if (!r.has_value) return NULL;
- 
+
     sNode* node = r.u.value;
     node->next  = NULL;
+    l->overflow_live++;
     return node;
 }
- 
+// --------------------------------------------------------------------------------
+
 static inline error_code_t _alloc_node_error(const slist_t* l) {
-    return (l->slab_used >= l->slab_cap && !l->allow_overflow)
-           ? CAPACITY_OVERFLOW : OUT_OF_MEMORY;
+    if (!l) return NULL_POINTER;
+
+    return ((l->slab_used + l->slab_free_count) >= l->slab_cap &&
+            l->slab_free_count == 0u &&
+            !l->allow_overflow)
+           ? CAPACITY_OVERFLOW
+           : OUT_OF_MEMORY;
 }
- 
+// --------------------------------------------------------------------------------
+
 static inline void _return_node(slist_t* l, sNode* node) {
-    if (!_ptr_in_slab(l, node))
-        l->alloc_v.return_element(l->alloc_v.ctx, node);
+    if (!l || !node) return;
+
+    if (_ptr_in_slab(l, node)) {
+        if (l->slab_used > 0u)
+            l->slab_used--;
+        _push_slab_free(l, node);
+        return;
+    }
+
+    l->alloc_v.return_element(l->alloc_v.ctx, node);
+
+    if (l->overflow_live > 0u)
+        l->overflow_live--;
 }
- 
+
 // ================================================================================
 // init_slist
 // ================================================================================
@@ -94,16 +162,19 @@ slist_expect_t init_slist(size_t             num_nodes,
         return (slist_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
     }
  
-    l->slab           = sr.u.value;
-    l->slab_cap       = num_nodes;
-    l->slab_used      = 0;
-    l->data_size      = data_size;
-    l->dtype          = dtype;
-    l->len            = 0;
-    l->head           = NULL;
-    l->tail           = NULL;
-    l->allow_overflow = allow_overflow;
-    l->alloc_v        = alloc_v;
+    l->slab            = sr.u.value;
+    l->slab_cap        = num_nodes;
+    l->slab_used       = 0u;
+    l->slab_free       = NULL;
+    l->slab_free_count = 0u;
+    l->overflow_live   = 0u;
+    l->data_size       = data_size;
+    l->dtype           = dtype;
+    l->len             = 0u;
+    l->head            = NULL;
+    l->tail            = NULL;
+    l->allow_overflow  = allow_overflow;
+    l->alloc_v         = alloc_v;
  
     return (slist_expect_t){ .has_value = true, .u.value = l };
 }
@@ -316,7 +387,6 @@ error_code_t pop_at_slist(slist_t* list, size_t index, void* out_value) {
 error_code_t clear_slist(slist_t* list) {
     if (!list) return NULL_POINTER;
  
-    /* Return overflow nodes individually; slab nodes skipped by _return_node. */
     sNode* node = list->head;
     while (node) {
         sNode* next = node->next;
@@ -324,22 +394,14 @@ error_code_t clear_slist(slist_t* list) {
         node = next;
     }
  
-    /* Return the old slab. */
-    list->alloc_v.return_element(list->alloc_v.ctx, list->slab);
-    list->slab      = NULL;
-    list->slab_used = 0;
-    list->head      = NULL;
-    list->tail      = NULL;
-    list->len       = 0;
+    list->head            = NULL;
+    list->tail            = NULL;
+    list->len             = 0u;
+    list->slab_used       = 0u;
+    list->slab_free       = NULL;
+    list->slab_free_count = 0u;
+    list->overflow_live   = 0u;
  
-    /* Allocate a fresh slab of the same capacity so the list is immediately reusable. */
-    size_t            slab_sz = list->slab_cap * _node_stride(list->data_size);
-    void_ptr_expect_t sr      = list->alloc_v.allocate(list->alloc_v.ctx, slab_sz,
-                                                       /*zeroed=*/true);
-    if (!sr.has_value)
-        return OUT_OF_MEMORY;   /* list is empty but slabless; overflow still works */
- 
-    list->slab = sr.u.value;
     return NO_ERROR;
 }
  
@@ -398,15 +460,15 @@ error_code_t reverse_slist(slist_t* list) {
     /* Nothing to do for an empty list or a single node. */
     if (list->len <= 1) return NO_ERROR;
  
-    sNode* prev    = NULL;
-    sNode* current = list->head;
+    sNode* prev     = NULL;
+    sNode* current  = list->head;
     sNode* new_tail = list->head;   /* head becomes tail after reversal */
  
     while (current) {
-        sNode* next    = current->next;
-        current->next  = prev;
-        prev           = current;
-        current        = next;
+        sNode* next   = current->next;
+        current->next = prev;
+        prev          = current;
+        current       = next;
     }
  
     list->head = prev;      /* prev is the old tail, now the new head */
@@ -437,8 +499,8 @@ error_code_t concat_slist(slist_t* dst, const slist_t* src) {
 // ================================================================================
  
 error_code_t foreach_slist(const slist_t* list,
-                            slist_iter_fn  fn,
-                            void*          user_data) {
+                           slist_iter_fn  fn,
+                           void*          user_data) {
     if (!list || !fn) return NULL_POINTER;
  
     sNode* node = list->head;
@@ -446,8 +508,7 @@ error_code_t foreach_slist(const slist_t* list,
         fn(node->data, i, user_data);
  
     return NO_ERROR;
-}
- 
+} 
 // ================================================================================
 // ================================================================================
 // eof

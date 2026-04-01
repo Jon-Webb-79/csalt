@@ -78,18 +78,43 @@ typedef struct sNode {
  * Do not manipulate any fields directly; use the provided API.
  */
 typedef struct {
-    sNode*             head;           /**< First node, or NULL if empty.                   */
-    sNode*             tail;           /**< Last node, or NULL if empty.                    */
-    size_t             len;            /**< Total number of nodes currently in the list.    */
-    size_t             data_size;      /**< Bytes per value, fixed at init.                 */
-    dtype_id_t         dtype;          /**< Type tag (UINT8_TYPE, FLOAT_TYPE, …).           */
-    uint8_t*           slab;           /**< Pre-allocated contiguous node block.            */
-    size_t             slab_cap;       /**< Maximum nodes the slab can hold.               */
-    size_t             slab_used;      /**< Nodes handed out from the slab so far.         */
-    bool               allow_overflow; /**< true = heap fallback, false = hard cap.        */
-    allocator_vtable_t alloc_v;        /**< Allocator for the slab and any overflow nodes. */
+    // -------------------------------------------------------------------------
+    // Core list structure (hot path — accessed most frequently)
+    // -------------------------------------------------------------------------
+    sNode* head;            /**< First node, or NULL if empty.                     */
+    sNode* tail;            /**< Last node, or NULL if empty.                      */
+
+    // -------------------------------------------------------------------------
+    // Slab memory management (also hot path)
+    // -------------------------------------------------------------------------
+    uint8_t* slab;          /**< Contiguous slab storage for primary nodes.        */
+    sNode*   slab_free;     /**< Recycled slab nodes available for reuse.          */
+
+    // -------------------------------------------------------------------------
+    // Size and capacity tracking
+    // -------------------------------------------------------------------------
+    size_t len;             /**< Number of live nodes currently in the list.       */
+    size_t slab_cap;        /**< Total number of nodes the slab can hold.          */
+    size_t slab_used;       /**< Fresh slab slots ever consumed.                  */
+    size_t slab_free_count; /**< Number of nodes on slab_free.                    */
+    size_t overflow_live;   /**< Number of currently live overflow nodes.         */
+
+    // -------------------------------------------------------------------------
+    // Data description
+    // -------------------------------------------------------------------------
+    size_t     data_size;   /**< Bytes per element stored in each node.           */
+    dtype_id_t dtype;       /**< Type identifier (UINT8_TYPE, FLOAT_TYPE, etc.). */
+
+    // -------------------------------------------------------------------------
+    // Configuration flags
+    // -------------------------------------------------------------------------
+    bool allow_overflow;    /**< true = allocator fallback, false = hard cap.     */
+
+    // -------------------------------------------------------------------------
+    // Allocator interface
+    // -------------------------------------------------------------------------
+    allocator_vtable_t alloc_v; /**< Allocator used for slab and overflow nodes. */
 } slist_t;
- 
 // ================================================================================
 // Expected return types
 // ================================================================================
