@@ -877,7 +877,338 @@ array_expect_t cumulative_array(const array_t*     src,
                                                         const void* element),
                                 allocator_vtable_t alloc_v,
                                 dtype_id_t         dtype);
+// ================================================================================ 
+// ================================================================================ 
 
+/**
+ * @brief A generic, type-safe binary heap backed by a dynamic array.
+ *
+ * heap_t wraps an array_t with a caller-supplied comparator that determines
+ * the heap's ordering. Passing a comparator that returns > 0 when *a > *b
+ * produces a max-heap (largest element at the root); passing one that returns
+ * > 0 when *a < *b produces a min-heap. Any total ordering consistent with
+ * the qsort(3) convention is accepted.
+ *
+ * The dtype and data_size are fixed at init time and stored on the struct so
+ * that push, pop, peek, and foreach operations require no additional type
+ * arguments from the caller. Do not modify any field directly — use the
+ * provided API functions.
+ *
+ * Memory is managed entirely through the embedded allocator_vtable_t inherited
+ * from the inner array_t. The heap_t struct itself is also allocated through
+ * the same vtable, matching the pattern used by array_t.
+ */
+typedef struct {
+    array_t*   data;                         /**< Backing storage for heap elements.      */
+    dtype_id_t dtype;                        /**< Runtime type identity, fixed at init.   */
+    int      (*cmp)(const void*, const void*); /**< Comparator defining heap order.       */
+} heap_t;
+ 
+// ================================================================================
+// Expected return type
+// ================================================================================
+ 
+/**
+ * @brief Expected return type for heap initialization and copy operations.
+ *
+ * On success, has_value is true and u.value points to a valid heap_t.
+ * On failure, has_value is false and u.error contains the error code.
+ */
+typedef struct {
+    bool has_value;
+    union {
+        heap_t*      value;
+        error_code_t error;
+    } u;
+} heap_expect_t;
+ 
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+ 
+/**
+ * @brief Initialize a new binary heap.
+ *
+ * Allocates a heap_t struct and its backing array_t (including data buffer)
+ * through the provided allocator vtable. The dtype must be registered in the
+ * dtype registry before calling this function. The comparator cmp determines
+ * heap ordering and must remain valid for the lifetime of the heap.
+ *
+ * The comparator follows the qsort(3) convention:
+ *   - Returns < 0 if *a should be closer to the root than *b.
+ *   - Returns   0 if *a and *b are considered equal in priority.
+ *   - Returns > 0 if *b should be closer to the root than *a.
+ *
+ * Pass a comparator returning (*(T*)a > *(T*)b) - (*(T*)a < *(T*)b) for a
+ * max-heap, or its negation for a min-heap.
+ *
+ * If growth is true, the backing array expands automatically when full using
+ * the tiered growth strategy of array_t. If growth is false, heap_push returns
+ * CAPACITY_OVERFLOW once the initial capacity is exhausted.
+ *
+ * @param capacity  Initial number of elements to allocate space for. Must be > 0.
+ * @param dtype     Type identifier. Must be registered in the dtype registry.
+ * @param growth    If true, the backing array grows automatically when full.
+ * @param alloc_v   Allocator vtable used for all memory operations.
+ * @param cmp       Comparator function defining heap order. Must not be NULL.
+ *
+ * @return heap_expect_t with has_value true and a valid heap_t* on success.
+ *         On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER    if alloc_v.allocate or cmp is NULL
+ *         - INVALID_ARG     if capacity is 0 or dtype is UNKNOWN_TYPE
+ *         - ILLEGAL_STATE   if the dtype registry could not be initialized
+ *         - TYPE_MISMATCH   if dtype is not registered in the dtype registry
+ *         - LENGTH_OVERFLOW if capacity * data_size would overflow size_t
+ *         - BAD_ALLOC       if the allocator fails to allocate the heap_t struct
+ *         - OUT_OF_MEMORY   if the allocator fails to allocate the data buffer
+ *
+ * @code
+ *     static int cmp_int(const void* a, const void* b) {
+ *         int va = *(const int*)a, vb = *(const int*)b;
+ *         return (va > vb) - (va < vb);   // max-heap
+ *     }
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     heap_expect_t r = init_heap(16, INT32_TYPE, true, alloc, cmp_int);
+ *     if (!r.has_value) { handle_error(r.u.error); }
+ *     heap_t* h = r.u.value;
+ * @endcode
+ */
+heap_expect_t init_heap(size_t             capacity,
+                        dtype_id_t         dtype,
+                        bool               growth,
+                        allocator_vtable_t alloc_v,
+                        int              (*cmp)(const void*, const void*));
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Return a heap's memory back to its allocator.
+ *
+ * Delegates to return_array to release the backing array_t and its data buffer,
+ * then returns the heap_t struct itself to the allocator via return_element.
+ * This does NOT free or destroy the allocator itself. After this call the
+ * pointer must not be used.
+ *
+ * @param heap  Pointer to the heap to return. Silently ignored if NULL.
+ */
+void return_heap(heap_t* heap);
+ 
+// ================================================================================
+// Mutation operations
+// ================================================================================
+ 
+/**
+ * @brief Insert one element into the heap and restore the heap property.
+ *
+ * Appends the new element to the end of the backing array and then sifts it
+ * upward until the comparator is satisfied at every parent-child pair. The
+ * element is copied by value; the caller retains ownership of the buffer
+ * pointed to by data.
+ *
+ * If the backing array is full and growth is true, the data buffer is
+ * reallocated before insertion. If growth is false, returns CAPACITY_OVERFLOW
+ * without modifying the heap.
+ *
+ * @param heap  Pointer to the target heap. Must not be NULL.
+ * @param data  Pointer to the element to insert. Must not be NULL.
+ *              The pointed-to data must be exactly heap->data->data_size bytes.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER      if heap or data is NULL
+ *         - CAPACITY_OVERFLOW if the heap is full and growth is false
+ *         - OUT_OF_MEMORY     if growth reallocation fails
+ *         - LENGTH_OVERFLOW   if the new capacity would overflow size_t
+ *
+ * @code
+ *     int val = 42;
+ *     error_code_t err = heap_push(h, &val);
+ * @endcode
+ */
+error_code_t heap_push(heap_t* heap, const void* data);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Remove the root element from the heap and restore the heap property.
+ *
+ * Copies the root element into the caller-supplied buffer out, replaces the
+ * root with the last element, decrements the length, and then sifts the new
+ * root downward until the heap property is restored. The removed value is
+ * written to out before any modification of the internal buffer, so the
+ * caller's buffer may safely alias stack memory.
+ *
+ * @param heap  Pointer to the target heap. Must not be NULL.
+ * @param out   Caller-provided buffer to receive the removed root element.
+ *              Must not be NULL. Must be at least heap->data->data_size bytes.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if heap or out is NULL
+ *         - EMPTY        if the heap contains no elements
+ *
+ * @code
+ *     int top;
+ *     error_code_t err = heap_pop(h, &top);
+ *     // top now holds the former root (highest-priority element).
+ * @endcode
+ */
+error_code_t heap_pop(heap_t* heap, void* out);
+ 
+// ================================================================================
+// Inspection operations
+// ================================================================================
+ 
+/**
+ * @brief Return a read-only pointer to the root (highest-priority) element.
+ *
+ * Returns a direct pointer into the backing array's internal buffer. The
+ * pointer is valid only until the next mutation (heap_push or heap_pop).
+ * Do not free or write through the returned pointer.
+ *
+ * @param heap  Pointer to the heap to inspect. Must not be NULL.
+ *
+ * @return Pointer to the root element on success, or NULL if heap is NULL
+ *         or the heap is empty.
+ *
+ * @code
+ *     const int* top = (const int*)heap_peek(h);
+ *     if (top) printf("root = %d\n", *top);
+ * @endcode
+ */
+const void* heap_peek(const heap_t* heap);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Return the number of elements currently stored in the heap.
+ *
+ * Delegates to the backing array's len field. Returns 0 if heap is NULL.
+ *
+ * @param heap  Pointer to the heap to query. Must not be NULL.
+ * @return Number of elements in the heap, or 0 if heap is NULL.
+ */
+size_t heap_size(const heap_t* heap);
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * @brief Return the total number of elements the heap can hold without
+ *        reallocation.
+ *
+ * Delegates to the backing array's alloc field. This is the currently
+ * allocated capacity, not the number of elements stored. If growth is true,
+ * this value increases automatically as elements are pushed. Returns 0 if
+ * heap is NULL.
+ *
+ * @param heap  Pointer to the heap to query.
+ * @return Allocated capacity in number of elements, or 0 if heap is NULL.
+ *
+ * @code
+ *     size_t used  = heap_size(h);
+ *     size_t cap   = heap_alloc(h);
+ *     size_t spare = cap - used;
+ * @endcode
+ */
+size_t heap_alloc(const heap_t* heap);
+ 
+// ================================================================================
+// Iteration
+// ================================================================================
+ 
+/**
+ * @brief Visit every element in the heap, calling fn once per element.
+ *
+ * Iterates over the backing array's internal buffer in heap-internal order,
+ * which satisfies the heap property but is not sorted order. The traversal
+ * order is unspecified beyond this guarantee — callers must not rely on
+ * elements being visited highest-priority first.
+ *
+ * If ordered traversal is required, copy the heap with copy_heap and pop
+ * elements one at a time from the copy instead.
+ *
+ * The callback signature is:
+ *   void fn(const void* element, void* ctx)
+ * where element points to one element within the backing buffer (valid only
+ * for the duration of the callback) and ctx is the opaque pointer supplied
+ * by the caller, which may be used to accumulate results, filter, or pass
+ * any other state into the callback without globals.
+ *
+ * The heap must not be mutated during iteration. Behaviour is undefined if
+ * fn calls heap_push or heap_pop on the same heap.
+ *
+ * @param heap  Pointer to the heap to iterate. Must not be NULL.
+ * @param fn    Callback invoked once per element. Must not be NULL.
+ * @param ctx   Opaque pointer forwarded to every fn call. May be NULL.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if heap or fn is NULL
+ *         - EMPTY        if the heap contains no elements
+ *
+ * @code
+ *     // Print every integer in the heap (in unspecified order).
+ *     static void print_int(const void* elem, void* ctx) {
+ *         (void)ctx;
+ *         printf("%d\n", *(const int*)elem);
+ *     }
+ *     heap_foreach(h, print_int, NULL);
+ *
+ *     // Accumulate a sum using ctx.
+ *     static void sum_int(const void* elem, void* ctx) {
+ *         *(long*)ctx += *(const int*)elem;
+ *     }
+ *     long total = 0;
+ *     heap_foreach(h, sum_int, &total);
+ * @endcode
+ */
+error_code_t heap_foreach(const heap_t* heap,
+                          void        (*fn)(const void* element, void* ctx),
+                          void*         ctx);
+ 
+// ================================================================================
+// Copy
+// ================================================================================
+ 
+/**
+ * @brief Create a deep copy of a heap using a (possibly different) allocator.
+ *
+ * Allocates a new heap_t struct and a new backing array_t (including its data
+ * buffer) through alloc_v, then copies all len elements from src into the new
+ * heap. The copy shares the same dtype, growth setting, and comparator pointer
+ * as src. The comparator pointer is copied by value — function pointers carry
+ * no ownership and require no deep copy.
+ *
+ * The returned heap is independent of src: mutations to either heap do not
+ * affect the other, and each must be individually returned via return_heap.
+ *
+ * A common use case is ordered traversal: copy the heap, then pop from the
+ * copy in a loop to visit elements in priority order without destroying the
+ * original.
+ *
+ * @param src      Pointer to the source heap. Must not be NULL.
+ * @param alloc_v  Allocator vtable for all memory operations on the new heap.
+ *                 May differ from src's allocator. alloc_v.allocate must not
+ *                 be NULL.
+ *
+ * @return heap_expect_t with has_value true and a valid heap_t* on success.
+ *         On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER  if src is NULL or alloc_v.allocate is NULL
+ *         - BAD_ALLOC     if the allocator fails to allocate the new heap_t
+ *         - OUT_OF_MEMORY if the allocator fails to allocate the new data buffer
+ *
+ * @code
+ *     // Ordered traversal without destroying the original heap.
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     heap_expect_t r = copy_heap(h, alloc);
+ *     if (!r.has_value) { handle_error(r.u.error); }
+ *     heap_t* tmp = r.u.value;
+ *     int val;
+ *     while (heap_size(tmp) > 0) {
+ *         heap_pop(tmp, &val);
+ *         printf("%d\n", val);   // printed in priority order
+ *     }
+ *     return_heap(tmp);
+ * @endcode
+ */
+heap_expect_t copy_heap(const heap_t* src, allocator_vtable_t alloc_v);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

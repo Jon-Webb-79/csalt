@@ -136,6 +136,30 @@ Linked List (``slist_t``)
 * Supports standard list operations including push (front, back, index),
   pop (front, back, index), search, and introspection.
  
+Binary Heap (``heap_t``)
+------------------------
+* Utilizes allocators from the ``c_allocator.h`` file or user-developed custom
+  allocators to manage memory for both the ``heap_t`` struct and its backing
+  ``array_t`` element buffer.
+* Implemented as a generic binary heap backed by a contiguous ``array_t``
+  buffer; all elements are stored inline as fixed-size byte buffers identified
+  by a ``dtype_id_t``.
+* Heap ordering is fully determined by a caller-supplied comparator following
+  the ``qsort(3)`` convention — the same comparator serves as both a max-heap
+  and a min-heap depending on its sign convention, with no hardcoded ordering
+  in the implementation.
+* Uses the same tiered growth strategy as ``array_t``: 2× below 1 024
+  elements, 1.5× up to 8 192, 1.25× up to 65 536, and a fixed increment of
+  256 beyond that; fixed-capacity mode is also supported via ``growth = false``.
+* Supports push (with sift-up), pop (with sift-down), non-destructive root
+  peek, unordered foreach iteration via a typed callback, deep copy, and
+  standard introspection (size, allocated capacity).
+* Ordered traversal is achieved by copying the heap with ``copy_heap`` and
+  draining the copy via repeated ``heap_pop`` calls, preserving the original
+  intact.
+* Designed as a generic container — users are expected to register their own
+  ``dtype_id_t``, supply a comparator, and define thin typed wrappers for
+  domain-specific priority structures using ``c_dtypes.h``.
 
 Matrix
 ------
@@ -171,6 +195,7 @@ The following are areas for future improvement in the code base
     c_array <Array>
     c_dict <Dict>
     c_list <List>
+    c_heap <Heap>
     
 Indices and tables
 ==================

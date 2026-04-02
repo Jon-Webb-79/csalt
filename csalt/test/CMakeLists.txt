@@ -21,6 +21,7 @@ add_executable(unit_tests
     test_array.c
     test_dict.c
     test_list.c
+    test_heap.c
 )
 
 # Link the test executable against the Hello library and cmocka

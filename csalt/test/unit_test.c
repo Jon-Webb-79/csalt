@@ -70,6 +70,7 @@ int main(void) {
         {"Double Dict", test_double_dict, test_double_dict_count},
         {"LDouble Dict", test_ldouble_dict, test_ldouble_dict_count},
         {"Singly Linked List", test_slist, test_slist_count},
+        {"Heap", test_heap, test_heap_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);

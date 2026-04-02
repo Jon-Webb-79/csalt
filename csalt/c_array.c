@@ -1022,6 +1022,247 @@ array_expect_t cumulative_array(const array_t*     src,
 
     return (array_expect_t){ .has_value = true, .u.value = dst };
 }
+// ================================================================================ 
+// ================================================================================ 
+
+/**
+ * Return a pointer to element at index i in the backing buffer.
+ * No bounds checking — callers are responsible for ensuring i < data->len.
+ */
+static inline uint8_t* _heap_elem(const heap_t* heap, size_t i) {
+    return heap->data->data + i * heap->data->data_size;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * Swap two elements in the backing buffer by index using a stack-local
+ * scratch byte. Avoids VLAs and heap allocation for the swap buffer by
+ * working one byte at a time, which is correct for any data_size.
+ */
+static void _heap_swap(heap_t* heap, size_t i, size_t j) {
+    if (i == j) return;
+    uint8_t* a      = _heap_elem(heap, i);
+    uint8_t* b      = _heap_elem(heap, j);
+    size_t   ds     = heap->data->data_size;
+ 
+    for (size_t k = 0u; k < ds; k++) {
+        uint8_t tmp = a[k];
+        a[k]        = b[k];
+        b[k]        = tmp;
+    }
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * Sift the element at index i upward until the heap property is restored.
+ * Used after inserting a new element at the end of the buffer.
+ *
+ * The heap property is: cmp(parent, child) >= 0 for every parent-child pair,
+ * meaning the root always compares >= every descendant under the stored
+ * comparator. A max-heap results when cmp returns > 0 for a > b; a min-heap
+ * results when cmp returns > 0 for a < b.
+ */
+static void _sift_up(heap_t* heap, size_t i) {
+    while (i > 0u) {
+        size_t parent = (i - 1u) / 2u;
+        if (heap->cmp(_heap_elem(heap, parent), _heap_elem(heap, i)) >= 0)
+            break;
+        _heap_swap(heap, parent, i);
+        i = parent;
+    }
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * Sift the element at index i downward until the heap property is restored.
+ * Used after replacing the root with the last element during a pop.
+ */
+static void _sift_down(heap_t* heap, size_t i) {
+    size_t len = heap->data->len;
+ 
+    for (;;) {
+        size_t left  = 2u * i + 1u;
+        size_t right = 2u * i + 2u;
+        size_t best  = i;
+ 
+        if (left  < len && heap->cmp(_heap_elem(heap, left),
+                                     _heap_elem(heap, best)) > 0)
+            best = left;
+        if (right < len && heap->cmp(_heap_elem(heap, right),
+                                     _heap_elem(heap, best)) > 0)
+            best = right;
+ 
+        if (best == i) break;
+ 
+        _heap_swap(heap, i, best);
+        i = best;
+    }
+}
+ 
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+ 
+heap_expect_t init_heap(size_t             capacity,
+                        dtype_id_t         dtype,
+                        bool               growth,
+                        allocator_vtable_t alloc_v,
+                        int              (*cmp)(const void*, const void*)) {
+    if (alloc_v.allocate == NULL || cmp == NULL)
+        return (heap_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+ 
+    /* Delegate all capacity/dtype/allocator validation to init_array */
+    array_expect_t arr = init_array(capacity, dtype, growth, alloc_v);
+    if (arr.has_value == false)
+        return (heap_expect_t){ .has_value = false, .u.error = arr.u.error };
+ 
+    /* Allocate the heap_t struct through the same allocator */
+    void_ptr_expect_t struct_result = alloc_v.allocate(
+        alloc_v.ctx, sizeof(heap_t), true
+    );
+    if (struct_result.has_value == false) {
+        return_array(arr.u.value);
+        return (heap_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
+    }
+ 
+    heap_t* heap = (heap_t*)struct_result.u.value;
+    heap->data   = arr.u.value;
+    heap->dtype  = dtype;
+    heap->cmp    = cmp;
+ 
+    return (heap_expect_t){ .has_value = true, .u.value = heap };
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+void return_heap(heap_t* heap) {
+    if (heap == NULL) return;
+ 
+    /* Capture allocator before the struct is released */
+    allocator_vtable_t alloc_v = heap->data->alloc_v;
+ 
+    return_array(heap->data);
+    heap->data = NULL;
+ 
+    alloc_v.return_element(alloc_v.ctx, heap);
+}
+ 
+// ================================================================================
+// Mutation operations
+// ================================================================================
+ 
+error_code_t heap_push(heap_t* heap, const void* data) {
+    if (heap == NULL || data == NULL) return NULL_POINTER;
+ 
+    /* Append to the backing array — handles capacity and growth */
+    error_code_t err = push_back_array(heap->data, data, heap->dtype);
+    if (err != NO_ERROR) return err;
+ 
+    /* Restore heap property by sifting the new element up */
+    _sift_up(heap, heap->data->len - 1u);
+    return NO_ERROR;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t heap_pop(heap_t* heap, void* out) {
+    if (heap == NULL || out == NULL) return NULL_POINTER;
+    if (heap->data->len == 0u)       return EMPTY;
+ 
+    size_t ds = heap->data->data_size;
+ 
+    /* Copy the root into the caller's buffer before modifying anything */
+    memcpy(out, _heap_elem(heap, 0u), ds);
+ 
+    size_t last = heap->data->len - 1u;
+ 
+    if (last == 0u) {
+        /* Only one element: just decrement length, nothing to sift */
+        heap->data->len = 0u;
+        return NO_ERROR;
+    }
+ 
+    /* Move the last element into the root slot */
+    memcpy(_heap_elem(heap, 0u), _heap_elem(heap, last), ds);
+    heap->data->len = last;
+ 
+    /* Restore heap property */
+    _sift_down(heap, 0u);
+    return NO_ERROR;
+}
+ 
+// ================================================================================
+// Inspection operations
+// ================================================================================
+ 
+const void* heap_peek(const heap_t* heap) {
+    if (heap == NULL || heap->data->len == 0u) return NULL;
+    return (const void*)_heap_elem(heap, 0u);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_t heap_size(const heap_t* heap) {
+    if (heap == NULL) return 0u;
+    return heap->data->len;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_t heap_alloc(const heap_t* heap) {
+    if (heap == NULL) return 0u;
+    return heap->data->alloc;
+}
+ 
+// ================================================================================
+// Iteration
+// ================================================================================
+ 
+error_code_t heap_foreach(const heap_t* heap,
+                          void        (*fn)(const void* element, void* ctx),
+                          void*         ctx) {
+    if (heap == NULL || fn == NULL) return NULL_POINTER;
+    if (heap->data->len == 0u)      return EMPTY;
+ 
+    size_t ds = heap->data->data_size;
+    for (size_t i = 0u; i < heap->data->len; i++)
+        fn((const void*)(heap->data->data + i * ds), ctx);
+ 
+    return NO_ERROR;
+}
+ 
+// ================================================================================
+// Copy
+// ================================================================================
+ 
+heap_expect_t copy_heap(const heap_t* src, allocator_vtable_t alloc_v) {
+    if (src == NULL || alloc_v.allocate == NULL)
+        return (heap_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+ 
+    /* Deep-copy the backing array — copy_array handles the data buffer */
+    array_expect_t arr = copy_array(src->data, alloc_v);
+    if (arr.has_value == false)
+        return (heap_expect_t){ .has_value = false, .u.error = arr.u.error };
+ 
+    /* Allocate the new heap_t struct */
+    void_ptr_expect_t struct_result = alloc_v.allocate(
+        alloc_v.ctx, sizeof(heap_t), true
+    );
+    if (struct_result.has_value == false) {
+        return_array(arr.u.value);
+        return (heap_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
+    }
+ 
+    heap_t* dst = (heap_t*)struct_result.u.value;
+    dst->data   = arr.u.value;
+    dst->dtype  = src->dtype;
+    dst->cmp    = src->cmp;   /* function pointer — shallow copy is correct */
+ 
+    return (heap_expect_t){ .has_value = true, .u.value = dst };
+}
 // ================================================================================
 // ================================================================================
 // eof
