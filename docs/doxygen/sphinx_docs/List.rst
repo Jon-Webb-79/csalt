@@ -111,6 +111,58 @@ by the allocator implementation.
 
 See :ref:`allocator_file` for details.
 
+Recommended Allocators
+----------------------
+
+Different allocators are appropriate depending on how the list is used:
+
+* **HeapAllocator**
+  
+  Best for:
+  
+  * general-purpose use
+  * unit testing
+  * host-side applications
+  * debugging container logic independent of allocator complexity
+
+  This is usually the best allocator to use first because failure modes are
+  simple and easy to reason about.
+
+* **ArenaAllocator**
+  
+  Best for:
+  
+  * build-then-discard workflows
+  * temporary lists used during parsing or transformation passes
+  * scenarios where the full list lifetime matches a larger arena lifetime
+
+  This works especially well when overflow is disabled or rare. If overflow
+  is frequent, the arena must still have enough capacity to satisfy those
+  extra node allocations.
+
+* **BuddyAllocator**
+  
+  Best for:
+  
+  * deterministic dynamic allocation
+  * environments where memory should be returnable and coalesced
+  * systems requiring more structure than a heap allocator
+
+  This is a reasonable choice when the list may grow dynamically and later
+  release memory through normal destruction.
+
+* **PoolAllocator / SlabAllocator**
+  
+  Best for:
+  
+  * overflow-heavy workloads with uniform node sizes
+  * fixed-type deployments where the node footprint is stable
+  * performance-sensitive paths with many push/pop operations
+
+  These allocators can be particularly effective because list nodes are
+  fixed-size objects for a given ``T``. They are less useful when only the
+  primary slab is used and overflow is disabled.
+
 Error Handling
 --------------
 
