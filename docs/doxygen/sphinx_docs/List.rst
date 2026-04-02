@@ -1,8 +1,8 @@
 .. _slist:
 
-*********************
+******************
 Singly Linked List
-*********************
+******************
 
 ``c_list.h`` provides a generic, type-erased singly linked list built on top
 of the csalt allocator and dtype systems.  It is designed for flexibility,

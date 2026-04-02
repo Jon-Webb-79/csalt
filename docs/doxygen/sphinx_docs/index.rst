@@ -161,6 +161,37 @@ Binary Heap (``heap_t``)
   ``dtype_id_t``, supply a comparator, and define thin typed wrappers for
   domain-specific priority structures using ``c_dtypes.h``.
 
+AVL Tree (``avl_t``)
+---------------------
+
+* Utilizes allocators from the ``c_allocator.h`` file or user-developed custom
+  allocators to manage memory for the tree header, node slab, free list, and
+  any overflow allocations.
+* Implements a self-balancing binary search tree (AVL) that maintains strict
+  height balance, ensuring O(log n) insertion, removal, and lookup operations.
+* Stores values as fixed-size byte buffers with a user-specified ``data_size``
+  derived from ``dtype_id_t``, enabling generic storage of arbitrary types.
+* Nodes store data inline (no secondary allocation), improving cache locality
+  and eliminating pointer indirection for element access.
+* Uses a hybrid allocation strategy:
+  - Reuses removed nodes through an internal free list
+  - Carves new nodes from a contiguous slab for cache-friendly allocation
+  - Optionally performs overflow allocation when slab capacity is exceeded
+* Tree ordering is fully determined by a caller-supplied comparator following
+  the ``qsort(3)`` convention; duplicate handling is configurable at
+  initialisation.
+* Automatically maintains AVL balance through single and double rotations
+  during insertion and removal operations.
+* Supports ordered traversal via in-order iteration, as well as range-based
+  traversal with branch pruning for efficient subset queries.
+* Provides safe element access and retrieval via copy semantics (no direct
+  exposure of internal node storage).
+* Designed as a generic container — users are expected to define their own
+  typed wrappers for domain-specific data structures using ``c_dtypes.h``.
+* Supports standard tree operations including insert, remove, contains,
+  find, min/max retrieval, ordered traversal, range traversal, copy, and
+  introspection.
+
 Matrix
 ------
 * To be developed
@@ -196,6 +227,7 @@ The following are areas for future improvement in the code base
     c_dict <Dict>
     c_list <List>
     c_heap <Heap>
+    c_tree <Tree>
     
 Indices and tables
 ==================
