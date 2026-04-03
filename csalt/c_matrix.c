@@ -1852,43 +1852,6 @@ error_code_t fill_matrix(matrix_t* mat,
 }
 
 // ============================================================================
-// is_zero_matrix
-// ============================================================================
-
-bool is_zero_matrix(const matrix_t* mat) {
-    if (mat == NULL) return true;
-
-    switch (mat->format) {
-
-        case DENSE_MATRIX: {
-            size_t count = mat->rows * mat->cols;
-
-            for (size_t i = 0u; i < count; ++i) {
-                const uint8_t* ptr =
-                    mat->rep.dense.data + (i * mat->data_size);
-
-                if (!_value_is_zero(ptr, mat->data_size)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        case COO_MATRIX:
-            return mat->rep.coo.nnz == 0u;
-
-        case CSR_MATRIX:
-            return mat->rep.csr.nnz == 0u;
-
-        case CSC_MATRIX:
-            return mat->rep.csc.nnz == 0u;
-
-        default:
-            return false;
-    }
-}
-
-// ============================================================================
 // compatibility helpers
 // ============================================================================
 
@@ -2105,6 +2068,101 @@ matrix_expect_t init_identity_matrix(size_t n,
     }
 
     return r;
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_expect_t init_row_vector(size_t length,
+                                dtype_id_t dtype,
+                                allocator_vtable_t alloc_v) {
+    return init_dense_matrix(1u, length, dtype, alloc_v);
+}
+// -------------------------------------------------------------------------------- 
+
+matrix_expect_t init_col_vector(size_t length,
+                                dtype_id_t dtype,
+                                allocator_vtable_t alloc_v) {
+    return init_dense_matrix(length, 1u, dtype, alloc_v);
+}
+// -------------------------------------------------------------------------------- 
+
+// ============================================================================
+// Vector shape helpers
+// ============================================================================
+
+bool matrix_is_row_vector(const matrix_t* mat) {
+    if (mat == NULL) return false;
+
+    /* Row vector: 1 x N (including N = 0) */
+    return (mat->rows == 1u);
+}
+
+// ----------------------------------------------------------------------------
+
+bool matrix_is_col_vector(const matrix_t* mat) {
+    if (mat == NULL) return false;
+
+    /* Column vector: N x 1 (including N = 0) */
+    return (mat->cols == 1u);
+}
+
+// ----------------------------------------------------------------------------
+
+bool matrix_is_vector(const matrix_t* mat) {
+    if (mat == NULL) return false;
+
+    /* Vector: either row or column vector */
+    return (mat->rows == 1u) || (mat->cols == 1u);
+}
+
+// ----------------------------------------------------------------------------
+
+size_t matrix_vector_length(const matrix_t* mat) {
+    if (mat == NULL) return 0u;
+
+    if (mat->rows == 1u) {
+        return mat->cols;
+    }
+
+    if (mat->cols == 1u) {
+        return mat->rows;
+    }
+
+    /* Not a vector */
+    return 0u;
+}
+// -------------------------------------------------------------------------------- 
+
+bool is_zero_matrix(const matrix_t* mat) {
+    if (mat == NULL) return true;
+
+    switch (mat->format) {
+
+        case DENSE_MATRIX: {
+            size_t count = mat->rows * mat->cols;
+
+            for (size_t i = 0u; i < count; ++i) {
+                const uint8_t* ptr =
+                    mat->rep.dense.data + (i * mat->data_size);
+
+                if (!_value_is_zero(ptr, mat->data_size)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        case COO_MATRIX:
+            return mat->rep.coo.nnz == 0u;
+
+        case CSR_MATRIX:
+            return mat->rep.csr.nnz == 0u;
+
+        case CSC_MATRIX:
+            return mat->rep.csc.nnz == 0u;
+
+        default:
+            return false;
+    }
 }
 // ================================================================================
 // ================================================================================

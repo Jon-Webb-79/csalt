@@ -192,9 +192,35 @@ AVL Tree (``avl_t``)
   find, min/max retrieval, ordered traversal, range traversal, copy, and
   introspection.
 
-Matrix
-------
-* To be developed
+Matrix (``matrix_t``)
+---------------------
+
+* Utilizes allocators from the ``c_allocator.h`` file or user-developed custom
+  allocators to manage memory for the matrix header and all internal storage
+  buffers across supported formats.
+* Implements a generic, type-erased matrix container supporting multiple
+  storage formats:
+  - Dense (row-major contiguous storage)
+  - COO (coordinate list sparse format)
+  - CSR (compressed sparse row)
+  - CSC (compressed sparse column)
+* Stores values as fixed-size byte buffers identified by a runtime
+  ``dtype_id_t``, enabling generic storage of arbitrary data types.
+* Provides safe element access via copy semantics; sparse formats return zero
+  values for entries not explicitly stored.
+* Supports format-aware operations including conversion between storage
+  formats and transpose across all supported representations.
+* Includes structural operations such as zeroing, filling (dense-only for
+  nonzero values), row and column swapping (dense and COO), and compatibility
+  checks for addition and multiplication.
+* Supports vector-style usage through row and column vector construction and
+  introspection helpers (e.g., ``matrix_is_vector``).
+* Designed strictly as a container abstraction — no numerical algorithms
+  (e.g., multiplication, inversion, decomposition) are implemented in this
+  module.
+* Intended to serve as the foundation for type-specific numerical extensions,
+  where optimized operations (including SIMD-enabled implementations) are
+  defined in separate modules layered on top of the generic container.
 
 Work Forward 
 ------------
@@ -228,6 +254,7 @@ The following are areas for future improvement in the code base
     c_list <List>
     c_heap <Heap>
     c_tree <Tree>
+    c_matrix <Matrix>
     
 Indices and tables
 ==================
