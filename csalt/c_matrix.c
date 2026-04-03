@@ -1386,44 +1386,236 @@ matrix_expect_t convert_matrix(const matrix_t*   src,
 }
 // -------------------------------------------------------------------------------- 
 
+static matrix_expect_t _transpose_csr_matrix(const matrix_t* src,
+                                             allocator_vtable_t alloc_v) {
+    matrix_t* dst = NULL;
+    size_t ptr_bytes = 0u;
+    size_t idx_bytes = 0u;
+    size_t val_bytes = 0u;
+
+    void_ptr_expect_t mr;
+    void_ptr_expect_t col_ptr_r;
+    void_ptr_expect_t row_idx_r;
+    void_ptr_expect_t values_r;
+
+    if (src == NULL) {
+        return (matrix_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+    if (src->format != CSR_MATRIX) {
+        return (matrix_expect_t){ .has_value = false, .u.error = ILLEGAL_STATE };
+    }
+
+    mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
+    if (!mr.has_value) {
+        return (matrix_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
+    }
+
+    dst = (matrix_t*)mr.u.value;
+    dst->rows = src->cols;
+    dst->cols = src->rows;
+    dst->dtype = src->dtype;
+    dst->data_size = src->data_size;
+    dst->format = CSC_MATRIX;
+    dst->alloc_v = alloc_v;
+
+    dst->rep.csc.nnz = 0u;
+    dst->rep.csc.col_ptr = NULL;
+    dst->rep.csc.row_idx = NULL;
+    dst->rep.csc.values = NULL;
+
+    ptr_bytes = (dst->cols + 1u) * sizeof(size_t); /* src->rows + 1 */
+    idx_bytes = src->rep.csr.nnz * sizeof(size_t);
+    val_bytes = src->rep.csr.nnz * src->data_size;
+
+    col_ptr_r = alloc_v.allocate(alloc_v.ctx, ptr_bytes, true);
+    row_idx_r = alloc_v.allocate(alloc_v.ctx, idx_bytes, true);
+    values_r  = alloc_v.allocate(alloc_v.ctx, val_bytes, false);
+
+    if (!col_ptr_r.has_value || !row_idx_r.has_value || !values_r.has_value) {
+        if (col_ptr_r.has_value) alloc_v.return_element(alloc_v.ctx, col_ptr_r.u.value);
+        if (row_idx_r.has_value) alloc_v.return_element(alloc_v.ctx, row_idx_r.u.value);
+        if (values_r.has_value)  alloc_v.return_element(alloc_v.ctx, values_r.u.value);
+        alloc_v.return_element(alloc_v.ctx, dst);
+        return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+    }
+
+    memcpy(col_ptr_r.u.value,
+           src->rep.csr.row_ptr,
+           ptr_bytes);
+
+    memcpy(row_idx_r.u.value,
+           src->rep.csr.col_idx,
+           idx_bytes);
+
+    memcpy(values_r.u.value,
+           src->rep.csr.values,
+           val_bytes);
+
+    dst->rep.csc.nnz = src->rep.csr.nnz;
+    dst->rep.csc.col_ptr = (size_t*)col_ptr_r.u.value;
+    dst->rep.csc.row_idx = (size_t*)row_idx_r.u.value;
+    dst->rep.csc.values  = (uint8_t*)values_r.u.value;
+
+    return (matrix_expect_t){ .has_value = true, .u.value = dst };
+}
+// -------------------------------------------------------------------------------- 
+
+static matrix_expect_t _transpose_csc_matrix(const matrix_t* src,
+                                             allocator_vtable_t alloc_v) {
+    matrix_t* dst = NULL;
+    size_t ptr_bytes = 0u;
+    size_t idx_bytes = 0u;
+    size_t val_bytes = 0u;
+
+    void_ptr_expect_t mr;
+    void_ptr_expect_t row_ptr_r;
+    void_ptr_expect_t col_idx_r;
+    void_ptr_expect_t values_r;
+
+    if (src == NULL) {
+        return (matrix_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+    if (src->format != CSC_MATRIX) {
+        return (matrix_expect_t){ .has_value = false, .u.error = ILLEGAL_STATE };
+    }
+
+    mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
+    if (!mr.has_value) {
+        return (matrix_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
+    }
+
+    dst = (matrix_t*)mr.u.value;
+    dst->rows = src->cols;
+    dst->cols = src->rows;
+    dst->dtype = src->dtype;
+    dst->data_size = src->data_size;
+    dst->format = CSR_MATRIX;
+    dst->alloc_v = alloc_v;
+
+    dst->rep.csr.nnz = 0u;
+    dst->rep.csr.row_ptr = NULL;
+    dst->rep.csr.col_idx = NULL;
+    dst->rep.csr.values = NULL;
+
+    ptr_bytes = (dst->rows + 1u) * sizeof(size_t); /* src->cols + 1 */
+    idx_bytes = src->rep.csc.nnz * sizeof(size_t);
+    val_bytes = src->rep.csc.nnz * src->data_size;
+
+    row_ptr_r = alloc_v.allocate(alloc_v.ctx, ptr_bytes, true);
+    col_idx_r = alloc_v.allocate(alloc_v.ctx, idx_bytes, true);
+    values_r  = alloc_v.allocate(alloc_v.ctx, val_bytes, false);
+
+    if (!row_ptr_r.has_value || !col_idx_r.has_value || !values_r.has_value) {
+        if (row_ptr_r.has_value) alloc_v.return_element(alloc_v.ctx, row_ptr_r.u.value);
+        if (col_idx_r.has_value) alloc_v.return_element(alloc_v.ctx, col_idx_r.u.value);
+        if (values_r.has_value)  alloc_v.return_element(alloc_v.ctx, values_r.u.value);
+        alloc_v.return_element(alloc_v.ctx, dst);
+        return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+    }
+
+    memcpy(row_ptr_r.u.value,
+           src->rep.csc.col_ptr,
+           ptr_bytes);
+
+    memcpy(col_idx_r.u.value,
+           src->rep.csc.row_idx,
+           idx_bytes);
+
+    memcpy(values_r.u.value,
+           src->rep.csc.values,
+           val_bytes);
+
+    dst->rep.csr.nnz = src->rep.csc.nnz;
+    dst->rep.csr.row_ptr = (size_t*)row_ptr_r.u.value;
+    dst->rep.csr.col_idx = (size_t*)col_idx_r.u.value;
+    dst->rep.csr.values  = (uint8_t*)values_r.u.value;
+
+    return (matrix_expect_t){ .has_value = true, .u.value = dst };
+}
+// -------------------------------------------------------------------------------- 
+
 static matrix_expect_t _transpose_dense_matrix(const matrix_t* src,
                                                allocator_vtable_t alloc_v) {
-    matrix_expect_t r = init_dense_matrix(src->cols, src->rows, src->dtype, alloc_v);
+    matrix_expect_t r;
+    matrix_t* dst = NULL;
+    size_t i = 0u;
+    size_t j = 0u;
+
+    if (src == NULL) {
+        return (matrix_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+    if (src->format != DENSE_MATRIX) {
+        return (matrix_expect_t){ .has_value = false, .u.error = ILLEGAL_STATE };
+    }
+
+    r = init_dense_matrix(src->cols, src->rows, src->dtype, alloc_v);
     if (!r.has_value) return r;
 
-    matrix_t* dst = r.u.value;
+    dst = r.u.value;
 
-    for (size_t i = 0; i < src->rows; ++i) {
-        for (size_t j = 0; j < src->cols; ++j) {
-            set_matrix(dst, j, i,
-                       src->rep.dense.data +
-                       ((i * src->cols + j) * src->data_size));
+    for (i = 0u; i < src->rows; ++i) {
+        for (j = 0u; j < src->cols; ++j) {
+            const uint8_t* src_ptr =
+                src->rep.dense.data + _dense_offset(src, i, j);
+            uint8_t* dst_ptr =
+                dst->rep.dense.data + _dense_offset(dst, j, i);
+
+            memcpy(dst_ptr, src_ptr, src->data_size);
         }
     }
 
     return r;
 }
-
-// --------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------- 
 
 static matrix_expect_t _transpose_coo_matrix(const matrix_t* src,
                                              allocator_vtable_t alloc_v) {
-    const coo_matrix_t* s = &src->rep.coo;
+    const coo_matrix_t* s = NULL;
+    coo_matrix_t* d = NULL;
+    matrix_expect_t r;
+    matrix_t* dst = NULL;
+    size_t i = 0u;
+    size_t cap = 0u;
+    error_code_t err;
 
-    matrix_expect_t r = init_coo_matrix(src->cols, src->rows,
-                                        s->cap, src->dtype, s->growth, alloc_v);
-    if (!r.has_value) return r;
-
-    matrix_t* dst = r.u.value;
-
-    for (size_t i = 0; i < s->nnz; ++i) {
-        push_back_coo_matrix(dst,
-                             s->col_idx[i],
-                             s->row_idx[i],
-                             s->values + (i * src->data_size));
+    if (src == NULL) {
+        return (matrix_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+    if (src->format != COO_MATRIX) {
+        return (matrix_expect_t){ .has_value = false, .u.error = ILLEGAL_STATE };
     }
 
-    sort_coo_matrix(dst);
+    s = &src->rep.coo;
+    cap = (s->cap > 0u) ? s->cap : 1u;
+
+    r = init_coo_matrix(src->cols, src->rows,
+                        cap, src->dtype, s->growth, alloc_v);
+    if (!r.has_value) return r;
+
+    dst = r.u.value;
+    d = &dst->rep.coo;
+
+    for (i = 0u; i < s->nnz; ++i) {
+        d->row_idx[i] = s->col_idx[i];
+        d->col_idx[i] = s->row_idx[i];
+        memcpy(d->values + (i * src->data_size),
+               s->values + (i * src->data_size),
+               src->data_size);
+    }
+
+    d->nnz = s->nnz;
+    d->sorted = false;
+
+    if (d->nnz > 1u) {
+        err = sort_coo_matrix(dst);
+        if (err != NO_ERROR) {
+            return_matrix(dst);
+            return (matrix_expect_t){ .has_value = false, .u.error = err };
+        }
+    } else {
+        d->sorted = true;
+    }
+
     return r;
 }
 // ================================================================================
@@ -1479,8 +1671,9 @@ matrix_expect_t copy_matrix(const matrix_t*   src,
 
 matrix_expect_t transpose_matrix(const matrix_t* src,
                                  allocator_vtable_t alloc_v) {
-    if (src == NULL)
+    if (src == NULL) {
         return (matrix_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
 
     switch (src->format) {
         case DENSE_MATRIX:
@@ -1488,6 +1681,12 @@ matrix_expect_t transpose_matrix(const matrix_t* src,
 
         case COO_MATRIX:
             return _transpose_coo_matrix(src, alloc_v);
+
+        case CSR_MATRIX:
+            return _transpose_csr_matrix(src, alloc_v);
+
+        case CSC_MATRIX:
+            return _transpose_csc_matrix(src, alloc_v);
 
         default:
             return (matrix_expect_t){ .has_value = false, .u.error = ILLEGAL_STATE };
@@ -1583,6 +1782,329 @@ bool matrix_equal(const matrix_t* a,
     free(va);
     free(vb);
     return equal;
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t zero_matrix(matrix_t* mat) {
+    if (mat == NULL) return NULL_POINTER;
+
+    switch (mat->format) {
+
+        case DENSE_MATRIX: {
+            size_t bytes = mat->rows * mat->cols * mat->data_size;
+            memset(mat->rep.dense.data, 0, bytes);
+            return NO_ERROR;
+        }
+
+        case COO_MATRIX:
+            mat->rep.coo.nnz = 0u;
+            mat->rep.coo.sorted = true;
+            return NO_ERROR;
+
+        case CSR_MATRIX:
+            if (mat->rep.csr.row_ptr != NULL) {
+                memset(mat->rep.csr.row_ptr, 0,
+                       (mat->rows + 1u) * sizeof(size_t));
+            }
+            mat->rep.csr.nnz = 0u;
+            return NO_ERROR;
+
+        case CSC_MATRIX:
+            if (mat->rep.csc.col_ptr != NULL) {
+                memset(mat->rep.csc.col_ptr, 0,
+                       (mat->cols + 1u) * sizeof(size_t));
+            }
+            mat->rep.csc.nnz = 0u;
+            return NO_ERROR;
+
+        default:
+            return ILLEGAL_STATE;
+    }
+}
+
+// ============================================================================
+// fill_matrix
+// ============================================================================
+
+error_code_t fill_matrix(matrix_t* mat,
+                         const void* value) {
+    if ((mat == NULL) || (value == NULL)) return NULL_POINTER;
+
+    /* Zero case */
+    if (_value_is_zero((const uint8_t*)value, mat->data_size)) {
+        return zero_matrix(mat);
+    }
+
+    /* Only dense supports non-zero fill */
+    if (mat->format != DENSE_MATRIX) {
+        return OPERATION_UNAVAILABLE;
+    }
+
+    size_t count = mat->rows * mat->cols;
+
+    for (size_t i = 0u; i < count; ++i) {
+        memcpy(mat->rep.dense.data + (i * mat->data_size),
+               value,
+               mat->data_size);
+    }
+
+    return NO_ERROR;
+}
+
+// ============================================================================
+// is_zero_matrix
+// ============================================================================
+
+bool is_zero_matrix(const matrix_t* mat) {
+    if (mat == NULL) return true;
+
+    switch (mat->format) {
+
+        case DENSE_MATRIX: {
+            size_t count = mat->rows * mat->cols;
+
+            for (size_t i = 0u; i < count; ++i) {
+                const uint8_t* ptr =
+                    mat->rep.dense.data + (i * mat->data_size);
+
+                if (!_value_is_zero(ptr, mat->data_size)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        case COO_MATRIX:
+            return mat->rep.coo.nnz == 0u;
+
+        case CSR_MATRIX:
+            return mat->rep.csr.nnz == 0u;
+
+        case CSC_MATRIX:
+            return mat->rep.csc.nnz == 0u;
+
+        default:
+            return false;
+    }
+}
+
+// ============================================================================
+// compatibility helpers
+// ============================================================================
+
+bool matrix_has_same_dtype(const matrix_t* a,
+                           const matrix_t* b) {
+    if ((a == NULL) || (b == NULL)) return false;
+    return a->dtype == b->dtype;
+}
+
+// ----------------------------------------------------------------------------
+
+bool matrix_is_add_compatible(const matrix_t* a,
+                              const matrix_t* b) {
+    if ((a == NULL) || (b == NULL)) return false;
+
+    return (a->rows == b->rows) &&
+           (a->cols == b->cols) &&
+           (a->dtype == b->dtype);
+}
+
+// ----------------------------------------------------------------------------
+
+bool matrix_is_multiply_compatible(const matrix_t* a,
+                                   const matrix_t* b) {
+    if ((a == NULL) || (b == NULL)) return false;
+
+    return (a->cols == b->rows) &&
+           (a->dtype == b->dtype);
+}
+
+// ============================================================================
+// internal helpers for swapping
+// ============================================================================
+
+static error_code_t _swap_dense_rows(matrix_t* mat,
+                                     size_t r1,
+                                     size_t r2) {
+    if ((r1 >= mat->rows) || (r2 >= mat->rows)) return OUT_OF_BOUNDS;
+    if (r1 == r2) return NO_ERROR;
+
+    size_t row_bytes = mat->cols * mat->data_size;
+
+    void_ptr_expect_t tmp_r =
+        mat->alloc_v.allocate(mat->alloc_v.ctx, row_bytes, false);
+
+    if (!tmp_r.has_value) return OUT_OF_MEMORY;
+
+    uint8_t* tmp = (uint8_t*)tmp_r.u.value;
+
+    uint8_t* row1 = mat->rep.dense.data + (r1 * row_bytes);
+    uint8_t* row2 = mat->rep.dense.data + (r2 * row_bytes);
+
+    memcpy(tmp,  row1, row_bytes);
+    memcpy(row1, row2, row_bytes);
+    memcpy(row2, tmp,  row_bytes);
+
+    mat->alloc_v.return_element(mat->alloc_v.ctx, tmp);
+
+    return NO_ERROR;
+}
+
+// ----------------------------------------------------------------------------
+
+static error_code_t _swap_dense_cols(matrix_t* mat,
+                                     size_t c1,
+                                     size_t c2) {
+    if ((c1 >= mat->cols) || (c2 >= mat->cols)) return OUT_OF_BOUNDS;
+    if (c1 == c2) return NO_ERROR;
+
+    for (size_t r = 0u; r < mat->rows; ++r) {
+        uint8_t* a = mat->rep.dense.data + _dense_offset(mat, r, c1);
+        uint8_t* b = mat->rep.dense.data + _dense_offset(mat, r, c2);
+
+        for (size_t k = 0u; k < mat->data_size; ++k) {
+            uint8_t tmp = a[k];
+            a[k] = b[k];
+            b[k] = tmp;
+        }
+    }
+
+    return NO_ERROR;
+}
+
+// ----------------------------------------------------------------------------
+
+static error_code_t _swap_coo_rows(matrix_t* mat,
+                                   size_t r1,
+                                   size_t r2) {
+    if ((r1 >= mat->rows) || (r2 >= mat->rows)) return OUT_OF_BOUNDS;
+    if (r1 == r2) return NO_ERROR;
+
+    for (size_t i = 0u; i < mat->rep.coo.nnz; ++i) {
+        if (mat->rep.coo.row_idx[i] == r1)
+            mat->rep.coo.row_idx[i] = r2;
+        else if (mat->rep.coo.row_idx[i] == r2)
+            mat->rep.coo.row_idx[i] = r1;
+    }
+
+    mat->rep.coo.sorted = false;
+    return _sort_coo_matrix(mat);
+}
+
+// ----------------------------------------------------------------------------
+
+static error_code_t _swap_coo_cols(matrix_t* mat,
+                                   size_t c1,
+                                   size_t c2) {
+    if ((c1 >= mat->cols) || (c2 >= mat->cols)) return OUT_OF_BOUNDS;
+    if (c1 == c2) return NO_ERROR;
+
+    for (size_t i = 0u; i < mat->rep.coo.nnz; ++i) {
+        if (mat->rep.coo.col_idx[i] == c1)
+            mat->rep.coo.col_idx[i] = c2;
+        else if (mat->rep.coo.col_idx[i] == c2)
+            mat->rep.coo.col_idx[i] = c1;
+    }
+
+    mat->rep.coo.sorted = false;
+    return _sort_coo_matrix(mat);
+}
+
+// ============================================================================
+// public swap APIs
+// ============================================================================
+
+error_code_t swap_matrix_rows(matrix_t* mat,
+                              size_t r1,
+                              size_t r2) {
+    if (mat == NULL) return NULL_POINTER;
+
+    switch (mat->format) {
+
+        case DENSE_MATRIX:
+            return _swap_dense_rows(mat, r1, r2);
+
+        case COO_MATRIX:
+            return _swap_coo_rows(mat, r1, r2);
+
+        case CSR_MATRIX:
+        case CSC_MATRIX:
+            return OPERATION_UNAVAILABLE;
+
+        default:
+            return ILLEGAL_STATE;
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+error_code_t swap_matrix_cols(matrix_t* mat,
+                              size_t c1,
+                              size_t c2) {
+    if (mat == NULL) return NULL_POINTER;
+
+    switch (mat->format) {
+
+        case DENSE_MATRIX:
+            return _swap_dense_cols(mat, c1, c2);
+
+        case COO_MATRIX:
+            return _swap_coo_cols(mat, c1, c2);
+
+        case CSR_MATRIX:
+        case CSC_MATRIX:
+            return OPERATION_UNAVAILABLE;
+
+        default:
+            return ILLEGAL_STATE;
+    }
+}
+
+// ============================================================================
+// init_identity_matrix
+// ============================================================================
+
+matrix_expect_t init_identity_matrix(size_t n,
+                                     dtype_id_t dtype,
+                                     allocator_vtable_t alloc_v) {
+    matrix_expect_t r = init_dense_matrix(n, n, dtype, alloc_v);
+    if (!r.has_value) return r;
+
+    matrix_t* mat = r.u.value;
+
+    error_code_t err = zero_matrix(mat);
+    if (err != NO_ERROR) {
+        return_matrix(mat);
+        return (matrix_expect_t){ .has_value = false, .u.error = err };
+    }
+
+    uint8_t one_buf[16] = {0};
+
+    if (mat->data_size > sizeof(one_buf)) {
+        return_matrix(mat);
+        return (matrix_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+
+    if (dtype == FLOAT_TYPE) {
+        float v = 1.0f;
+        memcpy(one_buf, &v, sizeof(float));
+    } else if (dtype == DOUBLE_TYPE) {
+        double v = 1.0;
+        memcpy(one_buf, &v, sizeof(double));
+    } else {
+        memset(one_buf, 0, mat->data_size);
+        one_buf[0] = 1;
+    }
+
+    for (size_t i = 0u; i < n; ++i) {
+        err = set_matrix(mat, i, i, one_buf);
+        if (err != NO_ERROR) {
+            return_matrix(mat);
+            return (matrix_expect_t){ .has_value = false, .u.error = err };
+        }
+    }
+
+    return r;
 }
 // ================================================================================
 // ================================================================================

@@ -2055,6 +2055,1392 @@ static void test_convert_csc_to_csr(void** state) {
     return_matrix(csr);
 }
 // ================================================================================
+// Transpose tests
+// ================================================================================
+
+static void test_transpose_dense_rectangular_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t src_r = init_dense_matrix(2u, 3u, INT32_TYPE, alloc);
+    assert_true(src_r.has_value);
+    assert_non_null(src_r.u.value);
+
+    matrix_t* src = src_r.u.value;
+
+    int32_t v00 = 1;
+    int32_t v01 = 2;
+    int32_t v02 = 3;
+    int32_t v10 = 4;
+    int32_t v11 = 5;
+    int32_t v12 = 6;
+    int32_t out = 0;
+
+    assert_int_equal(set_matrix(src, 0u, 0u, &v00), NO_ERROR);
+    assert_int_equal(set_matrix(src, 0u, 1u, &v01), NO_ERROR);
+    assert_int_equal(set_matrix(src, 0u, 2u, &v02), NO_ERROR);
+    assert_int_equal(set_matrix(src, 1u, 0u, &v10), NO_ERROR);
+    assert_int_equal(set_matrix(src, 1u, 1u, &v11), NO_ERROR);
+    assert_int_equal(set_matrix(src, 1u, 2u, &v12), NO_ERROR);
+
+    matrix_expect_t tr_r = transpose_matrix(src, alloc);
+    assert_true(tr_r.has_value);
+    assert_non_null(tr_r.u.value);
+
+    matrix_t* tr = tr_r.u.value;
+
+    assert_int_equal(tr->format, DENSE_MATRIX);
+    assert_int_equal(tr->rows, 3u);
+    assert_int_equal(tr->cols, 2u);
+    assert_int_equal(tr->dtype, INT32_TYPE);
+
+    assert_int_equal(get_matrix(tr, 0u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 1);
+    assert_int_equal(get_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 2);
+    assert_int_equal(get_matrix(tr, 2u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 3);
+
+    assert_int_equal(get_matrix(tr, 0u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 4);
+    assert_int_equal(get_matrix(tr, 1u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 5);
+    assert_int_equal(get_matrix(tr, 2u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 6);
+
+    return_matrix(src);
+    return_matrix(tr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_dense_square_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t src_r = init_dense_matrix(3u, 3u, INT32_TYPE, alloc);
+    assert_true(src_r.has_value);
+    assert_non_null(src_r.u.value);
+
+    matrix_t* src = src_r.u.value;
+
+    int32_t v1 = 10;
+    int32_t v2 = 20;
+    int32_t v3 = 30;
+    int32_t v4 = 40;
+    int32_t out = 0;
+
+    assert_int_equal(set_matrix(src, 0u, 1u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(src, 1u, 0u, &v2), NO_ERROR);
+    assert_int_equal(set_matrix(src, 1u, 2u, &v3), NO_ERROR);
+    assert_int_equal(set_matrix(src, 2u, 2u, &v4), NO_ERROR);
+
+    matrix_expect_t tr_r = transpose_matrix(src, alloc);
+    assert_true(tr_r.has_value);
+    assert_non_null(tr_r.u.value);
+
+    matrix_t* tr = tr_r.u.value;
+
+    assert_int_equal(tr->format, DENSE_MATRIX);
+    assert_int_equal(tr->rows, 3u);
+    assert_int_equal(tr->cols, 3u);
+
+    assert_int_equal(get_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 10);
+
+    assert_int_equal(get_matrix(tr, 0u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 20);
+
+    assert_int_equal(get_matrix(tr, 2u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 30);
+
+    assert_int_equal(get_matrix(tr, 2u, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 40);
+
+    return_matrix(src);
+    return_matrix(tr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_dense_twice_returns_original(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t src_r = init_dense_matrix(3u, 2u, INT32_TYPE, alloc);
+    assert_true(src_r.has_value);
+    assert_non_null(src_r.u.value);
+
+    matrix_t* src = src_r.u.value;
+
+    int32_t v1 = 10;
+    int32_t v2 = 20;
+    int32_t v3 = 30;
+    int32_t v4 = 40;
+
+    assert_int_equal(set_matrix(src, 0u, 0u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(src, 1u, 1u, &v2), NO_ERROR);
+    assert_int_equal(set_matrix(src, 2u, 0u, &v3), NO_ERROR);
+    assert_int_equal(set_matrix(src, 2u, 1u, &v4), NO_ERROR);
+
+    matrix_expect_t t1_r = transpose_matrix(src, alloc);
+    assert_true(t1_r.has_value);
+    assert_non_null(t1_r.u.value);
+
+    matrix_t* t1 = t1_r.u.value;
+
+    matrix_expect_t t2_r = transpose_matrix(t1, alloc);
+    assert_true(t2_r.has_value);
+    assert_non_null(t2_r.u.value);
+
+    matrix_t* t2 = t2_r.u.value;
+
+    assert_true(matrix_equal(src, t2));
+
+    return_matrix(src);
+    return_matrix(t1);
+    return_matrix(t2);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_coo_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t src_r = init_coo_matrix(3u, 4u, 6u, INT32_TYPE, true, alloc);
+    assert_true(src_r.has_value);
+    assert_non_null(src_r.u.value);
+
+    matrix_t* src = src_r.u.value;
+
+    int32_t v1 = 11;
+    int32_t v2 = 22;
+    int32_t v3 = 33;
+    int32_t out = 0;
+
+    assert_int_equal(push_back_coo_matrix(src, 0u, 1u, &v1), NO_ERROR);
+    assert_int_equal(push_back_coo_matrix(src, 1u, 3u, &v2), NO_ERROR);
+    assert_int_equal(push_back_coo_matrix(src, 2u, 0u, &v3), NO_ERROR);
+
+    matrix_expect_t tr_r = transpose_matrix(src, alloc);
+    assert_true(tr_r.has_value);
+    assert_non_null(tr_r.u.value);
+
+    matrix_t* tr = tr_r.u.value;
+
+    assert_int_equal(tr->format, COO_MATRIX);
+    assert_int_equal(tr->rows, 4u);
+    assert_int_equal(tr->cols, 3u);
+    assert_int_equal(tr->dtype, INT32_TYPE);
+    assert_int_equal(matrix_nnz(tr), 3u);
+
+    assert_int_equal(get_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 11);
+
+    assert_int_equal(get_matrix(tr, 3u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 22);
+
+    assert_int_equal(get_matrix(tr, 0u, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 33);
+
+    return_matrix(src);
+    return_matrix(tr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_coo_twice_returns_original(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t src_r = init_coo_matrix(4u, 3u, 6u, INT32_TYPE, true, alloc);
+    assert_true(src_r.has_value);
+    assert_non_null(src_r.u.value);
+
+    matrix_t* src = src_r.u.value;
+
+    int32_t v1 = 5;
+    int32_t v2 = 15;
+    int32_t v3 = 25;
+
+    assert_int_equal(push_back_coo_matrix(src, 0u, 2u, &v1), NO_ERROR);
+    assert_int_equal(push_back_coo_matrix(src, 2u, 1u, &v2), NO_ERROR);
+    assert_int_equal(push_back_coo_matrix(src, 3u, 0u, &v3), NO_ERROR);
+
+    matrix_expect_t t1_r = transpose_matrix(src, alloc);
+    assert_true(t1_r.has_value);
+    assert_non_null(t1_r.u.value);
+
+    matrix_t* t1 = t1_r.u.value;
+
+    matrix_expect_t t2_r = transpose_matrix(t1, alloc);
+    assert_true(t2_r.has_value);
+    assert_non_null(t2_r.u.value);
+
+    matrix_t* t2 = t2_r.u.value;
+
+    assert_true(matrix_equal(src, t2));
+
+    return_matrix(src);
+    return_matrix(t1);
+    return_matrix(t2);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_csr_returns_csc(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t dense_r = init_dense_matrix(3u, 4u, INT32_TYPE, alloc);
+    assert_true(dense_r.has_value);
+    assert_non_null(dense_r.u.value);
+
+    matrix_t* dense = dense_r.u.value;
+
+    int32_t v1 = 7;
+    int32_t v2 = 8;
+    int32_t v3 = 9;
+    int32_t out = 0;
+
+    assert_int_equal(set_matrix(dense, 0u, 1u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 1u, 3u, &v2), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 2u, 0u, &v3), NO_ERROR);
+
+    matrix_expect_t csr_r = convert_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(csr_r.has_value);
+    assert_non_null(csr_r.u.value);
+
+    matrix_t* csr = csr_r.u.value;
+
+    matrix_expect_t tr_r = transpose_matrix(csr, alloc);
+    assert_true(tr_r.has_value);
+    assert_non_null(tr_r.u.value);
+
+    matrix_t* tr = tr_r.u.value;
+
+    assert_int_equal(tr->format, CSC_MATRIX);
+    assert_int_equal(tr->rows, 4u);
+    assert_int_equal(tr->cols, 3u);
+    assert_int_equal(tr->dtype, INT32_TYPE);
+
+    assert_int_equal(get_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 7);
+
+    assert_int_equal(get_matrix(tr, 3u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 8);
+
+    assert_int_equal(get_matrix(tr, 0u, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 9);
+
+    return_matrix(dense);
+    return_matrix(csr);
+    return_matrix(tr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_csr_twice_returns_original(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t dense_r = init_dense_matrix(4u, 3u, INT32_TYPE, alloc);
+    assert_true(dense_r.has_value);
+    assert_non_null(dense_r.u.value);
+
+    matrix_t* dense = dense_r.u.value;
+
+    int32_t v1 = 2;
+    int32_t v2 = 4;
+    int32_t v3 = 6;
+
+    assert_int_equal(set_matrix(dense, 0u, 2u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 2u, 1u, &v2), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 3u, 0u, &v3), NO_ERROR);
+
+    matrix_expect_t csr_r = convert_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(csr_r.has_value);
+    assert_non_null(csr_r.u.value);
+
+    matrix_t* csr = csr_r.u.value;
+
+    matrix_expect_t t1_r = transpose_matrix(csr, alloc);
+    assert_true(t1_r.has_value);
+    assert_non_null(t1_r.u.value);
+
+    matrix_t* t1 = t1_r.u.value;
+
+    matrix_expect_t t2_r = transpose_matrix(t1, alloc);
+    assert_true(t2_r.has_value);
+    assert_non_null(t2_r.u.value);
+
+    matrix_t* t2 = t2_r.u.value;
+
+    assert_true(matrix_equal(csr, t2));
+
+    return_matrix(dense);
+    return_matrix(csr);
+    return_matrix(t1);
+    return_matrix(t2);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_csc_returns_csr(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t dense_r = init_dense_matrix(3u, 4u, INT32_TYPE, alloc);
+    assert_true(dense_r.has_value);
+    assert_non_null(dense_r.u.value);
+
+    matrix_t* dense = dense_r.u.value;
+
+    int32_t v1 = 12;
+    int32_t v2 = 24;
+    int32_t v3 = 36;
+    int32_t out = 0;
+
+    assert_int_equal(set_matrix(dense, 0u, 2u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 1u, 0u, &v2), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 2u, 3u, &v3), NO_ERROR);
+
+    matrix_expect_t csc_r = convert_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(csc_r.has_value);
+    assert_non_null(csc_r.u.value);
+
+    matrix_t* csc = csc_r.u.value;
+
+    matrix_expect_t tr_r = transpose_matrix(csc, alloc);
+    assert_true(tr_r.has_value);
+    assert_non_null(tr_r.u.value);
+
+    matrix_t* tr = tr_r.u.value;
+
+    assert_int_equal(tr->format, CSR_MATRIX);
+    assert_int_equal(tr->rows, 4u);
+    assert_int_equal(tr->cols, 3u);
+    assert_int_equal(tr->dtype, INT32_TYPE);
+
+    assert_int_equal(get_matrix(tr, 2u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 12);
+
+    assert_int_equal(get_matrix(tr, 0u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 24);
+
+    assert_int_equal(get_matrix(tr, 3u, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 36);
+
+    return_matrix(dense);
+    return_matrix(csc);
+    return_matrix(tr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_csc_twice_returns_original(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t dense_r = init_dense_matrix(4u, 3u, INT32_TYPE, alloc);
+    assert_true(dense_r.has_value);
+    assert_non_null(dense_r.u.value);
+
+    matrix_t* dense = dense_r.u.value;
+
+    int32_t v1 = 3;
+    int32_t v2 = 6;
+    int32_t v3 = 9;
+
+    assert_int_equal(set_matrix(dense, 0u, 1u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 1u, 2u, &v2), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 3u, 0u, &v3), NO_ERROR);
+
+    matrix_expect_t csc_r = convert_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(csc_r.has_value);
+    assert_non_null(csc_r.u.value);
+
+    matrix_t* csc = csc_r.u.value;
+
+    matrix_expect_t t1_r = transpose_matrix(csc, alloc);
+    assert_true(t1_r.has_value);
+    assert_non_null(t1_r.u.value);
+
+    matrix_t* t1 = t1_r.u.value;
+
+    matrix_expect_t t2_r = transpose_matrix(t1, alloc);
+    assert_true(t2_r.has_value);
+    assert_non_null(t2_r.u.value);
+
+    matrix_t* t2 = t2_r.u.value;
+
+    assert_true(matrix_equal(csc, t2));
+
+    return_matrix(dense);
+    return_matrix(csc);
+    return_matrix(t1);
+    return_matrix(t2);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_matrix_null_input(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r = transpose_matrix(NULL, alloc);
+
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+// ================================================================================
+// Additional helper method tests
+// ================================================================================
+
+static void test_zero_matrix_dense_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 3u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+
+    matrix_t* mat = r.u.value;
+
+    int32_t v1 = 10;
+    int32_t v2 = 20;
+    int32_t out = -1;
+
+    assert_int_equal(set_matrix(mat, 0u, 1u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 1u, 2u, &v2), NO_ERROR);
+
+    assert_int_equal(zero_matrix(mat), NO_ERROR);
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 3u; ++j) {
+            out = -1;
+            assert_int_equal(get_matrix(mat, i, j, &out), NO_ERROR);
+            assert_int_equal(out, 0);
+        }
+    }
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_zero_matrix_coo_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_coo_matrix(4u, 4u, 4u, INT32_TYPE, true, alloc);
+
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+
+    matrix_t* mat = r.u.value;
+
+    int32_t v1 = 11;
+    int32_t v2 = 22;
+    int32_t out = -1;
+
+    assert_int_equal(push_back_coo_matrix(mat, 0u, 1u, &v1), NO_ERROR);
+    assert_int_equal(push_back_coo_matrix(mat, 3u, 2u, &v2), NO_ERROR);
+    assert_int_equal(mat->rep.coo.nnz, 2u);
+
+    assert_int_equal(zero_matrix(mat), NO_ERROR);
+    assert_int_equal(mat->rep.coo.nnz, 0u);
+    assert_true(mat->rep.coo.sorted);
+
+    assert_int_equal(get_matrix(mat, 0u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 0);
+
+    assert_int_equal(get_matrix(mat, 3u, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 0);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_zero_matrix_csr_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t dense_r = init_dense_matrix(3u, 3u, INT32_TYPE, alloc);
+    assert_true(dense_r.has_value);
+    matrix_t* dense = dense_r.u.value;
+
+    int32_t v1 = 5;
+    int32_t v2 = 10;
+    int32_t out = -1;
+
+    assert_int_equal(set_matrix(dense, 0u, 0u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 2u, 1u, &v2), NO_ERROR);
+
+    matrix_expect_t csr_r = convert_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(csr_r.has_value);
+    matrix_t* csr = csr_r.u.value;
+
+    assert_true(csr->rep.csr.nnz > 0u);
+    assert_int_equal(zero_matrix(csr), NO_ERROR);
+    assert_int_equal(csr->rep.csr.nnz, 0u);
+
+    for (size_t i = 0u; i < csr->rows + 1u; ++i) {
+        assert_int_equal(csr->rep.csr.row_ptr[i], 0u);
+    }
+
+    assert_int_equal(get_matrix(csr, 0u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 0);
+
+    assert_int_equal(get_matrix(csr, 2u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 0);
+
+    return_matrix(dense);
+    return_matrix(csr);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_zero_matrix_csc_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t dense_r = init_dense_matrix(3u, 4u, INT32_TYPE, alloc);
+    assert_true(dense_r.has_value);
+    matrix_t* dense = dense_r.u.value;
+
+    int32_t v1 = 7;
+    int32_t v2 = 14;
+    int32_t out = -1;
+
+    assert_int_equal(set_matrix(dense, 0u, 2u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(dense, 2u, 3u, &v2), NO_ERROR);
+
+    matrix_expect_t csc_r = convert_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(csc_r.has_value);
+    matrix_t* csc = csc_r.u.value;
+
+    assert_true(csc->rep.csc.nnz > 0u);
+    assert_int_equal(zero_matrix(csc), NO_ERROR);
+    assert_int_equal(csc->rep.csc.nnz, 0u);
+
+    for (size_t i = 0u; i < csc->cols + 1u; ++i) {
+        assert_int_equal(csc->rep.csc.col_ptr[i], 0u);
+    }
+
+    assert_int_equal(get_matrix(csc, 0u, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 0);
+
+    assert_int_equal(get_matrix(csc, 2u, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 0);
+
+    return_matrix(dense);
+    return_matrix(csc);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_zero_matrix_null_input(void** state) {
+    (void)state;
+
+    assert_int_equal(zero_matrix(NULL), NULL_POINTER);
+}
+
+// ================================================================================
+// fill_matrix tests
+// ================================================================================
+
+static void test_fill_matrix_dense_nonzero_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t fill = 9;
+    int32_t out = 0;
+
+    assert_int_equal(fill_matrix(mat, &fill), NO_ERROR);
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 2u; ++j) {
+            assert_int_equal(get_matrix(mat, i, j, &out), NO_ERROR);
+            assert_int_equal(out, 9);
+        }
+    }
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_fill_matrix_dense_zero_calls_zero_behavior(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 3u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t v1 = 1;
+    int32_t v2 = 2;
+    int32_t zero = 0;
+    int32_t out = -1;
+
+    assert_int_equal(set_matrix(mat, 0u, 0u, &v1), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 1u, 2u, &v2), NO_ERROR);
+
+    assert_int_equal(fill_matrix(mat, &zero), NO_ERROR);
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 3u; ++j) {
+            assert_int_equal(get_matrix(mat, i, j, &out), NO_ERROR);
+            assert_int_equal(out, 0);
+        }
+    }
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_fill_matrix_sparse_nonzero_unavailable(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_coo_matrix(3u, 3u, 4u, INT32_TYPE, true, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t value = 5;
+
+    assert_int_equal(fill_matrix(mat, &value), OPERATION_UNAVAILABLE);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_fill_matrix_sparse_zero_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_coo_matrix(3u, 3u, 4u, INT32_TYPE, true, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t v1 = 3;
+    int32_t v2 = 6;
+    int32_t zero = 0;
+    int32_t out = -1;
+
+    assert_int_equal(push_back_coo_matrix(mat, 0u, 1u, &v1), NO_ERROR);
+    assert_int_equal(push_back_coo_matrix(mat, 2u, 2u, &v2), NO_ERROR);
+    assert_int_equal(mat->rep.coo.nnz, 2u);
+
+    assert_int_equal(fill_matrix(mat, &zero), NO_ERROR);
+    assert_int_equal(mat->rep.coo.nnz, 0u);
+
+    assert_int_equal(get_matrix(mat, 0u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 0);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_fill_matrix_null_inputs(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t value = 1;
+
+    assert_int_equal(fill_matrix(NULL, &value), NULL_POINTER);
+    assert_int_equal(fill_matrix(mat, NULL), NULL_POINTER);
+
+    return_matrix(mat);
+}
+
+// ================================================================================
+// is_zero_matrix tests
+// ================================================================================
+
+static void test_is_zero_matrix_dense_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(3u, 3u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    assert_true(is_zero_matrix(mat));
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_is_zero_matrix_dense_false(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(3u, 3u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t value = 1;
+    assert_int_equal(set_matrix(mat, 1u, 1u, &value), NO_ERROR);
+
+    assert_false(is_zero_matrix(mat));
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_is_zero_matrix_coo_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_coo_matrix(3u, 3u, 4u, INT32_TYPE, true, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    assert_true(is_zero_matrix(mat));
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_is_zero_matrix_coo_false(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_coo_matrix(3u, 3u, 4u, INT32_TYPE, true, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t value = 4;
+    assert_int_equal(push_back_coo_matrix(mat, 0u, 2u, &value), NO_ERROR);
+
+    assert_false(is_zero_matrix(mat));
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_is_zero_matrix_null_matrix(void** state) {
+    (void)state;
+
+    assert_true(is_zero_matrix(NULL));
+}
+
+// ================================================================================
+// dtype / compatibility tests
+// ================================================================================
+
+static void test_matrix_has_same_dtype_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r1 = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+    matrix_expect_t r2 = init_coo_matrix(3u, 3u, 4u, INT32_TYPE, true, alloc);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_true(matrix_has_same_dtype(r1.u.value, r2.u.value));
+
+    return_matrix(r1.u.value);
+    return_matrix(r2.u.value);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_matrix_has_same_dtype_false(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r1 = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+    matrix_expect_t r2 = init_dense_matrix(2u, 2u, FLOAT_TYPE, alloc);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_false(matrix_has_same_dtype(r1.u.value, r2.u.value));
+
+    return_matrix(r1.u.value);
+    return_matrix(r2.u.value);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_matrix_has_same_dtype_null_inputs(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    assert_false(matrix_has_same_dtype(NULL, mat));
+    assert_false(matrix_has_same_dtype(mat, NULL));
+    assert_false(matrix_has_same_dtype(NULL, NULL));
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_matrix_is_add_compatible_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r1 = init_dense_matrix(3u, 4u, INT32_TYPE, alloc);
+    matrix_expect_t r2 = init_coo_matrix(3u, 4u, 6u, INT32_TYPE, true, alloc);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_true(matrix_is_add_compatible(r1.u.value, r2.u.value));
+
+    return_matrix(r1.u.value);
+    return_matrix(r2.u.value);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_matrix_is_add_compatible_false_shape(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r1 = init_dense_matrix(3u, 4u, INT32_TYPE, alloc);
+    matrix_expect_t r2 = init_dense_matrix(4u, 3u, INT32_TYPE, alloc);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_false(matrix_is_add_compatible(r1.u.value, r2.u.value));
+
+    return_matrix(r1.u.value);
+    return_matrix(r2.u.value);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_matrix_is_add_compatible_false_dtype(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r1 = init_dense_matrix(3u, 4u, INT32_TYPE, alloc);
+    matrix_expect_t r2 = init_dense_matrix(3u, 4u, DOUBLE_TYPE, alloc);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_false(matrix_is_add_compatible(r1.u.value, r2.u.value));
+
+    return_matrix(r1.u.value);
+    return_matrix(r2.u.value);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_matrix_is_multiply_compatible_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r1 = init_dense_matrix(2u, 3u, INT32_TYPE, alloc);
+    matrix_expect_t r2 = init_dense_matrix(3u, 5u, INT32_TYPE, alloc);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_true(matrix_is_multiply_compatible(r1.u.value, r2.u.value));
+
+    return_matrix(r1.u.value);
+    return_matrix(r2.u.value);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_matrix_is_multiply_compatible_false_shape(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r1 = init_dense_matrix(2u, 4u, INT32_TYPE, alloc);
+    matrix_expect_t r2 = init_dense_matrix(3u, 5u, INT32_TYPE, alloc);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_false(matrix_is_multiply_compatible(r1.u.value, r2.u.value));
+
+    return_matrix(r1.u.value);
+    return_matrix(r2.u.value);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_matrix_is_multiply_compatible_false_dtype(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r1 = init_dense_matrix(2u, 3u, INT32_TYPE, alloc);
+    matrix_expect_t r2 = init_dense_matrix(3u, 2u, FLOAT_TYPE, alloc);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_false(matrix_is_multiply_compatible(r1.u.value, r2.u.value));
+
+    return_matrix(r1.u.value);
+    return_matrix(r2.u.value);
+}
+
+// ================================================================================
+// swap_matrix_rows tests
+// ================================================================================
+
+static void test_swap_matrix_rows_dense_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(3u, 2u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t v00 = 1, v01 = 2;
+    int32_t v10 = 3, v11 = 4;
+    int32_t v20 = 5, v21 = 6;
+    int32_t out = 0;
+
+    assert_int_equal(set_matrix(mat, 0u, 0u, &v00), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 0u, 1u, &v01), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 1u, 0u, &v10), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 1u, 1u, &v11), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 2u, 0u, &v20), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 2u, 1u, &v21), NO_ERROR);
+
+    assert_int_equal(swap_matrix_rows(mat, 0u, 2u), NO_ERROR);
+
+    assert_int_equal(get_matrix(mat, 0u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 5);
+    assert_int_equal(get_matrix(mat, 0u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 6);
+
+    assert_int_equal(get_matrix(mat, 2u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 1);
+    assert_int_equal(get_matrix(mat, 2u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 2);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_swap_matrix_rows_coo_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_coo_matrix(4u, 4u, 6u, INT32_TYPE, true, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t v1 = 10;
+    int32_t v2 = 20;
+    int32_t out = 0;
+
+    assert_int_equal(push_back_coo_matrix(mat, 0u, 1u, &v1), NO_ERROR);
+    assert_int_equal(push_back_coo_matrix(mat, 3u, 2u, &v2), NO_ERROR);
+
+    assert_int_equal(swap_matrix_rows(mat, 0u, 3u), NO_ERROR);
+
+    assert_int_equal(get_matrix(mat, 3u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 10);
+
+    assert_int_equal(get_matrix(mat, 0u, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 20);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_swap_matrix_rows_same_index_noop(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t value = 7;
+    int32_t out = 0;
+
+    assert_int_equal(set_matrix(mat, 1u, 1u, &value), NO_ERROR);
+    assert_int_equal(swap_matrix_rows(mat, 1u, 1u), NO_ERROR);
+    assert_int_equal(get_matrix(mat, 1u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 7);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_swap_matrix_rows_invalid_row(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    assert_int_equal(swap_matrix_rows(mat, 0u, 2u), OUT_OF_BOUNDS);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_swap_matrix_rows_sparse_compressed_unavailable(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t dense_r = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+    assert_true(dense_r.has_value);
+    matrix_t* dense = dense_r.u.value;
+
+    int32_t value = 1;
+    assert_int_equal(set_matrix(dense, 0u, 1u, &value), NO_ERROR);
+
+    matrix_expect_t csr_r = convert_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(csr_r.has_value);
+    matrix_t* csr = csr_r.u.value;
+
+    matrix_expect_t csc_r = convert_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(csc_r.has_value);
+    matrix_t* csc = csc_r.u.value;
+
+    assert_int_equal(swap_matrix_rows(csr, 0u, 1u), OPERATION_UNAVAILABLE);
+    assert_int_equal(swap_matrix_rows(csc, 0u, 1u), OPERATION_UNAVAILABLE);
+
+    return_matrix(dense);
+    return_matrix(csr);
+    return_matrix(csc);
+}
+
+// ================================================================================
+// swap_matrix_cols tests
+// ================================================================================
+
+static void test_swap_matrix_cols_dense_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 3u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t v00 = 1, v01 = 2, v02 = 3;
+    int32_t v10 = 4, v11 = 5, v12 = 6;
+    int32_t out = 0;
+
+    assert_int_equal(set_matrix(mat, 0u, 0u, &v00), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 0u, 1u, &v01), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 0u, 2u, &v02), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 1u, 0u, &v10), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 1u, 1u, &v11), NO_ERROR);
+    assert_int_equal(set_matrix(mat, 1u, 2u, &v12), NO_ERROR);
+
+    assert_int_equal(swap_matrix_cols(mat, 0u, 2u), NO_ERROR);
+
+    assert_int_equal(get_matrix(mat, 0u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 3);
+    assert_int_equal(get_matrix(mat, 0u, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 1);
+
+    assert_int_equal(get_matrix(mat, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 6);
+    assert_int_equal(get_matrix(mat, 1u, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 4);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_swap_matrix_cols_coo_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_coo_matrix(4u, 4u, 6u, INT32_TYPE, true, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t v1 = 10;
+    int32_t v2 = 20;
+    int32_t out = 0;
+
+    assert_int_equal(push_back_coo_matrix(mat, 1u, 0u, &v1), NO_ERROR);
+    assert_int_equal(push_back_coo_matrix(mat, 2u, 3u, &v2), NO_ERROR);
+
+    assert_int_equal(swap_matrix_cols(mat, 0u, 3u), NO_ERROR);
+
+    assert_int_equal(get_matrix(mat, 1u, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 10);
+
+    assert_int_equal(get_matrix(mat, 2u, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 20);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_swap_matrix_cols_same_index_noop(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    int32_t value = 8;
+    int32_t out = 0;
+
+    assert_int_equal(set_matrix(mat, 0u, 1u, &value), NO_ERROR);
+    assert_int_equal(swap_matrix_cols(mat, 1u, 1u), NO_ERROR);
+    assert_int_equal(get_matrix(mat, 0u, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 8);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_swap_matrix_cols_invalid_col(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    matrix_expect_t r = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    matrix_t* mat = r.u.value;
+
+    assert_int_equal(swap_matrix_cols(mat, 0u, 2u), OUT_OF_BOUNDS);
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_swap_matrix_cols_sparse_compressed_unavailable(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t dense_r = init_dense_matrix(2u, 2u, INT32_TYPE, alloc);
+    assert_true(dense_r.has_value);
+    matrix_t* dense = dense_r.u.value;
+
+    int32_t value = 1;
+    assert_int_equal(set_matrix(dense, 0u, 1u, &value), NO_ERROR);
+
+    matrix_expect_t csr_r = convert_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(csr_r.has_value);
+    matrix_t* csr = csr_r.u.value;
+
+    matrix_expect_t csc_r = convert_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(csc_r.has_value);
+    matrix_t* csc = csc_r.u.value;
+
+    assert_int_equal(swap_matrix_cols(csr, 0u, 1u), OPERATION_UNAVAILABLE);
+    assert_int_equal(swap_matrix_cols(csc, 0u, 1u), OPERATION_UNAVAILABLE);
+
+    return_matrix(dense);
+    return_matrix(csr);
+    return_matrix(csc);
+}
+
+// ================================================================================
+// init_identity_matrix tests
+// ================================================================================
+
+static void test_init_identity_matrix_int32_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r = init_identity_matrix(4u, INT32_TYPE, alloc);
+
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+
+    matrix_t* mat = r.u.value;
+    int32_t out = -1;
+
+    assert_int_equal(mat->format, DENSE_MATRIX);
+    assert_int_equal(mat->rows, 4u);
+    assert_int_equal(mat->cols, 4u);
+    assert_int_equal(mat->dtype, INT32_TYPE);
+
+    for (size_t i = 0u; i < 4u; ++i) {
+        for (size_t j = 0u; j < 4u; ++j) {
+            assert_int_equal(get_matrix(mat, i, j, &out), NO_ERROR);
+            if (i == j) {
+                assert_int_equal(out, 1);
+            } else {
+                assert_int_equal(out, 0);
+            }
+        }
+    }
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_init_identity_matrix_float_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r = init_identity_matrix(3u, FLOAT_TYPE, alloc);
+
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+
+    matrix_t* mat = r.u.value;
+    float out = -1.0f;
+
+    for (size_t i = 0u; i < 3u; ++i) {
+        for (size_t j = 0u; j < 3u; ++j) {
+            assert_int_equal(get_matrix(mat, i, j, &out), NO_ERROR);
+            if (i == j) {
+                assert_true(out == 1.0f);
+            } else {
+                assert_true(out == 0.0f);
+            }
+        }
+    }
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_init_identity_matrix_double_success(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r = init_identity_matrix(2u, DOUBLE_TYPE, alloc);
+
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+
+    matrix_t* mat = r.u.value;
+    double out = -1.0;
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 2u; ++j) {
+            assert_int_equal(get_matrix(mat, i, j, &out), NO_ERROR);
+            if (i == j) {
+                assert_true(out == 1.0);
+            } else {
+                assert_true(out == 0.0);
+            }
+        }
+    }
+
+    return_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_init_identity_matrix_invalid_size(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r = init_identity_matrix(0u, INT32_TYPE, alloc);
+
+    assert_false(r.has_value);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_init_identity_matrix_invalid_dtype(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+
+    matrix_expect_t r = init_identity_matrix(3u, UNKNOWN_TYPE, alloc);
+
+    assert_false(r.has_value);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_init_identity_matrix_null_allocator(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = {0};
+
+    matrix_expect_t r = init_identity_matrix(3u, INT32_TYPE, alloc);
+
+    assert_false(r.has_value);
+}
+// ================================================================================
 // Test runner
 // ================================================================================
 
@@ -2162,6 +3548,70 @@ const struct CMUnitTest test_matrix[] = {
     cmocka_unit_test_setup(test_convert_csc_to_coo, setup_dtype_registry),
     cmocka_unit_test_setup(test_convert_csr_to_csc, setup_dtype_registry),
     cmocka_unit_test_setup(test_convert_csc_to_csr, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_transpose_dense_rectangular_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_transpose_dense_square_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_transpose_dense_twice_returns_original, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_transpose_coo_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_transpose_coo_twice_returns_original, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_transpose_csr_returns_csc, setup_dtype_registry),
+    cmocka_unit_test_setup(test_transpose_csr_twice_returns_original, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_transpose_csc_returns_csr, setup_dtype_registry),
+    cmocka_unit_test_setup(test_transpose_csc_twice_returns_original, setup_dtype_registry),
+
+    cmocka_unit_test(test_transpose_matrix_null_input),
+
+    cmocka_unit_test_setup(test_zero_matrix_dense_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_zero_matrix_coo_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_zero_matrix_csr_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_zero_matrix_csc_success, setup_dtype_registry),
+    cmocka_unit_test(test_zero_matrix_null_input),
+
+    cmocka_unit_test_setup(test_fill_matrix_dense_nonzero_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_fill_matrix_dense_zero_calls_zero_behavior, setup_dtype_registry),
+    cmocka_unit_test_setup(test_fill_matrix_sparse_nonzero_unavailable, setup_dtype_registry),
+    cmocka_unit_test_setup(test_fill_matrix_sparse_zero_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_fill_matrix_null_inputs, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_is_zero_matrix_dense_true, setup_dtype_registry),
+    cmocka_unit_test_setup(test_is_zero_matrix_dense_false, setup_dtype_registry),
+    cmocka_unit_test_setup(test_is_zero_matrix_coo_true, setup_dtype_registry),
+    cmocka_unit_test_setup(test_is_zero_matrix_coo_false, setup_dtype_registry),
+    cmocka_unit_test(test_is_zero_matrix_null_matrix),
+
+    cmocka_unit_test_setup(test_matrix_has_same_dtype_true, setup_dtype_registry),
+    cmocka_unit_test_setup(test_matrix_has_same_dtype_false, setup_dtype_registry),
+    cmocka_unit_test_setup(test_matrix_has_same_dtype_null_inputs, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_matrix_is_add_compatible_true, setup_dtype_registry),
+    cmocka_unit_test_setup(test_matrix_is_add_compatible_false_shape, setup_dtype_registry),
+    cmocka_unit_test_setup(test_matrix_is_add_compatible_false_dtype, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_matrix_is_multiply_compatible_true, setup_dtype_registry),
+    cmocka_unit_test_setup(test_matrix_is_multiply_compatible_false_shape, setup_dtype_registry),
+    cmocka_unit_test_setup(test_matrix_is_multiply_compatible_false_dtype, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_swap_matrix_rows_dense_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_swap_matrix_rows_coo_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_swap_matrix_rows_same_index_noop, setup_dtype_registry),
+    cmocka_unit_test_setup(test_swap_matrix_rows_invalid_row, setup_dtype_registry),
+    cmocka_unit_test_setup(test_swap_matrix_rows_sparse_compressed_unavailable, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_swap_matrix_cols_dense_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_swap_matrix_cols_coo_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_swap_matrix_cols_same_index_noop, setup_dtype_registry),
+    cmocka_unit_test_setup(test_swap_matrix_cols_invalid_col, setup_dtype_registry),
+    cmocka_unit_test_setup(test_swap_matrix_cols_sparse_compressed_unavailable, setup_dtype_registry),
+
+    cmocka_unit_test_setup(test_init_identity_matrix_int32_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_init_identity_matrix_float_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_init_identity_matrix_double_success, setup_dtype_registry),
+    cmocka_unit_test_setup(test_init_identity_matrix_invalid_size, setup_dtype_registry),
+    cmocka_unit_test_setup(test_init_identity_matrix_invalid_dtype, setup_dtype_registry),
+    cmocka_unit_test(test_init_identity_matrix_null_allocator),
 
 };
 

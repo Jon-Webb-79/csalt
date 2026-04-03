@@ -213,7 +213,40 @@ const char* matrix_format_name(matrix_format_t format);
 
 bool matrix_equal(const matrix_t* a,
                   const matrix_t* b);
+// ================================================================================ 
+// ================================================================================ 
 
+// ------------------------------------------------------------------------------
+// Additional helpers
+// ------------------------------------------------------------------------------
+
+error_code_t zero_matrix(matrix_t* mat);
+
+error_code_t fill_matrix(matrix_t* mat,
+                         const void* value);
+
+bool is_zero_matrix(const matrix_t* mat);
+
+bool matrix_has_same_dtype(const matrix_t* a,
+                           const matrix_t* b);
+
+bool matrix_is_add_compatible(const matrix_t* a,
+                              const matrix_t* b);
+
+bool matrix_is_multiply_compatible(const matrix_t* a,
+                                   const matrix_t* b);
+
+error_code_t swap_matrix_rows(matrix_t* mat,
+                              size_t r1,
+                              size_t r2);
+
+error_code_t swap_matrix_cols(matrix_t* mat,
+                              size_t c1,
+                              size_t c2);
+
+matrix_expect_t init_identity_matrix(size_t n,
+                                     dtype_id_t dtype,
+                                     allocator_vtable_t alloc_v);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
