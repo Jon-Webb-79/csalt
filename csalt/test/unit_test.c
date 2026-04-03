@@ -72,6 +72,7 @@ int main(void) {
         {"Singly Linked List", test_slist, test_slist_count},
         {"Heap", test_heap, test_heap_count},
         {"AVL", test_avl, test_avl_count},
+        {"Generic Matrix", test_matrix, test_matrix_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);

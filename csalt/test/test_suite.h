@@ -238,6 +238,11 @@ extern const size_t test_heap_count;
 
 extern const struct CMUnitTest test_avl[];
 extern const size_t test_avl_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_matrix[];
+extern const size_t test_matrix_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus
