@@ -341,34 +341,139 @@ static error_code_t _reserve_coo_matrix(matrix_t* mat, size_t new_cap) {
 
 // --------------------------------------------------------------------------------
 
-static error_code_t _push_back_coo_matrix(matrix_t*    mat,
-                                          size_t       row,
-                                          size_t       col,
-                                          const void*  value) {
+static error_code_t _push_back_coo_matrix(matrix_t*   mat,
+                                          size_t      row,
+                                          size_t      col,
+                                          const void* value) {
     if (mat == NULL || value == NULL) return NULL_POINTER;
     if (mat->format != COO_MATRIX)    return ILLEGAL_STATE;
-    if (!_matrix_in_bounds(mat, row, col)) return INVALID_ARG;
+    if (!_matrix_in_bounds(mat, row, col)) return INVALID_ARG;  /* must be first */
 
     coo_matrix_t* coo = &mat->rep.coo;
 
+    /* Search for an existing entry at (row, col) and overwrite if found */
+    size_t idx = 0u;
+    bool found = coo->sorted
+        ? _coo_binary_search(mat, row, col, &idx)
+        : _coo_linear_search(mat, row, col, &idx);
+
+    if (found) {
+        memcpy(coo->values + (idx * mat->data_size), value, mat->data_size);
+        return NO_ERROR;
+    }
+
+    /* Not found — append as a new entry */
     if (coo->nnz == coo->cap) {
         if (!coo->growth) return CAPACITY_OVERFLOW;
-
         size_t new_cap = (coo->cap == 0u) ? 1u : (coo->cap * 2u);
         if (new_cap < coo->cap) return LENGTH_OVERFLOW;
-
         error_code_t r = _reserve_coo_matrix(mat, new_cap);
         if (r != NO_ERROR) return r;
     }
 
-    size_t idx = coo->nnz;
+    idx = coo->nnz;
     coo->row_idx[idx] = row;
     coo->col_idx[idx] = col;
     memcpy(coo->values + (idx * mat->data_size), value, mat->data_size);
-
     coo->nnz++;
     coo->sorted = false;
     return NO_ERROR;
+}
+// --------------------------------------------------------------------------------
+
+static size_t _coo_partition(matrix_t* mat, size_t lo, size_t hi) {
+    coo_matrix_t* coo = &mat->rep.coo;
+    size_t mid = lo + (hi - lo) / 2u;
+
+    /* Median-of-three pivot selection using (row, col) pairs */
+    size_t a_row = coo->row_idx[lo],  a_col = coo->col_idx[lo];
+    size_t b_row = coo->row_idx[mid], b_col = coo->col_idx[mid];
+    size_t c_row = coo->row_idx[hi],  c_col = coo->col_idx[hi];
+
+    int ab = _coo_compare_pair(a_row, a_col, b_row, b_col);
+    int bc = _coo_compare_pair(b_row, b_col, c_row, c_col);
+    int ac = _coo_compare_pair(a_row, a_col, c_row, c_col);
+
+    /* Swap median to hi (pivot position) */
+    size_t pivot_idx;
+    if (ab <= 0) {
+        pivot_idx = (bc <= 0) ? mid : (ac <= 0) ? hi : lo;
+    } else {
+        pivot_idx = (ac <= 0) ? lo : (bc <= 0) ? hi : mid;
+    }
+
+    if (pivot_idx != hi)
+        _coo_swap_entries(mat, pivot_idx, hi);
+
+    size_t pivot_row = coo->row_idx[hi];
+    size_t pivot_col = coo->col_idx[hi];
+    size_t i = lo;
+
+    for (size_t j = lo; j < hi; j++) {
+        if (_coo_compare_pair(coo->row_idx[j], coo->col_idx[j],
+                              pivot_row, pivot_col) < 0) {
+            _coo_swap_entries(mat, i, j);
+            i++;
+        }
+    }
+
+    _coo_swap_entries(mat, i, hi);
+    return i;
+}
+
+static void _coo_insertion_sort(matrix_t* mat, size_t lo, size_t hi) {
+    coo_matrix_t* coo = &mat->rep.coo;
+
+    for (size_t i = lo + 1u; i <= hi; i++) {
+        size_t key_row = coo->row_idx[i];
+        size_t key_col = coo->col_idx[i];
+
+        /* Stash the value bytes on the stack using a VLA */
+        uint8_t key_val[mat->data_size];
+        memcpy(key_val, coo->values + i * mat->data_size, mat->data_size);
+
+        size_t j = i;
+        while (j > lo &&
+               _coo_compare_pair(coo->row_idx[j - 1u], coo->col_idx[j - 1u],
+                                 key_row, key_col) > 0) {
+            /* Shift entry j-1 forward to j */
+            coo->row_idx[j] = coo->row_idx[j - 1u];
+            coo->col_idx[j] = coo->col_idx[j - 1u];
+            memcpy(coo->values + j * mat->data_size,
+                   coo->values + (j - 1u) * mat->data_size,
+                   mat->data_size);
+            j--;
+        }
+
+        coo->row_idx[j] = key_row;
+        coo->col_idx[j] = key_col;
+        memcpy(coo->values + j * mat->data_size, key_val, mat->data_size);
+    }
+}
+
+static void _coo_quicksort(matrix_t* mat, size_t lo, size_t hi) {
+#define COO_INSERTION_THRESHOLD 10u
+
+    while (lo < hi) {
+        if (hi - lo < COO_INSERTION_THRESHOLD) {
+            _coo_insertion_sort(mat, lo, hi);
+            break;
+        }
+
+        size_t pi = _coo_partition(mat, lo, hi);
+
+        if (pi > lo && pi - lo <= hi - pi) {
+            _coo_quicksort(mat, lo, pi - 1u);
+            lo = pi + 1u;
+        } else {
+            if (pi + 1u < hi)
+                _coo_quicksort(mat, pi + 1u, hi);
+            if (pi == 0u) break;
+            hi = pi - 1u;
+        }
+    }
+
+#undef COO_INSERTION_THRESHOLD
 }
 
 // --------------------------------------------------------------------------------
@@ -383,22 +488,37 @@ static error_code_t _sort_coo_matrix(matrix_t* mat) {
         return NO_ERROR;
     }
 
-    for (size_t i = 1u; i < coo->nnz; ++i) {
-        size_t j = i;
-        while (j > 0u) {
-            int cmp = _coo_compare_pair(coo->row_idx[j - 1u],
-                                        coo->col_idx[j - 1u],
-                                        coo->row_idx[j],
-                                        coo->col_idx[j]);
-            if (cmp <= 0) break;
-            _coo_swap_entries(mat, j - 1u, j);
-            --j;
-        }
-    }
-
+    _coo_quicksort(mat, 0u, coo->nnz - 1u);
     coo->sorted = true;
     return NO_ERROR;
 }
+
+// static error_code_t _sort_coo_matrix(matrix_t* mat) {
+//     if (mat == NULL) return NULL_POINTER;
+//     if (mat->format != COO_MATRIX) return ILLEGAL_STATE;
+//
+//     coo_matrix_t* coo = &mat->rep.coo;
+//     if (coo->nnz < 2u) {
+//         coo->sorted = true;
+//         return NO_ERROR;
+//     }
+//
+//     for (size_t i = 1u; i < coo->nnz; ++i) {
+//         size_t j = i;
+//         while (j > 0u) {
+//             int cmp = _coo_compare_pair(coo->row_idx[j - 1u],
+//                                         coo->col_idx[j - 1u],
+//                                         coo->row_idx[j],
+//                                         coo->col_idx[j]);
+//             if (cmp <= 0) break;
+//             _coo_swap_entries(mat, j - 1u, j);
+//             --j;
+//         }
+//     }
+//
+//     coo->sorted = true;
+//     return NO_ERROR;
+// }
 
 // --------------------------------------------------------------------------------
 
@@ -1386,150 +1506,283 @@ matrix_expect_t convert_matrix(const matrix_t*   src,
 }
 // -------------------------------------------------------------------------------- 
 
-static matrix_expect_t _transpose_csr_matrix(const matrix_t* src,
+static matrix_expect_t _transpose_csr_matrix(const matrix_t*    src,
                                              allocator_vtable_t alloc_v) {
-    matrix_t* dst = NULL;
-    size_t ptr_bytes = 0u;
-    size_t idx_bytes = 0u;
-    size_t val_bytes = 0u;
-
-    void_ptr_expect_t mr;
-    void_ptr_expect_t col_ptr_r;
-    void_ptr_expect_t row_idx_r;
-    void_ptr_expect_t values_r;
-
-    if (src == NULL) {
+    if (src == NULL)
         return (matrix_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    }
-    if (src->format != CSR_MATRIX) {
+    if (src->format != CSR_MATRIX)
         return (matrix_expect_t){ .has_value = false, .u.error = ILLEGAL_STATE };
-    }
-
-    mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
-    if (!mr.has_value) {
+ 
+    const csr_matrix_t* s   = &src->rep.csr;
+    const size_t        nnz = s->nnz;
+ 
+    /* Result dimensions: n x m (source cols become result rows) */
+    const size_t dst_rows = src->cols;
+    const size_t dst_cols = src->rows;
+ 
+    /* ------------------------------------------------------------------ */
+    /* Allocate the result matrix_t struct                                  */
+    /* ------------------------------------------------------------------ */
+    void_ptr_expect_t mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
+    if (!mr.has_value)
         return (matrix_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
-    }
-
-    dst = (matrix_t*)mr.u.value;
-    dst->rows = src->cols;
-    dst->cols = src->rows;
-    dst->dtype = src->dtype;
-    dst->data_size = src->data_size;
-    dst->format = CSC_MATRIX;
-    dst->alloc_v = alloc_v;
-
-    dst->rep.csc.nnz = 0u;
-    dst->rep.csc.col_ptr = NULL;
-    dst->rep.csc.row_idx = NULL;
-    dst->rep.csc.values = NULL;
-
-    ptr_bytes = (dst->cols + 1u) * sizeof(size_t); /* src->rows + 1 */
-    idx_bytes = src->rep.csr.nnz * sizeof(size_t);
-    val_bytes = src->rep.csr.nnz * src->data_size;
-
-    col_ptr_r = alloc_v.allocate(alloc_v.ctx, ptr_bytes, true);
-    row_idx_r = alloc_v.allocate(alloc_v.ctx, idx_bytes, true);
-    values_r  = alloc_v.allocate(alloc_v.ctx, val_bytes, false);
-
-    if (!col_ptr_r.has_value || !row_idx_r.has_value || !values_r.has_value) {
-        if (col_ptr_r.has_value) alloc_v.return_element(alloc_v.ctx, col_ptr_r.u.value);
-        if (row_idx_r.has_value) alloc_v.return_element(alloc_v.ctx, row_idx_r.u.value);
-        if (values_r.has_value)  alloc_v.return_element(alloc_v.ctx, values_r.u.value);
+ 
+    matrix_t* dst       = (matrix_t*)mr.u.value;
+    dst->rows           = dst_rows;
+    dst->cols           = dst_cols;
+    dst->dtype          = src->dtype;
+    dst->data_size      = src->data_size;
+    dst->format         = CSR_MATRIX;
+    dst->alloc_v        = alloc_v;
+    dst->rep.csr.nnz     = 0u;
+    dst->rep.csr.row_ptr = NULL;
+    dst->rep.csr.col_idx = NULL;
+    dst->rep.csr.values  = NULL;
+ 
+    /* ------------------------------------------------------------------ */
+    /* Allocate output arrays                                               */
+    /* row_ptr: dst_rows + 1 entries                                       */
+    /* col_idx: nnz entries                                                 */
+    /* values:  nnz * data_size bytes                                      */
+    /* ------------------------------------------------------------------ */
+    size_t row_ptr_bytes = (dst_rows + 1u) * sizeof(size_t);
+    size_t col_idx_bytes = nnz * sizeof(size_t);
+    size_t values_bytes  = nnz * src->data_size;
+ 
+    void_ptr_expect_t row_ptr_r = alloc_v.allocate(alloc_v.ctx,
+                                                   row_ptr_bytes, true);
+    if (!row_ptr_r.has_value) {
         alloc_v.return_element(alloc_v.ctx, dst);
         return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
     }
-
-    memcpy(col_ptr_r.u.value,
-           src->rep.csr.row_ptr,
-           ptr_bytes);
-
-    memcpy(row_idx_r.u.value,
-           src->rep.csr.col_idx,
-           idx_bytes);
-
-    memcpy(values_r.u.value,
-           src->rep.csr.values,
-           val_bytes);
-
-    dst->rep.csc.nnz = src->rep.csr.nnz;
-    dst->rep.csc.col_ptr = (size_t*)col_ptr_r.u.value;
-    dst->rep.csc.row_idx = (size_t*)row_idx_r.u.value;
-    dst->rep.csc.values  = (uint8_t*)values_r.u.value;
-
+ 
+    /* col_idx and values may be zero-length when nnz == 0 — guard the
+       allocation size so we never pass 0 to the allocator.               */
+    void_ptr_expect_t col_idx_r = { .has_value = true, .u.value = NULL };
+    void_ptr_expect_t values_r  = { .has_value = true, .u.value = NULL };
+ 
+    if (nnz > 0u) {
+        col_idx_r = alloc_v.allocate(alloc_v.ctx, col_idx_bytes, false);
+        if (!col_idx_r.has_value) {
+            alloc_v.return_element(alloc_v.ctx, row_ptr_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, dst);
+            return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+        }
+ 
+        values_r = alloc_v.allocate(alloc_v.ctx, values_bytes, false);
+        if (!values_r.has_value) {
+            alloc_v.return_element(alloc_v.ctx, col_idx_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, row_ptr_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, dst);
+            return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+        }
+    }
+ 
+    size_t*  row_ptr = (size_t*)row_ptr_r.u.value;
+    size_t*  col_idx = (size_t*)col_idx_r.u.value;
+    uint8_t* values  = (uint8_t*)values_r.u.value;
+ 
+    /* ------------------------------------------------------------------ */
+    /* Pass 1 — histogram: count nonzeros per source column               */
+    /* row_ptr is already zero-initialised (alloc with zeroed=true).      */
+    /* We store counts in row_ptr[1..dst_rows] then prefix-sum.           */
+    /* ------------------------------------------------------------------ */
+    for (size_t i = 0u; i < src->rows; ++i) {
+        for (size_t k = s->row_ptr[i]; k < s->row_ptr[i + 1u]; ++k) {
+            size_t j = s->col_idx[k];   /* source column = result row */
+            row_ptr[j + 1u]++;
+        }
+    }
+ 
+    /* Prefix-sum to turn counts into row start positions */
+    for (size_t j = 0u; j < dst_rows; ++j)
+        row_ptr[j + 1u] += row_ptr[j];
+ 
+    /* ------------------------------------------------------------------ */
+    /* Allocate cursor array: one size_t per result row, stack-init from  */
+    /* row_ptr[0..dst_rows-1].  We borrow a temporary allocation.         */
+    /* ------------------------------------------------------------------ */
+    if (nnz > 0u) {
+        void_ptr_expect_t cur_r = alloc_v.allocate(alloc_v.ctx,
+                                                   dst_rows * sizeof(size_t),
+                                                   false);
+        if (!cur_r.has_value) {
+            alloc_v.return_element(alloc_v.ctx, values_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, col_idx_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, row_ptr_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, dst);
+            return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+        }
+ 
+        size_t* cursor = (size_t*)cur_r.u.value;
+        for (size_t j = 0u; j < dst_rows; ++j)
+            cursor[j] = row_ptr[j];
+ 
+        /* -------------------------------------------------------------- */
+        /* Pass 2 — scatter: place each source entry into the result      */
+        /* -------------------------------------------------------------- */
+        for (size_t i = 0u; i < src->rows; ++i) {
+            for (size_t k = s->row_ptr[i]; k < s->row_ptr[i + 1u]; ++k) {
+                size_t j   = s->col_idx[k];       /* source col -> result row */
+                size_t pos = cursor[j]++;          /* next free slot in row j  */
+ 
+                col_idx[pos] = i;                  /* source row -> result col */
+                memcpy(values + pos * src->data_size,
+                       s->values + k * src->data_size,
+                       src->data_size);
+            }
+        }
+ 
+        alloc_v.return_element(alloc_v.ctx, cursor);
+    }
+ 
+    /* ------------------------------------------------------------------ */
+    /* Wire up the result                                                   */
+    /* ------------------------------------------------------------------ */
+    dst->rep.csr.nnz     = nnz;
+    dst->rep.csr.row_ptr = row_ptr;
+    dst->rep.csr.col_idx = col_idx;
+    dst->rep.csr.values  = values;
+ 
     return (matrix_expect_t){ .has_value = true, .u.value = dst };
 }
 // -------------------------------------------------------------------------------- 
 
-static matrix_expect_t _transpose_csc_matrix(const matrix_t* src,
+static matrix_expect_t _transpose_csc_matrix(const matrix_t*    src,
                                              allocator_vtable_t alloc_v) {
-    matrix_t* dst = NULL;
-    size_t ptr_bytes = 0u;
-    size_t idx_bytes = 0u;
-    size_t val_bytes = 0u;
-
-    void_ptr_expect_t mr;
-    void_ptr_expect_t row_ptr_r;
-    void_ptr_expect_t col_idx_r;
-    void_ptr_expect_t values_r;
-
-    if (src == NULL) {
+    if (src == NULL)
         return (matrix_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    }
-    if (src->format != CSC_MATRIX) {
+    if (src->format != CSC_MATRIX)
         return (matrix_expect_t){ .has_value = false, .u.error = ILLEGAL_STATE };
-    }
-
-    mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
-    if (!mr.has_value) {
+ 
+    const csc_matrix_t* s   = &src->rep.csc;
+    const size_t        nnz = s->nnz;
+ 
+    /* Result dimensions: n x m (source cols become result rows) */
+    const size_t dst_rows = src->cols;
+    const size_t dst_cols = src->rows;
+ 
+    /* ------------------------------------------------------------------ */
+    /* Allocate the result matrix_t struct                                  */
+    /* ------------------------------------------------------------------ */
+    void_ptr_expect_t mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
+    if (!mr.has_value)
         return (matrix_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
-    }
-
-    dst = (matrix_t*)mr.u.value;
-    dst->rows = src->cols;
-    dst->cols = src->rows;
-    dst->dtype = src->dtype;
-    dst->data_size = src->data_size;
-    dst->format = CSR_MATRIX;
-    dst->alloc_v = alloc_v;
-
-    dst->rep.csr.nnz = 0u;
-    dst->rep.csr.row_ptr = NULL;
-    dst->rep.csr.col_idx = NULL;
-    dst->rep.csr.values = NULL;
-
-    ptr_bytes = (dst->rows + 1u) * sizeof(size_t); /* src->cols + 1 */
-    idx_bytes = src->rep.csc.nnz * sizeof(size_t);
-    val_bytes = src->rep.csc.nnz * src->data_size;
-
-    row_ptr_r = alloc_v.allocate(alloc_v.ctx, ptr_bytes, true);
-    col_idx_r = alloc_v.allocate(alloc_v.ctx, idx_bytes, true);
-    values_r  = alloc_v.allocate(alloc_v.ctx, val_bytes, false);
-
-    if (!row_ptr_r.has_value || !col_idx_r.has_value || !values_r.has_value) {
-        if (row_ptr_r.has_value) alloc_v.return_element(alloc_v.ctx, row_ptr_r.u.value);
-        if (col_idx_r.has_value) alloc_v.return_element(alloc_v.ctx, col_idx_r.u.value);
-        if (values_r.has_value)  alloc_v.return_element(alloc_v.ctx, values_r.u.value);
+ 
+    matrix_t* dst       = (matrix_t*)mr.u.value;
+    dst->rows           = dst_rows;
+    dst->cols           = dst_cols;
+    dst->dtype          = src->dtype;
+    dst->data_size      = src->data_size;
+    dst->format         = CSC_MATRIX;
+    dst->alloc_v        = alloc_v;
+    dst->rep.csc.nnz     = 0u;
+    dst->rep.csc.col_ptr = NULL;
+    dst->rep.csc.row_idx = NULL;
+    dst->rep.csc.values  = NULL;
+ 
+    /* ------------------------------------------------------------------ */
+    /* Allocate output arrays                                               */
+    /* col_ptr: dst_cols + 1 entries  (= src->rows + 1)                   */
+    /* row_idx: nnz entries                                                 */
+    /* values:  nnz * data_size bytes                                      */
+    /* ------------------------------------------------------------------ */
+    size_t col_ptr_bytes = (dst_cols + 1u) * sizeof(size_t);
+    size_t row_idx_bytes = nnz * sizeof(size_t);
+    size_t values_bytes  = nnz * src->data_size;
+ 
+    void_ptr_expect_t col_ptr_r = alloc_v.allocate(alloc_v.ctx,
+                                                   col_ptr_bytes, true);
+    if (!col_ptr_r.has_value) {
         alloc_v.return_element(alloc_v.ctx, dst);
         return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
     }
-
-    memcpy(row_ptr_r.u.value,
-           src->rep.csc.col_ptr,
-           ptr_bytes);
-
-    memcpy(col_idx_r.u.value,
-           src->rep.csc.row_idx,
-           idx_bytes);
-
-    memcpy(values_r.u.value,
-           src->rep.csc.values,
-           val_bytes);
-
-    dst->rep.csr.nnz = src->rep.csc.nnz;
-    dst->rep.csr.row_ptr = (size_t*)row_ptr_r.u.value;
-    dst->rep.csr.col_idx = (size_t*)col_idx_r.u.value;
-    dst->rep.csr.values  = (uint8_t*)values_r.u.value;
-
+ 
+    void_ptr_expect_t row_idx_r = { .has_value = true, .u.value = NULL };
+    void_ptr_expect_t values_r  = { .has_value = true, .u.value = NULL };
+ 
+    if (nnz > 0u) {
+        row_idx_r = alloc_v.allocate(alloc_v.ctx, row_idx_bytes, false);
+        if (!row_idx_r.has_value) {
+            alloc_v.return_element(alloc_v.ctx, col_ptr_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, dst);
+            return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+        }
+ 
+        values_r = alloc_v.allocate(alloc_v.ctx, values_bytes, false);
+        if (!values_r.has_value) {
+            alloc_v.return_element(alloc_v.ctx, row_idx_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, col_ptr_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, dst);
+            return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+        }
+    }
+ 
+    size_t*  col_ptr = (size_t*)col_ptr_r.u.value;
+    size_t*  row_idx = (size_t*)row_idx_r.u.value;
+    uint8_t* values  = (uint8_t*)values_r.u.value;
+ 
+    /* ------------------------------------------------------------------ */
+    /* Pass 1 — histogram: count nonzeros per source row                  */
+    /* col_ptr is already zero-initialised.                                */
+    /* We store counts in col_ptr[1..dst_cols] then prefix-sum.           */
+    /* ------------------------------------------------------------------ */
+    for (size_t j = 0u; j < src->cols; ++j) {
+        for (size_t k = s->col_ptr[j]; k < s->col_ptr[j + 1u]; ++k) {
+            size_t i = s->row_idx[k];   /* source row = result col */
+            col_ptr[i + 1u]++;
+        }
+    }
+ 
+    /* Prefix-sum to turn counts into column start positions */
+    for (size_t i = 0u; i < dst_cols; ++i)
+        col_ptr[i + 1u] += col_ptr[i];
+ 
+    /* ------------------------------------------------------------------ */
+    /* Allocate cursor array: one size_t per result column.               */
+    /* ------------------------------------------------------------------ */
+    if (nnz > 0u) {
+        void_ptr_expect_t cur_r = alloc_v.allocate(alloc_v.ctx,
+                                                   dst_cols * sizeof(size_t),
+                                                   false);
+        if (!cur_r.has_value) {
+            alloc_v.return_element(alloc_v.ctx, values_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, row_idx_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, col_ptr_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, dst);
+            return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+        }
+ 
+        size_t* cursor = (size_t*)cur_r.u.value;
+        for (size_t i = 0u; i < dst_cols; ++i)
+            cursor[i] = col_ptr[i];
+ 
+        /* -------------------------------------------------------------- */
+        /* Pass 2 — scatter: place each source entry into the result      */
+        /* -------------------------------------------------------------- */
+        for (size_t j = 0u; j < src->cols; ++j) {
+            for (size_t k = s->col_ptr[j]; k < s->col_ptr[j + 1u]; ++k) {
+                size_t i   = s->row_idx[k];        /* source row -> result col */
+                size_t pos = cursor[i]++;           /* next free slot in col i  */
+ 
+                row_idx[pos] = j;                   /* source col -> result row */
+                memcpy(values + pos * src->data_size,
+                       s->values + k * src->data_size,
+                       src->data_size);
+            }
+        }
+ 
+        alloc_v.return_element(alloc_v.ctx, cursor);
+    }
+ 
+    /* ------------------------------------------------------------------ */
+    /* Wire up the result                                                   */
+    /* ------------------------------------------------------------------ */
+    dst->rep.csc.nnz     = nnz;
+    dst->rep.csc.col_ptr = col_ptr;
+    dst->rep.csc.row_idx = row_idx;
+    dst->rep.csc.values  = values;
+ 
     return (matrix_expect_t){ .has_value = true, .u.value = dst };
 }
 // -------------------------------------------------------------------------------- 
@@ -1721,18 +1974,39 @@ bool matrix_is_sparse(const matrix_t* mat) {
 // ================================================================================
 
 size_t matrix_storage_bytes(const matrix_t* mat) {
-    if (!mat) return 0;
+    if (!mat) return 0u;
 
     switch (mat->format) {
+
         case DENSE_MATRIX:
             return mat->rows * mat->cols * mat->data_size;
 
         case COO_MATRIX:
-            return (mat->rep.coo.cap * sizeof(size_t) * 2) +
+            /* row_idx and col_idx are each cap size_t values, plus the
+               value buffer at cap elements. Capacity rather than nnz is
+               used because this reports allocated storage, not logical
+               occupancy. */
+            return (mat->rep.coo.cap * sizeof(size_t) * 2u) +
                    (mat->rep.coo.cap * mat->data_size);
 
+        case CSR_MATRIX:
+            /* row_ptr:  (rows + 1) size_t values
+               col_idx:  nnz size_t values
+               values:   nnz elements */
+            return ((mat->rows + 1u) * sizeof(size_t)) +
+                   (mat->rep.csr.nnz * sizeof(size_t)) +
+                   (mat->rep.csr.nnz * mat->data_size);
+
+        case CSC_MATRIX:
+            /* col_ptr:  (cols + 1) size_t values
+               row_idx:  nnz size_t values
+               values:   nnz elements */
+            return ((mat->cols + 1u) * sizeof(size_t)) +
+                   (mat->rep.csc.nnz * sizeof(size_t)) +
+                   (mat->rep.csc.nnz * mat->data_size);
+
         default:
-            return 0;
+            return 0u;
     }
 }
 
@@ -1758,70 +2032,28 @@ bool matrix_equal(const matrix_t* a,
     if (!matrix_has_same_shape(a, b)) return false;
     if (a->dtype != b->dtype) return false;
 
-    uint8_t* va = (uint8_t*)malloc(a->data_size);
-    uint8_t* vb = (uint8_t*)malloc(a->data_size);
+    /*
+     * VLA buffers sized to the actual element width. data_size is
+     * guaranteed non-zero for any successfully initialised matrix_t,
+     * so no additional guard is needed. No heap or allocator
+     * involvement is required because we only ever hold one element
+     * from each matrix at a time.
+     */
+    uint8_t va[a->data_size];
+    uint8_t vb[a->data_size];
 
-    if (!va || !vb) {
-        free(va); free(vb);
-        return false;
-    }
-
-    bool equal = true;
-
-    for (size_t i = 0; i < a->rows && equal; ++i) {
-        for (size_t j = 0; j < a->cols; ++j) {
+    for (size_t i = 0u; i < a->rows; ++i) {
+        for (size_t j = 0u; j < a->cols; ++j) {
             if (get_matrix(a, i, j, va) != NO_ERROR ||
                 get_matrix(b, i, j, vb) != NO_ERROR ||
                 memcmp(va, vb, a->data_size) != 0) {
-                equal = false;
-                break;
+                return false;
             }
         }
     }
 
-    free(va);
-    free(vb);
-    return equal;
+    return true;
 }
-// -------------------------------------------------------------------------------- 
-
-error_code_t zero_matrix(matrix_t* mat) {
-    if (mat == NULL) return NULL_POINTER;
-
-    switch (mat->format) {
-
-        case DENSE_MATRIX: {
-            size_t bytes = mat->rows * mat->cols * mat->data_size;
-            memset(mat->rep.dense.data, 0, bytes);
-            return NO_ERROR;
-        }
-
-        case COO_MATRIX:
-            mat->rep.coo.nnz = 0u;
-            mat->rep.coo.sorted = true;
-            return NO_ERROR;
-
-        case CSR_MATRIX:
-            if (mat->rep.csr.row_ptr != NULL) {
-                memset(mat->rep.csr.row_ptr, 0,
-                       (mat->rows + 1u) * sizeof(size_t));
-            }
-            mat->rep.csr.nnz = 0u;
-            return NO_ERROR;
-
-        case CSC_MATRIX:
-            if (mat->rep.csc.col_ptr != NULL) {
-                memset(mat->rep.csc.col_ptr, 0,
-                       (mat->cols + 1u) * sizeof(size_t));
-            }
-            mat->rep.csc.nnz = 0u;
-            return NO_ERROR;
-
-        default:
-            return ILLEGAL_STATE;
-    }
-}
-
 // ============================================================================
 // fill_matrix
 // ============================================================================
@@ -1832,7 +2064,7 @@ error_code_t fill_matrix(matrix_t* mat,
 
     /* Zero case */
     if (_value_is_zero((const uint8_t*)value, mat->data_size)) {
-        return zero_matrix(mat);
+        return clear_matrix(mat);
     }
 
     /* Only dense supports non-zero fill */
@@ -2027,26 +2259,24 @@ error_code_t swap_matrix_cols(matrix_t* mat,
 // init_identity_matrix
 // ============================================================================
 
-matrix_expect_t init_identity_matrix(size_t n,
-                                     dtype_id_t dtype,
+matrix_expect_t init_identity_matrix(size_t             n,
+                                     dtype_id_t         dtype,
                                      allocator_vtable_t alloc_v) {
     matrix_expect_t r = init_dense_matrix(n, n, dtype, alloc_v);
     if (!r.has_value) return r;
 
     matrix_t* mat = r.u.value;
 
-    error_code_t err = zero_matrix(mat);
+    error_code_t err = clear_matrix(mat);
     if (err != NO_ERROR) {
         return_matrix(mat);
         return (matrix_expect_t){ .has_value = false, .u.error = err };
     }
 
-    uint8_t one_buf[16] = {0};
-
-    if (mat->data_size > sizeof(one_buf)) {
-        return_matrix(mat);
-        return (matrix_expect_t){ .has_value = false, .u.error = INVALID_ARG };
-    }
+    /* VLA sized to the actual element width — no fixed-size cap, no
+       INVALID_ARG rejection for large user-defined types.             */
+    uint8_t one_buf[mat->data_size];
+    memset(one_buf, 0, mat->data_size);
 
     if (dtype == FLOAT_TYPE) {
         float v = 1.0f;
@@ -2054,9 +2284,11 @@ matrix_expect_t init_identity_matrix(size_t n,
     } else if (dtype == DOUBLE_TYPE) {
         double v = 1.0;
         memcpy(one_buf, &v, sizeof(double));
+    } else if (dtype == LDOUBLE_TYPE) {
+        long double v = 1.0L;
+        memcpy(one_buf, &v, sizeof(long double));
     } else {
-        memset(one_buf, 0, mat->data_size);
-        one_buf[0] = 1;
+        one_buf[0] = 1u;
     }
 
     for (size_t i = 0u; i < n; ++i) {
@@ -2069,6 +2301,49 @@ matrix_expect_t init_identity_matrix(size_t n,
 
     return r;
 }
+
+// matrix_expect_t init_identity_matrix(size_t n,
+//                                      dtype_id_t dtype,
+//                                      allocator_vtable_t alloc_v) {
+//     matrix_expect_t r = init_dense_matrix(n, n, dtype, alloc_v);
+//     if (!r.has_value) return r;
+//
+//     matrix_t* mat = r.u.value;
+//
+//     error_code_t err = clear_matrix(mat);
+//     if (err != NO_ERROR) {
+//         return_matrix(mat);
+//         return (matrix_expect_t){ .has_value = false, .u.error = err };
+//     }
+//
+//     uint8_t one_buf[16] = {0};
+//
+//     if (mat->data_size > sizeof(one_buf)) {
+//         return_matrix(mat);
+//         return (matrix_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+//     }
+//
+//     if (dtype == FLOAT_TYPE) {
+//         float v = 1.0f;
+//         memcpy(one_buf, &v, sizeof(float));
+//     } else if (dtype == DOUBLE_TYPE) {
+//         double v = 1.0;
+//         memcpy(one_buf, &v, sizeof(double));
+//     } else {
+//         memset(one_buf, 0, mat->data_size);
+//         one_buf[0] = 1;
+//     }
+//
+//     for (size_t i = 0u; i < n; ++i) {
+//         err = set_matrix(mat, i, i, one_buf);
+//         if (err != NO_ERROR) {
+//             return_matrix(mat);
+//             return (matrix_expect_t){ .has_value = false, .u.error = err };
+//         }
+//     }
+//
+//     return r;
+// }
 // -------------------------------------------------------------------------------- 
 
 matrix_expect_t init_row_vector(size_t length,

@@ -21,6 +21,7 @@
 #include "c_allocator.h"
 #include "c_error.h"
 #include "c_dtypes.h"
+
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -432,18 +433,6 @@ const char* matrix_format_name(matrix_format_t format);
  */
 bool matrix_equal(const matrix_t* a,
                   const matrix_t* b);
-
-/**
- * @brief Reset a matrix to the logical zero matrix.
- *
- * Dense matrices are zero-filled. Sparse matrices are reset to zero logical
- * entries while preserving their allocated storage.
- *
- * @param mat  Matrix to reset.
- *
- * @return ::NO_ERROR on success or an appropriate ::error_code_t on failure.
- */
-error_code_t zero_matrix(matrix_t* mat);
 
 /**
  * @brief Fill a matrix with a single repeated value.

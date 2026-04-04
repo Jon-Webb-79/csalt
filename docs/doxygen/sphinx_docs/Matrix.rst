@@ -328,7 +328,6 @@ Structural Operations
 
 .. doxygenfunction:: clear_matrix
 
-.. doxygenfunction:: zero_matrix
 
 .. doxygenfunction:: fill_matrix
 
