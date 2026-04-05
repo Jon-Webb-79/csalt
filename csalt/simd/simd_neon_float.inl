@@ -198,6 +198,252 @@ static size_t simd_binary_search_float(const float* data,
 }
 // ================================================================================ 
 // ================================================================================ 
+// MATRIX METHODS 
+
+static inline void simd_fill_float(float* data, size_t count, float value) {
+    float32x4_t v = vdupq_n_f32(value);
+ 
+    size_t i = 0u;
+ 
+    /* ---- Unaligned head: scalar until 16-byte aligned ---- */
+    while (i < count && ((uintptr_t)(data + i) & 15u) != 0u) {
+        data[i] = value;
+        ++i;
+    }
+ 
+    /* ---- Aligned NEON body: 16 floats (4 × 128-bit) per iteration ---- */
+    size_t aligned_end = i + ((count - i) / 16u) * 16u;
+    for (; i < aligned_end; i += 16u) {
+        vst1q_f32(data + i,        v);
+        vst1q_f32(data + i + 4u,   v);
+        vst1q_f32(data + i + 8u,   v);
+        vst1q_f32(data + i + 12u,  v);
+    }
+ 
+    /* ---- Single-vector passes ---- */
+    aligned_end = i + ((count - i) / 4u) * 4u;
+    for (; i < aligned_end; i += 4u) {
+        vst1q_f32(data + i, v);
+    }
+ 
+    /* ---- Scalar tail ---- */
+    for (; i < count; ++i) {
+        data[i] = value;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+static inline void _neon_transpose_4x4(float32x4_t r0, float32x4_t r1,
+                                       float32x4_t r2, float32x4_t r3,
+                                       float32x4_t* o0, float32x4_t* o1,
+                                       float32x4_t* o2, float32x4_t* o3) {
+    /*
+     * vtrnq interleaves even/odd elements between two registers:
+     *   vtrnq(r0, r1) =>  val[0] = {r0[0],r1[0],r0[2],r1[2]}
+     *                     val[1] = {r0[1],r1[1],r0[3],r1[3]}
+     */
+    float32x4x2_t trn01 = vtrnq_f32(r0, r1);
+    float32x4x2_t trn23 = vtrnq_f32(r2, r3);
+ 
+    /*
+     * Now recombine the 64-bit halves.  We reinterpret as float64x2
+     * to use vcombine on the low/high 64-bit chunks, which swaps
+     * the second and third rows of the 4×4 block.
+     *
+     * trn01.val[0] = [a0 b0 | a2 b2]   trn23.val[0] = [c0 d0 | c2 d2]
+     * trn01.val[1] = [a1 b1 | a3 b3]   trn23.val[1] = [c1 d1 | c3 d3]
+     *
+     * We need:
+     *   o0 = [a0 b0 c0 d0]  =>  low(trn01[0])  + low(trn23[0])
+     *   o1 = [a1 b1 c1 d1]  =>  low(trn01[1])  + low(trn23[1])
+     *   o2 = [a2 b2 c2 d2]  =>  high(trn01[0]) + high(trn23[0])
+     *   o3 = [a3 b3 c3 d3]  =>  high(trn01[1]) + high(trn23[1])
+     */
+    float64x2_t a0 = vreinterpretq_f64_f32(trn01.val[0]);
+    float64x2_t a1 = vreinterpretq_f64_f32(trn01.val[1]);
+    float64x2_t b0 = vreinterpretq_f64_f32(trn23.val[0]);
+    float64x2_t b1 = vreinterpretq_f64_f32(trn23.val[1]);
+ 
+    /* vcombine_f64 joins two f64x1 scalars into an f64x2 */
+    *o0 = vreinterpretq_f32_f64(
+        vcombine_f64(vget_low_f64(a0),  vget_low_f64(b0)));
+    *o1 = vreinterpretq_f32_f64(
+        vcombine_f64(vget_low_f64(a1),  vget_low_f64(b1)));
+    *o2 = vreinterpretq_f32_f64(
+        vcombine_f64(vget_high_f64(a0), vget_high_f64(b0)));
+    *o3 = vreinterpretq_f32_f64(
+        vcombine_f64(vget_high_f64(a1), vget_high_f64(b1)));
+}
+ 
+static inline void simd_transpose_float(const float* src,
+                                        float*       dst,
+                                        size_t       src_rows,
+                                        size_t       src_cols) {
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / 4u) * 4u;
+    size_t col_body = (src_cols / 4u) * 4u;
+ 
+    /* ---- Tiled 4×4 body ---- */
+    for (i = 0u; i < row_body; i += 4u) {
+        for (j = 0u; j < col_body; j += 4u) {
+            float32x4_t r0 = vld1q_f32(src + (i + 0u) * src_cols + j);
+            float32x4_t r1 = vld1q_f32(src + (i + 1u) * src_cols + j);
+            float32x4_t r2 = vld1q_f32(src + (i + 2u) * src_cols + j);
+            float32x4_t r3 = vld1q_f32(src + (i + 3u) * src_cols + j);
+ 
+            float32x4_t o0, o1, o2, o3;
+            _neon_transpose_4x4(r0, r1, r2, r3, &o0, &o1, &o2, &o3);
+ 
+            vst1q_f32(dst + (j + 0u) * src_rows + i, o0);
+            vst1q_f32(dst + (j + 1u) * src_rows + i, o1);
+            vst1q_f32(dst + (j + 2u) * src_rows + i, o2);
+            vst1q_f32(dst + (j + 3u) * src_rows + i, o3);
+        }
+    }
+ 
+    /* ---- Remainder columns ---- */
+    for (i = 0u; i < row_body; i += 4u) {
+        for (j = col_body; j < src_cols; ++j) {
+            dst[j * src_rows + (i + 0u)] = src[(i + 0u) * src_cols + j];
+            dst[j * src_rows + (i + 1u)] = src[(i + 1u) * src_cols + j];
+            dst[j * src_rows + (i + 2u)] = src[(i + 2u) * src_cols + j];
+            dst[j * src_rows + (i + 3u)] = src[(i + 3u) * src_cols + j];
+        }
+    }
+ 
+    /* ---- Remainder rows ---- */
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_equal_float(const float* a,
+                                    const float* b,
+                                    size_t       count) {
+    size_t i = 0u;
+ 
+    /* ---- Body: 16 floats (4 × 128-bit) per iteration ---- */
+    size_t body_end = (count / 16u) * 16u;
+    for (; i < body_end; i += 16u) {
+        uint32x4_t x0 = veorq_u32(
+            vreinterpretq_u32_f32(vld1q_f32(a + i)),
+            vreinterpretq_u32_f32(vld1q_f32(b + i)));
+        uint32x4_t x1 = veorq_u32(
+            vreinterpretq_u32_f32(vld1q_f32(a + i + 4u)),
+            vreinterpretq_u32_f32(vld1q_f32(b + i + 4u)));
+        uint32x4_t x2 = veorq_u32(
+            vreinterpretq_u32_f32(vld1q_f32(a + i + 8u)),
+            vreinterpretq_u32_f32(vld1q_f32(b + i + 8u)));
+        uint32x4_t x3 = veorq_u32(
+            vreinterpretq_u32_f32(vld1q_f32(a + i + 12u)),
+            vreinterpretq_u32_f32(vld1q_f32(b + i + 12u)));
+ 
+        /* OR all XOR results */
+        uint32x4_t any = vorrq_u32(vorrq_u32(x0, x1),
+                                   vorrq_u32(x2, x3));
+ 
+        /* vmaxvq_u32: horizontal max — nonzero means mismatch */
+        if (vmaxvq_u32(any) != 0u) return false;
+    }
+ 
+    /* ---- Single-vector passes ---- */
+    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    for (; i < vec_end; i += 4u) {
+        uint32x4_t x = veorq_u32(
+            vreinterpretq_u32_f32(vld1q_f32(a + i)),
+            vreinterpretq_u32_f32(vld1q_f32(b + i)));
+ 
+        if (vmaxvq_u32(x) != 0u) return false;
+    }
+ 
+    /* ---- Scalar tail ---- */
+    for (; i < count; ++i) {
+        uint32_t va, vb;
+        memcpy(&va, a + i, sizeof(uint32_t));
+        memcpy(&vb, b + i, sizeof(uint32_t));
+        if (va != vb) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline size_t simd_count_nonzero_float(const float* data,
+                                              size_t       count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+ 
+    float32x4_t zero = vdupq_n_f32(0.0f);
+ 
+    /* ---- Body: 16 floats (4 × 128-bit) per iteration ---- */
+    size_t body_end = (count / 16u) * 16u;
+    for (; i < body_end; i += 16u) {
+        float32x4_t v0 = vld1q_f32(data + i);
+        float32x4_t v1 = vld1q_f32(data + i + 4u);
+        float32x4_t v2 = vld1q_f32(data + i + 8u);
+        float32x4_t v3 = vld1q_f32(data + i + 12u);
+ 
+        /* Fast all-zero check */
+        uint32x4_t any = vorrq_u32(
+            vorrq_u32(vreinterpretq_u32_f32(v0), vreinterpretq_u32_f32(v1)),
+            vorrq_u32(vreinterpretq_u32_f32(v2), vreinterpretq_u32_f32(v3)));
+ 
+        if (vmaxvq_u32(any) == 0u) continue;
+ 
+        /* vceqq_f32: 0xFFFFFFFF where equal to zero.
+           vmvnq_u32: invert — 0xFFFFFFFF where nonzero.
+           Shift right by 31 to get 0 or 1 per lane, then horizontal add. */
+        uint32x4_t nz0 = vshrq_n_u32(vmvnq_u32(vceqq_f32(v0, zero)), 31);
+        uint32x4_t nz1 = vshrq_n_u32(vmvnq_u32(vceqq_f32(v1, zero)), 31);
+        uint32x4_t nz2 = vshrq_n_u32(vmvnq_u32(vceqq_f32(v2, zero)), 31);
+        uint32x4_t nz3 = vshrq_n_u32(vmvnq_u32(vceqq_f32(v3, zero)), 31);
+ 
+        /* Sum all 16 lanes */
+        uint32x4_t sum = vaddq_u32(vaddq_u32(nz0, nz1),
+                                   vaddq_u32(nz2, nz3));
+        nnz += (size_t)vaddvq_u32(sum);
+    }
+ 
+    /* ---- Single-vector passes ---- */
+    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    for (; i < vec_end; i += 4u) {
+        float32x4_t v = vld1q_f32(data + i);
+        uint32x4_t nz = vshrq_n_u32(vmvnq_u32(vceqq_f32(v, vdupq_n_f32(0.0f))), 31);
+        nnz += (size_t)vaddvq_u32(nz);
+    }
+ 
+    /* ---- Scalar tail ---- */
+    for (; i < count; ++i) {
+        if (data[i] != 0.0f) ++nnz;
+    }
+ 
+    return nnz;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static inline size_t simd_scatter_csr_row_float(const float* row_data,
+                                                size_t       cols,
+                                                size_t       col_offset,
+                                                size_t*      col_idx,
+                                                float*       values,
+                                                size_t       k) {
+    for (size_t j = 0u; j < cols; ++j) {
+        if (row_data[j] != 0.0f) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+    return k;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* SIMD_NEON_FLOAT_INL */ 
 // ================================================================================ 
 // ================================================================================ 

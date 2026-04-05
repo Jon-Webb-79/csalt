@@ -20,6 +20,7 @@
 
 #include "c_array.h"
 #include "c_dict.h"
+#include "c_matrix.h"
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -1669,6 +1670,543 @@ size_t float_dict_alloc(const float_dict_t* dict);
  * @brief true if @p dict is NULL or contains no entries.
  */
 bool is_float_dict_empty(const float_dict_t* dict);
+// ================================================================================ 
+// ================================================================================ 
+
+// ================================================================================ 
+// ================================================================================ 
+// float_matrix_t — type-safe float wrapper around matrix_t
+//
+// This section provides a float-specialised interface to the generic matrix_t
+// type.  float_matrix_t is a typedef for matrix_t; all functions below fix
+// the dtype to FLOAT_TYPE and accept / return float values directly so that
+// callers never need to pass a dtype_id_t or void* value.
+//
+// The wrapper covers every public function in c_matrix.h that either:
+//   (a) takes a dtype_id_t argument (replaced with FLOAT_TYPE), or
+//   (b) takes or returns void* element pointers (replaced with float / float*).
+//
+// Functions that are already type-agnostic (matrix_rows, matrix_cols,
+// matrix_is_square, matrix_has_same_shape, etc.) are wrapped with a
+// float_matrix_t* signature for consistency, but simply delegate.
+// ================================================================================ 
+// ================================================================================ 
+
+typedef matrix_t float_matrix_t;
+
+typedef struct {
+    bool has_value;
+    union {
+        float_matrix_t* value;
+        error_code_t    error;
+    } u;
+} float_matrix_expect_t;
+
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+
+/**
+ * @brief Initialize a dense float matrix with zero-initialized storage.
+ *
+ * Creates a dense matrix of shape @p rows by @p cols with the dtype fixed to
+ * FLOAT_TYPE. All elements are initialised to zero.
+ *
+ * @param rows     Number of matrix rows. Must be > 0.
+ * @param cols     Number of matrix columns. Must be > 0.
+ * @param alloc_v  Allocator for the matrix header and data buffer.
+ *
+ * @return float_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *     float_matrix_expect_t r = init_float_dense_matrix(3, 4, a);
+ *     if (!r.has_value) { fprintf(stderr, "%d\n", r.u.error); return; }
+ *     float_matrix_t* m = r.u.value;
+ *
+ *     set_float_matrix(m, 0, 0, 1.0f);
+ *     set_float_matrix(m, 1, 2, 5.5f);
+ *
+ *     return_float_matrix(m);
+ * @endcode
+ */
+float_matrix_expect_t init_float_dense_matrix(size_t             rows,
+                                              size_t             cols,
+                                              allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize an empty COO sparse float matrix.
+ *
+ * Creates a coordinate-list sparse matrix with storage for up to @p capacity
+ * entries. The dtype is fixed to FLOAT_TYPE.
+ *
+ * @param rows      Number of matrix rows. Must be > 0.
+ * @param cols      Number of matrix columns. Must be > 0.
+ * @param capacity  Initial entry capacity. Must be > 0.
+ * @param growth    If true, the COO storage may grow when full.
+ * @param alloc_v   Allocator for the matrix header and COO buffers.
+ *
+ * @return float_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *     float_matrix_expect_t r = init_float_coo_matrix(100, 100, 16, true, a);
+ *     float_matrix_t* m = r.u.value;
+ *
+ *     push_back_float_coo_matrix(m, 0, 5, 3.14f);
+ *     push_back_float_coo_matrix(m, 42, 99, -1.0f);
+ *
+ *     return_float_matrix(m);
+ * @endcode
+ */
+float_matrix_expect_t init_float_coo_matrix(size_t             rows,
+                                            size_t             cols,
+                                            size_t             capacity,
+                                            bool               growth,
+                                            allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Release all storage owned by a float matrix.
+ *
+ * Frees internal buffers and the matrix object itself. Passing NULL is safe.
+ *
+ * @param mat  Matrix to destroy, or NULL.
+ */
+void return_float_matrix(float_matrix_t* mat);
+
+// ================================================================================
+// Element access
+// ================================================================================
+
+/**
+ * @brief Read a float element at the given row and column.
+ *
+ * For sparse formats, missing entries are returned as 0.0f.
+ *
+ * @param mat  Matrix to read from.
+ * @param row  Zero-based row index.
+ * @param col  Zero-based column index.
+ * @param out  Receives the float value. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER / INVALID_ARG / OUT_OF_BOUNDS.
+ *
+ * @code
+ *     float v = 0.0f;
+ *     get_float_matrix(m, 1, 2, &v);
+ * @endcode
+ */
+error_code_t get_float_matrix(const float_matrix_t* mat,
+                              size_t                row,
+                              size_t                col,
+                              float*                out);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Write a float element at the given row and column.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return ILLEGAL_STATE.
+ *
+ * @param mat    Matrix to modify.
+ * @param row    Zero-based row index.
+ * @param col    Zero-based column index.
+ * @param value  The float value to store.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     set_float_matrix(m, 0, 0, 42.0f);
+ * @endcode
+ */
+error_code_t set_float_matrix(float_matrix_t* mat,
+                              size_t          row,
+                              size_t          col,
+                              float           value);
+
+// ================================================================================
+// COO assembly helpers
+// ================================================================================
+
+/**
+ * @brief Reserve additional entry capacity for a float COO matrix.
+ *
+ * @param mat       COO matrix to grow.
+ * @param capacity  Requested minimum entry capacity.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t reserve_float_coo_matrix(float_matrix_t* mat,
+                                      size_t          capacity);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Append or overwrite a float entry in a COO matrix.
+ *
+ * If (row, col) already exists its value is overwritten; otherwise a new
+ * entry is appended. The matrix is marked unsorted after insertion.
+ *
+ * @param mat    COO matrix to append to.
+ * @param row    Zero-based row index.
+ * @param col    Zero-based column index.
+ * @param value  The float value to insert.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     push_back_float_coo_matrix(m, 0, 5, 3.14f);
+ * @endcode
+ */
+error_code_t push_back_float_coo_matrix(float_matrix_t* mat,
+                                        size_t          row,
+                                        size_t          col,
+                                        float           value);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Sort COO entries by (row, col).
+ *
+ * @param mat  COO matrix to sort.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t sort_float_coo_matrix(float_matrix_t* mat);
+
+// ================================================================================
+// Lifecycle / structural operations
+// ================================================================================
+
+/**
+ * @brief Clear a float matrix, preserving its allocated storage.
+ *
+ * Dense matrices are zeroed. COO matrices reset to zero logical entries.
+ *
+ * @param mat  Matrix to clear.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t clear_float_matrix(float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Deep-copy a float matrix.
+ *
+ * @param src      Matrix to copy.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return float_matrix_expect_t with has_value true on success.
+ */
+float_matrix_expect_t copy_float_matrix(const float_matrix_t* src,
+                                        allocator_vtable_t    alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Convert a float matrix to a different storage format.
+ *
+ * Produces a new matrix with the same logical values in the target format.
+ *
+ * @param src      Matrix to convert.
+ * @param target   Desired destination storage format.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return float_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     float_matrix_expect_t csr =
+ *         convert_float_matrix(dense_m, CSR_MATRIX, a);
+ * @endcode
+ */
+float_matrix_expect_t convert_float_matrix(const float_matrix_t* src,
+                                           matrix_format_t       target,
+                                           allocator_vtable_t    alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compute the transpose of a float matrix.
+ *
+ * Dense stays dense, COO stays COO, CSR transposes to CSR, CSC to CSC.
+ *
+ * @param src      Matrix to transpose.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return float_matrix_expect_t with has_value true on success.
+ */
+float_matrix_expect_t transpose_float_matrix(const float_matrix_t* src,
+                                             allocator_vtable_t    alloc_v);
+
+// ================================================================================
+// Fill and zero
+// ================================================================================
+
+/**
+ * @brief Fill a float matrix with a single repeated value.
+ *
+ * Nonzero fill is supported only for dense matrices. Supplying 0.0f resets
+ * the matrix through clear_float_matrix.
+ *
+ * @param mat    Matrix to fill.
+ * @param value  The float fill value.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     fill_float_matrix(m, 1.0f);   // every element becomes 1.0
+ *     fill_float_matrix(m, 0.0f);   // equivalent to clear
+ * @endcode
+ */
+error_code_t fill_float_matrix(float_matrix_t* mat,
+                               float           value);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Set all elements of a float matrix to zero.
+ *
+ * Equivalent to clear_float_matrix.
+ *
+ * @param mat  Matrix to zero.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t zero_float_matrix(float_matrix_t* mat);
+
+// ================================================================================
+// Introspection
+// ================================================================================
+
+/**
+ * @brief Return the number of rows.
+ * Returns 0 if @p mat is NULL.
+ */
+size_t float_matrix_rows(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the number of columns.
+ * Returns 0 if @p mat is NULL.
+ */
+size_t float_matrix_cols(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the format-dependent entry count.
+ *
+ * For dense matrices returns rows * cols. For sparse formats returns the
+ * stored entry count.
+ */
+size_t float_matrix_nnz(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the active storage format.
+ */
+matrix_format_t float_matrix_format(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the storage footprint of the matrix payload in bytes.
+ */
+size_t float_matrix_storage_bytes(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a human-readable name for the matrix's storage format.
+ */
+const char* float_matrix_format_name(const float_matrix_t* mat);
+
+// ================================================================================
+// Shape and compatibility queries
+// ================================================================================
+
+/**
+ * @brief Test whether two float matrices have identical shape.
+ */
+bool float_matrix_has_same_shape(const float_matrix_t* a,
+                                 const float_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a float matrix is square.
+ */
+bool float_matrix_is_square(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a float matrix uses a sparse representation.
+ */
+bool float_matrix_is_sparse(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a float matrix is logically all zeros.
+ */
+bool is_float_matrix_zero(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two float matrices for logical equality.
+ *
+ * Uses exact bitwise comparison of every element. Matrices must have the
+ * same shape and dtype. Different storage formats are compared element-wise
+ * through the get_matrix interface.
+ */
+bool float_matrix_equal(const float_matrix_t* a,
+                        const float_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether two float matrices are compatible for addition.
+ *
+ * Requires equal shape and equal dtype.
+ */
+bool float_matrix_is_add_compatible(const float_matrix_t* a,
+                                    const float_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether two float matrices are compatible for multiplication.
+ *
+ * Requires a->cols == b->rows and equal dtype.
+ */
+bool float_matrix_is_multiply_compatible(const float_matrix_t* a,
+                                         const float_matrix_t* b);
+
+// ================================================================================
+// Row / column swaps
+// ================================================================================
+
+/**
+ * @brief Swap two rows of a float matrix in place.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
+ *
+ * @param mat  Matrix to modify.
+ * @param r1   First zero-based row index.
+ * @param r2   Second zero-based row index.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t swap_float_matrix_rows(float_matrix_t* mat,
+                                    size_t          r1,
+                                    size_t          r2);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Swap two columns of a float matrix in place.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
+ *
+ * @param mat  Matrix to modify.
+ * @param c1   First zero-based column index.
+ * @param c2   Second zero-based column index.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t swap_float_matrix_cols(float_matrix_t* mat,
+                                    size_t          c1,
+                                    size_t          c2);
+
+// ================================================================================
+// Special matrix constructors
+// ================================================================================
+
+/**
+ * @brief Initialize a dense float identity matrix.
+ *
+ * Creates an @p n by @p n dense matrix with 1.0f on the diagonal and 0.0f
+ * elsewhere.
+ *
+ * @param n        Matrix order (rows == cols).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return float_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     float_matrix_expect_t r = init_float_identity_matrix(3, a);
+ *     // 3x3 identity matrix.
+ * @endcode
+ */
+float_matrix_expect_t init_float_identity_matrix(size_t             n,
+                                                 allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize a dense float row vector (1 x length).
+ *
+ * @param length   Vector length (number of columns).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return float_matrix_expect_t with has_value true on success.
+ */
+float_matrix_expect_t init_float_row_vector(size_t             length,
+                                            allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize a dense float column vector (length x 1).
+ *
+ * @param length   Vector length (number of rows).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return float_matrix_expect_t with has_value true on success.
+ */
+float_matrix_expect_t init_float_col_vector(size_t             length,
+                                            allocator_vtable_t alloc_v);
+
+// ================================================================================
+// Vector shape queries
+// ================================================================================
+
+/**
+ * @brief Test whether a float matrix has row-vector shape (1 x N).
+ */
+bool float_matrix_is_row_vector(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a float matrix has column-vector shape (N x 1).
+ */
+bool float_matrix_is_col_vector(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a float matrix has vector shape (row or column).
+ */
+bool float_matrix_is_vector(const float_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the logical length of a vector-shaped float matrix.
+ *
+ * For row vectors returns cols; for column vectors returns rows.
+ * Non-vector matrices return 0.
+ */
+size_t float_matrix_vector_length(const float_matrix_t* mat);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

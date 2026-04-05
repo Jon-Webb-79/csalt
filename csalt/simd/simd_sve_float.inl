@@ -204,6 +204,207 @@ static size_t simd_binary_search_float(const float* data,
 }
 // ================================================================================ 
 // ================================================================================ 
+// MATRIX METHODS
+
+static inline void simd_fill_float(float* data, size_t count, float value) {
+    svfloat32_t v = svdup_n_f32(value);
+ 
+    size_t i = 0u;
+    size_t vl = svcntw();   /* floats per vector — known at runtime */
+ 
+    /* ---- Main body: full-vector stores ---- */
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svst1_f32(svptrue_b32(), data + i, v);
+    }
+ 
+    /* ---- Predicated tail ---- */
+    if (i < count) {
+        svbool_t mask = svwhilelt_b32((uint32_t)i, (uint32_t)count);
+        svst1_f32(mask, data + i, v);
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+static inline void simd_transpose_float(const float* src,
+                                        float*       dst,
+                                        size_t       src_rows,
+                                        size_t       src_cols) {
+    /*
+     * Use a fixed tile height of 8 rows.  The tile width equals the
+     * SVE vector length in 32-bit elements.  This keeps the tile small
+     * enough for L1 while still benefiting from predicated loads.
+     */
+    const size_t vl = svcntw();
+    const size_t TILE_H = 8u;
+    const size_t TILE_W = vl;
+ 
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / TILE_H) * TILE_H;
+    size_t col_body = (src_cols / TILE_W) * TILE_W;
+ 
+    /* ---- Tiled body: TILE_H × TILE_W blocks ---- */
+    for (i = 0u; i < row_body; i += TILE_H) {
+        for (j = 0u; j < col_body; j += TILE_W) {
+            for (size_t jj = 0u; jj < TILE_W; ++jj) {
+                for (size_t ii = 0u; ii < TILE_H; ++ii) {
+                    dst[(j + jj) * src_rows + (i + ii)] =
+                        src[(i + ii) * src_cols + (j + jj)];
+                }
+            }
+        }
+    }
+ 
+    /* ---- Remainder columns (right strip) ---- */
+    for (i = 0u; i < row_body; i += TILE_H) {
+        for (j = col_body; j < src_cols; ++j) {
+            for (size_t ii = 0u; ii < TILE_H; ++ii) {
+                dst[j * src_rows + (i + ii)] =
+                    src[(i + ii) * src_cols + j];
+            }
+        }
+    }
+ 
+    /* ---- Remainder rows (bottom strip, including corner) ---- */
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_equal_float(const float* a,
+                                    const float* b,
+                                    size_t       count) {
+    size_t i = 0u;
+    size_t vl = svcntw();   /* floats per vector */
+ 
+    /* ---- Main body: full-vector checks ---- */
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svuint32_t va = svld1_u32(svptrue_b32(),
+                                  (const uint32_t*)(a + i));
+        svuint32_t vb = svld1_u32(svptrue_b32(),
+                                  (const uint32_t*)(b + i));
+ 
+        svuint32_t x = sveor_u32_z(svptrue_b32(), va, vb);
+ 
+        /* svptest_any returns true if ANY active lane in the predicate
+           result is set.  svcmpne checks which lanes of x are nonzero. */
+        svbool_t neq = svcmpne_n_u32(svptrue_b32(), x, 0u);
+        if (svptest_any(svptrue_b32(), neq)) return false;
+    }
+ 
+    /* ---- Predicated tail ---- */
+    if (i < count) {
+        svbool_t mask = svwhilelt_b32((uint32_t)i, (uint32_t)count);
+ 
+        svuint32_t va = svld1_u32(mask, (const uint32_t*)(a + i));
+        svuint32_t vb = svld1_u32(mask, (const uint32_t*)(b + i));
+ 
+        svuint32_t x = sveor_u32_z(mask, va, vb);
+ 
+        svbool_t neq = svcmpne_n_u32(mask, x, 0u);
+        if (svptest_any(mask, neq)) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline size_t simd_count_nonzero_float(const float* data,
+                                              size_t       count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+    size_t vl = svcntw();
+ 
+    /* ---- Main body ---- */
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svfloat32_t v = svld1_f32(svptrue_b32(), data + i);
+ 
+        svbool_t is_zero    = svcmpeq_n_f32(svptrue_b32(), v, 0.0f);
+        svbool_t is_nonzero = svnot_b_z(svptrue_b32(), is_zero);
+ 
+        nnz += (size_t)svcntp_b32(svptrue_b32(), is_nonzero);
+    }
+ 
+    /* ---- Predicated tail ---- */
+    if (i < count) {
+        svbool_t mask = svwhilelt_b32((uint32_t)i, (uint32_t)count);
+        svfloat32_t v = svld1_f32(mask, data + i);
+ 
+        svbool_t is_zero    = svcmpeq_n_f32(mask, v, 0.0f);
+        svbool_t is_nonzero = svnot_b_z(mask, is_zero);
+ 
+        nnz += (size_t)svcntp_b32(mask, is_nonzero);
+    }
+ 
+    return nnz;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static inline size_t simd_scatter_csr_row_float(const float* row_data,
+                                                size_t       cols,
+                                                size_t       col_offset,
+                                                size_t*      col_idx,
+                                                float*       values,
+                                                size_t       k) {
+    size_t j = 0u;
+    size_t vl = svcntw();
+ 
+    /*
+     * Stack buffer for spilling compacted column indices.
+     * SVE vectors are at most 2048 bits = 64 x 32-bit lanes.
+     */
+    uint32_t col_tmp[64];
+ 
+    /* ---- Main body ---- */
+    size_t vec_end = (cols / vl) * vl;
+    for (; j < vec_end; j += vl) {
+        svfloat32_t v = svld1_f32(svptrue_b32(), row_data + j);
+ 
+        svbool_t is_zero    = svcmpeq_n_f32(svptrue_b32(), v, 0.0f);
+        svbool_t is_nonzero = svnot_b_z(svptrue_b32(), is_zero);
+ 
+        uint32_t popcnt = (uint32_t)svcntp_b32(svptrue_b32(), is_nonzero);
+        if (popcnt == 0u) continue;
+ 
+        /* Compact nonzero values and store */
+        svfloat32_t packed_vals = svcompact_f32(is_nonzero, v);
+        svbool_t store_mask = svwhilelt_b32(0u, popcnt);
+        svst1_f32(store_mask, values + k, packed_vals);
+ 
+        /* Compact column indices and spill to stack */
+        svuint32_t col_vec = svindex_u32((uint32_t)(col_offset + j), 1u);
+        svuint32_t packed_cols = svcompact_u32(is_nonzero, col_vec);
+        svst1_u32(store_mask, col_tmp, packed_cols);
+ 
+        /* Widen uint32 -> size_t */
+        for (uint32_t n = 0u; n < popcnt; ++n) {
+            col_idx[k + n] = (size_t)col_tmp[n];
+        }
+ 
+        k += (size_t)popcnt;
+    }
+ 
+    /* ---- Scalar tail ---- */
+    for (; j < cols; ++j) {
+        if (row_data[j] != 0.0f) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+ 
+    return k;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* SIMD_SVE_FLOAT_INL */ 
 // ================================================================================ 
 // ================================================================================ 
