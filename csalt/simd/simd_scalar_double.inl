@@ -99,5 +99,104 @@ static size_t simd_binary_search_double(const double* data,
     }
     return best;
 }
+// ================================================================================ 
+// ================================================================================ 
+// MATRIX METHODS
+
+#define TRANSPOSE_TILE_SCALAR 16u
+ 
+static inline void simd_fill_double(double* data, size_t count, double value) {
+    for (size_t i = 0u; i < count; ++i) {
+        data[i] = value;
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline void simd_transpose_double(const double* src,
+                                         double*       dst,
+                                         size_t        src_rows,
+                                         size_t        src_cols) {
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / TRANSPOSE_TILE_SCALAR) * TRANSPOSE_TILE_SCALAR;
+    size_t col_body = (src_cols / TRANSPOSE_TILE_SCALAR) * TRANSPOSE_TILE_SCALAR;
+ 
+    for (i = 0u; i < row_body; i += TRANSPOSE_TILE_SCALAR) {
+        for (j = 0u; j < col_body; j += TRANSPOSE_TILE_SCALAR) {
+            for (size_t ii = i; ii < i + TRANSPOSE_TILE_SCALAR; ++ii) {
+                for (size_t jj = j; jj < j + TRANSPOSE_TILE_SCALAR; ++jj) {
+                    dst[jj * src_rows + ii] = src[ii * src_cols + jj];
+                }
+            }
+        }
+    }
+ 
+    for (i = 0u; i < row_body; i += TRANSPOSE_TILE_SCALAR) {
+        for (j = col_body; j < src_cols; ++j) {
+            for (size_t ii = i; ii < i + TRANSPOSE_TILE_SCALAR; ++ii) {
+                dst[j * src_rows + ii] = src[ii * src_cols + j];
+            }
+        }
+    }
+ 
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+ 
+#undef TRANSPOSE_TILE_SCALAR
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_equal_double(const double* a,
+                                     const double* b,
+                                     size_t        count) {
+    for (size_t i = 0u; i < count; ++i) {
+        uint64_t va, vb;
+        memcpy(&va, a + i, sizeof(uint64_t));
+        memcpy(&vb, b + i, sizeof(uint64_t));
+        if (va != vb) return false;
+    }
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_count_nonzero_double(const double* data,
+                                               size_t        count) {
+    size_t nnz = 0u;
+    for (size_t i = 0u; i < count; ++i) {
+        if (data[i] != 0.0) ++nnz;
+    }
+    return nnz;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_scatter_csr_row_double(const double* row_data,
+                                                 size_t        cols,
+                                                 size_t        col_offset,
+                                                 size_t*       col_idx,
+                                                 double*       values,
+                                                 size_t        k) {
+    for (size_t j = 0u; j < cols; ++j) {
+        if (row_data[j] != 0.0) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+    return k;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_is_all_zero_double(const double* data, size_t count) {
+    for (size_t i = 0u; i < count; ++i) {
+        if (data[i] != 0.0) return false;
+    }
+    return true;
+}
+// ================================================================================ 
+// ================================================================================ 
 
 #endif /* SIMD_SCALAR_DOUBLE_INL */

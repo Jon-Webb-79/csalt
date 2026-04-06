@@ -217,5 +217,241 @@ static size_t simd_binary_search_double(const double* data,
     }
     return best;
 }
+// ================================================================================ 
+// ================================================================================ 
 
+static inline void simd_fill_double(double* data, size_t count, double value) {
+    __m256d v = _mm256_set1_pd(value);
+    size_t i = 0u;
+ 
+    while (i < count && ((uintptr_t)(data + i) & 31u) != 0u) {
+        data[i] = value;
+        ++i;
+    }
+ 
+    size_t aligned_end = i + ((count - i) / 16u) * 16u;
+    for (; i < aligned_end; i += 16u) {
+        _mm256_store_pd(data + i,        v);
+        _mm256_store_pd(data + i + 4u,   v);
+        _mm256_store_pd(data + i + 8u,   v);
+        _mm256_store_pd(data + i + 12u,  v);
+    }
+ 
+    aligned_end = i + ((count - i) / 4u) * 4u;
+    for (; i < aligned_end; i += 4u) {
+        _mm256_store_pd(data + i, v);
+    }
+ 
+    for (; i < count; ++i) {
+        data[i] = value;
+    }
+ 
+    _mm256_zeroupper();
+}
+// -------------------------------------------------------------------------------- 
+ 
+/*
+ * 4×4 double transpose using AVX.
+ *
+ * Each __m256d holds 4 doubles as two 128-bit lanes [lo | hi].
+ * unpacklo/hi interleave within lanes, then permute2f128 swaps lanes.
+ */
+static inline void _avx_transpose_4x4d(const __m256d r[4], __m256d o[4]) {
+    __m256d t0 = _mm256_unpacklo_pd(r[0], r[1]);   /* [a0 b0 | a2 b2] */
+    __m256d t1 = _mm256_unpackhi_pd(r[0], r[1]);   /* [a1 b1 | a3 b3] */
+    __m256d t2 = _mm256_unpacklo_pd(r[2], r[3]);   /* [c0 d0 | c2 d2] */
+    __m256d t3 = _mm256_unpackhi_pd(r[2], r[3]);   /* [c1 d1 | c3 d3] */
+ 
+    o[0] = _mm256_permute2f128_pd(t0, t2, 0x20);   /* [a0 b0 c0 d0] */
+    o[1] = _mm256_permute2f128_pd(t1, t3, 0x20);   /* [a1 b1 c1 d1] */
+    o[2] = _mm256_permute2f128_pd(t0, t2, 0x31);   /* [a2 b2 c2 d2] */
+    o[3] = _mm256_permute2f128_pd(t1, t3, 0x31);   /* [a3 b3 c3 d3] */
+}
+ 
+static inline void simd_transpose_double(const double* src,
+                                         double*       dst,
+                                         size_t        src_rows,
+                                         size_t        src_cols) {
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / 4u) * 4u;
+    size_t col_body = (src_cols / 4u) * 4u;
+ 
+    for (i = 0u; i < row_body; i += 4u) {
+        for (j = 0u; j < col_body; j += 4u) {
+            __m256d r[4], o[4];
+            for (size_t k = 0u; k < 4u; ++k) {
+                r[k] = _mm256_loadu_pd(src + (i + k) * src_cols + j);
+            }
+            _avx_transpose_4x4d(r, o);
+            for (size_t k = 0u; k < 4u; ++k) {
+                _mm256_storeu_pd(dst + (j + k) * src_rows + i, o[k]);
+            }
+        }
+    }
+ 
+    for (i = 0u; i < row_body; i += 4u) {
+        for (j = col_body; j < src_cols; ++j) {
+            for (size_t k = 0u; k < 4u; ++k) {
+                dst[j * src_rows + (i + k)] = src[(i + k) * src_cols + j];
+            }
+        }
+    }
+ 
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+ 
+    _mm256_zeroupper();
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_equal_double(const double* a,
+                                     const double* b,
+                                     size_t        count) {
+    size_t i = 0u;
+ 
+    size_t body_end = (count / 16u) * 16u;
+    for (; i < body_end; i += 16u) {
+        __m256d x0 = _mm256_xor_pd(_mm256_loadu_pd(a + i),
+                                    _mm256_loadu_pd(b + i));
+        __m256d x1 = _mm256_xor_pd(_mm256_loadu_pd(a + i + 4u),
+                                    _mm256_loadu_pd(b + i + 4u));
+        __m256d x2 = _mm256_xor_pd(_mm256_loadu_pd(a + i + 8u),
+                                    _mm256_loadu_pd(b + i + 8u));
+        __m256d x3 = _mm256_xor_pd(_mm256_loadu_pd(a + i + 12u),
+                                    _mm256_loadu_pd(b + i + 12u));
+ 
+        __m256d any = _mm256_or_pd(_mm256_or_pd(x0, x1),
+                                   _mm256_or_pd(x2, x3));
+ 
+        __m128i lo = _mm_castpd_si128(_mm256_castpd256_pd128(any));
+        __m128i hi = _mm_castpd_si128(_mm256_extractf128_pd(any, 1));
+        __m128i combined = _mm_or_si128(lo, hi);
+ 
+        if (_mm_movemask_epi8(
+                _mm_cmpeq_epi8(combined, _mm_setzero_si128())) != 0xFFFF) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    for (; i < vec_end; i += 4u) {
+        __m256d x = _mm256_xor_pd(_mm256_loadu_pd(a + i),
+                                   _mm256_loadu_pd(b + i));
+ 
+        __m128i lo = _mm_castpd_si128(_mm256_castpd256_pd128(x));
+        __m128i hi = _mm_castpd_si128(_mm256_extractf128_pd(x, 1));
+        __m128i combined = _mm_or_si128(lo, hi);
+ 
+        if (_mm_movemask_epi8(
+                _mm_cmpeq_epi8(combined, _mm_setzero_si128())) != 0xFFFF) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    _mm256_zeroupper();
+ 
+    for (; i < count; ++i) {
+        uint64_t va, vb;
+        memcpy(&va, a + i, sizeof(uint64_t));
+        memcpy(&vb, b + i, sizeof(uint64_t));
+        if (va != vb) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_count_nonzero_double(const double* data,
+                                               size_t        count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+    __m256d zero = _mm256_setzero_pd();
+ 
+    size_t body_end = (count / 16u) * 16u;
+    for (; i < body_end; i += 16u) {
+        int m0 = _mm256_movemask_pd(_mm256_cmp_pd(_mm256_loadu_pd(data + i),        zero, _CMP_NEQ_UQ));
+        int m1 = _mm256_movemask_pd(_mm256_cmp_pd(_mm256_loadu_pd(data + i + 4u),   zero, _CMP_NEQ_UQ));
+        int m2 = _mm256_movemask_pd(_mm256_cmp_pd(_mm256_loadu_pd(data + i + 8u),   zero, _CMP_NEQ_UQ));
+        int m3 = _mm256_movemask_pd(_mm256_cmp_pd(_mm256_loadu_pd(data + i + 12u),  zero, _CMP_NEQ_UQ));
+ 
+        nnz += (size_t)__builtin_popcount(
+            (unsigned)(m0 | (m1 << 4) | (m2 << 8) | (m3 << 12)));
+    }
+ 
+    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    for (; i < vec_end; i += 4u) {
+        int m = _mm256_movemask_pd(_mm256_cmp_pd(_mm256_loadu_pd(data + i), zero, _CMP_NEQ_UQ));
+        nnz += (size_t)__builtin_popcount((unsigned)m);
+    }
+ 
+    _mm256_zeroupper();
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0.0) ++nnz;
+    }
+ 
+    return nnz;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_scatter_csr_row_double(const double* row_data,
+                                                 size_t        cols,
+                                                 size_t        col_offset,
+                                                 size_t*       col_idx,
+                                                 double*       values,
+                                                 size_t        k) {
+    for (size_t j = 0u; j < cols; ++j) {
+        if (row_data[j] != 0.0) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+    return k;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_is_all_zero_double(const double* data, size_t count) {
+    size_t i = 0u;
+    __m256d zero = _mm256_setzero_pd();
+ 
+    size_t body_end = (count / 16u) * 16u;
+    for (; i < body_end; i += 16u) {
+        int m0 = _mm256_movemask_pd(_mm256_cmp_pd(_mm256_loadu_pd(data + i),        zero, _CMP_NEQ_UQ));
+        int m1 = _mm256_movemask_pd(_mm256_cmp_pd(_mm256_loadu_pd(data + i + 4u),   zero, _CMP_NEQ_UQ));
+        int m2 = _mm256_movemask_pd(_mm256_cmp_pd(_mm256_loadu_pd(data + i + 8u),   zero, _CMP_NEQ_UQ));
+        int m3 = _mm256_movemask_pd(_mm256_cmp_pd(_mm256_loadu_pd(data + i + 12u),  zero, _CMP_NEQ_UQ));
+ 
+        if ((m0 | m1 | m2 | m3) != 0) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    for (; i < vec_end; i += 4u) {
+        if (_mm256_movemask_pd(_mm256_cmp_pd(
+                _mm256_loadu_pd(data + i), zero, _CMP_NEQ_UQ)) != 0) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    _mm256_zeroupper();
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0.0) return false;
+    }
+ 
+    return true;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* SIMD_AVX_DOUBLE_INL */

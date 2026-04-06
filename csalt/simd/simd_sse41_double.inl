@@ -209,5 +209,214 @@ static size_t simd_binary_search_double(const double* data,
     }
     return best;
 }
+// ================================================================================ 
+// ================================================================================ 
 
+static inline void simd_fill_double(double* data, size_t count, double value) {
+    __m128d v = _mm_set1_pd(value);
+    size_t i = 0u;
+ 
+    while (i < count && ((uintptr_t)(data + i) & 15u) != 0u) {
+        data[i] = value;
+        ++i;
+    }
+ 
+    size_t aligned_end = i + ((count - i) / 8u) * 8u;
+    for (; i < aligned_end; i += 8u) {
+        _mm_store_pd(data + i,       v);
+        _mm_store_pd(data + i + 2u,  v);
+        _mm_store_pd(data + i + 4u,  v);
+        _mm_store_pd(data + i + 6u,  v);
+    }
+ 
+    aligned_end = i + ((count - i) / 2u) * 2u;
+    for (; i < aligned_end; i += 2u) {
+        _mm_store_pd(data + i, v);
+    }
+ 
+    for (; i < count; ++i) {
+        data[i] = value;
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline void simd_transpose_double(const double* src,
+                                         double*       dst,
+                                         size_t        src_rows,
+                                         size_t        src_cols) {
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / 2u) * 2u;
+    size_t col_body = (src_cols / 2u) * 2u;
+ 
+    for (i = 0u; i < row_body; i += 2u) {
+        for (j = 0u; j < col_body; j += 2u) {
+            __m128d r0 = _mm_loadu_pd(src + (i + 0u) * src_cols + j);
+            __m128d r1 = _mm_loadu_pd(src + (i + 1u) * src_cols + j);
+ 
+            _mm_storeu_pd(dst + (j + 0u) * src_rows + i,
+                          _mm_unpacklo_pd(r0, r1));
+            _mm_storeu_pd(dst + (j + 1u) * src_rows + i,
+                          _mm_unpackhi_pd(r0, r1));
+        }
+    }
+ 
+    for (i = 0u; i < row_body; i += 2u) {
+        for (j = col_body; j < src_cols; ++j) {
+            dst[j * src_rows + (i + 0u)] = src[(i + 0u) * src_cols + j];
+            dst[j * src_rows + (i + 1u)] = src[(i + 1u) * src_cols + j];
+        }
+    }
+ 
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_equal_double(const double* a,
+                                     const double* b,
+                                     size_t        count) {
+    size_t i = 0u;
+ 
+    size_t body_end = (count / 8u) * 8u;
+    for (; i < body_end; i += 8u) {
+        __m128i x0 = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i)),
+            _mm_loadu_si128((const __m128i*)(b + i)));
+        __m128i x1 = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i + 2u)),
+            _mm_loadu_si128((const __m128i*)(b + i + 2u)));
+        __m128i x2 = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i + 4u)),
+            _mm_loadu_si128((const __m128i*)(b + i + 4u)));
+        __m128i x3 = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i + 6u)),
+            _mm_loadu_si128((const __m128i*)(b + i + 6u)));
+ 
+        __m128i any = _mm_or_si128(_mm_or_si128(x0, x1),
+                                   _mm_or_si128(x2, x3));
+ 
+        if (!_mm_testz_si128(any, any)) return false;
+    }
+ 
+    size_t vec_end = i + ((count - i) / 2u) * 2u;
+    for (; i < vec_end; i += 2u) {
+        __m128i x = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i)),
+            _mm_loadu_si128((const __m128i*)(b + i)));
+ 
+        if (!_mm_testz_si128(x, x)) return false;
+    }
+ 
+    for (; i < count; ++i) {
+        uint64_t va, vb;
+        memcpy(&va, a + i, sizeof(uint64_t));
+        memcpy(&vb, b + i, sizeof(uint64_t));
+        if (va != vb) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_count_nonzero_double(const double* data,
+                                               size_t        count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+    __m128d zero = _mm_setzero_pd();
+ 
+    size_t body_end = (count / 8u) * 8u;
+    for (; i < body_end; i += 8u) {
+        __m128d v0 = _mm_loadu_pd(data + i);
+        __m128d v1 = _mm_loadu_pd(data + i + 2u);
+        __m128d v2 = _mm_loadu_pd(data + i + 4u);
+        __m128d v3 = _mm_loadu_pd(data + i + 6u);
+ 
+        __m128d any = _mm_or_pd(_mm_or_pd(v0, v1), _mm_or_pd(v2, v3));
+        __m128i any_i = _mm_castpd_si128(any);
+        if (_mm_testz_si128(any_i, any_i)) continue;
+ 
+        int m0 = ~_mm_movemask_pd(_mm_cmpeq_pd(v0, zero)) & 0x3;
+        int m1 = ~_mm_movemask_pd(_mm_cmpeq_pd(v1, zero)) & 0x3;
+        int m2 = ~_mm_movemask_pd(_mm_cmpeq_pd(v2, zero)) & 0x3;
+        int m3 = ~_mm_movemask_pd(_mm_cmpeq_pd(v3, zero)) & 0x3;
+ 
+        nnz += (size_t)__builtin_popcount(
+            (unsigned)(m0 | (m1 << 2) | (m2 << 4) | (m3 << 6)));
+    }
+ 
+    size_t vec_end = i + ((count - i) / 2u) * 2u;
+    for (; i < vec_end; i += 2u) {
+        __m128d v = _mm_loadu_pd(data + i);
+        __m128i vi = _mm_castpd_si128(v);
+        if (_mm_testz_si128(vi, vi)) continue;
+ 
+        int m = ~_mm_movemask_pd(_mm_cmpeq_pd(v, zero)) & 0x3;
+        nnz += (size_t)__builtin_popcount((unsigned)m);
+    }
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0.0) ++nnz;
+    }
+ 
+    return nnz;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_scatter_csr_row_double(const double* row_data,
+                                                 size_t        cols,
+                                                 size_t        col_offset,
+                                                 size_t*       col_idx,
+                                                 double*       values,
+                                                 size_t        k) {
+    for (size_t j = 0u; j < cols; ++j) {
+        if (row_data[j] != 0.0) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+    return k;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_is_all_zero_double(const double* data, size_t count) {
+    size_t i = 0u;
+    __m128d zero = _mm_setzero_pd();
+ 
+    size_t body_end = (count / 8u) * 8u;
+    for (; i < body_end; i += 8u) {
+        __m128d eq0 = _mm_cmpeq_pd(_mm_loadu_pd(data + i),       zero);
+        __m128d eq1 = _mm_cmpeq_pd(_mm_loadu_pd(data + i + 2u),  zero);
+        __m128d eq2 = _mm_cmpeq_pd(_mm_loadu_pd(data + i + 4u),  zero);
+        __m128d eq3 = _mm_cmpeq_pd(_mm_loadu_pd(data + i + 6u),  zero);
+ 
+        __m128d all_eq = _mm_and_pd(_mm_and_pd(eq0, eq1),
+                                    _mm_and_pd(eq2, eq3));
+ 
+        __m128i inv = _mm_andnot_si128(_mm_castpd_si128(all_eq),
+                                       _mm_set1_epi64x(-1LL));
+        if (!_mm_testz_si128(inv, inv)) return false;
+    }
+ 
+    size_t vec_end = i + ((count - i) / 2u) * 2u;
+    for (; i < vec_end; i += 2u) {
+        __m128d eq = _mm_cmpeq_pd(_mm_loadu_pd(data + i), zero);
+        __m128i inv = _mm_andnot_si128(_mm_castpd_si128(eq),
+                                       _mm_set1_epi64x(-1LL));
+        if (!_mm_testz_si128(inv, inv)) return false;
+    }
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0.0) return false;
+    }
+ 
+    return true;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* SIMD_SSE41_DOUBLE_INL */

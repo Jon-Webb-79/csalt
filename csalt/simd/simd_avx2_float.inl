@@ -442,6 +442,53 @@ static inline size_t simd_scatter_csr_row_float(const float* row_data,
     }
     return k;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_is_all_zero_float(const float* data, size_t count) {
+    size_t i = 0u;
+ 
+    __m256 zero = _mm256_setzero_ps();
+ 
+    /* ---- Body: 32 floats per iteration ---- */
+    size_t body_end = (count / 32u) * 32u;
+    for (; i < body_end; i += 32u) {
+        __m256 nz0 = _mm256_cmp_ps(_mm256_loadu_ps(data + i),       zero, _CMP_NEQ_UQ);
+        __m256 nz1 = _mm256_cmp_ps(_mm256_loadu_ps(data + i + 8u),  zero, _CMP_NEQ_UQ);
+        __m256 nz2 = _mm256_cmp_ps(_mm256_loadu_ps(data + i + 16u), zero, _CMP_NEQ_UQ);
+        __m256 nz3 = _mm256_cmp_ps(_mm256_loadu_ps(data + i + 24u), zero, _CMP_NEQ_UQ);
+ 
+        /* OR all nonzero masks — any set bit means at least one nonzero */
+        __m256 any = _mm256_or_ps(_mm256_or_ps(nz0, nz1),
+                                  _mm256_or_ps(nz2, nz3));
+ 
+        __m256i any_i = _mm256_castps_si256(any);
+        if (!_mm256_testz_si256(any_i, any_i)) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    /* ---- Single-vector passes ---- */
+    size_t vec_end = i + ((count - i) / 8u) * 8u;
+    for (; i < vec_end; i += 8u) {
+        __m256 nz = _mm256_cmp_ps(_mm256_loadu_ps(data + i), zero, _CMP_NEQ_UQ);
+        __m256i nz_i = _mm256_castps_si256(nz);
+ 
+        if (!_mm256_testz_si256(nz_i, nz_i)) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    _mm256_zeroupper();
+ 
+    /* ---- Scalar tail ---- */
+    for (; i < count; ++i) {
+        if (data[i] != 0.0f) return false;
+    }
+ 
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* SIMD_AVX2_FLOAT_INL */ 

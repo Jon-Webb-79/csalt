@@ -442,6 +442,43 @@ static inline size_t simd_scatter_csr_row_float(const float* row_data,
     }
     return k;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_is_all_zero_float(const float* data, size_t count) {
+    size_t i = 0u;
+ 
+    float32x4_t zero = vdupq_n_f32(0.0f);
+ 
+    /* ---- Body: 16 floats (4 × 128-bit) per iteration ---- */
+    size_t body_end = (count / 16u) * 16u;
+    for (; i < body_end; i += 16u) {
+        /* Invert equality mask: 0xFFFFFFFF where nonzero */
+        uint32x4_t nz0 = vmvnq_u32(vceqq_f32(vld1q_f32(data + i),       zero));
+        uint32x4_t nz1 = vmvnq_u32(vceqq_f32(vld1q_f32(data + i + 4u),  zero));
+        uint32x4_t nz2 = vmvnq_u32(vceqq_f32(vld1q_f32(data + i + 8u),  zero));
+        uint32x4_t nz3 = vmvnq_u32(vceqq_f32(vld1q_f32(data + i + 12u), zero));
+ 
+        /* OR all masks — any set bit means nonzero element exists */
+        uint32x4_t any = vorrq_u32(vorrq_u32(nz0, nz1),
+                                   vorrq_u32(nz2, nz3));
+ 
+        if (vmaxvq_u32(any) != 0u) return false;
+    }
+ 
+    /* ---- Single-vector passes ---- */
+    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    for (; i < vec_end; i += 4u) {
+        uint32x4_t nz = vmvnq_u32(vceqq_f32(vld1q_f32(data + i), zero));
+        if (vmaxvq_u32(nz) != 0u) return false;
+    }
+ 
+    /* ---- Scalar tail ---- */
+    for (; i < count; ++i) {
+        if (data[i] != 0.0f) return false;
+    }
+ 
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* SIMD_NEON_FLOAT_INL */ 

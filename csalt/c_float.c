@@ -945,6 +945,16 @@ bool float_matrix_is_sparse(const float_matrix_t* mat) {
 // --------------------------------------------------------------------------------
 
 bool is_float_matrix_zero(const float_matrix_t* mat) {
+    if (mat == NULL) return true;
+
+    /* SIMD fast path: dense float */
+    if (mat->format == DENSE_MATRIX) {
+        const float* data = (const float*)mat->rep.dense.data;
+        size_t count = mat->rows * mat->cols;
+        return simd_is_all_zero_float(data, count);
+    }
+
+    /* Sparse formats: delegate to generic path */
     return is_zero_matrix(mat);
 }
 

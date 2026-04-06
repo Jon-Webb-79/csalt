@@ -403,6 +403,36 @@ static inline size_t simd_scatter_csr_row_float(const float* row_data,
  
     return k;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_is_all_zero_float(const float* data, size_t count) {
+    size_t i = 0u;
+    size_t vl = svcntw();
+ 
+    /* ---- Main body ---- */
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svfloat32_t v = svld1_f32(svptrue_b32(), data + i);
+ 
+        svbool_t is_zero    = svcmpeq_n_f32(svptrue_b32(), v, 0.0f);
+        svbool_t is_nonzero = svnot_b_z(svptrue_b32(), is_zero);
+ 
+        if (svptest_any(svptrue_b32(), is_nonzero)) return false;
+    }
+ 
+    /* ---- Predicated tail ---- */
+    if (i < count) {
+        svbool_t mask = svwhilelt_b32((uint32_t)i, (uint32_t)count);
+        svfloat32_t v = svld1_f32(mask, data + i);
+ 
+        svbool_t is_zero    = svcmpeq_n_f32(mask, v, 0.0f);
+        svbool_t is_nonzero = svnot_b_z(mask, is_zero);
+ 
+        if (svptest_any(mask, is_nonzero)) return false;
+    }
+ 
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* SIMD_SVE_FLOAT_INL */ 

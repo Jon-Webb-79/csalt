@@ -600,7 +600,443 @@ size_t double_dict_alloc(const double_dict_t* dict) {
 bool is_double_dict_empty(const double_dict_t* dict) {
     return is_dict_empty(dict);
 }
+// ================================================================================ 
+// ================================================================================ 
 
+static inline double_matrix_expect_t _wrap_double_matrix_expect(matrix_expect_t e) {
+    if (e.has_value) {
+        return (double_matrix_expect_t){
+            .has_value = true,
+            .u.value   = (double_matrix_t*)e.u.value
+        };
+    }
+    return (double_matrix_expect_t){
+        .has_value = false,
+        .u.error   = e.u.error
+    };
+}
+ 
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+ 
+double_matrix_expect_t init_double_dense_matrix(size_t             rows,
+                                                size_t             cols,
+                                                allocator_vtable_t alloc_v) {
+    return _wrap_double_matrix_expect(
+        init_dense_matrix(rows, cols, DOUBLE_TYPE, alloc_v)
+    );
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+double_matrix_expect_t init_double_coo_matrix(size_t             rows,
+                                              size_t             cols,
+                                              size_t             capacity,
+                                              bool               growth,
+                                              allocator_vtable_t alloc_v) {
+    return _wrap_double_matrix_expect(
+        init_coo_matrix(rows, cols, capacity, DOUBLE_TYPE, growth, alloc_v)
+    );
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+void return_double_matrix(double_matrix_t* mat) {
+    return_matrix(mat);
+}
+ 
+// ================================================================================
+// Element access
+// ================================================================================
+ 
+error_code_t get_double_matrix(const double_matrix_t* mat,
+                               size_t                 row,
+                               size_t                 col,
+                               double*                out) {
+    if (mat == NULL || out == NULL) return NULL_POINTER;
+    return get_matrix(mat, row, col, out);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t set_double_matrix(double_matrix_t* mat,
+                               size_t           row,
+                               size_t           col,
+                               double           value) {
+    if (mat == NULL) return NULL_POINTER;
+    return set_matrix(mat, row, col, &value);
+}
+ 
+// ================================================================================
+// COO assembly helpers
+// ================================================================================
+ 
+error_code_t reserve_double_coo_matrix(double_matrix_t* mat,
+                                       size_t           capacity) {
+    return reserve_coo_matrix(mat, capacity);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t push_back_double_coo_matrix(double_matrix_t* mat,
+                                         size_t           row,
+                                         size_t           col,
+                                         double           value) {
+    if (mat == NULL) return NULL_POINTER;
+    return push_back_coo_matrix(mat, row, col, &value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t sort_double_coo_matrix(double_matrix_t* mat) {
+    return sort_coo_matrix(mat);
+}
+ 
+// ================================================================================
+// Lifecycle / structural operations
+// ================================================================================
+ 
+error_code_t clear_double_matrix(double_matrix_t* mat) {
+    return clear_matrix(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+double_matrix_expect_t copy_double_matrix(const double_matrix_t* src,
+                                          allocator_vtable_t     alloc_v) {
+    return _wrap_double_matrix_expect(copy_matrix(src, alloc_v));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+double_matrix_expect_t convert_double_matrix(const double_matrix_t* src,
+                                             matrix_format_t        target,
+                                             allocator_vtable_t     alloc_v) {
+    if (src == NULL) {
+        return (double_matrix_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+ 
+    /* SIMD fast path: dense double → CSR */
+    if (src->format == DENSE_MATRIX && target == CSR_MATRIX) {
+        const double* data = (const double*)src->rep.dense.data;
+        size_t total = src->rows * src->cols;
+ 
+        /* Pass 1: count nonzeros (SIMD-accelerated) */
+        size_t nnz = simd_count_nonzero_double(data, total);
+ 
+        /* Allocate the matrix_t header */
+        void_ptr_expect_t mr = alloc_v.allocate(
+            alloc_v.ctx, sizeof(matrix_t), true);
+        if (!mr.has_value) {
+            return (double_matrix_expect_t){
+                .has_value = false, .u.error = BAD_ALLOC };
+        }
+ 
+        double_matrix_t* dst = (double_matrix_t*)mr.u.value;
+ 
+        dst->rows      = src->rows;
+        dst->cols      = src->cols;
+        dst->dtype     = DOUBLE_TYPE;
+        dst->data_size = sizeof(double);
+        dst->format    = CSR_MATRIX;
+        dst->alloc_v   = alloc_v;
+ 
+        dst->rep.csr.nnz     = 0u;
+        dst->rep.csr.row_ptr = NULL;
+        dst->rep.csr.col_idx = NULL;
+        dst->rep.csr.values  = NULL;
+ 
+        /* Allocate CSR arrays */
+        size_t row_ptr_bytes = (src->rows + 1u) * sizeof(size_t);
+        size_t col_idx_bytes = nnz * sizeof(size_t);
+        size_t values_bytes  = nnz * sizeof(double);
+ 
+        void_ptr_expect_t rp_r = alloc_v.allocate(
+            alloc_v.ctx, row_ptr_bytes, true);
+        void_ptr_expect_t ci_r = alloc_v.allocate(
+            alloc_v.ctx, (nnz > 0u) ? col_idx_bytes : 1u, true);
+        void_ptr_expect_t vl_r = alloc_v.allocate(
+            alloc_v.ctx, (nnz > 0u) ? values_bytes : 1u, true);
+ 
+        if (!rp_r.has_value || !ci_r.has_value || !vl_r.has_value) {
+            if (rp_r.has_value) alloc_v.return_element(alloc_v.ctx, rp_r.u.value);
+            if (ci_r.has_value) alloc_v.return_element(alloc_v.ctx, ci_r.u.value);
+            if (vl_r.has_value) alloc_v.return_element(alloc_v.ctx, vl_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, dst);
+            return (double_matrix_expect_t){
+                .has_value = false, .u.error = OUT_OF_MEMORY };
+        }
+ 
+        size_t* row_ptr = (size_t*)rp_r.u.value;
+        size_t* col_idx = (size_t*)ci_r.u.value;
+        double* values  = (double*)vl_r.u.value;
+ 
+        /* Pass 2: scatter nonzeros into CSR arrays (SIMD where available) */
+        row_ptr[0] = 0u;
+        size_t k = 0u;
+ 
+        for (size_t i = 0u; i < src->rows; ++i) {
+            const double* row_data = data + (i * src->cols);
+            k = simd_scatter_csr_row_double(
+                row_data, src->cols, 0u, col_idx, values, k);
+            row_ptr[i + 1u] = k;
+        }
+ 
+        dst->rep.csr.nnz     = nnz;
+        dst->rep.csr.row_ptr = row_ptr;
+        dst->rep.csr.col_idx = col_idx;
+        dst->rep.csr.values  = (uint8_t*)values;
+ 
+        return (double_matrix_expect_t){
+            .has_value = true, .u.value = dst };
+    }
+ 
+    /* All other conversions: delegate to generic path */
+    return _wrap_double_matrix_expect(convert_matrix(src, target, alloc_v));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+double_matrix_expect_t transpose_double_matrix(const double_matrix_t* src,
+                                               allocator_vtable_t     alloc_v) {
+    if (src == NULL) {
+        return (double_matrix_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+ 
+    /* Non-dense formats: delegate to the generic path */
+    if (src->format != DENSE_MATRIX) {
+        return _wrap_double_matrix_expect(transpose_matrix(src, alloc_v));
+    }
+ 
+    /* Allocate destination dense matrix with transposed dimensions */
+    double_matrix_expect_t r = init_double_dense_matrix(
+        src->cols, src->rows, alloc_v
+    );
+    if (!r.has_value) return r;
+ 
+    /* SIMD fast path: dense double transpose */
+    const double* sdata = (const double*)src->rep.dense.data;
+    double*       ddata = (double*)r.u.value->rep.dense.data;
+    simd_transpose_double(sdata, ddata, src->rows, src->cols);
+ 
+    return r;
+}
+ 
+// ================================================================================
+// Fill and zero
+// ================================================================================
+ 
+error_code_t fill_double_matrix(double_matrix_t* mat,
+                                double           value) {
+    if (mat == NULL) return NULL_POINTER;
+ 
+    /* Zero fill: delegate to clear_matrix for all formats */
+    if (value == 0.0) return clear_matrix(mat);
+ 
+    /* Non-zero fill on non-dense: fall back to generic path */
+    if (mat->format != DENSE_MATRIX) return fill_matrix(mat, &value);
+ 
+    /* SIMD fast path: dense double fill */
+    double* data = (double*)mat->rep.dense.data;
+    size_t count = mat->rows * mat->cols;
+    simd_fill_double(data, count, value);
+    return NO_ERROR;
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t zero_double_matrix(double_matrix_t* mat) {
+    return clear_matrix(mat);
+}
+ 
+// ================================================================================
+// Introspection
+// ================================================================================
+ 
+size_t double_matrix_rows(const double_matrix_t* mat) {
+    return matrix_rows(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_t double_matrix_cols(const double_matrix_t* mat) {
+    return matrix_cols(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_t double_matrix_nnz(const double_matrix_t* mat) {
+    return matrix_nnz(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+matrix_format_t double_matrix_format(const double_matrix_t* mat) {
+    return matrix_format(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_t double_matrix_storage_bytes(const double_matrix_t* mat) {
+    return matrix_storage_bytes(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+const char* double_matrix_format_name(const double_matrix_t* mat) {
+    if (mat == NULL) return "UNKNOWN_MATRIX_FORMAT";
+    return matrix_format_name(mat->format);
+}
+ 
+// ================================================================================
+// Shape and compatibility queries
+// ================================================================================
+ 
+bool double_matrix_has_same_shape(const double_matrix_t* a,
+                                  const double_matrix_t* b) {
+    return matrix_has_same_shape(a, b);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool double_matrix_is_square(const double_matrix_t* mat) {
+    return matrix_is_square(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool double_matrix_is_sparse(const double_matrix_t* mat) {
+    return matrix_is_sparse(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool is_double_matrix_zero(const double_matrix_t* mat) {
+    if (mat == NULL) return true;
+ 
+    /* SIMD fast path: dense double — linear scan with early exit */
+    if (mat->format == DENSE_MATRIX) {
+        const double* data = (const double*)mat->rep.dense.data;
+        size_t count = mat->rows * mat->cols;
+        return simd_is_all_zero_double(data, count);
+    }
+ 
+    /* Sparse formats: delegate (just checks nnz == 0) */
+    return is_zero_matrix(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool double_matrix_equal(const double_matrix_t* a,
+                         const double_matrix_t* b) {
+    if (a == NULL || b == NULL) return false;
+    if (!matrix_has_same_shape(a, b)) return false;
+    if (a->dtype != b->dtype) return false;
+ 
+    /* SIMD fast path: both dense double matrices — flat linear comparison */
+    if (a->format == DENSE_MATRIX && b->format == DENSE_MATRIX) {
+        const double* da = (const double*)a->rep.dense.data;
+        const double* db = (const double*)b->rep.dense.data;
+        return simd_equal_double(da, db, a->rows * a->cols);
+    }
+ 
+    /* Mixed/sparse formats: fall back to generic element-wise comparison */
+    return matrix_equal(a, b);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool double_matrix_is_add_compatible(const double_matrix_t* a,
+                                     const double_matrix_t* b) {
+    return matrix_is_add_compatible(a, b);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool double_matrix_is_multiply_compatible(const double_matrix_t* a,
+                                          const double_matrix_t* b) {
+    return matrix_is_multiply_compatible(a, b);
+}
+ 
+// ================================================================================
+// Row / column swaps
+// ================================================================================
+ 
+error_code_t swap_double_matrix_rows(double_matrix_t* mat,
+                                     size_t           r1,
+                                     size_t           r2) {
+    return swap_matrix_rows(mat, r1, r2);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+error_code_t swap_double_matrix_cols(double_matrix_t* mat,
+                                     size_t           c1,
+                                     size_t           c2) {
+    return swap_matrix_cols(mat, c1, c2);
+}
+ 
+// ================================================================================
+// Special matrix constructors
+// ================================================================================
+ 
+double_matrix_expect_t init_double_identity_matrix(size_t             n,
+                                                   allocator_vtable_t alloc_v) {
+    return _wrap_double_matrix_expect(
+        init_identity_matrix(n, DOUBLE_TYPE, alloc_v)
+    );
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+double_matrix_expect_t init_double_row_vector(size_t             length,
+                                              allocator_vtable_t alloc_v) {
+    return _wrap_double_matrix_expect(
+        init_row_vector(length, DOUBLE_TYPE, alloc_v)
+    );
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+double_matrix_expect_t init_double_col_vector(size_t             length,
+                                              allocator_vtable_t alloc_v) {
+    return _wrap_double_matrix_expect(
+        init_col_vector(length, DOUBLE_TYPE, alloc_v)
+    );
+}
+ 
+// ================================================================================
+// Vector shape queries
+// ================================================================================
+ 
+bool double_matrix_is_row_vector(const double_matrix_t* mat) {
+    return matrix_is_row_vector(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool double_matrix_is_col_vector(const double_matrix_t* mat) {
+    return matrix_is_col_vector(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+bool double_matrix_is_vector(const double_matrix_t* mat) {
+    return matrix_is_vector(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+size_t double_matrix_vector_length(const double_matrix_t* mat) {
+    return matrix_vector_length(mat);
+}
 // ================================================================================
 // ================================================================================
 // eof

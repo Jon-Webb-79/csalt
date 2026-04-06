@@ -392,6 +392,35 @@ static inline size_t simd_scatter_csr_row_float(const float* row_data,
     }
     return k;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_is_all_zero_float(const float* data, size_t count) {
+    size_t i = 0u;
+ 
+    __m128 zero = _mm_setzero_ps();
+ 
+    size_t body_end = (count / 16u) * 16u;
+    for (; i < body_end; i += 16u) {
+        int m0 = _mm_movemask_ps(_mm_cmpeq_ps(_mm_loadu_ps(data + i),       zero));
+        int m1 = _mm_movemask_ps(_mm_cmpeq_ps(_mm_loadu_ps(data + i + 4u),  zero));
+        int m2 = _mm_movemask_ps(_mm_cmpeq_ps(_mm_loadu_ps(data + i + 8u),  zero));
+        int m3 = _mm_movemask_ps(_mm_cmpeq_ps(_mm_loadu_ps(data + i + 12u), zero));
+ 
+        if ((m0 & m1 & m2 & m3) != 0xF) return false;
+    }
+ 
+    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    for (; i < vec_end; i += 4u) {
+        if (_mm_movemask_ps(_mm_cmpeq_ps(
+                _mm_loadu_ps(data + i), zero)) != 0xF) return false;
+    }
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0.0f) return false;
+    }
+ 
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* SIMD_SSE3_FLOAT_INL */ 

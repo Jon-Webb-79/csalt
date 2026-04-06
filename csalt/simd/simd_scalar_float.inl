@@ -211,6 +211,14 @@ static inline size_t simd_scatter_csr_row_float(const float* row_data,
     }
     return k;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_is_all_zero_float(const float* data, size_t count) {
+    for (size_t i = 0u; i < count; ++i) {
+        if (data[i] != 0.0f) return false;
+    }
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* SIMD_SCALAR_FLOAT_INL */

@@ -474,6 +474,52 @@ static inline size_t simd_scatter_csr_row_float(const float* row_data,
     }
     return k;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_is_all_zero_float(const float* data, size_t count) {
+    size_t i = 0u;
+ 
+    __m256 zero = _mm256_setzero_ps();
+ 
+    /* ---- Body: 32 floats per iteration ---- */
+    size_t body_end = (count / 32u) * 32u;
+    for (; i < body_end; i += 32u) {
+        /* _CMP_NEQ_UQ: mask bits set where value != 0 */
+        int m0 = _mm256_movemask_ps(
+            _mm256_cmp_ps(_mm256_loadu_ps(data + i),       zero, _CMP_NEQ_UQ));
+        int m1 = _mm256_movemask_ps(
+            _mm256_cmp_ps(_mm256_loadu_ps(data + i + 8u),  zero, _CMP_NEQ_UQ));
+        int m2 = _mm256_movemask_ps(
+            _mm256_cmp_ps(_mm256_loadu_ps(data + i + 16u), zero, _CMP_NEQ_UQ));
+        int m3 = _mm256_movemask_ps(
+            _mm256_cmp_ps(_mm256_loadu_ps(data + i + 24u), zero, _CMP_NEQ_UQ));
+ 
+        if ((m0 | m1 | m2 | m3) != 0) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    /* ---- Single-vector passes ---- */
+    size_t vec_end = i + ((count - i) / 8u) * 8u;
+    for (; i < vec_end; i += 8u) {
+        if (_mm256_movemask_ps(
+                _mm256_cmp_ps(_mm256_loadu_ps(data + i),
+                              zero, _CMP_NEQ_UQ)) != 0) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    _mm256_zeroupper();
+ 
+    /* ---- Scalar tail ---- */
+    for (; i < count; ++i) {
+        if (data[i] != 0.0f) return false;
+    }
+ 
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* SIMD_AVX_FLOAT_INL */ 

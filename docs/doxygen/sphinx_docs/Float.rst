@@ -328,3 +328,204 @@ Introspection
 
 float Matrix 
 ============
+A ``float_matrix_t`` is a generic matrix supporting Dense, COO, CSR, and
+CSC storage formats with the element type fixed to ``float``.  It is a
+type-safe wrapper around the generic :ref:`matrix` engine described in
+``c_matrix.h``, replacing all ``void*`` element access with ``float`` /
+``float*`` and fixing ``dtype`` to ``FLOAT_TYPE`` at every call site.
+
+The matrix does not have a default allocator — an
+:c:type:`allocator_vtable_t` must be supplied at initialisation time
+and to every function that produces a new matrix (copy, convert,
+transpose).  See :ref:`allocator_file` for available allocators and the
+trade-offs between them.
+
+Storage Formats
+---------------
+
+``float_matrix_t`` supports four storage representations, selected at
+initialisation time or through :c:func:`convert_float_matrix`:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Format
+     - Description
+   * - ``DENSE_MATRIX``
+     - Row-major contiguous buffer.  Element at (i, j) is at offset
+       ``(i * cols + j) * sizeof(float)``.  Best for full or nearly-full
+       matrices.
+   * - ``COO_MATRIX``
+     - Coordinate list with three parallel arrays (row_idx, col_idx,
+       values).  Supports dynamic insertion and overwrite.  Best for
+       incremental assembly of sparse matrices.
+   * - ``CSR_MATRIX``
+     - Compressed Sparse Row.  Read-only after construction (set returns
+       ``ILLEGAL_STATE``).  Best for row-oriented sparse operations.
+   * - ``CSC_MATRIX``
+     - Compressed Sparse Column.  Read-only after construction.  Best
+       for column-oriented sparse operations.
+
+SIMD Acceleration
+-----------------
+
+Five operations use SIMD-accelerated code paths when operating on dense
+float matrices, with automatic compile-time dispatch across x86
+(SSE2 through AVX-512) and ARM (NEON, SVE, SVE2) instruction sets:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Function
+     - SIMD technique
+   * - :c:func:`fill_float_matrix`
+     - Broadcast-store (4/8/16 floats per instruction)
+   * - :c:func:`is_float_matrix_zero`
+     - Compare-against-zero with early exit
+   * - :c:func:`float_matrix_equal`
+     - XOR + testz/movemask with early exit
+   * - :c:func:`transpose_float_matrix`
+     - Tiled in-register transpose (4×4 / 8×8 / 16×16 blocks)
+   * - :c:func:`convert_float_matrix`
+     - Dense→CSR: vectorized nonzero counting + compress-store scatter
+
+Non-dense formats and mixed-format operations fall back to the generic
+``c_matrix.h`` implementations automatically.
+
+.. code-block:: c
+
+   #include "c_float.h"
+
+   allocator_vtable_t a = heap_allocator();
+
+   /* Dense matrix: 3×4, zero-initialized */
+   float_matrix_expect_t r = init_float_dense_matrix(3, 4, a);
+   if (!r.has_value) { /* handle r.u.error */ }
+   float_matrix_t* m = r.u.value;
+
+   set_float_matrix(m, 0, 0, 1.0f);
+   set_float_matrix(m, 1, 2, 5.5f);
+   set_float_matrix(m, 2, 3, -3.0f);
+
+   /* Transpose (SIMD-accelerated for dense) */
+   float_matrix_expect_t tr = transpose_float_matrix(m, a);
+   /* tr.u.value is 4×3 */
+
+   /* Convert to CSR (SIMD-accelerated counting + scatter) */
+   float_matrix_expect_t csr = convert_float_matrix(m, CSR_MATRIX, a);
+
+   return_float_matrix(csr.u.value);
+   return_float_matrix(tr.u.value);
+   return_float_matrix(m);
+
+.. code-block:: c
+
+   /* COO sparse matrix: 100×100, capacity for 16 entries, growable */
+   float_matrix_expect_t r = init_float_coo_matrix(100, 100, 16, true, a);
+   float_matrix_t* sp = r.u.value;
+
+   push_back_float_coo_matrix(sp, 0, 5, 3.14f);
+   push_back_float_coo_matrix(sp, 42, 99, -1.0f);
+
+   float v;
+   get_float_matrix(sp, 0, 5, &v);    /* v == 3.14f */
+   get_float_matrix(sp, 10, 10, &v);  /* v == 0.0f (not stored) */
+
+   return_float_matrix(sp);
+
+Structs
+-------
+
+.. note::
+
+   ``float_matrix_t`` is a ``typedef`` alias for :c:struct:`matrix_t`.
+   All internal fields are documented under :c:struct:`matrix_t` in
+   :ref:`matrix`.  The ``data_size`` field is always ``sizeof(float)``
+   (4 bytes) and the ``dtype`` field is always ``FLOAT_TYPE``.
+
+.. doxygenstruct:: float_matrix_expect_t
+   :members:
+
+Initialisation and Teardown
+---------------------------
+
+.. doxygenfunction:: init_float_dense_matrix
+.. doxygenfunction:: init_float_coo_matrix
+.. doxygenfunction:: return_float_matrix
+
+Element Access
+--------------
+
+.. doxygenfunction:: get_float_matrix
+.. doxygenfunction:: set_float_matrix
+
+COO Assembly
+------------
+
+These functions are only valid on COO-format matrices.
+
+.. doxygenfunction:: reserve_float_coo_matrix
+.. doxygenfunction:: push_back_float_coo_matrix
+.. doxygenfunction:: sort_float_coo_matrix
+
+Lifecycle Operations
+--------------------
+
+.. doxygenfunction:: clear_float_matrix
+.. doxygenfunction:: copy_float_matrix
+.. doxygenfunction:: convert_float_matrix
+.. doxygenfunction:: transpose_float_matrix
+
+Fill and Zero
+-------------
+
+.. doxygenfunction:: fill_float_matrix
+.. doxygenfunction:: zero_float_matrix
+
+Equality and Zero Test
+----------------------
+
+.. doxygenfunction:: float_matrix_equal
+.. doxygenfunction:: is_float_matrix_zero
+
+Row and Column Swaps
+--------------------
+
+.. doxygenfunction:: swap_float_matrix_rows
+.. doxygenfunction:: swap_float_matrix_cols
+
+Special Constructors
+--------------------
+
+.. doxygenfunction:: init_float_identity_matrix
+.. doxygenfunction:: init_float_row_vector
+.. doxygenfunction:: init_float_col_vector
+
+Introspection
+-------------
+
+.. doxygenfunction:: float_matrix_rows
+.. doxygenfunction:: float_matrix_cols
+.. doxygenfunction:: float_matrix_nnz
+.. doxygenfunction:: float_matrix_format
+.. doxygenfunction:: float_matrix_storage_bytes
+.. doxygenfunction:: float_matrix_format_name
+
+Shape and Compatibility
+-----------------------
+
+.. doxygenfunction:: float_matrix_has_same_shape
+.. doxygenfunction:: float_matrix_is_square
+.. doxygenfunction:: float_matrix_is_sparse
+.. doxygenfunction:: float_matrix_is_add_compatible
+.. doxygenfunction:: float_matrix_is_multiply_compatible
+
+Vector Queries
+--------------
+
+.. doxygenfunction:: float_matrix_is_row_vector
+.. doxygenfunction:: float_matrix_is_col_vector
+.. doxygenfunction:: float_matrix_is_vector
+.. doxygenfunction:: float_matrix_vector_length

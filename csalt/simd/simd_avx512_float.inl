@@ -476,6 +476,47 @@ static inline size_t simd_scatter_csr_row_float(const float* row_data,
  
     return k;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_is_all_zero_float(const float* data, size_t count) {
+    size_t i = 0u;
+ 
+    __m512 zero = _mm512_setzero_ps();
+ 
+    /* ---- Body: 64 floats (4 × 512-bit) per iteration ---- */
+    size_t body_end = (count / 64u) * 64u;
+    for (; i < body_end; i += 64u) {
+        __mmask16 m0 = _mm512_cmp_ps_mask(
+            _mm512_loadu_ps(data + i),       zero, _CMP_NEQ_UQ);
+        __mmask16 m1 = _mm512_cmp_ps_mask(
+            _mm512_loadu_ps(data + i + 16u), zero, _CMP_NEQ_UQ);
+        __mmask16 m2 = _mm512_cmp_ps_mask(
+            _mm512_loadu_ps(data + i + 32u), zero, _CMP_NEQ_UQ);
+        __mmask16 m3 = _mm512_cmp_ps_mask(
+            _mm512_loadu_ps(data + i + 48u), zero, _CMP_NEQ_UQ);
+ 
+        if ((m0 | m1 | m2 | m3) != 0u) return false;
+    }
+ 
+    /* ---- Single-vector passes ---- */
+    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    for (; i < vec_end; i += 16u) {
+        __mmask16 m = _mm512_cmp_ps_mask(
+            _mm512_loadu_ps(data + i), zero, _CMP_NEQ_UQ);
+        if (m != 0u) return false;
+    }
+ 
+    /* ---- Masked tail (up to 15 elements) ---- */
+    if (i < count) {
+        __mmask16 tail = (__mmask16)((1u << (count - i)) - 1u);
+        __m512 v = _mm512_maskz_loadu_ps(tail, data + i);
+        __mmask16 m = _mm512_cmp_ps_mask(v, zero, _CMP_NEQ_UQ);
+ 
+        if ((m & tail) != 0u) return false;
+    }
+ 
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* SIMD_AVX512_FLOAT_INL */ 

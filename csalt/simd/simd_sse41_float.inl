@@ -414,6 +414,50 @@ static inline size_t simd_scatter_csr_row_float(const float* row_data,
     }
     return k;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline bool simd_is_all_zero_float(const float* data, size_t count) {
+    size_t i = 0u;
+ 
+    __m128 zero = _mm_setzero_ps();
+ 
+    /* ---- Body: 16 floats per iteration ---- */
+    size_t body_end = (count / 16u) * 16u;
+    for (; i < body_end; i += 16u) {
+        __m128 eq0 = _mm_cmpeq_ps(_mm_loadu_ps(data + i),       zero);
+        __m128 eq1 = _mm_cmpeq_ps(_mm_loadu_ps(data + i + 4u),  zero);
+        __m128 eq2 = _mm_cmpeq_ps(_mm_loadu_ps(data + i + 8u),  zero);
+        __m128 eq3 = _mm_cmpeq_ps(_mm_loadu_ps(data + i + 12u), zero);
+ 
+        /* AND all equality masks: all-ones iff every lane is zero */
+        __m128 all_eq = _mm_and_ps(_mm_and_ps(eq0, eq1),
+                                   _mm_and_ps(eq2, eq3));
+ 
+        /* Invert: if any lane was nonzero, inverted mask has set bits.
+           testz returns 1 iff (a & b) == 0.  We test ~all_eq against
+           itself — if all_eq was all-ones, ~all_eq is all-zeros → testz=1.
+           If any lane was nonzero, ~all_eq has bits set → testz=0. */
+        __m128i inv = _mm_andnot_si128(_mm_castps_si128(all_eq),
+                                       _mm_set1_epi32(-1));
+        if (!_mm_testz_si128(inv, inv)) return false;
+    }
+ 
+    /* ---- Single-vector passes ---- */
+    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    for (; i < vec_end; i += 4u) {
+        __m128 eq = _mm_cmpeq_ps(_mm_loadu_ps(data + i), zero);
+        __m128i inv = _mm_andnot_si128(_mm_castps_si128(eq),
+                                       _mm_set1_epi32(-1));
+        if (!_mm_testz_si128(inv, inv)) return false;
+    }
+ 
+    /* ---- Scalar tail ---- */
+    for (; i < count; ++i) {
+        if (data[i] != 0.0f) return false;
+    }
+ 
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* SIMD_SSE41_FLOAT_INL */ 

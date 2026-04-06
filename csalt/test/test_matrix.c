@@ -21,6 +21,7 @@
 #include "c_allocator.h"
 #include "c_dtypes.h"
 #include "c_error.h"
+#include "c_float.h"
 
 // ================================================================================
 // Helpers
@@ -3587,6 +3588,1046 @@ const struct CMUnitTest test_matrix[] = {
 };
 
 const size_t test_matrix_count = sizeof(test_matrix) / sizeof(test_matrix[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+/* Exact float equality for binary fractions used in tests. */
+#define ASSERT_FLOAT_EXACT(a, b) assert_true((a) == (b))
+ 
+// ================================================================================
+// Group 1: init_float_dense_matrix
+// ================================================================================
+ 
+static void test_dense_init_null_allocator_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    float_matrix_expect_t r = init_float_dense_matrix(3, 4, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_dense_init_zero_rows_fails(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(0, 4, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_dense_init_zero_cols_fails(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 0, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_dense_init_returns_valid_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 4, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_int_equal((int)float_matrix_rows(r.u.value), 3);
+    assert_int_equal((int)float_matrix_cols(r.u.value), 4);
+    assert_int_equal((int)float_matrix_format(r.u.value), DENSE_MATRIX);
+    return_float_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_dense_init_elements_are_zero(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    float val = -1.0f;
+    for (size_t i = 0; i < 2; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            assert_int_equal(get_float_matrix(m, i, j, &val), NO_ERROR);
+            ASSERT_FLOAT_EXACT(val, 0.0f);
+        }
+    }
+ 
+    return_float_matrix(m);
+}
+ 
+// ================================================================================
+// Group 2: init_float_coo_matrix
+// ================================================================================
+ 
+static void test_coo_init_returns_valid_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_coo_matrix(10, 10, 8, true, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)float_matrix_rows(r.u.value), 10);
+    assert_int_equal((int)float_matrix_cols(r.u.value), 10);
+    assert_int_equal((int)float_matrix_format(r.u.value), COO_MATRIX);
+    assert_int_equal((int)float_matrix_nnz(r.u.value), 0);
+    return_float_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_coo_init_zero_capacity_fails(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_coo_matrix(5, 5, 0, true, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+ 
+// ================================================================================
+// Group 3: return_float_matrix
+// ================================================================================
+ 
+static void test_return_null_is_safe(void** state) {
+    (void)state;
+    return_float_matrix(NULL);
+}
+ 
+// ================================================================================
+// Group 4: get/set_float_matrix (dense)
+// ================================================================================
+ 
+static void test_get_null_matrix_returns_null_pointer(void** state) {
+    (void)state;
+    float val = 0.0f;
+    assert_int_equal(get_float_matrix(NULL, 0, 0, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_get_null_out_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 2, alloc);
+    assert_true(r.has_value);
+    assert_int_equal(get_float_matrix(r.u.value, 0, 0, NULL), NULL_POINTER);
+    return_float_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_set_null_matrix_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_float_matrix(NULL, 0, 0, 1.0f), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_set_and_get_round_trip(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    assert_int_equal(set_float_matrix(m, 0, 0, 1.5f), NO_ERROR);
+    assert_int_equal(set_float_matrix(m, 1, 2, -3.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(m, 2, 1, 42.0f), NO_ERROR);
+ 
+    float val = 0.0f;
+    get_float_matrix(m, 0, 0, &val); ASSERT_FLOAT_EXACT(val, 1.5f);
+    get_float_matrix(m, 1, 2, &val); ASSERT_FLOAT_EXACT(val, -3.0f);
+    get_float_matrix(m, 2, 1, &val); ASSERT_FLOAT_EXACT(val, 42.0f);
+ 
+    /* Unset element should still be zero */
+    get_float_matrix(m, 0, 1, &val); ASSERT_FLOAT_EXACT(val, 0.0f);
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_set_out_of_bounds_returns_error(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+ 
+    assert_int_equal(set_float_matrix(r.u.value, 2, 0, 1.0f), INVALID_ARG);
+    assert_int_equal(set_float_matrix(r.u.value, 0, 3, 1.0f), INVALID_ARG);
+ 
+    return_float_matrix(r.u.value);
+}
+ 
+// ================================================================================
+// Group 5: COO assembly (push_back, sort, reserve)
+// ================================================================================
+ 
+static void test_coo_push_back_and_retrieve(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_coo_matrix(5, 5, 4, true, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    assert_int_equal(push_back_float_coo_matrix(m, 0, 2, 3.14f), NO_ERROR);
+    assert_int_equal(push_back_float_coo_matrix(m, 3, 4, -1.0f), NO_ERROR);
+    assert_int_equal((int)float_matrix_nnz(m), 2);
+ 
+    float val = 0.0f;
+    get_float_matrix(m, 0, 2, &val); ASSERT_FLOAT_EXACT(val, 3.14f);
+    get_float_matrix(m, 3, 4, &val); ASSERT_FLOAT_EXACT(val, -1.0f);
+ 
+    /* Unset entry returns zero */
+    get_float_matrix(m, 1, 1, &val); ASSERT_FLOAT_EXACT(val, 0.0f);
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_coo_push_back_overwrites_existing(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_coo_matrix(3, 3, 4, true, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    push_back_float_coo_matrix(m, 1, 1, 10.0f);
+    push_back_float_coo_matrix(m, 1, 1, 20.0f);  /* overwrite */
+    assert_int_equal((int)float_matrix_nnz(m), 1);
+ 
+    float val = 0.0f;
+    get_float_matrix(m, 1, 1, &val);
+    ASSERT_FLOAT_EXACT(val, 20.0f);
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_coo_sort_orders_entries(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_coo_matrix(4, 4, 8, true, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    /* Insert out of order */
+    push_back_float_coo_matrix(m, 3, 0, 4.0f);
+    push_back_float_coo_matrix(m, 0, 1, 1.0f);
+    push_back_float_coo_matrix(m, 1, 2, 2.0f);
+ 
+    assert_int_equal(sort_float_coo_matrix(m), NO_ERROR);
+ 
+    /* Values should still be retrievable after sort */
+    float val = 0.0f;
+    get_float_matrix(m, 0, 1, &val); ASSERT_FLOAT_EXACT(val, 1.0f);
+    get_float_matrix(m, 1, 2, &val); ASSERT_FLOAT_EXACT(val, 2.0f);
+    get_float_matrix(m, 3, 0, &val); ASSERT_FLOAT_EXACT(val, 4.0f);
+ 
+    return_float_matrix(m);
+}
+ 
+// ================================================================================
+// Group 6: clear_float_matrix
+// ================================================================================
+ 
+static void test_clear_dense_zeros_all_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 2, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    set_float_matrix(m, 0, 0, 5.0f);
+    set_float_matrix(m, 1, 1, 9.0f);
+    assert_int_equal(clear_float_matrix(m), NO_ERROR);
+ 
+    assert_true(is_float_matrix_zero(m));
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_clear_coo_resets_nnz(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_coo_matrix(3, 3, 4, true, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    push_back_float_coo_matrix(m, 0, 0, 1.0f);
+    push_back_float_coo_matrix(m, 1, 1, 2.0f);
+    assert_int_equal(clear_float_matrix(m), NO_ERROR);
+    assert_int_equal((int)float_matrix_nnz(m), 0);
+ 
+    return_float_matrix(m);
+}
+ 
+// ================================================================================
+// Group 7: copy_float_matrix
+// ================================================================================
+ 
+static void test_copy_null_returns_error(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = copy_float_matrix(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_copy_dense_produces_independent_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* src = r.u.value;
+ 
+    set_float_matrix(src, 0, 0, 1.0f);
+    set_float_matrix(src, 1, 2, 7.0f);
+ 
+    float_matrix_expect_t cr = copy_float_matrix(src, alloc);
+    assert_true(cr.has_value);
+    float_matrix_t* dst = cr.u.value;
+ 
+    /* Mutating src must not affect copy */
+    set_float_matrix(src, 0, 0, 999.0f);
+ 
+    float val = 0.0f;
+    get_float_matrix(dst, 0, 0, &val); ASSERT_FLOAT_EXACT(val, 1.0f);
+    get_float_matrix(dst, 1, 2, &val); ASSERT_FLOAT_EXACT(val, 7.0f);
+ 
+    return_float_matrix(src);
+    return_float_matrix(dst);
+}
+ 
+// ================================================================================
+// Group 8: fill_float_matrix (SIMD-accelerated)
+// ================================================================================
+ 
+static void test_fill_null_returns_error(void** state) {
+    (void)state;
+    assert_int_equal(fill_float_matrix(NULL, 1.0f), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_fill_dense_sets_all_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(4, 5, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    assert_int_equal(fill_float_matrix(m, 3.5f), NO_ERROR);
+ 
+    float val = 0.0f;
+    for (size_t i = 0; i < 4; ++i) {
+        for (size_t j = 0; j < 5; ++j) {
+            get_float_matrix(m, i, j, &val);
+            ASSERT_FLOAT_EXACT(val, 3.5f);
+        }
+    }
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_fill_zero_clears_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    fill_float_matrix(m, 5.0f);
+    assert_int_equal(fill_float_matrix(m, 0.0f), NO_ERROR);
+    assert_true(is_float_matrix_zero(m));
+ 
+    return_float_matrix(m);
+}
+ 
+// ================================================================================
+// Group 9: is_float_matrix_zero (SIMD-accelerated)
+// ================================================================================
+ 
+static void test_is_zero_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_float_matrix_zero(NULL));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_is_zero_freshly_initialized_dense(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(5, 5, alloc);
+    assert_true(r.has_value);
+    assert_true(is_float_matrix_zero(r.u.value));
+    return_float_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_is_zero_returns_false_after_set(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    set_float_matrix(m, 1, 1, 0.001f);
+    assert_false(is_float_matrix_zero(m));
+ 
+    return_float_matrix(m);
+}
+ 
+// ================================================================================
+// Group 10: float_matrix_equal (SIMD-accelerated)
+// ================================================================================
+ 
+static void test_equal_null_returns_false(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 2, alloc);
+    assert_true(r.has_value);
+ 
+    assert_false(float_matrix_equal(NULL, r.u.value));
+    assert_false(float_matrix_equal(r.u.value, NULL));
+ 
+    return_float_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_equal_identical_matrices(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* a = r.u.value;
+ 
+    set_float_matrix(a, 0, 0, 1.0f);
+    set_float_matrix(a, 1, 2, -4.5f);
+ 
+    float_matrix_expect_t cr = copy_float_matrix(a, alloc);
+    assert_true(cr.has_value);
+ 
+    assert_true(float_matrix_equal(a, cr.u.value));
+ 
+    return_float_matrix(a);
+    return_float_matrix(cr.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_equal_different_values_returns_false(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t ra = init_float_dense_matrix(2, 2, alloc);
+    float_matrix_expect_t rb = init_float_dense_matrix(2, 2, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    set_float_matrix(ra.u.value, 0, 0, 1.0f);
+    set_float_matrix(rb.u.value, 0, 0, 2.0f);
+ 
+    assert_false(float_matrix_equal(ra.u.value, rb.u.value));
+ 
+    return_float_matrix(ra.u.value);
+    return_float_matrix(rb.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_equal_different_shape_returns_false(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t ra = init_float_dense_matrix(2, 3, alloc);
+    float_matrix_expect_t rb = init_float_dense_matrix(3, 2, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    assert_false(float_matrix_equal(ra.u.value, rb.u.value));
+ 
+    return_float_matrix(ra.u.value);
+    return_float_matrix(rb.u.value);
+}
+ 
+// ================================================================================
+// Group 11: transpose_float_matrix (SIMD-accelerated)
+// ================================================================================
+ 
+static void test_transpose_null_returns_error(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = transpose_float_matrix(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_transpose_dense_swaps_dimensions(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    /* Fill with distinct values: m[i][j] = (i+1)*10 + j */
+    set_float_matrix(m, 0, 0, 10.0f);
+    set_float_matrix(m, 0, 1, 11.0f);
+    set_float_matrix(m, 0, 2, 12.0f);
+    set_float_matrix(m, 1, 0, 20.0f);
+    set_float_matrix(m, 1, 1, 21.0f);
+    set_float_matrix(m, 1, 2, 22.0f);
+ 
+    float_matrix_expect_t tr = transpose_float_matrix(m, alloc);
+    assert_true(tr.has_value);
+    float_matrix_t* t = tr.u.value;
+ 
+    assert_int_equal((int)float_matrix_rows(t), 3);
+    assert_int_equal((int)float_matrix_cols(t), 2);
+ 
+    float val = 0.0f;
+    get_float_matrix(t, 0, 0, &val); ASSERT_FLOAT_EXACT(val, 10.0f);
+    get_float_matrix(t, 0, 1, &val); ASSERT_FLOAT_EXACT(val, 20.0f);
+    get_float_matrix(t, 1, 0, &val); ASSERT_FLOAT_EXACT(val, 11.0f);
+    get_float_matrix(t, 1, 1, &val); ASSERT_FLOAT_EXACT(val, 21.0f);
+    get_float_matrix(t, 2, 0, &val); ASSERT_FLOAT_EXACT(val, 12.0f);
+    get_float_matrix(t, 2, 1, &val); ASSERT_FLOAT_EXACT(val, 22.0f);
+ 
+    return_float_matrix(m);
+    return_float_matrix(t);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_transpose_square_is_correct(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    set_float_matrix(m, 0, 1, 5.0f);
+    set_float_matrix(m, 1, 0, 7.0f);
+ 
+    float_matrix_expect_t tr = transpose_float_matrix(m, alloc);
+    assert_true(tr.has_value);
+ 
+    float val = 0.0f;
+    get_float_matrix(tr.u.value, 0, 1, &val); ASSERT_FLOAT_EXACT(val, 7.0f);
+    get_float_matrix(tr.u.value, 1, 0, &val); ASSERT_FLOAT_EXACT(val, 5.0f);
+ 
+    return_float_matrix(m);
+    return_float_matrix(tr.u.value);
+}
+ 
+// ================================================================================
+// Group 12: convert_float_matrix dense→CSR (SIMD-accelerated)
+// ================================================================================
+ 
+static void test_convert_dense_to_csr_preserves_values(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    set_float_matrix(m, 0, 0, 1.0f);
+    set_float_matrix(m, 0, 2, 2.0f);
+    set_float_matrix(m, 1, 1, 3.0f);
+    set_float_matrix(m, 2, 0, 4.0f);
+    set_float_matrix(m, 2, 2, 5.0f);
+ 
+    float_matrix_expect_t cr = convert_float_matrix(m, CSR_MATRIX, alloc);
+    assert_true(cr.has_value);
+    float_matrix_t* csr = cr.u.value;
+ 
+    assert_int_equal((int)float_matrix_format(csr), CSR_MATRIX);
+    assert_int_equal((int)float_matrix_rows(csr), 3);
+    assert_int_equal((int)float_matrix_cols(csr), 3);
+    assert_int_equal((int)float_matrix_nnz(csr), 5);
+ 
+    float val = 0.0f;
+    get_float_matrix(csr, 0, 0, &val); ASSERT_FLOAT_EXACT(val, 1.0f);
+    get_float_matrix(csr, 0, 2, &val); ASSERT_FLOAT_EXACT(val, 2.0f);
+    get_float_matrix(csr, 1, 1, &val); ASSERT_FLOAT_EXACT(val, 3.0f);
+    get_float_matrix(csr, 2, 0, &val); ASSERT_FLOAT_EXACT(val, 4.0f);
+    get_float_matrix(csr, 2, 2, &val); ASSERT_FLOAT_EXACT(val, 5.0f);
+ 
+    /* Zero entries must read as zero */
+    get_float_matrix(csr, 0, 1, &val); ASSERT_FLOAT_EXACT(val, 0.0f);
+    get_float_matrix(csr, 1, 0, &val); ASSERT_FLOAT_EXACT(val, 0.0f);
+ 
+    return_float_matrix(m);
+    return_float_matrix(csr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_convert_all_zero_dense_to_csr(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+ 
+    float_matrix_expect_t cr = convert_float_matrix(r.u.value, CSR_MATRIX, alloc);
+    assert_true(cr.has_value);
+    assert_int_equal((int)float_matrix_nnz(cr.u.value), 0);
+ 
+    return_float_matrix(r.u.value);
+    return_float_matrix(cr.u.value);
+}
+ 
+// ================================================================================
+// Group 13: Introspection
+// ================================================================================
+ 
+static void test_introspection_null_returns_defaults(void** state) {
+    (void)state;
+    assert_int_equal((int)float_matrix_rows(NULL), 0);
+    assert_int_equal((int)float_matrix_cols(NULL), 0);
+    assert_int_equal((int)float_matrix_nnz(NULL), 0);
+    assert_int_equal((int)float_matrix_storage_bytes(NULL), 0);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_dense_nnz_equals_rows_times_cols(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(4, 5, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)float_matrix_nnz(r.u.value), 20);
+    return_float_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_format_name_returns_string(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 2, alloc);
+    assert_true(r.has_value);
+    assert_string_equal(float_matrix_format_name(r.u.value), "DENSE_MATRIX");
+    return_float_matrix(r.u.value);
+}
+ 
+// ================================================================================
+// Group 14: Shape and compatibility queries
+// ================================================================================
+ 
+static void test_same_shape_true_for_matching_dimensions(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t ra = init_float_dense_matrix(3, 4, alloc);
+    float_matrix_expect_t rb = init_float_dense_matrix(3, 4, alloc);
+    assert_true(ra.has_value && rb.has_value);
+    assert_true(float_matrix_has_same_shape(ra.u.value, rb.u.value));
+    return_float_matrix(ra.u.value);
+    return_float_matrix(rb.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_is_square(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t sq = init_float_dense_matrix(3, 3, alloc);
+    float_matrix_expect_t ns = init_float_dense_matrix(3, 4, alloc);
+    assert_true(sq.has_value && ns.has_value);
+    assert_true(float_matrix_is_square(sq.u.value));
+    assert_false(float_matrix_is_square(ns.u.value));
+    return_float_matrix(sq.u.value);
+    return_float_matrix(ns.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_is_sparse(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t d = init_float_dense_matrix(2, 2, alloc);
+    float_matrix_expect_t c = init_float_coo_matrix(2, 2, 4, true, alloc);
+    assert_true(d.has_value && c.has_value);
+    assert_false(float_matrix_is_sparse(d.u.value));
+    assert_true(float_matrix_is_sparse(c.u.value));
+    return_float_matrix(d.u.value);
+    return_float_matrix(c.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_add_compatible(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t ra = init_float_dense_matrix(3, 4, alloc);
+    float_matrix_expect_t rb = init_float_dense_matrix(3, 4, alloc);
+    float_matrix_expect_t rc = init_float_dense_matrix(4, 3, alloc);
+    assert_true(ra.has_value && rb.has_value && rc.has_value);
+ 
+    assert_true(float_matrix_is_add_compatible(ra.u.value, rb.u.value));
+    assert_false(float_matrix_is_add_compatible(ra.u.value, rc.u.value));
+ 
+    return_float_matrix(ra.u.value);
+    return_float_matrix(rb.u.value);
+    return_float_matrix(rc.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_multiply_compatible(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t ra = init_float_dense_matrix(2, 3, alloc);
+    float_matrix_expect_t rb = init_float_dense_matrix(3, 5, alloc);
+    float_matrix_expect_t rc = init_float_dense_matrix(4, 5, alloc);
+    assert_true(ra.has_value && rb.has_value && rc.has_value);
+ 
+    assert_true(float_matrix_is_multiply_compatible(ra.u.value, rb.u.value));
+    assert_false(float_matrix_is_multiply_compatible(ra.u.value, rc.u.value));
+ 
+    return_float_matrix(ra.u.value);
+    return_float_matrix(rb.u.value);
+    return_float_matrix(rc.u.value);
+}
+ 
+// ================================================================================
+// Group 15: Row / column swaps
+// ================================================================================
+ 
+static void test_swap_rows_dense(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 2, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    /* Row 0: [1, 2], Row 1: [3, 4], Row 2: [5, 6] */
+    set_float_matrix(m, 0, 0, 1.0f); set_float_matrix(m, 0, 1, 2.0f);
+    set_float_matrix(m, 1, 0, 3.0f); set_float_matrix(m, 1, 1, 4.0f);
+    set_float_matrix(m, 2, 0, 5.0f); set_float_matrix(m, 2, 1, 6.0f);
+ 
+    assert_int_equal(swap_float_matrix_rows(m, 0, 2), NO_ERROR);
+ 
+    float val = 0.0f;
+    get_float_matrix(m, 0, 0, &val); ASSERT_FLOAT_EXACT(val, 5.0f);
+    get_float_matrix(m, 0, 1, &val); ASSERT_FLOAT_EXACT(val, 6.0f);
+    get_float_matrix(m, 2, 0, &val); ASSERT_FLOAT_EXACT(val, 1.0f);
+    get_float_matrix(m, 2, 1, &val); ASSERT_FLOAT_EXACT(val, 2.0f);
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_swap_cols_dense(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    set_float_matrix(m, 0, 0, 1.0f); set_float_matrix(m, 0, 2, 3.0f);
+    set_float_matrix(m, 1, 0, 4.0f); set_float_matrix(m, 1, 2, 6.0f);
+ 
+    assert_int_equal(swap_float_matrix_cols(m, 0, 2), NO_ERROR);
+ 
+    float val = 0.0f;
+    get_float_matrix(m, 0, 0, &val); ASSERT_FLOAT_EXACT(val, 3.0f);
+    get_float_matrix(m, 0, 2, &val); ASSERT_FLOAT_EXACT(val, 1.0f);
+    get_float_matrix(m, 1, 0, &val); ASSERT_FLOAT_EXACT(val, 6.0f);
+    get_float_matrix(m, 1, 2, &val); ASSERT_FLOAT_EXACT(val, 4.0f);
+ 
+    return_float_matrix(m);
+}
+ 
+// ================================================================================
+// Group 16: Special constructors (identity, row/col vector)
+// ================================================================================
+ 
+static void test_identity_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_identity_matrix(3, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    assert_int_equal((int)float_matrix_rows(m), 3);
+    assert_int_equal((int)float_matrix_cols(m), 3);
+ 
+    float val = 0.0f;
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            get_float_matrix(m, i, j, &val);
+            ASSERT_FLOAT_EXACT(val, (i == j) ? 1.0f : 0.0f);
+        }
+    }
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_row_vector_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_row_vector(5, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    assert_int_equal((int)float_matrix_rows(m), 1);
+    assert_int_equal((int)float_matrix_cols(m), 5);
+    assert_true(float_matrix_is_row_vector(m));
+    assert_false(float_matrix_is_col_vector(m));
+    assert_true(float_matrix_is_vector(m));
+    assert_int_equal((int)float_matrix_vector_length(m), 5);
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_col_vector_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_col_vector(4, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    assert_int_equal((int)float_matrix_rows(m), 4);
+    assert_int_equal((int)float_matrix_cols(m), 1);
+    assert_false(float_matrix_is_row_vector(m));
+    assert_true(float_matrix_is_col_vector(m));
+    assert_true(float_matrix_is_vector(m));
+    assert_int_equal((int)float_matrix_vector_length(m), 4);
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_non_vector_returns_zero_length(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(3, 4, alloc);
+    assert_true(r.has_value);
+ 
+    assert_false(float_matrix_is_vector(r.u.value));
+    assert_int_equal((int)float_matrix_vector_length(r.u.value), 0);
+ 
+    return_float_matrix(r.u.value);
+}
+ 
+// ================================================================================
+// Group 17: Large matrix smoke tests (exercises SIMD body + tail paths)
+// ================================================================================
+ 
+static void test_fill_large_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    /* 100×100 = 10000 elements — enough to exercise SIMD unrolled body
+       and scalar/masked tail for any vector width up to 512-bit. */
+    float_matrix_expect_t r = init_float_dense_matrix(100, 100, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    assert_int_equal(fill_float_matrix(m, -2.5f), NO_ERROR);
+ 
+    float val = 0.0f;
+    get_float_matrix(m, 0, 0, &val);     ASSERT_FLOAT_EXACT(val, -2.5f);
+    get_float_matrix(m, 49, 50, &val);   ASSERT_FLOAT_EXACT(val, -2.5f);
+    get_float_matrix(m, 99, 99, &val);   ASSERT_FLOAT_EXACT(val, -2.5f);
+ 
+    return_float_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_transpose_large_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    /* 17×19 — not a multiple of any SIMD width, exercises all remainder paths */
+    float_matrix_expect_t r = init_float_dense_matrix(17, 19, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    /* Fill with distinct values */
+    for (size_t i = 0; i < 17; ++i) {
+        for (size_t j = 0; j < 19; ++j) {
+            set_float_matrix(m, i, j, (float)(i * 19 + j));
+        }
+    }
+ 
+    float_matrix_expect_t tr = transpose_float_matrix(m, alloc);
+    assert_true(tr.has_value);
+    float_matrix_t* t = tr.u.value;
+ 
+    assert_int_equal((int)float_matrix_rows(t), 19);
+    assert_int_equal((int)float_matrix_cols(t), 17);
+ 
+    /* Verify every element: t[j][i] == m[i][j] */
+    float vm = 0.0f, vt = 0.0f;
+    for (size_t i = 0; i < 17; ++i) {
+        for (size_t j = 0; j < 19; ++j) {
+            get_float_matrix(m, i, j, &vm);
+            get_float_matrix(t, j, i, &vt);
+            ASSERT_FLOAT_EXACT(vm, vt);
+        }
+    }
+ 
+    return_float_matrix(m);
+    return_float_matrix(t);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_equal_large_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(50, 50, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    fill_float_matrix(m, 7.0f);
+ 
+    float_matrix_expect_t cr = copy_float_matrix(m, alloc);
+    assert_true(cr.has_value);
+ 
+    assert_true(float_matrix_equal(m, cr.u.value));
+ 
+    /* Flip one element near the end to test early-exit vs. full scan */
+    set_float_matrix(cr.u.value, 49, 49, 8.0f);
+    assert_false(float_matrix_equal(m, cr.u.value));
+ 
+    return_float_matrix(m);
+    return_float_matrix(cr.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_convert_large_dense_to_csr(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    /* 20×20 with sparse population */
+    float_matrix_expect_t r = init_float_dense_matrix(20, 20, alloc);
+    assert_true(r.has_value);
+    float_matrix_t* m = r.u.value;
+ 
+    /* Set only diagonal */
+    for (size_t i = 0; i < 20; ++i) {
+        set_float_matrix(m, i, i, (float)(i + 1));
+    }
+ 
+    float_matrix_expect_t cr = convert_float_matrix(m, CSR_MATRIX, alloc);
+    assert_true(cr.has_value);
+    float_matrix_t* csr = cr.u.value;
+ 
+    assert_int_equal((int)float_matrix_nnz(csr), 20);
+ 
+    /* Verify diagonal values survive conversion */
+    float val = 0.0f;
+    for (size_t i = 0; i < 20; ++i) {
+        get_float_matrix(csr, i, i, &val);
+        ASSERT_FLOAT_EXACT(val, (float)(i + 1));
+    }
+ 
+    /* Verify off-diagonal is zero */
+    get_float_matrix(csr, 0, 1, &val); ASSERT_FLOAT_EXACT(val, 0.0f);
+    get_float_matrix(csr, 19, 0, &val); ASSERT_FLOAT_EXACT(val, 0.0f);
+ 
+    return_float_matrix(m);
+    return_float_matrix(csr);
+}
+ 
+// ================================================================================
+// Test suite export
+// ================================================================================
+ 
+const struct CMUnitTest test_float_matrix[] = {
+    /* Group 1: init dense */
+    cmocka_unit_test(test_dense_init_null_allocator_fails),
+    cmocka_unit_test(test_dense_init_zero_rows_fails),
+    cmocka_unit_test(test_dense_init_zero_cols_fails),
+    cmocka_unit_test(test_dense_init_returns_valid_matrix),
+    cmocka_unit_test(test_dense_init_elements_are_zero),
+    /* Group 2: init COO */
+    cmocka_unit_test(test_coo_init_returns_valid_matrix),
+    cmocka_unit_test(test_coo_init_zero_capacity_fails),
+    /* Group 3: return */
+    cmocka_unit_test(test_return_null_is_safe),
+    /* Group 4: get/set dense */
+    cmocka_unit_test(test_get_null_matrix_returns_null_pointer),
+    cmocka_unit_test(test_get_null_out_returns_null_pointer),
+    cmocka_unit_test(test_set_null_matrix_returns_null_pointer),
+    cmocka_unit_test(test_set_and_get_round_trip),
+    cmocka_unit_test(test_set_out_of_bounds_returns_error),
+    /* Group 5: COO assembly */
+    cmocka_unit_test(test_coo_push_back_and_retrieve),
+    cmocka_unit_test(test_coo_push_back_overwrites_existing),
+    cmocka_unit_test(test_coo_sort_orders_entries),
+    /* Group 6: clear */
+    cmocka_unit_test(test_clear_dense_zeros_all_elements),
+    cmocka_unit_test(test_clear_coo_resets_nnz),
+    /* Group 7: copy */
+    cmocka_unit_test(test_copy_null_returns_error),
+    cmocka_unit_test(test_copy_dense_produces_independent_matrix),
+    /* Group 8: fill (SIMD) */
+    cmocka_unit_test(test_fill_null_returns_error),
+    cmocka_unit_test(test_fill_dense_sets_all_elements),
+    cmocka_unit_test(test_fill_zero_clears_matrix),
+    /* Group 9: is_zero (SIMD) */
+    cmocka_unit_test(test_is_zero_null_returns_true),
+    cmocka_unit_test(test_is_zero_freshly_initialized_dense),
+    cmocka_unit_test(test_is_zero_returns_false_after_set),
+    /* Group 10: equal (SIMD) */
+    cmocka_unit_test(test_equal_null_returns_false),
+    cmocka_unit_test(test_equal_identical_matrices),
+    cmocka_unit_test(test_equal_different_values_returns_false),
+    cmocka_unit_test(test_equal_different_shape_returns_false),
+    /* Group 11: transpose (SIMD) */
+    cmocka_unit_test(test_transpose_null_returns_error),
+    cmocka_unit_test(test_transpose_dense_swaps_dimensions),
+    cmocka_unit_test(test_transpose_square_is_correct),
+    /* Group 12: convert dense→CSR (SIMD) */
+    cmocka_unit_test(test_convert_dense_to_csr_preserves_values),
+    cmocka_unit_test(test_convert_all_zero_dense_to_csr),
+    /* Group 13: introspection */
+    cmocka_unit_test(test_introspection_null_returns_defaults),
+    cmocka_unit_test(test_dense_nnz_equals_rows_times_cols),
+    cmocka_unit_test(test_format_name_returns_string),
+    /* Group 14: shape/compat */
+    cmocka_unit_test(test_same_shape_true_for_matching_dimensions),
+    cmocka_unit_test(test_is_square),
+    cmocka_unit_test(test_is_sparse),
+    cmocka_unit_test(test_add_compatible),
+    cmocka_unit_test(test_multiply_compatible),
+    /* Group 15: swaps */
+    cmocka_unit_test(test_swap_rows_dense),
+    cmocka_unit_test(test_swap_cols_dense),
+    /* Group 16: special constructors */
+    cmocka_unit_test(test_identity_matrix),
+    cmocka_unit_test(test_row_vector_shape),
+    cmocka_unit_test(test_col_vector_shape),
+    cmocka_unit_test(test_non_vector_returns_zero_length),
+    /* Group 17: large matrix smoke tests */
+    cmocka_unit_test(test_fill_large_matrix),
+    cmocka_unit_test(test_transpose_large_matrix),
+    cmocka_unit_test(test_equal_large_matrix),
+    cmocka_unit_test(test_convert_large_dense_to_csr),
+};
+const size_t test_float_matrix_count =
+    sizeof(test_float_matrix) / sizeof(test_float_matrix[0]);
 // ================================================================================
 // ================================================================================
 // eof

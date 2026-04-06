@@ -191,5 +191,209 @@ static size_t simd_binary_search_double(const double* data,
     }
     return best;
 }
+// ================================================================================ 
+// ================================================================================ 
 
+static inline void simd_fill_double(double* data, size_t count, double value) {
+    svfloat64_t v = svdup_n_f64(value);
+    size_t i = 0u;
+    size_t vl = svcntd();
+ 
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svst1_f64(svptrue_b64(), data + i, v);
+    }
+ 
+    if (i < count) {
+        svbool_t mask = svwhilelt_b64((uint64_t)i, (uint64_t)count);
+        svst1_f64(mask, data + i, v);
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline void simd_transpose_double(const double* src,
+                                         double*       dst,
+                                         size_t        src_rows,
+                                         size_t        src_cols) {
+    const size_t vl = svcntd();
+    const size_t TILE_H = 8u;
+    const size_t TILE_W = vl;
+ 
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / TILE_H) * TILE_H;
+    size_t col_body = (src_cols / TILE_W) * TILE_W;
+ 
+    for (i = 0u; i < row_body; i += TILE_H) {
+        for (j = 0u; j < col_body; j += TILE_W) {
+            for (size_t jj = 0u; jj < TILE_W; ++jj) {
+                for (size_t ii = 0u; ii < TILE_H; ++ii) {
+                    dst[(j + jj) * src_rows + (i + ii)] =
+                        src[(i + ii) * src_cols + (j + jj)];
+                }
+            }
+        }
+    }
+ 
+    for (i = 0u; i < row_body; i += TILE_H) {
+        for (j = col_body; j < src_cols; ++j) {
+            for (size_t ii = 0u; ii < TILE_H; ++ii) {
+                dst[j * src_rows + (i + ii)] =
+                    src[(i + ii) * src_cols + j];
+            }
+        }
+    }
+ 
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_equal_double(const double* a,
+                                     const double* b,
+                                     size_t        count) {
+    size_t i = 0u;
+    size_t vl = svcntd();
+ 
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svuint64_t va = svld1_u64(svptrue_b64(),
+                                  (const uint64_t*)(a + i));
+        svuint64_t vb = svld1_u64(svptrue_b64(),
+                                  (const uint64_t*)(b + i));
+ 
+        svuint64_t x = sveor_u64_z(svptrue_b64(), va, vb);
+ 
+        svbool_t neq = svcmpne_n_u64(svptrue_b64(), x, 0u);
+        if (svptest_any(svptrue_b64(), neq)) return false;
+    }
+ 
+    if (i < count) {
+        svbool_t mask = svwhilelt_b64((uint64_t)i, (uint64_t)count);
+ 
+        svuint64_t va = svld1_u64(mask, (const uint64_t*)(a + i));
+        svuint64_t vb = svld1_u64(mask, (const uint64_t*)(b + i));
+ 
+        svuint64_t x = sveor_u64_z(mask, va, vb);
+ 
+        svbool_t neq = svcmpne_n_u64(mask, x, 0u);
+        if (svptest_any(mask, neq)) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_count_nonzero_double(const double* data,
+                                               size_t        count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+    size_t vl = svcntd();
+ 
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svfloat64_t v = svld1_f64(svptrue_b64(), data + i);
+ 
+        svbool_t is_zero    = svcmpeq_n_f64(svptrue_b64(), v, 0.0);
+        svbool_t is_nonzero = svnot_b_z(svptrue_b64(), is_zero);
+ 
+        nnz += (size_t)svcntp_b64(svptrue_b64(), is_nonzero);
+    }
+ 
+    if (i < count) {
+        svbool_t mask = svwhilelt_b64((uint64_t)i, (uint64_t)count);
+        svfloat64_t v = svld1_f64(mask, data + i);
+ 
+        svbool_t is_zero    = svcmpeq_n_f64(mask, v, 0.0);
+        svbool_t is_nonzero = svnot_b_z(mask, is_zero);
+ 
+        nnz += (size_t)svcntp_b64(mask, is_nonzero);
+    }
+ 
+    return nnz;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_scatter_csr_row_double(const double* row_data,
+                                                 size_t        cols,
+                                                 size_t        col_offset,
+                                                 size_t*       col_idx,
+                                                 double*       values,
+                                                 size_t        k) {
+    size_t j = 0u;
+    size_t vl = svcntd();
+ 
+    /* Stack buffer for spilling compacted column indices.
+       SVE vectors are at most 2048 bits = 32 × 64-bit lanes. */
+    uint64_t col_tmp[32];
+ 
+    size_t vec_end = (cols / vl) * vl;
+    for (; j < vec_end; j += vl) {
+        svfloat64_t v = svld1_f64(svptrue_b64(), row_data + j);
+ 
+        svbool_t is_zero    = svcmpeq_n_f64(svptrue_b64(), v, 0.0);
+        svbool_t is_nonzero = svnot_b_z(svptrue_b64(), is_zero);
+ 
+        uint64_t popcnt = (uint64_t)svcntp_b64(svptrue_b64(), is_nonzero);
+        if (popcnt == 0u) continue;
+ 
+        svfloat64_t packed_vals = svcompact_f64(is_nonzero, v);
+        svbool_t store_mask = svwhilelt_b64(0ull, popcnt);
+        svst1_f64(store_mask, values + k, packed_vals);
+ 
+        svuint64_t col_vec = svindex_u64((uint64_t)(col_offset + j), 1ull);
+        svuint64_t packed_cols = svcompact_u64(is_nonzero, col_vec);
+        svst1_u64(store_mask, col_tmp, packed_cols);
+ 
+        for (uint64_t n = 0u; n < popcnt; ++n) {
+            col_idx[k + n] = (size_t)col_tmp[n];
+        }
+ 
+        k += (size_t)popcnt;
+    }
+ 
+    for (; j < cols; ++j) {
+        if (row_data[j] != 0.0) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+ 
+    return k;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_is_all_zero_double(const double* data, size_t count) {
+    size_t i = 0u;
+    size_t vl = svcntd();
+ 
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svfloat64_t v = svld1_f64(svptrue_b64(), data + i);
+ 
+        svbool_t is_zero    = svcmpeq_n_f64(svptrue_b64(), v, 0.0);
+        svbool_t is_nonzero = svnot_b_z(svptrue_b64(), is_zero);
+ 
+        if (svptest_any(svptrue_b64(), is_nonzero)) return false;
+    }
+ 
+    if (i < count) {
+        svbool_t mask = svwhilelt_b64((uint64_t)i, (uint64_t)count);
+        svfloat64_t v = svld1_f64(mask, data + i);
+ 
+        svbool_t is_zero    = svcmpeq_n_f64(mask, v, 0.0);
+        svbool_t is_nonzero = svnot_b_z(mask, is_zero);
+ 
+        if (svptest_any(mask, is_nonzero)) return false;
+    }
+ 
+    return true;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* SIMD_SVE_DOUBLE_INL */
