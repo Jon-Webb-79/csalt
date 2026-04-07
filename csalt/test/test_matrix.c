@@ -23,6 +23,7 @@
 #include "c_error.h"
 #include "c_float.h"
 #include "c_double.h"
+#include "c_ldouble.h"
 
 // ================================================================================
 // Helpers
@@ -5720,6 +5721,959 @@ const struct CMUnitTest test_double_matrix[] = {
 };
 const size_t test_double_matrix_count =
     sizeof(test_double_matrix) / sizeof(test_double_matrix[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+
+/* Exact long double equality for binary fractions used in tests. */
+#define ASSERT_LDOUBLE_EXACT(a, b) assert_true((a) == (b))
+ 
+// ================================================================================
+// Group 1: init_ldouble_dense_matrix
+// ================================================================================
+ 
+static void test_ldouble_dense_init_null_allocator_fails(void** state) {
+    (void)state;
+    allocator_vtable_t bad = { 0 };
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 4, bad);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_dense_init_zero_rows_fails(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(0, 4, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_dense_init_zero_cols_fails(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 0, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_dense_init_returns_valid_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 4, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_int_equal((int)ldouble_matrix_rows(r.u.value), 3);
+    assert_int_equal((int)ldouble_matrix_cols(r.u.value), 4);
+    assert_int_equal((int)ldouble_matrix_format(r.u.value), DENSE_MATRIX);
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_dense_init_elements_are_zero(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    long double val = -1.0L;
+    for (size_t i = 0; i < 2; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            assert_int_equal(get_ldouble_matrix(m, i, j, &val), NO_ERROR);
+            ASSERT_LDOUBLE_EXACT(val, 0.0L);
+        }
+    }
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// ================================================================================
+// Group 2: init_ldouble_coo_matrix
+// ================================================================================
+ 
+static void test_ldouble_coo_init_returns_valid_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_coo_matrix(10, 10, 8, true, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)ldouble_matrix_rows(r.u.value), 10);
+    assert_int_equal((int)ldouble_matrix_cols(r.u.value), 10);
+    assert_int_equal((int)ldouble_matrix_format(r.u.value), COO_MATRIX);
+    assert_int_equal((int)ldouble_matrix_nnz(r.u.value), 0);
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_coo_init_zero_capacity_fails(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_coo_matrix(5, 5, 0, true, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+ 
+// ================================================================================
+// Group 3: return_ldouble_matrix
+// ================================================================================
+ 
+static void test_ldouble_return_null_is_safe(void** state) {
+    (void)state;
+    return_ldouble_matrix(NULL);
+}
+ 
+// ================================================================================
+// Group 4: get/set_ldouble_matrix (dense)
+// ================================================================================
+ 
+static void test_ldouble_get_null_matrix_returns_null_pointer(void** state) {
+    (void)state;
+    long double val = 0.0L;
+    assert_int_equal(get_ldouble_matrix(NULL, 0, 0, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_get_null_out_returns_null_pointer(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 2, alloc);
+    assert_true(r.has_value);
+    assert_int_equal(get_ldouble_matrix(r.u.value, 0, 0, NULL), NULL_POINTER);
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_set_null_matrix_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_ldouble_matrix(NULL, 0, 0, 1.0L), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_set_and_get_round_trip(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    assert_int_equal(set_ldouble_matrix(m, 0, 0, 1.5L), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(m, 1, 2, -3.0L), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(m, 2, 1, 42.0L), NO_ERROR);
+ 
+    long double val = 0.0L;
+    get_ldouble_matrix(m, 0, 0, &val); ASSERT_LDOUBLE_EXACT(val, 1.5L);
+    get_ldouble_matrix(m, 1, 2, &val); ASSERT_LDOUBLE_EXACT(val, -3.0L);
+    get_ldouble_matrix(m, 2, 1, &val); ASSERT_LDOUBLE_EXACT(val, 42.0L);
+ 
+    /* Unset element should still be zero */
+    get_ldouble_matrix(m, 0, 1, &val); ASSERT_LDOUBLE_EXACT(val, 0.0L);
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_set_out_of_bounds_returns_error(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+ 
+    assert_int_equal(set_ldouble_matrix(r.u.value, 2, 0, 1.0L), INVALID_ARG);
+    assert_int_equal(set_ldouble_matrix(r.u.value, 0, 3, 1.0L), INVALID_ARG);
+ 
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// ================================================================================
+// Group 5: COO assembly (push_back, sort, reserve)
+// ================================================================================
+ 
+static void test_ldouble_coo_push_back_and_retrieve(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_coo_matrix(5, 5, 4, true, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    assert_int_equal(push_back_ldouble_coo_matrix(m, 0, 2, 3.14159265358979L), NO_ERROR);
+    assert_int_equal(push_back_ldouble_coo_matrix(m, 3, 4, -1.0L), NO_ERROR);
+    assert_int_equal((int)ldouble_matrix_nnz(m), 2);
+ 
+    long double val = 0.0L;
+    get_ldouble_matrix(m, 0, 2, &val); ASSERT_LDOUBLE_EXACT(val, 3.14159265358979L);
+    get_ldouble_matrix(m, 3, 4, &val); ASSERT_LDOUBLE_EXACT(val, -1.0L);
+ 
+    /* Unset entry returns zero */
+    get_ldouble_matrix(m, 1, 1, &val); ASSERT_LDOUBLE_EXACT(val, 0.0L);
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_coo_push_back_overwrites_existing(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_coo_matrix(3, 3, 4, true, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    push_back_ldouble_coo_matrix(m, 1, 1, 10.0L);
+    push_back_ldouble_coo_matrix(m, 1, 1, 20.0L);  /* overwrite */
+    assert_int_equal((int)ldouble_matrix_nnz(m), 1);
+ 
+    long double val = 0.0L;
+    get_ldouble_matrix(m, 1, 1, &val);
+    ASSERT_LDOUBLE_EXACT(val, 20.0L);
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_coo_sort_orders_entries(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_coo_matrix(4, 4, 8, true, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    /* Insert out of order */
+    push_back_ldouble_coo_matrix(m, 3, 0, 4.0L);
+    push_back_ldouble_coo_matrix(m, 0, 1, 1.0L);
+    push_back_ldouble_coo_matrix(m, 1, 2, 2.0L);
+ 
+    assert_int_equal(sort_ldouble_coo_matrix(m), NO_ERROR);
+ 
+    /* Values should still be retrievable after sort */
+    long double val = 0.0L;
+    get_ldouble_matrix(m, 0, 1, &val); ASSERT_LDOUBLE_EXACT(val, 1.0L);
+    get_ldouble_matrix(m, 1, 2, &val); ASSERT_LDOUBLE_EXACT(val, 2.0L);
+    get_ldouble_matrix(m, 3, 0, &val); ASSERT_LDOUBLE_EXACT(val, 4.0L);
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// ================================================================================
+// Group 6: clear_ldouble_matrix
+// ================================================================================
+ 
+static void test_ldouble_clear_dense_zeros_all_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 2, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    set_ldouble_matrix(m, 0, 0, 5.0L);
+    set_ldouble_matrix(m, 1, 1, 9.0L);
+    assert_int_equal(clear_ldouble_matrix(m), NO_ERROR);
+ 
+    assert_true(is_ldouble_matrix_zero(m));
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_clear_coo_resets_nnz(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_coo_matrix(3, 3, 4, true, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    push_back_ldouble_coo_matrix(m, 0, 0, 1.0L);
+    push_back_ldouble_coo_matrix(m, 1, 1, 2.0L);
+    assert_int_equal(clear_ldouble_matrix(m), NO_ERROR);
+    assert_int_equal((int)ldouble_matrix_nnz(m), 0);
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// ================================================================================
+// Group 7: copy_ldouble_matrix
+// ================================================================================
+ 
+static void test_ldouble_copy_null_returns_error(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = copy_ldouble_matrix(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_copy_dense_produces_independent_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* src = r.u.value;
+ 
+    set_ldouble_matrix(src, 0, 0, 1.0L);
+    set_ldouble_matrix(src, 1, 2, 7.0L);
+ 
+    ldouble_matrix_expect_t cr = copy_ldouble_matrix(src, alloc);
+    assert_true(cr.has_value);
+    ldouble_matrix_t* dst = cr.u.value;
+ 
+    /* Mutating src must not affect copy */
+    set_ldouble_matrix(src, 0, 0, 999.0L);
+ 
+    long double val = 0.0L;
+    get_ldouble_matrix(dst, 0, 0, &val); ASSERT_LDOUBLE_EXACT(val, 1.0L);
+    get_ldouble_matrix(dst, 1, 2, &val); ASSERT_LDOUBLE_EXACT(val, 7.0L);
+ 
+    return_ldouble_matrix(src);
+    return_ldouble_matrix(dst);
+}
+ 
+// ================================================================================
+// Group 8: fill_ldouble_matrix
+// ================================================================================
+ 
+static void test_ldouble_fill_null_returns_error(void** state) {
+    (void)state;
+    assert_int_equal(fill_ldouble_matrix(NULL, 1.0L), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_fill_dense_sets_all_elements(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(4, 5, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    assert_int_equal(fill_ldouble_matrix(m, 3.5L), NO_ERROR);
+ 
+    long double val = 0.0L;
+    for (size_t i = 0; i < 4; ++i) {
+        for (size_t j = 0; j < 5; ++j) {
+            get_ldouble_matrix(m, i, j, &val);
+            ASSERT_LDOUBLE_EXACT(val, 3.5L);
+        }
+    }
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_fill_zero_clears_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    fill_ldouble_matrix(m, 5.0L);
+    assert_int_equal(fill_ldouble_matrix(m, 0.0L), NO_ERROR);
+    assert_true(is_ldouble_matrix_zero(m));
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// ================================================================================
+// Group 9: is_ldouble_matrix_zero
+// ================================================================================
+ 
+static void test_ldouble_is_zero_null_returns_true(void** state) {
+    (void)state;
+    assert_true(is_ldouble_matrix_zero(NULL));
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_is_zero_freshly_initialized_dense(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(5, 5, alloc);
+    assert_true(r.has_value);
+    assert_true(is_ldouble_matrix_zero(r.u.value));
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_is_zero_returns_false_after_set(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    set_ldouble_matrix(m, 1, 1, 0.001L);
+    assert_false(is_ldouble_matrix_zero(m));
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// ================================================================================
+// Group 10: ldouble_matrix_equal
+// ================================================================================
+ 
+static void test_ldouble_equal_null_returns_false(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 2, alloc);
+    assert_true(r.has_value);
+ 
+    assert_false(ldouble_matrix_equal(NULL, r.u.value));
+    assert_false(ldouble_matrix_equal(r.u.value, NULL));
+ 
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_equal_identical_matrices(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* a = r.u.value;
+ 
+    set_ldouble_matrix(a, 0, 0, 1.0L);
+    set_ldouble_matrix(a, 1, 2, -4.5L);
+ 
+    ldouble_matrix_expect_t cr = copy_ldouble_matrix(a, alloc);
+    assert_true(cr.has_value);
+ 
+    assert_true(ldouble_matrix_equal(a, cr.u.value));
+ 
+    return_ldouble_matrix(a);
+    return_ldouble_matrix(cr.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_equal_different_values_returns_false(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t ra = init_ldouble_dense_matrix(2, 2, alloc);
+    ldouble_matrix_expect_t rb = init_ldouble_dense_matrix(2, 2, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    set_ldouble_matrix(ra.u.value, 0, 0, 1.0L);
+    set_ldouble_matrix(rb.u.value, 0, 0, 2.0L);
+ 
+    assert_false(ldouble_matrix_equal(ra.u.value, rb.u.value));
+ 
+    return_ldouble_matrix(ra.u.value);
+    return_ldouble_matrix(rb.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_equal_different_shape_returns_false(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t ra = init_ldouble_dense_matrix(2, 3, alloc);
+    ldouble_matrix_expect_t rb = init_ldouble_dense_matrix(3, 2, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    assert_false(ldouble_matrix_equal(ra.u.value, rb.u.value));
+ 
+    return_ldouble_matrix(ra.u.value);
+    return_ldouble_matrix(rb.u.value);
+}
+ 
+// ================================================================================
+// Group 11: transpose_ldouble_matrix
+// ================================================================================
+ 
+static void test_ldouble_transpose_null_returns_error(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = transpose_ldouble_matrix(NULL, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_transpose_dense_swaps_dimensions(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    set_ldouble_matrix(m, 0, 0, 10.0L);
+    set_ldouble_matrix(m, 0, 1, 11.0L);
+    set_ldouble_matrix(m, 0, 2, 12.0L);
+    set_ldouble_matrix(m, 1, 0, 20.0L);
+    set_ldouble_matrix(m, 1, 1, 21.0L);
+    set_ldouble_matrix(m, 1, 2, 22.0L);
+ 
+    ldouble_matrix_expect_t tr = transpose_ldouble_matrix(m, alloc);
+    assert_true(tr.has_value);
+    ldouble_matrix_t* t = tr.u.value;
+ 
+    assert_int_equal((int)ldouble_matrix_rows(t), 3);
+    assert_int_equal((int)ldouble_matrix_cols(t), 2);
+ 
+    long double val = 0.0L;
+    get_ldouble_matrix(t, 0, 0, &val); ASSERT_LDOUBLE_EXACT(val, 10.0L);
+    get_ldouble_matrix(t, 0, 1, &val); ASSERT_LDOUBLE_EXACT(val, 20.0L);
+    get_ldouble_matrix(t, 1, 0, &val); ASSERT_LDOUBLE_EXACT(val, 11.0L);
+    get_ldouble_matrix(t, 1, 1, &val); ASSERT_LDOUBLE_EXACT(val, 21.0L);
+    get_ldouble_matrix(t, 2, 0, &val); ASSERT_LDOUBLE_EXACT(val, 12.0L);
+    get_ldouble_matrix(t, 2, 1, &val); ASSERT_LDOUBLE_EXACT(val, 22.0L);
+ 
+    return_ldouble_matrix(m);
+    return_ldouble_matrix(t);
+}
+ 
+// ================================================================================
+// Group 12: convert_ldouble_matrix dense→CSR
+// ================================================================================
+ 
+static void test_ldouble_convert_dense_to_csr_preserves_values(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    set_ldouble_matrix(m, 0, 0, 1.0L);
+    set_ldouble_matrix(m, 0, 2, 2.0L);
+    set_ldouble_matrix(m, 1, 1, 3.0L);
+    set_ldouble_matrix(m, 2, 0, 4.0L);
+    set_ldouble_matrix(m, 2, 2, 5.0L);
+ 
+    ldouble_matrix_expect_t cr = convert_ldouble_matrix(m, CSR_MATRIX, alloc);
+    assert_true(cr.has_value);
+    ldouble_matrix_t* csr = cr.u.value;
+ 
+    assert_int_equal((int)ldouble_matrix_format(csr), CSR_MATRIX);
+    assert_int_equal((int)ldouble_matrix_nnz(csr), 5);
+ 
+    long double val = 0.0L;
+    get_ldouble_matrix(csr, 0, 0, &val); ASSERT_LDOUBLE_EXACT(val, 1.0L);
+    get_ldouble_matrix(csr, 0, 2, &val); ASSERT_LDOUBLE_EXACT(val, 2.0L);
+    get_ldouble_matrix(csr, 1, 1, &val); ASSERT_LDOUBLE_EXACT(val, 3.0L);
+    get_ldouble_matrix(csr, 2, 0, &val); ASSERT_LDOUBLE_EXACT(val, 4.0L);
+    get_ldouble_matrix(csr, 2, 2, &val); ASSERT_LDOUBLE_EXACT(val, 5.0L);
+ 
+    /* Zero entries must read as zero */
+    get_ldouble_matrix(csr, 0, 1, &val); ASSERT_LDOUBLE_EXACT(val, 0.0L);
+ 
+    return_ldouble_matrix(m);
+    return_ldouble_matrix(csr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_convert_all_zero_dense_to_csr(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+ 
+    ldouble_matrix_expect_t cr = convert_ldouble_matrix(r.u.value, CSR_MATRIX, alloc);
+    assert_true(cr.has_value);
+    assert_int_equal((int)ldouble_matrix_nnz(cr.u.value), 0);
+
+    return_ldouble_matrix(r.u.value);
+    return_ldouble_matrix(cr.u.value);
+}
+ 
+// ================================================================================
+// Group 13: Introspection
+// ================================================================================
+ 
+static void test_ldouble_introspection_null_returns_defaults(void** state) {
+    (void)state;
+    assert_int_equal((int)ldouble_matrix_rows(NULL), 0);
+    assert_int_equal((int)ldouble_matrix_cols(NULL), 0);
+    assert_int_equal((int)ldouble_matrix_nnz(NULL), 0);
+    assert_int_equal((int)ldouble_matrix_storage_bytes(NULL), 0);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_dense_nnz_equals_rows_times_cols(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(4, 5, alloc);
+    assert_true(r.has_value);
+    assert_int_equal((int)ldouble_matrix_nnz(r.u.value), 20);
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_format_name_returns_string(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 2, alloc);
+    assert_true(r.has_value);
+    assert_string_equal(ldouble_matrix_format_name(r.u.value), "DENSE_MATRIX");
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_storage_bytes_dense(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 4, alloc);
+    assert_true(r.has_value);
+    /* 3 * 4 * sizeof(long double) — platform-dependent */
+    size_t expected = 3u * 4u * sizeof(long double);
+    assert_int_equal((int)ldouble_matrix_storage_bytes(r.u.value), (int)expected);
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// ================================================================================
+// Group 14: Shape and compatibility queries
+// ================================================================================
+ 
+static void test_ldouble_same_shape_true_for_matching_dimensions(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t ra = init_ldouble_dense_matrix(3, 4, alloc);
+    ldouble_matrix_expect_t rb = init_ldouble_dense_matrix(3, 4, alloc);
+    assert_true(ra.has_value && rb.has_value);
+    assert_true(ldouble_matrix_has_same_shape(ra.u.value, rb.u.value));
+    return_ldouble_matrix(ra.u.value);
+    return_ldouble_matrix(rb.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_is_square(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t sq = init_ldouble_dense_matrix(3, 3, alloc);
+    ldouble_matrix_expect_t ns = init_ldouble_dense_matrix(3, 4, alloc);
+    assert_true(sq.has_value && ns.has_value);
+    assert_true(ldouble_matrix_is_square(sq.u.value));
+    assert_false(ldouble_matrix_is_square(ns.u.value));
+    return_ldouble_matrix(sq.u.value);
+    return_ldouble_matrix(ns.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_is_sparse(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t d = init_ldouble_dense_matrix(2, 2, alloc);
+    ldouble_matrix_expect_t c = init_ldouble_coo_matrix(2, 2, 4, true, alloc);
+    assert_true(d.has_value && c.has_value);
+    assert_false(ldouble_matrix_is_sparse(d.u.value));
+    assert_true(ldouble_matrix_is_sparse(c.u.value));
+    return_ldouble_matrix(d.u.value);
+    return_ldouble_matrix(c.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_add_compatible(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t ra = init_ldouble_dense_matrix(3, 4, alloc);
+    ldouble_matrix_expect_t rb = init_ldouble_dense_matrix(3, 4, alloc);
+    ldouble_matrix_expect_t rc = init_ldouble_dense_matrix(4, 3, alloc);
+    assert_true(ra.has_value && rb.has_value && rc.has_value);
+ 
+    assert_true(ldouble_matrix_is_add_compatible(ra.u.value, rb.u.value));
+    assert_false(ldouble_matrix_is_add_compatible(ra.u.value, rc.u.value));
+ 
+    return_ldouble_matrix(ra.u.value);
+    return_ldouble_matrix(rb.u.value);
+    return_ldouble_matrix(rc.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_multiply_compatible(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t ra = init_ldouble_dense_matrix(2, 3, alloc);
+    ldouble_matrix_expect_t rb = init_ldouble_dense_matrix(3, 5, alloc);
+    ldouble_matrix_expect_t rc = init_ldouble_dense_matrix(4, 5, alloc);
+    assert_true(ra.has_value && rb.has_value && rc.has_value);
+ 
+    assert_true(ldouble_matrix_is_multiply_compatible(ra.u.value, rb.u.value));
+    assert_false(ldouble_matrix_is_multiply_compatible(ra.u.value, rc.u.value));
+ 
+    return_ldouble_matrix(ra.u.value);
+    return_ldouble_matrix(rb.u.value);
+    return_ldouble_matrix(rc.u.value);
+}
+ 
+// ================================================================================
+// Group 15: Row / column swaps
+// ================================================================================
+ 
+static void test_ldouble_swap_rows_dense(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 2, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    set_ldouble_matrix(m, 0, 0, 1.0L); set_ldouble_matrix(m, 0, 1, 2.0L);
+    set_ldouble_matrix(m, 1, 0, 3.0L); set_ldouble_matrix(m, 1, 1, 4.0L);
+    set_ldouble_matrix(m, 2, 0, 5.0L); set_ldouble_matrix(m, 2, 1, 6.0L);
+ 
+    assert_int_equal(swap_ldouble_matrix_rows(m, 0, 2), NO_ERROR);
+ 
+    long double val = 0.0L;
+    get_ldouble_matrix(m, 0, 0, &val); ASSERT_LDOUBLE_EXACT(val, 5.0L);
+    get_ldouble_matrix(m, 0, 1, &val); ASSERT_LDOUBLE_EXACT(val, 6.0L);
+    get_ldouble_matrix(m, 2, 0, &val); ASSERT_LDOUBLE_EXACT(val, 1.0L);
+    get_ldouble_matrix(m, 2, 1, &val); ASSERT_LDOUBLE_EXACT(val, 2.0L);
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_swap_cols_dense(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    set_ldouble_matrix(m, 0, 0, 1.0L); set_ldouble_matrix(m, 0, 2, 3.0L);
+    set_ldouble_matrix(m, 1, 0, 4.0L); set_ldouble_matrix(m, 1, 2, 6.0L);
+ 
+    assert_int_equal(swap_ldouble_matrix_cols(m, 0, 2), NO_ERROR);
+ 
+    long double val = 0.0L;
+    get_ldouble_matrix(m, 0, 0, &val); ASSERT_LDOUBLE_EXACT(val, 3.0L);
+    get_ldouble_matrix(m, 0, 2, &val); ASSERT_LDOUBLE_EXACT(val, 1.0L);
+    get_ldouble_matrix(m, 1, 0, &val); ASSERT_LDOUBLE_EXACT(val, 6.0L);
+    get_ldouble_matrix(m, 1, 2, &val); ASSERT_LDOUBLE_EXACT(val, 4.0L);
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// ================================================================================
+// Group 16: Special constructors (identity, row/col vector)
+// ================================================================================
+ 
+static void test_ldouble_identity_matrix(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_identity_matrix(3, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    assert_int_equal((int)ldouble_matrix_rows(m), 3);
+    assert_int_equal((int)ldouble_matrix_cols(m), 3);
+ 
+    long double val = 0.0L;
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            get_ldouble_matrix(m, i, j, &val);
+            ASSERT_LDOUBLE_EXACT(val, (i == j) ? 1.0L : 0.0L);
+        }
+    }
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_row_vector_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_row_vector(5, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    assert_int_equal((int)ldouble_matrix_rows(m), 1);
+    assert_int_equal((int)ldouble_matrix_cols(m), 5);
+    assert_true(ldouble_matrix_is_row_vector(m));
+    assert_false(ldouble_matrix_is_col_vector(m));
+    assert_true(ldouble_matrix_is_vector(m));
+    assert_int_equal((int)ldouble_matrix_vector_length(m), 5);
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_col_vector_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_col_vector(4, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    assert_int_equal((int)ldouble_matrix_rows(m), 4);
+    assert_int_equal((int)ldouble_matrix_cols(m), 1);
+    assert_false(ldouble_matrix_is_row_vector(m));
+    assert_true(ldouble_matrix_is_col_vector(m));
+    assert_true(ldouble_matrix_is_vector(m));
+    assert_int_equal((int)ldouble_matrix_vector_length(m), 4);
+ 
+    return_ldouble_matrix(m);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_non_vector_returns_zero_length(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 4, alloc);
+    assert_true(r.has_value);
+ 
+    assert_false(ldouble_matrix_is_vector(r.u.value));
+    assert_int_equal((int)ldouble_matrix_vector_length(r.u.value), 0);
+ 
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// ================================================================================
+// Group 17: Long-double-specific precision test
+// ================================================================================
+ 
+static void test_ldouble_preserves_extended_precision(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(2, 2, alloc);
+    assert_true(r.has_value);
+    ldouble_matrix_t* m = r.u.value;
+ 
+    /* Values that require more than 53 mantissa bits (double precision).
+       On x86 with 80-bit extended, long double has 64 mantissa bits.
+       If the implementation accidentally used double anywhere, these
+       would be truncated. */
+    long double precise_a = 1.0L + 1.0e-18L;
+    long double precise_b = 1234567890123456789.0L;
+ 
+    set_ldouble_matrix(m, 0, 0, precise_a);
+    set_ldouble_matrix(m, 1, 1, precise_b);
+ 
+    long double val = 0.0L;
+    get_ldouble_matrix(m, 0, 0, &val); ASSERT_LDOUBLE_EXACT(val, precise_a);
+    get_ldouble_matrix(m, 1, 1, &val); ASSERT_LDOUBLE_EXACT(val, precise_b);
+ 
+    /* Verify through copy as well */
+    ldouble_matrix_expect_t cr = copy_ldouble_matrix(m, alloc);
+    assert_true(cr.has_value);
+ 
+    get_ldouble_matrix(cr.u.value, 0, 0, &val); ASSERT_LDOUBLE_EXACT(val, precise_a);
+    get_ldouble_matrix(cr.u.value, 1, 1, &val); ASSERT_LDOUBLE_EXACT(val, precise_b);
+ 
+    return_ldouble_matrix(m);
+    return_ldouble_matrix(cr.u.value);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+static void test_ldouble_sizeof_matches_registration(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(1, 1, alloc);
+    assert_true(r.has_value);
+ 
+    /* The matrix's data_size must match sizeof(long double) on this platform */
+    assert_int_equal((int)r.u.value->data_size, (int)sizeof(long double));
+ 
+    return_ldouble_matrix(r.u.value);
+}
+ 
+// ================================================================================
+// Test suite export
+// ================================================================================
+ 
+const struct CMUnitTest test_ldouble_matrix[] = {
+    /* Group 1: init dense */
+    cmocka_unit_test(test_ldouble_dense_init_null_allocator_fails),
+    cmocka_unit_test(test_ldouble_dense_init_zero_rows_fails),
+    cmocka_unit_test(test_ldouble_dense_init_zero_cols_fails),
+    cmocka_unit_test(test_ldouble_dense_init_returns_valid_matrix),
+    cmocka_unit_test(test_ldouble_dense_init_elements_are_zero),
+    /* Group 2: init COO */
+    cmocka_unit_test(test_ldouble_coo_init_returns_valid_matrix),
+    cmocka_unit_test(test_ldouble_coo_init_zero_capacity_fails),
+    /* Group 3: return */
+    cmocka_unit_test(test_ldouble_return_null_is_safe),
+    /* Group 4: get/set dense */
+    cmocka_unit_test(test_ldouble_get_null_matrix_returns_null_pointer),
+    cmocka_unit_test(test_ldouble_get_null_out_returns_null_pointer),
+    cmocka_unit_test(test_ldouble_set_null_matrix_returns_null_pointer),
+    cmocka_unit_test(test_ldouble_set_and_get_round_trip),
+    cmocka_unit_test(test_ldouble_set_out_of_bounds_returns_error),
+    /* Group 5: COO assembly */
+    cmocka_unit_test(test_ldouble_coo_push_back_and_retrieve),
+    cmocka_unit_test(test_ldouble_coo_push_back_overwrites_existing),
+    cmocka_unit_test(test_ldouble_coo_sort_orders_entries),
+    /* Group 6: clear */
+    cmocka_unit_test(test_ldouble_clear_dense_zeros_all_elements),
+    cmocka_unit_test(test_ldouble_clear_coo_resets_nnz),
+    /* Group 7: copy */
+    cmocka_unit_test(test_ldouble_copy_null_returns_error),
+    cmocka_unit_test(test_ldouble_copy_dense_produces_independent_matrix),
+    /* Group 8: fill */
+    cmocka_unit_test(test_ldouble_fill_null_returns_error),
+    cmocka_unit_test(test_ldouble_fill_dense_sets_all_elements),
+    cmocka_unit_test(test_ldouble_fill_zero_clears_matrix),
+    /* Group 9: is_zero */
+    cmocka_unit_test(test_ldouble_is_zero_null_returns_true),
+    cmocka_unit_test(test_ldouble_is_zero_freshly_initialized_dense),
+    cmocka_unit_test(test_ldouble_is_zero_returns_false_after_set),
+    /* Group 10: equal */
+    cmocka_unit_test(test_ldouble_equal_null_returns_false),
+    cmocka_unit_test(test_ldouble_equal_identical_matrices),
+    cmocka_unit_test(test_ldouble_equal_different_values_returns_false),
+    cmocka_unit_test(test_ldouble_equal_different_shape_returns_false),
+    /* Group 11: transpose */
+    cmocka_unit_test(test_ldouble_transpose_null_returns_error),
+    cmocka_unit_test(test_ldouble_transpose_dense_swaps_dimensions),
+    /* Group 12: convert dense→CSR */
+    cmocka_unit_test(test_ldouble_convert_dense_to_csr_preserves_values),
+    cmocka_unit_test(test_ldouble_convert_all_zero_dense_to_csr),
+    /* Group 13: introspection */
+    cmocka_unit_test(test_ldouble_introspection_null_returns_defaults),
+    cmocka_unit_test(test_ldouble_dense_nnz_equals_rows_times_cols),
+    cmocka_unit_test(test_ldouble_format_name_returns_string),
+    cmocka_unit_test(test_ldouble_storage_bytes_dense),
+    /* Group 14: shape/compat */
+    cmocka_unit_test(test_ldouble_same_shape_true_for_matching_dimensions),
+    cmocka_unit_test(test_ldouble_is_square),
+    cmocka_unit_test(test_ldouble_is_sparse),
+    cmocka_unit_test(test_ldouble_add_compatible),
+    cmocka_unit_test(test_ldouble_multiply_compatible),
+    /* Group 15: swaps */
+    cmocka_unit_test(test_ldouble_swap_rows_dense),
+    cmocka_unit_test(test_ldouble_swap_cols_dense),
+    /* Group 16: special constructors */
+    cmocka_unit_test(test_ldouble_identity_matrix),
+    cmocka_unit_test(test_ldouble_row_vector_shape),
+    cmocka_unit_test(test_ldouble_col_vector_shape),
+    cmocka_unit_test(test_ldouble_non_vector_returns_zero_length),
+    /* Group 17: ldouble-specific precision */
+    cmocka_unit_test(test_ldouble_preserves_extended_precision),
+    cmocka_unit_test(test_ldouble_sizeof_matches_registration),
+};
+const size_t test_ldouble_matrix_count =
+    sizeof(test_ldouble_matrix) / sizeof(test_ldouble_matrix[0]);
 // ================================================================================
 // ================================================================================
 // eof

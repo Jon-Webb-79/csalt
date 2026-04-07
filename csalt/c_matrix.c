@@ -21,6 +21,12 @@
 // Internal helpers
 // ================================================================================
 
+static inline bool _matrix_in_bounds(const matrix_t* mat,
+                                     size_t          row,
+                                     size_t          col) {
+    return mat != NULL && row < mat->rows && col < mat->cols;
+}
+
 static bool _value_is_zero(const uint8_t* ptr, size_t data_size) {
     size_t i;
 
@@ -32,10 +38,12 @@ static bool _value_is_zero(const uint8_t* ptr, size_t data_size) {
      * Fast path: check raw bytes
      * This works for:
      * - all integer types
-     * - +0.0 for floats/doubles
+     * - +0.0 for floats/doubles/long doubles
      *
      * Caveat:
      * - -0.0 will NOT be detected here (handled below)
+     * - long double padding bytes may be nonzero on some platforms
+     *   (handled below)
      */
     for (i = 0u; i < data_size; ++i) {
         if (ptr[i] != 0u) {
@@ -48,8 +56,15 @@ static bool _value_is_zero(const uint8_t* ptr, size_t data_size) {
     }
 
     /*
-     * Handle floating-point negative zero
-     * Only needed for float/double sizes
+     * Handle floating-point negative zero.
+     * IEEE 754 defines -0.0 == +0.0 under comparison, but -0.0 has a
+     * nonzero sign bit so the byte scan above will not catch it.
+     *
+     * Long double also has platform-dependent padding bytes (e.g. 6
+     * padding bytes in the 16-byte x86-64 representation of 80-bit
+     * extended) that may contain garbage.  The memcpy + comparison
+     * approach handles this correctly because the compiler's ==
+     * operator ignores padding.
      */
     if (data_size == sizeof(float)) {
         float val = 0.0f;
@@ -63,17 +78,17 @@ static bool _value_is_zero(const uint8_t* ptr, size_t data_size) {
         return (val == 0.0);
     }
 
+    if (data_size == sizeof(long double)) {
+        long double val = 0.0L;
+        memcpy(&val, ptr, sizeof(long double));
+        return (val == 0.0L);
+    }
+
     /*
      * For all other types:
      * If any byte != 0, it's non-zero
      */
     return false;
-}
-
-static inline bool _matrix_in_bounds(const matrix_t* mat,
-                                     size_t          row,
-                                     size_t          col) {
-    return mat != NULL && row < mat->rows && col < mat->cols;
 }
 
 // --------------------------------------------------------------------------------
@@ -1151,6 +1166,7 @@ static matrix_expect_t _dense_to_csr_matrix(const matrix_t* src,
     size_t nnz = 0u;
     const uint8_t* ptr = NULL;
 
+    /* Pass 1: count nonzeros */
     for (i = 0u; i < src->rows; ++i) {
         for (j = 0u; j < src->cols; ++j) {
             ptr = src->rep.dense.data + _dense_offset(src, i, j);
@@ -1160,6 +1176,7 @@ static matrix_expect_t _dense_to_csr_matrix(const matrix_t* src,
         }
     }
 
+    /* Allocate matrix_t header */
     void_ptr_expect_t mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
     if (!mr.has_value) {
         return (matrix_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
@@ -1167,26 +1184,31 @@ static matrix_expect_t _dense_to_csr_matrix(const matrix_t* src,
 
     dst = (matrix_t*)mr.u.value;
 
-    dst->rows = src->rows;
-    dst->cols = src->cols;
-    dst->dtype = src->dtype;
+    dst->rows      = src->rows;
+    dst->cols      = src->cols;
+    dst->dtype     = src->dtype;
     dst->data_size = src->data_size;
-    dst->format = CSR_MATRIX;
-    dst->alloc_v = alloc_v;
+    dst->format    = CSR_MATRIX;
+    dst->alloc_v   = alloc_v;
 
-    dst->rep.csr.nnz = 0u;
+    dst->rep.csr.nnz     = 0u;
     dst->rep.csr.row_ptr = NULL;
     dst->rep.csr.col_idx = NULL;
-    dst->rep.csr.values = NULL;
+    dst->rep.csr.values  = NULL;
+
+    /* Allocate CSR arrays — guard against zero-size allocations */
+    size_t row_ptr_bytes = (src->rows + 1u) * sizeof(size_t);
+    size_t col_idx_bytes = nnz * sizeof(size_t);
+    size_t values_bytes  = nnz * src->data_size;
 
     void_ptr_expect_t row_ptr_r = alloc_v.allocate(alloc_v.ctx,
-                                                   (src->rows + 1u) * sizeof(size_t),
+                                                   row_ptr_bytes,
                                                    true);
     void_ptr_expect_t col_idx_r = alloc_v.allocate(alloc_v.ctx,
-                                                   nnz * sizeof(size_t),
+                                                   (nnz > 0u) ? col_idx_bytes : 1u,
                                                    true);
     void_ptr_expect_t values_r  = alloc_v.allocate(alloc_v.ctx,
-                                                   nnz * src->data_size,
+                                                   (nnz > 0u) ? values_bytes : 1u,
                                                    true);
 
     if (!row_ptr_r.has_value || !col_idx_r.has_value || !values_r.has_value) {
@@ -1197,10 +1219,11 @@ static matrix_expect_t _dense_to_csr_matrix(const matrix_t* src,
         return (matrix_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
     }
 
-    size_t* row_ptr = (size_t*)row_ptr_r.u.value;
-    size_t* col_idx = (size_t*)col_idx_r.u.value;
-    uint8_t* values = (uint8_t*)values_r.u.value;
+    size_t*  row_ptr = (size_t*)row_ptr_r.u.value;
+    size_t*  col_idx = (size_t*)col_idx_r.u.value;
+    uint8_t* values  = (uint8_t*)values_r.u.value;
 
+    /* Pass 2: scatter nonzeros into CSR arrays */
     row_ptr[0] = 0u;
     k = 0u;
 
@@ -1216,7 +1239,7 @@ static matrix_expect_t _dense_to_csr_matrix(const matrix_t* src,
         row_ptr[i + 1u] = k;
     }
 
-    dst->rep.csr.nnz = nnz;
+    dst->rep.csr.nnz     = nnz;
     dst->rep.csr.row_ptr = row_ptr;
     dst->rep.csr.col_idx = col_idx;
     dst->rep.csr.values  = values;

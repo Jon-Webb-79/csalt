@@ -336,7 +336,7 @@ A ``double_matrix_t`` is a generic matrix supporting Dense, COO, CSR, and
 CSC storage formats with the element type fixed to ``double``.  It is a
 type-safe wrapper around the generic :ref:`matrix` engine described in
 ``c_matrix.h``, replacing all ``void*`` element access with ``double`` /
-``double*`` and fixing ``dtype`` to ``double_TYPE`` at every call site.
+``double*`` and fixing ``dtype`` to ``DOUBLE_TYPE`` at every call site.
 
 The matrix does not have a default allocator — an
 :c:type:`allocator_vtable_t` must be supplied at initialisation time

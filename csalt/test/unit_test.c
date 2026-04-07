@@ -74,7 +74,8 @@ int main(void) {
         {"AVL", test_avl, test_avl_count},
         {"Generic Matrix", test_matrix, test_matrix_count},
         {"Float Matrix", test_float_matrix, test_float_matrix_count},
-        {"Doubke Matrix", test_double_matrix, test_double_matrix_count},
+        {"Double Matrix", test_double_matrix, test_double_matrix_count},
+        {"LDouble Matrix", test_ldouble_matrix, test_ldouble_matrix_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);

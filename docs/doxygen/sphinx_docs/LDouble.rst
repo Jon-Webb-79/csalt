@@ -336,3 +336,204 @@ Introspection
 
 long double Matrix 
 ==================
+A ``ldouble_matrix_t`` is a generic matrix supporting Dense, COO, CSR, and
+CSC storage formats with the element type fixed to ``ldouble``.  It is a
+type-safe wrapper around the generic :ref:`matrix` engine described in
+``c_matrix.h``, replacing all ``void*`` element access with ``ldouble`` /
+``ldouble*`` and fixing ``dtype`` to ``LDOUBLE_TYPE`` at every call site.
+
+The matrix does not have a default allocator — an
+:c:type:`allocator_vtable_t` must be supplied at initialisation time
+and to every function that produces a new matrix (copy, convert,
+transpose).  See :ref:`allocator_file` for available allocators and the
+trade-offs between them.
+
+Storage Formats
+---------------
+
+``ldouble_matrix_t`` supports four storage representations, selected at
+initialisation time or through :c:func:`convert_ldouble_matrix`:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Format
+     - Description
+   * - ``DENSE_MATRIX``
+     - Row-major contiguous buffer.  Element at (i, j) is at offset
+       ``(i * cols + j) * sizeof(ldouble)``.  Best for full or nearly-full
+       matrices.
+   * - ``COO_MATRIX``
+     - Coordinate list with three parallel arrays (row_idx, col_idx,
+       values).  Supports dynamic insertion and overwrite.  Best for
+       incremental assembly of sparse matrices.
+   * - ``CSR_MATRIX``
+     - Compressed Sparse Row.  Read-only after construction (set returns
+       ``ILLEGAL_STATE``).  Best for row-oriented sparse operations.
+   * - ``CSC_MATRIX``
+     - Compressed Sparse Column.  Read-only after construction.  Best
+       for column-oriented sparse operations.
+
+SIMD Acceleration
+-----------------
+
+Five operations use SIMD-accelerated code paths when operating on dense
+ldouble matrices, with automatic compile-time dispatch across x86
+(SSE2 through AVX-512) and ARM (NEON, SVE, SVE2) instruction sets:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Function
+     - SIMD technique
+   * - :c:func:`fill_ldouble_matrix`
+     - Broadcast-store (4/8/16 ldoubles per instruction)
+   * - :c:func:`is_ldouble_matrix_zero`
+     - Compare-against-zero with early exit
+   * - :c:func:`ldouble_matrix_equal`
+     - XOR + testz/movemask with early exit
+   * - :c:func:`transpose_ldouble_matrix`
+     - Tiled in-register transpose (4×4 / 8×8 / 16×16 blocks)
+   * - :c:func:`convert_ldouble_matrix`
+     - Dense→CSR: vectorized nonzero counting + compress-store scatter
+
+Non-dense formats and mixed-format operations fall back to the generic
+``c_matrix.h`` implementations automatically.
+
+.. code-block:: c
+
+   #include "c_ldouble.h"
+
+   allocator_vtable_t a = heap_allocator();
+
+   /* Dense matrix: 3×4, zero-initialized */
+   ldouble_matrix_expect_t r = init_ldouble_dense_matrix(3, 4, a);
+   if (!r.has_value) { /* handle r.u.error */ }
+   ldouble_matrix_t* m = r.u.value;
+
+   set_ldouble_matrix(m, 0, 0, 1.0f);
+   set_ldouble_matrix(m, 1, 2, 5.5f);
+   set_ldouble_matrix(m, 2, 3, -3.0f);
+
+   /* Transpose (SIMD-accelerated for dense) */
+   ldouble_matrix_expect_t tr = transpose_ldouble_matrix(m, a);
+   /* tr.u.value is 4×3 */
+
+   /* Convert to CSR (SIMD-accelerated counting + scatter) */
+   ldouble_matrix_expect_t csr = convert_ldouble_matrix(m, CSR_MATRIX, a);
+
+   return_ldouble_matrix(csr.u.value);
+   return_ldouble_matrix(tr.u.value);
+   return_ldouble_matrix(m);
+
+.. code-block:: c
+
+   /* COO sparse matrix: 100×100, capacity for 16 entries, growable */
+   ldouble_matrix_expect_t r = init_ldouble_coo_matrix(100, 100, 16, true, a);
+   ldouble_matrix_t* sp = r.u.value;
+
+   push_back_ldouble_coo_matrix(sp, 0, 5, 3.14f);
+   push_back_ldouble_coo_matrix(sp, 42, 99, -1.0f);
+
+   ldouble v;
+   get_ldouble_matrix(sp, 0, 5, &v);    /* v == 3.14f */
+   get_ldouble_matrix(sp, 10, 10, &v);  /* v == 0.0f (not stored) */
+
+   return_ldouble_matrix(sp);
+
+Structs
+-------
+
+.. note::
+
+   ``ldouble_matrix_t`` is a ``typedef`` alias for :c:struct:`matrix_t`.
+   All internal fields are documented under :c:struct:`matrix_t` in
+   :ref:`matrix`.  The ``data_size`` field is always ``sizeof(ldouble)``
+   (4 bytes) and the ``dtype`` field is always ``ldouble_TYPE``.
+
+.. doxygenstruct:: ldouble_matrix_expect_t
+   :members:
+
+Initialisation and Teardown
+---------------------------
+
+.. doxygenfunction:: init_ldouble_dense_matrix
+.. doxygenfunction:: init_ldouble_coo_matrix
+.. doxygenfunction:: return_ldouble_matrix
+
+Element Access
+--------------
+
+.. doxygenfunction:: get_ldouble_matrix
+.. doxygenfunction:: set_ldouble_matrix
+
+COO Assembly
+------------
+
+These functions are only valid on COO-format matrices.
+
+.. doxygenfunction:: reserve_ldouble_coo_matrix
+.. doxygenfunction:: push_back_ldouble_coo_matrix
+.. doxygenfunction:: sort_ldouble_coo_matrix
+
+Lifecycle Operations
+--------------------
+
+.. doxygenfunction:: clear_ldouble_matrix
+.. doxygenfunction:: copy_ldouble_matrix
+.. doxygenfunction:: convert_ldouble_matrix
+.. doxygenfunction:: transpose_ldouble_matrix
+
+Fill and Zero
+-------------
+
+.. doxygenfunction:: fill_ldouble_matrix
+.. doxygenfunction:: zero_ldouble_matrix
+
+Equality and Zero Test
+----------------------
+
+.. doxygenfunction:: ldouble_matrix_equal
+.. doxygenfunction:: is_ldouble_matrix_zero
+
+Row and Column Swaps
+--------------------
+
+.. doxygenfunction:: swap_ldouble_matrix_rows
+.. doxygenfunction:: swap_ldouble_matrix_cols
+
+Special Constructors
+--------------------
+
+.. doxygenfunction:: init_ldouble_identity_matrix
+.. doxygenfunction:: init_ldouble_row_vector
+.. doxygenfunction:: init_ldouble_col_vector
+
+Introspection
+-------------
+
+.. doxygenfunction:: ldouble_matrix_rows
+.. doxygenfunction:: ldouble_matrix_cols
+.. doxygenfunction:: ldouble_matrix_nnz
+.. doxygenfunction:: ldouble_matrix_format
+.. doxygenfunction:: ldouble_matrix_storage_bytes
+.. doxygenfunction:: ldouble_matrix_format_name
+
+Shape and Compatibility
+-----------------------
+
+.. doxygenfunction:: ldouble_matrix_has_same_shape
+.. doxygenfunction:: ldouble_matrix_is_square
+.. doxygenfunction:: ldouble_matrix_is_sparse
+.. doxygenfunction:: ldouble_matrix_is_add_compatible
+.. doxygenfunction:: ldouble_matrix_is_multiply_compatible
+
+Vector Queries
+--------------
+
+.. doxygenfunction:: ldouble_matrix_is_row_vector
+.. doxygenfunction:: ldouble_matrix_is_col_vector
+.. doxygenfunction:: ldouble_matrix_is_vector
+.. doxygenfunction:: ldouble_matrix_vector_length
