@@ -246,18 +246,23 @@ extern const size_t test_matrix_count;
 // ================================================================================ 
 // ================================================================================ 
 
-extern const struct CMUnitTest test_float_matrix[];
-extern const size_t test_float_matrix_count;
+// extern const struct CMUnitTest test_float_matrix[];
+// extern const size_t test_float_matrix_count;
+// // ================================================================================ 
+// // ================================================================================ 
+//
+// extern const struct CMUnitTest test_double_matrix[];
+// extern const size_t test_double_matrix_count;
+// // ================================================================================ 
+// // ================================================================================ 
+//
+// extern const struct CMUnitTest test_ldouble_matrix[];
+// extern const size_t test_ldouble_matrix_count;
 // ================================================================================ 
 // ================================================================================ 
 
-extern const struct CMUnitTest test_double_matrix[];
-extern const size_t test_double_matrix_count;
-// ================================================================================ 
-// ================================================================================ 
-
-extern const struct CMUnitTest test_ldouble_matrix[];
-extern const size_t test_ldouble_matrix_count;
+// extern const struct CMUnitTest test_uint8_matrix[];
+// extern const size_t test_uint8_matrix_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus

@@ -17,6 +17,29 @@
 // ================================================================================ 
 // ================================================================================ 
 
+#if defined(__AVX512F__)
+#  include "simd_avx512_uint8.inl"
+#elif defined(__AVX2__)
+#  include "simd_avx2_uint8.inl"
+#elif defined(__AVX__)
+#  include "simd_avx_uint8.inl"
+#elif defined(__SSE4_1__)
+#  include "simd_sse41_uint8.inl"
+#elif defined(__SSSE3__)
+#  include "simd_sse3_uint8.inl"
+#elif defined(__SSE2__)
+#  include "simd_sse2_uint8.inl"
+#elif defined(__ARM_FEATURE_SVE2)
+#  include "simd_sve2_uint8.inl"
+#elif defined(__ARM_FEATURE_SVE)
+#  include "simd_sve_uint8.inl"
+#elif defined(__ARM_NEON)
+#  include "simd_neon_uint8.inl"
+#else
+#  include "simd_scalar_uint8.inl"
+#endif
+
+
 // ================================================================================
 // Internal helper: unwrap a raw array_expect_t into a uint8_array_expect_t.
 // The array_t* stored inside the array_expect_t is reinterpreted as the base
@@ -503,6 +526,454 @@ size_t uint8_dict_alloc(const uint8_dict_t* dict) {
  
 bool is_uint8_dict_empty(const uint8_dict_t* dict) {
     return is_dict_empty(dict);
+}
+// ================================================================================ 
+// ================================================================================ 
+
+// uint8_matrix_t — type-safe uint8 wrapper implementations
+//
+// Every function below is a thin delegation to the corresponding generic
+// matrix_t function, fixing the dtype to uint8_TYPE and converting between
+// uint8 / uint8* and the void* interface expected by c_matrix.h.
+// ================================================================================
+// ================================================================================
+
+// ================================================================================
+// Internal helper: rewrap matrix_expect_t as uint8_matrix_expect_t
+// ================================================================================
+
+static inline uint8_matrix_expect_t _wrap_matrix_expect(matrix_expect_t e) {
+    if (e.has_value) {
+        return (uint8_matrix_expect_t){
+            .has_value = true,
+            .u.value   = (uint8_matrix_t*)e.u.value
+        };
+    }
+    return (uint8_matrix_expect_t){
+        .has_value = false,
+        .u.error   = e.u.error
+    };
+}
+
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+
+uint8_matrix_expect_t init_uint8_dense_matrix(size_t             rows,
+                                              size_t             cols,
+                                              allocator_vtable_t alloc_v) {
+    return _wrap_matrix_expect(
+        init_dense_matrix(rows, cols, UINT8_TYPE, alloc_v)
+    );
+}
+
+// --------------------------------------------------------------------------------
+
+uint8_matrix_expect_t init_uint8_coo_matrix(size_t             rows,
+                                            size_t             cols,
+                                            size_t             capacity,
+                                            bool               growth,
+                                            allocator_vtable_t alloc_v) {
+    return _wrap_matrix_expect(
+        init_coo_matrix(rows, cols, capacity, UINT8_TYPE, growth, alloc_v)
+    );
+}
+
+// --------------------------------------------------------------------------------
+
+void return_uint8_matrix(uint8_matrix_t* mat) {
+    return_matrix(mat);
+}
+
+// ================================================================================
+// Element access
+// ================================================================================
+
+error_code_t get_uint8_matrix(const uint8_matrix_t* mat,
+                              size_t                row,
+                              size_t                col,
+                              uint8_t*              out) {
+    if (mat == NULL || out == NULL) return NULL_POINTER;
+    return get_matrix(mat, row, col, out);
+}
+
+// --------------------------------------------------------------------------------
+
+error_code_t set_uint8_matrix(uint8_matrix_t* mat,
+                              size_t          row,
+                              size_t          col,
+                              uint8_t         value) {
+    if (mat == NULL) return NULL_POINTER;
+    return set_matrix(mat, row, col, &value);
+}
+
+// ================================================================================
+// COO assembly helpers
+// ================================================================================
+
+error_code_t reserve_uint8_coo_matrix(uint8_matrix_t* mat,
+                                      size_t          capacity) {
+    return reserve_coo_matrix(mat, capacity);
+}
+
+// --------------------------------------------------------------------------------
+
+error_code_t push_back_uint8_coo_matrix(uint8_matrix_t* mat,
+                                        size_t          row,
+                                        size_t          col,
+                                        uint8_t         value) {
+    if (mat == NULL) return NULL_POINTER;
+    return push_back_coo_matrix(mat, row, col, &value);
+}
+
+// --------------------------------------------------------------------------------
+
+error_code_t sort_uint8_coo_matrix(uint8_matrix_t* mat) {
+    return sort_coo_matrix(mat);
+}
+
+// ================================================================================
+// Lifecycle / structural operations
+// ================================================================================
+
+error_code_t clear_uint8_matrix(uint8_matrix_t* mat) {
+    return clear_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+uint8_matrix_expect_t copy_uint8_matrix(const uint8_matrix_t* src,
+                                        allocator_vtable_t    alloc_v) {
+    return _wrap_matrix_expect(copy_matrix(src, alloc_v));
+}
+
+// --------------------------------------------------------------------------------
+
+uint8_matrix_expect_t convert_uint8_matrix(const uint8_matrix_t* src,
+                                           matrix_format_t       target,
+                                           allocator_vtable_t    alloc_v) {
+    if (src == NULL) {
+        return (uint8_matrix_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+ 
+    /* SIMD fast path: dense uint8 → CSR */
+    if (src->format == DENSE_MATRIX && target == CSR_MATRIX) {
+        const uint8_t* data = (const uint8_t*)src->rep.dense.data;
+        size_t total = src->rows * src->cols;
+ 
+        /* Pass 1: count nonzeros (SIMD-accelerated) */
+        size_t nnz = simd_count_nonzero_uint8(data, total);
+ 
+        /* Allocate the matrix_t header */
+        void_ptr_expect_t mr = alloc_v.allocate(
+            alloc_v.ctx, sizeof(matrix_t), true);
+        if (!mr.has_value) {
+            return (uint8_matrix_expect_t){
+                .has_value = false, .u.error = BAD_ALLOC };
+        }
+ 
+        uint8_matrix_t* dst = (uint8_matrix_t*)mr.u.value;
+ 
+        dst->rows      = src->rows;
+        dst->cols      = src->cols;
+        dst->dtype     = UINT8_TYPE;
+        dst->data_size = sizeof(uint8_t);
+        dst->format    = CSR_MATRIX;
+        dst->alloc_v   = alloc_v;
+ 
+        dst->rep.csr.nnz     = 0u;
+        dst->rep.csr.row_ptr = NULL;
+        dst->rep.csr.col_idx = NULL;
+        dst->rep.csr.values  = NULL;
+ 
+        /* Allocate CSR arrays */
+        size_t row_ptr_bytes = (src->rows + 1u) * sizeof(size_t);
+        size_t col_idx_bytes = nnz * sizeof(size_t);
+        size_t values_bytes  = nnz * sizeof(uint8_t);
+ 
+        void_ptr_expect_t rp_r = alloc_v.allocate(
+            alloc_v.ctx, row_ptr_bytes, true);
+        void_ptr_expect_t ci_r = alloc_v.allocate(
+            alloc_v.ctx, (nnz > 0u) ? col_idx_bytes : 1u, true);
+        void_ptr_expect_t vl_r = alloc_v.allocate(
+            alloc_v.ctx, (nnz > 0u) ? values_bytes : 1u, true);
+ 
+        if (!rp_r.has_value || !ci_r.has_value || !vl_r.has_value) {
+            if (rp_r.has_value) alloc_v.return_element(alloc_v.ctx, rp_r.u.value);
+            if (ci_r.has_value) alloc_v.return_element(alloc_v.ctx, ci_r.u.value);
+            if (vl_r.has_value) alloc_v.return_element(alloc_v.ctx, vl_r.u.value);
+            alloc_v.return_element(alloc_v.ctx, dst);
+            return (uint8_matrix_expect_t){
+                .has_value = false, .u.error = OUT_OF_MEMORY };
+        }
+ 
+        size_t* row_ptr = (size_t*)rp_r.u.value;
+        size_t* col_idx = (size_t*)ci_r.u.value;
+        uint8_t*  values  = (uint8_t*)vl_r.u.value;
+ 
+        /* Pass 2: scatter nonzeros into CSR arrays (SIMD where available) */
+        row_ptr[0] = 0u;
+        size_t k = 0u;
+ 
+        for (size_t i = 0u; i < src->rows; ++i) {
+            const uint8_t* row_data = data + (i * src->cols);
+            k = simd_scatter_csr_row_uint8(
+                row_data, src->cols, 0u, col_idx, values, k);
+            row_ptr[i + 1u] = k;
+        }
+ 
+        dst->rep.csr.nnz     = nnz;
+        dst->rep.csr.row_ptr = row_ptr;
+        dst->rep.csr.col_idx = col_idx;
+        dst->rep.csr.values  = (uint8_t*)values;
+ 
+        return (uint8_matrix_expect_t){
+            .has_value = true, .u.value = dst };
+    }
+ 
+    /* All other conversions: delegate to generic path */
+    return _wrap_matrix_expect(convert_matrix(src, target, alloc_v));
+}
+
+// --------------------------------------------------------------------------------
+
+uint8_matrix_expect_t transpose_uint8_matrix(const uint8_matrix_t* src,
+                                             allocator_vtable_t    alloc_v) {
+    if (src == NULL) {
+        return (uint8_matrix_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+ 
+    /* Non-dense formats: delegate to the generic path which handles
+       COO, CSR, and CSC transposes natively. */
+    if (src->format != DENSE_MATRIX) {
+        return _wrap_matrix_expect(transpose_matrix(src, alloc_v));
+    }
+ 
+    /* Allocate destination dense matrix with transposed dimensions */
+    uint8_matrix_expect_t r = init_uint8_dense_matrix(
+        src->cols, src->rows, alloc_v
+    );
+    if (!r.has_value) return r;
+ 
+    /* SIMD fast path: dense uint8 transpose */
+    const uint8_t* sdata = (const uint8_t*)src->rep.dense.data;
+    uint8_t*       ddata = (uint8_t*)r.u.value->rep.dense.data;
+    simd_transpose_uint8(sdata, ddata, src->rows, src->cols);
+ 
+    return r;
+}
+// ================================================================================
+// Fill and zero
+// ================================================================================
+
+error_code_t fill_uint8_matrix(uint8_matrix_t* mat,
+                               uint8_t         value) {
+    if (mat == NULL) return NULL_POINTER;
+ 
+    /* Zero fill: delegate to clear_matrix for all formats */
+    if (value == 0u) return clear_matrix(mat);
+ 
+    /* Non-zero fill on non-dense: fall back to generic path */
+    if (mat->format != DENSE_MATRIX) return fill_matrix(mat, &value);
+ 
+    /* SIMD fast path: dense uint8 fill */
+    uint8_t* data  = (uint8_t*)mat->rep.dense.data;
+    size_t count = mat->rows * mat->cols;
+    simd_fill_uint8(data, count, value);
+    return NO_ERROR;
+}
+// --------------------------------------------------------------------------------
+
+error_code_t zero_uint8_matrix(uint8_matrix_t* mat) {
+    return clear_matrix(mat);
+}
+
+// ================================================================================
+// Introspection
+// ================================================================================
+
+size_t uint8_matrix_rows(const uint8_matrix_t* mat) {
+    return matrix_rows(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+size_t uint8_matrix_cols(const uint8_matrix_t* mat) {
+    return matrix_cols(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+size_t uint8_matrix_nnz(const uint8_matrix_t* mat) {
+    return matrix_nnz(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+matrix_format_t uint8_matrix_format(const uint8_matrix_t* mat) {
+    return matrix_format(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+size_t uint8_matrix_storage_bytes(const uint8_matrix_t* mat) {
+    return matrix_storage_bytes(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+const char* uint8_matrix_format_name(const uint8_matrix_t* mat) {
+    if (mat == NULL) return "UNKNOWN_MATRIX_FORMAT";
+    return matrix_format_name(mat->format);
+}
+
+// ================================================================================
+// Shape and compatibility queries
+// ================================================================================
+
+bool uint8_matrix_has_same_shape(const uint8_matrix_t* a,
+                                 const uint8_matrix_t* b) {
+    return matrix_has_same_shape(a, b);
+}
+
+// --------------------------------------------------------------------------------
+
+bool uint8_matrix_is_square(const uint8_matrix_t* mat) {
+    return matrix_is_square(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+bool uint8_matrix_is_sparse(const uint8_matrix_t* mat) {
+    return matrix_is_sparse(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+bool is_uint8_matrix_zero(const uint8_matrix_t* mat) {
+    if (mat == NULL) return true;
+
+    /* SIMD fast path: dense uint8 */
+    if (mat->format == DENSE_MATRIX) {
+        const uint8_t* data = (const uint8_t*)mat->rep.dense.data;
+        size_t count = mat->rows * mat->cols;
+        return simd_is_all_zero_uint8(data, count);
+    }
+
+    /* Sparse formats: delegate to generic path */
+    return is_zero_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+bool uint8_matrix_equal(const uint8_matrix_t* a,
+                        const uint8_matrix_t* b) {
+    if (a == NULL || b == NULL) return false;
+    if (!matrix_has_same_shape(a, b)) return false;
+    if (a->dtype != b->dtype) return false;
+ 
+    /* SIMD fast path: both dense uint8 matrices — flat linear comparison */
+    if (a->format == DENSE_MATRIX && b->format == DENSE_MATRIX) {
+        const uint8_t* da = (const uint8_t*)a->rep.dense.data;
+        const uint8_t* db = (const uint8_t*)b->rep.dense.data;
+        return simd_equal_uint8(da, db, a->rows * a->cols);
+    }
+ 
+    /* Mixed/sparse formats: fall back to generic element-wise comparison */
+    return matrix_equal(a, b);
+}
+
+// --------------------------------------------------------------------------------
+
+bool uint8_matrix_is_add_compatible(const uint8_matrix_t* a,
+                                    const uint8_matrix_t* b) {
+    return matrix_is_add_compatible(a, b);
+}
+
+// --------------------------------------------------------------------------------
+
+bool uint8_matrix_is_multiply_compatible(const uint8_matrix_t* a,
+                                         const uint8_matrix_t* b) {
+    return matrix_is_multiply_compatible(a, b);
+}
+
+// ================================================================================
+// Row / column swaps
+// ================================================================================
+
+error_code_t swap_uint8_matrix_rows(uint8_matrix_t* mat,
+                                    size_t          r1,
+                                    size_t          r2) {
+    return swap_matrix_rows(mat, r1, r2);
+}
+
+// --------------------------------------------------------------------------------
+
+error_code_t swap_uint8_matrix_cols(uint8_matrix_t* mat,
+                                    size_t          c1,
+                                    size_t          c2) {
+    return swap_matrix_cols(mat, c1, c2);
+}
+
+// ================================================================================
+// Special matrix constructors
+// ================================================================================
+
+uint8_matrix_expect_t init_uint8_identity_matrix(size_t             n,
+                                                 allocator_vtable_t alloc_v) {
+    return _wrap_matrix_expect(
+        init_identity_matrix(n, UINT8_TYPE, alloc_v)
+    );
+}
+
+// --------------------------------------------------------------------------------
+
+uint8_matrix_expect_t init_uint8_row_vector(size_t             length,
+                                            allocator_vtable_t alloc_v) {
+    return _wrap_matrix_expect(
+        init_row_vector(length, UINT8_TYPE, alloc_v)
+    );
+}
+
+// --------------------------------------------------------------------------------
+
+uint8_matrix_expect_t init_uint8_col_vector(size_t             length,
+                                            allocator_vtable_t alloc_v) {
+    return _wrap_matrix_expect(
+        init_col_vector(length, UINT8_TYPE, alloc_v)
+    );
+}
+
+// ================================================================================
+// Vector shape queries
+// ================================================================================
+
+bool uint8_matrix_is_row_vector(const uint8_matrix_t* mat) {
+    return matrix_is_row_vector(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+bool uint8_matrix_is_col_vector(const uint8_matrix_t* mat) {
+    return matrix_is_col_vector(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+bool uint8_matrix_is_vector(const uint8_matrix_t* mat) {
+    return matrix_is_vector(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+size_t uint8_matrix_vector_length(const uint8_matrix_t* mat) {
+    return matrix_vector_length(mat);
 }
 // ================================================================================
 // ================================================================================

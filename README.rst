@@ -105,6 +105,116 @@ Dictionary (``dict_t``)
   membership test, clear, deep copy, merge (with or without overwrite), and
   bucket-order iteration via a typed callback.
 
+Linked List (``slist_t``)
+-------------------------
+
+* Utilizes allocators from the ``c_allocator.h`` file or user-developed custom
+  allocators to manage memory for the list header, node slab, and any overflow
+  allocations.
+* Stores values as fixed-size byte buffers with a user-specified ``data_size``
+  and associated ``dtype_id_t`` for type identification.
+* Nodes store data inline (no secondary allocation), improving cache locality
+  and reducing pointer indirection during traversal.
+* Uses a hybrid allocation strategy:
+  - Pre-allocated contiguous node slab for fast, cache-friendly access
+  - Optional overflow allocation for additional nodes when capacity is exceeded
+* Provides O(1) insertion at the front and back, with O(n) traversal-based
+  access and insertion at arbitrary positions.
+* Supports safe element access and retrieval via copy semantics (no direct
+  exposure of internal node storage).
+* Designed as a generic container — users are expected to define their own
+  typed wrappers for domain-specific data structures using ``c_dtypes.h``.
+* Provides iteration support via callback functions for traversal without
+  exposing internal node structure.
+* Supports standard list operations including push (front, back, index),
+  pop (front, back, index), search, and introspection.
+ 
+Binary Heap (``heap_t``)
+------------------------
+* Utilizes allocators from the ``c_allocator.h`` file or user-developed custom
+  allocators to manage memory for both the ``heap_t`` struct and its backing
+  ``array_t`` element buffer.
+* Implemented as a generic binary heap backed by a contiguous ``array_t``
+  buffer; all elements are stored inline as fixed-size byte buffers identified
+  by a ``dtype_id_t``.
+* Heap ordering is fully determined by a caller-supplied comparator following
+  the ``qsort(3)`` convention — the same comparator serves as both a max-heap
+  and a min-heap depending on its sign convention, with no hardcoded ordering
+  in the implementation.
+* Uses the same tiered growth strategy as ``array_t``: 2× below 1 024
+  elements, 1.5× up to 8 192, 1.25× up to 65 536, and a fixed increment of
+  256 beyond that; fixed-capacity mode is also supported via ``growth = false``.
+* Supports push (with sift-up), pop (with sift-down), non-destructive root
+  peek, unordered foreach iteration via a typed callback, deep copy, and
+  standard introspection (size, allocated capacity).
+* Ordered traversal is achieved by copying the heap with ``copy_heap`` and
+  draining the copy via repeated ``heap_pop`` calls, preserving the original
+  intact.
+* Designed as a generic container — users are expected to register their own
+  ``dtype_id_t``, supply a comparator, and define thin typed wrappers for
+  domain-specific priority structures using ``c_dtypes.h``.
+
+AVL Tree (``avl_t``)
+---------------------
+
+* Utilizes allocators from the ``c_allocator.h`` file or user-developed custom
+  allocators to manage memory for the tree header, node slab, free list, and
+  any overflow allocations.
+* Implements a self-balancing binary search tree (AVL) that maintains strict
+  height balance, ensuring O(log n) insertion, removal, and lookup operations.
+* Stores values as fixed-size byte buffers with a user-specified ``data_size``
+  derived from ``dtype_id_t``, enabling generic storage of arbitrary types.
+* Nodes store data inline (no secondary allocation), improving cache locality
+  and eliminating pointer indirection for element access.
+* Uses a hybrid allocation strategy:
+  - Reuses removed nodes through an internal free list
+  - Carves new nodes from a contiguous slab for cache-friendly allocation
+  - Optionally performs overflow allocation when slab capacity is exceeded
+* Tree ordering is fully determined by a caller-supplied comparator following
+  the ``qsort(3)`` convention; duplicate handling is configurable at
+  initialisation.
+* Automatically maintains AVL balance through single and double rotations
+  during insertion and removal operations.
+* Supports ordered traversal via in-order iteration, as well as range-based
+  traversal with branch pruning for efficient subset queries.
+* Provides safe element access and retrieval via copy semantics (no direct
+  exposure of internal node storage).
+* Designed as a generic container — users are expected to define their own
+  typed wrappers for domain-specific data structures using ``c_dtypes.h``.
+* Supports standard tree operations including insert, remove, contains,
+  find, min/max retrieval, ordered traversal, range traversal, copy, and
+  introspection.
+
+Matrix (``matrix_t``)
+---------------------
+
+* Utilizes allocators from the ``c_allocator.h`` file or user-developed custom
+  allocators to manage memory for the matrix header and all internal storage
+  buffers across supported formats.
+* Implements a generic, type-erased matrix container supporting multiple
+  storage formats:
+  - Dense (row-major contiguous storage)
+  - COO (coordinate list sparse format)
+  - CSR (compressed sparse row)
+  - CSC (compressed sparse column)
+* Stores values as fixed-size byte buffers identified by a runtime
+  ``dtype_id_t``, enabling generic storage of arbitrary data types.
+* Provides safe element access via copy semantics; sparse formats return zero
+  values for entries not explicitly stored.
+* Supports format-aware operations including conversion between storage
+  formats and transpose across all supported representations.
+* Includes structural operations such as zeroing, filling (dense-only for
+  nonzero values), row and column swapping (dense and COO), and compatibility
+  checks for addition and multiplication.
+* Supports vector-style usage through row and column vector construction and
+  introspection helpers (e.g., ``matrix_is_vector``).
+* Designed strictly as a container abstraction — no numerical algorithms
+  (e.g., multiplication, inversion, decomposition) are implemented in this
+  module.
+* Intended to serve as the foundation for type-specific numerical extensions,
+  where optimized operations (including SIMD-enabled implementations) are
+  defined in separate modules layered on top of the generic container.
+
 Matrix
 ------
 * To be developed

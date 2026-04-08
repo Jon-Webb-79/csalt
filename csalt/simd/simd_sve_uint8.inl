@@ -361,5 +361,158 @@ static void simd_sum_uint8(const uint8_t* data,
 }
 // ================================================================================ 
 // ================================================================================ 
+
+static inline void simd_fill_uint8(uint8_t* data, size_t count, uint8_t value) {
+    memset(data, value, count);
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline void simd_transpose_uint8(const uint8_t* src,
+                                        uint8_t*       dst,
+                                        size_t         src_rows,
+                                        size_t         src_cols) {
+    const size_t vl = svcntb();
+    const size_t TILE_H = 16u;
+    const size_t TILE_W = vl;
+ 
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / TILE_H) * TILE_H;
+    size_t col_body = (src_cols / TILE_W) * TILE_W;
+ 
+    for (i = 0u; i < row_body; i += TILE_H) {
+        for (j = 0u; j < col_body; j += TILE_W) {
+            for (size_t jj = 0u; jj < TILE_W; ++jj) {
+                for (size_t ii = 0u; ii < TILE_H; ++ii) {
+                    dst[(j + jj) * src_rows + (i + ii)] =
+                        src[(i + ii) * src_cols + (j + jj)];
+                }
+            }
+        }
+    }
+ 
+    for (i = 0u; i < row_body; i += TILE_H) {
+        for (j = col_body; j < src_cols; ++j) {
+            for (size_t ii = 0u; ii < TILE_H; ++ii) {
+                dst[j * src_rows + (i + ii)] =
+                    src[(i + ii) * src_cols + j];
+            }
+        }
+    }
+ 
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_equal_uint8(const uint8_t* a,
+                                    const uint8_t* b,
+                                    size_t         count) {
+    size_t i = 0u;
+    size_t vl = svcntb();
+ 
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svuint8_t va = svld1_u8(svptrue_b8(), a + i);
+        svuint8_t vb = svld1_u8(svptrue_b8(), b + i);
+ 
+        svuint8_t x = sveor_u8_z(svptrue_b8(), va, vb);
+ 
+        svbool_t neq = svcmpne_n_u8(svptrue_b8(), x, 0u);
+        if (svptest_any(svptrue_b8(), neq)) return false;
+    }
+ 
+    if (i < count) {
+        svbool_t mask = svwhilelt_b8((uint32_t)i, (uint32_t)count);
+ 
+        svuint8_t va = svld1_u8(mask, a + i);
+        svuint8_t vb = svld1_u8(mask, b + i);
+ 
+        svuint8_t x = sveor_u8_z(mask, va, vb);
+ 
+        svbool_t neq = svcmpne_n_u8(mask, x, 0u);
+        if (svptest_any(mask, neq)) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_count_nonzero_uint8(const uint8_t* data,
+                                              size_t         count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+    size_t vl = svcntb();
+ 
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svuint8_t v = svld1_u8(svptrue_b8(), data + i);
+ 
+        svbool_t is_nonzero = svcmpne_n_u8(svptrue_b8(), v, 0u);
+        nnz += (size_t)svcntp_b8(svptrue_b8(), is_nonzero);
+    }
+ 
+    if (i < count) {
+        svbool_t mask = svwhilelt_b8((uint32_t)i, (uint32_t)count);
+        svuint8_t v = svld1_u8(mask, data + i);
+ 
+        svbool_t is_nonzero = svcmpne_n_u8(mask, v, 0u);
+        nnz += (size_t)svcntp_b8(mask, is_nonzero);
+    }
+ 
+    return nnz;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_scatter_csr_row_uint8(const uint8_t* row_data,
+                                                size_t         cols,
+                                                size_t         col_offset,
+                                                size_t*        col_idx,
+                                                uint8_t*       values,
+                                                size_t         k) {
+    /*
+     * svcompact operates on 32/64-bit lanes, not bytes.  Byte-level
+     * compress would require widening to 32-bit, compacting, and
+     * narrowing back — more overhead than scalar for typical sparsity.
+     */
+    for (size_t j = 0u; j < cols; ++j) {
+        if (row_data[j] != 0u) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+    return k;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_is_all_zero_uint8(const uint8_t* data, size_t count) {
+    size_t i = 0u;
+    size_t vl = svcntb();
+ 
+    size_t body_end = (count / vl) * vl;
+    for (; i < body_end; i += vl) {
+        svuint8_t v = svld1_u8(svptrue_b8(), data + i);
+ 
+        svbool_t is_nonzero = svcmpne_n_u8(svptrue_b8(), v, 0u);
+        if (svptest_any(svptrue_b8(), is_nonzero)) return false;
+    }
+ 
+    if (i < count) {
+        svbool_t mask = svwhilelt_b8((uint32_t)i, (uint32_t)count);
+        svuint8_t v = svld1_u8(mask, data + i);
+ 
+        svbool_t is_nonzero = svcmpne_n_u8(mask, v, 0u);
+        if (svptest_any(mask, is_nonzero)) return false;
+    }
+ 
+    return true;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* CSALT_SIMD_SVE_UINT8_INL */
 

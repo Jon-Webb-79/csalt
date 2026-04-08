@@ -367,3 +367,135 @@ Shape Helpers
 .. doxygenfunction:: matrix_is_col_vector
 
 .. doxygenfunction:: matrix_vector_length
+
+Semantic Value Operations (Comparators)
+---------------------------------------
+
+The matrix container is **type-erased** and operates on raw byte buffers.
+As a result, the container cannot infer the *semantic meaning* of stored
+values from their memory representation alone.
+
+For many built-in integer types, bytewise comparison is sufficient.
+However, for certain types (e.g., ``long double`` or user-defined types),
+**bytewise equality and zero detection may not match semantic intent**.
+
+To address this, the matrix API provides **optional callback-based
+comparators** for operations that require semantic interpretation.
+
+Comparator Types
+~~~~~~~~~~~~~~~~
+
+Two callback types are provided:
+
+.. code-block:: c
+
+   typedef bool (*matrix_equal_fn)(const void* a,
+                                   const void* b);
+
+   typedef bool (*matrix_zero_fn)(const void* value);
+
+- ``matrix_equal_fn``  
+  Determines whether two elements are **logically equal**.
+
+- ``matrix_zero_fn``  
+  Determines whether a value should be treated as **zero**.
+
+These callbacks operate on **individual elements**, not entire matrices.
+
+When Are Comparators Needed?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Comparators should be used when:
+
+- The type contains **padding or non-canonical representations**
+  (e.g., ``long double`` on some platforms)
+- Multiple representations should be treated as equivalent
+  (e.g., ``-1`` used as a sentinel zero)
+- The type is **user-defined** and has custom semantics
+- Bitwise equality is insufficient or unsafe
+
+If no comparator is provided, the matrix falls back to:
+
+- ``memcmp`` for equality
+- bytewise zero detection for sparsity decisions
+
+Comparator-Aware APIs
+~~~~~~~~~~~~~~~~~~~~~
+
+The following functions accept optional comparator callbacks:
+
+.. code-block:: c
+
+   bool matrix_equal_cmp(const matrix_t* a,
+                         const matrix_t* b,
+                         matrix_equal_fn cmp);
+
+   error_code_t fill_matrix_zero(matrix_t*      mat,
+                                const void*    value,
+                                matrix_zero_fn is_zero);
+
+   matrix_expect_t convert_matrix_zero(const matrix_t*    src,
+                                       matrix_format_t    target,
+                                       allocator_vtable_t alloc_v,
+                                       matrix_zero_fn     is_zero);
+
+The original APIs remain available:
+
+- ``matrix_equal``
+- ``fill_matrix``
+- ``convert_matrix``
+
+These call the comparator-aware versions internally with ``NULL``,
+preserving default bytewise behavior.
+
+Example: Custom Zero Semantics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following example treats both ``0`` and ``-1`` as zero when converting
+a dense matrix to a sparse format:
+
+.. code-block:: c
+
+   static bool zero_or_neg_one(const void* v) {
+       const int32_t* x = (const int32_t*)v;
+       return (*x == 0 || *x == -1);
+   }
+
+   matrix_expect_t csr =
+       convert_matrix_zero(dense, CSR_MATRIX, alloc, zero_or_neg_one);
+
+This allows sentinel values to be excluded from sparse storage.
+
+Example: Custom Equality
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: c
+
+   static bool abs_equal(const void* a, const void* b) {
+       const int32_t* x = (const int32_t*)a;
+       const int32_t* y = (const int32_t*)b;
+
+       int32_t ax = (*x < 0) ? -(*x) : *x;
+       int32_t ay = (*y < 0) ? -(*y) : *y;
+
+       return (ax == ay);
+   }
+
+   bool eq = matrix_equal_cmp(a, b, abs_equal);
+
+Design Notes
+~~~~~~~~~~~~
+
+- Comparators are **optional** and only used when needed.
+- They are intentionally **not stored in the dtype registry** to avoid
+  modifying the existing dtype system.
+- They are typically provided by **type-specific wrappers**.
+- The generic container remains fully usable without them.
+
+.. warning::
+
+   When using sparse formats, failing to provide a correct
+   ``matrix_zero_fn`` may result in:
+
+   - incorrect ``nnz`` counts
+   - unexpected storage of values intended to be treated as zero

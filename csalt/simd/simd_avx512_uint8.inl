@@ -419,5 +419,205 @@ static void simd_sum_uint8(const uint8_t* data,
 }
 // ================================================================================ 
 // ================================================================================ 
+
+static inline void simd_fill_uint8(uint8_t* data, size_t count, uint8_t value) {
+    memset(data, value, count);
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline void simd_transpose_uint8(const uint8_t* src,
+                                        uint8_t*       dst,
+                                        size_t         src_rows,
+                                        size_t         src_cols) {
+    const size_t TILE = 16u;
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / TILE) * TILE;
+    size_t col_body = (src_cols / TILE) * TILE;
+ 
+    for (i = 0u; i < row_body; i += TILE) {
+        for (j = 0u; j < col_body; j += TILE) {
+            for (size_t ii = i; ii < i + TILE; ++ii) {
+                for (size_t jj = j; jj < j + TILE; ++jj) {
+                    dst[jj * src_rows + ii] = src[ii * src_cols + jj];
+                }
+            }
+        }
+    }
+ 
+    for (i = 0u; i < row_body; i += TILE) {
+        for (j = col_body; j < src_cols; ++j) {
+            for (size_t ii = i; ii < i + TILE; ++ii) {
+                dst[j * src_rows + ii] = src[ii * src_cols + j];
+            }
+        }
+    }
+ 
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_equal_uint8(const uint8_t* a,
+                                    const uint8_t* b,
+                                    size_t         count) {
+    size_t i = 0u;
+ 
+    /* 256 bytes (4 × 512-bit) per iteration */
+    size_t body_end = (count / 256u) * 256u;
+    for (; i < body_end; i += 256u) {
+        __m512i x0 = _mm512_xor_si512(
+            _mm512_loadu_si512((const __m512i*)(a + i)),
+            _mm512_loadu_si512((const __m512i*)(b + i)));
+        __m512i x1 = _mm512_xor_si512(
+            _mm512_loadu_si512((const __m512i*)(a + i + 64u)),
+            _mm512_loadu_si512((const __m512i*)(b + i + 64u)));
+        __m512i x2 = _mm512_xor_si512(
+            _mm512_loadu_si512((const __m512i*)(a + i + 128u)),
+            _mm512_loadu_si512((const __m512i*)(b + i + 128u)));
+        __m512i x3 = _mm512_xor_si512(
+            _mm512_loadu_si512((const __m512i*)(a + i + 192u)),
+            _mm512_loadu_si512((const __m512i*)(b + i + 192u)));
+ 
+        __m512i any = _mm512_or_si512(_mm512_or_si512(x0, x1),
+                                      _mm512_or_si512(x2, x3));
+ 
+        if (_mm512_test_epi8_mask(any, any) != 0u) return false;
+    }
+ 
+    size_t vec_end = i + ((count - i) / 64u) * 64u;
+    for (; i < vec_end; i += 64u) {
+        __m512i x = _mm512_xor_si512(
+            _mm512_loadu_si512((const __m512i*)(a + i)),
+            _mm512_loadu_si512((const __m512i*)(b + i)));
+ 
+        if (_mm512_test_epi8_mask(x, x) != 0u) return false;
+    }
+ 
+    /* Masked tail */
+    if (i < count) {
+        size_t rem = count - i;
+        __mmask64 mask = (rem >= 64u) ? (__mmask64)-1
+                                      : ((__mmask64)1u << rem) - 1u;
+ 
+        __m512i va = _mm512_maskz_loadu_epi8(mask, (const __m512i*)(a + i));
+        __m512i vb = _mm512_maskz_loadu_epi8(mask, (const __m512i*)(b + i));
+        __m512i x  = _mm512_xor_si512(va, vb);
+ 
+        if ((_mm512_test_epi8_mask(x, x) & mask) != 0u) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_count_nonzero_uint8(const uint8_t* data,
+                                              size_t         count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+ 
+    __m512i zero = _mm512_setzero_si512();
+ 
+    size_t body_end = (count / 256u) * 256u;
+    for (; i < body_end; i += 256u) {
+        /* _mm512_cmpeq_epi8_mask: returns __mmask64 with bit set where
+           byte == 0.  Invert to get nonzero mask, popcount. */
+        __mmask64 m0 = ~_mm512_cmpeq_epi8_mask(
+            _mm512_loadu_si512((const __m512i*)(data + i)), zero);
+        __mmask64 m1 = ~_mm512_cmpeq_epi8_mask(
+            _mm512_loadu_si512((const __m512i*)(data + i + 64u)), zero);
+        __mmask64 m2 = ~_mm512_cmpeq_epi8_mask(
+            _mm512_loadu_si512((const __m512i*)(data + i + 128u)), zero);
+        __mmask64 m3 = ~_mm512_cmpeq_epi8_mask(
+            _mm512_loadu_si512((const __m512i*)(data + i + 192u)), zero);
+ 
+        nnz += (size_t)(__builtin_popcountll((unsigned long long)m0) +
+                        __builtin_popcountll((unsigned long long)m1) +
+                        __builtin_popcountll((unsigned long long)m2) +
+                        __builtin_popcountll((unsigned long long)m3));
+    }
+ 
+    size_t vec_end = i + ((count - i) / 64u) * 64u;
+    for (; i < vec_end; i += 64u) {
+        __mmask64 m = ~_mm512_cmpeq_epi8_mask(
+            _mm512_loadu_si512((const __m512i*)(data + i)), zero);
+        nnz += (size_t)__builtin_popcountll((unsigned long long)m);
+    }
+ 
+    /* Masked tail */
+    if (i < count) {
+        size_t rem = count - i;
+        __mmask64 tail = (rem >= 64u) ? (__mmask64)-1
+                                      : ((__mmask64)1u << rem) - 1u;
+ 
+        __m512i v = _mm512_maskz_loadu_epi8(tail, (const __m512i*)(data + i));
+        __mmask64 m = ~_mm512_cmpeq_epi8_mask(v, zero) & tail;
+        nnz += (size_t)__builtin_popcountll((unsigned long long)m);
+    }
+ 
+    return nnz;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_scatter_csr_row_uint8(const uint8_t* row_data,
+                                                size_t         cols,
+                                                size_t         col_offset,
+                                                size_t*        col_idx,
+                                                uint8_t*       values,
+                                                size_t         k) {
+    /*
+     * AVX-512BW has _mm512_mask_compressstoreu_epi8 but it requires
+     * AVX-512VBMI2 which is not universally available.  Use scalar.
+     */
+    for (size_t j = 0u; j < cols; ++j) {
+        if (row_data[j] != 0u) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+    return k;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_is_all_zero_uint8(const uint8_t* data, size_t count) {
+    size_t i = 0u;
+ 
+    size_t body_end = (count / 256u) * 256u;
+    for (; i < body_end; i += 256u) {
+        __m512i any = _mm512_or_si512(
+            _mm512_or_si512(
+                _mm512_loadu_si512((const __m512i*)(data + i)),
+                _mm512_loadu_si512((const __m512i*)(data + i + 64u))),
+            _mm512_or_si512(
+                _mm512_loadu_si512((const __m512i*)(data + i + 128u)),
+                _mm512_loadu_si512((const __m512i*)(data + i + 192u))));
+ 
+        if (_mm512_test_epi8_mask(any, any) != 0u) return false;
+    }
+ 
+    size_t vec_end = i + ((count - i) / 64u) * 64u;
+    for (; i < vec_end; i += 64u) {
+        __m512i v = _mm512_loadu_si512((const __m512i*)(data + i));
+        if (_mm512_test_epi8_mask(v, v) != 0u) return false;
+    }
+ 
+    if (i < count) {
+        size_t rem = count - i;
+        __mmask64 tail = (rem >= 64u) ? (__mmask64)-1
+                                      : ((__mmask64)1u << rem) - 1u;
+ 
+        __m512i v = _mm512_maskz_loadu_epi8(tail, (const __m512i*)(data + i));
+        if ((_mm512_test_epi8_mask(v, v) & tail) != 0u) return false;
+    }
+ 
+    return true;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* CSALT_SIMD_AVX512_UINT8_INL */
 

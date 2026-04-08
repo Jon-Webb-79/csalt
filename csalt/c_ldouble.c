@@ -706,300 +706,300 @@ bool is_ldouble_dict_empty(const ldouble_dict_t* dict) {
 // ================================================================================ 
 // ================================================================================ 
 
-static inline ldouble_matrix_expect_t _wrap_ldouble_matrix_expect(matrix_expect_t e) {
-    if (e.has_value) {
-        return (ldouble_matrix_expect_t){
-            .has_value = true,
-            .u.value   = (ldouble_matrix_t*)e.u.value
-        };
-    }
-    return (ldouble_matrix_expect_t){
-        .has_value = false,
-        .u.error   = e.u.error
-    };
-}
- 
-// ================================================================================
-// Initialization and teardown
-// ================================================================================
- 
-ldouble_matrix_expect_t init_ldouble_dense_matrix(size_t             rows,
-                                                  size_t             cols,
-                                                  allocator_vtable_t alloc_v) {
-    return _wrap_ldouble_matrix_expect(
-        init_dense_matrix(rows, cols, LDOUBLE_TYPE, alloc_v)
-    );
-}
- 
-// --------------------------------------------------------------------------------
- 
-ldouble_matrix_expect_t init_ldouble_coo_matrix(size_t             rows,
-                                                size_t             cols,
-                                                size_t             capacity,
-                                                bool               growth,
-                                                allocator_vtable_t alloc_v) {
-    return _wrap_ldouble_matrix_expect(
-        init_coo_matrix(rows, cols, capacity, LDOUBLE_TYPE, growth, alloc_v)
-    );
-}
- 
-// --------------------------------------------------------------------------------
- 
-void return_ldouble_matrix(ldouble_matrix_t* mat) {
-    return_matrix(mat);
-}
- 
-// ================================================================================
-// Element access
-// ================================================================================
- 
-error_code_t get_ldouble_matrix(const ldouble_matrix_t* mat,
-                                size_t                 row,
-                                size_t                 col,
-                                long double*                out) {
-    if (mat == NULL || out == NULL) return NULL_POINTER;
-    return get_matrix(mat, row, col, out);
-}
- 
-// --------------------------------------------------------------------------------
- 
-error_code_t set_ldouble_matrix(ldouble_matrix_t* mat,
-                                size_t           row,
-                                size_t           col,
-                                long double           value) {
-    if (mat == NULL) return NULL_POINTER;
-    return set_matrix(mat, row, col, &value);
-}
- 
-// ================================================================================
-// COO assembly helpers
-// ================================================================================
- 
-error_code_t reserve_ldouble_coo_matrix(ldouble_matrix_t* mat,
-                                        size_t           capacity) {
-    return reserve_coo_matrix(mat, capacity);
-}
- 
-// --------------------------------------------------------------------------------
- 
-error_code_t push_back_ldouble_coo_matrix(ldouble_matrix_t* mat,
-                                          size_t           row,
-                                          size_t           col,
-                                          long double           value) {
-    if (mat == NULL) return NULL_POINTER;
-    return push_back_coo_matrix(mat, row, col, &value);
-}
- 
-// --------------------------------------------------------------------------------
- 
-error_code_t sort_ldouble_coo_matrix(ldouble_matrix_t* mat) {
-    return sort_coo_matrix(mat);
-}
- 
-// ================================================================================
-// Lifecycle / structural operations
-// ================================================================================
- 
-error_code_t clear_ldouble_matrix(ldouble_matrix_t* mat) {
-    return clear_matrix(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-ldouble_matrix_expect_t copy_ldouble_matrix(const ldouble_matrix_t* src,
-                                            allocator_vtable_t     alloc_v) {
-    return _wrap_ldouble_matrix_expect(copy_matrix(src, alloc_v));
-}
- 
-// --------------------------------------------------------------------------------
- 
-ldouble_matrix_expect_t convert_ldouble_matrix(const ldouble_matrix_t* src,
-                                               matrix_format_t        target,
-                                               allocator_vtable_t     alloc_v) {
-    return _wrap_ldouble_matrix_expect(convert_matrix(src, target, alloc_v));
-}
- 
-// --------------------------------------------------------------------------------
- 
-ldouble_matrix_expect_t transpose_ldouble_matrix(const ldouble_matrix_t* src,
-                                                 allocator_vtable_t     alloc_v) {
-    return _wrap_ldouble_matrix_expect(transpose_matrix(src, alloc_v));
-}
- 
-// ================================================================================
-// Fill and zero
-// ================================================================================
- 
-error_code_t fill_ldouble_matrix(ldouble_matrix_t* mat,
-                                 long double           value) {
-    return fill_matrix(mat, &value);
-}
- 
-// --------------------------------------------------------------------------------
- 
-error_code_t zero_ldouble_matrix(ldouble_matrix_t* mat) {
-    return clear_matrix(mat);
-}
- 
-// ================================================================================
-// Introspection
-// ================================================================================
- 
-size_t ldouble_matrix_rows(const ldouble_matrix_t* mat) {
-    return matrix_rows(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-size_t ldouble_matrix_cols(const ldouble_matrix_t* mat) {
-    return matrix_cols(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-size_t ldouble_matrix_nnz(const ldouble_matrix_t* mat) {
-    return matrix_nnz(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-matrix_format_t ldouble_matrix_format(const ldouble_matrix_t* mat) {
-    return matrix_format(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-size_t ldouble_matrix_storage_bytes(const ldouble_matrix_t* mat) {
-    return matrix_storage_bytes(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-const char* ldouble_matrix_format_name(const ldouble_matrix_t* mat) {
-    if (mat == NULL) return "UNKNOWN_MATRIX_FORMAT";
-    return matrix_format_name(mat->format);
-}
- 
-// ================================================================================
-// Shape and compatibility queries
-// ================================================================================
- 
-bool ldouble_matrix_has_same_shape(const ldouble_matrix_t* a,
-                                  const ldouble_matrix_t* b) {
-    return matrix_has_same_shape(a, b);
-}
- 
-// --------------------------------------------------------------------------------
- 
-bool ldouble_matrix_is_square(const ldouble_matrix_t* mat) {
-    return matrix_is_square(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-bool ldouble_matrix_is_sparse(const ldouble_matrix_t* mat) {
-    return matrix_is_sparse(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-bool is_ldouble_matrix_zero(const ldouble_matrix_t* mat) {
-    return is_zero_matrix(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-bool ldouble_matrix_equal(const ldouble_matrix_t* a,
-                         const ldouble_matrix_t* b) {
-    return matrix_equal(a, b);
-}
- 
-// --------------------------------------------------------------------------------
- 
-bool ldouble_matrix_is_add_compatible(const ldouble_matrix_t* a,
-                                     const ldouble_matrix_t* b) {
-    return matrix_is_add_compatible(a, b);
-}
- 
-// --------------------------------------------------------------------------------
- 
-bool ldouble_matrix_is_multiply_compatible(const ldouble_matrix_t* a,
-                                          const ldouble_matrix_t* b) {
-    return matrix_is_multiply_compatible(a, b);
-}
- 
-// ================================================================================
-// Row / column swaps
-// ================================================================================
- 
-error_code_t swap_ldouble_matrix_rows(ldouble_matrix_t* mat,
-                                     size_t           r1,
-                                     size_t           r2) {
-    return swap_matrix_rows(mat, r1, r2);
-}
- 
-// --------------------------------------------------------------------------------
- 
-error_code_t swap_ldouble_matrix_cols(ldouble_matrix_t* mat,
-                                     size_t           c1,
-                                     size_t           c2) {
-    return swap_matrix_cols(mat, c1, c2);
-}
- 
-// ================================================================================
-// Special matrix constructors
-// ================================================================================
- 
-ldouble_matrix_expect_t init_ldouble_identity_matrix(size_t             n,
-                                                   allocator_vtable_t alloc_v) {
-    return _wrap_ldouble_matrix_expect(
-        init_identity_matrix(n, LDOUBLE_TYPE, alloc_v)
-    );
-}
- 
-// --------------------------------------------------------------------------------
- 
-ldouble_matrix_expect_t init_ldouble_row_vector(size_t             length,
-                                              allocator_vtable_t alloc_v) {
-    return _wrap_ldouble_matrix_expect(
-        init_row_vector(length, LDOUBLE_TYPE, alloc_v)
-    );
-}
- 
-// --------------------------------------------------------------------------------
- 
-ldouble_matrix_expect_t init_ldouble_col_vector(size_t             length,
-                                              allocator_vtable_t alloc_v) {
-    return _wrap_ldouble_matrix_expect(
-        init_col_vector(length, LDOUBLE_TYPE, alloc_v)
-    );
-}
- 
-// ================================================================================
-// Vector shape queries
-// ================================================================================
- 
-bool ldouble_matrix_is_row_vector(const ldouble_matrix_t* mat) {
-    return matrix_is_row_vector(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-bool ldouble_matrix_is_col_vector(const ldouble_matrix_t* mat) {
-    return matrix_is_col_vector(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-bool ldouble_matrix_is_vector(const ldouble_matrix_t* mat) {
-    return matrix_is_vector(mat);
-}
- 
-// --------------------------------------------------------------------------------
- 
-size_t ldouble_matrix_vector_length(const ldouble_matrix_t* mat) {
-    return matrix_vector_length(mat);
-}
+// static inline ldouble_matrix_expect_t _wrap_ldouble_matrix_expect(matrix_expect_t e) {
+//     if (e.has_value) {
+//         return (ldouble_matrix_expect_t){
+//             .has_value = true,
+//             .u.value   = (ldouble_matrix_t*)e.u.value
+//         };
+//     }
+//     return (ldouble_matrix_expect_t){
+//         .has_value = false,
+//         .u.error   = e.u.error
+//     };
+// }
+//  
+// // ================================================================================
+// // Initialization and teardown
+// // ================================================================================
+//  
+// ldouble_matrix_expect_t init_ldouble_dense_matrix(size_t             rows,
+//                                                   size_t             cols,
+//                                                   allocator_vtable_t alloc_v) {
+//     return _wrap_ldouble_matrix_expect(
+//         init_dense_matrix(rows, cols, LDOUBLE_TYPE, alloc_v)
+//     );
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// ldouble_matrix_expect_t init_ldouble_coo_matrix(size_t             rows,
+//                                                 size_t             cols,
+//                                                 size_t             capacity,
+//                                                 bool               growth,
+//                                                 allocator_vtable_t alloc_v) {
+//     return _wrap_ldouble_matrix_expect(
+//         init_coo_matrix(rows, cols, capacity, LDOUBLE_TYPE, growth, alloc_v)
+//     );
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// void return_ldouble_matrix(ldouble_matrix_t* mat) {
+//     return_matrix(mat);
+// }
+//  
+// // ================================================================================
+// // Element access
+// // ================================================================================
+//  
+// error_code_t get_ldouble_matrix(const ldouble_matrix_t* mat,
+//                                 size_t                 row,
+//                                 size_t                 col,
+//                                 long double*                out) {
+//     if (mat == NULL || out == NULL) return NULL_POINTER;
+//     return get_matrix(mat, row, col, out);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// error_code_t set_ldouble_matrix(ldouble_matrix_t* mat,
+//                                 size_t           row,
+//                                 size_t           col,
+//                                 long double           value) {
+//     if (mat == NULL) return NULL_POINTER;
+//     return set_matrix(mat, row, col, &value);
+// }
+//  
+// // ================================================================================
+// // COO assembly helpers
+// // ================================================================================
+//  
+// error_code_t reserve_ldouble_coo_matrix(ldouble_matrix_t* mat,
+//                                         size_t           capacity) {
+//     return reserve_coo_matrix(mat, capacity);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// error_code_t push_back_ldouble_coo_matrix(ldouble_matrix_t* mat,
+//                                           size_t           row,
+//                                           size_t           col,
+//                                           long double           value) {
+//     if (mat == NULL) return NULL_POINTER;
+//     return push_back_coo_matrix(mat, row, col, &value);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// error_code_t sort_ldouble_coo_matrix(ldouble_matrix_t* mat) {
+//     return sort_coo_matrix(mat);
+// }
+//  
+// // ================================================================================
+// // Lifecycle / structural operations
+// // ================================================================================
+//  
+// error_code_t clear_ldouble_matrix(ldouble_matrix_t* mat) {
+//     return clear_matrix(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// ldouble_matrix_expect_t copy_ldouble_matrix(const ldouble_matrix_t* src,
+//                                             allocator_vtable_t     alloc_v) {
+//     return _wrap_ldouble_matrix_expect(copy_matrix(src, alloc_v));
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// ldouble_matrix_expect_t convert_ldouble_matrix(const ldouble_matrix_t* src,
+//                                                matrix_format_t        target,
+//                                                allocator_vtable_t     alloc_v) {
+//     return _wrap_ldouble_matrix_expect(convert_matrix(src, target, alloc_v));
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// ldouble_matrix_expect_t transpose_ldouble_matrix(const ldouble_matrix_t* src,
+//                                                  allocator_vtable_t     alloc_v) {
+//     return _wrap_ldouble_matrix_expect(transpose_matrix(src, alloc_v));
+// }
+//  
+// // ================================================================================
+// // Fill and zero
+// // ================================================================================
+//  
+// error_code_t fill_ldouble_matrix(ldouble_matrix_t* mat,
+//                                  long double           value) {
+//     return fill_matrix(mat, &value);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// error_code_t zero_ldouble_matrix(ldouble_matrix_t* mat) {
+//     return clear_matrix(mat);
+// }
+//  
+// // ================================================================================
+// // Introspection
+// // ================================================================================
+//  
+// size_t ldouble_matrix_rows(const ldouble_matrix_t* mat) {
+//     return matrix_rows(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// size_t ldouble_matrix_cols(const ldouble_matrix_t* mat) {
+//     return matrix_cols(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// size_t ldouble_matrix_nnz(const ldouble_matrix_t* mat) {
+//     return matrix_nnz(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// matrix_format_t ldouble_matrix_format(const ldouble_matrix_t* mat) {
+//     return matrix_format(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// size_t ldouble_matrix_storage_bytes(const ldouble_matrix_t* mat) {
+//     return matrix_storage_bytes(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// const char* ldouble_matrix_format_name(const ldouble_matrix_t* mat) {
+//     if (mat == NULL) return "UNKNOWN_MATRIX_FORMAT";
+//     return matrix_format_name(mat->format);
+// }
+//  
+// // ================================================================================
+// // Shape and compatibility queries
+// // ================================================================================
+//  
+// bool ldouble_matrix_has_same_shape(const ldouble_matrix_t* a,
+//                                   const ldouble_matrix_t* b) {
+//     return matrix_has_same_shape(a, b);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// bool ldouble_matrix_is_square(const ldouble_matrix_t* mat) {
+//     return matrix_is_square(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// bool ldouble_matrix_is_sparse(const ldouble_matrix_t* mat) {
+//     return matrix_is_sparse(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// bool is_ldouble_matrix_zero(const ldouble_matrix_t* mat) {
+//     return is_zero_matrix(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// bool ldouble_matrix_equal(const ldouble_matrix_t* a,
+//                          const ldouble_matrix_t* b) {
+//     return matrix_equal(a, b);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// bool ldouble_matrix_is_add_compatible(const ldouble_matrix_t* a,
+//                                      const ldouble_matrix_t* b) {
+//     return matrix_is_add_compatible(a, b);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// bool ldouble_matrix_is_multiply_compatible(const ldouble_matrix_t* a,
+//                                           const ldouble_matrix_t* b) {
+//     return matrix_is_multiply_compatible(a, b);
+// }
+//  
+// // ================================================================================
+// // Row / column swaps
+// // ================================================================================
+//  
+// error_code_t swap_ldouble_matrix_rows(ldouble_matrix_t* mat,
+//                                      size_t           r1,
+//                                      size_t           r2) {
+//     return swap_matrix_rows(mat, r1, r2);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// error_code_t swap_ldouble_matrix_cols(ldouble_matrix_t* mat,
+//                                      size_t           c1,
+//                                      size_t           c2) {
+//     return swap_matrix_cols(mat, c1, c2);
+// }
+//  
+// // ================================================================================
+// // Special matrix constructors
+// // ================================================================================
+//  
+// ldouble_matrix_expect_t init_ldouble_identity_matrix(size_t             n,
+//                                                    allocator_vtable_t alloc_v) {
+//     return _wrap_ldouble_matrix_expect(
+//         init_identity_matrix(n, LDOUBLE_TYPE, alloc_v)
+//     );
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// ldouble_matrix_expect_t init_ldouble_row_vector(size_t             length,
+//                                               allocator_vtable_t alloc_v) {
+//     return _wrap_ldouble_matrix_expect(
+//         init_row_vector(length, LDOUBLE_TYPE, alloc_v)
+//     );
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// ldouble_matrix_expect_t init_ldouble_col_vector(size_t             length,
+//                                               allocator_vtable_t alloc_v) {
+//     return _wrap_ldouble_matrix_expect(
+//         init_col_vector(length, LDOUBLE_TYPE, alloc_v)
+//     );
+// }
+//  
+// // ================================================================================
+// // Vector shape queries
+// // ================================================================================
+//  
+// bool ldouble_matrix_is_row_vector(const ldouble_matrix_t* mat) {
+//     return matrix_is_row_vector(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// bool ldouble_matrix_is_col_vector(const ldouble_matrix_t* mat) {
+//     return matrix_is_col_vector(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// bool ldouble_matrix_is_vector(const ldouble_matrix_t* mat) {
+//     return matrix_is_vector(mat);
+// }
+//  
+// // --------------------------------------------------------------------------------
+//  
+// size_t ldouble_matrix_vector_length(const ldouble_matrix_t* mat) {
+//     return matrix_vector_length(mat);
+// }
 // ================================================================================
 // ================================================================================
 // eof

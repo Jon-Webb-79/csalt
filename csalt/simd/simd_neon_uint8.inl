@@ -341,5 +341,177 @@ static void simd_sum_uint8(const uint8_t* data,
 }
 // ================================================================================ 
 // ================================================================================ 
+
+static inline void simd_fill_uint8(uint8_t* data, size_t count, uint8_t value) {
+    memset(data, value, count);
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline void simd_transpose_uint8(const uint8_t* src,
+                                        uint8_t*       dst,
+                                        size_t         src_rows,
+                                        size_t         src_cols) {
+    const size_t TILE = 16u;
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / TILE) * TILE;
+    size_t col_body = (src_cols / TILE) * TILE;
+ 
+    for (i = 0u; i < row_body; i += TILE) {
+        for (j = 0u; j < col_body; j += TILE) {
+            for (size_t ii = i; ii < i + TILE; ++ii) {
+                for (size_t jj = j; jj < j + TILE; ++jj) {
+                    dst[jj * src_rows + ii] = src[ii * src_cols + jj];
+                }
+            }
+        }
+    }
+ 
+    for (i = 0u; i < row_body; i += TILE) {
+        for (j = col_body; j < src_cols; ++j) {
+            for (size_t ii = i; ii < i + TILE; ++ii) {
+                dst[j * src_rows + ii] = src[ii * src_cols + j];
+            }
+        }
+    }
+ 
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_equal_uint8(const uint8_t* a,
+                                    const uint8_t* b,
+                                    size_t         count) {
+    size_t i = 0u;
+ 
+    size_t body_end = (count / 64u) * 64u;
+    for (; i < body_end; i += 64u) {
+        uint8x16_t x0 = veorq_u8(vld1q_u8(a + i),      vld1q_u8(b + i));
+        uint8x16_t x1 = veorq_u8(vld1q_u8(a + i + 16u), vld1q_u8(b + i + 16u));
+        uint8x16_t x2 = veorq_u8(vld1q_u8(a + i + 32u), vld1q_u8(b + i + 32u));
+        uint8x16_t x3 = veorq_u8(vld1q_u8(a + i + 48u), vld1q_u8(b + i + 48u));
+ 
+        uint8x16_t any = vorrq_u8(vorrq_u8(x0, x1), vorrq_u8(x2, x3));
+ 
+        if (vmaxvq_u8(any) != 0u) return false;
+    }
+ 
+    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    for (; i < vec_end; i += 16u) {
+        uint8x16_t x = veorq_u8(vld1q_u8(a + i), vld1q_u8(b + i));
+        if (vmaxvq_u8(x) != 0u) return false;
+    }
+ 
+    for (; i < count; ++i) {
+        if (a[i] != b[i]) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_count_nonzero_uint8(const uint8_t* data,
+                                              size_t         count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+ 
+    uint8x16_t zero = vdupq_n_u8(0u);
+ 
+    /*
+     * For each lane: ceq gives 0xFF if zero, 0x00 if nonzero.
+     * Invert (mvn): 0xFF if nonzero, 0x00 if zero.
+     * Right-shift by 7: 0x01 if nonzero, 0x00 if zero.
+     * vaddvq_u8 sums all 16 lanes → count of nonzero bytes.
+     */
+    size_t body_end = (count / 64u) * 64u;
+    for (; i < body_end; i += 64u) {
+        uint8x16_t v0 = vld1q_u8(data + i);
+        uint8x16_t v1 = vld1q_u8(data + i + 16u);
+        uint8x16_t v2 = vld1q_u8(data + i + 32u);
+        uint8x16_t v3 = vld1q_u8(data + i + 48u);
+ 
+        /* Fast all-zero skip */
+        uint8x16_t any = vorrq_u8(vorrq_u8(v0, v1), vorrq_u8(v2, v3));
+        if (vmaxvq_u8(any) == 0u) continue;
+ 
+        uint8x16_t nz0 = vshrq_n_u8(vmvnq_u8(vceqq_u8(v0, zero)), 7);
+        uint8x16_t nz1 = vshrq_n_u8(vmvnq_u8(vceqq_u8(v1, zero)), 7);
+        uint8x16_t nz2 = vshrq_n_u8(vmvnq_u8(vceqq_u8(v2, zero)), 7);
+        uint8x16_t nz3 = vshrq_n_u8(vmvnq_u8(vceqq_u8(v3, zero)), 7);
+ 
+        /* Sum pairs to avoid u8 overflow (max 16 per vector, 64 total) */
+        uint16x8_t s01 = vaddl_u8(vget_low_u8(nz0), vget_low_u8(nz1));
+        s01 = vaddw_u8(s01, vget_high_u8(nz0));
+        s01 = vaddw_u8(s01, vget_high_u8(nz1));
+ 
+        uint16x8_t s23 = vaddl_u8(vget_low_u8(nz2), vget_low_u8(nz3));
+        s23 = vaddw_u8(s23, vget_high_u8(nz2));
+        s23 = vaddw_u8(s23, vget_high_u8(nz3));
+ 
+        uint16x8_t sum = vaddq_u16(s01, s23);
+        nnz += (size_t)vaddvq_u16(sum);
+    }
+ 
+    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    for (; i < vec_end; i += 16u) {
+        uint8x16_t nz = vshrq_n_u8(vmvnq_u8(vceqq_u8(vld1q_u8(data + i), zero)), 7);
+        nnz += (size_t)vaddvq_u8(nz);
+    }
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0u) ++nnz;
+    }
+ 
+    return nnz;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_scatter_csr_row_uint8(const uint8_t* row_data,
+                                                size_t         cols,
+                                                size_t         col_offset,
+                                                size_t*        col_idx,
+                                                uint8_t*       values,
+                                                size_t         k) {
+    for (size_t j = 0u; j < cols; ++j) {
+        if (row_data[j] != 0u) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+    return k;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_is_all_zero_uint8(const uint8_t* data, size_t count) {
+    size_t i = 0u;
+ 
+    size_t body_end = (count / 64u) * 64u;
+    for (; i < body_end; i += 64u) {
+        uint8x16_t any = vorrq_u8(
+            vorrq_u8(vld1q_u8(data + i),      vld1q_u8(data + i + 16u)),
+            vorrq_u8(vld1q_u8(data + i + 32u), vld1q_u8(data + i + 48u)));
+ 
+        if (vmaxvq_u8(any) != 0u) return false;
+    }
+ 
+    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    for (; i < vec_end; i += 16u) {
+        if (vmaxvq_u8(vld1q_u8(data + i)) != 0u) return false;
+    }
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0u) return false;
+    }
+ 
+    return true;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* CSALT_SIMD_NEON_UINT8_INL */
 

@@ -375,5 +375,216 @@ static void simd_sum_uint8(const uint8_t* data,
 }
 // ================================================================================ 
 // ================================================================================ 
+
+static inline void simd_fill_uint8(uint8_t* data, size_t count, uint8_t value) {
+    memset(data, value, count);
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline void simd_transpose_uint8(const uint8_t* src,
+                                        uint8_t*       dst,
+                                        size_t         src_rows,
+                                        size_t         src_cols) {
+    /*
+     * Byte transpose at 256-bit width would require vpshufb + vpermq
+     * sequences.  The complexity is high for marginal gain since the
+     * bottleneck is scattered stores, not loads.  Use tiled scalar.
+     */
+    const size_t TILE = 16u;
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / TILE) * TILE;
+    size_t col_body = (src_cols / TILE) * TILE;
+ 
+    for (i = 0u; i < row_body; i += TILE) {
+        for (j = 0u; j < col_body; j += TILE) {
+            for (size_t ii = i; ii < i + TILE; ++ii) {
+                for (size_t jj = j; jj < j + TILE; ++jj) {
+                    dst[jj * src_rows + ii] = src[ii * src_cols + jj];
+                }
+            }
+        }
+    }
+ 
+    for (i = 0u; i < row_body; i += TILE) {
+        for (j = col_body; j < src_cols; ++j) {
+            for (size_t ii = i; ii < i + TILE; ++ii) {
+                dst[j * src_rows + ii] = src[ii * src_cols + j];
+            }
+        }
+    }
+ 
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_equal_uint8(const uint8_t* a,
+                                    const uint8_t* b,
+                                    size_t         count) {
+    size_t i = 0u;
+ 
+    /* 128 bytes (4 × 256-bit) per iteration */
+    size_t body_end = (count / 128u) * 128u;
+    for (; i < body_end; i += 128u) {
+        __m256i x0 = _mm256_xor_si256(
+            _mm256_loadu_si256((const __m256i*)(a + i)),
+            _mm256_loadu_si256((const __m256i*)(b + i)));
+        __m256i x1 = _mm256_xor_si256(
+            _mm256_loadu_si256((const __m256i*)(a + i + 32u)),
+            _mm256_loadu_si256((const __m256i*)(b + i + 32u)));
+        __m256i x2 = _mm256_xor_si256(
+            _mm256_loadu_si256((const __m256i*)(a + i + 64u)),
+            _mm256_loadu_si256((const __m256i*)(b + i + 64u)));
+        __m256i x3 = _mm256_xor_si256(
+            _mm256_loadu_si256((const __m256i*)(a + i + 96u)),
+            _mm256_loadu_si256((const __m256i*)(b + i + 96u)));
+ 
+        __m256i any = _mm256_or_si256(_mm256_or_si256(x0, x1),
+                                      _mm256_or_si256(x2, x3));
+ 
+        if (!_mm256_testz_si256(any, any)) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    /* Single-vector passes */
+    size_t vec_end = i + ((count - i) / 32u) * 32u;
+    for (; i < vec_end; i += 32u) {
+        __m256i x = _mm256_xor_si256(
+            _mm256_loadu_si256((const __m256i*)(a + i)),
+            _mm256_loadu_si256((const __m256i*)(b + i)));
+ 
+        if (!_mm256_testz_si256(x, x)) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    _mm256_zeroupper();
+ 
+    for (; i < count; ++i) {
+        if (a[i] != b[i]) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_count_nonzero_uint8(const uint8_t* data,
+                                              size_t         count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+ 
+    __m256i zero = _mm256_setzero_si256();
+ 
+    /*
+     * _mm256_cmpeq_epi8: 0xFF for zero bytes, 0x00 for nonzero.
+     * _mm256_movemask_epi8: returns 32-bit mask (one bit per byte).
+     * Invert and popcount to count nonzero bytes.
+     */
+    size_t body_end = (count / 128u) * 128u;
+    for (; i < body_end; i += 128u) {
+        __m256i v0 = _mm256_loadu_si256((const __m256i*)(data + i));
+        __m256i v1 = _mm256_loadu_si256((const __m256i*)(data + i + 32u));
+        __m256i v2 = _mm256_loadu_si256((const __m256i*)(data + i + 64u));
+        __m256i v3 = _mm256_loadu_si256((const __m256i*)(data + i + 96u));
+ 
+        /* Fast all-zero skip */
+        __m256i any = _mm256_or_si256(_mm256_or_si256(v0, v1),
+                                      _mm256_or_si256(v2, v3));
+        if (_mm256_testz_si256(any, any)) continue;
+ 
+        unsigned m0 = (unsigned)~_mm256_movemask_epi8(_mm256_cmpeq_epi8(v0, zero));
+        unsigned m1 = (unsigned)~_mm256_movemask_epi8(_mm256_cmpeq_epi8(v1, zero));
+        unsigned m2 = (unsigned)~_mm256_movemask_epi8(_mm256_cmpeq_epi8(v2, zero));
+        unsigned m3 = (unsigned)~_mm256_movemask_epi8(_mm256_cmpeq_epi8(v3, zero));
+ 
+        nnz += (size_t)(__builtin_popcount(m0) +
+                        __builtin_popcount(m1) +
+                        __builtin_popcount(m2) +
+                        __builtin_popcount(m3));
+    }
+ 
+    size_t vec_end = i + ((count - i) / 32u) * 32u;
+    for (; i < vec_end; i += 32u) {
+        __m256i v = _mm256_loadu_si256((const __m256i*)(data + i));
+        if (_mm256_testz_si256(v, v)) continue;
+ 
+        unsigned m = (unsigned)~_mm256_movemask_epi8(
+            _mm256_cmpeq_epi8(v, zero));
+        nnz += (size_t)__builtin_popcount(m);
+    }
+ 
+    _mm256_zeroupper();
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0u) ++nnz;
+    }
+ 
+    return nnz;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_scatter_csr_row_uint8(const uint8_t* row_data,
+                                                size_t         cols,
+                                                size_t         col_offset,
+                                                size_t*        col_idx,
+                                                uint8_t*       values,
+                                                size_t         k) {
+    for (size_t j = 0u; j < cols; ++j) {
+        if (row_data[j] != 0u) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+    return k;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_is_all_zero_uint8(const uint8_t* data, size_t count) {
+    size_t i = 0u;
+ 
+    size_t body_end = (count / 128u) * 128u;
+    for (; i < body_end; i += 128u) {
+        __m256i any = _mm256_or_si256(
+            _mm256_or_si256(
+                _mm256_loadu_si256((const __m256i*)(data + i)),
+                _mm256_loadu_si256((const __m256i*)(data + i + 32u))),
+            _mm256_or_si256(
+                _mm256_loadu_si256((const __m256i*)(data + i + 64u)),
+                _mm256_loadu_si256((const __m256i*)(data + i + 96u))));
+ 
+        if (!_mm256_testz_si256(any, any)) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    size_t vec_end = i + ((count - i) / 32u) * 32u;
+    for (; i < vec_end; i += 32u) {
+        __m256i v = _mm256_loadu_si256((const __m256i*)(data + i));
+        if (!_mm256_testz_si256(v, v)) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    _mm256_zeroupper();
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0u) return false;
+    }
+ 
+    return true;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* CSALT_SIMD_AVX2_UINT8_INL */
 

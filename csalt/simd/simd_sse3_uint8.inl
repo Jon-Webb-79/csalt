@@ -282,5 +282,184 @@ static void simd_sum_uint8(const uint8_t* data,
 }
 // ================================================================================ 
 // ================================================================================ 
+
+static inline void simd_fill_uint8(uint8_t* data, size_t count, uint8_t value) {
+    memset(data, value, count);
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline void simd_transpose_uint8(const uint8_t* src,
+                                        uint8_t*       dst,
+                                        size_t         src_rows,
+                                        size_t         src_cols) {
+    const size_t TILE = 16u;
+    size_t i = 0u;
+    size_t j = 0u;
+ 
+    size_t row_body = (src_rows / TILE) * TILE;
+    size_t col_body = (src_cols / TILE) * TILE;
+ 
+    for (i = 0u; i < row_body; i += TILE) {
+        for (j = 0u; j < col_body; j += TILE) {
+            for (size_t ii = i; ii < i + TILE; ++ii) {
+                for (size_t jj = j; jj < j + TILE; ++jj) {
+                    dst[jj * src_rows + ii] = src[ii * src_cols + jj];
+                }
+            }
+        }
+    }
+ 
+    for (i = 0u; i < row_body; i += TILE) {
+        for (j = col_body; j < src_cols; ++j) {
+            for (size_t ii = i; ii < i + TILE; ++ii) {
+                dst[j * src_rows + ii] = src[ii * src_cols + j];
+            }
+        }
+    }
+ 
+    for (i = row_body; i < src_rows; ++i) {
+        for (j = 0u; j < src_cols; ++j) {
+            dst[j * src_rows + i] = src[i * src_cols + j];
+        }
+    }
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_equal_uint8(const uint8_t* a,
+                                    const uint8_t* b,
+                                    size_t         count) {
+    size_t i = 0u;
+ 
+    size_t body_end = (count / 64u) * 64u;
+    for (; i < body_end; i += 64u) {
+        __m128i x0 = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i)),
+            _mm_loadu_si128((const __m128i*)(b + i)));
+        __m128i x1 = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i + 16u)),
+            _mm_loadu_si128((const __m128i*)(b + i + 16u)));
+        __m128i x2 = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i + 32u)),
+            _mm_loadu_si128((const __m128i*)(b + i + 32u)));
+        __m128i x3 = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i + 48u)),
+            _mm_loadu_si128((const __m128i*)(b + i + 48u)));
+ 
+        __m128i any = _mm_or_si128(_mm_or_si128(x0, x1),
+                                   _mm_or_si128(x2, x3));
+ 
+        if (_mm_movemask_epi8(
+                _mm_cmpeq_epi8(any, _mm_setzero_si128())) != 0xFFFF)
+            return false;
+    }
+ 
+    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    for (; i < vec_end; i += 16u) {
+        __m128i x = _mm_xor_si128(
+            _mm_loadu_si128((const __m128i*)(a + i)),
+            _mm_loadu_si128((const __m128i*)(b + i)));
+ 
+        if (_mm_movemask_epi8(
+                _mm_cmpeq_epi8(x, _mm_setzero_si128())) != 0xFFFF)
+            return false;
+    }
+ 
+    for (; i < count; ++i) {
+        if (a[i] != b[i]) return false;
+    }
+ 
+    return true;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_count_nonzero_uint8(const uint8_t* data,
+                                              size_t         count) {
+    size_t nnz = 0u;
+    size_t i = 0u;
+    __m128i zero = _mm_setzero_si128();
+ 
+    size_t body_end = (count / 64u) * 64u;
+    for (; i < body_end; i += 64u) {
+        int m0 = ~_mm_movemask_epi8(_mm_cmpeq_epi8(
+            _mm_loadu_si128((const __m128i*)(data + i)), zero)) & 0xFFFF;
+        int m1 = ~_mm_movemask_epi8(_mm_cmpeq_epi8(
+            _mm_loadu_si128((const __m128i*)(data + i + 16u)), zero)) & 0xFFFF;
+        int m2 = ~_mm_movemask_epi8(_mm_cmpeq_epi8(
+            _mm_loadu_si128((const __m128i*)(data + i + 32u)), zero)) & 0xFFFF;
+        int m3 = ~_mm_movemask_epi8(_mm_cmpeq_epi8(
+            _mm_loadu_si128((const __m128i*)(data + i + 48u)), zero)) & 0xFFFF;
+ 
+        nnz += (size_t)(__builtin_popcount((unsigned)m0) +
+                        __builtin_popcount((unsigned)m1) +
+                        __builtin_popcount((unsigned)m2) +
+                        __builtin_popcount((unsigned)m3));
+    }
+ 
+    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    for (; i < vec_end; i += 16u) {
+        int m = ~_mm_movemask_epi8(_mm_cmpeq_epi8(
+            _mm_loadu_si128((const __m128i*)(data + i)), zero)) & 0xFFFF;
+        nnz += (size_t)__builtin_popcount((unsigned)m);
+    }
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0u) ++nnz;
+    }
+ 
+    return nnz;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline size_t simd_scatter_csr_row_uint8(const uint8_t* row_data,
+                                                size_t         cols,
+                                                size_t         col_offset,
+                                                size_t*        col_idx,
+                                                uint8_t*       values,
+                                                size_t         k) {
+    for (size_t j = 0u; j < cols; ++j) {
+        if (row_data[j] != 0u) {
+            col_idx[k] = col_offset + j;
+            values[k]  = row_data[j];
+            ++k;
+        }
+    }
+    return k;
+}
+// -------------------------------------------------------------------------------- 
+ 
+static inline bool simd_is_all_zero_uint8(const uint8_t* data, size_t count) {
+    size_t i = 0u;
+ 
+    size_t body_end = (count / 64u) * 64u;
+    for (; i < body_end; i += 64u) {
+        __m128i any = _mm_or_si128(
+            _mm_or_si128(
+                _mm_loadu_si128((const __m128i*)(data + i)),
+                _mm_loadu_si128((const __m128i*)(data + i + 16u))),
+            _mm_or_si128(
+                _mm_loadu_si128((const __m128i*)(data + i + 32u)),
+                _mm_loadu_si128((const __m128i*)(data + i + 48u))));
+ 
+        if (_mm_movemask_epi8(
+                _mm_cmpeq_epi8(any, _mm_setzero_si128())) != 0xFFFF)
+            return false;
+    }
+ 
+    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    for (; i < vec_end; i += 16u) {
+        if (_mm_movemask_epi8(_mm_cmpeq_epi8(
+                _mm_loadu_si128((const __m128i*)(data + i)),
+                _mm_setzero_si128())) != 0xFFFF)
+            return false;
+    }
+ 
+    for (; i < count; ++i) {
+        if (data[i] != 0u) return false;
+    }
+ 
+    return true;
+}
+// ================================================================================ 
+// ================================================================================ 
 #endif /* CSALT_SIMD_SSE3_UINT8_INL */
 

@@ -27,15 +27,24 @@ static inline bool _matrix_in_bounds(const matrix_t* mat,
     return mat != NULL && row < mat->rows && col < mat->cols;
 }
 
-static bool _value_is_zero_default(const uint8_t* ptr,
-                                   dtype_id_t      dtype,
-                                   size_t          data_size) {
+static bool _value_is_zero(const uint8_t* ptr, size_t data_size) {
     size_t i;
 
     if ((ptr == NULL) || (data_size == 0u)) {
         return true;
     }
 
+    /*
+     * Fast path: check raw bytes
+     * This works for:
+     * - all integer types
+     * - +0.0 for floats/doubles/long doubles
+     *
+     * Caveat:
+     * - -0.0 will NOT be detected here (handled below)
+     * - long double padding bytes may be nonzero on some platforms
+     *   (handled below)
+     */
     for (i = 0u; i < data_size; ++i) {
         if (ptr[i] != 0u) {
             break;
@@ -46,44 +55,40 @@ static bool _value_is_zero_default(const uint8_t* ptr,
         return true;
     }
 
-    switch (dtype) {
-        case FLOAT_TYPE: {
-            float val = 0.0f;
-            memcpy(&val, ptr, sizeof(float));
-            return (val == 0.0f);
-        }
-
-        case DOUBLE_TYPE: {
-            double val = 0.0;
-            memcpy(&val, ptr, sizeof(double));
-            return (val == 0.0);
-        }
-
-        case LDOUBLE_TYPE: {
-            long double val = 0.0L;
-            memcpy(&val, ptr, sizeof(long double));
-            return (val == 0.0L);
-        }
-
-        default:
-            return false;
-    }
-}
-
-// --------------------------------------------------------------------------------
-
-static bool _value_is_zero_cb(const void* value,
-                              size_t      data_size,
-                              matrix_zero_fn is_zero) {
-    if ((value == NULL) || (data_size == 0u)) {
-        return true;
+    /*
+     * Handle floating-point negative zero.
+     * IEEE 754 defines -0.0 == +0.0 under comparison, but -0.0 has a
+     * nonzero sign bit so the byte scan above will not catch it.
+     *
+     * Long double also has platform-dependent padding bytes (e.g. 6
+     * padding bytes in the 16-byte x86-64 representation of 80-bit
+     * extended) that may contain garbage.  The memcpy + comparison
+     * approach handles this correctly because the compiler's ==
+     * operator ignores padding.
+     */
+    if (data_size == sizeof(float)) {
+        float val = 0.0f;
+        memcpy(&val, ptr, sizeof(float));
+        return (val == 0.0f);
     }
 
-    if (is_zero != NULL) {
-        return is_zero(value);
+    if (data_size == sizeof(double)) {
+        double val = 0.0;
+        memcpy(&val, ptr, sizeof(double));
+        return (val == 0.0);
     }
 
-    return _value_is_zero_bytes((const uint8_t*)value, data_size);
+    if (data_size == sizeof(long double)) {
+        long double val = 0.0L;
+        memcpy(&val, ptr, sizeof(long double));
+        return (val == 0.0L);
+    }
+
+    /*
+     * For all other types:
+     * If any byte != 0, it's non-zero
+     */
+    return false;
 }
 
 // --------------------------------------------------------------------------------
@@ -1083,9 +1088,8 @@ static matrix_expect_t _copy_csc_matrix(const matrix_t* src,
 // ================================================================================ 
 // ================================================================================ 
 
-static matrix_expect_t _dense_to_coo_matrix_ex(const matrix_t* src,
-                                               allocator_vtable_t alloc_v,
-                                               matrix_zero_fn is_zero) {
+static matrix_expect_t _dense_to_coo_matrix(const matrix_t* src,
+                                            allocator_vtable_t alloc_v) {
     matrix_expect_t r;
     matrix_t* dst = NULL;
     size_t i = 0u;
@@ -1107,7 +1111,7 @@ static matrix_expect_t _dense_to_coo_matrix_ex(const matrix_t* src,
         for (j = 0u; j < src->cols; ++j) {
             ptr = src->rep.dense.data + _dense_offset(src, i, j);
 
-            if (!_value_is_zero_cb(ptr, src->data_size, is_zero)) {
+            if (!_value_is_zero(ptr, src->data_size)) {
                 err = _push_back_coo_matrix(dst, i, j, ptr);
                 if (err != NO_ERROR) {
                     return_matrix(dst);
@@ -1153,9 +1157,8 @@ static matrix_expect_t _coo_to_dense_matrix(const matrix_t* src,
 
 // --------------------------------------------------------------------------------
 
-static matrix_expect_t _dense_to_csr_matrix_ex(const matrix_t* src,
-                                               allocator_vtable_t alloc_v,
-                                               matrix_zero_fn is_zero) {
+static matrix_expect_t _dense_to_csr_matrix(const matrix_t* src,
+                                            allocator_vtable_t alloc_v) {
     matrix_t* dst = NULL;
     size_t i = 0u;
     size_t j = 0u;
@@ -1167,7 +1170,7 @@ static matrix_expect_t _dense_to_csr_matrix_ex(const matrix_t* src,
     for (i = 0u; i < src->rows; ++i) {
         for (j = 0u; j < src->cols; ++j) {
             ptr = src->rep.dense.data + _dense_offset(src, i, j);
-            if (!_value_is_zero_cb(ptr, src->data_size, is_zero)) {
+            if (!_value_is_zero(ptr, src->data_size)) {
                 nnz++;
             }
         }
@@ -1227,7 +1230,7 @@ static matrix_expect_t _dense_to_csr_matrix_ex(const matrix_t* src,
     for (i = 0u; i < src->rows; ++i) {
         for (j = 0u; j < src->cols; ++j) {
             ptr = src->rep.dense.data + _dense_offset(src, i, j);
-            if (!_value_is_zero_cb(ptr, src->data_size, is_zero)) {
+            if (!_value_is_zero(ptr, src->data_size)) {
                 col_idx[k] = j;
                 memcpy(values + (k * src->data_size), ptr, src->data_size);
                 k++;
@@ -1246,9 +1249,8 @@ static matrix_expect_t _dense_to_csr_matrix_ex(const matrix_t* src,
 
 // --------------------------------------------------------------------------------
 
-static matrix_expect_t _dense_to_csc_matrix_ex(const matrix_t* src,
-                                               allocator_vtable_t alloc_v,
-                                               matrix_zero_fn is_zero) {
+static matrix_expect_t _dense_to_csc_matrix(const matrix_t* src,
+                                            allocator_vtable_t alloc_v) {
     matrix_t* dst = NULL;
     size_t i = 0u;
     size_t j = 0u;
@@ -1259,7 +1261,7 @@ static matrix_expect_t _dense_to_csc_matrix_ex(const matrix_t* src,
     for (i = 0u; i < src->rows; ++i) {
         for (j = 0u; j < src->cols; ++j) {
             ptr = src->rep.dense.data + _dense_offset(src, i, j);
-            if (!_value_is_zero_cb(ptr, src->data_size, is_zero)) {
+            if (!_value_is_zero(ptr, src->data_size)) {
                 nnz++;
             }
         }
@@ -1312,7 +1314,7 @@ static matrix_expect_t _dense_to_csc_matrix_ex(const matrix_t* src,
     for (j = 0u; j < src->cols; ++j) {
         for (i = 0u; i < src->rows; ++i) {
             ptr = src->rep.dense.data + _dense_offset(src, i, j);
-            if (!_value_is_zero_cb(ptr, src->data_size, is_zero)) {
+            if (!_value_is_zero(ptr, src->data_size)) {
                 row_idx[k] = i;
                 memcpy(values + (k * src->data_size), ptr, src->data_size);
                 k++;
@@ -1339,7 +1341,7 @@ static matrix_expect_t _coo_to_csr_matrix(const matrix_t* src,
     tmp = _coo_to_dense_matrix(src, alloc_v);
     if (!tmp.has_value) return tmp;
 
-    out = _dense_to_csr_matrix_ex(tmp.u.value, alloc_v, NULL);
+    out = _dense_to_csr_matrix(tmp.u.value, alloc_v);
     return_matrix(tmp.u.value);
     return out;
 }
@@ -1354,7 +1356,7 @@ static matrix_expect_t _coo_to_csc_matrix(const matrix_t* src,
     tmp = _coo_to_dense_matrix(src, alloc_v);
     if (!tmp.has_value) return tmp;
 
-    out = _dense_to_csc_matrix_ex(tmp.u.value, alloc_v, NULL);
+    out = _dense_to_csc_matrix(tmp.u.value, alloc_v);
     return_matrix(tmp.u.value);
     return out;
 }
@@ -1429,7 +1431,7 @@ static matrix_expect_t _csr_to_coo_matrix(const matrix_t* src,
     tmp = _csr_to_dense_matrix(src, alloc_v);
     if (!tmp.has_value) return tmp;
 
-    out = _dense_to_coo_matrix_ex(tmp.u.value, alloc_v, NULL);
+    out = _dense_to_coo_matrix(tmp.u.value, alloc_v);
     return_matrix(tmp.u.value);
     return out;
 }
@@ -1444,7 +1446,7 @@ static matrix_expect_t _csc_to_coo_matrix(const matrix_t* src,
     tmp = _csc_to_dense_matrix(src, alloc_v);
     if (!tmp.has_value) return tmp;
 
-    out = _dense_to_coo_matrix_ex(tmp.u.value, alloc_v, NULL);
+    out = _dense_to_coo_matrix(tmp.u.value, alloc_v);
     return_matrix(tmp.u.value);
     return out;
 }
@@ -1459,7 +1461,7 @@ static matrix_expect_t _csr_to_csc_matrix(const matrix_t* src,
     tmp = _csr_to_dense_matrix(src, alloc_v);
     if (!tmp.has_value) return tmp;
 
-    out = _dense_to_csc_matrix_ex(tmp.u.value, alloc_v, NULL);
+    out = _dense_to_csc_matrix(tmp.u.value, alloc_v);
     return_matrix(tmp.u.value);
     return out;
 }
@@ -1474,7 +1476,7 @@ static matrix_expect_t _csc_to_csr_matrix(const matrix_t* src,
     tmp = _csc_to_dense_matrix(src, alloc_v);
     if (!tmp.has_value) return tmp;
 
-    out = _dense_to_csr_matrix_ex(tmp.u.value, alloc_v, NULL);
+    out = _dense_to_csr_matrix(tmp.u.value, alloc_v);
     return_matrix(tmp.u.value);
     return out;
 }
@@ -1483,10 +1485,9 @@ static matrix_expect_t _csc_to_csr_matrix(const matrix_t* src,
 // Public dispatcher
 // ================================================================================
 
-matrix_expect_t convert_matrix_zero(const matrix_t*    src,
-                                    matrix_format_t    target,
-                                    allocator_vtable_t alloc_v,
-                                    matrix_zero_fn     is_zero) {
+matrix_expect_t convert_matrix(const matrix_t*   src,
+                               matrix_format_t   target,
+                               allocator_vtable_t alloc_v) {
     if (src == NULL) {
         return (matrix_expect_t){ .has_value = false, .u.error = NULL_POINTER };
     }
@@ -1497,9 +1498,9 @@ matrix_expect_t convert_matrix_zero(const matrix_t*    src,
 
     switch (src->format) {
         case DENSE_MATRIX:
-            if (target == COO_MATRIX) return _dense_to_coo_matrix_ex(src, alloc_v, is_zero);
-            if (target == CSR_MATRIX) return _dense_to_csr_matrix_ex(src, alloc_v, is_zero);
-            if (target == CSC_MATRIX) return _dense_to_csc_matrix_ex(src, alloc_v, is_zero);
+            if (target == COO_MATRIX) return _dense_to_coo_matrix(src, alloc_v);
+            if (target == CSR_MATRIX) return _dense_to_csr_matrix(src, alloc_v);
+            if (target == CSC_MATRIX) return _dense_to_csc_matrix(src, alloc_v);
             break;
 
         case COO_MATRIX:
@@ -1525,14 +1526,6 @@ matrix_expect_t convert_matrix_zero(const matrix_t*    src,
     }
 
     return (matrix_expect_t){ .has_value = false, .u.error = ILLEGAL_STATE };
-}
-
-// --------------------------------------------------------------------------------
-
-matrix_expect_t convert_matrix(const matrix_t*   src,
-                               matrix_format_t   target,
-                               allocator_vtable_t alloc_v) {
-    return convert_matrix_zero(src, target, alloc_v, NULL);
 }
 // -------------------------------------------------------------------------------- 
 
@@ -2056,43 +2049,33 @@ const char* matrix_format_name(matrix_format_t format) {
 // Comparison
 // ================================================================================
 
-bool matrix_equal_cmp(const matrix_t* a,
-                      const matrix_t* b,
-                      matrix_equal_fn cmp) {
+bool matrix_equal(const matrix_t* a,
+                  const matrix_t* b) {
     if (!a || !b) return false;
     if (!matrix_has_same_shape(a, b)) return false;
     if (a->dtype != b->dtype) return false;
 
+    /*
+     * VLA buffers sized to the actual element width. data_size is
+     * guaranteed non-zero for any successfully initialised matrix_t,
+     * so no additional guard is needed. No heap or allocator
+     * involvement is required because we only ever hold one element
+     * from each matrix at a time.
+     */
     uint8_t va[a->data_size];
     uint8_t vb[a->data_size];
 
     for (size_t i = 0u; i < a->rows; ++i) {
         for (size_t j = 0u; j < a->cols; ++j) {
             if (get_matrix(a, i, j, va) != NO_ERROR ||
-                get_matrix(b, i, j, vb) != NO_ERROR) {
+                get_matrix(b, i, j, vb) != NO_ERROR ||
+                memcmp(va, vb, a->data_size) != 0) {
                 return false;
-            }
-
-            if (cmp != NULL) {
-                if (!cmp(va, vb)) {
-                    return false;
-                }
-            } else {
-                if (memcmp(va, vb, a->data_size) != 0) {
-                    return false;
-                }
             }
         }
     }
 
     return true;
-}
-
-// --------------------------------------------------------------------------------
-
-bool matrix_equal(const matrix_t* a,
-                  const matrix_t* b) {
-    return matrix_equal_cmp(a, b, NULL);
 }
 // ============================================================================
 // fill_matrix
@@ -2100,15 +2083,14 @@ bool matrix_equal(const matrix_t* a,
 
 error_code_t fill_matrix(matrix_t* mat,
                          const void* value) {
-    if ((mat == NULL) || (value == NULL)) {
-        return NULL_POINTER;
-    }
+    if ((mat == NULL) || (value == NULL)) return NULL_POINTER;
 
-    // Use your existing default zero detection
-    if (_value_is_zero_bytes((const uint8_t*)value, mat->data_size)) {
+    /* Zero case */
+    if (_value_is_zero((const uint8_t*)value, mat->data_size)) {
         return clear_matrix(mat);
     }
 
+    /* Only dense supports non-zero fill */
     if (mat->format != DENSE_MATRIX) {
         return OPERATION_UNAVAILABLE;
     }
@@ -2460,7 +2442,7 @@ bool is_zero_matrix(const matrix_t* mat) {
                 const uint8_t* ptr =
                     mat->rep.dense.data + (i * mat->data_size);
 
-                if (!_value_is_zero_bytes(ptr, mat->data_size)) {
+                if (!_value_is_zero(ptr, mat->data_size)) {
                     return false;
                 }
             }

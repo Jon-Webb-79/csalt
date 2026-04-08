@@ -22,6 +22,7 @@
 
 #include "c_array.h"
 #include "c_dict.h"
+#include "c_matrix.h"
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -1967,6 +1968,541 @@ size_t uint8_dict_alloc(const uint8_dict_t* dict);
  * @endcode
  */
 bool is_uint8_dict_empty(const uint8_dict_t* dict);
+// ================================================================================ 
+// ================================================================================ 
+
+// uint8_matrix_t — type-safe uint8_t wrapper around matrix_t
+//
+// This section provides a uint8-specialised interface to the generic matrix_t
+// type.  uint8_matrix_t is a typedef for matrix_t; all functions below fix
+// the dtype to uint8_TYPE and accept / return uint8 values directly so that
+// callers never need to pass a dtype_id_t or void* value.
+//
+// The wrapper covers every public function in c_matrix.h that either:
+//   (a) takes a dtype_id_t argument (replaced with uint8_TYPE), or
+//   (b) takes or returns void* element pointers (replaced with uint8 / uint8*).
+//
+// Functions that are already type-agnostic (matrix_rows, matrix_cols,
+// matrix_is_square, matrix_has_same_shape, etc.) are wrapped with a
+// uint8_matrix_t* signature for consistency, but simply delegate.
+// ================================================================================ 
+// ================================================================================ 
+
+typedef matrix_t uint8_matrix_t;
+
+typedef struct {
+    bool has_value;
+    union {
+        uint8_matrix_t* value;
+        error_code_t    error;
+    } u;
+} uint8_matrix_expect_t;
+
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+
+/**
+ * @brief Initialize a dense uint8 matrix with zero-initialized storage.
+ *
+ * Creates a dense matrix of shape @p rows by @p cols with the dtype fixed to
+ * uint8_TYPE. All elements are initialised to zero.
+ *
+ * @param rows     Number of matrix rows. Must be > 0.
+ * @param cols     Number of matrix columns. Must be > 0.
+ * @param alloc_v  Allocator for the matrix header and data buffer.
+ *
+ * @return uint8_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *     uint8_matrix_expect_t r = init_uint8_dense_matrix(3, 4, a);
+ *     if (!r.has_value) { fprintf(stderr, "%d\n", r.u.error); return; }
+ *     uint8_matrix_t* m = r.u.value;
+ *
+ *     set_uint8_matrix(m, 0, 0, 1.0f);
+ *     set_uint8_matrix(m, 1, 2, 5.5f);
+ *
+ *     return_uint8_matrix(m);
+ * @endcode
+ */
+uint8_matrix_expect_t init_uint8_dense_matrix(size_t             rows,
+                                              size_t             cols,
+                                              allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize an empty COO sparse uint8 matrix.
+ *
+ * Creates a coordinate-list sparse matrix with storage for up to @p capacity
+ * entries. The dtype is fixed to uint8_TYPE.
+ *
+ * @param rows      Number of matrix rows. Must be > 0.
+ * @param cols      Number of matrix columns. Must be > 0.
+ * @param capacity  Initial entry capacity. Must be > 0.
+ * @param growth    If true, the COO storage may grow when full.
+ * @param alloc_v   Allocator for the matrix header and COO buffers.
+ *
+ * @return uint8_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     allocator_vtable_t a = heap_allocator();
+ *     uint8_matrix_expect_t r = init_uint8_coo_matrix(100, 100, 16, true, a);
+ *     uint8_matrix_t* m = r.u.value;
+ *
+ *     push_back_uint8_coo_matrix(m, 0, 5, 3.14f);
+ *     push_back_uint8_coo_matrix(m, 42, 99, -1.0f);
+ *
+ *     return_uint8_matrix(m);
+ * @endcode
+ */
+uint8_matrix_expect_t init_uint8_coo_matrix(size_t             rows,
+                                            size_t             cols,
+                                            size_t             capacity,
+                                            bool               growth,
+                                            allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Release all storage owned by a uint8 matrix.
+ *
+ * Frees internal buffers and the matrix object itself. Passing NULL is safe.
+ *
+ * @param mat  Matrix to destroy, or NULL.
+ */
+void return_uint8_matrix(uint8_matrix_t* mat);
+
+// ================================================================================
+// Element access
+// ================================================================================
+
+/**
+ * @brief Read a uint8 element at the given row and column.
+ *
+ * For sparse formats, missing entries are returned as 0.0f.
+ *
+ * @param mat  Matrix to read from.
+ * @param row  Zero-based row index.
+ * @param col  Zero-based column index.
+ * @param out  Receives the uint8 value. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER / INVALID_ARG / OUT_OF_BOUNDS.
+ *
+ * @code
+ *     uint8 v = 0.0f;
+ *     get_uint8_matrix(m, 1, 2, &v);
+ * @endcode
+ */
+error_code_t get_uint8_matrix(const uint8_matrix_t* mat,
+                              size_t                row,
+                              size_t                col,
+                              uint8_t*              out);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Write a uint8 element at the given row and column.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return ILLEGAL_STATE.
+ *
+ * @param mat    Matrix to modify.
+ * @param row    Zero-based row index.
+ * @param col    Zero-based column index.
+ * @param value  The uint8 value to store.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     set_uint8_matrix(m, 0, 0, 42.0f);
+ * @endcode
+ */
+error_code_t set_uint8_matrix(uint8_matrix_t* mat,
+                              size_t          row,
+                              size_t          col,
+                              uint8_t         value);
+
+// ================================================================================
+// COO assembly helpers
+// ================================================================================
+
+/**
+ * @brief Reserve additional entry capacity for a uint8 COO matrix.
+ *
+ * @param mat       COO matrix to grow.
+ * @param capacity  Requested minimum entry capacity.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t reserve_uint8_coo_matrix(uint8_matrix_t* mat,
+                                      size_t          capacity);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Append or overwrite a uint8 entry in a COO matrix.
+ *
+ * If (row, col) already exists its value is overwritten; otherwise a new
+ * entry is appended. The matrix is marked unsorted after insertion.
+ *
+ * @param mat    COO matrix to append to.
+ * @param row    Zero-based row index.
+ * @param col    Zero-based column index.
+ * @param value  The uint8 value to insert.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     push_back_uint8_coo_matrix(m, 0, 5, 3.14f);
+ * @endcode
+ */
+error_code_t push_back_uint8_coo_matrix(uint8_matrix_t* mat,
+                                        size_t          row,
+                                        size_t          col,
+                                        uint8_t         value);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Sort COO entries by (row, col).
+ *
+ * @param mat  COO matrix to sort.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t sort_uint8_coo_matrix(uint8_matrix_t* mat);
+
+// ================================================================================
+// Lifecycle / structural operations
+// ================================================================================
+
+/**
+ * @brief Clear a uint8 matrix, preserving its allocated storage.
+ *
+ * Dense matrices are zeroed. COO matrices reset to zero logical entries.
+ *
+ * @param mat  Matrix to clear.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t clear_uint8_matrix(uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Deep-copy a uint8 matrix.
+ *
+ * @param src      Matrix to copy.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return uint8_matrix_expect_t with has_value true on success.
+ */
+uint8_matrix_expect_t copy_uint8_matrix(const uint8_matrix_t* src,
+                                        allocator_vtable_t    alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Convert a uint8 matrix to a different storage format.
+ *
+ * Produces a new matrix with the same logical values in the target format.
+ *
+ * @param src      Matrix to convert.
+ * @param target   Desired destination storage format.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return uint8_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     uint8_matrix_expect_t csr =
+ *         convert_uint8_matrix(dense_m, CSR_MATRIX, a);
+ * @endcode
+ */
+uint8_matrix_expect_t convert_uint8_matrix(const uint8_matrix_t* src,
+                                           matrix_format_t       target,
+                                           allocator_vtable_t    alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compute the transpose of a uint8 matrix.
+ *
+ * Dense stays dense, COO stays COO, CSR transposes to CSR, CSC to CSC.
+ *
+ * @param src      Matrix to transpose.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return uint8_matrix_expect_t with has_value true on success.
+ */
+uint8_matrix_expect_t transpose_uint8_matrix(const uint8_matrix_t* src,
+                                             allocator_vtable_t    alloc_v);
+
+// ================================================================================
+// Fill and zero
+// ================================================================================
+
+/**
+ * @brief Fill a uint8 matrix with a single repeated value.
+ *
+ * Nonzero fill is supported only for dense matrices. Supplying 0.0f resets
+ * the matrix through clear_uint8_matrix.
+ *
+ * @param mat    Matrix to fill.
+ * @param value  The uint8 fill value.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     fill_uint8_matrix(m, 1.0f);   // every element becomes 1.0
+ *     fill_uint8_matrix(m, 0.0f);   // equivalent to clear
+ * @endcode
+ */
+error_code_t fill_uint8_matrix(uint8_matrix_t* mat,
+                               uint8_t         value);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Set all elements of a uint8 matrix to zero.
+ *
+ * Equivalent to clear_uint8_matrix.
+ *
+ * @param mat  Matrix to zero.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t zero_uint8_matrix(uint8_matrix_t* mat);
+
+// ================================================================================
+// Introspection
+// ================================================================================
+
+/**
+ * @brief Return the number of rows.
+ * Returns 0 if @p mat is NULL.
+ */
+size_t uint8_matrix_rows(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the number of columns.
+ * Returns 0 if @p mat is NULL.
+ */
+size_t uint8_matrix_cols(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the format-dependent entry count.
+ *
+ * For dense matrices returns rows * cols. For sparse formats returns the
+ * stored entry count.
+ */
+size_t uint8_matrix_nnz(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the active storage format.
+ */
+matrix_format_t uint8_matrix_format(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the storage footprint of the matrix payload in bytes.
+ */
+size_t uint8_matrix_storage_bytes(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a human-readable name for the matrix's storage format.
+ */
+const char* uint8_matrix_format_name(const uint8_matrix_t* mat);
+
+// ================================================================================
+// Shape and compatibility queries
+// ================================================================================
+
+/**
+ * @brief Test whether two uint8 matrices have identical shape.
+ */
+bool uint8_matrix_has_same_shape(const uint8_matrix_t* a,
+                                 const uint8_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a uint8 matrix is square.
+ */
+bool uint8_matrix_is_square(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a uint8 matrix uses a sparse representation.
+ */
+bool uint8_matrix_is_sparse(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a uint8 matrix is logically all zeros.
+ */
+bool is_uint8_matrix_zero(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two uint8 matrices for logical equality.
+ *
+ * Uses exact bitwise comparison of every element. Matrices must have the
+ * same shape and dtype. Different storage formats are compared element-wise
+ * through the get_matrix interface.
+ */
+bool uint8_matrix_equal(const uint8_matrix_t* a,
+                        const uint8_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether two uint8 matrices are compatible for addition.
+ *
+ * Requires equal shape and equal dtype.
+ */
+bool uint8_matrix_is_add_compatible(const uint8_matrix_t* a,
+                                    const uint8_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether two uint8 matrices are compatible for multiplication.
+ *
+ * Requires a->cols == b->rows and equal dtype.
+ */
+bool uint8_matrix_is_multiply_compatible(const uint8_matrix_t* a,
+                                         const uint8_matrix_t* b);
+
+// ================================================================================
+// Row / column swaps
+// ================================================================================
+
+/**
+ * @brief Swap two rows of a uint8 matrix in place.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
+ *
+ * @param mat  Matrix to modify.
+ * @param r1   First zero-based row index.
+ * @param r2   Second zero-based row index.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t swap_uint8_matrix_rows(uint8_matrix_t* mat,
+                                    size_t          r1,
+                                    size_t          r2);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Swap two columns of a uint8 matrix in place.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
+ *
+ * @param mat  Matrix to modify.
+ * @param c1   First zero-based column index.
+ * @param c2   Second zero-based column index.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t swap_uint8_matrix_cols(uint8_matrix_t* mat,
+                                    size_t          c1,
+                                    size_t          c2);
+
+// ================================================================================
+// Special matrix constructors
+// ================================================================================
+
+/**
+ * @brief Initialize a dense uint8 identity matrix.
+ *
+ * Creates an @p n by @p n dense matrix with 1.0f on the diagonal and 0.0f
+ * elsewhere.
+ *
+ * @param n        Matrix order (rows == cols).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return uint8_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     uint8_matrix_expect_t r = init_uint8_identity_matrix(3, a);
+ *     // 3x3 identity matrix.
+ * @endcode
+ */
+uint8_matrix_expect_t init_uint8_identity_matrix(size_t             n,
+                                                 allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize a dense uint8 row vector (1 x length).
+ *
+ * @param length   Vector length (number of columns).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return uint8_matrix_expect_t with has_value true on success.
+ */
+uint8_matrix_expect_t init_uint8_row_vector(size_t             length,
+                                            allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize a dense uint8 column vector (length x 1).
+ *
+ * @param length   Vector length (number of rows).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return uint8_matrix_expect_t with has_value true on success.
+ */
+uint8_matrix_expect_t init_uint8_col_vector(size_t             length,
+                                            allocator_vtable_t alloc_v);
+
+// ================================================================================
+// Vector shape queries
+// ================================================================================
+
+/**
+ * @brief Test whether a uint8 matrix has row-vector shape (1 x N).
+ */
+bool uint8_matrix_is_row_vector(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a uint8 matrix has column-vector shape (N x 1).
+ */
+bool uint8_matrix_is_col_vector(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a uint8 matrix has vector shape (row or column).
+ */
+bool uint8_matrix_is_vector(const uint8_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the logical length of a vector-shaped uint8 matrix.
+ *
+ * For row vectors returns cols; for column vectors returns rows.
+ * Non-vector matrices return 0.
+ */
+size_t uint8_matrix_vector_length(const uint8_matrix_t* mat);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
