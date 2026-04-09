@@ -22,14 +22,6 @@
 #include "c_error.h"
 #include "c_dtypes.h"
 
-// TODO: convert_matrix should be in place 
-// TODO: convert_matrix_zero should be in place
-
-// TODO: fill_float_matrix SIMD 
-// TODO: transpose_float_matrix add SIMD
-// TODO: float_matrix_equal add SIMD instead of VLA
-// TODO: convert_float_matrix dense to CSR (see if SIMD is better)
-// TODO: is_float_matrix_zero  add SIMD (We left off here)
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

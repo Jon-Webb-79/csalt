@@ -21,6 +21,52 @@
 // Internal helpers
 // ================================================================================
 
+static bool _value_is_zero_bytes(const uint8_t* ptr, size_t data_size) {
+    size_t i;
+
+    if ((ptr == NULL) || (data_size == 0u)) {
+        return true;
+    }
+
+    /* Fast path: check for all-zero bytes */
+    for (i = 0u; i < data_size; ++i) {
+        if (ptr[i] != 0u) {
+            break;
+        }
+    }
+
+    if (i == data_size) {
+        return true;
+    }
+
+    /*
+     * Floating-point fallback:
+     * Handle negative zero (-0.0), which is not all-zero bytes but
+     * should be considered zero semantically.
+     */
+
+    if (data_size == sizeof(float)) {
+        float val;
+        memcpy(&val, ptr, sizeof(float));
+        return (val == 0.0f);
+    }
+
+    if (data_size == sizeof(double)) {
+        double val;
+        memcpy(&val, ptr, sizeof(double));
+        return (val == 0.0);
+    }
+
+    if (data_size == sizeof(long double)) {
+        long double val;
+        memcpy(&val, ptr, sizeof(long double));
+        return (val == 0.0L);
+    }
+
+    /* Default: not zero */
+    return false;
+}
+
 static inline bool _matrix_in_bounds(const matrix_t* mat,
                                      size_t          row,
                                      size_t          col) {
