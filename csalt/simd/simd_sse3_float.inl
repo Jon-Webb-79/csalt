@@ -421,6 +421,16 @@ static inline bool simd_is_all_zero_float(const float* data, size_t count) {
  
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+bool float_matrix_equal_cmp(const float_matrix_t* a,
+                            const float_matrix_t* b,
+                            float_equal_fn        cmp);
+
+float_matrix_expect_t convert_float_matrix_zero(const float_matrix_t* src,
+                                                matrix_format_t       target,
+                                                allocator_vtable_t    alloc_v,
+                                                float_zero_fn         is_zero);
 // ================================================================================ 
 // ================================================================================ 
 #endif /* SIMD_SSE3_FLOAT_INL */ 

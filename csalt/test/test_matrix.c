@@ -21,7 +21,7 @@
 #include "c_allocator.h"
 #include "c_dtypes.h"
 #include "c_error.h"
-// #include "c_float.h"
+#include "c_float.h"
 // #include "c_double.h"
 // #include "c_ldouble.h"
 // #include "c_uint8.h"
@@ -2457,7 +2457,10 @@ static void test_matrix_equal_custom_struct_bytewise_equal_returns_true(void** s
     matrix_t* a = _make_dense_record_matrix(2u, 2u);
     matrix_t* b = _make_dense_record_matrix(2u, 2u);
 
-    test_record_t r1 = { 17, 3.5, 0xA5u };
+    test_record_t r1 = {0};
+    r1.id = 17;
+    r1.value = 3.5;
+    r1.flags = 0xA5u;
 
     assert_int_equal(set_matrix(a, 1u, 0u, &r1), NO_ERROR);
     assert_int_equal(set_matrix(b, 1u, 0u, &r1), NO_ERROR);
@@ -2476,8 +2479,15 @@ static void test_matrix_equal_custom_struct_bytewise_different_returns_false(voi
     matrix_t* a = _make_dense_record_matrix(2u, 2u);
     matrix_t* b = _make_dense_record_matrix(2u, 2u);
 
-    test_record_t r1 = { 17, 3.5, 0xA5u };
-    test_record_t r2 = { 17, 9.5, 0x00u };   /* same id, different other fields */
+    test_record_t r1 = {0};
+    r1.id = 17;
+    r1.value = 3.5;
+    r1.flags = 0xA5u;
+
+    test_record_t r2 = {0};
+    r2.id = 17;
+    r2.value = 9.5;
+    r2.flags = 0x00u;
 
     assert_int_equal(set_matrix(a, 1u, 0u, &r1), NO_ERROR);
     assert_int_equal(set_matrix(b, 1u, 0u, &r2), NO_ERROR);
@@ -2989,7 +2999,1027 @@ const struct CMUnitTest test_matrix[] = {
 
 const size_t test_matrix_count =
     sizeof(test_matrix) / sizeof(test_matrix[0]);
+// ================================================================================ 
+// ================================================================================ 
 
+/* =============================================================================
+ * Helpers
+ * ========================================================================== */
+
+static float_matrix_t* _make_dense_float_matrix(size_t rows, size_t cols) {
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_expect_t r = init_float_dense_matrix(rows, cols, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+static float_matrix_t* _make_coo_float_matrix(size_t rows,
+                                              size_t cols,
+                                              size_t cap,
+                                              bool   growth) {
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_expect_t r = init_float_coo_matrix(rows, cols, cap, growth, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+static float_matrix_t* _make_sample_dense_float_matrix(void) {
+    float_matrix_t* mat = _make_dense_float_matrix(3u, 4u);
+
+    assert_int_equal(set_float_matrix(mat, 0u, 1u, 10.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 3u, 20.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 2u, 0u, 30.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 2u, 2u, 40.0f), NO_ERROR);
+
+    return mat;
+}
+
+static float_matrix_t* _make_sample_coo_float_matrix(void) {
+    float_matrix_t* mat = _make_coo_float_matrix(3u, 4u, 8u, true);
+
+    assert_int_equal(set_float_matrix(mat, 0u, 1u, 10.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 3u, 20.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 2u, 0u, 30.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 2u, 2u, 40.0f), NO_ERROR);
+
+    return mat;
+}
+
+static bool _float_abs_equal(float a, float b) {
+    return fabsf(fabsf(a) - fabsf(b)) < 1e-6f;
+}
+
+static bool _float_zero_or_neg_one(float v) {
+    return (v == 0.0f) || (v == -1.0f);
+}
+
+/* =============================================================================
+ * Group 1: init_float_dense_matrix
+ * ========================================================================== */
+
+static void test_float_dense_init_zero_rows_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    float_matrix_expect_t r = init_float_dense_matrix(0u, 4u, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+
+static void test_float_dense_init_zero_cols_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    float_matrix_expect_t r = init_float_dense_matrix(3u, 0u, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+
+static void test_float_dense_init_returns_valid_matrix(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_dense_float_matrix(3u, 4u);
+
+    assert_int_equal((int)matrix_rows(mat), 3);
+    assert_int_equal((int)matrix_cols(mat), 4);
+    assert_int_equal((int)matrix_dtype(mat), (int)FLOAT_TYPE);
+    assert_int_equal((int)matrix_data_size(mat), (int)sizeof(float));
+    assert_int_equal((int)matrix_format(mat), (int)DENSE_MATRIX);
+    assert_int_equal((int)matrix_nnz(mat), 12);
+
+    return_float_matrix(mat);
+}
+
+static void test_float_dense_init_is_zero_initialized(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_dense_float_matrix(2u, 3u);
+    float out = -1.0f;
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 3u; ++j) {
+            out = -1.0f;
+            assert_int_equal(get_float_matrix(mat, i, j, &out), NO_ERROR);
+            assert_true(out == 0.0f);
+        }
+    }
+
+    assert_true(float_matrix_is_zero(mat));
+    return_float_matrix(mat);
+}
+
+/* =============================================================================
+ * Group 2: init_float_coo_matrix
+ * ========================================================================== */
+
+static void test_float_coo_init_zero_capacity_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    float_matrix_expect_t r = init_float_coo_matrix(3u, 4u, 0u, true, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+
+static void test_float_coo_init_returns_valid_matrix(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_coo_float_matrix(3u, 4u, 8u, true);
+
+    assert_int_equal((int)matrix_rows(mat), 3);
+    assert_int_equal((int)matrix_cols(mat), 4);
+    assert_int_equal((int)matrix_dtype(mat), (int)FLOAT_TYPE);
+    assert_int_equal((int)matrix_data_size(mat), (int)sizeof(float));
+    assert_int_equal((int)matrix_format(mat), (int)COO_MATRIX);
+    assert_int_equal((int)matrix_nnz(mat), 0);
+    assert_true(mat->rep.coo.growth);
+    assert_true(mat->rep.coo.sorted);
+
+    return_float_matrix(mat);
+}
+
+static void test_float_coo_unset_entry_reads_back_as_zero(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_coo_float_matrix(3u, 4u, 8u, true);
+    float out = -1.0f;
+
+    assert_int_equal(get_float_matrix(mat, 1u, 2u, &out), NO_ERROR);
+    assert_true(out == 0.0f);
+
+    return_float_matrix(mat);
+}
+
+/* =============================================================================
+ * Group 3: dense set/get
+ * ========================================================================== */
+
+static void test_float_set_dense_null_matrix_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_float_matrix(NULL, 0u, 0u, 7.0f), NULL_POINTER);
+}
+
+static void test_float_get_dense_null_out_returns_null_pointer(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_dense_float_matrix(2u, 2u);
+
+    assert_int_equal(get_float_matrix(mat, 0u, 0u, NULL), NULL_POINTER);
+    return_float_matrix(mat);
+}
+
+static void test_float_set_get_dense_single_value(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_dense_float_matrix(3u, 3u);
+
+    float out = 0.0f;
+    assert_int_equal(set_float_matrix(mat, 1u, 2u, 42.5f), NO_ERROR);
+    assert_int_equal(get_float_matrix(mat, 1u, 2u, &out), NO_ERROR);
+    assert_true(out == 42.5f);
+
+    return_float_matrix(mat);
+}
+
+static void test_float_set_dense_overwrites_existing_value(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_dense_float_matrix(2u, 2u);
+
+    float out = 0.0f;
+    assert_int_equal(set_float_matrix(mat, 1u, 1u, 5.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 1u, 99.0f), NO_ERROR);
+    assert_int_equal(get_float_matrix(mat, 1u, 1u, &out), NO_ERROR);
+    assert_true(out == 99.0f);
+
+    return_float_matrix(mat);
+}
+
+/* =============================================================================
+ * Group 4: COO set/get
+ * ========================================================================== */
+
+static void test_float_set_get_coo_single_value(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_coo_float_matrix(3u, 3u, 4u, true);
+
+    float out = 0.0f;
+    assert_int_equal(set_float_matrix(mat, 2u, 1u, 123.25f), NO_ERROR);
+    assert_int_equal(get_float_matrix(mat, 2u, 1u, &out), NO_ERROR);
+    assert_true(out == 123.25f);
+    assert_int_equal((int)matrix_nnz(mat), 1);
+
+    return_float_matrix(mat);
+}
+
+static void test_float_push_back_coo_overwrite_does_not_increase_nnz(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_coo_float_matrix(3u, 3u, 4u, true);
+
+    float out = 0.0f;
+    assert_int_equal(push_back_float_coo_matrix(mat, 1u, 1u, 5.0f), NO_ERROR);
+    assert_int_equal((int)matrix_nnz(mat), 1);
+
+    assert_int_equal(push_back_float_coo_matrix(mat, 1u, 1u, 99.0f), NO_ERROR);
+    assert_int_equal((int)matrix_nnz(mat), 1);
+
+    assert_int_equal(get_float_matrix(mat, 1u, 1u, &out), NO_ERROR);
+    assert_true(out == 99.0f);
+
+    return_float_matrix(mat);
+}
+
+static void test_float_push_back_coo_capacity_overflow_when_growth_disabled(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_coo_float_matrix(3u, 3u, 2u, false);
+
+    assert_int_equal(push_back_float_coo_matrix(mat, 0u, 0u, 1.0f), NO_ERROR);
+    assert_int_equal(push_back_float_coo_matrix(mat, 1u, 1u, 2.0f), NO_ERROR);
+    assert_int_equal(push_back_float_coo_matrix(mat, 2u, 2u, 3.0f), CAPACITY_OVERFLOW);
+
+    return_float_matrix(mat);
+}
+
+/* =============================================================================
+ * Group 5: clear / copy
+ * ========================================================================== */
+
+static void test_clear_float_dense_zeroes_all_entries(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_dense_float_matrix(2u, 3u);
+    float out = -1.0f;
+
+    assert_int_equal(set_float_matrix(mat, 0u, 0u, 11.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 0u, 2u, 22.0f), NO_ERROR);
+    assert_false(float_matrix_is_zero(mat));
+
+    assert_int_equal(clear_float_matrix(mat), NO_ERROR);
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 3u; ++j) {
+            out = -1.0f;
+            assert_int_equal(get_float_matrix(mat, i, j, &out), NO_ERROR);
+            assert_true(out == 0.0f);
+        }
+    }
+
+    assert_true(float_matrix_is_zero(mat));
+    return_float_matrix(mat);
+}
+
+static void test_copy_float_dense_preserves_values(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_t* src = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r = copy_float_matrix(src, a);
+    assert_true(r.has_value);
+    assert_true(float_matrix_equal(src, r.u.value));
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(src);
+}
+
+static void test_copy_float_coo_is_independent_of_source(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_t* src = _make_coo_float_matrix(3u, 3u, 4u, true);
+
+    assert_int_equal(set_float_matrix(src, 1u, 1u, 5.0f), NO_ERROR);
+
+    float_matrix_expect_t r = copy_float_matrix(src, a);
+    assert_true(r.has_value);
+
+    assert_int_equal(set_float_matrix(r.u.value, 1u, 1u, 77.0f), NO_ERROR);
+
+    float src_out = 0.0f;
+    float dst_out = 0.0f;
+
+    assert_int_equal(get_float_matrix(src, 1u, 1u, &src_out), NO_ERROR);
+    assert_int_equal(get_float_matrix(r.u.value, 1u, 1u, &dst_out), NO_ERROR);
+
+    assert_true(src_out == 5.0f);
+    assert_true(dst_out == 77.0f);
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(src);
+}
+
+/* =============================================================================
+ * Group 6: convert / convert_zero
+ * ========================================================================== */
+
+static void test_convert_float_dense_to_coo_preserves_values(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_t* src = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r = convert_float_matrix(src, COO_MATRIX, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)matrix_format(r.u.value), (int)COO_MATRIX);
+    assert_true(float_matrix_equal(src, r.u.value));
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(src);
+}
+
+static void test_convert_float_dense_to_csr_preserves_values(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_t* src = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r = convert_float_matrix(src, CSR_MATRIX, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)matrix_format(r.u.value), (int)CSR_MATRIX);
+    assert_true(float_matrix_equal(src, r.u.value));
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(src);
+}
+
+static void test_convert_float_zero_dense_to_csr_omits_neg_one(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_t* src = _make_dense_float_matrix(2u, 3u);
+
+    assert_int_equal(set_float_matrix(src, 0u, 0u, 5.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(src, 0u, 1u, -1.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(src, 1u, 2u, 8.0f), NO_ERROR);
+
+    float_matrix_expect_t r =
+        convert_float_matrix_zero(src, CSR_MATRIX, a, _float_zero_or_neg_one);
+    assert_true(r.has_value);
+    assert_int_equal((int)matrix_nnz(r.u.value), 2);
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(src);
+}
+
+/* =============================================================================
+ * Group 7: transpose / fill
+ * ========================================================================== */
+
+static void test_transpose_float_dense_moves_values(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_t* src = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r = transpose_float_matrix(src, a);
+    assert_true(r.has_value);
+
+    float out = 0.0f;
+    assert_int_equal(get_float_matrix(r.u.value, 1u, 0u, &out), NO_ERROR);
+    assert_true(out == 10.0f);
+
+    assert_int_equal(get_float_matrix(r.u.value, 3u, 1u, &out), NO_ERROR);
+    assert_true(out == 20.0f);
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(src);
+}
+
+static void test_fill_float_dense_sets_every_entry(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_dense_float_matrix(2u, 3u);
+    float out = 0.0f;
+
+    assert_int_equal(fill_float_matrix(mat, 7.5f), NO_ERROR);
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 3u; ++j) {
+            assert_int_equal(get_float_matrix(mat, i, j, &out), NO_ERROR);
+            assert_true(out == 7.5f);
+        }
+    }
+
+    return_float_matrix(mat);
+}
+
+static void test_fill_float_zero_equivalent_to_clear(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_dense_float_matrix(2u, 2u);
+
+    assert_int_equal(set_float_matrix(mat, 1u, 1u, 9.0f), NO_ERROR);
+    assert_false(float_matrix_is_zero(mat));
+
+    assert_int_equal(fill_float_matrix(mat, 0.0f), NO_ERROR);
+    assert_true(float_matrix_is_zero(mat));
+
+    return_float_matrix(mat);
+}
+
+/* =============================================================================
+ * Group 8: equality / compatibility
+ * ========================================================================== */
+
+static void test_float_matrix_equal_dense_same_values_returns_true(void** state) {
+    (void)state;
+
+    float_matrix_t* a = _make_sample_dense_float_matrix();
+    float_matrix_t* b = _make_sample_dense_float_matrix();
+
+    assert_true(float_matrix_equal(a, b));
+
+    return_float_matrix(a);
+    return_float_matrix(b);
+}
+
+static void test_float_matrix_equal_cmp_abs_equal_accepts_negated_values(void** state) {
+    (void)state;
+
+    float_matrix_t* a = _make_dense_float_matrix(2u, 2u);
+    float_matrix_t* b = _make_dense_float_matrix(2u, 2u);
+
+    assert_int_equal(set_float_matrix(a, 0u, 0u, -5.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(b, 0u, 0u,  5.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(a, 1u, 1u, -9.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(b, 1u, 1u,  9.0f), NO_ERROR);
+
+    assert_false(float_matrix_equal(a, b));
+    assert_true(float_matrix_equal_cmp(a, b, _float_abs_equal));
+
+    return_float_matrix(a);
+    return_float_matrix(b);
+}
+
+static void test_float_matrix_shape_compatibility_helpers(void** state) {
+    (void)state;
+
+    float_matrix_t* a = _make_dense_float_matrix(2u, 3u);
+    float_matrix_t* b = _make_dense_float_matrix(2u, 3u);
+    float_matrix_t* c = _make_dense_float_matrix(3u, 4u);
+
+    assert_true(float_matrix_has_same_shape(a, b));
+    assert_true(float_matrix_is_add_compatible(a, b));
+    assert_true(float_matrix_is_multiply_compatible(a, c));
+    assert_false(float_matrix_is_square(a));
+
+    return_float_matrix(a);
+    return_float_matrix(b);
+    return_float_matrix(c);
+}
+
+/* =============================================================================
+ * Group 9: swaps / constructors / vector queries
+ * ========================================================================== */
+
+static void test_swap_float_matrix_rows_dense(void** state) {
+    (void)state;
+    float_matrix_t* mat = _make_dense_float_matrix(2u, 2u);
+    float out = 0.0f;
+
+    assert_int_equal(set_float_matrix(mat, 0u, 0u, 1.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 0u, 2.0f), NO_ERROR);
+
+    assert_int_equal(swap_float_matrix_rows(mat, 0u, 1u), NO_ERROR);
+
+    assert_int_equal(get_float_matrix(mat, 0u, 0u, &out), NO_ERROR);
+    assert_true(out == 2.0f);
+
+    assert_int_equal(get_float_matrix(mat, 1u, 0u, &out), NO_ERROR);
+    assert_true(out == 1.0f);
+
+    return_float_matrix(mat);
+}
+
+static void test_init_float_identity_matrix_sets_diagonal_to_one(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    float_matrix_expect_t r = init_float_identity_matrix(3u, a);
+    assert_true(r.has_value);
+
+    float out = 0.0f;
+    assert_int_equal(get_float_matrix(r.u.value, 0u, 0u, &out), NO_ERROR);
+    assert_true(out == 1.0f);
+
+    assert_int_equal(get_float_matrix(r.u.value, 0u, 1u, &out), NO_ERROR);
+    assert_true(out == 0.0f);
+
+    return_float_matrix(r.u.value);
+}
+
+static void test_float_row_and_col_vector_queries(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    float_matrix_expect_t row = init_float_row_vector(5u, a);
+    float_matrix_expect_t col = init_float_col_vector(7u, a);
+
+    assert_true(row.has_value);
+    assert_true(col.has_value);
+
+    assert_true(float_matrix_is_row_vector(row.u.value));
+    assert_true(float_matrix_is_vector(row.u.value));
+    assert_int_equal((int)float_matrix_vector_length(row.u.value), 5);
+
+    assert_true(float_matrix_is_col_vector(col.u.value));
+    assert_true(float_matrix_is_vector(col.u.value));
+    assert_int_equal((int)float_matrix_vector_length(col.u.value), 7);
+
+    return_float_matrix(row.u.value);
+    return_float_matrix(col.u.value);
+}
+// ================================================================================
+// Group 10: Additional float matrix tests
+// ================================================================================
+
+static void test_transpose_float_coo_preserves_logical_values(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* src = _make_sample_coo_float_matrix();
+
+    float_matrix_expect_t r = transpose_float_matrix(src, alloc);
+    assert_true(r.has_value);
+
+    float_matrix_t* tr = r.u.value;
+    float out = 0.0f;
+
+    assert_int_equal((int)matrix_format(tr), (int)COO_MATRIX);
+    assert_int_equal((int)matrix_rows(tr), 4);
+    assert_int_equal((int)matrix_cols(tr), 3);
+
+    assert_int_equal(get_float_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_true(out == 10.0f);
+
+    assert_int_equal(get_float_matrix(tr, 3u, 1u, &out), NO_ERROR);
+    assert_true(out == 20.0f);
+
+    assert_int_equal(get_float_matrix(tr, 0u, 2u, &out), NO_ERROR);
+    assert_true(out == 30.0f);
+
+    assert_int_equal(get_float_matrix(tr, 2u, 2u, &out), NO_ERROR);
+    assert_true(out == 40.0f);
+
+    return_float_matrix(tr);
+    return_float_matrix(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_float_csr_preserves_logical_values(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* dense = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t src_r = convert_float_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(src_r.has_value);
+
+    float_matrix_expect_t tr_r = transpose_float_matrix(src_r.u.value, alloc);
+    assert_true(tr_r.has_value);
+
+    float_matrix_t* tr = tr_r.u.value;
+    float out = 0.0f;
+
+    assert_int_equal((int)matrix_format(tr), (int)CSR_MATRIX);
+    assert_int_equal((int)matrix_rows(tr), 4);
+    assert_int_equal((int)matrix_cols(tr), 3);
+
+    assert_int_equal(get_float_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_true(out == 10.0f);
+
+    assert_int_equal(get_float_matrix(tr, 3u, 1u, &out), NO_ERROR);
+    assert_true(out == 20.0f);
+
+    assert_int_equal(get_float_matrix(tr, 0u, 2u, &out), NO_ERROR);
+    assert_true(out == 30.0f);
+
+    assert_int_equal(get_float_matrix(tr, 2u, 2u, &out), NO_ERROR);
+    assert_true(out == 40.0f);
+
+    return_float_matrix(tr);
+    return_float_matrix(src_r.u.value);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_transpose_float_csc_preserves_logical_values(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* dense = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t src_r = convert_float_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(src_r.has_value);
+
+    float_matrix_expect_t tr_r = transpose_float_matrix(src_r.u.value, alloc);
+    assert_true(tr_r.has_value);
+
+    float_matrix_t* tr = tr_r.u.value;
+    float out = 0.0f;
+
+    assert_int_equal((int)matrix_format(tr), (int)CSC_MATRIX);
+    assert_int_equal((int)matrix_rows(tr), 4);
+    assert_int_equal((int)matrix_cols(tr), 3);
+
+    assert_int_equal(get_float_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_true(out == 10.0f);
+
+    assert_int_equal(get_float_matrix(tr, 3u, 1u, &out), NO_ERROR);
+    assert_true(out == 20.0f);
+
+    assert_int_equal(get_float_matrix(tr, 0u, 2u, &out), NO_ERROR);
+    assert_true(out == 30.0f);
+
+    assert_int_equal(get_float_matrix(tr, 2u, 2u, &out), NO_ERROR);
+    assert_true(out == 40.0f);
+
+    return_float_matrix(tr);
+    return_float_matrix(src_r.u.value);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_swap_float_matrix_cols_dense(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_dense_float_matrix(2u, 3u);
+    float out = 0.0f;
+
+    assert_int_equal(set_float_matrix(mat, 0u, 0u, 1.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 0u, 2u, 3.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 0u, 4.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 2u, 6.0f), NO_ERROR);
+
+    assert_int_equal(swap_float_matrix_cols(mat, 0u, 2u), NO_ERROR);
+
+    assert_int_equal(get_float_matrix(mat, 0u, 0u, &out), NO_ERROR);
+    assert_true(out == 3.0f);
+
+    assert_int_equal(get_float_matrix(mat, 0u, 2u, &out), NO_ERROR);
+    assert_true(out == 1.0f);
+
+    assert_int_equal(get_float_matrix(mat, 1u, 0u, &out), NO_ERROR);
+    assert_true(out == 6.0f);
+
+    assert_int_equal(get_float_matrix(mat, 1u, 2u, &out), NO_ERROR);
+    assert_true(out == 4.0f);
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_is_sparse_dense_returns_false(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_dense_float_matrix(3u, 3u);
+    assert_false(float_matrix_is_sparse(mat));
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_is_sparse_coo_returns_true(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_coo_float_matrix(3u, 3u, 4u, true);
+    assert_true(float_matrix_is_sparse(mat));
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_is_sparse_csr_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* dense = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r = convert_float_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(r.has_value);
+    assert_true(float_matrix_is_sparse(r.u.value));
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_is_sparse_csc_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* dense = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r = convert_float_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(r.has_value);
+    assert_true(float_matrix_is_sparse(r.u.value));
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_equal_dense_and_coo_same_values_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* dense = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r = convert_float_matrix(dense, COO_MATRIX, alloc);
+    assert_true(r.has_value);
+
+    assert_true(float_matrix_equal(dense, r.u.value));
+    assert_true(float_matrix_equal(r.u.value, dense));
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_equal_dense_and_csr_same_values_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* dense = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r = convert_float_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(r.has_value);
+
+    assert_true(float_matrix_equal(dense, r.u.value));
+    assert_true(float_matrix_equal(r.u.value, dense));
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_equal_dense_and_csc_same_values_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* dense = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r = convert_float_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(r.has_value);
+
+    assert_true(float_matrix_equal(dense, r.u.value));
+    assert_true(float_matrix_equal(r.u.value, dense));
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_convert_float_matrix_zero_null_callback_matches_convert_float_matrix_coo(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* src = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r1 = convert_float_matrix(src, COO_MATRIX, alloc);
+    float_matrix_expect_t r2 = convert_float_matrix_zero(src, COO_MATRIX, alloc, NULL);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_true(float_matrix_equal(r1.u.value, r2.u.value));
+    assert_int_equal((int)matrix_nnz(r1.u.value), (int)matrix_nnz(r2.u.value));
+
+    return_float_matrix(r2.u.value);
+    return_float_matrix(r1.u.value);
+    return_float_matrix(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_convert_float_matrix_zero_null_callback_matches_convert_float_matrix_csr(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* src = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r1 = convert_float_matrix(src, CSR_MATRIX, alloc);
+    float_matrix_expect_t r2 = convert_float_matrix_zero(src, CSR_MATRIX, alloc, NULL);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_true(float_matrix_equal(r1.u.value, r2.u.value));
+    assert_int_equal((int)matrix_nnz(r1.u.value), (int)matrix_nnz(r2.u.value));
+
+    return_float_matrix(r2.u.value);
+    return_float_matrix(r1.u.value);
+    return_float_matrix(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_convert_float_matrix_zero_null_callback_matches_convert_float_matrix_csc(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* src = _make_sample_dense_float_matrix();
+
+    float_matrix_expect_t r1 = convert_float_matrix(src, CSC_MATRIX, alloc);
+    float_matrix_expect_t r2 = convert_float_matrix_zero(src, CSC_MATRIX, alloc, NULL);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_true(float_matrix_equal(r1.u.value, r2.u.value));
+    assert_int_equal((int)matrix_nnz(r1.u.value), (int)matrix_nnz(r2.u.value));
+
+    return_float_matrix(r2.u.value);
+    return_float_matrix(r1.u.value);
+    return_float_matrix(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_convert_float_matrix_zero_treats_negative_zero_as_zero_in_coo(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* src = _make_dense_float_matrix(2u, 2u);
+
+    float neg_zero = -0.0f;
+    float one = 1.0f;
+
+    assert_int_equal(set_float_matrix(src, 0u, 0u, neg_zero), NO_ERROR);
+    assert_int_equal(set_float_matrix(src, 1u, 1u, one), NO_ERROR);
+
+    float_matrix_expect_t r = convert_float_matrix_zero(src, COO_MATRIX, alloc, NULL);
+    assert_true(r.has_value);
+
+    /* -0.0f should be treated as semantic zero and omitted */
+    assert_int_equal((int)matrix_nnz(r.u.value), 1);
+
+    float out = 123.0f;
+    assert_int_equal(get_float_matrix(r.u.value, 0u, 0u, &out), NO_ERROR);
+    assert_true(out == 0.0f);
+
+    assert_int_equal(get_float_matrix(r.u.value, 1u, 1u, &out), NO_ERROR);
+    assert_true(out == 1.0f);
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_convert_float_matrix_zero_treats_negative_zero_as_zero_in_csr(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    float_matrix_t* src = _make_dense_float_matrix(2u, 2u);
+
+    assert_int_equal(set_float_matrix(src, 0u, 1u, -0.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(src, 1u, 0u, 2.0f), NO_ERROR);
+
+    float_matrix_expect_t r = convert_float_matrix_zero(src, CSR_MATRIX, alloc, NULL);
+    assert_true(r.has_value);
+
+    assert_int_equal((int)matrix_nnz(r.u.value), 1);
+
+    float out = 0.0f;
+    assert_int_equal(get_float_matrix(r.u.value, 0u, 1u, &out), NO_ERROR);
+    assert_true(out == 0.0f);
+
+    assert_int_equal(get_float_matrix(r.u.value, 1u, 0u, &out), NO_ERROR);
+    assert_true(out == 2.0f);
+
+    return_float_matrix(r.u.value);
+    return_float_matrix(src);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_equal_negative_zero_and_positive_zero_are_not_equal_by_default(void** state) {
+    (void)state;
+
+    float_matrix_t* a = _make_dense_float_matrix(2u, 2u);
+    float_matrix_t* b = _make_dense_float_matrix(2u, 2u);
+
+    assert_int_equal(set_float_matrix(a, 1u, 1u, -0.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(b, 1u, 1u,  0.0f), NO_ERROR);
+
+    /* Default float matrix equality is exact / bitwise. */
+    assert_false(float_matrix_equal(a, b));
+    assert_false(float_matrix_equal_cmp(a, b, NULL));
+
+    return_float_matrix(a);
+    return_float_matrix(b);
+}
+
+// --------------------------------------------------------------------------------
+
+static bool _zero_sign_must_match(float a, float b) {
+    if (a == 0.0f && b == 0.0f) {
+        return signbit(a) == signbit(b);
+    }
+    return a == b;
+}
+
+static void test_float_matrix_equal_cmp_can_distinguish_negative_zero_when_requested(void** state) {
+    (void)state;
+
+    float_matrix_t* a = _make_dense_float_matrix(1u, 1u);
+    float_matrix_t* b = _make_dense_float_matrix(1u, 1u);
+
+    assert_int_equal(set_float_matrix(a, 0u, 0u, -0.0f), NO_ERROR);
+    assert_int_equal(set_float_matrix(b, 0u, 0u,  0.0f), NO_ERROR);
+
+    /* Default equality is exact / bitwise, so these already compare unequal. */
+    assert_false(float_matrix_equal(a, b));
+
+    /* A sign-sensitive comparator also keeps them unequal. */
+    assert_false(float_matrix_equal_cmp(a, b, _zero_sign_must_match));
+
+    return_float_matrix(a);
+    return_float_matrix(b);
+}
+
+/* =============================================================================
+ * Registry
+ * ========================================================================== */
+
+const struct CMUnitTest test_float_matrix[] = {
+    /* Group 1 */
+    cmocka_unit_test(test_float_dense_init_zero_rows_fails),
+    cmocka_unit_test(test_float_dense_init_zero_cols_fails),
+    cmocka_unit_test(test_float_dense_init_returns_valid_matrix),
+    cmocka_unit_test(test_float_dense_init_is_zero_initialized),
+
+    /* Group 2 */
+    cmocka_unit_test(test_float_coo_init_zero_capacity_fails),
+    cmocka_unit_test(test_float_coo_init_returns_valid_matrix),
+    cmocka_unit_test(test_float_coo_unset_entry_reads_back_as_zero),
+
+    /* Group 3 */
+    cmocka_unit_test(test_float_set_dense_null_matrix_returns_null_pointer),
+    cmocka_unit_test(test_float_get_dense_null_out_returns_null_pointer),
+    cmocka_unit_test(test_float_set_get_dense_single_value),
+    cmocka_unit_test(test_float_set_dense_overwrites_existing_value),
+
+    /* Group 4 */
+    cmocka_unit_test(test_float_set_get_coo_single_value),
+    cmocka_unit_test(test_float_push_back_coo_overwrite_does_not_increase_nnz),
+    cmocka_unit_test(test_float_push_back_coo_capacity_overflow_when_growth_disabled),
+
+    /* Group 5 */
+    cmocka_unit_test(test_clear_float_dense_zeroes_all_entries),
+    cmocka_unit_test(test_copy_float_dense_preserves_values),
+    cmocka_unit_test(test_copy_float_coo_is_independent_of_source),
+
+    /* Group 6 */
+    cmocka_unit_test(test_convert_float_dense_to_coo_preserves_values),
+    cmocka_unit_test(test_convert_float_dense_to_csr_preserves_values),
+    cmocka_unit_test(test_convert_float_zero_dense_to_csr_omits_neg_one),
+
+    /* Group 7 */
+    cmocka_unit_test(test_transpose_float_dense_moves_values),
+    cmocka_unit_test(test_fill_float_dense_sets_every_entry),
+    cmocka_unit_test(test_fill_float_zero_equivalent_to_clear),
+
+    /* Group 8 */
+    cmocka_unit_test(test_float_matrix_equal_dense_same_values_returns_true),
+    cmocka_unit_test(test_float_matrix_equal_cmp_abs_equal_accepts_negated_values),
+    cmocka_unit_test(test_float_matrix_shape_compatibility_helpers),
+
+    /* Group 9 */
+    cmocka_unit_test(test_swap_float_matrix_rows_dense),
+    cmocka_unit_test(test_init_float_identity_matrix_sets_diagonal_to_one),
+    cmocka_unit_test(test_float_row_and_col_vector_queries),
+
+    /* Group 10 */
+    cmocka_unit_test(test_transpose_float_coo_preserves_logical_values),
+    cmocka_unit_test(test_transpose_float_csr_preserves_logical_values),
+    cmocka_unit_test(test_transpose_float_csc_preserves_logical_values),
+
+    cmocka_unit_test(test_swap_float_matrix_cols_dense),
+
+    cmocka_unit_test(test_float_matrix_is_sparse_dense_returns_false),
+    cmocka_unit_test(test_float_matrix_is_sparse_coo_returns_true),
+    cmocka_unit_test(test_float_matrix_is_sparse_csr_returns_true),
+    cmocka_unit_test(test_float_matrix_is_sparse_csc_returns_true),
+
+    cmocka_unit_test(test_float_matrix_equal_dense_and_coo_same_values_returns_true),
+    cmocka_unit_test(test_float_matrix_equal_dense_and_csr_same_values_returns_true),
+    cmocka_unit_test(test_float_matrix_equal_dense_and_csc_same_values_returns_true),
+
+    cmocka_unit_test(test_convert_float_matrix_zero_null_callback_matches_convert_float_matrix_coo),
+    cmocka_unit_test(test_convert_float_matrix_zero_null_callback_matches_convert_float_matrix_csr),
+    cmocka_unit_test(test_convert_float_matrix_zero_null_callback_matches_convert_float_matrix_csc),
+
+    cmocka_unit_test(test_convert_float_matrix_zero_treats_negative_zero_as_zero_in_coo),
+    cmocka_unit_test(test_convert_float_matrix_zero_treats_negative_zero_as_zero_in_csr),
+    cmocka_unit_test(test_float_matrix_equal_negative_zero_and_positive_zero_are_not_equal_by_default),
+    cmocka_unit_test(test_float_matrix_equal_cmp_can_distinguish_negative_zero_when_requested),
+};
+
+const size_t test_float_matrix_count =
+    sizeof(test_float_matrix) / sizeof(test_float_matrix[0]);
 
 // ================================================================================ 
 // ================================================================================ 
