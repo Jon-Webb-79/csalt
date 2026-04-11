@@ -26,6 +26,7 @@
 #include "c_ldouble.h"
 #include "c_uint8.h"
 #include "c_int8.h"
+#include "c_uint16.h"
 // ================================================================================ 
 // ================================================================================ 
 
@@ -7659,6 +7660,922 @@ const struct CMUnitTest test_int8_matrix[] = {
 
 const size_t test_int8_matrix_count =
     sizeof(test_int8_matrix) / sizeof(test_int8_matrix[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+static uint16_matrix_t* _make_dense_uint16_matrix(size_t rows, size_t cols) {
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_expect_t r = init_uint16_dense_matrix(rows, cols, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+static uint16_matrix_t* _make_coo_uint16_matrix(size_t rows,
+                                              size_t cols,
+                                              size_t cap,
+                                              bool   growth) {
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_expect_t r = init_uint16_coo_matrix(rows, cols, cap, growth, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+static uint16_matrix_t* _make_sample_dense_uint16_matrix(void) {
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(3u, 4u);
+
+    assert_int_equal(set_uint16_matrix(mat, 0u, 1u, (uint16_t)10u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 3u, (uint16_t)20u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 2u, 0u, (uint16_t)30u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 2u, 2u, (uint16_t)40u), NO_ERROR);
+
+    return mat;
+}
+
+static uint16_matrix_t* _make_sample_coo_uint16_matrix(void) {
+    uint16_matrix_t* mat = _make_coo_uint16_matrix(3u, 4u, 8u, true);
+
+    assert_int_equal(set_uint16_matrix(mat, 0u, 1u, (uint16_t)10u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 3u, (uint16_t)20u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 2u, 0u, (uint16_t)30u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 2u, 2u, (uint16_t)40u), NO_ERROR);
+
+    return mat;
+}
+
+static bool _uint16_equal_mod_10(uint16_t a, uint16_t b) {
+    return (uint16_t)(a % 10u) == (uint16_t)(b % 10u);
+}
+
+static bool _uint16_zero_or_ff(uint16_t v) {
+    return (v == (uint16_t)0u) || (v == (uint16_t)255u);
+}
+
+// ================================================================================
+// Group 1: init_uint16_dense_matrix
+// ================================================================================
+
+static void test_uint16_dense_init_zero_rows_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    uint16_matrix_expect_t r = init_uint16_dense_matrix(0u, 4u, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+
+static void test_uint16_dense_init_zero_cols_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    uint16_matrix_expect_t r = init_uint16_dense_matrix(3u, 0u, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+
+static void test_uint16_dense_init_returns_valid_matrix(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(3u, 4u);
+
+    assert_int_equal((int)matrix_rows(mat), 3);
+    assert_int_equal((int)matrix_cols(mat), 4);
+    assert_int_equal((int)matrix_dtype(mat), (int)UINT16_TYPE);
+    assert_int_equal((int)matrix_data_size(mat), (int)sizeof(uint16_t));
+    assert_int_equal((int)matrix_format(mat), (int)DENSE_MATRIX);
+    assert_int_equal((int)matrix_nnz(mat), 12);
+
+    return_uint16_matrix(mat);
+}
+
+static void test_uint16_dense_init_is_zero_initialized(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(2u, 3u);
+    uint16_t out = 255u;
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 3u; ++j) {
+            out = 255u;
+            assert_int_equal(get_uint16_matrix(mat, i, j, &out), NO_ERROR);
+            assert_int_equal((int)out, 0);
+        }
+    }
+
+    assert_true(uint16_matrix_is_zero(mat));
+    return_uint16_matrix(mat);
+}
+
+// ================================================================================
+// Group 2: init_uint16_coo_matrix
+// ================================================================================
+
+static void test_uint16_coo_init_zero_capacity_fails(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    uint16_matrix_expect_t r = init_uint16_coo_matrix(3u, 4u, 0u, true, a);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, INVALID_ARG);
+}
+
+static void test_uint16_coo_init_returns_valid_matrix(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_coo_uint16_matrix(3u, 4u, 8u, true);
+
+    assert_int_equal((int)matrix_rows(mat), 3);
+    assert_int_equal((int)matrix_cols(mat), 4);
+    assert_int_equal((int)matrix_dtype(mat), (int)UINT16_TYPE);
+    assert_int_equal((int)matrix_data_size(mat), (int)sizeof(uint16_t));
+    assert_int_equal((int)matrix_format(mat), (int)COO_MATRIX);
+    assert_int_equal((int)matrix_nnz(mat), 0);
+    assert_true(mat->rep.coo.growth);
+    assert_true(mat->rep.coo.sorted);
+
+    return_uint16_matrix(mat);
+}
+
+static void test_uint16_coo_unset_entry_reads_back_as_zero(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_coo_uint16_matrix(3u, 4u, 8u, true);
+    uint16_t out = 255u;
+
+    assert_int_equal(get_uint16_matrix(mat, 1u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 0);
+
+    return_uint16_matrix(mat);
+}
+
+// ================================================================================
+// Group 3: dense set/get
+// ================================================================================
+
+static void test_uint16_set_dense_null_matrix_returns_null_pointer(void** state) {
+    (void)state;
+    assert_int_equal(set_uint16_matrix(NULL, 0u, 0u, (uint16_t)7u), NULL_POINTER);
+}
+
+static void test_uint16_get_dense_null_out_returns_null_pointer(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(2u, 2u);
+
+    assert_int_equal(get_uint16_matrix(mat, 0u, 0u, NULL), NULL_POINTER);
+    return_uint16_matrix(mat);
+}
+
+static void test_uint16_set_get_dense_single_value(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(3u, 3u);
+
+    uint16_t out = 0u;
+    assert_int_equal(set_uint16_matrix(mat, 1u, 2u, (uint16_t)42u), NO_ERROR);
+    assert_int_equal(get_uint16_matrix(mat, 1u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 42);
+
+    return_uint16_matrix(mat);
+}
+
+static void test_uint16_set_dense_overwrites_existing_value(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(2u, 2u);
+
+    uint16_t out = 0u;
+    assert_int_equal(set_uint16_matrix(mat, 1u, 1u, (uint16_t)5u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 1u, (uint16_t)99u), NO_ERROR);
+    assert_int_equal(get_uint16_matrix(mat, 1u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 99);
+
+    return_uint16_matrix(mat);
+}
+
+// ================================================================================
+// Group 4: COO set/get
+// ================================================================================
+
+static void test_uint16_set_get_coo_single_value(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_coo_uint16_matrix(3u, 3u, 4u, true);
+
+    uint16_t out = 0u;
+    assert_int_equal(set_uint16_matrix(mat, 2u, 1u, (uint16_t)123u), NO_ERROR);
+    assert_int_equal(get_uint16_matrix(mat, 2u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 123);
+    assert_int_equal((int)matrix_nnz(mat), 1);
+
+    return_uint16_matrix(mat);
+}
+
+static void test_uint16_push_back_coo_overwrite_does_not_increase_nnz(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_coo_uint16_matrix(3u, 3u, 4u, true);
+
+    uint16_t out = 0u;
+    assert_int_equal(push_back_uint16_coo_matrix(mat, 1u, 1u, (uint16_t)5u), NO_ERROR);
+    assert_int_equal((int)matrix_nnz(mat), 1);
+
+    assert_int_equal(push_back_uint16_coo_matrix(mat, 1u, 1u, (uint16_t)99u), NO_ERROR);
+    assert_int_equal((int)matrix_nnz(mat), 1);
+
+    assert_int_equal(get_uint16_matrix(mat, 1u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 99);
+
+    return_uint16_matrix(mat);
+}
+
+static void test_uint16_push_back_coo_capacity_overflow_when_growth_disabled(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_coo_uint16_matrix(3u, 3u, 2u, false);
+
+    assert_int_equal(push_back_uint16_coo_matrix(mat, 0u, 0u, (uint16_t)1u), NO_ERROR);
+    assert_int_equal(push_back_uint16_coo_matrix(mat, 1u, 1u, (uint16_t)2u), NO_ERROR);
+    assert_int_equal(push_back_uint16_coo_matrix(mat, 2u, 2u, (uint16_t)3u), CAPACITY_OVERFLOW);
+
+    return_uint16_matrix(mat);
+}
+
+// ================================================================================
+// Group 5: clear / copy
+// ================================================================================
+
+static void test_clear_uint16_dense_zeroes_all_entries(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(2u, 3u);
+    uint16_t out = 255u;
+
+    assert_int_equal(set_uint16_matrix(mat, 0u, 0u, (uint16_t)11u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 0u, 2u, (uint16_t)22u), NO_ERROR);
+    assert_false(uint16_matrix_is_zero(mat));
+
+    assert_int_equal(clear_uint16_matrix(mat), NO_ERROR);
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 3u; ++j) {
+            out = 255u;
+            assert_int_equal(get_uint16_matrix(mat, i, j, &out), NO_ERROR);
+            assert_int_equal((int)out, 0);
+        }
+    }
+
+    assert_true(uint16_matrix_is_zero(mat));
+    return_uint16_matrix(mat);
+}
+
+static void test_copy_uint16_dense_preserves_values(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_t* src = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r = copy_uint16_matrix(src, a);
+    assert_true(r.has_value);
+    assert_true(uint16_matrix_equal(src, r.u.value));
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(src);
+}
+
+static void test_copy_uint16_coo_is_independent_of_source(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_t* src = _make_coo_uint16_matrix(3u, 3u, 4u, true);
+
+    assert_int_equal(set_uint16_matrix(src, 1u, 1u, (uint16_t)5u), NO_ERROR);
+
+    uint16_matrix_expect_t r = copy_uint16_matrix(src, a);
+    assert_true(r.has_value);
+
+    assert_int_equal(set_uint16_matrix(r.u.value, 1u, 1u, (uint16_t)77u), NO_ERROR);
+
+    uint16_t src_out = 0u;
+    uint16_t dst_out = 0u;
+
+    assert_int_equal(get_uint16_matrix(src, 1u, 1u, &src_out), NO_ERROR);
+    assert_int_equal(get_uint16_matrix(r.u.value, 1u, 1u, &dst_out), NO_ERROR);
+
+    assert_int_equal((int)src_out, 5);
+    assert_int_equal((int)dst_out, 77);
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(src);
+}
+
+// ================================================================================
+// Group 6: convert / convert_zero
+// ================================================================================
+
+static void test_convert_uint16_dense_to_coo_preserves_values(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_t* src = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r = convert_uint16_matrix(src, COO_MATRIX, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)matrix_format(r.u.value), (int)COO_MATRIX);
+    assert_true(uint16_matrix_equal(src, r.u.value));
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(src);
+}
+
+static void test_convert_uint16_dense_to_csr_preserves_values(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_t* src = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r = convert_uint16_matrix(src, CSR_MATRIX, a);
+    assert_true(r.has_value);
+    assert_int_equal((int)matrix_format(r.u.value), (int)CSR_MATRIX);
+    assert_true(uint16_matrix_equal(src, r.u.value));
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(src);
+}
+
+static void test_convert_uint16_zero_dense_to_csr_omits_ff(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_t* src = _make_dense_uint16_matrix(2u, 3u);
+
+    assert_int_equal(set_uint16_matrix(src, 0u, 0u, (uint16_t)5u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(src, 0u, 1u, (uint16_t)255u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(src, 1u, 2u, (uint16_t)8u), NO_ERROR);
+
+    uint16_matrix_expect_t r =
+        convert_uint16_matrix_zero(src, CSR_MATRIX, a, _uint16_zero_or_ff);
+    assert_true(r.has_value);
+    assert_int_equal((int)matrix_nnz(r.u.value), 2);
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(src);
+}
+
+// ================================================================================
+// Group 7: transpose / fill
+// ================================================================================
+
+static void test_transpose_uint16_dense_moves_values(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_t* src = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r = transpose_uint16_matrix(src, a);
+    assert_true(r.has_value);
+
+    uint16_t out = 0u;
+    assert_int_equal(get_uint16_matrix(r.u.value, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 10);
+
+    assert_int_equal(get_uint16_matrix(r.u.value, 3u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 20);
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(src);
+}
+
+static void test_fill_uint16_dense_sets_every_entry(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(2u, 3u);
+    uint16_t out = 0u;
+
+    assert_int_equal(fill_uint16_matrix(mat, (uint16_t)7u), NO_ERROR);
+
+    for (size_t i = 0u; i < 2u; ++i) {
+        for (size_t j = 0u; j < 3u; ++j) {
+            assert_int_equal(get_uint16_matrix(mat, i, j, &out), NO_ERROR);
+            assert_int_equal((int)out, 7);
+        }
+    }
+
+    return_uint16_matrix(mat);
+}
+
+static void test_fill_uint16_zero_equivalent_to_clear(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(2u, 2u);
+
+    assert_int_equal(set_uint16_matrix(mat, 1u, 1u, (uint16_t)9u), NO_ERROR);
+    assert_false(uint16_matrix_is_zero(mat));
+
+    assert_int_equal(fill_uint16_matrix(mat, (uint16_t)0u), NO_ERROR);
+    assert_true(uint16_matrix_is_zero(mat));
+
+    return_uint16_matrix(mat);
+}
+
+// ================================================================================
+// Group 8: equality / compatibility
+// ================================================================================
+
+static void test_uint16_matrix_equal_dense_same_values_returns_true(void** state) {
+    (void)state;
+
+    uint16_matrix_t* a = _make_sample_dense_uint16_matrix();
+    uint16_matrix_t* b = _make_sample_dense_uint16_matrix();
+
+    assert_true(uint16_matrix_equal(a, b));
+
+    return_uint16_matrix(a);
+    return_uint16_matrix(b);
+}
+
+static void test_uint16_matrix_shape_compatibility_helpers(void** state) {
+    (void)state;
+
+    uint16_matrix_t* a = _make_dense_uint16_matrix(2u, 3u);
+    uint16_matrix_t* b = _make_dense_uint16_matrix(2u, 3u);
+    uint16_matrix_t* c = _make_dense_uint16_matrix(3u, 4u);
+
+    assert_true(uint16_matrix_has_same_shape(a, b));
+    assert_true(uint16_matrix_is_add_compatible(a, b));
+    assert_true(uint16_matrix_is_multiply_compatible(a, c));
+    assert_false(uint16_matrix_is_square(a));
+
+    return_uint16_matrix(a);
+    return_uint16_matrix(b);
+    return_uint16_matrix(c);
+}
+
+// ================================================================================
+// Group 9: swaps / constructors / vector queries
+// ================================================================================
+
+static void test_swap_uint16_matrix_rows_dense(void** state) {
+    (void)state;
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(2u, 2u);
+    uint16_t out = 0u;
+
+    assert_int_equal(set_uint16_matrix(mat, 0u, 0u, (uint16_t)1u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 0u, (uint16_t)2u), NO_ERROR);
+
+    assert_int_equal(swap_uint16_matrix_rows(mat, 0u, 1u), NO_ERROR);
+
+    assert_int_equal(get_uint16_matrix(mat, 0u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 2);
+
+    assert_int_equal(get_uint16_matrix(mat, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 1);
+
+    return_uint16_matrix(mat);
+}
+
+static void test_init_uint16_identity_matrix_sets_diagonal_to_one(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    uint16_matrix_expect_t r = init_uint16_identity_matrix(3u, a);
+    assert_true(r.has_value);
+
+    uint16_t out = 0u;
+    assert_int_equal(get_uint16_matrix(r.u.value, 0u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 1);
+
+    assert_int_equal(get_uint16_matrix(r.u.value, 0u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 0);
+
+    return_uint16_matrix(r.u.value);
+}
+
+static void test_uint16_row_and_col_vector_queries(void** state) {
+    (void)state;
+    allocator_vtable_t a = heap_allocator();
+
+    uint16_matrix_expect_t row = init_uint16_row_vector(5u, a);
+    uint16_matrix_expect_t col = init_uint16_col_vector(7u, a);
+
+    assert_true(row.has_value);
+    assert_true(col.has_value);
+
+    assert_true(uint16_matrix_is_row_vector(row.u.value));
+    assert_true(uint16_matrix_is_vector(row.u.value));
+    assert_int_equal((int)uint16_matrix_vector_length(row.u.value), 5);
+
+    assert_true(uint16_matrix_is_col_vector(col.u.value));
+    assert_true(uint16_matrix_is_vector(col.u.value));
+    assert_int_equal((int)uint16_matrix_vector_length(col.u.value), 7);
+
+    return_uint16_matrix(row.u.value);
+    return_uint16_matrix(col.u.value);
+}
+
+// ================================================================================
+// Group 10: Additional uint16 matrix tests
+// ================================================================================
+
+static void test_transpose_uint16_coo_preserves_logical_values(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* src = _make_sample_coo_uint16_matrix();
+
+    uint16_matrix_expect_t r = transpose_uint16_matrix(src, alloc);
+    assert_true(r.has_value);
+
+    uint16_matrix_t* tr = r.u.value;
+    uint16_t out = 0u;
+
+    assert_int_equal((int)matrix_format(tr), (int)COO_MATRIX);
+    assert_int_equal((int)matrix_rows(tr), 4);
+    assert_int_equal((int)matrix_cols(tr), 3);
+
+    assert_int_equal(get_uint16_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 10);
+
+    assert_int_equal(get_uint16_matrix(tr, 3u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 20);
+
+    assert_int_equal(get_uint16_matrix(tr, 0u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 30);
+
+    assert_int_equal(get_uint16_matrix(tr, 2u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 40);
+
+    return_uint16_matrix(tr);
+    return_uint16_matrix(src);
+}
+
+static void test_transpose_uint16_csr_preserves_logical_values(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* dense = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t src_r = convert_uint16_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(src_r.has_value);
+
+    uint16_matrix_expect_t tr_r = transpose_uint16_matrix(src_r.u.value, alloc);
+    assert_true(tr_r.has_value);
+
+    uint16_matrix_t* tr = tr_r.u.value;
+    uint16_t out = 0u;
+
+    assert_int_equal((int)matrix_format(tr), (int)CSR_MATRIX);
+    assert_int_equal((int)matrix_rows(tr), 4);
+    assert_int_equal((int)matrix_cols(tr), 3);
+
+    assert_int_equal(get_uint16_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 10);
+
+    assert_int_equal(get_uint16_matrix(tr, 3u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 20);
+
+    assert_int_equal(get_uint16_matrix(tr, 0u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 30);
+
+    assert_int_equal(get_uint16_matrix(tr, 2u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 40);
+
+    return_uint16_matrix(tr);
+    return_uint16_matrix(src_r.u.value);
+    return_uint16_matrix(dense);
+}
+
+static void test_transpose_uint16_csc_preserves_logical_values(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* dense = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t src_r = convert_uint16_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(src_r.has_value);
+
+    uint16_matrix_expect_t tr_r = transpose_uint16_matrix(src_r.u.value, alloc);
+    assert_true(tr_r.has_value);
+
+    uint16_matrix_t* tr = tr_r.u.value;
+    uint16_t out = 0u;
+
+    assert_int_equal((int)matrix_format(tr), (int)CSC_MATRIX);
+    assert_int_equal((int)matrix_rows(tr), 4);
+    assert_int_equal((int)matrix_cols(tr), 3);
+
+    assert_int_equal(get_uint16_matrix(tr, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 10);
+
+    assert_int_equal(get_uint16_matrix(tr, 3u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 20);
+
+    assert_int_equal(get_uint16_matrix(tr, 0u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 30);
+
+    assert_int_equal(get_uint16_matrix(tr, 2u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 40);
+
+    return_uint16_matrix(tr);
+    return_uint16_matrix(src_r.u.value);
+    return_uint16_matrix(dense);
+}
+
+static void test_swap_uint16_matrix_cols_dense(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(2u, 3u);
+    uint16_t out = 0u;
+
+    assert_int_equal(set_uint16_matrix(mat, 0u, 0u, (uint16_t)1u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 0u, 2u, (uint16_t)3u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 0u, (uint16_t)4u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 2u, (uint16_t)6u), NO_ERROR);
+
+    assert_int_equal(swap_uint16_matrix_cols(mat, 0u, 2u), NO_ERROR);
+
+    assert_int_equal(get_uint16_matrix(mat, 0u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 3);
+
+    assert_int_equal(get_uint16_matrix(mat, 0u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 1);
+
+    assert_int_equal(get_uint16_matrix(mat, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 6);
+
+    assert_int_equal(get_uint16_matrix(mat, 1u, 2u, &out), NO_ERROR);
+    assert_int_equal((int)out, 4);
+
+    return_uint16_matrix(mat);
+}
+
+static void test_uint16_matrix_is_sparse_dense_returns_false(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_dense_uint16_matrix(3u, 3u);
+    assert_false(uint16_matrix_is_sparse(mat));
+
+    return_uint16_matrix(mat);
+}
+
+static void test_uint16_matrix_is_sparse_coo_returns_true(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_coo_uint16_matrix(3u, 3u, 4u, true);
+    assert_true(uint16_matrix_is_sparse(mat));
+
+    return_uint16_matrix(mat);
+}
+
+static void test_uint16_matrix_is_sparse_csr_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* dense = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r = convert_uint16_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(r.has_value);
+    assert_true(uint16_matrix_is_sparse(r.u.value));
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(dense);
+}
+
+static void test_uint16_matrix_is_sparse_csc_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* dense = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r = convert_uint16_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(r.has_value);
+    assert_true(uint16_matrix_is_sparse(r.u.value));
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(dense);
+}
+
+static void test_uint16_matrix_equal_dense_and_coo_same_values_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* dense = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r = convert_uint16_matrix(dense, COO_MATRIX, alloc);
+    assert_true(r.has_value);
+
+    assert_true(uint16_matrix_equal(dense, r.u.value));
+    assert_true(uint16_matrix_equal(r.u.value, dense));
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(dense);
+}
+
+static void test_uint16_matrix_equal_dense_and_csr_same_values_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* dense = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r = convert_uint16_matrix(dense, CSR_MATRIX, alloc);
+    assert_true(r.has_value);
+
+    assert_true(uint16_matrix_equal(dense, r.u.value));
+    assert_true(uint16_matrix_equal(r.u.value, dense));
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(dense);
+}
+
+static void test_uint16_matrix_equal_dense_and_csc_same_values_returns_true(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* dense = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r = convert_uint16_matrix(dense, CSC_MATRIX, alloc);
+    assert_true(r.has_value);
+
+    assert_true(uint16_matrix_equal(dense, r.u.value));
+    assert_true(uint16_matrix_equal(r.u.value, dense));
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(dense);
+}
+
+static void test_convert_uint16_matrix_zero_null_callback_matches_convert_uint16_matrix_coo(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* src = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r1 = convert_uint16_matrix(src, COO_MATRIX, alloc);
+    uint16_matrix_expect_t r2 = convert_uint16_matrix_zero(src, COO_MATRIX, alloc, NULL);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_true(uint16_matrix_equal(r1.u.value, r2.u.value));
+    assert_int_equal((int)matrix_nnz(r1.u.value), (int)matrix_nnz(r2.u.value));
+
+    return_uint16_matrix(r2.u.value);
+    return_uint16_matrix(r1.u.value);
+    return_uint16_matrix(src);
+}
+
+static void test_convert_uint16_matrix_zero_null_callback_matches_convert_uint16_matrix_csr(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* src = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r1 = convert_uint16_matrix(src, CSR_MATRIX, alloc);
+    uint16_matrix_expect_t r2 = convert_uint16_matrix_zero(src, CSR_MATRIX, alloc, NULL);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_true(uint16_matrix_equal(r1.u.value, r2.u.value));
+    assert_int_equal((int)matrix_nnz(r1.u.value), (int)matrix_nnz(r2.u.value));
+
+    return_uint16_matrix(r2.u.value);
+    return_uint16_matrix(r1.u.value);
+    return_uint16_matrix(src);
+}
+
+static void test_convert_uint16_matrix_zero_null_callback_matches_convert_uint16_matrix_csc(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* src = _make_sample_dense_uint16_matrix();
+
+    uint16_matrix_expect_t r1 = convert_uint16_matrix(src, CSC_MATRIX, alloc);
+    uint16_matrix_expect_t r2 = convert_uint16_matrix_zero(src, CSC_MATRIX, alloc, NULL);
+
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+
+    assert_true(uint16_matrix_equal(r1.u.value, r2.u.value));
+    assert_int_equal((int)matrix_nnz(r1.u.value), (int)matrix_nnz(r2.u.value));
+
+    return_uint16_matrix(r2.u.value);
+    return_uint16_matrix(r1.u.value);
+    return_uint16_matrix(src);
+}
+
+static void test_convert_uint16_matrix_zero_default_omits_zero_in_coo(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* src = _make_dense_uint16_matrix(2u, 2u);
+
+    assert_int_equal(set_uint16_matrix(src, 0u, 0u, (uint16_t)0u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(src, 1u, 1u, (uint16_t)1u), NO_ERROR);
+
+    uint16_matrix_expect_t r = convert_uint16_matrix_zero(src, COO_MATRIX, alloc, NULL);
+    assert_true(r.has_value);
+
+    assert_int_equal((int)matrix_nnz(r.u.value), 1);
+
+    uint16_t out = 123u;
+    assert_int_equal(get_uint16_matrix(r.u.value, 0u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 0);
+
+    assert_int_equal(get_uint16_matrix(r.u.value, 1u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 1);
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(src);
+}
+
+static void test_convert_uint16_matrix_zero_default_omits_zero_in_csr(void** state) {
+    (void)state;
+
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_matrix_t* src = _make_dense_uint16_matrix(2u, 2u);
+
+    assert_int_equal(set_uint16_matrix(src, 0u, 1u, (uint16_t)0u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(src, 1u, 0u, (uint16_t)2u), NO_ERROR);
+
+    uint16_matrix_expect_t r = convert_uint16_matrix_zero(src, CSR_MATRIX, alloc, NULL);
+    assert_true(r.has_value);
+
+    assert_int_equal((int)matrix_nnz(r.u.value), 1);
+
+    uint16_t out = 0u;
+    assert_int_equal(get_uint16_matrix(r.u.value, 0u, 1u, &out), NO_ERROR);
+    assert_int_equal((int)out, 0);
+
+    assert_int_equal(get_uint16_matrix(r.u.value, 1u, 0u, &out), NO_ERROR);
+    assert_int_equal((int)out, 2);
+
+    return_uint16_matrix(r.u.value);
+    return_uint16_matrix(src);
+}
+
+// ================================================================================
+// Registry
+// ================================================================================
+
+const struct CMUnitTest test_uint16_matrix[] = {
+    /* Group 1 */
+    cmocka_unit_test(test_uint16_dense_init_zero_rows_fails),
+    cmocka_unit_test(test_uint16_dense_init_zero_cols_fails),
+    cmocka_unit_test(test_uint16_dense_init_returns_valid_matrix),
+    cmocka_unit_test(test_uint16_dense_init_is_zero_initialized),
+
+    /* Group 2 */
+    cmocka_unit_test(test_uint16_coo_init_zero_capacity_fails),
+    cmocka_unit_test(test_uint16_coo_init_returns_valid_matrix),
+    cmocka_unit_test(test_uint16_coo_unset_entry_reads_back_as_zero),
+
+    /* Group 3 */
+    cmocka_unit_test(test_uint16_set_dense_null_matrix_returns_null_pointer),
+    cmocka_unit_test(test_uint16_get_dense_null_out_returns_null_pointer),
+    cmocka_unit_test(test_uint16_set_get_dense_single_value),
+    cmocka_unit_test(test_uint16_set_dense_overwrites_existing_value),
+
+    /* Group 4 */
+    cmocka_unit_test(test_uint16_set_get_coo_single_value),
+    cmocka_unit_test(test_uint16_push_back_coo_overwrite_does_not_increase_nnz),
+    cmocka_unit_test(test_uint16_push_back_coo_capacity_overflow_when_growth_disabled),
+
+    /* Group 5 */
+    cmocka_unit_test(test_clear_uint16_dense_zeroes_all_entries),
+    cmocka_unit_test(test_copy_uint16_dense_preserves_values),
+    cmocka_unit_test(test_copy_uint16_coo_is_independent_of_source),
+
+    /* Group 6 */
+    cmocka_unit_test(test_convert_uint16_dense_to_coo_preserves_values),
+    cmocka_unit_test(test_convert_uint16_dense_to_csr_preserves_values),
+    cmocka_unit_test(test_convert_uint16_zero_dense_to_csr_omits_ff),
+
+    /* Group 7 */
+    cmocka_unit_test(test_transpose_uint16_dense_moves_values),
+    cmocka_unit_test(test_fill_uint16_dense_sets_every_entry),
+    cmocka_unit_test(test_fill_uint16_zero_equivalent_to_clear),
+
+    /* Group 8 */
+    cmocka_unit_test(test_uint16_matrix_equal_dense_same_values_returns_true),
+    cmocka_unit_test(test_uint16_matrix_shape_compatibility_helpers),
+
+    /* Group 9 */
+    cmocka_unit_test(test_swap_uint16_matrix_rows_dense),
+    cmocka_unit_test(test_init_uint16_identity_matrix_sets_diagonal_to_one),
+    cmocka_unit_test(test_uint16_row_and_col_vector_queries),
+
+    /* Group 10 */
+    cmocka_unit_test(test_transpose_uint16_coo_preserves_logical_values),
+    cmocka_unit_test(test_transpose_uint16_csr_preserves_logical_values),
+    cmocka_unit_test(test_transpose_uint16_csc_preserves_logical_values),
+
+    cmocka_unit_test(test_swap_uint16_matrix_cols_dense),
+
+    cmocka_unit_test(test_uint16_matrix_is_sparse_dense_returns_false),
+    cmocka_unit_test(test_uint16_matrix_is_sparse_coo_returns_true),
+    cmocka_unit_test(test_uint16_matrix_is_sparse_csr_returns_true),
+    cmocka_unit_test(test_uint16_matrix_is_sparse_csc_returns_true),
+
+    cmocka_unit_test(test_uint16_matrix_equal_dense_and_coo_same_values_returns_true),
+    cmocka_unit_test(test_uint16_matrix_equal_dense_and_csr_same_values_returns_true),
+    cmocka_unit_test(test_uint16_matrix_equal_dense_and_csc_same_values_returns_true),
+
+    cmocka_unit_test(test_convert_uint16_matrix_zero_null_callback_matches_convert_uint16_matrix_coo),
+    cmocka_unit_test(test_convert_uint16_matrix_zero_null_callback_matches_convert_uint16_matrix_csr),
+    cmocka_unit_test(test_convert_uint16_matrix_zero_null_callback_matches_convert_uint16_matrix_csc),
+
+    cmocka_unit_test(test_convert_uint16_matrix_zero_default_omits_zero_in_coo),
+    cmocka_unit_test(test_convert_uint16_matrix_zero_default_omits_zero_in_csr),
+};
+
+const size_t test_uint16_matrix_count =
+    sizeof(test_uint16_matrix) / sizeof(test_uint16_matrix[0]);
 // ================================================================================
 // ================================================================================
 // eof
