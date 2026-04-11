@@ -863,7 +863,7 @@ uint32_matrix_expect_t convert_uint32_matrix(const uint32_matrix_t* src,
 
         dst->rep.csr.row_ptr = row_ptr;
         dst->rep.csr.col_idx = col_idx;
-        dst->rep.csr.values  = (uint32_t*)values;
+        dst->rep.csr.values  = (uint8_t*)values;
 
         return (uint32_matrix_expect_t){
             .has_value = true,

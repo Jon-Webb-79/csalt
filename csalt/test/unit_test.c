@@ -82,6 +82,7 @@ int main(void) {
         {"Int16 Matrix", test_int16_matrix, test_int16_matrix_count},
         {"UInt32 Matrix", test_uint32_matrix, test_uint32_matrix_count},
         {"Int32 Matrix", test_int32_matrix, test_int32_matrix_count},
+        {"UInt64 Matrix", test_uint64_matrix, test_uint64_matrix_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);
