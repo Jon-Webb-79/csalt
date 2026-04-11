@@ -370,7 +370,7 @@ Storage Formats
 
    ``set_float_matrix`` supports dense and COO matrices.  CSR and CSC are
    treated as derived sparse formats and are not directly mutable through
-   element-wise set operations. :contentReference[oaicite:6]{index=6}
+   element-wise set operations.
 
 Float Comparison and Zero Semantics
 -----------------------------------
@@ -388,7 +388,7 @@ For the float wrapper specifically:
 * Sparse and mixed-format comparisons fall back to generic element-wise
   comparison through the generic matrix engine.
 * ``float_matrix_is_zero`` uses a dense SIMD fast path for dense float
-  matrices and falls back to the generic zero test for sparse formats. :contentReference[oaicite:8]{index=8} :contentReference[oaicite:9]{index=9}
+  matrices and falls back to the generic zero test for sparse formats.
 
 .. note::
 
@@ -410,7 +410,7 @@ Current dense-float SIMD fast paths include:
 * ``transpose_float_matrix`` for dense transpose
 * ``fill_float_matrix`` for dense fill
 * ``float_matrix_is_zero`` for dense zero detection
-* ``float_matrix_equal`` for dense equality checks :contentReference[oaicite:10]{index=10} :contentReference[oaicite:11]{index=11} :contentReference[oaicite:12]{index=12}
+* ``float_matrix_equal`` for dense equality checks 
 
 Example Usage
 -------------
@@ -556,4 +556,4 @@ directly:
 .. note::
 
    These functions are type-agnostic and therefore are not duplicated as
-   float-specific APIs in the public documentation. :contentReference[oaicite:13]{index=13}
+   float-specific APIs in the public documentation.

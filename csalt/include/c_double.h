@@ -1187,697 +1187,632 @@ bool is_double_dict_empty(const double_dict_t* dict);
 // ================================================================================ 
 // ================================================================================ 
 
+// double_matrix_t — type-safe double wrapper around matrix_t
+//
+// This section provides a double-specialised interface to the generic matrix_t
+// type.  double_matrix_t is a typedef for matrix_t; all functions below fix
+// the dtype to double_TYPE and accept / return double values directly so that
+// callers never need to pass a dtype_id_t or void* value.
+//
+// The wrapper covers every public function in c_matrix.h that either:
+//   (a) takes a dtype_id_t argument (replaced with double_TYPE), or
+//   (b) takes or returns void* element pointers (replaced with double / double*).
+//
+// Functions that are already type-agnostic (matrix_rows, matrix_cols,
+// matrix_is_square, matrix_has_same_shape, etc.) are wrapped with a
+// double_matrix_t* signature for consistency, but simply delegate.
+// ================================================================================ 
+// ================================================================================ 
+
+typedef matrix_t double_matrix_t;
+
+typedef struct {
+    bool has_value;
+    union {
+        double_matrix_t* value;
+        error_code_t    error;
+    } u;
+} double_matrix_expect_t;
+
+/* =============================================================================
+ * Comparator / Predicate Function Types
+ * ========================================================================== */
+
 /**
- * @brief A type-safe double-precision matrix.
+ * @brief Predicate function to determine semantic zero for double values.
  *
- * Wraps matrix_t with the dtype fixed to DOUBLE_TYPE.  Supports Dense,
- * COO, CSR, and CSC storage formats.
+ * This function defines what values should be treated as "zero" during
+ * dense-to-sparse conversion operations. It is primarily used by:
+ *
+ * - convert_double_matrix_zero()
+ *
+ * @param value The double value to evaluate.
+ *
+ * @return true if the value should be treated as zero, false otherwise.
+ *
+ * @note If NULL is passed, the default behavior is:
+ *       value == 0.0
+ *
+ * @example
+ * Treat both 0.0 and -1.0 as zero:
+ * @code{.c}
+ * bool zero_or_neg_one(double v) {
+ *     return (v == 0.0) || (v == -1.0);
+ * }
+ * @endcode
  */
-// typedef matrix_t double_matrix_t;
-//  
-// /**
-//  * @brief Expected return type for double_matrix_t operations that may fail.
-//  *
-//  * Check @c has_value before accessing @c u.value.  On failure @c u.error
-//  * contains the error code.
-//  */
-// typedef struct {
-//     bool has_value;
-//     union {
-//         double_matrix_t* value;
-//         error_code_t     error;
-//     } u;
-// } double_matrix_expect_t;
-//  
-// // ================================================================================
-// // Initialization and teardown
-// // ================================================================================
-//  
-// /**
-//  * @brief Initialize a dense double matrix with zero-initialized storage.
-//  *
-//  * Creates a dense matrix of shape @p rows by @p cols with the dtype fixed to
-//  * DOUBLE_TYPE.  All elements are initialised to zero.  The caller must free
-//  * the matrix with return_double_matrix when no longer needed.
-//  *
-//  * @param rows     Number of matrix rows.  Must be > 0.
-//  * @param cols     Number of matrix columns.  Must be > 0.
-//  * @param alloc_v  Allocator vtable.  alloc_v.allocate must not be NULL.
-//  *
-//  * @return double_matrix_expect_t with has_value true on success, or u.error:
-//  *         - NULL_POINTER    — alloc_v.allocate is NULL
-//  *         - INVALID_ARG     — rows or cols is 0
-//  *         - ILLEGAL_STATE   — dtype registry could not be initialized
-//  *         - TYPE_MISMATCH   — DOUBLE_TYPE not found in the registry
-//  *         - LENGTH_OVERFLOW — rows * cols * sizeof(double) overflows size_t
-//  *         - BAD_ALLOC       — matrix_t struct allocation failed
-//  *         - OUT_OF_MEMORY   — data buffer allocation failed
-//  *
-//  * @code
-//  *     allocator_vtable_t a = heap_allocator();
-//  *     double_matrix_expect_t r = init_double_dense_matrix(3, 4, a);
-//  *     if (!r.has_value) { fprintf(stderr, "%d\n", r.u.error); return; }
-//  *     double_matrix_t* m = r.u.value;
-//  *
-//  *     set_double_matrix(m, 0, 0, 1.0);
-//  *     set_double_matrix(m, 1, 2, 5.5);
-//  *
-//  *     return_double_matrix(m);
-//  * @endcode
-//  */
-// double_matrix_expect_t init_double_dense_matrix(size_t             rows,
-//                                                 size_t             cols,
-//                                                 allocator_vtable_t alloc_v);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Initialize an empty COO sparse double matrix.
-//  *
-//  * Creates a coordinate-list sparse matrix with storage for up to @p capacity
-//  * entries.  The dtype is fixed to DOUBLE_TYPE.  The matrix starts with zero
-//  * stored entries (nnz = 0).
-//  *
-//  * @param rows      Number of matrix rows.  Must be > 0.
-//  * @param cols      Number of matrix columns.  Must be > 0.
-//  * @param capacity  Initial number of entry slots.  Must be > 0.
-//  * @param growth    If true, COO buffers grow automatically when full.
-//  * @param alloc_v   Allocator vtable.  alloc_v.allocate must not be NULL.
-//  *
-//  * @return double_matrix_expect_t with has_value true on success, or u.error:
-//  *         - NULL_POINTER    — alloc_v.allocate is NULL
-//  *         - INVALID_ARG     — rows, cols, or capacity is 0
-//  *         - ILLEGAL_STATE   — dtype registry could not be initialized
-//  *         - TYPE_MISMATCH   — DOUBLE_TYPE not found in the registry
-//  *         - LENGTH_OVERFLOW — capacity overflows size_t arithmetic
-//  *         - BAD_ALLOC       — matrix_t struct allocation failed
-//  *         - OUT_OF_MEMORY   — COO buffer allocation failed
-//  *
-//  * @code
-//  *     allocator_vtable_t a = heap_allocator();
-//  *     double_matrix_expect_t r = init_double_coo_matrix(100, 100, 16, true, a);
-//  *     double_matrix_t* m = r.u.value;
-//  *
-//  *     push_back_double_coo_matrix(m, 0, 5, 3.14159265);
-//  *     push_back_double_coo_matrix(m, 42, 99, -1.0);
-//  *
-//  *     return_double_matrix(m);
-//  * @endcode
-//  */
-// double_matrix_expect_t init_double_coo_matrix(size_t             rows,
-//                                               size_t             cols,
-//                                               size_t             capacity,
-//                                               bool               growth,
-//                                               allocator_vtable_t alloc_v);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Release all storage owned by a double matrix.
-//  *
-//  * Frees internal buffers for the active format, then frees the matrix_t
-//  * struct itself through its stored allocator.  NULL-safe.
-//  *
-//  * @param mat  Matrix to destroy, or NULL (no-op).
-//  */
-// void return_double_matrix(double_matrix_t* mat);
-//  
-// // ================================================================================
-// // Element access
-// // ================================================================================
-//  
-// /**
-//  * @brief Read a double element at the given row and column.
-//  *
-//  * For sparse formats, entries not explicitly stored are returned as 0.0.
-//  *
-//  * @param mat  Matrix to read from.  Must not be NULL.
-//  * @param row  Zero-based row index.  Must be < mat->rows.
-//  * @param col  Zero-based column index.  Must be < mat->cols.
-//  * @param out  Receives the double value.  Must not be NULL.
-//  *
-//  * @return NO_ERROR on success, or:
-//  *         - NULL_POINTER — mat or out is NULL
-//  *         - INVALID_ARG  — (row, col) out of bounds
-//  *
-//  * @code
-//  *     double v = 0.0;
-//  *     get_double_matrix(m, 1, 2, &v);
-//  * @endcode
-//  */
-// error_code_t get_double_matrix(const double_matrix_t* mat,
-//                                size_t                 row,
-//                                size_t                 col,
-//                                double*                out);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Write a double element at the given row and column.
-//  *
-//  * Dense: direct overwrite.  COO: inserts or overwrites the entry at
-//  * (row, col).  CSR/CSC: not supported (returns ILLEGAL_STATE).
-//  *
-//  * @param mat    Matrix to modify.  Must not be NULL.
-//  * @param row    Zero-based row index.  Must be < mat->rows.
-//  * @param col    Zero-based column index.  Must be < mat->cols.
-//  * @param value  The double value to store.
-//  *
-//  * @return NO_ERROR on success, or:
-//  *         - NULL_POINTER      — mat is NULL
-//  *         - INVALID_ARG       — (row, col) out of bounds
-//  *         - ILLEGAL_STATE     — format is CSR or CSC
-//  *         - CAPACITY_OVERFLOW — COO is full and growth is false
-//  *         - LENGTH_OVERFLOW   — COO growth would overflow size_t
-//  *         - OUT_OF_MEMORY     — COO growth allocation failed
-//  *
-//  * @code
-//  *     set_double_matrix(m, 0, 0, 42.0);
-//  * @endcode
-//  */
-// error_code_t set_double_matrix(double_matrix_t* mat,
-//                                size_t           row,
-//                                size_t           col,
-//                                double           value);
-//  
-// // ================================================================================
-// // COO assembly helpers
-// // ================================================================================
-//  
-// /**
-//  * @brief Reserve additional entry capacity for a double COO matrix.
-//  *
-//  * Grows COO buffers to at least @p capacity entries.  No-op if the
-//  * current capacity is already sufficient.  Existing entries are preserved.
-//  *
-//  * @param mat       COO matrix to grow.  Must not be NULL.
-//  * @param capacity  Requested minimum entry capacity.
-//  *
-//  * @return NO_ERROR on success, or:
-//  *         - NULL_POINTER    — mat is NULL
-//  *         - ILLEGAL_STATE   — mat is not COO format
-//  *         - INVALID_ARG     — capacity < current nnz
-//  *         - LENGTH_OVERFLOW — capacity overflows size_t arithmetic
-//  *         - OUT_OF_MEMORY   — buffer reallocation failed
-//  */
-// error_code_t reserve_double_coo_matrix(double_matrix_t* mat,
-//                                        size_t           capacity);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Append or overwrite a double entry in a COO matrix.
-//  *
-//  * If an entry at (row, col) already exists, its value is overwritten
-//  * without increasing nnz.  Otherwise a new entry is appended and the
-//  * matrix is marked unsorted.
-//  *
-//  * @param mat    COO matrix to append to.  Must not be NULL.
-//  * @param row    Zero-based row index.  Must be < mat->rows.
-//  * @param col    Zero-based column index.  Must be < mat->cols.
-//  * @param value  The double value to insert.
-//  *
-//  * @return NO_ERROR on success, or:
-//  *         - NULL_POINTER      — mat is NULL
-//  *         - ILLEGAL_STATE     — mat is not COO format
-//  *         - INVALID_ARG       — (row, col) out of bounds
-//  *         - CAPACITY_OVERFLOW — COO is full and growth is false
-//  *         - LENGTH_OVERFLOW   — growth would overflow size_t
-//  *         - OUT_OF_MEMORY     — growth allocation failed
-//  *
-//  * @code
-//  *     push_back_double_coo_matrix(m, 0, 5, 3.14159265);
-//  * @endcode
-//  */
-// error_code_t push_back_double_coo_matrix(double_matrix_t* mat,
-//                                          size_t           row,
-//                                          size_t           col,
-//                                          double           value);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Sort COO entries into row-major (row, col) order.
-//  *
-//  * Uses quicksort with median-of-three pivot and insertion-sort fallback.
-//  * After sorting, COO lookups use binary search.  No-op if nnz < 2.
-//  *
-//  * @param mat  COO matrix to sort.  Must not be NULL.
-//  *
-//  * @return NO_ERROR on success, or:
-//  *         - NULL_POINTER  — mat is NULL
-//  *         - ILLEGAL_STATE — mat is not COO format
-//  */
-// error_code_t sort_double_coo_matrix(double_matrix_t* mat);
-//  
-// // ================================================================================
-// // Lifecycle / structural operations
-// // ================================================================================
-//  
-// /**
-//  * @brief Clear a double matrix while preserving its allocated storage.
-//  *
-//  * Dense: all bytes memset to zero.  COO: nnz reset to 0, sorted to true.
-//  * CSR/CSC: not supported.
-//  *
-//  * @param mat  Matrix to clear.  Must not be NULL.
-//  *
-//  * @return NO_ERROR on success, or:
-//  *         - NULL_POINTER  — mat is NULL
-//  *         - ILLEGAL_STATE — format is CSR or CSC
-//  */
-// error_code_t clear_double_matrix(double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Deep-copy a double matrix preserving its format.
-//  *
-//  * All four formats are supported.  The copy is fully independent of
-//  * the source.
-//  *
-//  * @param src      Matrix to copy.  Must not be NULL.
-//  * @param alloc_v  Allocator for the destination matrix.
-//  *
-//  * @return double_matrix_expect_t with has_value true on success, or u.error:
-//  *         - NULL_POINTER  — src is NULL
-//  *         - BAD_ALLOC     — struct allocation failed
-//  *         - OUT_OF_MEMORY — buffer allocation failed
-//  *         - ILLEGAL_STATE — unrecognized format
-//  */
-// double_matrix_expect_t copy_double_matrix(const double_matrix_t* src,
-//                                           allocator_vtable_t     alloc_v);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Convert a double matrix to a different storage format.
-//  *
-//  * All 12 format pairs (Dense↔COO↔CSR↔CSC) are supported.  If @p target
-//  * equals the source format, this behaves like copy_double_matrix.
-//  *
-//  * The Dense→CSR path uses SIMD-accelerated nonzero counting (pass 1)
-//  * and compress-store scatter (pass 2) for improved throughput.
-//  *
-//  * @param src      Matrix to convert.  Must not be NULL.
-//  * @param target   Desired destination storage format.
-//  * @param alloc_v  Allocator for the destination matrix.
-//  *
-//  * @return double_matrix_expect_t with has_value true on success, or u.error:
-//  *         - NULL_POINTER  — src is NULL
-//  *         - BAD_ALLOC     — struct allocation failed
-//  *         - OUT_OF_MEMORY — buffer allocation failed
-//  *         - ILLEGAL_STATE — unrecognized source or target format
-//  *
-//  * @code
-//  *     double_matrix_expect_t csr =
-//  *         convert_double_matrix(dense_m, CSR_MATRIX, a);
-//  * @endcode
-//  */
-// double_matrix_expect_t convert_double_matrix(const double_matrix_t* src,
-//                                              matrix_format_t        target,
-//                                              allocator_vtable_t     alloc_v);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Compute the transpose of a double matrix.
-//  *
-//  * Dense: SIMD-accelerated tiled in-register transpose (2×2 at SSE/NEON,
-//  * 4×4 at AVX/AVX2, 8×8 at AVX-512).  COO→COO, CSR→CSR, CSC→CSC
-//  * delegate to the generic path.
-//  *
-//  * @param src      Matrix to transpose.  Must not be NULL.
-//  * @param alloc_v  Allocator for the destination matrix.
-//  *
-//  * @return double_matrix_expect_t with has_value true on success, or u.error:
-//  *         - NULL_POINTER  — src is NULL
-//  *         - BAD_ALLOC     — struct allocation failed
-//  *         - OUT_OF_MEMORY — buffer allocation failed
-//  *         - ILLEGAL_STATE — unrecognized format
-//  */
-// double_matrix_expect_t transpose_double_matrix(const double_matrix_t* src,
-//                                                allocator_vtable_t     alloc_v);
-//  
-// // ================================================================================
-// // Fill and zero
-// // ================================================================================
-//  
-// /**
-//  * @brief Fill a double matrix with a single repeated value.
-//  *
-//  * Nonzero fill on dense matrices uses SIMD broadcast-store.  Supplying
-//  * 0.0 resets the matrix through clear_double_matrix, which supports all
-//  * clearable formats.  Nonzero fill on non-Dense formats returns
-//  * OPERATION_UNAVAILABLE.
-//  *
-//  * @param mat    Matrix to fill.  Must not be NULL.
-//  * @param value  The double fill value.
-//  *
-//  * @return NO_ERROR on success, or:
-//  *         - NULL_POINTER          — mat is NULL
-//  *         - OPERATION_UNAVAILABLE — nonzero fill on non-Dense format
-//  *         (zero fill delegates to clear_matrix, which may return
-//  *          ILLEGAL_STATE for CSR/CSC)
-//  *
-//  * @code
-//  *     fill_double_matrix(m, 1.0);   // every element becomes 1.0
-//  *     fill_double_matrix(m, 0.0);   // equivalent to clear
-//  * @endcode
-//  */
-// error_code_t fill_double_matrix(double_matrix_t* mat,
-//                                 double           value);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Set all elements of a double matrix to zero.
-//  *
-//  * Equivalent to clear_double_matrix.  Dense: memset to zero.  COO: nnz
-//  * reset to 0.  CSR/CSC: ILLEGAL_STATE.
-//  *
-//  * @param mat  Matrix to zero.  Must not be NULL.
-//  *
-//  * @return NO_ERROR on success, or:
-//  *         - NULL_POINTER  — mat is NULL
-//  *         - ILLEGAL_STATE — format is CSR or CSC
-//  */
-// error_code_t zero_double_matrix(double_matrix_t* mat);
-//  
-// // ================================================================================
-// // Introspection
-// // ================================================================================
-//  
-// /**
-//  * @brief Return the number of rows in a double matrix.
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return Row count, or 0 if @p mat is NULL.
-//  */
-// size_t double_matrix_rows(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Return the number of columns in a double matrix.
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return Column count, or 0 if @p mat is NULL.
-//  */
-// size_t double_matrix_cols(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Return the entry count for a double matrix.
-//  *
-//  * Dense: rows × cols.  COO/CSR/CSC: stored nonzero count.
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return Entry count, or 0 if @p mat is NULL.
-//  */
-// size_t double_matrix_nnz(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Return the active storage format of a double matrix.
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return Format enum value, or DENSE_MATRIX if @p mat is NULL.
-//  */
-// matrix_format_t double_matrix_format(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Return the storage footprint of the double matrix payload in bytes.
-//  *
-//  * Dense: rows × cols × sizeof(double).
-//  * COO:   cap × (2 × sizeof(size_t) + sizeof(double)).
-//  * CSR:   (rows+1) × sizeof(size_t) + nnz × (sizeof(size_t) + sizeof(double)).
-//  * CSC:   (cols+1) × sizeof(size_t) + nnz × (sizeof(size_t) + sizeof(double)).
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return Storage bytes, or 0 if @p mat is NULL or format is unrecognized.
-//  */
-// size_t double_matrix_storage_bytes(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Return a human-readable name for the double matrix's storage format.
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return Constant string (e.g. "DENSE_MATRIX"), or
-//  *         "UNKNOWN_MATRIX_FORMAT" if @p mat is NULL.
-//  */
-// const char* double_matrix_format_name(const double_matrix_t* mat);
-//  
-// // ================================================================================
-// // Shape and compatibility queries
-// // ================================================================================
-//  
-// /**
-//  * @brief Test whether two double matrices have identical shape.
-//  *
-//  * @param a  First matrix.
-//  * @param b  Second matrix.
-//  * @return true if both non-NULL with matching rows and cols; false otherwise.
-//  */
-// bool double_matrix_has_same_shape(const double_matrix_t* a,
-//                                   const double_matrix_t* b);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Test whether a double matrix is square.
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return true if non-NULL and rows == cols; false otherwise.
-//  */
-// bool double_matrix_is_square(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Test whether a double matrix uses a sparse representation.
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return true for COO, CSR, CSC; false for Dense or NULL.
-//  */
-// bool double_matrix_is_sparse(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Test whether a double matrix is logically all zeros.
-//  *
-//  * Dense: SIMD-accelerated IEEE compare-against-zero with early exit on
-//  * the first nonzero lane.  Treats -0.0 as zero.
-//  * Sparse: checks nnz == 0.
-//  *
-//  * @param mat  Matrix to inspect.  NULL returns true.
-//  * @return true if all elements are logically zero; false otherwise.
-//  */
-// bool is_double_matrix_zero(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Bitwise element-by-element equality of two double matrices.
-//  *
-//  * Requires same shape and dtype.  When both matrices are dense, uses
-//  * SIMD-accelerated XOR + testz linear scan with early exit on the first
-//  * mismatch.  Mixed/sparse formats fall back to per-element get_matrix
-//  * comparison.
-//  *
-//  * @note Uses bitwise comparison: +0.0 and -0.0 compare unequal.
-//  *       Two NaN values with different payloads compare unequal.
-//  *
-//  * @param a  First matrix.  May be NULL (returns false).
-//  * @param b  Second matrix.  May be NULL (returns false).
-//  * @return true if logically equal; false otherwise.
-//  */
-// bool double_matrix_equal(const double_matrix_t* a,
-//                          const double_matrix_t* b);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Test whether two double matrices are compatible for addition.
-//  *
-//  * Requires equal shape (rows and cols) and equal dtype.
-//  *
-//  * @param a  First matrix.
-//  * @param b  Second matrix.
-//  * @return true if add-compatible; false otherwise (including if either is NULL).
-//  */
-// bool double_matrix_is_add_compatible(const double_matrix_t* a,
-//                                      const double_matrix_t* b);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Test whether two double matrices are compatible for multiplication.
-//  *
-//  * Requires a->cols == b->rows and equal dtype.
-//  *
-//  * @param a  Left-hand matrix.
-//  * @param b  Right-hand matrix.
-//  * @return true if multiply-compatible; false otherwise (including if either
-//  *         is NULL).
-//  */
-// bool double_matrix_is_multiply_compatible(const double_matrix_t* a,
-//                                           const double_matrix_t* b);
-//  
-// // ================================================================================
-// // Row / column swaps
-// // ================================================================================
-//  
-// /**
-//  * @brief Swap two rows of a double matrix in place.
-//  *
-//  * Dense: allocates a temporary buffer for one row, performs three memcpy
-//  * operations.  COO: relabels row indices and re-sorts.  CSR/CSC: not
-//  * supported.
-//  *
-//  * @param mat  Matrix to modify.  Must not be NULL.
-//  * @param r1   First zero-based row index.
-//  * @param r2   Second zero-based row index.
-//  *
-//  * @return NO_ERROR on success (including r1 == r2, which is a no-op), or:
-//  *         - NULL_POINTER          — mat is NULL
-//  *         - OUT_OF_BOUNDS         — r1 or r2 >= mat->rows
-//  *         - OUT_OF_MEMORY         — temp buffer alloc failed (Dense only)
-//  *         - OPERATION_UNAVAILABLE — format is CSR or CSC
-//  *         - ILLEGAL_STATE         — unrecognized format
-//  */
-// error_code_t swap_double_matrix_rows(double_matrix_t* mat,
-//                                      size_t           r1,
-//                                      size_t           r2);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Swap two columns of a double matrix in place.
-//  *
-//  * Dense: element-by-element byte swap across all rows.  COO: relabels
-//  * column indices and re-sorts.  CSR/CSC: not supported.
-//  *
-//  * @param mat  Matrix to modify.  Must not be NULL.
-//  * @param c1   First zero-based column index.
-//  * @param c2   Second zero-based column index.
-//  *
-//  * @return NO_ERROR on success (including c1 == c2, which is a no-op), or:
-//  *         - NULL_POINTER          — mat is NULL
-//  *         - OUT_OF_BOUNDS         — c1 or c2 >= mat->cols
-//  *         - OPERATION_UNAVAILABLE — format is CSR or CSC
-//  *         - ILLEGAL_STATE         — unrecognized format
-//  */
-// error_code_t swap_double_matrix_cols(double_matrix_t* mat,
-//                                      size_t           c1,
-//                                      size_t           c2);
-//  
-// // ================================================================================
-// // Special matrix constructors
-// // ================================================================================
-//  
-// /**
-//  * @brief Initialize a dense double identity matrix.
-//  *
-//  * Creates an @p n by @p n dense matrix with 1.0 on the diagonal and 0.0
-//  * elsewhere.
-//  *
-//  * @param n        Matrix order (rows == cols == n).  Must be > 0.
-//  * @param alloc_v  Allocator vtable.
-//  *
-//  * @return double_matrix_expect_t with has_value true on success.
-//  *         Propagates all errors from init_double_dense_matrix, plus
-//  *         errors from clear_matrix or set_matrix during diagonal fill.
-//  *
-//  * @code
-//  *     double_matrix_expect_t r = init_double_identity_matrix(3, a);
-//  *     // 3×3 identity matrix with 1.0 on diagonal.
-//  * @endcode
-//  */
-// double_matrix_expect_t init_double_identity_matrix(size_t             n,
-//                                                    allocator_vtable_t alloc_v);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Initialize a dense double row vector (1 × length), zero-initialized.
-//  *
-//  * Equivalent to init_double_dense_matrix(1, length, alloc_v).
-//  *
-//  * @param length   Number of columns (vector length).  Must be > 0.
-//  * @param alloc_v  Allocator vtable.
-//  *
-//  * @return double_matrix_expect_t — same errors as init_double_dense_matrix.
-//  */
-// double_matrix_expect_t init_double_row_vector(size_t             length,
-//                                               allocator_vtable_t alloc_v);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Initialize a dense double column vector (length × 1), zero-initialized.
-//  *
-//  * Equivalent to init_double_dense_matrix(length, 1, alloc_v).
-//  *
-//  * @param length   Number of rows (vector length).  Must be > 0.
-//  * @param alloc_v  Allocator vtable.
-//  *
-//  * @return double_matrix_expect_t — same errors as init_double_dense_matrix.
-//  */
-// double_matrix_expect_t init_double_col_vector(size_t             length,
-//                                               allocator_vtable_t alloc_v);
-//  
-// // ================================================================================
-// // Vector shape queries
-// // ================================================================================
-//  
-// /**
-//  * @brief Test whether a double matrix has row-vector shape (1 × N).
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return true if non-NULL and rows == 1; false otherwise.
-//  */
-// bool double_matrix_is_row_vector(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Test whether a double matrix has column-vector shape (N × 1).
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return true if non-NULL and cols == 1; false otherwise.
-//  */
-// bool double_matrix_is_col_vector(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Test whether a double matrix has vector shape (row or column).
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return true if row vector or column vector; false otherwise (including NULL).
-//  */
-// bool double_matrix_is_vector(const double_matrix_t* mat);
-//  
-// // -------------------------------------------------------------------------------- 
-//  
-// /**
-//  * @brief Return the logical length of a vector-shaped double matrix.
-//  *
-//  * Row vector: returns cols.  Column vector: returns rows.  Non-vector
-//  * matrices return 0.
-//  *
-//  * @param mat  Matrix to inspect.
-//  * @return Vector length, or 0 if @p mat is NULL or not vector-shaped.
-//  */
-// size_t double_matrix_vector_length(const double_matrix_t* mat);
+typedef bool (*double_zero_fn)(double value);
+
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+
+/**
+ * @brief Initialize a dense double matrix with zero-initialized storage.
+ *
+ * Creates a dense matrix of shape @p rows by @p cols with the dtype fixed to
+ * double_TYPE. All elements are initialised to zero.
+ *
+ * @param rows     Number of matrix rows. Must be > 0.
+ * @param cols     Number of matrix columns. Must be > 0.
+ * @param alloc_v  Allocator for the matrix header and data buffer.
+ *
+ * @return double_matrix_expect_t with has_value true on success.
+ *
+ * @code{.c}
+ *     allocator_vtable_t a = heap_allocator();
+ *     double_matrix_expect_t r = init_double_dense_matrix(3, 4, a);
+ *     if (!r.has_value) { fprintf(stderr, "%d\n", r.u.error); return; }
+ *     double_matrix_t* m = r.u.value;
+ *
+ *     set_double_matrix(m, 0, 0, 1.0);
+ *     set_double_matrix(m, 1, 2, 5.5);
+ *
+ *     return_double_matrix(m);
+ * @endcode
+ */
+double_matrix_expect_t init_double_dense_matrix(size_t             rows,
+                                                size_t             cols,
+                                                allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize an empty COO sparse double matrix.
+ *
+ * Creates a coordinate-list sparse matrix with storage for up to @p capacity
+ * entries. The dtype is fixed to double_TYPE.
+ *
+ * @param rows      Number of matrix rows. Must be > 0.
+ * @param cols      Number of matrix columns. Must be > 0.
+ * @param capacity  Initial entry capacity. Must be > 0.
+ * @param growth    If true, the COO storage may grow when full.
+ * @param alloc_v   Allocator for the matrix header and COO buffers.
+ *
+ * @return double_matrix_expect_t with has_value true on success.
+ *
+ * @code{.c}
+ *     allocator_vtable_t a = heap_allocator();
+ *     double_matrix_expect_t r = init_double_coo_matrix(100, 100, 16, true, a);
+ *     double_matrix_t* m = r.u.value;
+ *
+ *     push_back_double_coo_matrix(m, 0, 5, 3.14);
+ *     push_back_double_coo_matrix(m, 42, 99, -1.0);
+ *
+ *     return_double_matrix(m);
+ * @endcode
+ */
+double_matrix_expect_t init_double_coo_matrix(size_t             rows,
+                                              size_t             cols,
+                                              size_t             capacity,
+                                              bool               growth,
+                                              allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Release all storage owned by a double matrix.
+ *
+ * Frees internal buffers and the matrix object itself. Passing NULL is safe.
+ *
+ * @param mat  Matrix to destroy, or NULL.
+ */
+void return_double_matrix(double_matrix_t* mat);
+
+// ================================================================================
+// Element access
+// ================================================================================
+
+/**
+ * @brief Read a double element at the given row and column.
+ *
+ * For sparse formats, missing entries are returned as 0.0f.
+ *
+ * @param mat  Matrix to read from.
+ * @param row  Zero-based row index.
+ * @param col  Zero-based column index.
+ * @param out  Receives the double value. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER / INVALID_ARG / OUT_OF_BOUNDS.
+ *
+ * @code
+ *     double v = 0.0f;
+ *     get_double_matrix(m, 1, 2, &v);
+ * @endcode
+ */
+error_code_t get_double_matrix(const double_matrix_t* mat,
+                               size_t                row,
+                               size_t                col,
+                               double*                out);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Write a double element at the given row and column.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return ILLEGAL_STATE.
+ *
+ * @param mat    Matrix to modify.
+ * @param row    Zero-based row index.
+ * @param col    Zero-based column index.
+ * @param value  The double value to store.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     set_double_matrix(m, 0, 0, 42.0);
+ * @endcode
+ */
+error_code_t set_double_matrix(double_matrix_t* mat,
+                               size_t          row,
+                               size_t          col,
+                               double           value);
+
+// ================================================================================
+// COO assembly helpers
+// ================================================================================
+
+/**
+ * @brief Reserve additional entry capacity for a double COO matrix.
+ *
+ * @param mat       COO matrix to grow.
+ * @param capacity  Requested minimum entry capacity.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t reserve_double_coo_matrix(double_matrix_t* mat,
+                                       size_t          capacity);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Append or overwrite a double entry in a COO matrix.
+ *
+ * If (row, col) already exists its value is overwritten; otherwise a new
+ * entry is appended. The matrix is marked unsorted after insertion.
+ *
+ * @param mat    COO matrix to append to.
+ * @param row    Zero-based row index.
+ * @param col    Zero-based column index.
+ * @param value  The double value to insert.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     push_back_double_coo_matrix(m, 0, 5, 3.14);
+ * @endcode
+ */
+error_code_t push_back_double_coo_matrix(double_matrix_t* mat,
+                                        size_t          row,
+                                        size_t          col,
+                                        double           value);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Sort COO entries by (row, col).
+ *
+ * @param mat  COO matrix to sort.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t sort_double_coo_matrix(double_matrix_t* mat);
+
+// ================================================================================
+// Lifecycle / structural operations
+// ================================================================================
+
+/**
+ * @brief Clear a double matrix, preserving its allocated storage.
+ *
+ * Dense matrices are zeroed. COO matrices reset to zero logical entries.
+ *
+ * @param mat  Matrix to clear.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t clear_double_matrix(double_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Deep-copy a double matrix.
+ *
+ * @param src      Matrix to copy.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return double_matrix_expect_t with has_value true on success.
+ */
+double_matrix_expect_t copy_double_matrix(const double_matrix_t* src,
+                                          allocator_vtable_t    alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Convert a double matrix to a different storage format.
+ *
+ * Produces a new matrix with the same logical values in the target format.
+ *
+ * @param src      Matrix to convert.
+ * @param target   Desired destination storage format. Can be any value in 
+ * ``matrix_format_t`` enum, (i.e. ``DENSE_MATRIX``, ``COO_MATRIX``, 
+ * ``CSR_MATRIX``, ``CSC__MATRIX``)
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return double_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     double_matrix_expect_t csr =
+ *         convert_double_matrix(dense_m, CSR_MATRIX, a);
+ * @endcode
+ */
+double_matrix_expect_t convert_double_matrix(const double_matrix_t* src,
+                                             matrix_format_t       target,
+                                             allocator_vtable_t    alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compute the transpose of a double matrix.
+ *
+ * Dense stays dense, COO stays COO, CSR transposes to CSR, CSC to CSC.
+ *
+ * @param src      Matrix to transpose.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return double_matrix_expect_t with has_value true on success.
+ */
+double_matrix_expect_t transpose_double_matrix(const double_matrix_t* src,
+                                               allocator_vtable_t    alloc_v);
+
+// ================================================================================
+// Fill and zero
+// ================================================================================
+
+/**
+ * @brief Fill a double matrix with a single repeated value.
+ *
+ * Nonzero fill is supported only for dense matrices. Supplying 0.0f resets
+ * the matrix through clear_double_matrix.
+ *
+ * @param mat    Matrix to fill.
+ * @param value  The double fill value.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     fill_double_matrix(m, 1.0);   // every element becomes 1.0
+ *     fill_double_matrix(m, 0.0);   // equivalent to clear
+ * @endcode
+ */
+error_code_t fill_double_matrix(double_matrix_t* mat,
+                                double           value);
+// ================================================================================
+// Shape and compatibility queries
+// ================================================================================
+
+/**
+ * @brief Test whether two double matrices have identical shape.
+ */
+bool double_matrix_has_same_shape(const double_matrix_t* a,
+                                  const double_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a double matrix is square.
+ */
+bool double_matrix_is_square(const double_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a double matrix uses a sparse representation.
+ */
+bool double_matrix_is_sparse(const double_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a double matrix is logically all zeros.
+ */
+bool double_matrix_is_zero(const double_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two double matrices for numerical equality.
+ *
+ * This function determines whether two matrices are logically equal based on
+ * their numerical values, independent of their internal storage format.
+ *
+ * Equality is defined using standard doubleing-point comparison semantics:
+ *
+ * - Values are compared using the C `==` operator.
+ * - `-0.0f` and `+0.0f` are considered equal.
+ * - `NaN` values are not equal to any value, including themselves.
+ *
+ * Matrices must:
+ * - be non-NULL
+ * - have the same dimensions (rows and columns)
+ * - have dtype == double_TYPE
+ *
+ * The comparison is **format-agnostic**, meaning matrices with different
+ * storage formats (e.g., dense vs COO vs CSR vs CSC) are considered equal
+ * if they represent the same logical values.
+ *
+ * Performance optimizations:
+ * - Dense × Dense comparisons use SIMD-accelerated numerical comparison.
+ * - COO × COO comparisons use a fast path when both matrices are sorted,
+ *   comparing index arrays and values directly.
+ * - All other cases fall back to element-wise comparison using logical
+ *   matrix access.
+ *
+ * @param a First matrix (may be NULL).
+ * @param b Second matrix (may be NULL).
+ *
+ * @return true if the matrices are numerically equal, false otherwise.
+ *
+ * @note This function performs numerical comparison only. For custom
+ *       comparison rules (e.g., tolerance-based equality or sign-sensitive
+ *       comparisons), use :c:func:`double_matrix_equal_cmp`.
+ *
+ * @code{.c}
+ * allocator_vtable_t alloc = heap_allocator();
+ *
+ * double_matrix_expect_t r1 = init_double_dense_matrix(2, 2, alloc);
+ * double_matrix_expect_t r2 = init_double_dense_matrix(2, 2, alloc);
+ *
+ * double_matrix_t* a = r1.u.value;
+ * double_matrix_t* b = r2.u.value;
+ *
+ * set_double_matrix(a, 0, 0, -0.0);
+ * set_double_matrix(b, 0, 0,  0.0);
+ *
+ * // Numerical equality: -0.0 == +0.0
+ * assert_true(double_matrix_equal(a, b));
+ *
+ * return_double_matrix(a);
+ * return_double_matrix(b);
+ * @endcode
+ *
+ * @code{.c}
+ * // Equality across different storage formats
+ *
+ * double_matrix_expect_t dense_r = init_double_dense_matrix(2, 2, alloc);
+ * double_matrix_t* dense = dense_r.u.value;
+ *
+ * set_double_matrix(dense, 0, 1, 3.14);
+ *
+ * double_matrix_expect_t csr_r =
+ *     convert_double_matrix(dense, CSR_MATRIX, alloc);
+ *
+ * double_matrix_t* csr = csr_r.u.value;
+ *
+ * // Same logical values → equal
+ * assert_true(double_matrix_equal(dense, csr));
+ *
+ * return_double_matrix(csr);
+ * return_double_matrix(dense);
+ * @endcode
+ */
+bool double_matrix_equal(const double_matrix_t* a,
+                         const double_matrix_t* b);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether two double matrices are compatible for addition.
+ *
+ * Requires equal shape and equal dtype.
+ */
+bool double_matrix_is_add_compatible(const double_matrix_t* a,
+                                     const double_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether two double matrices are compatible for multiplication.
+ *
+ * Requires a->cols == b->rows and equal dtype.
+ */
+bool double_matrix_is_multiply_compatible(const double_matrix_t* a,
+                                          const double_matrix_t* b);
+
+// ================================================================================
+// Row / column swaps
+// ================================================================================
+
+/**
+ * @brief Swap two rows of a double matrix in place.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
+ *
+ * @param mat  Matrix to modify.
+ * @param r1   First zero-based row index.
+ * @param r2   Second zero-based row index.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t swap_double_matrix_rows(double_matrix_t* mat,
+                                     size_t          r1,
+                                     size_t          r2);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Swap two columns of a double matrix in place.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
+ *
+ * @param mat  Matrix to modify.
+ * @param c1   First zero-based column index.
+ * @param c2   Second zero-based column index.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t swap_double_matrix_cols(double_matrix_t* mat,
+                                     size_t          c1,
+                                     size_t          c2);
+
+// ================================================================================
+// Special matrix constructors
+// ================================================================================
+
+/**
+ * @brief Initialize a dense double identity matrix.
+ *
+ * Creates an @p n by @p n dense matrix with 1.0f on the diagonal and 0.0f
+ * elsewhere.
+ *
+ * @param n        Matrix order (rows == cols).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return double_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     double_matrix_expect_t r = init_double_identity_matrix(3, a);
+ *     // 3x3 identity matrix.
+ * @endcode
+ */
+double_matrix_expect_t init_double_identity_matrix(size_t             n,
+                                                   allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize a dense double row vector (1 x length).
+ *
+ * @param length   Vector length (number of columns).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return double_matrix_expect_t with has_value true on success.
+ */
+double_matrix_expect_t init_double_row_vector(size_t             length,
+                                              allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize a dense double column vector (length x 1).
+ *
+ * @param length   Vector length (number of rows).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return double_matrix_expect_t with has_value true on success.
+ */
+double_matrix_expect_t init_double_col_vector(size_t             length,
+                                              allocator_vtable_t alloc_v);
+
+// ================================================================================
+// Vector shape queries
+// ================================================================================
+
+/**
+ * @brief Test whether a double matrix has row-vector shape (1 x N).
+ */
+bool double_matrix_is_row_vector(const double_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a double matrix has column-vector shape (N x 1).
+ */
+bool double_matrix_is_col_vector(const double_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a double matrix has vector shape (row or column).
+ */
+bool double_matrix_is_vector(const double_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the logical length of a vector-shaped double matrix.
+ *
+ * For row vectors returns cols; for column vectors returns rows.
+ * Non-vector matrices return 0.
+ */
+size_t double_matrix_vector_length(const double_matrix_t* mat);
+
+// ================================================================================
+// Conversion with semantic zero callback
+// ================================================================================
+
+/**
+ * @brief Convert a double matrix to a different storage format using an
+ *        optional semantic zero-test.
+ *
+ * This function performs the same structural conversion as
+ * :c:func:`convert_double_matrix`, but allows the caller to define what
+ * double values should be treated as zero during dense-to-sparse conversion.
+ *
+ * The @p is_zero callback is used only when:
+ *   - @p src is a dense matrix, and
+ *   - @p target is COO_MATRIX, CSR_MATRIX, or CSC_MATRIX.
+ *
+ * In all other cases, this function behaves exactly like
+ * :c:func:`convert_double_matrix`.
+ *
+ * If @p is_zero is NULL, the default zero rule is:
+ *
+ * @code{.c}
+ * value == 0.0f
+ * @endcode
+ *
+ * @param src      Matrix to convert. Must not be NULL.
+ * @param target   Desired destination storage format.
+ * @param alloc_v  Allocator for the destination matrix.
+ * @param is_zero  Optional semantic zero predicate used only for
+ *                 dense-to-sparse conversion.
+ *
+ * @return double_matrix_expect_t with has_value true on success, or
+ *         u.error describing the failure.
+ *
+ * Possible failure codes include:
+ *   - NULL_POINTER
+ *   - ILLEGAL_STATE
+ *   - LENGTH_OVERFLOW
+ *   - BAD_ALLOC
+ *   - OUT_OF_MEMORY
+ *
+ * @code{.c}
+ * static bool zero_or_neg_one(double v) {
+ *     return (v == 0.0) || (v == -1.0);
+ * }
+ *
+ * double_matrix_expect_t r =
+ *     convert_double_matrix_zero(dense_m, CSR_MATRIX, alloc, zero_or_neg_one);
+ * @endcode
+ *
+ * @note This function is primarily intended for domain-specific sparse
+ *       conversion rules where exact zero is not sufficient.
+ */
+double_matrix_expect_t convert_double_matrix_zero(const double_matrix_t* src,
+                                                  matrix_format_t       target,
+                                                  allocator_vtable_t    alloc_v,
+                                                  double_zero_fn         is_zero);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
