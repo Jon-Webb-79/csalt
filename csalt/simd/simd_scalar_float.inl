@@ -172,14 +172,15 @@ static inline void simd_transpose_float(const float* src,
 #undef TRANSPOSE_TILE_SCALAR
 // -------------------------------------------------------------------------------- 
 
-static inline bool simd_equal_float(const float* a,
-                                    const float* b,
-                                    size_t       count) {
+static inline bool simd_float_arrays_equal(const float* a,
+                                           const float* b,
+                                           size_t       count) {
+    if (a == NULL || b == NULL) return false;
+
     for (size_t i = 0u; i < count; ++i) {
-        uint32_t va, vb;
-        memcpy(&va, a + i, sizeof(uint32_t));
-        memcpy(&vb, b + i, sizeof(uint32_t));
-        if (va != vb) return false;
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
     return true;
 }

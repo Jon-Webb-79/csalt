@@ -277,48 +277,30 @@ static inline void simd_transpose_double(const double* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_double(const double* a,
-                                     const double* b,
-                                     size_t        count) {
+static inline bool simd_double_arrays_equal(const double* a,
+                                            const double* b,
+                                            size_t        count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    size_t body_end = (count / 8u) * 8u;
-    for (; i < body_end; i += 8u) {
-        __m128i x0 = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i)),
-            _mm_loadu_si128((const __m128i*)(b + i)));
-        __m128i x1 = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i + 2u)),
-            _mm_loadu_si128((const __m128i*)(b + i + 2u)));
-        __m128i x2 = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i + 4u)),
-            _mm_loadu_si128((const __m128i*)(b + i + 4u)));
-        __m128i x3 = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i + 6u)),
-            _mm_loadu_si128((const __m128i*)(b + i + 6u)));
- 
-        __m128i any = _mm_or_si128(_mm_or_si128(x0, x1),
-                                   _mm_or_si128(x2, x3));
- 
-        if (!_mm_testz_si128(any, any)) return false;
-    }
- 
-    size_t vec_end = i + ((count - i) / 2u) * 2u;
+    size_t vec_end = (count / 2u) * 2u;
+
     for (; i < vec_end; i += 2u) {
-        __m128i x = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i)),
-            _mm_loadu_si128((const __m128i*)(b + i)));
- 
-        if (!_mm_testz_si128(x, x)) return false;
+        __m128d av = _mm_loadu_pd(a + i);
+        __m128d bv = _mm_loadu_pd(b + i);
+        __m128d cv = _mm_cmpeq_pd(av, bv);
+
+        if (_mm_movemask_pd(cv) != 0x3) {
+            return false;
+        }
     }
- 
+
     for (; i < count; ++i) {
-        uint64_t va, vb;
-        memcpy(&va, a + i, sizeof(uint64_t));
-        memcpy(&vb, b + i, sizeof(uint64_t));
-        if (va != vb) return false;
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

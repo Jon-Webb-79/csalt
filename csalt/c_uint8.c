@@ -882,7 +882,7 @@ bool uint8_matrix_equal(const uint8_matrix_t* a,
     if (a->format == DENSE_MATRIX && b->format == DENSE_MATRIX) {
         const uint8_t* da = (const uint8_t*)a->rep.dense.data;
         const uint8_t* db = (const uint8_t*)b->rep.dense.data;
-        return simd_equal_uint8(da, db, a->rows * a->cols);
+        return simd_uint8_arrays_equal(da, db, a->rows * a->cols);
     }
  
     /* Mixed/sparse formats: fall back to generic element-wise comparison */

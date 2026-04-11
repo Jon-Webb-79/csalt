@@ -150,14 +150,15 @@ static inline void simd_transpose_double(const double* src,
 #undef TRANSPOSE_TILE_SCALAR
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_double(const double* a,
-                                     const double* b,
-                                     size_t        count) {
+static inline bool simd_double_arrays_equal(const double* a,
+                                            const double* b,
+                                            size_t        count) {
+    if (a == NULL || b == NULL) return false;
+
     for (size_t i = 0u; i < count; ++i) {
-        uint64_t va, vb;
-        memcpy(&va, a + i, sizeof(uint64_t));
-        memcpy(&vb, b + i, sizeof(uint64_t));
-        if (va != vb) return false;
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
     return true;
 }

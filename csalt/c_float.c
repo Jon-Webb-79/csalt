@@ -1003,20 +1003,60 @@ bool float_matrix_is_zero(const float_matrix_t* mat) {
 bool float_matrix_equal(const float_matrix_t* a,
                         const float_matrix_t* b) {
     if (a == NULL || b == NULL) return false;
-    if (!matrix_has_same_shape(a, b)) return false;
-    if (a->dtype != b->dtype) return false;
- 
-    /* SIMD fast path: both dense float matrices — flat linear comparison */
+    if (!matrix_has_same_shape((const matrix_t*)a, (const matrix_t*)b)) return false;
+    if (a->dtype != FLOAT_TYPE || b->dtype != FLOAT_TYPE) return false;
+
+    /* Fast path: both dense */
     if (a->format == DENSE_MATRIX && b->format == DENSE_MATRIX) {
         const float* da = (const float*)a->rep.dense.data;
         const float* db = (const float*)b->rep.dense.data;
-        return simd_equal_float(da, db, a->rows * a->cols);
+        return simd_float_arrays_equal(da, db, a->rows * a->cols);
     }
- 
-    /* Mixed/sparse formats: fall back to generic element-wise comparison */
-    return matrix_equal(a, b);
-}
 
+    /* Fast path: both COO and sorted */
+    if (a->format == COO_MATRIX && b->format == COO_MATRIX &&
+        a->rep.coo.sorted && b->rep.coo.sorted) {
+
+        size_t nnz = a->rep.coo.nnz;
+        if (nnz != b->rep.coo.nnz) return false;
+
+        if (nnz > 0u) {
+            if (memcmp(a->rep.coo.row_idx, b->rep.coo.row_idx,
+                       nnz * sizeof(size_t)) != 0) {
+                return false;
+            }
+
+            if (memcmp(a->rep.coo.col_idx, b->rep.coo.col_idx,
+                       nnz * sizeof(size_t)) != 0) {
+                return false;
+            }
+
+            if (!simd_float_arrays_equal(
+                    (const float*)a->rep.coo.values,
+                    (const float*)b->rep.coo.values,
+                    nnz)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /* General logical comparison */
+    for (size_t i = 0u; i < a->rows; ++i) {
+        for (size_t j = 0u; j < a->cols; ++j) {
+            float va = 0.0f;
+            float vb = 0.0f;
+
+            if (get_matrix((const matrix_t*)a, i, j, &va) != NO_ERROR) return false;
+            if (get_matrix((const matrix_t*)b, i, j, &vb) != NO_ERROR) return false;
+
+            if (!(va == vb)) return false;
+        }
+    }
+
+    return true;
+}
 // --------------------------------------------------------------------------------
 
 bool float_matrix_is_add_compatible(const float_matrix_t* a,
@@ -1103,56 +1143,6 @@ bool float_matrix_is_vector(const float_matrix_t* mat) {
 size_t float_matrix_vector_length(const float_matrix_t* mat) {
     return matrix_vector_length(mat);
 }
-// -------------------------------------------------------------------------------- 
-
-// ================================================================================
-// float_matrix_equal_cmp
-// ================================================================================
-
-bool float_matrix_equal_cmp(const float_matrix_t* a,
-                            const float_matrix_t* b,
-                            float_equal_fn        cmp) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-
-    if (!matrix_has_same_shape((const matrix_t*)a, (const matrix_t*)b)) {
-        return false;
-    }
-
-    if (a->dtype != FLOAT_TYPE || b->dtype != FLOAT_TYPE) {
-        return false;
-    }
-
-    /* Fast path: exact equality */
-    if (cmp == NULL) {
-        return float_matrix_equal(a, b);
-    }
-
-    size_t rows = a->rows;
-    size_t cols = a->cols;
-
-    float va = 0.0f;
-    float vb = 0.0f;
-
-    for (size_t i = 0u; i < rows; ++i) {
-        for (size_t j = 0u; j < cols; ++j) {
-            if (get_matrix((const matrix_t*)a, i, j, &va) != NO_ERROR) {
-                return false;
-            }
-            if (get_matrix((const matrix_t*)b, i, j, &vb) != NO_ERROR) {
-                return false;
-            }
-
-            if (!cmp(va, vb)) {
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
 // ================================================================================
 // convert_float_matrix_zero
 // ================================================================================

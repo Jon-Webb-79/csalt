@@ -343,45 +343,29 @@ static inline void simd_transpose_uint8(const uint8_t* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_uint8(const uint8_t* a,
-                                    const uint8_t* b,
-                                    size_t         count) {
+static inline bool simd_uint8_arrays_equal(const uint8_t* a,
+                                           const uint8_t* b,
+                                           size_t         count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    size_t body_end = (count / 64u) * 64u;
-    for (; i < body_end; i += 64u) {
-        __m128i x0 = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i)),
-            _mm_loadu_si128((const __m128i*)(b + i)));
-        __m128i x1 = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i + 16u)),
-            _mm_loadu_si128((const __m128i*)(b + i + 16u)));
-        __m128i x2 = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i + 32u)),
-            _mm_loadu_si128((const __m128i*)(b + i + 32u)));
-        __m128i x3 = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i + 48u)),
-            _mm_loadu_si128((const __m128i*)(b + i + 48u)));
- 
-        __m128i any = _mm_or_si128(_mm_or_si128(x0, x1),
-                                   _mm_or_si128(x2, x3));
- 
-        if (!_mm_testz_si128(any, any)) return false;
-    }
- 
-    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    size_t vec_end = (count / 16u) * 16u;
+
     for (; i < vec_end; i += 16u) {
-        __m128i x = _mm_xor_si128(
-            _mm_loadu_si128((const __m128i*)(a + i)),
-            _mm_loadu_si128((const __m128i*)(b + i)));
- 
-        if (!_mm_testz_si128(x, x)) return false;
+        __m128i av = _mm_loadu_si128((const __m128i*)(a + i));
+        __m128i bv = _mm_loadu_si128((const __m128i*)(b + i));
+
+        __m128i cmp = _mm_cmpeq_epi8(av, bv);
+
+        if (_mm_movemask_epi8(cmp) != 0xFFFF) {
+            return false;
+        }
     }
- 
+
     for (; i < count; ++i) {
         if (a[i] != b[i]) return false;
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

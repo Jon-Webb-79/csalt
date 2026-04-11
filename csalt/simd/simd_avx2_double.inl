@@ -284,56 +284,58 @@ static inline void simd_transpose_double(const double* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_double(const double* a,
-                                     const double* b,
-                                     size_t        count) {
+static inline bool simd_double_arrays_equal(const double* a,
+                                            const double* b,
+                                            size_t        count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
+
     size_t body_end = (count / 16u) * 16u;
     for (; i < body_end; i += 16u) {
-        __m256i x0 = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i)),
-            _mm256_loadu_si256((const __m256i*)(b + i)));
-        __m256i x1 = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i + 4u)),
-            _mm256_loadu_si256((const __m256i*)(b + i + 4u)));
-        __m256i x2 = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i + 8u)),
-            _mm256_loadu_si256((const __m256i*)(b + i + 8u)));
-        __m256i x3 = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i + 12u)),
-            _mm256_loadu_si256((const __m256i*)(b + i + 12u)));
- 
-        __m256i any = _mm256_or_si256(_mm256_or_si256(x0, x1),
-                                      _mm256_or_si256(x2, x3));
- 
-        if (!_mm256_testz_si256(any, any)) {
+        __m256d a0 = _mm256_loadu_pd(a + i);
+        __m256d b0 = _mm256_loadu_pd(b + i);
+        __m256d a1 = _mm256_loadu_pd(a + i + 4u);
+        __m256d b1 = _mm256_loadu_pd(b + i + 4u);
+        __m256d a2 = _mm256_loadu_pd(a + i + 8u);
+        __m256d b2 = _mm256_loadu_pd(b + i + 8u);
+        __m256d a3 = _mm256_loadu_pd(a + i + 12u);
+        __m256d b3 = _mm256_loadu_pd(b + i + 12u);
+
+        __m256d c0 = _mm256_cmp_pd(a0, b0, _CMP_EQ_OQ);
+        __m256d c1 = _mm256_cmp_pd(a1, b1, _CMP_EQ_OQ);
+        __m256d c2 = _mm256_cmp_pd(a2, b2, _CMP_EQ_OQ);
+        __m256d c3 = _mm256_cmp_pd(a3, b3, _CMP_EQ_OQ);
+
+        if (_mm256_movemask_pd(c0) != 0xF ||
+            _mm256_movemask_pd(c1) != 0xF ||
+            _mm256_movemask_pd(c2) != 0xF ||
+            _mm256_movemask_pd(c3) != 0xF) {
             _mm256_zeroupper();
             return false;
         }
     }
- 
+
     size_t vec_end = i + ((count - i) / 4u) * 4u;
     for (; i < vec_end; i += 4u) {
-        __m256i x = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i)),
-            _mm256_loadu_si256((const __m256i*)(b + i)));
- 
-        if (!_mm256_testz_si256(x, x)) {
+        __m256d av = _mm256_loadu_pd(a + i);
+        __m256d bv = _mm256_loadu_pd(b + i);
+        __m256d cv = _mm256_cmp_pd(av, bv, _CMP_EQ_OQ);
+
+        if (_mm256_movemask_pd(cv) != 0xF) {
             _mm256_zeroupper();
             return false;
         }
     }
- 
+
     _mm256_zeroupper();
- 
+
     for (; i < count; ++i) {
-        uint64_t va, vb;
-        memcpy(&va, a + i, sizeof(uint64_t));
-        memcpy(&vb, b + i, sizeof(uint64_t));
-        if (va != vb) return false;
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

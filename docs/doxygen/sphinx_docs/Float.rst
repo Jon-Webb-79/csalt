@@ -515,7 +515,6 @@ Shape and Compatibility
 .. doxygenfunction:: float_matrix_is_sparse
 .. doxygenfunction:: float_matrix_is_zero
 .. doxygenfunction:: float_matrix_equal
-.. doxygenfunction:: float_matrix_equal_cmp
 .. doxygenfunction:: float_matrix_is_add_compatible
 .. doxygenfunction:: float_matrix_is_multiply_compatible
 

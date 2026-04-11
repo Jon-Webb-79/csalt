@@ -384,33 +384,37 @@ static inline void simd_transpose_uint8(const uint8_t* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_uint8(const uint8_t* a,
-                                    const uint8_t* b,
-                                    size_t         count) {
+static inline bool simd_uint8_arrays_equal(const uint8_t* a,
+                                           const uint8_t* b,
+                                           size_t         count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    size_t body_end = (count / 64u) * 64u;
-    for (; i < body_end; i += 64u) {
-        uint8x16_t x0 = veorq_u8(vld1q_u8(a + i),      vld1q_u8(b + i));
-        uint8x16_t x1 = veorq_u8(vld1q_u8(a + i + 16u), vld1q_u8(b + i + 16u));
-        uint8x16_t x2 = veorq_u8(vld1q_u8(a + i + 32u), vld1q_u8(b + i + 32u));
-        uint8x16_t x3 = veorq_u8(vld1q_u8(a + i + 48u), vld1q_u8(b + i + 48u));
- 
-        uint8x16_t any = vorrq_u8(vorrq_u8(x0, x1), vorrq_u8(x2, x3));
- 
-        if (vmaxvq_u8(any) != 0u) return false;
-    }
- 
-    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    size_t vec_end = (count / 16u) * 16u;
+
     for (; i < vec_end; i += 16u) {
-        uint8x16_t x = veorq_u8(vld1q_u8(a + i), vld1q_u8(b + i));
-        if (vmaxvq_u8(x) != 0u) return false;
+        uint8x16_t av = vld1q_u8(a + i);
+        uint8x16_t bv = vld1q_u8(b + i);
+
+        uint8x16_t cmp = vceqq_u8(av, bv);
+
+#if defined(__aarch64__)
+        if (vminvq_u8(cmp) != 0xFF) {
+            return false;
+        }
+#else
+        uint8_t lanes[16];
+        vst1q_u8(lanes, cmp);
+        for (int j = 0; j < 16; ++j) {
+            if (lanes[j] != 0xFF) return false;
+        }
+#endif
     }
- 
+
     for (; i < count; ++i) {
         if (a[i] != b[i]) return false;
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

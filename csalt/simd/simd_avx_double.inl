@@ -309,61 +309,33 @@ static inline void simd_transpose_double(const double* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_double(const double* a,
-                                     const double* b,
-                                     size_t        count) {
+static inline bool simd_double_arrays_equal(const double* a,
+                                            const double* b,
+                                            size_t        count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    size_t body_end = (count / 16u) * 16u;
-    for (; i < body_end; i += 16u) {
-        __m256d x0 = _mm256_xor_pd(_mm256_loadu_pd(a + i),
-                                    _mm256_loadu_pd(b + i));
-        __m256d x1 = _mm256_xor_pd(_mm256_loadu_pd(a + i + 4u),
-                                    _mm256_loadu_pd(b + i + 4u));
-        __m256d x2 = _mm256_xor_pd(_mm256_loadu_pd(a + i + 8u),
-                                    _mm256_loadu_pd(b + i + 8u));
-        __m256d x3 = _mm256_xor_pd(_mm256_loadu_pd(a + i + 12u),
-                                    _mm256_loadu_pd(b + i + 12u));
- 
-        __m256d any = _mm256_or_pd(_mm256_or_pd(x0, x1),
-                                   _mm256_or_pd(x2, x3));
- 
-        __m128i lo = _mm_castpd_si128(_mm256_castpd256_pd128(any));
-        __m128i hi = _mm_castpd_si128(_mm256_extractf128_pd(any, 1));
-        __m128i combined = _mm_or_si128(lo, hi);
- 
-        if (_mm_movemask_epi8(
-                _mm_cmpeq_epi8(combined, _mm_setzero_si128())) != 0xFFFF) {
-            _mm256_zeroupper();
-            return false;
-        }
-    }
- 
-    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    size_t vec_end = (count / 4u) * 4u;
+
     for (; i < vec_end; i += 4u) {
-        __m256d x = _mm256_xor_pd(_mm256_loadu_pd(a + i),
-                                   _mm256_loadu_pd(b + i));
- 
-        __m128i lo = _mm_castpd_si128(_mm256_castpd256_pd128(x));
-        __m128i hi = _mm_castpd_si128(_mm256_extractf128_pd(x, 1));
-        __m128i combined = _mm_or_si128(lo, hi);
- 
-        if (_mm_movemask_epi8(
-                _mm_cmpeq_epi8(combined, _mm_setzero_si128())) != 0xFFFF) {
+        __m256d av = _mm256_loadu_pd(a + i);
+        __m256d bv = _mm256_loadu_pd(b + i);
+        __m256d cv = _mm256_cmp_pd(av, bv, _CMP_EQ_OQ);
+
+        if (_mm256_movemask_pd(cv) != 0xF) {
             _mm256_zeroupper();
             return false;
         }
     }
- 
+
     _mm256_zeroupper();
- 
+
     for (; i < count; ++i) {
-        uint64_t va, vb;
-        memcpy(&va, a + i, sizeof(uint64_t));
-        memcpy(&vb, b + i, sizeof(uint64_t));
-        if (va != vb) return false;
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

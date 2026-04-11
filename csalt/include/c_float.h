@@ -1707,24 +1707,6 @@ typedef struct {
  * ========================================================================== */
 
 /**
- * @brief Comparator function for float values.
- *
- * This function is used to compare two float values for equality under
- * user-defined semantics. It is primarily used by:
- *
- * - float_matrix_equal_cmp()
- *
- * @param a First value.
- * @param b Second value.
- *
- * @return true if values are considered equal, false otherwise.
- *
- * @note If NULL is passed to APIs expecting this comparator, a default
- *       byte-wise comparison is used (equivalent to float_matrix_equal()).
- */
-typedef bool (*float_equal_fn)(float a, float b);
-
-/**
  * @brief Predicate function to determine semantic zero for float values.
  *
  * This function defines what values should be treated as "zero" during
@@ -1741,7 +1723,7 @@ typedef bool (*float_equal_fn)(float a, float b);
  *
  * @example
  * Treat both 0.0 and -1.0 as zero:
- * @code
+ * @code{.c}
  * bool zero_or_neg_one(float v) {
  *     return (v == 0.0f) || (v == -1.0f);
  * }
@@ -1765,7 +1747,7 @@ typedef bool (*float_zero_fn)(float value);
  *
  * @return float_matrix_expect_t with has_value true on success.
  *
- * @code
+ * @code{.c}
  *     allocator_vtable_t a = heap_allocator();
  *     float_matrix_expect_t r = init_float_dense_matrix(3, 4, a);
  *     if (!r.has_value) { fprintf(stderr, "%d\n", r.u.error); return; }
@@ -1797,7 +1779,7 @@ float_matrix_expect_t init_float_dense_matrix(size_t             rows,
  *
  * @return float_matrix_expect_t with has_value true on success.
  *
- * @code
+ * @code{.c}
  *     allocator_vtable_t a = heap_allocator();
  *     float_matrix_expect_t r = init_float_coo_matrix(100, 100, 16, true, a);
  *     float_matrix_t* m = r.u.value;
@@ -2047,15 +2029,83 @@ bool float_matrix_is_zero(const float_matrix_t* mat);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Compare two float matrices for logical equality.
+ * @brief Compare two float matrices for numerical equality.
  *
- * Uses exact bitwise comparison of every element. Matrices must have the
- * same shape and dtype. Different storage formats are compared element-wise
- * through the get_matrix interface.
+ * This function determines whether two matrices are logically equal based on
+ * their numerical values, independent of their internal storage format.
+ *
+ * Equality is defined using standard floating-point comparison semantics:
+ *
+ * - Values are compared using the C `==` operator.
+ * - `-0.0f` and `+0.0f` are considered equal.
+ * - `NaN` values are not equal to any value, including themselves.
+ *
+ * Matrices must:
+ * - be non-NULL
+ * - have the same dimensions (rows and columns)
+ * - have dtype == FLOAT_TYPE
+ *
+ * The comparison is **format-agnostic**, meaning matrices with different
+ * storage formats (e.g., dense vs COO vs CSR vs CSC) are considered equal
+ * if they represent the same logical values.
+ *
+ * Performance optimizations:
+ * - Dense × Dense comparisons use SIMD-accelerated numerical comparison.
+ * - COO × COO comparisons use a fast path when both matrices are sorted,
+ *   comparing index arrays and values directly.
+ * - All other cases fall back to element-wise comparison using logical
+ *   matrix access.
+ *
+ * @param a First matrix (may be NULL).
+ * @param b Second matrix (may be NULL).
+ *
+ * @return true if the matrices are numerically equal, false otherwise.
+ *
+ * @note This function performs numerical comparison only. For custom
+ *       comparison rules (e.g., tolerance-based equality or sign-sensitive
+ *       comparisons), use :c:func:`float_matrix_equal_cmp`.
+ *
+ * @code{.c}
+ * allocator_vtable_t alloc = heap_allocator();
+ *
+ * float_matrix_expect_t r1 = init_float_dense_matrix(2, 2, alloc);
+ * float_matrix_expect_t r2 = init_float_dense_matrix(2, 2, alloc);
+ *
+ * float_matrix_t* a = r1.u.value;
+ * float_matrix_t* b = r2.u.value;
+ *
+ * set_float_matrix(a, 0, 0, -0.0f);
+ * set_float_matrix(b, 0, 0,  0.0f);
+ *
+ * // Numerical equality: -0.0f == +0.0f
+ * assert_true(float_matrix_equal(a, b));
+ *
+ * return_float_matrix(a);
+ * return_float_matrix(b);
+ * @endcode
+ *
+ * @code{.c}
+ * // Equality across different storage formats
+ *
+ * float_matrix_expect_t dense_r = init_float_dense_matrix(2, 2, alloc);
+ * float_matrix_t* dense = dense_r.u.value;
+ *
+ * set_float_matrix(dense, 0, 1, 3.14f);
+ *
+ * float_matrix_expect_t csr_r =
+ *     convert_float_matrix(dense, CSR_MATRIX, alloc);
+ *
+ * float_matrix_t* csr = csr_r.u.value;
+ *
+ * // Same logical values → equal
+ * assert_true(float_matrix_equal(dense, csr));
+ *
+ * return_float_matrix(csr);
+ * return_float_matrix(dense);
+ * @endcode
  */
 bool float_matrix_equal(const float_matrix_t* a,
                         const float_matrix_t* b);
-
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -2193,50 +2243,6 @@ bool float_matrix_is_vector(const float_matrix_t* mat);
  * Non-vector matrices return 0.
  */
 size_t float_matrix_vector_length(const float_matrix_t* mat);
-
-// ================================================================================
-// Comparison with semantic callback
-// ================================================================================
-
-/**
- * @brief Compare two float matrices using an optional semantic comparator.
- *
- * This function behaves like :c:func:`float_matrix_equal`, but allows the
- * caller to provide a custom equality rule for corresponding float elements.
- *
- * If @p cmp is NULL, this function falls back to
- * :c:func:`float_matrix_equal`.
- *
- * Matrices must:
- *   - both be non-NULL
- *   - have the same shape
- *   - have dtype == FLOAT_TYPE
- *
- * Different storage formats are supported. Elements are compared logically
- * through matrix element access rather than requiring identical internal
- * layouts.
- *
- * @param a    First matrix. May be NULL (returns false).
- * @param b    Second matrix. May be NULL (returns false).
- * @param cmp  Optional semantic comparator for element-wise equality.
- *
- * @return true if the matrices are logically equal under the selected
- *         comparison rule, false otherwise.
- *
- * @code{.c}
- * static bool abs_equal(float a, float b) {
- *     return fabsf(fabsf(a) - fabsf(b)) < 1e-6f;
- * }
- *
- * bool same = float_matrix_equal_cmp(ma, mb, abs_equal);
- * @endcode
- *
- * @note This function is useful when exact equality is too strict for
- *       application-level floating-point comparisons.
- */
-bool float_matrix_equal_cmp(const float_matrix_t* a,
-                            const float_matrix_t* b,
-                            float_equal_fn        cmp);
 
 // ================================================================================
 // Conversion with semantic zero callback

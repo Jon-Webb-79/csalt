@@ -147,10 +147,17 @@ static inline void simd_transpose_uint8(const uint8_t* src,
 #undef TRANSPOSE_TILE_SCALAR
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_uint8(const uint8_t* a,
-                                    const uint8_t* b,
-                                    size_t         count) {
-    return memcmp(a, b, count) == 0;
+static inline bool simd_uint8_arrays_equal(const uint8_t* a,
+                                           const uint8_t* b,
+                                           size_t         count) {
+    if (a == NULL || b == NULL) return false;
+
+    for (size_t i = 0u; i < count; ++i) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 // -------------------------------------------------------------------------------- 
  

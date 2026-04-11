@@ -359,57 +359,30 @@ static inline void simd_transpose_float(const float* src,
 }
 // -------------------------------------------------------------------------------- 
 
-static inline bool simd_equal_float(const float* a,
-                                    const float* b,
-                                    size_t       count) {
+static inline bool simd_float_arrays_equal(const float* a,
+                                           const float* b,
+                                           size_t       count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    /* ---- Body: 64 floats (4 × 512-bit) per iteration ---- */
-    size_t body_end = (count / 64u) * 64u;
-    for (; i < body_end; i += 64u) {
-        __m512i x0 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i)),
-            _mm512_loadu_si512((const __m512i*)(b + i)));
-        __m512i x1 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i + 16u)),
-            _mm512_loadu_si512((const __m512i*)(b + i + 16u)));
-        __m512i x2 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i + 32u)),
-            _mm512_loadu_si512((const __m512i*)(b + i + 32u)));
-        __m512i x3 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i + 48u)),
-            _mm512_loadu_si512((const __m512i*)(b + i + 48u)));
- 
-        /* OR all XOR results */
-        __m512i any = _mm512_or_si512(_mm512_or_si512(x0, x1),
-                                      _mm512_or_si512(x2, x3));
- 
-        /* _mm512_test_epi32_mask(v, v): mask bit set where lane != 0 */
-        if (_mm512_test_epi32_mask(any, any) != 0u) return false;
-    }
- 
-    /* ---- Single-vector passes ---- */
-    size_t vec_end = i + ((count - i) / 16u) * 16u;
+    size_t vec_end = (count / 16u) * 16u;
+
     for (; i < vec_end; i += 16u) {
-        __m512i x = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i)),
-            _mm512_loadu_si512((const __m512i*)(b + i)));
- 
-        if (_mm512_test_epi32_mask(x, x) != 0u) return false;
+        __m512 av = _mm512_loadu_ps(a + i);
+        __m512 bv = _mm512_loadu_ps(b + i);
+
+        __mmask16 mask = _mm512_cmp_ps_mask(av, bv, _CMP_EQ_OQ);
+        if (mask != 0xFFFFu) {
+            return false;
+        }
     }
- 
-    /* ---- Masked tail (up to 15 elements) ---- */
-    if (i < count) {
-        __mmask16 mask = (__mmask16)((1u << (count - i)) - 1u);
- 
-        __m512i va = _mm512_maskz_loadu_epi32(mask, (const __m512i*)(a + i));
-        __m512i vb = _mm512_maskz_loadu_epi32(mask, (const __m512i*)(b + i));
-        __m512i x  = _mm512_xor_si512(va, vb);
- 
-        /* Only test lanes within the mask */
-        if ((_mm512_test_epi32_mask(x, x) & mask) != 0u) return false;
+
+    for (; i < count; ++i) {
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

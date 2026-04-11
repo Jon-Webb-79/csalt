@@ -325,54 +325,30 @@ static inline void simd_transpose_float(const float* src,
 #undef TRANSPOSE_TILE_SSE
 // -------------------------------------------------------------------------------- 
 
-static inline bool simd_equal_float(const float* a,
-                                    const float* b,
-                                    size_t       count) {
+static inline bool simd_float_arrays_equal(const float* a,
+                                           const float* b,
+                                           size_t       count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    /* ---- SSE2 body: 16 floats (4 × 128-bit) per iteration ---- */
-    size_t body_end = (count / 16u) * 16u;
-    for (; i < body_end; i += 16u) {
-        __m128i a0 = _mm_loadu_si128((const __m128i*)(a + i));
-        __m128i b0 = _mm_loadu_si128((const __m128i*)(b + i));
-        __m128i a1 = _mm_loadu_si128((const __m128i*)(a + i + 4u));
-        __m128i b1 = _mm_loadu_si128((const __m128i*)(b + i + 4u));
-        __m128i a2 = _mm_loadu_si128((const __m128i*)(a + i + 8u));
-        __m128i b2 = _mm_loadu_si128((const __m128i*)(b + i + 8u));
-        __m128i a3 = _mm_loadu_si128((const __m128i*)(a + i + 12u));
-        __m128i b3 = _mm_loadu_si128((const __m128i*)(b + i + 12u));
- 
-        __m128i eq0 = _mm_cmpeq_epi32(a0, b0);
-        __m128i eq1 = _mm_cmpeq_epi32(a1, b1);
-        __m128i eq2 = _mm_cmpeq_epi32(a2, b2);
-        __m128i eq3 = _mm_cmpeq_epi32(a3, b3);
- 
-        /* AND all four comparison results together */
-        __m128i all = _mm_and_si128(_mm_and_si128(eq0, eq1),
-                                    _mm_and_si128(eq2, eq3));
- 
-        /* movemask: 0xFFFF means all 16 bytes matched */
-        if (_mm_movemask_epi8(all) != 0xFFFF) return false;
-    }
- 
-    /* ---- Single-vector passes ---- */
-    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    size_t vec_end = (count / 4u) * 4u;
+
     for (; i < vec_end; i += 4u) {
-        __m128i va = _mm_loadu_si128((const __m128i*)(a + i));
-        __m128i vb = _mm_loadu_si128((const __m128i*)(b + i));
-        __m128i eq = _mm_cmpeq_epi32(va, vb);
- 
-        if (_mm_movemask_epi8(eq) != 0xFFFF) return false;
+        __m128 av = _mm_loadu_ps(a + i);
+        __m128 bv = _mm_loadu_ps(b + i);
+        __m128 cv = _mm_cmpeq_ps(av, bv);
+
+        if (_mm_movemask_ps(cv) != 0xF) {
+            return false;
+        }
     }
- 
-    /* ---- Scalar tail ---- */
+
     for (; i < count; ++i) {
-        uint32_t va, vb;
-        memcpy(&va, a + i, sizeof(uint32_t));
-        memcpy(&vb, b + i, sizeof(uint32_t));
-        if (va != vb) return false;
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

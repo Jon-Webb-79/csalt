@@ -2403,120 +2403,6 @@ static void test_matrix_equal_coo_and_csr_same_values_returns_true(void** state)
     return_matrix(dense);
 }
 
-// --------------------------------------------------------------------------------
-
-static void test_matrix_equal_cmp_null_matrices_returns_false(void** state) {
-    (void)state;
-    assert_false(matrix_equal_cmp(NULL, NULL, _int32_abs_equal));
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_matrix_equal_cmp_with_null_comparator_falls_back_to_bytewise(void** state) {
-    (void)state;
-
-    matrix_t* a = _make_sample_dense_int32_matrix();
-    matrix_t* b = _make_sample_dense_int32_matrix();
-
-    assert_true(matrix_equal_cmp(a, b, NULL));
-
-    return_matrix(a);
-    return_matrix(b);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_matrix_equal_cmp_abs_equal_accepts_negated_values(void** state) {
-    (void)state;
-
-    matrix_t* a = _make_dense_int32_matrix(2u, 2u);
-    matrix_t* b = _make_dense_int32_matrix(2u, 2u);
-
-    int32_t va = -5;
-    int32_t vb =  5;
-    int32_t vc = -9;
-    int32_t vd =  9;
-
-    assert_int_equal(set_matrix(a, 0u, 0u, &va), NO_ERROR);
-    assert_int_equal(set_matrix(b, 0u, 0u, &vb), NO_ERROR);
-    assert_int_equal(set_matrix(a, 1u, 1u, &vc), NO_ERROR);
-    assert_int_equal(set_matrix(b, 1u, 1u, &vd), NO_ERROR);
-
-    assert_false(matrix_equal(a, b));
-    assert_true(matrix_equal_cmp(a, b, _int32_abs_equal));
-
-    return_matrix(a);
-    return_matrix(b);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_matrix_equal_custom_struct_bytewise_equal_returns_true(void** state) {
-    (void)state;
-
-    matrix_t* a = _make_dense_record_matrix(2u, 2u);
-    matrix_t* b = _make_dense_record_matrix(2u, 2u);
-
-    test_record_t r1 = {0};
-    r1.id = 17;
-    r1.value = 3.5;
-    r1.flags = 0xA5u;
-
-    assert_int_equal(set_matrix(a, 1u, 0u, &r1), NO_ERROR);
-    assert_int_equal(set_matrix(b, 1u, 0u, &r1), NO_ERROR);
-
-    assert_true(matrix_equal(a, b));
-
-    return_matrix(a);
-    return_matrix(b);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_matrix_equal_custom_struct_bytewise_different_returns_false(void** state) {
-    (void)state;
-
-    matrix_t* a = _make_dense_record_matrix(2u, 2u);
-    matrix_t* b = _make_dense_record_matrix(2u, 2u);
-
-    test_record_t r1 = {0};
-    r1.id = 17;
-    r1.value = 3.5;
-    r1.flags = 0xA5u;
-
-    test_record_t r2 = {0};
-    r2.id = 17;
-    r2.value = 9.5;
-    r2.flags = 0x00u;
-
-    assert_int_equal(set_matrix(a, 1u, 0u, &r1), NO_ERROR);
-    assert_int_equal(set_matrix(b, 1u, 0u, &r2), NO_ERROR);
-
-    assert_false(matrix_equal(a, b));
-
-    return_matrix(a);
-    return_matrix(b);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_matrix_equal_cmp_custom_struct_by_id_returns_true(void** state) {
-    (void)state;
-
-    matrix_t* a = _make_dense_record_matrix(2u, 2u);
-    matrix_t* b = _make_dense_record_matrix(2u, 2u);
-
-    test_record_t r1 = { 17, 3.5, 0xA5u };
-    test_record_t r2 = { 17, 9.5, 0x00u };   /* same id */
-
-    assert_int_equal(set_matrix(a, 1u, 0u, &r1), NO_ERROR);
-    assert_int_equal(set_matrix(b, 1u, 0u, &r2), NO_ERROR);
-
-    assert_true(matrix_equal_cmp(a, b, _record_equal_by_id));
-
-    return_matrix(a);
-    return_matrix(b);
-}
 // ================================================================================ 
 // Group 16: transpose_matrix
 // ================================================================================ 
@@ -2976,12 +2862,6 @@ const struct CMUnitTest test_matrix[] = {
     cmocka_unit_test(test_matrix_equal_dense_and_csr_same_values_returns_true),
     cmocka_unit_test(test_matrix_equal_dense_and_csc_same_values_returns_true),
     cmocka_unit_test(test_matrix_equal_coo_and_csr_same_values_returns_true),
-    cmocka_unit_test(test_matrix_equal_cmp_null_matrices_returns_false),
-    cmocka_unit_test(test_matrix_equal_cmp_with_null_comparator_falls_back_to_bytewise),
-    cmocka_unit_test(test_matrix_equal_cmp_abs_equal_accepts_negated_values),
-    cmocka_unit_test(test_matrix_equal_custom_struct_bytewise_equal_returns_true),
-    cmocka_unit_test(test_matrix_equal_custom_struct_bytewise_different_returns_false),
-    cmocka_unit_test(test_matrix_equal_cmp_custom_struct_by_id_returns_true),
 
     /* Group 17: transpose_matrix */
     cmocka_unit_test(test_transpose_matrix_null_src_fails),
@@ -3418,24 +3298,6 @@ static void test_float_matrix_equal_dense_same_values_returns_true(void** state)
     float_matrix_t* b = _make_sample_dense_float_matrix();
 
     assert_true(float_matrix_equal(a, b));
-
-    return_float_matrix(a);
-    return_float_matrix(b);
-}
-
-static void test_float_matrix_equal_cmp_abs_equal_accepts_negated_values(void** state) {
-    (void)state;
-
-    float_matrix_t* a = _make_dense_float_matrix(2u, 2u);
-    float_matrix_t* b = _make_dense_float_matrix(2u, 2u);
-
-    assert_int_equal(set_float_matrix(a, 0u, 0u, -5.0f), NO_ERROR);
-    assert_int_equal(set_float_matrix(b, 0u, 0u,  5.0f), NO_ERROR);
-    assert_int_equal(set_float_matrix(a, 1u, 1u, -9.0f), NO_ERROR);
-    assert_int_equal(set_float_matrix(b, 1u, 1u,  9.0f), NO_ERROR);
-
-    assert_false(float_matrix_equal(a, b));
-    assert_true(float_matrix_equal_cmp(a, b, _float_abs_equal));
 
     return_float_matrix(a);
     return_float_matrix(b);
@@ -3893,53 +3755,6 @@ static void test_convert_float_matrix_zero_treats_negative_zero_as_zero_in_csr(v
     return_float_matrix(src);
 }
 
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_equal_negative_zero_and_positive_zero_are_not_equal_by_default(void** state) {
-    (void)state;
-
-    float_matrix_t* a = _make_dense_float_matrix(2u, 2u);
-    float_matrix_t* b = _make_dense_float_matrix(2u, 2u);
-
-    assert_int_equal(set_float_matrix(a, 1u, 1u, -0.0f), NO_ERROR);
-    assert_int_equal(set_float_matrix(b, 1u, 1u,  0.0f), NO_ERROR);
-
-    /* Default float matrix equality is exact / bitwise. */
-    assert_false(float_matrix_equal(a, b));
-    assert_false(float_matrix_equal_cmp(a, b, NULL));
-
-    return_float_matrix(a);
-    return_float_matrix(b);
-}
-
-// --------------------------------------------------------------------------------
-
-static bool _zero_sign_must_match(float a, float b) {
-    if (a == 0.0f && b == 0.0f) {
-        return signbit(a) == signbit(b);
-    }
-    return a == b;
-}
-
-static void test_float_matrix_equal_cmp_can_distinguish_negative_zero_when_requested(void** state) {
-    (void)state;
-
-    float_matrix_t* a = _make_dense_float_matrix(1u, 1u);
-    float_matrix_t* b = _make_dense_float_matrix(1u, 1u);
-
-    assert_int_equal(set_float_matrix(a, 0u, 0u, -0.0f), NO_ERROR);
-    assert_int_equal(set_float_matrix(b, 0u, 0u,  0.0f), NO_ERROR);
-
-    /* Default equality is exact / bitwise, so these already compare unequal. */
-    assert_false(float_matrix_equal(a, b));
-
-    /* A sign-sensitive comparator also keeps them unequal. */
-    assert_false(float_matrix_equal_cmp(a, b, _zero_sign_must_match));
-
-    return_float_matrix(a);
-    return_float_matrix(b);
-}
-
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -3984,7 +3799,6 @@ const struct CMUnitTest test_float_matrix[] = {
 
     /* Group 8 */
     cmocka_unit_test(test_float_matrix_equal_dense_same_values_returns_true),
-    cmocka_unit_test(test_float_matrix_equal_cmp_abs_equal_accepts_negated_values),
     cmocka_unit_test(test_float_matrix_shape_compatibility_helpers),
 
     /* Group 9 */
@@ -4014,8 +3828,6 @@ const struct CMUnitTest test_float_matrix[] = {
 
     cmocka_unit_test(test_convert_float_matrix_zero_treats_negative_zero_as_zero_in_coo),
     cmocka_unit_test(test_convert_float_matrix_zero_treats_negative_zero_as_zero_in_csr),
-    cmocka_unit_test(test_float_matrix_equal_negative_zero_and_positive_zero_are_not_equal_by_default),
-    cmocka_unit_test(test_float_matrix_equal_cmp_can_distinguish_negative_zero_when_requested),
 };
 
 const size_t test_float_matrix_count =

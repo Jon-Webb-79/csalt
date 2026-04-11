@@ -253,37 +253,27 @@ static inline void simd_transpose_double(const double* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_double(const double* a,
-                                     const double* b,
-                                     size_t        count) {
+static inline bool simd_double_arrays_equal(const double* a,
+                                            const double* b,
+                                            size_t        count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
-    size_t vl = svcntd();
- 
-    size_t body_end = (count / vl) * vl;
-    for (; i < body_end; i += vl) {
-        svuint64_t va = svld1_u64(svptrue_b64(),
-                                  (const uint64_t*)(a + i));
-        svuint64_t vb = svld1_u64(svptrue_b64(),
-                                  (const uint64_t*)(b + i));
- 
-        svuint64_t x = sveor_u64_z(svptrue_b64(), va, vb);
- 
-        svbool_t neq = svcmpne_n_u64(svptrue_b64(), x, 0u);
-        if (svptest_any(svptrue_b64(), neq)) return false;
+    while (i < count) {
+        svbool_t pg = svwhilelt_b64(i, count);
+
+        svfloat64_t av = svld1(pg, a + i);
+        svfloat64_t bv = svld1(pg, b + i);
+
+        svbool_t cmp = svcmpeq_f64(pg, av, bv);
+
+        if (!svptest_all(pg, cmp)) {
+            return false;
+        }
+
+        i += svcntd();
     }
- 
-    if (i < count) {
-        svbool_t mask = svwhilelt_b64((uint64_t)i, (uint64_t)count);
- 
-        svuint64_t va = svld1_u64(mask, (const uint64_t*)(a + i));
-        svuint64_t vb = svld1_u64(mask, (const uint64_t*)(b + i));
- 
-        svuint64_t x = sveor_u64_z(mask, va, vb);
- 
-        svbool_t neq = svcmpne_n_u64(mask, x, 0u);
-        if (svptest_any(mask, neq)) return false;
-    }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

@@ -322,53 +322,42 @@ static inline void simd_transpose_float(const float* src,
 }
 // -------------------------------------------------------------------------------- 
 
-static inline bool simd_equal_float(const float* a,
-                                    const float* b,
-                                    size_t       count) {
+static inline bool simd_float_arrays_equal(const float* a,
+                                           const float* b,
+                                           size_t       count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    /* ---- Body: 16 floats (4 × 128-bit) per iteration ---- */
-    size_t body_end = (count / 16u) * 16u;
-    for (; i < body_end; i += 16u) {
-        uint32x4_t x0 = veorq_u32(
-            vreinterpretq_u32_f32(vld1q_f32(a + i)),
-            vreinterpretq_u32_f32(vld1q_f32(b + i)));
-        uint32x4_t x1 = veorq_u32(
-            vreinterpretq_u32_f32(vld1q_f32(a + i + 4u)),
-            vreinterpretq_u32_f32(vld1q_f32(b + i + 4u)));
-        uint32x4_t x2 = veorq_u32(
-            vreinterpretq_u32_f32(vld1q_f32(a + i + 8u)),
-            vreinterpretq_u32_f32(vld1q_f32(b + i + 8u)));
-        uint32x4_t x3 = veorq_u32(
-            vreinterpretq_u32_f32(vld1q_f32(a + i + 12u)),
-            vreinterpretq_u32_f32(vld1q_f32(b + i + 12u)));
- 
-        /* OR all XOR results */
-        uint32x4_t any = vorrq_u32(vorrq_u32(x0, x1),
-                                   vorrq_u32(x2, x3));
- 
-        /* vmaxvq_u32: horizontal max — nonzero means mismatch */
-        if (vmaxvq_u32(any) != 0u) return false;
-    }
- 
-    /* ---- Single-vector passes ---- */
-    size_t vec_end = i + ((count - i) / 4u) * 4u;
+    size_t vec_end = (count / 4u) * 4u;
+
     for (; i < vec_end; i += 4u) {
-        uint32x4_t x = veorq_u32(
-            vreinterpretq_u32_f32(vld1q_f32(a + i)),
-            vreinterpretq_u32_f32(vld1q_f32(b + i)));
- 
-        if (vmaxvq_u32(x) != 0u) return false;
+        float32x4_t av = vld1q_f32(a + i);
+        float32x4_t bv = vld1q_f32(b + i);
+
+        uint32x4_t cmp = vceqq_f32(av, bv);
+
+#if defined(__aarch64__)
+        if (vminvq_u32(cmp) != 0xFFFFFFFFu) {
+            return false;
+        }
+#else
+        uint32_t lanes[4];
+        vst1q_u32(lanes, cmp);
+        if (lanes[0] != 0xFFFFFFFFu ||
+            lanes[1] != 0xFFFFFFFFu ||
+            lanes[2] != 0xFFFFFFFFu ||
+            lanes[3] != 0xFFFFFFFFu) {
+            return false;
+        }
+#endif
     }
- 
-    /* ---- Scalar tail ---- */
+
     for (; i < count; ++i) {
-        uint32_t va, vb;
-        memcpy(&va, a + i, sizeof(uint32_t));
-        memcpy(&vb, b + i, sizeof(uint32_t));
-        if (va != vb) return false;
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

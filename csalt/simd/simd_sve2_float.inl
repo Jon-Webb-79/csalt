@@ -261,39 +261,29 @@ static inline void simd_transpose_float(const float* src,
 }
 // -------------------------------------------------------------------------------- 
 
-static inline bool simd_equal_float(const float* a,
-                                    const float* b,
-                                    size_t       count) {
+#include <arm_sve.h>
+
+static inline bool simd_float_arrays_equal(const float* a,
+                                           const float* b,
+                                           size_t       count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
-    size_t vl = svcntw();
- 
-    /* ---- Main body ---- */
-    size_t body_end = (count / vl) * vl;
-    for (; i < body_end; i += vl) {
-        svuint32_t va = svld1_u32(svptrue_b32(),
-                                  (const uint32_t*)(a + i));
-        svuint32_t vb = svld1_u32(svptrue_b32(),
-                                  (const uint32_t*)(b + i));
- 
-        svuint32_t x = sveor_u32_z(svptrue_b32(), va, vb);
- 
-        svbool_t neq = svcmpne_n_u32(svptrue_b32(), x, 0u);
-        if (svptest_any(svptrue_b32(), neq)) return false;
+    while (i < count) {
+        svbool_t pg = svwhilelt_b32(i, count);
+
+        svfloat32_t av = svld1(pg, a + i);
+        svfloat32_t bv = svld1(pg, b + i);
+
+        svbool_t cmp = svcmpeq_f32(pg, av, bv);
+
+        if (!svptest_all(pg, cmp)) {
+            return false;
+        }
+
+        i += svcntw();
     }
- 
-    /* ---- Predicated tail ---- */
-    if (i < count) {
-        svbool_t mask = svwhilelt_b32((uint32_t)i, (uint32_t)count);
- 
-        svuint32_t va = svld1_u32(mask, (const uint32_t*)(a + i));
-        svuint32_t vb = svld1_u32(mask, (const uint32_t*)(b + i));
- 
-        svuint32_t x = sveor_u32_z(mask, va, vb);
- 
-        svbool_t neq = svcmpne_n_u32(mask, x, 0u);
-        if (svptest_any(mask, neq)) return false;
-    }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

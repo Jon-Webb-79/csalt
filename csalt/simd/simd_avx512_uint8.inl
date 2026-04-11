@@ -462,55 +462,28 @@ static inline void simd_transpose_uint8(const uint8_t* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_uint8(const uint8_t* a,
-                                    const uint8_t* b,
-                                    size_t         count) {
+static inline bool simd_uint8_arrays_equal(const uint8_t* a,
+                                           const uint8_t* b,
+                                           size_t         count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    /* 256 bytes (4 × 512-bit) per iteration */
-    size_t body_end = (count / 256u) * 256u;
-    for (; i < body_end; i += 256u) {
-        __m512i x0 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i)),
-            _mm512_loadu_si512((const __m512i*)(b + i)));
-        __m512i x1 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i + 64u)),
-            _mm512_loadu_si512((const __m512i*)(b + i + 64u)));
-        __m512i x2 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i + 128u)),
-            _mm512_loadu_si512((const __m512i*)(b + i + 128u)));
-        __m512i x3 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i + 192u)),
-            _mm512_loadu_si512((const __m512i*)(b + i + 192u)));
- 
-        __m512i any = _mm512_or_si512(_mm512_or_si512(x0, x1),
-                                      _mm512_or_si512(x2, x3));
- 
-        if (_mm512_test_epi8_mask(any, any) != 0u) return false;
-    }
- 
-    size_t vec_end = i + ((count - i) / 64u) * 64u;
+    size_t vec_end = (count / 64u) * 64u;
+
     for (; i < vec_end; i += 64u) {
-        __m512i x = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i)),
-            _mm512_loadu_si512((const __m512i*)(b + i)));
- 
-        if (_mm512_test_epi8_mask(x, x) != 0u) return false;
+        __m512i av = _mm512_loadu_si512((const void*)(a + i));
+        __m512i bv = _mm512_loadu_si512((const void*)(b + i));
+
+        __mmask64 mask = _mm512_cmpeq_epi8_mask(av, bv);
+        if (mask != 0xFFFFFFFFFFFFFFFFULL) {
+            return false;
+        }
     }
- 
-    /* Masked tail */
-    if (i < count) {
-        size_t rem = count - i;
-        __mmask64 mask = (rem >= 64u) ? (__mmask64)-1
-                                      : ((__mmask64)1u << rem) - 1u;
- 
-        __m512i va = _mm512_maskz_loadu_epi8(mask, (const __m512i*)(a + i));
-        __m512i vb = _mm512_maskz_loadu_epi8(mask, (const __m512i*)(b + i));
-        __m512i x  = _mm512_xor_si512(va, vb);
- 
-        if ((_mm512_test_epi8_mask(x, x) & mask) != 0u) return false;
+
+    for (; i < count; ++i) {
+        if (a[i] != b[i]) return false;
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

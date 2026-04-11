@@ -298,53 +298,32 @@ static inline void simd_transpose_double(const double* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_double(const double* a,
-                                     const double* b,
-                                     size_t        count) {
+static inline bool simd_double_arrays_equal(const double* a,
+                                            const double* b,
+                                            size_t        count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    size_t body_end = (count / 32u) * 32u;
-    for (; i < body_end; i += 32u) {
-        __m512i x0 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i)),
-            _mm512_loadu_si512((const __m512i*)(b + i)));
-        __m512i x1 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i + 8u)),
-            _mm512_loadu_si512((const __m512i*)(b + i + 8u)));
-        __m512i x2 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i + 16u)),
-            _mm512_loadu_si512((const __m512i*)(b + i + 16u)));
-        __m512i x3 = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i + 24u)),
-            _mm512_loadu_si512((const __m512i*)(b + i + 24u)));
- 
-        __m512i any = _mm512_or_si512(_mm512_or_si512(x0, x1),
-                                      _mm512_or_si512(x2, x3));
- 
-        if (_mm512_test_epi64_mask(any, any) != 0u) return false;
-    }
- 
-    size_t vec_end = i + ((count - i) / 8u) * 8u;
+    size_t vec_end = (count / 8u) * 8u;
+
     for (; i < vec_end; i += 8u) {
-        __m512i x = _mm512_xor_si512(
-            _mm512_loadu_si512((const __m512i*)(a + i)),
-            _mm512_loadu_si512((const __m512i*)(b + i)));
- 
-        if (_mm512_test_epi64_mask(x, x) != 0u) return false;
+        __m512d av = _mm512_loadu_pd(a + i);
+        __m512d bv = _mm512_loadu_pd(b + i);
+
+        __mmask8 mask = _mm512_cmp_pd_mask(av, bv, _CMP_EQ_OQ);
+        if (mask != 0xFFu) {
+            return false;
+        }
     }
- 
-    if (i < count) {
-        __mmask8 tail = (__mmask8)((1u << (count - i)) - 1u);
-        __m512i va = _mm512_maskz_loadu_epi64(tail, (const __m512i*)(a + i));
-        __m512i vb = _mm512_maskz_loadu_epi64(tail, (const __m512i*)(b + i));
-        __m512i x  = _mm512_xor_si512(va, vb);
- 
-        if ((_mm512_test_epi64_mask(x, x) & tail) != 0u) return false;
+
+    for (; i < count; ++i) {
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
- 
+
     return true;
-}
-// -------------------------------------------------------------------------------- 
+}// -------------------------------------------------------------------------------- 
  
 static inline size_t simd_count_nonzero_double(const double* data,
                                                size_t        count) {

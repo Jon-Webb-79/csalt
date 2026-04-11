@@ -427,35 +427,28 @@ static inline void simd_transpose_uint8(const uint8_t* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_uint8(const uint8_t* a,
-                                    const uint8_t* b,
-                                    size_t         count) {
+static inline bool simd_uint8_arrays_equal(const uint8_t* a,
+                                           const uint8_t* b,
+                                           size_t         count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
-    size_t vl = svcntb();
- 
-    size_t body_end = (count / vl) * vl;
-    for (; i < body_end; i += vl) {
-        svuint8_t va = svld1_u8(svptrue_b8(), a + i);
-        svuint8_t vb = svld1_u8(svptrue_b8(), b + i);
- 
-        svuint8_t x = sveor_u8_z(svptrue_b8(), va, vb);
- 
-        svbool_t neq = svcmpne_n_u8(svptrue_b8(), x, 0u);
-        if (svptest_any(svptrue_b8(), neq)) return false;
+
+    while (i < count) {
+        svbool_t pg = svwhilelt_b8(i, count);
+
+        svuint8_t av = svld1(pg, a + i);
+        svuint8_t bv = svld1(pg, b + i);
+
+        svbool_t cmp = svcmpeq_u8(pg, av, bv);
+
+        if (!svptest_all(pg, cmp)) {
+            return false;
+        }
+
+        i += svcntb();
     }
- 
-    if (i < count) {
-        svbool_t mask = svwhilelt_b8((uint32_t)i, (uint32_t)count);
- 
-        svuint8_t va = svld1_u8(mask, a + i);
-        svuint8_t vb = svld1_u8(mask, b + i);
- 
-        svuint8_t x = sveor_u8_z(mask, va, vb);
- 
-        svbool_t neq = svcmpne_n_u8(mask, x, 0u);
-        if (svptest_any(mask, neq)) return false;
-    }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

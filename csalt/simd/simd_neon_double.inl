@@ -267,48 +267,39 @@ static inline void simd_transpose_double(const double* src,
 }
 // -------------------------------------------------------------------------------- 
  
-static inline bool simd_equal_double(const double* a,
-                                     const double* b,
-                                     size_t        count) {
+static inline bool simd_double_arrays_equal(const double* a,
+                                            const double* b,
+                                            size_t        count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    size_t body_end = (count / 8u) * 8u;
-    for (; i < body_end; i += 8u) {
-        uint64x2_t x0 = veorq_u64(
-            vreinterpretq_u64_f64(vld1q_f64(a + i)),
-            vreinterpretq_u64_f64(vld1q_f64(b + i)));
-        uint64x2_t x1 = veorq_u64(
-            vreinterpretq_u64_f64(vld1q_f64(a + i + 2u)),
-            vreinterpretq_u64_f64(vld1q_f64(b + i + 2u)));
-        uint64x2_t x2 = veorq_u64(
-            vreinterpretq_u64_f64(vld1q_f64(a + i + 4u)),
-            vreinterpretq_u64_f64(vld1q_f64(b + i + 4u)));
-        uint64x2_t x3 = veorq_u64(
-            vreinterpretq_u64_f64(vld1q_f64(a + i + 6u)),
-            vreinterpretq_u64_f64(vld1q_f64(b + i + 6u)));
- 
-        uint64x2_t any = vorrq_u64(vorrq_u64(x0, x1),
-                                   vorrq_u64(x2, x3));
- 
-        if (vmaxvq_u32(vreinterpretq_u32_u64(any)) != 0u) return false;
-    }
- 
-    size_t vec_end = i + ((count - i) / 2u) * 2u;
+    size_t vec_end = (count / 2u) * 2u;
+
     for (; i < vec_end; i += 2u) {
-        uint64x2_t x = veorq_u64(
-            vreinterpretq_u64_f64(vld1q_f64(a + i)),
-            vreinterpretq_u64_f64(vld1q_f64(b + i)));
- 
-        if (vmaxvq_u32(vreinterpretq_u32_u64(x)) != 0u) return false;
+        float64x2_t av = vld1q_f64(a + i);
+        float64x2_t bv = vld1q_f64(b + i);
+
+        uint64x2_t cmp = vceqq_f64(av, bv);
+
+#if defined(__aarch64__)
+        if (vminvq_u64(cmp) != UINT64_MAX) {
+            return false;
+        }
+#else
+        uint64_t lanes[2];
+        vst1q_u64(lanes, cmp);
+        if (lanes[0] != UINT64_MAX || lanes[1] != UINT64_MAX) {
+            return false;
+        }
+#endif
     }
- 
+
     for (; i < count; ++i) {
-        uint64_t va, vb;
-        memcpy(&va, a + i, sizeof(uint64_t));
-        memcpy(&vb, b + i, sizeof(uint64_t));
-        if (va != vb) return false;
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 

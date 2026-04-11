@@ -342,61 +342,33 @@ static inline void simd_transpose_float(const float* src,
 }
 // -------------------------------------------------------------------------------- 
 
-static inline bool simd_equal_float(const float* a,
-                                    const float* b,
-                                    size_t       count) {
+static inline bool simd_float_arrays_equal(const float* a,
+                                           const float* b,
+                                           size_t       count) {
+    if (a == NULL || b == NULL) return false;
+
     size_t i = 0u;
- 
-    /* ---- Body: 32 floats (4 × 256-bit) per iteration ---- */
-    size_t body_end = (count / 32u) * 32u;
-    for (; i < body_end; i += 32u) {
-        __m256i x0 = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i)),
-            _mm256_loadu_si256((const __m256i*)(b + i)));
-        __m256i x1 = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i + 8u)),
-            _mm256_loadu_si256((const __m256i*)(b + i + 8u)));
-        __m256i x2 = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i + 16u)),
-            _mm256_loadu_si256((const __m256i*)(b + i + 16u)));
-        __m256i x3 = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i + 24u)),
-            _mm256_loadu_si256((const __m256i*)(b + i + 24u)));
- 
-        /* OR all XOR results — any nonzero bit means mismatch */
-        __m256i any = _mm256_or_si256(_mm256_or_si256(x0, x1),
-                                      _mm256_or_si256(x2, x3));
- 
-        /* _mm256_testz_si256(v, v) returns 1 iff v is all-zero */
-        if (!_mm256_testz_si256(any, any)) {
-            _mm256_zeroupper();
-            return false;
-        }
-    }
- 
-    /* ---- Single-vector passes ---- */
-    size_t vec_end = i + ((count - i) / 8u) * 8u;
+    size_t vec_end = (count / 8u) * 8u;
+
     for (; i < vec_end; i += 8u) {
-        __m256i x = _mm256_xor_si256(
-            _mm256_loadu_si256((const __m256i*)(a + i)),
-            _mm256_loadu_si256((const __m256i*)(b + i)));
- 
-        if (!_mm256_testz_si256(x, x)) {
+        __m256 av = _mm256_loadu_ps(a + i);
+        __m256 bv = _mm256_loadu_ps(b + i);
+        __m256 cv = _mm256_cmp_ps(av, bv, _CMP_EQ_OQ);
+
+        if (_mm256_movemask_ps(cv) != 0xFF) {
             _mm256_zeroupper();
             return false;
         }
     }
- 
+
     _mm256_zeroupper();
- 
-    /* ---- Scalar tail ---- */
+
     for (; i < count; ++i) {
-        uint32_t va, vb;
-        memcpy(&va, a + i, sizeof(uint32_t));
-        memcpy(&vb, b + i, sizeof(uint32_t));
-        if (va != vb) return false;
+        if (!(a[i] == b[i])) {
+            return false;
+        }
     }
- 
+
     return true;
 }
 // -------------------------------------------------------------------------------- 
