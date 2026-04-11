@@ -323,3 +323,225 @@ Introspection
 
 uint32_t Matrix 
 ===============
+A ``uint32_matrix_t`` is a type-safe wrapper around the generic
+:c:type:`matrix_t` container with the runtime ``dtype`` fixed to
+``UINT32_TYPE``.  It provides uint32-specific construction, element access,
+conversion, comparison, and helper functions while reusing the generic
+matrix engine implemented in ``c_matrix.h`` and ``c_matrix.c``.
+
+The wrapper exists for APIs that either:
+
+* fix the ``dtype`` to ``UINT32_TYPE``
+* replace ``void*`` element access with ``uint32_t`` / ``uint32_t*``
+* provide uint32-specialised helper behaviour such as dense SIMD fast paths
+
+All memory is managed through a caller-supplied
+:c:type:`allocator_vtable_t`.  The library does not assume a default
+allocator.
+
+Storage Formats
+---------------
+
+``uint32_matrix_t`` supports the same storage formats as
+:c:type:`matrix_t`:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Format
+     - Description
+   * - ``DENSE_MATRIX``
+     - Row-major contiguous uint32 buffer.
+   * - ``COO_MATRIX``
+     - Coordinate list with parallel ``row_idx``, ``col_idx``, and
+       ``values`` arrays.  Intended for sparse matrix assembly.
+   * - ``CSR_MATRIX``
+     - Compressed Sparse Row format for sparse row-oriented operations.
+   * - ``CSC_MATRIX``
+     - Compressed Sparse Column format for sparse column-oriented operations.
+
+.. note::
+
+   ``set_uint32_matrix`` supports dense and COO matrices.  CSR and CSC are
+   treated as derived sparse formats and are not directly mutable through
+   element-wise set operations.
+
+uint32 Comparison and Zero Semantics
+-----------------------------------
+
+The generic matrix layer supports semantic comparison and semantic zero
+testing through callback-style predicates such as
+:c:type:`matrix_equal_fn` and :c:type:`matrix_zero_fn`.  These are
+documented in ``c_matrix.h`` and are the correct place to describe
+custom comparison behaviour. :contentReference[oaicite:7]{index=7}
+
+For the uint32 wrapper specifically:
+
+* ``uint32_matrix_equal`` performs exact logical equality and uses a
+  dense SIMD fast path when both inputs are dense uint32 matrices.
+* Sparse and mixed-format comparisons fall back to generic element-wise
+  comparison through the generic matrix engine.
+* ``uint32_matrix_is_zero`` uses a dense SIMD fast path for dense uint32
+  matrices and falls back to the generic zero test for sparse formats.
+
+SIMD Fast Paths
+---------------
+
+Several dense uint32 matrix operations use SIMD-specialised implementations
+when supported by the target platform.  Mixed-format and sparse cases
+fall back to the generic matrix implementation.
+
+Current dense-uint32 SIMD fast paths include:
+
+* ``convert_uint32_matrix`` for dense-to-CSR conversion
+* ``transpose_uint32_matrix`` for dense transpose
+* ``fill_uint32_matrix`` for dense fill
+* ``uint32_matrix_is_zero`` for dense zero detection
+* ``uint32_matrix_equal`` for dense equality checks 
+
+Example Usage
+-------------
+
+.. code-block:: c
+
+   #include "c_uint32.h"
+
+   allocator_vtable_t a = heap_allocator();
+
+   uint32_matrix_expect_t r = init_uint32_dense_matrix(3, 4, a);
+   if (!r.has_value) {
+       /* handle r.u.error */
+   }
+
+   uint32_matrix_t* m = r.u.value;
+
+   set_uint32_matrix(m, 0, 0, 1u);
+   set_uint32_matrix(m, 1, 2, 5u);
+   set_uint32_matrix(m, 2, 3, 3u);
+
+   uint32_t out = 0u;
+   get_uint32_matrix(m, 1, 2, &out);
+
+   uint32_matrix_expect_t tr = transpose_uint32_matrix(m, a);
+   uint32_matrix_expect_t csr = convert_uint32_matrix(m, CSR_MATRIX, a);
+
+   return_uint32_matrix(csr.u.value);
+   return_uint32_matrix(tr.u.value);
+   return_uint32_matrix(m);
+
+.. code-block:: c
+
+   uint32_matrix_expect_t r = init_uint32_coo_matrix(100, 100, 16, true, a);
+   if (!r.has_value) {
+       /* handle r.u.error */
+   }
+
+   uint32_matrix_t* sp = r.u.value;
+
+   push_back_uint32_coo_matrix(sp, 0, 5, 3u);
+   push_back_uint32_coo_matrix(sp, 42, 99, 1u);
+   sort_uint32_coo_matrix(sp);
+
+   uint32_t v = 0u;
+   get_uint32_matrix(sp, 10, 10, &v);   /* implicit zero */
+
+   return_uint32_matrix(sp);
+
+Structs
+-------
+
+.. note::
+
+   ``uint32_matrix_t`` is a ``typedef`` alias for :c:struct:`matrix_t`.
+   The underlying generic storage layout is documented in :ref:`matrix`.
+
+.. doxygenstruct:: uint32_matrix_expect_t
+   :members:
+
+Initialisation and Teardown
+---------------------------
+
+.. doxygenfunction:: init_uint32_dense_matrix
+.. doxygenfunction:: init_uint32_coo_matrix
+.. doxygenfunction:: return_uint32_matrix
+
+Element Access
+--------------
+
+.. doxygenfunction:: get_uint32_matrix
+.. doxygenfunction:: set_uint32_matrix
+
+COO Assembly
+------------
+
+These functions are only valid for COO-format matrices.
+
+.. doxygenfunction:: reserve_uint32_coo_matrix
+.. doxygenfunction:: push_back_uint32_coo_matrix
+.. doxygenfunction:: sort_uint32_coo_matrix
+
+Lifecycle / Structural Operations
+---------------------------------
+
+.. doxygenfunction:: clear_uint32_matrix
+.. doxygenfunction:: copy_uint32_matrix
+.. doxygenfunction:: convert_uint32_matrix
+.. doxygenfunction:: convert_uint32_matrix_zero
+.. doxygenfunction:: transpose_uint32_matrix
+
+Fill
+----
+
+.. doxygenfunction:: fill_uint32_matrix
+
+Shape and Compatibility
+-----------------------
+
+.. doxygenfunction:: uint32_matrix_has_same_shape
+.. doxygenfunction:: uint32_matrix_is_square
+.. doxygenfunction:: uint32_matrix_is_sparse
+.. doxygenfunction:: uint32_matrix_is_zero
+.. doxygenfunction:: uint32_matrix_equal
+.. doxygenfunction:: uint32_matrix_is_add_compatible
+.. doxygenfunction:: uint32_matrix_is_multiply_compatible
+
+Row and Column Swaps
+--------------------
+
+.. doxygenfunction:: swap_uint32_matrix_rows
+.. doxygenfunction:: swap_uint32_matrix_cols
+
+Special Constructors
+--------------------
+
+.. doxygenfunction:: init_uint32_identity_matrix
+.. doxygenfunction:: init_uint32_row_vector
+.. doxygenfunction:: init_uint32_col_vector
+
+Vector Queries
+--------------
+
+.. doxygenfunction:: uint32_matrix_is_row_vector
+.. doxygenfunction:: uint32_matrix_is_col_vector
+.. doxygenfunction:: uint32_matrix_is_vector
+.. doxygenfunction:: uint32_matrix_vector_length
+
+Generic Introspection
+---------------------
+
+Matrix introspection is documented in ``c_matrix.h`` rather than repeated
+for each typed wrapper.  Users should call the generic matrix functions
+directly:
+
+.. doxygenfunction:: matrix_rows
+.. doxygenfunction:: matrix_cols
+.. doxygenfunction:: matrix_data_size
+.. doxygenfunction:: matrix_dtype
+.. doxygenfunction:: matrix_format
+.. doxygenfunction:: matrix_nnz
+
+.. note::
+
+   These functions are type-agnostic and therefore are not duplicated as
+   uint32-specific APIs in the public documentation.
