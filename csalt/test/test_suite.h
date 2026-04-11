@@ -10,7 +10,7 @@
 // - Copyright: Copyright 2025, Jon Webb Inc.
 // ================================================================================
 // ================================================================================
-// 11497
+// 12415
 #ifndef TEST_SUITE_H
 #define TEST_SUITE_H
 
@@ -293,6 +293,11 @@ extern const size_t test_int32_matrix_count;
 
 extern const struct CMUnitTest test_uint64_matrix[];
 extern const size_t test_uint64_matrix_count;
+// ================================================================================ 
+// ================================================================================ 
+
+extern const struct CMUnitTest test_int64_matrix[];
+extern const size_t test_int64_matrix_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus

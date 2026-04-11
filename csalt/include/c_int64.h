@@ -19,6 +19,7 @@
 
 #include "c_array.h"
 #include "c_dict.h"
+#include "c_matrix.h"
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -1576,6 +1577,629 @@ bool is_int64_dict_empty(const int64_dict_t* dict);
 // ================================================================================ 
 // ================================================================================ 
 
+// ================================================================================ 
+// ================================================================================ 
+// int64_matrix_t — type-safe int64 wrapper around matrix_t
+//
+// This section provides a int64-specialised interface to the generic matrix_t
+// type.  int64_matrix_t is a typedef for matrix_t; all functions below fix
+// the dtype to int64_TYPE and accept / return int64 values directly so that
+// callers never need to pass a dtype_id_t or void* value.
+//
+// The wrapper covers every public function in c_matrix.h that either:
+//   (a) takes a dtype_id_t argument (replaced with int64_TYPE), or
+//   (b) takes or returns void* element pointers (replaced with int64 / int64*).
+//
+// Functions that are already type-agnostic (matrix_rows, matrix_cols,
+// matrix_is_square, matrix_has_same_shape, etc.) are wrapped with a
+// int64_matrix_t* signature for consistency, but simply delegate.
+// ================================================================================ 
+// ================================================================================ 
+
+typedef matrix_t int64_matrix_t;
+
+typedef struct {
+    bool has_value;
+    union {
+        int64_matrix_t* value;
+        error_code_t    error;
+    } u;
+} int64_matrix_expect_t;
+
+/* =============================================================================
+ * Comparator / Predicate Function Types
+ * ========================================================================== */
+
+/**
+ * @brief Predicate function to determine semantic zero for int64 values.
+ *
+ * This function defines what values should be treated as "zero" during
+ * dense-to-sparse conversion operations. It is primarily used by:
+ *
+ * - convert_int64_matrix_zero()
+ *
+ * @param value The int64 value to evaluate.
+ *
+ * @return true if the value should be treated as zero, false otherwise.
+ *
+ * @note If NULL is passed, the default behavior is:
+ *       value == 0.0f
+ *
+ * @example
+ * Treat both 0.0 and -1.0 as zero:
+ * @code{.c}
+ * bool zero_or_neg_one(int64 v) {
+ *     return (v == 0) || (v == 3);
+ * }
+ * @endcode
+ */
+typedef bool (*int64_zero_fn)(int64_t value);
+
+// ================================================================================
+// Initialization and teardown
+// ================================================================================
+
+/**
+ * @brief Initialize a dense int64 matrix with zero-initialized storage.
+ *
+ * Creates a dense matrix of shape @p rows by @p cols with the dtype fixed to
+ * int64_TYPE. All elements are initialised to zero.
+ *
+ * @param rows     Number of matrix rows. Must be > 0.
+ * @param cols     Number of matrix columns. Must be > 0.
+ * @param alloc_v  Allocator for the matrix header and data buffer.
+ *
+ * @return int64_matrix_expect_t with has_value true on success.
+ *
+ * @code{.c}
+ *     allocator_vtable_t a = heap_allocator();
+ *     int64_matrix_expect_t r = init_int64_dense_matrix(3, 4, a);
+ *     if (!r.has_value) { fprintf(stderr, "%d\n", r.u.error); return; }
+ *     int64_matrix_t* m = r.u.value;
+ *
+ *     set_int64_matrix(m, 0, 0, 1);
+ *     set_int64_matrix(m, 1, 2, 5);
+ *
+ *     return_int64_matrix(m);
+ * @endcode
+ */
+int64_matrix_expect_t init_int64_dense_matrix(size_t             rows,
+                                              size_t             cols,
+                                              allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize an empty COO sparse int64 matrix.
+ *
+ * Creates a coordinate-list sparse matrix with storage for up to @p capacity
+ * entries. The dtype is fixed to int64_TYPE.
+ *
+ * @param rows      Number of matrix rows. Must be > 0.
+ * @param cols      Number of matrix columns. Must be > 0.
+ * @param capacity  Initial entry capacity. Must be > 0.
+ * @param growth    If true, the COO storage may grow when full.
+ * @param alloc_v   Allocator for the matrix header and COO buffers.
+ *
+ * @return int64_matrix_expect_t with has_value true on success.
+ *
+ * @code{.c}
+ *     allocator_vtable_t a = heap_allocator();
+ *     int64_matrix_expect_t r = init_int64_coo_matrix(100, 100, 16, true, a);
+ *     int64_matrix_t* m = r.u.value;
+ *
+ *     push_back_int64_coo_matrix(m, 0, 5, 3);
+ *     push_back_int64_coo_matrix(m, 42, 99, 7);
+ *
+ *     return_int64_matrix(m);
+ * @endcode
+ */
+int64_matrix_expect_t init_int64_coo_matrix(size_t             rows,
+                                            size_t             cols,
+                                            size_t             capacity,
+                                            bool               growth,
+                                            allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Release all storage owned by a int64 matrix.
+ *
+ * Frees internal buffers and the matrix object itself. Passing NULL is safe.
+ *
+ * @param mat  Matrix to destroy, or NULL.
+ */
+void return_int64_matrix(int64_matrix_t* mat);
+
+// ================================================================================
+// Element access
+// ================================================================================
+
+/**
+ * @brief Read a int64 element at the given row and column.
+ *
+ * For sparse formats, missing entries are returned as 0.0f.
+ *
+ * @param mat  Matrix to read from.
+ * @param row  Zero-based row index.
+ * @param col  Zero-based column index.
+ * @param out  Receives the int64 value. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER / INVALID_ARG / OUT_OF_BOUNDS.
+ *
+ * @code
+ *     int64_t v = 0;
+ *     get_int64_matrix(m, 1, 2, &v);
+ * @endcode
+ */
+error_code_t get_int64_matrix(const int64_matrix_t* mat,
+                              size_t                row,
+                              size_t                col,
+                              int64_t*              out);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Write a int64 element at the given row and column.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return ILLEGAL_STATE.
+ *
+ * @param mat    Matrix to modify.
+ * @param row    Zero-based row index.
+ * @param col    Zero-based column index.
+ * @param value  The int64 value to store.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     set_int64_matrix(m, 0, 0, 42u);
+ * @endcode
+ */
+error_code_t set_int64_matrix(int64_matrix_t* mat,
+                              size_t          row,
+                              size_t          col,
+                              int64_t         value);
+
+// ================================================================================
+// COO assembly helpers
+// ================================================================================
+
+/**
+ * @brief Reserve additional entry capacity for a int64 COO matrix.
+ *
+ * @param mat       COO matrix to grow.
+ * @param capacity  Requested minimum entry capacity.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t reserve_int64_coo_matrix(int64_matrix_t* mat,
+                                      size_t          capacity);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Append or overwrite a int64 entry in a COO matrix.
+ *
+ * If (row, col) already exists its value is overwritten; otherwise a new
+ * entry is appended. The matrix is marked unsorted after insertion.
+ *
+ * @param mat    COO matrix to append to.
+ * @param row    Zero-based row index.
+ * @param col    Zero-based column index.
+ * @param value  The int64 value to insert.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     push_back_int64_coo_matrix(m, 0, 5, 3);
+ * @endcode
+ */
+error_code_t push_back_int64_coo_matrix(int64_matrix_t* mat,
+                                        size_t          row,
+                                        size_t          col,
+                                        int64_t         value);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Sort COO entries by (row, col).
+ *
+ * @param mat  COO matrix to sort.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t sort_int64_coo_matrix(int64_matrix_t* mat);
+
+// ================================================================================
+// Lifecycle / structural operations
+// ================================================================================
+
+/**
+ * @brief Clear a int64 matrix, preserving its allocated storage.
+ *
+ * Dense matrices are zeroed. COO matrices reset to zero logical entries.
+ *
+ * @param mat  Matrix to clear.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t clear_int64_matrix(int64_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Deep-copy a int64 matrix.
+ *
+ * @param src      Matrix to copy.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return int64_matrix_expect_t with has_value true on success.
+ */
+int64_matrix_expect_t copy_int64_matrix(const int64_matrix_t* src,
+                                      allocator_vtable_t    alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Convert a int64 matrix to a different storage format.
+ *
+ * Produces a new matrix with the same logical values in the target format.
+ *
+ * @param src      Matrix to convert.
+ * @param target   Desired destination storage format. Can be any value in 
+ * ``matrix_format_t`` enum, (i.e. ``DENSE_MATRIX``, ``COO_MATRIX``, 
+ * ``CSR_MATRIX``, ``CSC__MATRIX``)
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return int64_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     int64_matrix_expect_t csr =
+ *         convert_int64_matrix(dense_m, CSR_MATRIX, a);
+ * @endcode
+ */
+int64_matrix_expect_t convert_int64_matrix(const int64_matrix_t* src,
+                                         matrix_format_t       target,
+                                         allocator_vtable_t    alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compute the transpose of a int64 matrix.
+ *
+ * Dense stays dense, COO stays COO, CSR transposes to CSR, CSC to CSC.
+ *
+ * @param src      Matrix to transpose.
+ * @param alloc_v  Allocator for the destination matrix.
+ *
+ * @return int64_matrix_expect_t with has_value true on success.
+ */
+int64_matrix_expect_t transpose_int64_matrix(const int64_matrix_t* src,
+                                           allocator_vtable_t    alloc_v);
+
+// ================================================================================
+// Fill and zero
+// ================================================================================
+
+/**
+ * @brief Fill a int64 matrix with a single repeated value.
+ *
+ * Nonzero fill is supported only for dense matrices. Supplying 0.0f resets
+ * the matrix through clear_int64_matrix.
+ *
+ * @param mat    Matrix to fill.
+ * @param value  The int64 fill value.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ *
+ * @code
+ *     fill_int64_matrix(m, 1);   // every element becomes 1.0
+ *     fill_int64_matrix(m, 0);   // equivalent to clear
+ * @endcode
+ */
+error_code_t fill_int64_matrix(int64_matrix_t* mat,
+                              int64_t         value);
+// ================================================================================
+// Shape and compatibility queries
+// ================================================================================
+
+/**
+ * @brief Test whether two int64 matrices have identical shape.
+ */
+bool int64_matrix_has_same_shape(const int64_matrix_t* a,
+                                const int64_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a int64 matrix is square.
+ */
+bool int64_matrix_is_square(const int64_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a int64 matrix uses a sparse representation.
+ */
+bool int64_matrix_is_sparse(const int64_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a int64 matrix is logically all zeros.
+ */
+bool int64_matrix_is_zero(const int64_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two int64 matrices for numerical equality.
+ *
+ * This function determines whether two matrices are logically equal based on
+ * their numerical values, independent of their internal storage format.
+ *
+ * Equality is defined using standard int64ing-point comparison semantics:
+ *
+ * Matrices must:
+ * - be non-NULL
+ * - have the same dimensions (rows and columns)
+ * - have dtype == int64_TYPE
+ *
+ * The comparison is **format-agnostic**, meaning matrices with different
+ * storage formats (e.g., dense vs COO vs CSR vs CSC) are considered equal
+ * if they represent the same logical values.
+ *
+ * Performance optimizations:
+ * - Dense × Dense comparisons use SIMD-accelerated numerical comparison.
+ * - COO × COO comparisons use a fast path when both matrices are sorted,
+ *   comparing index arrays and values directly.
+ * - All other cases fall back to element-wise comparison using logical
+ *   matrix access.
+ *
+ * @param a First matrix (may be NULL).
+ * @param b Second matrix (may be NULL).
+ *
+ * @return true if the matrices are numerically equal, false otherwise.
+ *
+ * @note This function performs numerical comparison only. For custom
+ *       comparison rules (e.g., tolerance-based equality or sign-sensitive
+ *       comparisons), use :c:func:`int64_matrix_equal_cmp`.
+ *
+ * @code{.c}
+ * allocator_vtable_t alloc = heap_allocator();
+ *
+ * int64_matrix_expect_t r1 = init_int64_dense_matrix(2, 2, alloc);
+ * int64_matrix_expect_t r2 = init_int64_dense_matrix(2, 2, alloc);
+ *
+ * int64_matrix_t* a = r1.u.value;
+ * int64_matrix_t* b = r2.u.value;
+ *
+ * set_int64_matrix(a, 0, 0, 4);
+ * set_int64_matrix(b, 0, 0,  0);
+ *
+ * assert_true(int64_matrix_equal(a, b)); // false
+ *
+ * return_int64_matrix(a);
+ * return_int64_matrix(b);
+ * @endcode
+ *
+ * @code{.c}
+ * // Equality across different storage formats
+ *
+ * int64_matrix_expect_t dense_r = init_int64_dense_matrix(2, 2, alloc);
+ * int64_matrix_t* dense = dense_r.u.value;
+ *
+ * set_int64_matrix(dense, 0, 1, 3);
+ *
+ * int64_matrix_expect_t csr_r =
+ *     convert_int64_matrix(dense, CSR_MATRIX, alloc);
+ *
+ * int64_matrix_t* csr = csr_r.u.value;
+ *
+ * // Same logical values → equal
+ * assert_true(int64_matrix_equal(dense, csr)); // true
+ *
+ * return_int64_matrix(csr);
+ * return_int64_matrix(dense);
+ * @endcode
+ */
+bool int64_matrix_equal(const int64_matrix_t* a,
+                       const int64_matrix_t* b);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether two int64 matrices are compatible for addition.
+ *
+ * Requires equal shape and equal dtype.
+ */
+bool int64_matrix_is_add_compatible(const int64_matrix_t* a,
+                                   const int64_matrix_t* b);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether two int64 matrices are compatible for multiplication.
+ *
+ * Requires a->cols == b->rows and equal dtype.
+ */
+bool int64_matrix_is_multiply_compatible(const int64_matrix_t* a,
+                                        const int64_matrix_t* b);
+
+// ================================================================================
+// Row / column swaps
+// ================================================================================
+
+/**
+ * @brief Swap two rows of a int64 matrix in place.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
+ *
+ * @param mat  Matrix to modify.
+ * @param r1   First zero-based row index.
+ * @param r2   Second zero-based row index.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t swap_int64_matrix_rows(int64_matrix_t* mat,
+                                   size_t          r1,
+                                   size_t          r2);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Swap two columns of a int64 matrix in place.
+ *
+ * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
+ *
+ * @param mat  Matrix to modify.
+ * @param c1   First zero-based column index.
+ * @param c2   Second zero-based column index.
+ *
+ * @return NO_ERROR on success, or an appropriate error_code_t.
+ */
+error_code_t swap_int64_matrix_cols(int64_matrix_t* mat,
+                                   size_t          c1,
+                                   size_t          c2);
+
+// ================================================================================
+// Special matrix constructors
+// ================================================================================
+
+/**
+ * @brief Initialize a dense int64 identity matrix.
+ *
+ * Creates an @p n by @p n dense matrix with 1.0f on the diagonal and 0.0f
+ * elsewhere.
+ *
+ * @param n        Matrix order (rows == cols).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return int64_matrix_expect_t with has_value true on success.
+ *
+ * @code
+ *     int64_matrix_expect_t r = init_int64_identity_matrix(3, a);
+ *     // 3x3 identity matrix.
+ * @endcode
+ */
+int64_matrix_expect_t init_int64_identity_matrix(size_t             n,
+                                               allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize a dense int64 row vector (1 x length).
+ *
+ * @param length   Vector length (number of columns).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return int64_matrix_expect_t with has_value true on success.
+ */
+int64_matrix_expect_t init_int64_row_vector(size_t             length,
+                                          allocator_vtable_t alloc_v);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize a dense int64 column vector (length x 1).
+ *
+ * @param length   Vector length (number of rows).
+ * @param alloc_v  Allocator for the matrix.
+ *
+ * @return int64_matrix_expect_t with has_value true on success.
+ */
+int64_matrix_expect_t init_int64_col_vector(size_t             length,
+                                          allocator_vtable_t alloc_v);
+
+// ================================================================================
+// Vector shape queries
+// ================================================================================
+
+/**
+ * @brief Test whether a int64 matrix has row-vector shape (1 x N).
+ */
+bool int64_matrix_is_row_vector(const int64_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a int64 matrix has column-vector shape (N x 1).
+ */
+bool int64_matrix_is_col_vector(const int64_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Test whether a int64 matrix has vector shape (row or column).
+ */
+bool int64_matrix_is_vector(const int64_matrix_t* mat);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the logical length of a vector-shaped int64 matrix.
+ *
+ * For row vectors returns cols; for column vectors returns rows.
+ * Non-vector matrices return 0.
+ */
+size_t int64_matrix_vector_length(const int64_matrix_t* mat);
+
+// ================================================================================
+// Conversion with semantic zero callback
+// ================================================================================
+
+/**
+ * @brief Convert a int64 matrix to a different storage format using an
+ *        optional semantic zero-test.
+ *
+ * This function performs the same structural conversion as
+ * :c:func:`convert_int64_matrix`, but allows the caller to define what
+ * int64 values should be treated as zero during dense-to-sparse conversion.
+ *
+ * The @p is_zero callback is used only when:
+ *   - @p src is a dense matrix, and
+ *   - @p target is COO_MATRIX, CSR_MATRIX, or CSC_MATRIX.
+ *
+ * In all other cases, this function behaves exactly like
+ * :c:func:`convert_int64_matrix`.
+ *
+ * If @p is_zero is NULL, the default zero rule is:
+ *
+ * @code{.c}
+ * value == 0
+ * @endcode
+ *
+ * @param src      Matrix to convert. Must not be NULL.
+ * @param target   Desired destination storage format.
+ * @param alloc_v  Allocator for the destination matrix.
+ * @param is_zero  Optional semantic zero predicate used only for
+ *                 dense-to-sparse conversion.
+ *
+ * @return int64_matrix_expect_t with has_value true on success, or
+ *         u.error describing the failure.
+ *
+ * Possible failure codes include:
+ *   - NULL_POINTER
+ *   - ILLEGAL_STATE
+ *   - LENGTH_OVERFLOW
+ *   - BAD_ALLOC
+ *   - OUT_OF_MEMORY
+ *
+ * @code{.c}
+ * static bool zero_or_neg_one(int64 v) {
+ *     return (v == 0) || (v == 3);
+ * }
+ *
+ * int64_matrix_expect_t r =
+ *     convert_int64_matrix_zero(dense_m, CSR_MATRIX, alloc, zero_or_neg_one);
+ * @endcode
+ *
+ * @note This function is primarily intended for domain-specific sparse
+ *       conversion rules where exact zero is not sufficient.
+ */
+int64_matrix_expect_t convert_int64_matrix_zero(const int64_matrix_t* src,
+                                              matrix_format_t       target,
+                                              allocator_vtable_t    alloc_v,
+                                              int64_zero_fn         is_zero);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
