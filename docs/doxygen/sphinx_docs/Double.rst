@@ -331,7 +331,7 @@ Introspection
 
 
 double Matrix
-============
+=============
 A ``double_matrix_t`` is a type-safe wrapper around the generic
 :c:type:`matrix_t` container with the runtime ``dtype`` fixed to
 ``double_TYPE``.  It provides double-specific construction, element access,
@@ -377,7 +377,7 @@ Storage Formats
    element-wise set operations.
 
 double Comparison and Zero Semantics
------------------------------------
+------------------------------------
 
 The generic matrix layer supports semantic comparison and semantic zero
 testing through callback-style predicates such as

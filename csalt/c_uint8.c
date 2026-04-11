@@ -530,10 +530,12 @@ bool is_uint8_dict_empty(const uint8_dict_t* dict) {
 // ================================================================================ 
 // ================================================================================ 
 
+// ================================================================================
+// ================================================================================
 // uint8_matrix_t — type-safe uint8 wrapper implementations
 //
 // Every function below is a thin delegation to the corresponding generic
-// matrix_t function, fixing the dtype to uint8_TYPE and converting between
+// matrix_t function, fixing the dtype to UINT8_TYPE and converting between
 // uint8 / uint8* and the void* interface expected by c_matrix.h.
 // ================================================================================
 // ================================================================================
@@ -592,7 +594,7 @@ void return_uint8_matrix(uint8_matrix_t* mat) {
 error_code_t get_uint8_matrix(const uint8_matrix_t* mat,
                               size_t                row,
                               size_t                col,
-                              uint8_t*              out) {
+                              uint8_t*               out) {
     if (mat == NULL || out == NULL) return NULL_POINTER;
     return get_matrix(mat, row, col, out);
 }
@@ -658,82 +660,166 @@ uint8_matrix_expect_t convert_uint8_matrix(const uint8_matrix_t* src,
             .u.error   = NULL_POINTER
         };
     }
- 
-    /* SIMD fast path: dense uint8 → CSR */
+
+    /* SIMD fast path: dense uint8 -> CSR */
     if (src->format == DENSE_MATRIX && target == CSR_MATRIX) {
-        const uint8_t* data = (const uint8_t*)src->rep.dense.data;
-        size_t total = src->rows * src->cols;
- 
+        const uint8_t* data = NULL;
+        size_t total = 0u;
+        size_t nnz = 0u;
+        size_t row_ptr_bytes = 0u;
+        size_t col_idx_bytes = 0u;
+        size_t values_bytes = 0u;
+        size_t* row_ptr = NULL;
+        size_t* col_idx = NULL;
+        uint8_t* values = NULL;
+        uint8_matrix_t* dst = NULL;
+        void_ptr_expect_t mr;
+        void_ptr_expect_t rp_r;
+        void_ptr_expect_t ci_r;
+        void_ptr_expect_t vl_r;
+
+        /* Validate allocator interface required by this fast path */
+        if (alloc_v.allocate == NULL || alloc_v.return_element == NULL) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = NULL_POINTER
+            };
+        }
+
+        /* Defensive validation of dense backing storage */
+        if ((src->rows > 0u) && (src->cols > 0u) && (src->rep.dense.data == NULL)) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = ILLEGAL_STATE
+            };
+        }
+
+        /* Overflow check for rows * cols */
+        if ((src->rows != 0u) && (src->cols > (SIZE_MAX / src->rows))) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+        total = src->rows * src->cols;
+        data = (const uint8_t*)src->rep.dense.data;
+
         /* Pass 1: count nonzeros (SIMD-accelerated) */
-        size_t nnz = simd_count_nonzero_uint8(data, total);
- 
-        /* Allocate the matrix_t header */
-        void_ptr_expect_t mr = alloc_v.allocate(
-            alloc_v.ctx, sizeof(matrix_t), true);
+        nnz = simd_count_nonzero_uint8(data, total);
+
+        /* Overflow checks for byte counts */
+        if ((src->rows + 1u) < src->rows) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+        if ((src->rows + 1u) > (SIZE_MAX / sizeof(size_t))) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+        if (nnz > (SIZE_MAX / sizeof(size_t))) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+        if (nnz > (SIZE_MAX / sizeof(uint8_t))) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+
+        /* Allocate the matrix header */
+        mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
         if (!mr.has_value) {
             return (uint8_matrix_expect_t){
-                .has_value = false, .u.error = BAD_ALLOC };
+                .has_value = false,
+                .u.error   = BAD_ALLOC
+            };
         }
- 
-        uint8_matrix_t* dst = (uint8_matrix_t*)mr.u.value;
- 
+
+        dst = (uint8_matrix_t*)mr.u.value;
         dst->rows      = src->rows;
         dst->cols      = src->cols;
         dst->dtype     = UINT8_TYPE;
         dst->data_size = sizeof(uint8_t);
         dst->format    = CSR_MATRIX;
         dst->alloc_v   = alloc_v;
- 
+
         dst->rep.csr.nnz     = 0u;
         dst->rep.csr.row_ptr = NULL;
         dst->rep.csr.col_idx = NULL;
         dst->rep.csr.values  = NULL;
- 
-        /* Allocate CSR arrays */
-        size_t row_ptr_bytes = (src->rows + 1u) * sizeof(size_t);
-        size_t col_idx_bytes = nnz * sizeof(size_t);
-        size_t values_bytes  = nnz * sizeof(uint8_t);
- 
-        void_ptr_expect_t rp_r = alloc_v.allocate(
-            alloc_v.ctx, row_ptr_bytes, true);
-        void_ptr_expect_t ci_r = alloc_v.allocate(
-            alloc_v.ctx, (nnz > 0u) ? col_idx_bytes : 1u, true);
-        void_ptr_expect_t vl_r = alloc_v.allocate(
-            alloc_v.ctx, (nnz > 0u) ? values_bytes : 1u, true);
- 
+
+        row_ptr_bytes = (src->rows + 1u) * sizeof(size_t);
+        col_idx_bytes = nnz * sizeof(size_t);
+        values_bytes  = nnz * sizeof(uint8_t);
+
+        /*
+         * For nnz == 0, allocate a minimum of 1 byte for col_idx/values so the
+         * allocator is never asked for a zero-size block. The logical nnz stays 0.
+         */
+        rp_r = alloc_v.allocate(alloc_v.ctx, row_ptr_bytes, true);
+        ci_r = alloc_v.allocate(alloc_v.ctx, (nnz > 0u) ? col_idx_bytes : 1u, true);
+        vl_r = alloc_v.allocate(alloc_v.ctx, (nnz > 0u) ? values_bytes  : 1u, true);
+
         if (!rp_r.has_value || !ci_r.has_value || !vl_r.has_value) {
-            if (rp_r.has_value) alloc_v.return_element(alloc_v.ctx, rp_r.u.value);
-            if (ci_r.has_value) alloc_v.return_element(alloc_v.ctx, ci_r.u.value);
-            if (vl_r.has_value) alloc_v.return_element(alloc_v.ctx, vl_r.u.value);
+            if (rp_r.has_value) {
+                alloc_v.return_element(alloc_v.ctx, rp_r.u.value);
+            }
+            if (ci_r.has_value) {
+                alloc_v.return_element(alloc_v.ctx, ci_r.u.value);
+            }
+            if (vl_r.has_value) {
+                alloc_v.return_element(alloc_v.ctx, vl_r.u.value);
+            }
             alloc_v.return_element(alloc_v.ctx, dst);
+
             return (uint8_matrix_expect_t){
-                .has_value = false, .u.error = OUT_OF_MEMORY };
+                .has_value = false,
+                .u.error   = OUT_OF_MEMORY
+            };
         }
- 
-        size_t* row_ptr = (size_t*)rp_r.u.value;
-        size_t* col_idx = (size_t*)ci_r.u.value;
-        uint8_t*  values  = (uint8_t*)vl_r.u.value;
- 
-        /* Pass 2: scatter nonzeros into CSR arrays (SIMD where available) */
+
+        row_ptr = (size_t*)rp_r.u.value;
+        col_idx = (size_t*)ci_r.u.value;
+        values  = (uint8_t*)vl_r.u.value;
+
+        /* Pass 2: scatter nonzeros into CSR arrays */
         row_ptr[0] = 0u;
-        size_t k = 0u;
- 
-        for (size_t i = 0u; i < src->rows; ++i) {
-            const uint8_t* row_data = data + (i * src->cols);
-            k = simd_scatter_csr_row_uint8(
-                row_data, src->cols, 0u, col_idx, values, k);
-            row_ptr[i + 1u] = k;
+        if (nnz > 0u) {
+            size_t k = 0u;
+
+            for (size_t i = 0u; i < src->rows; ++i) {
+                const uint8_t* row_data = data + (i * src->cols);
+                k = simd_scatter_csr_row_uint8(
+                    row_data, src->cols, 0u, col_idx, values, k
+                );
+                row_ptr[i + 1u] = k;
+            }
+
+            dst->rep.csr.nnz = k;
+        } else {
+            for (size_t i = 0u; i < src->rows; ++i) {
+                row_ptr[i + 1u] = 0u;
+            }
+            dst->rep.csr.nnz = 0u;
         }
- 
-        dst->rep.csr.nnz     = nnz;
+
         dst->rep.csr.row_ptr = row_ptr;
         dst->rep.csr.col_idx = col_idx;
         dst->rep.csr.values  = (uint8_t*)values;
- 
+
         return (uint8_matrix_expect_t){
-            .has_value = true, .u.value = dst };
+            .has_value = true,
+            .u.value   = dst
+        };
     }
- 
+
     /* All other conversions: delegate to generic path */
     return _wrap_matrix_expect(convert_matrix(src, target, alloc_v));
 }
@@ -788,51 +874,6 @@ error_code_t fill_uint8_matrix(uint8_matrix_t* mat,
     simd_fill_uint8(data, count, value);
     return NO_ERROR;
 }
-// --------------------------------------------------------------------------------
-
-error_code_t zero_uint8_matrix(uint8_matrix_t* mat) {
-    return clear_matrix(mat);
-}
-
-// ================================================================================
-// Introspection
-// ================================================================================
-
-size_t uint8_matrix_rows(const uint8_matrix_t* mat) {
-    return matrix_rows(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-size_t uint8_matrix_cols(const uint8_matrix_t* mat) {
-    return matrix_cols(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-size_t uint8_matrix_nnz(const uint8_matrix_t* mat) {
-    return matrix_nnz(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-matrix_format_t uint8_matrix_format(const uint8_matrix_t* mat) {
-    return matrix_format(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-size_t uint8_matrix_storage_bytes(const uint8_matrix_t* mat) {
-    return matrix_storage_bytes(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-const char* uint8_matrix_format_name(const uint8_matrix_t* mat) {
-    if (mat == NULL) return "UNKNOWN_MATRIX_FORMAT";
-    return matrix_format_name(mat->format);
-}
-
 // ================================================================================
 // Shape and compatibility queries
 // ================================================================================
@@ -856,7 +897,7 @@ bool uint8_matrix_is_sparse(const uint8_matrix_t* mat) {
 
 // --------------------------------------------------------------------------------
 
-bool is_uint8_matrix_zero(const uint8_matrix_t* mat) {
+bool uint8_matrix_is_zero(const uint8_matrix_t* mat) {
     if (mat == NULL) return true;
 
     /* SIMD fast path: dense uint8 */
@@ -875,20 +916,60 @@ bool is_uint8_matrix_zero(const uint8_matrix_t* mat) {
 bool uint8_matrix_equal(const uint8_matrix_t* a,
                         const uint8_matrix_t* b) {
     if (a == NULL || b == NULL) return false;
-    if (!matrix_has_same_shape(a, b)) return false;
-    if (a->dtype != b->dtype) return false;
- 
-    /* SIMD fast path: both dense uint8 matrices — flat linear comparison */
+    if (!matrix_has_same_shape((const matrix_t*)a, (const matrix_t*)b)) return false;
+    if (a->dtype != UINT8_TYPE || b->dtype != UINT8_TYPE) return false;
+
+    /* Fast path: both dense */
     if (a->format == DENSE_MATRIX && b->format == DENSE_MATRIX) {
         const uint8_t* da = (const uint8_t*)a->rep.dense.data;
         const uint8_t* db = (const uint8_t*)b->rep.dense.data;
         return simd_uint8_arrays_equal(da, db, a->rows * a->cols);
     }
- 
-    /* Mixed/sparse formats: fall back to generic element-wise comparison */
-    return matrix_equal(a, b);
-}
 
+    /* Fast path: both COO and sorted */
+    if (a->format == COO_MATRIX && b->format == COO_MATRIX &&
+        a->rep.coo.sorted && b->rep.coo.sorted) {
+
+        size_t nnz = a->rep.coo.nnz;
+        if (nnz != b->rep.coo.nnz) return false;
+
+        if (nnz > 0u) {
+            if (memcmp(a->rep.coo.row_idx, b->rep.coo.row_idx,
+                       nnz * sizeof(size_t)) != 0) {
+                return false;
+            }
+
+            if (memcmp(a->rep.coo.col_idx, b->rep.coo.col_idx,
+                       nnz * sizeof(size_t)) != 0) {
+                return false;
+            }
+
+            if (!simd_uint8_arrays_equal(
+                    (const uint8_t*)a->rep.coo.values,
+                    (const uint8_t*)b->rep.coo.values,
+                    nnz)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /* General logical comparison */
+    for (size_t i = 0u; i < a->rows; ++i) {
+        for (size_t j = 0u; j < a->cols; ++j) {
+            uint8_t va = 0u;
+            uint8_t vb = 0u;
+
+            if (get_matrix((const matrix_t*)a, i, j, &va) != NO_ERROR) return false;
+            if (get_matrix((const matrix_t*)b, i, j, &vb) != NO_ERROR) return false;
+
+            if (!(va == vb)) return false;
+        }
+    }
+
+    return true;
+}
 // --------------------------------------------------------------------------------
 
 bool uint8_matrix_is_add_compatible(const uint8_matrix_t* a,
@@ -974,6 +1055,352 @@ bool uint8_matrix_is_vector(const uint8_matrix_t* mat) {
 
 size_t uint8_matrix_vector_length(const uint8_matrix_t* mat) {
     return matrix_vector_length(mat);
+}
+// ================================================================================
+// convert_uint8_matrix_zero
+// ================================================================================
+
+// ================================================================================
+// Internal helper
+// ================================================================================
+
+static inline bool _uint8_value_is_zero(uint8_t value, uint8_zero_fn is_zero) {
+    if (is_zero != NULL) {
+        return is_zero(value);
+    }
+    return (value == 0u);
+}
+
+// ================================================================================
+// Semantic-zero conversion for uint8 matrices
+// ================================================================================
+
+uint8_matrix_expect_t convert_uint8_matrix_zero(const uint8_matrix_t* src,
+                                                matrix_format_t       target,
+                                                allocator_vtable_t    alloc_v,
+                                                uint8_zero_fn         is_zero) {
+    if (src == NULL) {
+        return (uint8_matrix_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+
+    /*
+     * The semantic-zero callback only matters for dense -> sparse conversion.
+     * For all other cases, delegate to the normal uint8 conversion path.
+     */
+    if (src->format != DENSE_MATRIX ||
+        (target != COO_MATRIX && target != CSR_MATRIX && target != CSC_MATRIX)) {
+        return convert_uint8_matrix(src, target, alloc_v);
+    }
+
+    /* Validate allocator interface needed by the direct allocation path */
+    if (alloc_v.allocate == NULL || alloc_v.return_element == NULL) {
+        return (uint8_matrix_expect_t){
+            .has_value = false,
+            .u.error   = NULL_POINTER
+        };
+    }
+
+    /* Defensive validation of dense backing storage */
+    if ((src->rows > 0u) && (src->cols > 0u) && (src->rep.dense.data == NULL)) {
+        return (uint8_matrix_expect_t){
+            .has_value = false,
+            .u.error   = ILLEGAL_STATE
+        };
+    }
+
+    /* Overflow check for rows * cols */
+    if ((src->rows != 0u) && (src->cols > (SIZE_MAX / src->rows))) {
+        return (uint8_matrix_expect_t){
+            .has_value = false,
+            .u.error   = LENGTH_OVERFLOW
+        };
+    }
+
+    const uint8_t* data  = (const uint8_t*)src->rep.dense.data;
+    size_t total       = src->rows * src->cols;
+    size_t nnz         = 0u;
+
+    /* Pass 1: count semantic nonzeros */
+    for (size_t i = 0u; i < total; ++i) {
+        if (!_uint8_value_is_zero(data[i], is_zero)) {
+            ++nnz;
+        }
+    }
+
+    // ----------------------------------------------------------------------------
+    // dense -> COO
+    // ----------------------------------------------------------------------------
+    if (target == COO_MATRIX) {
+        uint8_matrix_expect_t r = init_uint8_coo_matrix(
+            src->rows, src->cols, (nnz > 0u) ? nnz : 1u, false, alloc_v
+        );
+        if (!r.has_value) {
+            return r;
+        }
+
+        uint8_matrix_t* dst = r.u.value;
+
+        for (size_t row = 0u; row < src->rows; ++row) {
+            for (size_t col = 0u; col < src->cols; ++col) {
+                uint8_t value = data[row * src->cols + col];
+                if (!_uint8_value_is_zero(value, is_zero)) {
+                    error_code_t ec = push_back_uint8_coo_matrix(dst, row, col, value);
+                    if (ec != NO_ERROR) {
+                        return_uint8_matrix(dst);
+                        return (uint8_matrix_expect_t){
+                            .has_value = false,
+                            .u.error   = ec
+                        };
+                    }
+                }
+            }
+        }
+
+        /*
+         * Row-major traversal naturally inserts in sorted order, but make the
+         * intent explicit and robust.
+         */
+        (void)sort_uint8_coo_matrix(dst);
+        return r;
+    }
+
+    // ----------------------------------------------------------------------------
+    // dense -> CSR
+    // ----------------------------------------------------------------------------
+    if (target == CSR_MATRIX) {
+        size_t row_ptr_bytes = 0u;
+        size_t col_idx_bytes = 0u;
+        size_t values_bytes  = 0u;
+
+        void_ptr_expect_t mr;
+        void_ptr_expect_t rp_r;
+        void_ptr_expect_t ci_r;
+        void_ptr_expect_t vl_r;
+
+        size_t* row_ptr = NULL;
+        size_t* col_idx = NULL;
+        uint8_t*  values  = NULL;
+        uint8_matrix_t* dst = NULL;
+
+        if ((src->rows + 1u) < src->rows) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+        if ((src->rows + 1u) > (SIZE_MAX / sizeof(size_t))) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+        if (nnz > (SIZE_MAX / sizeof(size_t)) ||
+            nnz > (SIZE_MAX / sizeof(uint8_t))) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+
+        row_ptr_bytes = (src->rows + 1u) * sizeof(size_t);
+        col_idx_bytes = nnz * sizeof(size_t);
+        values_bytes  = nnz * sizeof(uint8_t);
+
+        mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
+        if (!mr.has_value) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = BAD_ALLOC
+            };
+        }
+
+        dst = (uint8_matrix_t*)mr.u.value;
+        dst->rows      = src->rows;
+        dst->cols      = src->cols;
+        dst->dtype     = UINT8_TYPE;
+        dst->data_size = sizeof(uint8_t);
+        dst->format    = CSR_MATRIX;
+        dst->alloc_v   = alloc_v;
+
+        dst->rep.csr.nnz     = 0u;
+        dst->rep.csr.row_ptr = NULL;
+        dst->rep.csr.col_idx = NULL;
+        dst->rep.csr.values  = NULL;
+
+        rp_r = alloc_v.allocate(alloc_v.ctx, row_ptr_bytes, true);
+        ci_r = alloc_v.allocate(alloc_v.ctx, (nnz > 0u) ? col_idx_bytes : 1u, true);
+        vl_r = alloc_v.allocate(alloc_v.ctx, (nnz > 0u) ? values_bytes  : 1u, true);
+
+        if (!rp_r.has_value || !ci_r.has_value || !vl_r.has_value) {
+            if (rp_r.has_value) {
+                alloc_v.return_element(alloc_v.ctx, rp_r.u.value);
+            }
+            if (ci_r.has_value) {
+                alloc_v.return_element(alloc_v.ctx, ci_r.u.value);
+            }
+            if (vl_r.has_value) {
+                alloc_v.return_element(alloc_v.ctx, vl_r.u.value);
+            }
+            alloc_v.return_element(alloc_v.ctx, dst);
+
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = OUT_OF_MEMORY
+            };
+        }
+
+        row_ptr = (size_t*)rp_r.u.value;
+        col_idx = (size_t*)ci_r.u.value;
+        values  = (uint8_t*)vl_r.u.value;
+
+        row_ptr[0] = 0u;
+
+        size_t k = 0u;
+        for (size_t row = 0u; row < src->rows; ++row) {
+            for (size_t col = 0u; col < src->cols; ++col) {
+                uint8_t value = data[row * src->cols + col];
+                if (!_uint8_value_is_zero(value, is_zero)) {
+                    col_idx[k] = col;
+                    values[k]  = value;
+                    ++k;
+                }
+            }
+            row_ptr[row + 1u] = k;
+        }
+
+        dst->rep.csr.nnz     = k;
+        dst->rep.csr.row_ptr = row_ptr;
+        dst->rep.csr.col_idx = col_idx;
+        dst->rep.csr.values  = (uint8_t*)values;
+
+        return (uint8_matrix_expect_t){
+            .has_value = true,
+            .u.value   = dst
+        };
+    }
+
+    // ----------------------------------------------------------------------------
+    // dense -> CSC
+    // ----------------------------------------------------------------------------
+    if (target == CSC_MATRIX) {
+        size_t col_ptr_bytes = 0u;
+        size_t row_idx_bytes = 0u;
+        size_t values_bytes  = 0u;
+
+        void_ptr_expect_t mr;
+        void_ptr_expect_t cp_r;
+        void_ptr_expect_t ri_r;
+        void_ptr_expect_t vl_r;
+
+        size_t* col_ptr = NULL;
+        size_t* row_idx = NULL;
+        uint8_t*  values  = NULL;
+        uint8_matrix_t* dst = NULL;
+
+        if ((src->cols + 1u) < src->cols) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+        if ((src->cols + 1u) > (SIZE_MAX / sizeof(size_t))) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+        if (nnz > (SIZE_MAX / sizeof(size_t)) ||
+            nnz > (SIZE_MAX / sizeof(uint8_t))) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = LENGTH_OVERFLOW
+            };
+        }
+
+        col_ptr_bytes = (src->cols + 1u) * sizeof(size_t);
+        row_idx_bytes = nnz * sizeof(size_t);
+        values_bytes  = nnz * sizeof(uint8_t);
+
+        mr = alloc_v.allocate(alloc_v.ctx, sizeof(matrix_t), true);
+        if (!mr.has_value) {
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = BAD_ALLOC
+            };
+        }
+
+        dst = (uint8_matrix_t*)mr.u.value;
+        dst->rows      = src->rows;
+        dst->cols      = src->cols;
+        dst->dtype     = UINT8_TYPE;
+        dst->data_size = sizeof(uint8_t);
+        dst->format    = CSC_MATRIX;
+        dst->alloc_v   = alloc_v;
+
+        dst->rep.csc.nnz     = 0u;
+        dst->rep.csc.col_ptr = NULL;
+        dst->rep.csc.row_idx = NULL;
+        dst->rep.csc.values  = NULL;
+
+        cp_r = alloc_v.allocate(alloc_v.ctx, col_ptr_bytes, true);
+        ri_r = alloc_v.allocate(alloc_v.ctx, (nnz > 0u) ? row_idx_bytes : 1u, true);
+        vl_r = alloc_v.allocate(alloc_v.ctx, (nnz > 0u) ? values_bytes  : 1u, true);
+
+        if (!cp_r.has_value || !ri_r.has_value || !vl_r.has_value) {
+            if (cp_r.has_value) {
+                alloc_v.return_element(alloc_v.ctx, cp_r.u.value);
+            }
+            if (ri_r.has_value) {
+                alloc_v.return_element(alloc_v.ctx, ri_r.u.value);
+            }
+            if (vl_r.has_value) {
+                alloc_v.return_element(alloc_v.ctx, vl_r.u.value);
+            }
+            alloc_v.return_element(alloc_v.ctx, dst);
+
+            return (uint8_matrix_expect_t){
+                .has_value = false,
+                .u.error   = OUT_OF_MEMORY
+            };
+        }
+
+        col_ptr = (size_t*)cp_r.u.value;
+        row_idx = (size_t*)ri_r.u.value;
+        values  = (uint8_t*)vl_r.u.value;
+
+        col_ptr[0] = 0u;
+
+        size_t k = 0u;
+        for (size_t col = 0u; col < src->cols; ++col) {
+            for (size_t row = 0u; row < src->rows; ++row) {
+                uint8_t value = data[row * src->cols + col];
+                if (!_uint8_value_is_zero(value, is_zero)) {
+                    row_idx[k] = row;
+                    values[k]  = value;
+                    ++k;
+                }
+            }
+            col_ptr[col + 1u] = k;
+        }
+
+        dst->rep.csc.nnz     = k;
+        dst->rep.csc.col_ptr = col_ptr;
+        dst->rep.csc.row_idx = row_idx;
+        dst->rep.csc.values  = (uint8_t*)values;
+
+        return (uint8_matrix_expect_t){
+            .has_value = true,
+            .u.value   = dst
+        };
+    }
+
+    return (uint8_matrix_expect_t){
+        .has_value = false,
+        .u.error   = ILLEGAL_STATE
+    };
 }
 // ================================================================================
 // ================================================================================

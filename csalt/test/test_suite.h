@@ -261,8 +261,8 @@ extern const size_t test_ldouble_matrix_count;
 // ================================================================================ 
 // ================================================================================ 
 
-// extern const struct CMUnitTest test_uint8_matrix[];
-// extern const size_t test_uint8_matrix_count;
+extern const struct CMUnitTest test_uint8_matrix[];
+extern const size_t test_uint8_matrix_count;
 // ================================================================================
 // ================================================================================/
 #ifdef __cplusplus

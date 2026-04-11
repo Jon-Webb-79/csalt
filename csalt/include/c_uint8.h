@@ -1971,7 +1971,9 @@ bool is_uint8_dict_empty(const uint8_dict_t* dict);
 // ================================================================================ 
 // ================================================================================ 
 
-// uint8_matrix_t — type-safe uint8_t wrapper around matrix_t
+// ================================================================================ 
+// ================================================================================ 
+// uint8_matrix_t — type-safe uint8 wrapper around matrix_t
 //
 // This section provides a uint8-specialised interface to the generic matrix_t
 // type.  uint8_matrix_t is a typedef for matrix_t; all functions below fix
@@ -1998,6 +2000,35 @@ typedef struct {
     } u;
 } uint8_matrix_expect_t;
 
+/* =============================================================================
+ * Comparator / Predicate Function Types
+ * ========================================================================== */
+
+/**
+ * @brief Predicate function to determine semantic zero for uint8 values.
+ *
+ * This function defines what values should be treated as "zero" during
+ * dense-to-sparse conversion operations. It is primarily used by:
+ *
+ * - convert_uint8_matrix_zero()
+ *
+ * @param value The uint8 value to evaluate.
+ *
+ * @return true if the value should be treated as zero, false otherwise.
+ *
+ * @note If NULL is passed, the default behavior is:
+ *       value == 0.0f
+ *
+ * @example
+ * Treat both 0.0 and -1.0 as zero:
+ * @code{.c}
+ * bool zero_or_neg_one(uint8 v) {
+ *     return (v == 0u) || (v == 3u);
+ * }
+ * @endcode
+ */
+typedef bool (*uint8_zero_fn)(uint8_t value);
+
 // ================================================================================
 // Initialization and teardown
 // ================================================================================
@@ -2014,14 +2045,14 @@ typedef struct {
  *
  * @return uint8_matrix_expect_t with has_value true on success.
  *
- * @code
+ * @code{.c}
  *     allocator_vtable_t a = heap_allocator();
  *     uint8_matrix_expect_t r = init_uint8_dense_matrix(3, 4, a);
  *     if (!r.has_value) { fprintf(stderr, "%d\n", r.u.error); return; }
  *     uint8_matrix_t* m = r.u.value;
  *
- *     set_uint8_matrix(m, 0, 0, 1.0f);
- *     set_uint8_matrix(m, 1, 2, 5.5f);
+ *     set_uint8_matrix(m, 0, 0, 1u);
+ *     set_uint8_matrix(m, 1, 2, 5u);
  *
  *     return_uint8_matrix(m);
  * @endcode
@@ -2046,13 +2077,13 @@ uint8_matrix_expect_t init_uint8_dense_matrix(size_t             rows,
  *
  * @return uint8_matrix_expect_t with has_value true on success.
  *
- * @code
+ * @code{.c}
  *     allocator_vtable_t a = heap_allocator();
  *     uint8_matrix_expect_t r = init_uint8_coo_matrix(100, 100, 16, true, a);
  *     uint8_matrix_t* m = r.u.value;
  *
- *     push_back_uint8_coo_matrix(m, 0, 5, 3.14f);
- *     push_back_uint8_coo_matrix(m, 42, 99, -1.0f);
+ *     push_back_uint8_coo_matrix(m, 0, 5, 3u);
+ *     push_back_uint8_coo_matrix(m, 42, 99, 7u);
  *
  *     return_uint8_matrix(m);
  * @endcode
@@ -2091,7 +2122,7 @@ void return_uint8_matrix(uint8_matrix_t* mat);
  * @return NO_ERROR on success, or NULL_POINTER / INVALID_ARG / OUT_OF_BOUNDS.
  *
  * @code
- *     uint8 v = 0.0f;
+ *     uint8_t v = 0u;
  *     get_uint8_matrix(m, 1, 2, &v);
  * @endcode
  */
@@ -2115,7 +2146,7 @@ error_code_t get_uint8_matrix(const uint8_matrix_t* mat,
  * @return NO_ERROR on success, or an appropriate error_code_t.
  *
  * @code
- *     set_uint8_matrix(m, 0, 0, 42.0f);
+ *     set_uint8_matrix(m, 0, 0, 42u);
  * @endcode
  */
 error_code_t set_uint8_matrix(uint8_matrix_t* mat,
@@ -2154,7 +2185,7 @@ error_code_t reserve_uint8_coo_matrix(uint8_matrix_t* mat,
  * @return NO_ERROR on success, or an appropriate error_code_t.
  *
  * @code
- *     push_back_uint8_coo_matrix(m, 0, 5, 3.14f);
+ *     push_back_uint8_coo_matrix(m, 0, 5, 3u);
  * @endcode
  */
 error_code_t push_back_uint8_coo_matrix(uint8_matrix_t* mat,
@@ -2209,7 +2240,9 @@ uint8_matrix_expect_t copy_uint8_matrix(const uint8_matrix_t* src,
  * Produces a new matrix with the same logical values in the target format.
  *
  * @param src      Matrix to convert.
- * @param target   Desired destination storage format.
+ * @param target   Desired destination storage format. Can be any value in 
+ * ``matrix_format_t`` enum, (i.e. ``DENSE_MATRIX``, ``COO_MATRIX``, 
+ * ``CSR_MATRIX``, ``CSC__MATRIX``)
  * @param alloc_v  Allocator for the destination matrix.
  *
  * @return uint8_matrix_expect_t with has_value true on success.
@@ -2254,75 +2287,12 @@ uint8_matrix_expect_t transpose_uint8_matrix(const uint8_matrix_t* src,
  * @return NO_ERROR on success, or an appropriate error_code_t.
  *
  * @code
- *     fill_uint8_matrix(m, 1.0f);   // every element becomes 1.0
- *     fill_uint8_matrix(m, 0.0f);   // equivalent to clear
+ *     fill_uint8_matrix(m, 1u);   // every element becomes 1.0
+ *     fill_uint8_matrix(m, 0u);   // equivalent to clear
  * @endcode
  */
 error_code_t fill_uint8_matrix(uint8_matrix_t* mat,
                                uint8_t         value);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Set all elements of a uint8 matrix to zero.
- *
- * Equivalent to clear_uint8_matrix.
- *
- * @param mat  Matrix to zero.
- *
- * @return NO_ERROR on success, or an appropriate error_code_t.
- */
-error_code_t zero_uint8_matrix(uint8_matrix_t* mat);
-
-// ================================================================================
-// Introspection
-// ================================================================================
-
-/**
- * @brief Return the number of rows.
- * Returns 0 if @p mat is NULL.
- */
-size_t uint8_matrix_rows(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Return the number of columns.
- * Returns 0 if @p mat is NULL.
- */
-size_t uint8_matrix_cols(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Return the format-dependent entry count.
- *
- * For dense matrices returns rows * cols. For sparse formats returns the
- * stored entry count.
- */
-size_t uint8_matrix_nnz(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Return the active storage format.
- */
-matrix_format_t uint8_matrix_format(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Return the storage footprint of the matrix payload in bytes.
- */
-size_t uint8_matrix_storage_bytes(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Return a human-readable name for the matrix's storage format.
- */
-const char* uint8_matrix_format_name(const uint8_matrix_t* mat);
-
 // ================================================================================
 // Shape and compatibility queries
 // ================================================================================
@@ -2352,20 +2322,83 @@ bool uint8_matrix_is_sparse(const uint8_matrix_t* mat);
 /**
  * @brief Test whether a uint8 matrix is logically all zeros.
  */
-bool is_uint8_matrix_zero(const uint8_matrix_t* mat);
+bool uint8_matrix_is_zero(const uint8_matrix_t* mat);
 
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Compare two uint8 matrices for logical equality.
+ * @brief Compare two uint8 matrices for numerical equality.
  *
- * Uses exact bitwise comparison of every element. Matrices must have the
- * same shape and dtype. Different storage formats are compared element-wise
- * through the get_matrix interface.
+ * This function determines whether two matrices are logically equal based on
+ * their numerical values, independent of their internal storage format.
+ *
+ * Equality is defined using standard uint8ing-point comparison semantics:
+ *
+ * Matrices must:
+ * - be non-NULL
+ * - have the same dimensions (rows and columns)
+ * - have dtype == uint8_TYPE
+ *
+ * The comparison is **format-agnostic**, meaning matrices with different
+ * storage formats (e.g., dense vs COO vs CSR vs CSC) are considered equal
+ * if they represent the same logical values.
+ *
+ * Performance optimizations:
+ * - Dense × Dense comparisons use SIMD-accelerated numerical comparison.
+ * - COO × COO comparisons use a fast path when both matrices are sorted,
+ *   comparing index arrays and values directly.
+ * - All other cases fall back to element-wise comparison using logical
+ *   matrix access.
+ *
+ * @param a First matrix (may be NULL).
+ * @param b Second matrix (may be NULL).
+ *
+ * @return true if the matrices are numerically equal, false otherwise.
+ *
+ * @note This function performs numerical comparison only. For custom
+ *       comparison rules (e.g., tolerance-based equality or sign-sensitive
+ *       comparisons), use :c:func:`uint8_matrix_equal_cmp`.
+ *
+ * @code{.c}
+ * allocator_vtable_t alloc = heap_allocator();
+ *
+ * uint8_matrix_expect_t r1 = init_uint8_dense_matrix(2, 2, alloc);
+ * uint8_matrix_expect_t r2 = init_uint8_dense_matrix(2, 2, alloc);
+ *
+ * uint8_matrix_t* a = r1.u.value;
+ * uint8_matrix_t* b = r2.u.value;
+ *
+ * set_uint8_matrix(a, 0, 0, 4u);
+ * set_uint8_matrix(b, 0, 0,  0u);
+ *
+ * assert_true(uint8_matrix_equal(a, b)); // false
+ *
+ * return_uint8_matrix(a);
+ * return_uint8_matrix(b);
+ * @endcode
+ *
+ * @code{.c}
+ * // Equality across different storage formats
+ *
+ * uint8_matrix_expect_t dense_r = init_uint8_dense_matrix(2, 2, alloc);
+ * uint8_matrix_t* dense = dense_r.u.value;
+ *
+ * set_uint8_matrix(dense, 0, 1, 3u);
+ *
+ * uint8_matrix_expect_t csr_r =
+ *     convert_uint8_matrix(dense, CSR_MATRIX, alloc);
+ *
+ * uint8_matrix_t* csr = csr_r.u.value;
+ *
+ * // Same logical values → equal
+ * assert_true(uint8_matrix_equal(dense, csr)); // true
+ *
+ * return_uint8_matrix(csr);
+ * return_uint8_matrix(dense);
+ * @endcode
  */
 bool uint8_matrix_equal(const uint8_matrix_t* a,
                         const uint8_matrix_t* b);
-
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -2503,6 +2536,64 @@ bool uint8_matrix_is_vector(const uint8_matrix_t* mat);
  * Non-vector matrices return 0.
  */
 size_t uint8_matrix_vector_length(const uint8_matrix_t* mat);
+
+// ================================================================================
+// Conversion with semantic zero callback
+// ================================================================================
+
+/**
+ * @brief Convert a uint8 matrix to a different storage format using an
+ *        optional semantic zero-test.
+ *
+ * This function performs the same structural conversion as
+ * :c:func:`convert_uint8_matrix`, but allows the caller to define what
+ * uint8 values should be treated as zero during dense-to-sparse conversion.
+ *
+ * The @p is_zero callback is used only when:
+ *   - @p src is a dense matrix, and
+ *   - @p target is COO_MATRIX, CSR_MATRIX, or CSC_MATRIX.
+ *
+ * In all other cases, this function behaves exactly like
+ * :c:func:`convert_uint8_matrix`.
+ *
+ * If @p is_zero is NULL, the default zero rule is:
+ *
+ * @code{.c}
+ * value == 0.0f
+ * @endcode
+ *
+ * @param src      Matrix to convert. Must not be NULL.
+ * @param target   Desired destination storage format.
+ * @param alloc_v  Allocator for the destination matrix.
+ * @param is_zero  Optional semantic zero predicate used only for
+ *                 dense-to-sparse conversion.
+ *
+ * @return uint8_matrix_expect_t with has_value true on success, or
+ *         u.error describing the failure.
+ *
+ * Possible failure codes include:
+ *   - NULL_POINTER
+ *   - ILLEGAL_STATE
+ *   - LENGTH_OVERFLOW
+ *   - BAD_ALLOC
+ *   - OUT_OF_MEMORY
+ *
+ * @code{.c}
+ * static bool zero_or_neg_one(uint8 v) {
+ *     return (v == 0u) || (v == 3u);
+ * }
+ *
+ * uint8_matrix_expect_t r =
+ *     convert_uint8_matrix_zero(dense_m, CSR_MATRIX, alloc, zero_or_neg_one);
+ * @endcode
+ *
+ * @note This function is primarily intended for domain-specific sparse
+ *       conversion rules where exact zero is not sufficient.
+ */
+uint8_matrix_expect_t convert_uint8_matrix_zero(const uint8_matrix_t* src,
+                                                matrix_format_t       target,
+                                                allocator_vtable_t    alloc_v,
+                                                uint8_zero_fn         is_zero);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

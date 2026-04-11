@@ -76,7 +76,7 @@ int main(void) {
         {"Float Matrix", test_float_matrix, test_float_matrix_count},
         {"Double Matrix", test_double_matrix, test_double_matrix_count},
         {"LDouble Matrix", test_ldouble_matrix, test_ldouble_matrix_count},
-        //{"UInt8 Matrix", test_uint8_matrix, test_uint8_matrix_count},
+        {"UInt8 Matrix", test_uint8_matrix, test_uint8_matrix_count},
     };
     
     const size_t num_suites = sizeof(suites) / sizeof(suites[0]);
