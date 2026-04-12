@@ -16792,7 +16792,6 @@ static void test_delim_macro_lit_consecutive_delimiters(void** state) {
     assert_int_equal((int)str_array_size(r.u.value), 3);
 
     string_expect_t e1 = get_str_array_index(r.u.value, 1u);
-    fprint_string(stdout, e1.u.value);
     assert_string_equal(const_string(e1.u.value), "");
     return_string(e1.u.value);
     return_str_array(r.u.value);

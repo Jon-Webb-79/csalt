@@ -254,6 +254,12 @@ find_substr_lit
 .. doxygenfunction:: find_substr_lit
    :project: csalt
 
+print_string 
+~~~~~~~~~~~~
+
+.. doxygenfunction:: print_string
+   :project: csalt
+
 String Manipulation
 -------------------
 
@@ -593,6 +599,7 @@ Utility Operations
 .. doxygenfunction:: set_str_array_index_str
 .. doxygenfunction:: set_str_array_index_lit
 .. doxygenfunction:: reverse_str_array
+.. doxygenfunction:: print_string_array
  
 Algorithms
 ----------

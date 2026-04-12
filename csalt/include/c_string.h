@@ -2580,10 +2580,54 @@ static inline string_expect_t _pop_string_token_str_wrap_(string_t* s,
 #endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
 // -------------------------------------------------------------------------------- 
 
-static inline void fprint_string(FILE* stream, const string_t* s) {
-    if (!stream || !s || !s->str) return;
-    fwrite(s->str, 1u, s->len, stream);
-}
+/**
+ * @brief Print a string_t to an output stream with fixed-width line wrapping.
+ *
+ * Writes the logical contents of @p s to @p stream without adding quotes,
+ * brackets, braces, or a trailing newline. The output is wrapped every
+ * 70 columns: once 70 characters have been written on the current line,
+ * printing continues on the next line until the full string has been
+ * emitted.
+ *
+ * Wrapping is performed strictly by character count and does not attempt
+ * to preserve words or break at whitespace boundaries.
+ *
+ * This function does not modify the string and performs no allocations.
+ *
+ * @param s
+ * Pointer to the source @ref string_t to print.
+ *
+ * @param stream
+ * Output stream to write to, such as `stdout`, `stderr`, or an open file.
+ *
+ * @note
+ * - If @p s is `NULL`, `s->str` is `NULL`, or @p stream is `NULL`, the
+ *   function performs a silent no-op.
+ * - No trailing newline is appended automatically.
+ * - The function prints at most `s->len` bytes and does not rely on the
+ *   presence of a terminating null byte beyond the logical length.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * string_expect_t r = init_string(
+ *     "This is a long string that may need to wrap across multiple lines "
+ *     "when printed to the console.",
+ *     0u,
+ *     a
+ * );
+ *
+ * if (r.has_value) {
+ *     string_t* s = r.u.value;
+ *
+ *     print_string(s, stdout);
+ *     putchar('\n');
+ *
+ *     return_string(s);
+ * }
+ * @endcode
+ */
+void print_string(const string_t* s, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -3259,6 +3303,65 @@ str_array_expect_t string_delim_array_str(const string_t*    s,
      )((s), (delim_set), (begin), (end), (alloc_v)))
  
 #endif /* ARENA_USE_CONVENIENCE_MACROS && !NO_FUNCTION_MACROS */
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a str_array_t in bracketed form with quoted elements and
+ *        fixed-width line wrapping.
+ *
+ * Writes the contents of @p array to @p stream in the form:
+ *
+ *     [ "one", "two", "three" ]
+ *
+ * Each element is printed as a quoted string. Elements are separated by a
+ * comma and a space. The overall output is wrapped at 70 columns. Wrapping
+ * may occur either between elements or within the contents of an individual
+ * string element if necessary to remain within the column limit.
+ *
+ * The opening `[` and closing `]` are printed once for the entire array.
+ * Each string element is enclosed in double quotes. Quotes are not repeated
+ * on wrapped continuation lines inside a single element.
+ *
+ * The function does not modify the array or its contained strings and
+ * performs no allocations.
+ *
+ * @param array
+ * Pointer to the source @ref str_array_t to print. Must not be NULL.
+ *
+ * @param stream
+ * Output stream to write to, such as `stdout`, `stderr`, or an open file.
+ * Must not be NULL.
+ *
+ * @return NO_ERROR on success, or:
+ *         - NULL_POINTER if @p array or @p stream is NULL
+ *
+ * @note
+ * - If an element pointer stored in the array is NULL, that element is
+ *   printed as `""`.
+ * - Wrapping is based strictly on column count and does not preserve word
+ *   boundaries.
+ * - No trailing newline is appended automatically.
+ * - Output order matches the logical order of elements in the array.
+ *
+ * @code{.c}
+ * allocator_vtable_t a = heap_allocator();
+ *
+ * str_array_expect_t r = init_str_array(4u, true, a);
+ * if (r.has_value) {
+ *     str_array_t* arr = r.u.value;
+ *
+ *     push_back_lit(arr, "alpha");
+ *     push_back_lit(arr, "beta");
+ *     push_back_lit(arr, "gamma");
+ *
+ *     print_string_array(arr, stdout);
+ *     putchar('\n');
+ *
+ *     return_str_array(arr);
+ * }
+ * @endcode
+ */
+error_code_t print_string_array(const str_array_t* array, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

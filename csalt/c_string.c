@@ -1239,6 +1239,69 @@ string_expect_t pop_str_token_lit(string_t* s,
 
     return out;
 }
+// -------------------------------------------------------------------------------- 
+
+void print_string(const string_t* s, FILE* stream) {
+    if (s == NULL || stream == NULL || s->str == NULL) {
+        return;
+    }
+
+    size_t col = 0u;
+    size_t i   = 0u;
+
+    /* Opening quote */
+    if (fputc('"', stream) == EOF) {
+        return;
+    }
+    col = 1u;
+
+    while (i < s->len) {
+        size_t remaining = s->len - i;
+        size_t chunk     = remaining;
+
+        if (col >= 70u) {
+            if (fputc('\n', stream) == EOF) {
+                return;
+            }
+            col = 0u;
+        }
+
+        if ((col + chunk) > 70u) {
+            chunk = 70u - col;
+        }
+
+        if (chunk == 0u) {
+            if (fputc('\n', stream) == EOF) {
+                return;
+            }
+            col = 0u;
+            continue;
+        }
+
+        if (fwrite(s->str + i, 1u, chunk, stream) != chunk) {
+            return;
+        }
+
+        i   += chunk;
+        col += chunk;
+
+        if ((col == 70u) && (i < s->len)) {
+            if (fputc('\n', stream) == EOF) {
+                return;
+            }
+            col = 0u;
+        }
+    }
+
+    /* Closing quote */
+    if (col + 1u > 70u) {
+        if (fputc('\n', stream) == EOF) {
+            return;
+        }
+    }
+
+    fputc('"', stream);
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1951,6 +2014,139 @@ str_array_expect_t string_delim_array_str(const string_t*    s,
                                      .u.error   = INVALID_ARG };
  
     return _delim_tokenize(delim_set->str, wb, we, alloc_v);
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t print_string_array(const str_array_t* array, FILE* stream) {
+    if (array == NULL || stream == NULL) {
+        return NULL_POINTER;
+    }
+
+    size_t col = 0u;
+    size_t len = str_array_size(array);
+
+    /* Opening bracket */
+    if (fputs("[ ", stream) == EOF) {
+        return ILLEGAL_STATE;
+    }
+    col = 2u;
+
+    if (len == 0u) {
+        if (fputs("]", stream) == EOF) {
+            return ILLEGAL_STATE;
+        }
+        return NO_ERROR;
+    }
+
+    for (size_t i = 0u; i < len; ++i) {
+        string_expect_t r = get_str_array_ptr(array, i);
+        const string_t* s = NULL;
+        const char* text = "";
+        size_t text_len = 0u;
+
+        if (!r.has_value) {
+            return r.u.error;
+        }
+
+        s = r.u.value;
+        if (s != NULL && s->str != NULL) {
+            text = s->str;
+            text_len = s->len;
+        }
+
+        /* Separator before every element except the first */
+        if (i > 0u) {
+            if ((col + 2u) > 70u) {
+                if (fputc('\n', stream) == EOF) {
+                    return ILLEGAL_STATE;
+                }
+                col = 0u;
+            } else {
+                if (fputs(", ", stream) == EOF) {
+                    return ILLEGAL_STATE;
+                }
+                col += 2u;
+            }
+        }
+
+        /* Opening quote for this element */
+        if ((col + 1u) > 70u) {
+            if (fputc('\n', stream) == EOF) {
+                return ILLEGAL_STATE;
+            }
+            col = 0u;
+        }
+        if (fputc('"', stream) == EOF) {
+            return ILLEGAL_STATE;
+        }
+        col += 1u;
+
+        /* Element contents, wrapping mid-string if needed */
+        size_t j = 0u;
+        while (j < text_len) {
+            size_t remaining = text_len - j;
+            size_t chunk = remaining;
+
+            if (col >= 70u) {
+                if (fputc('\n', stream) == EOF) {
+                    return ILLEGAL_STATE;
+                }
+                col = 0u;
+            }
+
+            if ((col + chunk) > 70u) {
+                chunk = 70u - col;
+            }
+
+            if (chunk == 0u) {
+                if (fputc('\n', stream) == EOF) {
+                    return ILLEGAL_STATE;
+                }
+                col = 0u;
+                continue;
+            }
+
+            if (fwrite(text + j, 1u, chunk, stream) != chunk) {
+                return ILLEGAL_STATE;
+            }
+
+            j += chunk;
+            col += chunk;
+
+            if ((col == 70u) && (j < text_len)) {
+                if (fputc('\n', stream) == EOF) {
+                    return ILLEGAL_STATE;
+                }
+                col = 0u;
+            }
+        }
+
+        /* Closing quote for this element */
+        if ((col + 1u) > 70u) {
+            if (fputc('\n', stream) == EOF) {
+                return ILLEGAL_STATE;
+            }
+            col = 0u;
+        }
+        if (fputc('"', stream) == EOF) {
+            return ILLEGAL_STATE;
+        }
+        col += 1u;
+    }
+
+    /* Closing bracket */
+    if ((col + 2u) > 70u) {
+        if (fputc('\n', stream) == EOF) {
+            return ILLEGAL_STATE;
+        }
+        col = 0u;
+    }
+
+    if (fputs(" ]", stream) == EOF) {
+        return ILLEGAL_STATE;
+    }
+
+    return NO_ERROR;
 }
 // ================================================================================
 // ================================================================================

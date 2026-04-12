@@ -38,7 +38,6 @@ static void test_string_init_default_full_copy(void **state) {
     string_expect_t r = init_string("hello world!", 0, a);
 
     assert_true(r.has_value);
-    //printf("%s\n", error_to_string(r.u.error));
 
     string_t* s = r.u.value;
 
@@ -2500,7 +2499,6 @@ static void test_replace_substring_lit_non_overlapping(void **state)
 
     bool ok = replace_substring(s, "aa", "b", NULL, NULL);
     assert_ok(ok);
-    //printf("%ld\n", string_size(s));
     assert_s_eq(s, "abb");
 
     return_string(s);
@@ -2805,7 +2803,6 @@ static void test_pop_string_token_empty_token_string_t_returns_error(void **stat
     allocator_vtable_t a = heap_allocator();
     string_t* s   = make_string("abc/def");
     string_t* tok = make_token_str("");
-
     string_expect_t out = pop_string_token(s, tok, a);
     assert_false(out.has_value);
 
