@@ -110,6 +110,8 @@ Utility Operations
 
 .. doxygenfunction:: slice_float_array
 
+.. doxygenfunction:: print_float_array
+
 Algorithms
 ----------
 
@@ -284,6 +286,7 @@ Utility Operations
 .. doxygenfunction:: clear_float_dict
 .. doxygenfunction:: copy_float_dict
 .. doxygenfunction:: merge_float_dict
+.. doxygenfunction:: print_float_dict
  
 Iteration
 ---------

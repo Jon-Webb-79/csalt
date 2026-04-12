@@ -12386,7 +12386,6 @@ static void test_float_cumulative_mixed_signs(void** state) {
     get_float_array_index(dst, 1, &val);  ASSERT_FLOAT_EXACT(val, 2.0f);
     get_float_array_index(dst, 2, &val);  ASSERT_FLOAT_EXACT(val, 3.0f);
     get_float_array_index(dst, 3, &val);  ASSERT_FLOAT_EXACT(val, 2.5f);
-
     return_float_array(src);
     return_float_array(dst);
 }

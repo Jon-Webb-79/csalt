@@ -934,6 +934,29 @@ bool is_uint64_array_full(const uint64_array_t* array);
  * @endcode
  */
 bool is_uint64_array_ptr(const uint64_array_t* array, const uint64_t* ptr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a uint64 array in bracketed form with line wrapping.
+ *
+ * Prints the array in the form:
+ *
+ *     [ 1, 5, 2, 3, 6 ]
+ *
+ * If appending the next value would cause the current line to exceed
+ * 70 columns, printing continues on the next line. Continuation lines
+ * are indented by two spaces.
+ *
+ * @param array   Array to print. Must not be NULL.
+ * @param stream  Output stream to write to. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER if array or stream is NULL.
+ *
+ * @code{.c}
+ *     print_uint64_array(arr, stdout);
+ * @endcode
+ */
+error_code_t print_uint64_array(const uint64_array_t* array, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1605,6 +1628,29 @@ size_t uint64_dict_alloc(const uint64_dict_t* dict);
  * @brief true if @p dict is NULL or contains no entries.
  */
 bool is_uint64_dict_empty(const uint64_dict_t* dict);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a uint64_dict_t in a JSON-like key-value format with line wrapping.
+ *
+ * Values are printed using uint64_t formatting.
+ *
+ * Example:
+ *
+ *     { "big": 18446744073709551615 }
+ *
+ * Wrapping occurs at 70 columns.
+ *
+ * @param dict    Pointer to dictionary. Must not be NULL.
+ * @param stream  Output stream. Must not be NULL.
+ *
+ * @return NO_ERROR or:
+ *         - NULL_POINTER
+ *         - error from foreach_uint64_dict
+ *
+ * @note Output order is not guaranteed.
+ */
+error_code_t print_uint64_dict(const uint64_dict_t* dict, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 

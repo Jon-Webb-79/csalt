@@ -999,6 +999,29 @@ bool is_float_array_full(const float_array_t* array);
  * @endcode
  */
 bool is_float_array_ptr(const float_array_t* array, const float* ptr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a float array in bracketed form with line wrapping.
+ *
+ * Prints the array in the form:
+ *
+ *     [ 1.000, 5.000, 2.000, 3.000, 6.000 ]
+ *
+ * If appending the next value would cause the current line to exceed
+ * 70 columns, printing continues on the next line. Continuation lines
+ * are indented by two spaces.
+ *
+ * @param array   Array to print. Must not be NULL.
+ * @param stream  Output stream to write to. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER if array or stream is NULL.
+ *
+ * @code{.c}
+ *     print_float_array(arr, stdout);
+ * @endcode
+ */
+error_code_t print_float_array(const float_array_t* array, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1670,6 +1693,29 @@ size_t float_dict_alloc(const float_dict_t* dict);
  * @brief true if @p dict is NULL or contains no entries.
  */
 bool is_float_dict_empty(const float_dict_t* dict);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a float_dict_t in a JSON-like key-value format with line wrapping.
+ *
+ * Values are printed using %g formatting for compact representation.
+ *
+ * Example:
+ *
+ *     { "a": 1.5, "b": 2.75, "c": 1e+06 }
+ *
+ * Wrapping occurs at 70 columns.
+ *
+ * @param dict    Pointer to dictionary. Must not be NULL.
+ * @param stream  Output stream. Must not be NULL.
+ *
+ * @return NO_ERROR or:
+ *         - NULL_POINTER
+ *         - error from foreach_float_dict
+ *
+ * @note Floating-point precision is controlled by %g formatting.
+ */
+error_code_t print_float_dict(const float_dict_t* dict, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 

@@ -110,6 +110,8 @@ Utility Operations
 
 .. doxygenfunction:: slice_int64_array
 
+.. doxygenfunction:: print_int64_array
+
 Algorithms
 ----------
 
@@ -284,6 +286,7 @@ Utility Operations
 .. doxygenfunction:: clear_int64_dict
 .. doxygenfunction:: copy_int64_dict
 .. doxygenfunction:: merge_int64_dict
+.. doxygenfunction:: print_int64_dict
  
 Iteration
 ---------

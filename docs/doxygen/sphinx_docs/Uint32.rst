@@ -110,6 +110,8 @@ Utility Operations
 
 .. doxygenfunction:: slice_uint32_array
 
+.. doxygenfunction:: print_uint32_array
+
 Algorithms
 ----------
 
@@ -284,6 +286,7 @@ Utility Operations
 .. doxygenfunction:: clear_uint32_dict
 .. doxygenfunction:: copy_uint32_dict
 .. doxygenfunction:: merge_uint32_dict
+.. doxygenfunction:: print_uint32_dict
  
 Iteration
 ---------

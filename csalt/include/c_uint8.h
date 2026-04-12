@@ -1258,6 +1258,29 @@ uint8_expect_t uint8_array_min(const uint8_array_t* array);
  * @endcode
  */
 uint8_expect_t uint8_array_max(const uint8_array_t* array);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a uint8 array in bracketed form with line wrapping.
+ *
+ * Prints the array in the form:
+ *
+ *     [ 1, 5, 2, 3, 6 ]
+ *
+ * If appending the next value would cause the current line to exceed
+ * 70 columns, printing continues on the next line. Continuation lines
+ * are indented by two spaces.
+ *
+ * @param array   Array to print. Must not be NULL.
+ * @param stream  Output stream to write to. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER if array or stream is NULL.
+ *
+ * @code{.c}
+ *     print_uint8_array(arr, stdout);
+ * @endcode
+ */
+error_code_t print_uint8_array(const uint8_array_t* array, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1968,6 +1991,59 @@ size_t uint8_dict_alloc(const uint8_dict_t* dict);
  * @endcode
  */
 bool is_uint8_dict_empty(const uint8_dict_t* dict);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a uint8_dict_t in a JSON-like key-value format with line wrapping.
+ *
+ * Writes the contents of the dictionary to the given output stream in the form:
+ *
+ *     { "key1": 3, "key2": 4, "key3": 7 }
+ *
+ * Each key is printed as a quoted string followed by a colon and its
+ * associated uint8_t value. Entries are separated by a comma and space.
+ *
+ * If appending the next key-value pair would cause the current line to exceed
+ * 70 columns, the output is wrapped to a new line. Continuation lines are
+ * indented by two spaces for readability.
+ *
+ * The dictionary is traversed using its internal iteration order. This order
+ * is not guaranteed to match insertion order or lexical ordering of keys.
+ *
+ * The function does not modify the dictionary and performs no allocations.
+ *
+ * @param dict    Pointer to the dictionary to print. Must not be NULL.
+ * @param stream  Output stream to write to (e.g., stdout, stderr, or a file).
+ *                Must not be NULL.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if dict or stream is NULL
+ *         - any error propagated from foreach_uint8_dict (implementation-dependent)
+ *
+ * @note Keys are printed verbatim without escaping. If keys may contain
+ *       special characters such as quotes or backslashes, additional escaping
+ *       logic may be required for strict JSON compatibility.
+ *
+ * @code{.c}
+ *     allocator_vtable_t alloc = heap_allocator();
+ *
+ *     uint8_dict_expect_t r = init_uint8_dict(8, true, alloc);
+ *     if (!r.has_value) { return; }
+ *
+ *     uint8_dict_t* d = r.u.value;
+ *
+ *     insert_uint8_dict(d, "alpha",  3u, alloc);
+ *     insert_uint8_dict(d, "beta",   4u, alloc);
+ *     insert_uint8_dict(d, "gamma",  7u, alloc);
+ *
+ *     print_uint8_dict(d, stdout);
+ *     // Possible output:
+ *     // { "alpha": 3, "beta": 4, "gamma": 7 }
+ *
+ *     return_uint8_dict(d);
+ * @endcode
+  */
+error_code_t print_uint8_dict(const uint8_dict_t* dict, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 

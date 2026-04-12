@@ -13,7 +13,7 @@
 // Include modules here
 
 #include <string.h> 
-
+#include <inttypes.h>
 #include "c_int8.h"
 
 #if defined(__AVX512F__)
@@ -310,6 +310,60 @@ int8_expect_t int8_array_max(const int8_array_t* array) {
         return (int8_expect_t){ .has_value = false, .u.error = err };
     return (int8_expect_t){ .has_value = true, .u.value = val };
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t print_int8_array(const int8_array_t* array, FILE* stream) {
+    if (array == NULL || stream == NULL) return NULL_POINTER;
+
+    const int8_t* data = (const int8_t*)array->base.data;
+    size_t len = array->base.len;
+    size_t col = 0u;
+
+    fputs("[ ", stream);
+    col = 2u;
+
+    if (len == 0u) {
+        fputs("]", stream);
+        return NO_ERROR;
+    }
+
+    for (size_t i = 0u; i < len; ++i) {
+        char buf[8];
+        int n = snprintf(buf, sizeof(buf), "%" PRId8, data[i]);
+        size_t value_len = (size_t)n;
+
+        if (i == 0u) {
+            if (col + value_len > 70u) {
+                fputc('\n', stream);
+                fputs("  ", stream);
+                col = 2u;
+            }
+            fputs(buf, stream);
+            col += value_len;
+        } else {
+            size_t token_len = 2u + value_len;
+            if (col + token_len > 70u) {
+                fputs(",\n  ", stream);
+                col = 2u;
+                fputs(buf, stream);
+                col += value_len;
+            } else {
+                fputs(", ", stream);
+                fputs(buf, stream);
+                col += token_len;
+            }
+        }
+    }
+
+    if (col + 2u > 70u) {
+        fputc('\n', stream);
+        fputs("  ]", stream);
+    } else {
+        fputs(" ]", stream);
+    }
+
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -540,6 +594,74 @@ size_t int8_dict_alloc(const int8_dict_t* dict) {
  
 bool is_int8_dict_empty(const int8_dict_t* dict) {
     return is_dict_empty(dict);
+}
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    FILE*  stream;
+    size_t col;
+    bool   first;
+} _int8_dict_print_ctx_t;
+
+static void _print_int8_dict_entry(const char* key,
+                                   size_t      key_len,
+                                   int8_t      value,
+                                   void*       user_data) {
+    _int8_dict_print_ctx_t* ctx = (_int8_dict_print_ctx_t*)user_data;
+    char val_buf[8];
+    int val_n = snprintf(val_buf, sizeof(val_buf), "%" PRId8, value);
+    size_t value_len = (val_n > 0) ? (size_t)val_n : 0u;
+
+    size_t token_len = key_len + value_len + 4u;
+    if (!ctx->first) {
+        token_len += 2u;
+    }
+
+    if (ctx->col + token_len > 70u) {
+        if (!ctx->first) {
+            fputs(",\n  ", ctx->stream);
+            ctx->col = 2u;
+        } else {
+            fputc('\n', ctx->stream);
+            fputs("  ", ctx->stream);
+            ctx->col = 2u;
+        }
+    } else if (!ctx->first) {
+        fputs(", ", ctx->stream);
+        ctx->col += 2u;
+    }
+
+    fprintf(ctx->stream, "\"%.*s\": %s", (int)key_len, key, val_buf);
+    ctx->col += key_len + value_len + 4u;
+    ctx->first = false;
+}
+
+error_code_t print_int8_dict(const int8_dict_t* dict, FILE* stream) {
+    if (dict == NULL || stream == NULL) return NULL_POINTER;
+
+    _int8_dict_print_ctx_t ctx;
+    ctx.stream = stream;
+    ctx.col    = 2u;
+    ctx.first  = true;
+
+    fputs("{ ", stream);
+
+    error_code_t err = foreach_int8_dict(dict, _print_int8_dict_entry, &ctx);
+    if (err != NO_ERROR) return err;
+
+    if (ctx.first) {
+        fputs("}", stream);
+        return NO_ERROR;
+    }
+
+    if (ctx.col + 2u > 70u) {
+        fputc('\n', stream);
+        fputs("  }", stream);
+    } else {
+        fputs(" }", stream);
+    }
+
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

@@ -513,6 +513,29 @@ bool is_double_array_full(const double_array_t* array);
  * @param ptr    May be NULL.
  */
 bool is_double_array_ptr(const double_array_t* array, const double* ptr);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a double array in bracketed form with line wrapping.
+ *
+ * Prints the array in the form:
+ *
+ *     [ 1.000, 5.000, 2.000, 3.000, 6.000 ]
+ *
+ * If appending the next value would cause the current line to exceed
+ * 70 columns, printing continues on the next line. Continuation lines
+ * are indented by two spaces.
+ *
+ * @param array   Array to print. Must not be NULL.
+ * @param stream  Output stream to write to. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER if array or stream is NULL.
+ *
+ * @code{.c}
+ *     print_double_array(arr, stdout);
+ * @endcode
+ */
+error_code_t print_double_array(const double_array_t* array, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1184,6 +1207,27 @@ size_t double_dict_alloc(const double_dict_t* dict);
  * @brief true if @p dict is NULL or contains no entries.
  */
 bool is_double_dict_empty(const double_dict_t* dict);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a double_dict_t in a JSON-like key-value format with line wrapping.
+ *
+ * Values are printed using %g formatting for readability and compactness.
+ *
+ * Example:
+ *
+ *     { "pi": 3.14159, "exp": 2.71828 }
+ *
+ * Wrapping occurs at 70 columns.
+ *
+ * @param dict    Pointer to dictionary. Must not be NULL.
+ * @param stream  Output stream. Must not be NULL.
+ *
+ * @return NO_ERROR or:
+ *         - NULL_POINTER
+ *         - error from foreach_double_dict
+ */
+error_code_t print_double_dict(const double_dict_t* dict, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 

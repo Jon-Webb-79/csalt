@@ -14,6 +14,7 @@
 // Include modules here
 
 #include "c_uint8.h"
+#include <inttypes.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -287,6 +288,77 @@ uint8_expect_t uint8_array_max(const uint8_array_t* array) {
         return (uint8_expect_t){ .has_value = false, .u.error = err };
     return (uint8_expect_t){ .has_value = true, .u.value = val };
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t print_uint8_array(const uint8_array_t* array, FILE* stream) {
+    if (array == NULL || stream == NULL) return NULL_POINTER;
+
+    const uint8_t* data = (const uint8_t*)array->base.data;
+    size_t len = array->base.len;
+    size_t col = 0u;
+
+    /* Opening bracket */
+    if (fputs("[ ", stream) < 0) return FILE_WRITE;
+    col = 2u;
+
+    /* Empty array */
+    if (len == 0u) {
+        if (fputs("]", stream) < 0) return FILE_WRITE;
+        return NO_ERROR;
+    }
+
+    for (size_t i = 0u; i < len; ++i) {
+        char buf[8];
+        int n = snprintf(buf, sizeof(buf), "%u", (unsigned)data[i]);
+        size_t value_len;
+
+        if (n < 0) return FILE_WRITE;
+        value_len = (size_t)n;
+
+        if (i == 0u) {
+            /* First value: no leading comma */
+            if (col + value_len > 70u) {
+                if (fputc('\n', stream) == EOF) return FILE_WRITE;
+                if (fputs("  ", stream) < 0) return FILE_WRITE;
+                col = 2u;
+            }
+
+            if (fputs(buf, stream) < 0) return FILE_WRITE;
+            col += value_len;
+        } else {
+            /*
+             * Subsequent values are printed as ", value".
+             * If that would exceed 70 columns, wrap before the value:
+             *
+             *     ..., 99,
+             *       100
+             */
+            size_t token_len = 2u + value_len; /* ", " + value */
+
+            if (col + token_len > 70u) {
+                if (fputs(",\n  ", stream) < 0) return FILE_WRITE;
+                col = 2u;
+
+                if (fputs(buf, stream) < 0) return FILE_WRITE;
+                col += value_len;
+            } else {
+                if (fputs(", ", stream) < 0) return FILE_WRITE;
+                if (fputs(buf, stream) < 0) return FILE_WRITE;
+                col += token_len;
+            }
+        }
+    }
+
+    /* Closing bracket */
+    if (col + 2u > 70u) {
+        if (fputc('\n', stream) == EOF) return FILE_WRITE;
+        if (fputs("  ]", stream) < 0) return FILE_WRITE;
+    } else {
+        if (fputs(" ]", stream) < 0) return FILE_WRITE;
+    }
+
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -526,6 +598,76 @@ size_t uint8_dict_alloc(const uint8_dict_t* dict) {
  
 bool is_uint8_dict_empty(const uint8_dict_t* dict) {
     return is_dict_empty(dict);
+}
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    FILE*  stream;
+    size_t col;
+    bool   first;
+} _uint8_dict_print_ctx_t;
+
+static void _print_uint8_dict_entry(const char* key,
+                                    size_t      key_len,
+                                    uint8_t     value,
+                                    void*       user_data) {
+    _uint8_dict_print_ctx_t* ctx = (_uint8_dict_print_ctx_t*)user_data;
+    char val_buf[8];
+    int val_n = snprintf(val_buf, sizeof(val_buf), "%u", (unsigned)value);
+    size_t value_len = (val_n > 0) ? (size_t)val_n : 0u;
+
+    /* token = optional ", " + '"' + key + '"' + ": " + value */
+    size_t token_len = key_len + value_len + 4u; /* quotes + colon+space */
+    if (!ctx->first) {
+        token_len += 2u; /* ", " */
+    }
+
+    if (ctx->col + token_len > 70u) {
+        if (!ctx->first) {
+            fputs(",\n  ", ctx->stream);
+            ctx->col = 2u;
+        } else {
+            fputc('\n', ctx->stream);
+            fputs("  ", ctx->stream);
+            ctx->col = 2u;
+        }
+    } else if (!ctx->first) {
+        fputs(", ", ctx->stream);
+        ctx->col += 2u;
+    }
+
+    fprintf(ctx->stream, "\"%.*s\": %s", (int)key_len, key, val_buf);
+    ctx->col += key_len + value_len + 4u;
+    ctx->first = false;
+}
+
+error_code_t print_uint8_dict(const uint8_dict_t* dict, FILE* stream) {
+    if (dict == NULL || stream == NULL) return NULL_POINTER;
+
+    _uint8_dict_print_ctx_t ctx;
+    ctx.stream = stream;
+    ctx.col    = 2u;
+    ctx.first  = true;
+
+    fputs("{ ", stream);
+
+    error_code_t err = foreach_uint8_dict(dict, _print_uint8_dict_entry, &ctx);
+    if (err != NO_ERROR) return err;
+
+    if (ctx.first) {
+        /* empty dict */
+        fputs("}", stream);
+        return NO_ERROR;
+    }
+
+    if (ctx.col + 2u > 70u) {
+        fputc('\n', stream);
+        fputs("  }", stream);
+    } else {
+        fputs(" }", stream);
+    }
+
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

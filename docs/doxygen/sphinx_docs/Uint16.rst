@@ -108,6 +108,8 @@ Utility Operations
 
 .. doxygenfunction:: slice_uint16_array
 
+.. doxygenfunction:: print_uint16_array
+
 Algorithms
 ----------
 
@@ -282,6 +284,7 @@ Utility Operations
 .. doxygenfunction:: clear_uint16_dict
 .. doxygenfunction:: copy_uint16_dict
 .. doxygenfunction:: merge_uint16_dict
+.. doxygenfunction:: print_uint16_dict
  
 Iteration
 ---------

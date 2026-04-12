@@ -1191,6 +1191,29 @@ int16_expect_t int16_array_min(const int16_array_t* array);
  * @endcode
  */
 int16_expect_t int16_array_max(const int16_array_t* array);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a int16 array in bracketed form with line wrapping.
+ *
+ * Prints the array in the form:
+ *
+ *     [ 1, 5, 2, 3, 6 ]
+ *
+ * If appending the next value would cause the current line to exceed
+ * 70 columns, printing continues on the next line. Continuation lines
+ * are indented by two spaces.
+ *
+ * @param array   Array to print. Must not be NULL.
+ * @param stream  Output stream to write to. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER if array or stream is NULL.
+ *
+ * @code{.c}
+ *     print_int16_array(arr, stdout);
+ * @endcode
+ */
+error_code_t print_int16_array(const int16_array_t* array, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1862,6 +1885,29 @@ size_t int16_dict_alloc(const int16_dict_t* dict);
  * @brief true if @p dict is NULL or contains no entries.
  */
 bool is_int16_dict_empty(const int16_dict_t* dict);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print an int16_dict_t in a JSON-like key-value format with line wrapping.
+ *
+ * Values are printed as signed 16-bit integers.
+ *
+ * Output format:
+ *
+ *     { "key1": -100, "key2": 2048 }
+ *
+ * Line wrapping occurs at 70 columns with 2-space indentation.
+ *
+ * @param dict    Pointer to the dictionary. Must not be NULL.
+ * @param stream  Output stream. Must not be NULL.
+ *
+ * @return NO_ERROR or:
+ *         - NULL_POINTER
+ *         - error from foreach_int16_dict
+ *
+ * @note Keys are printed verbatim without escaping.
+ */
+error_code_t print_int16_dict(const int16_dict_t* dict, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 

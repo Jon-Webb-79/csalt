@@ -1326,6 +1326,29 @@ uint32_array_expect_t cumulative_uint32_array(const uint32_array_t* src,
  */
 uint32_array_expect_t cumulative_uint32_array(const uint32_array_t* src,
                                               allocator_vtable_t   alloc);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a uint32 array in bracketed form with line wrapping.
+ *
+ * Prints the array in the form:
+ *
+ *     [ 1, 5, 2, 3, 6 ]
+ *
+ * If appending the next value would cause the current line to exceed
+ * 70 columns, printing continues on the next line. Continuation lines
+ * are indented by two spaces.
+ *
+ * @param array   Array to print. Must not be NULL.
+ * @param stream  Output stream to write to. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER if array or stream is NULL.
+ *
+ * @code{.c}
+ *     print_uint32_array(arr, stdout);
+ * @endcode
+ */
+error_code_t print_uint32_array(const uint32_array_t* array, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1997,6 +2020,29 @@ size_t uint32_dict_alloc(const uint32_dict_t* dict);
  * @brief true if @p dict is NULL or contains no entries.
  */
 bool is_uint32_dict_empty(const uint32_dict_t* dict);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a uint32_dict_t in a JSON-like key-value format with line wrapping.
+ *
+ * Values are printed using uint32_t formatting.
+ *
+ * Example:
+ *
+ *     { "a": 100000, "b": 4294967295 }
+ *
+ * Line wrapping occurs at 70 columns.
+ *
+ * @param dict    Pointer to dictionary. Must not be NULL.
+ * @param stream  Output stream. Must not be NULL.
+ *
+ * @return NO_ERROR or:
+ *         - NULL_POINTER
+ *         - error from foreach_uint32_dict
+ *
+ * @note Output order is implementation-dependent.
+ */
+error_code_t print_uint32_dict(const uint32_dict_t* dict, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 

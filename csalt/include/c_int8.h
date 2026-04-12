@@ -1204,6 +1204,29 @@ int8_expect_t int8_array_min(const int8_array_t* array);
  * @endcode
  */
 int8_expect_t int8_array_max(const int8_array_t* array);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a int8 array in bracketed form with line wrapping.
+ *
+ * Prints the array in the form:
+ *
+ *     [ 1, 5, 2, 3, 6 ]
+ *
+ * If appending the next value would cause the current line to exceed
+ * 70 columns, printing continues on the next line. Continuation lines
+ * are indented by two spaces.
+ *
+ * @param array   Array to print. Must not be NULL.
+ * @param stream  Output stream to write to. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or NULL_POINTER if array or stream is NULL.
+ *
+ * @code{.c}
+ *     print_int8_array(arr, stdout);
+ * @endcode
+ */
+error_code_t print_int8_array(const int8_array_t* array, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -1884,6 +1907,35 @@ size_t int8_dict_alloc(const int8_dict_t* dict);
  * @brief true if @p dict is NULL or contains no entries.
  */
 bool is_int8_dict_empty(const int8_dict_t* dict);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print an int8_dict_t in a JSON-like key-value format with line wrapping.
+ *
+ * Writes the contents of the dictionary to the given output stream in the form:
+ *
+ *     { "key1": -3, "key2": 4, "key3": 7 }
+ *
+ * Each key is printed as a quoted string followed by a colon and its
+ * associated int8_t value. Entries are separated by a comma and space.
+ *
+ * If appending the next key-value pair would cause the current line to exceed
+ * 70 columns, the output is wrapped to a new line. Continuation lines are
+ * indented by two spaces.
+ *
+ * The dictionary is traversed using its internal iteration order, which is
+ * not guaranteed to match insertion order or lexical ordering.
+ *
+ * @param dict    Pointer to the dictionary to print. Must not be NULL.
+ * @param stream  Output stream to write to. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or:
+ *         - NULL_POINTER if dict or stream is NULL
+ *         - any error propagated from foreach_int8_dict
+ *
+ * @note Keys are printed without escaping.
+ */
+error_code_t print_int8_dict(const int8_dict_t* dict, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 

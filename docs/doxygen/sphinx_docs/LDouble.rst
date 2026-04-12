@@ -110,6 +110,8 @@ Utility Operations
 
 .. doxygenfunction:: slice_ldouble_array
 
+.. doxygenfunction:: print_ldouble_array
+
 Algorithms
 ----------
 
@@ -287,6 +289,7 @@ Utility Operations
 .. doxygenfunction:: clear_ldouble_dict
 .. doxygenfunction:: copy_ldouble_dict
 .. doxygenfunction:: merge_ldouble_dict
+.. doxygenfunction:: print_ldouble_dict
  
 Iteration
 ---------

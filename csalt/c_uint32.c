@@ -12,7 +12,7 @@
 // ================================================================================
 // Include modules here
 #include <string.h>
-
+#include <inttypes.h>
 #include "c_uint32.h"
 
 #if defined(__AVX512F__)
@@ -347,6 +347,60 @@ uint32_array_expect_t cumulative_uint32_array(const uint32_array_t* src,
     return (uint32_array_expect_t){ .has_value = true,
                                     .u.value   = (uint32_array_t*)r.u.value };
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t print_uint32_array(const uint32_array_t* array, FILE* stream) {
+    if (array == NULL || stream == NULL) return NULL_POINTER;
+
+    const uint32_t* data = (const uint32_t*)array->base.data;
+    size_t len = array->base.len;
+    size_t col = 0u;
+
+    fputs("[ ", stream);
+    col = 2u;
+
+    if (len == 0u) {
+        fputs("]", stream);
+        return NO_ERROR;
+    }
+
+    for (size_t i = 0u; i < len; ++i) {
+        char buf[16];
+        int n = snprintf(buf, sizeof(buf), "%" PRIu32, data[i]);
+        size_t value_len = (size_t)n;
+
+        if (i == 0u) {
+            if (col + value_len > 70u) {
+                fputc('\n', stream);
+                fputs("  ", stream);
+                col = 2u;
+            }
+            fputs(buf, stream);
+            col += value_len;
+        } else {
+            size_t token_len = 2u + value_len;
+            if (col + token_len > 70u) {
+                fputs(",\n  ", stream);
+                col = 2u;
+                fputs(buf, stream);
+                col += value_len;
+            } else {
+                fputs(", ", stream);
+                fputs(buf, stream);
+                col += token_len;
+            }
+        }
+    }
+
+    if (col + 2u > 70u) {
+        fputc('\n', stream);
+        fputs("  ]", stream);
+    } else {
+        fputs(" ]", stream);
+    }
+
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -577,6 +631,74 @@ size_t uint32_dict_alloc(const uint32_dict_t* dict) {
  
 bool is_uint32_dict_empty(const uint32_dict_t* dict) {
     return is_dict_empty(dict);
+}
+// -------------------------------------------------------------------------------- 
+
+typedef struct {
+    FILE*  stream;
+    size_t col;
+    bool   first;
+} _uint32_dict_print_ctx_t;
+
+static void _print_uint32_dict_entry(const char* key,
+                                     size_t      key_len,
+                                     uint32_t    value,
+                                     void*       user_data) {
+    _uint32_dict_print_ctx_t* ctx = (_uint32_dict_print_ctx_t*)user_data;
+    char val_buf[16];
+    int val_n = snprintf(val_buf, sizeof(val_buf), "%" PRIu32, value);
+    size_t value_len = (val_n > 0) ? (size_t)val_n : 0u;
+
+    size_t token_len = key_len + value_len + 4u;
+    if (!ctx->first) {
+        token_len += 2u;
+    }
+
+    if (ctx->col + token_len > 70u) {
+        if (!ctx->first) {
+            fputs(",\n  ", ctx->stream);
+            ctx->col = 2u;
+        } else {
+            fputc('\n', ctx->stream);
+            fputs("  ", ctx->stream);
+            ctx->col = 2u;
+        }
+    } else if (!ctx->first) {
+        fputs(", ", ctx->stream);
+        ctx->col += 2u;
+    }
+
+    fprintf(ctx->stream, "\"%.*s\": %s", (int)key_len, key, val_buf);
+    ctx->col += key_len + value_len + 4u;
+    ctx->first = false;
+}
+
+error_code_t print_uint32_dict(const uint32_dict_t* dict, FILE* stream) {
+    if (dict == NULL || stream == NULL) return NULL_POINTER;
+
+    _uint32_dict_print_ctx_t ctx;
+    ctx.stream = stream;
+    ctx.col    = 2u;
+    ctx.first  = true;
+
+    fputs("{ ", stream);
+
+    error_code_t err = foreach_uint32_dict(dict, _print_uint32_dict_entry, &ctx);
+    if (err != NO_ERROR) return err;
+
+    if (ctx.first) {
+        fputs("}", stream);
+        return NO_ERROR;
+    }
+
+    if (ctx.col + 2u > 70u) {
+        fputc('\n', stream);
+        fputs("  }", stream);
+    } else {
+        fputs(" }", stream);
+    }
+
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 
