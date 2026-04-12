@@ -224,8 +224,11 @@ Work Forward
 The following are areas for future improvement in the code base 
 
 * Test on a wider array of platforms and compilers to exercise all SIMD instruction sets 
-* Increase robustness of edge cases for unit tests 
-* Refactor string_t type to handle non ASCI data 
+* Add basic matrix solvers for Dense and Sparse (i.e. COO, CSR, CSC) matrices 
+  in ``lin_alg.h`` file
+* Add root solvers, numerical integration, and numerical differentiation in 
+  ``numerical.h`` file.
+* Add more advancec matrix solvers such as JFNK method.
 
 Contributing
 ############
