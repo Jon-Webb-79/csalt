@@ -1697,6 +1697,154 @@ ldouble_matrix_expect_t convert_ldouble_matrix_zero(const ldouble_matrix_t* src,
         .u.error   = ILLEGAL_STATE
     };
 }
+// -------------------------------------------------------------------------------- 
+
+static error_code_t _print_ldouble_dense_matrix(const ldouble_matrix_t* mat,
+                                                FILE*                   stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+    if (mat->format != DENSE_MATRIX)   return ILLEGAL_STATE;
+
+    const long double* data = (const long double*)mat->rep.dense.data;
+
+    if (fputs("[ ", stream) == EOF) return ILLEGAL_STATE;
+
+    for (size_t i = 0u; i < mat->rows; ++i) {
+        if (i == 0u) {
+            if (fputs("[ ", stream) == EOF) return ILLEGAL_STATE;
+        } else {
+            if (fputs("\n  [ ", stream) == EOF) return ILLEGAL_STATE;
+        }
+
+        for (size_t j = 0u; j < mat->cols; ++j) {
+            size_t idx = (i * mat->cols) + j;
+
+            if (fprintf(stream, "%Lg", data[idx]) < 0) {
+                return ILLEGAL_STATE;
+            }
+
+            if (j + 1u < mat->cols) {
+                if (fputs(", ", stream) == EOF) return ILLEGAL_STATE;
+            }
+        }
+
+        if (fputs(" ]", stream) == EOF) return ILLEGAL_STATE;
+
+        if (i + 1u < mat->rows) {
+            if (fputc(',', stream) == EOF) return ILLEGAL_STATE;
+        }
+    }
+
+    if (fputs(" ]", stream) == EOF) return ILLEGAL_STATE;
+    return NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
+static error_code_t _print_ldouble_sparse_row_major(const ldouble_matrix_t* mat,
+                                                    FILE*                   stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+
+    size_t col = 0u;
+    bool first = true;
+
+    if (fputs("[ ", stream) == EOF) return ILLEGAL_STATE;
+    col = 2u;
+
+    for (size_t i = 0u; i < mat->rows; ++i) {
+        for (size_t j = 0u; j < mat->cols; ++j) {
+            long double value = 0.0L;
+
+            error_code_t err = get_ldouble_matrix(mat, i, j, &value);
+            if (err != NO_ERROR) return err;
+
+            if (value == 0.0L) continue;
+
+            char token[160];
+            int n = snprintf(token, sizeof(token),
+                             "(%zu, %zu): %Lg", i, j, value);
+            size_t token_len = (n > 0) ? (size_t)n : 0u;
+
+            if (!first) {
+                if ((col + 2u + token_len) > 70u) {
+                    if (fputs(",\n  ", stream) == EOF) return ILLEGAL_STATE;
+                    col = 2u;
+                } else {
+                    if (fputs(", ", stream) == EOF) return ILLEGAL_STATE;
+                    col += 2u;
+                }
+            } else if ((col + token_len) > 70u) {
+                if (fputc('\n', stream) == EOF) return ILLEGAL_STATE;
+                if (fputs("  ", stream) == EOF) return ILLEGAL_STATE;
+                col = 2u;
+            }
+
+            if (fputs(token, stream) == EOF) return ILLEGAL_STATE;
+            col += token_len;
+            first = false;
+        }
+    }
+
+    if (first) {
+        if (fputs("]", stream) == EOF) return ILLEGAL_STATE;
+        return NO_ERROR;
+    }
+
+    if ((col + 2u) > 70u) {
+        if (fputc('\n', stream) == EOF) return ILLEGAL_STATE;
+        if (fputs("  ]", stream) == EOF) return ILLEGAL_STATE;
+    } else {
+        if (fputs(" ]", stream) == EOF) return ILLEGAL_STATE;
+    }
+
+    return NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
+static error_code_t _print_ldouble_coo_matrix(const ldouble_matrix_t* mat,
+                                              FILE*                   stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+    if (mat->format != COO_MATRIX)     return ILLEGAL_STATE;
+    return _print_ldouble_sparse_row_major(mat, stream);
+}
+
+// -----------------------------------------------------------------------------
+
+static error_code_t _print_ldouble_csr_matrix(const ldouble_matrix_t* mat,
+                                              FILE*                   stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+    if (mat->format != CSR_MATRIX)     return ILLEGAL_STATE;
+    return _print_ldouble_sparse_row_major(mat, stream);
+}
+
+// -----------------------------------------------------------------------------
+
+static error_code_t _print_ldouble_csc_matrix(const ldouble_matrix_t* mat,
+                                              FILE*                   stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+    if (mat->format != CSC_MATRIX)     return ILLEGAL_STATE;
+    return _print_ldouble_sparse_row_major(mat, stream);
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t print_ldouble_matrix(const ldouble_matrix_t* mat, FILE* stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+
+    switch (mat->format) {
+        case DENSE_MATRIX:
+            return _print_ldouble_dense_matrix(mat, stream);
+
+        case COO_MATRIX:
+            return _print_ldouble_coo_matrix(mat, stream);
+
+        case CSR_MATRIX:
+            return _print_ldouble_csr_matrix(mat, stream);
+
+        case CSC_MATRIX:
+            return _print_ldouble_csc_matrix(mat, stream);
+
+        default:
+            return ILLEGAL_STATE;
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof

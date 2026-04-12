@@ -523,6 +523,11 @@ Vector Queries
 .. doxygenfunction:: int8_matrix_is_vector
 .. doxygenfunction:: int8_matrix_vector_length
 
+Print 
+-----
+
+.. doxygenfunction:: print_int8_matrix
+
 Generic Introspection
 ---------------------
 

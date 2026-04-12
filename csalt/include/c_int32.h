@@ -2610,6 +2610,40 @@ int32_matrix_expect_t convert_int32_matrix_zero(const int32_matrix_t* src,
                                               matrix_format_t       target,
                                               allocator_vtable_t    alloc_v,
                                               int32_zero_fn         is_zero);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print an int32 matrix in a human-readable format.
+ *
+ * Dense matrices are printed row-by-row as nested bracketed arrays:
+ *
+ *     [ [ 1, 2, 3 ],
+ *       [ 4, 5, 6 ] ]
+ *
+ * Sparse matrices (COO, CSR, CSC) are printed as a flat list of explicitly
+ * stored logical nonzero entries:
+ *
+ *     [ (0, 0): 1, (0, 1): -2, (1, 2): 6 ]
+ *
+ * Dense printing does not wrap by column count; each row is printed on its
+ * own output line after the first row.
+ *
+ * Sparse printing wraps at 70 columns. If appending the next `(row, col): value`
+ * entry would exceed column 70, output continues on the next line with a
+ * two-space indentation.
+ *
+ * Sparse output is printed in row-major logical order, independent of the
+ * underlying sparse storage format.
+ *
+ * @param mat    Pointer to the matrix. Must not be NULL.
+ * @param stream Output stream. Must not be NULL.
+ *
+ * @return NO_ERROR or:
+ *         - NULL_POINTER
+ *         - ILLEGAL_STATE
+ *         - error from get_int32_matrix
+ */
+error_code_t print_int32_matrix(const int32_matrix_t* mat, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

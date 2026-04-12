@@ -535,6 +535,11 @@ Vector Queries
 .. doxygenfunction:: ldouble_matrix_is_vector
 .. doxygenfunction:: ldouble_matrix_vector_length
 
+Print 
+-----
+
+.. doxygenfunction:: print_ldouble_matrix
+
 Generic Introspection
 ---------------------
 

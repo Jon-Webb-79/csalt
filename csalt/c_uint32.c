@@ -1575,6 +1575,147 @@ uint32_matrix_expect_t convert_uint32_matrix_zero(const uint32_matrix_t* src,
         .u.error   = ILLEGAL_STATE
     };
 }
+// -------------------------------------------------------------------------------- 
+
+static error_code_t _print_uint32_dense_matrix(const uint32_matrix_t* mat,
+                                               FILE*                  stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+    if (mat->format != DENSE_MATRIX)   return ILLEGAL_STATE;
+
+    const uint32_t* data = (const uint32_t*)mat->rep.dense.data;
+
+    if (fputs("[ ", stream) == EOF) return ILLEGAL_STATE;
+
+    for (size_t i = 0u; i < mat->rows; ++i) {
+        if (i == 0u) {
+            fputs("[ ", stream);
+        } else {
+            fputs("\n  [ ", stream);
+        }
+
+        for (size_t j = 0u; j < mat->cols; ++j) {
+            size_t idx = (i * mat->cols) + j;
+
+            if (fprintf(stream, "%" PRIu32, data[idx]) < 0) {
+                return ILLEGAL_STATE;
+            }
+
+            if (j + 1u < mat->cols) {
+                fputs(", ", stream);
+            }
+        }
+
+        fputs(" ]", stream);
+
+        if (i + 1u < mat->rows) {
+            fputc(',', stream);
+        }
+    }
+
+    fputs(" ]", stream);
+    return NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
+static error_code_t _print_uint32_sparse_row_major(const uint32_matrix_t* mat,
+                                                   FILE*                  stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+
+    size_t col = 0u;
+    bool first = true;
+
+    fputs("[ ", stream);
+    col = 2u;
+
+    for (size_t i = 0u; i < mat->rows; ++i) {
+        for (size_t j = 0u; j < mat->cols; ++j) {
+            uint32_t value = 0u;
+
+            error_code_t err = get_uint32_matrix(mat, i, j, &value);
+            if (err != NO_ERROR) return err;
+
+            if (value == 0u) continue;
+
+            char token[64];
+            int n = snprintf(token, sizeof(token),
+                             "(%zu, %zu): %" PRIu32, i, j, value);
+            size_t token_len = (n > 0) ? (size_t)n : 0u;
+
+            if (!first) {
+                if ((col + 2u + token_len) > 70u) {
+                    fputs(",\n  ", stream);
+                    col = 2u;
+                } else {
+                    fputs(", ", stream);
+                    col += 2u;
+                }
+            } else if ((col + token_len) > 70u) {
+                fputc('\n', stream);
+                fputs("  ", stream);
+                col = 2u;
+            }
+
+            fputs(token, stream);
+            col += token_len;
+            first = false;
+        }
+    }
+
+    if (first) {
+        fputs("]", stream);
+        return NO_ERROR;
+    }
+
+    if ((col + 2u) > 70u) {
+        fputc('\n', stream);
+        fputs("  ]", stream);
+    } else {
+        fputs(" ]", stream);
+    }
+
+    return NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
+static error_code_t _print_uint32_coo_matrix(const uint32_matrix_t* mat,
+                                             FILE*                  stream) {
+    if (mat->format != COO_MATRIX) return ILLEGAL_STATE;
+    return _print_uint32_sparse_row_major(mat, stream);
+}
+
+static error_code_t _print_uint32_csr_matrix(const uint32_matrix_t* mat,
+                                             FILE*                  stream) {
+    if (mat->format != CSR_MATRIX) return ILLEGAL_STATE;
+    return _print_uint32_sparse_row_major(mat, stream);
+}
+
+static error_code_t _print_uint32_csc_matrix(const uint32_matrix_t* mat,
+                                             FILE*                  stream) {
+    if (mat->format != CSC_MATRIX) return ILLEGAL_STATE;
+    return _print_uint32_sparse_row_major(mat, stream);
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t print_uint32_matrix(const uint32_matrix_t* mat, FILE* stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+
+    switch (mat->format) {
+        case DENSE_MATRIX:
+            return _print_uint32_dense_matrix(mat, stream);
+
+        case COO_MATRIX:
+            return _print_uint32_coo_matrix(mat, stream);
+
+        case CSR_MATRIX:
+            return _print_uint32_csr_matrix(mat, stream);
+
+        case CSC_MATRIX:
+            return _print_uint32_csc_matrix(mat, stream);
+
+        default:
+            return ILLEGAL_STATE;
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof

@@ -2535,6 +2535,49 @@ uint16_matrix_expect_t convert_uint16_matrix_zero(const uint16_matrix_t* src,
                                                 matrix_format_t       target,
                                                 allocator_vtable_t    alloc_v,
                                                 uint16_zero_fn         is_zero);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Print a uint16 matrix in a human-readable format.
+ *
+ * Dense matrices are printed row-by-row as nested bracketed arrays:
+ *
+ *     [ [ 1, 2, 3 ],
+ *       [ 4, 5, 6 ] ]
+ *
+ * Sparse matrices (COO, CSR, CSC) are printed as a flat list of explicitly
+ * stored logical nonzero entries:
+ *
+ *     [ (0, 0): 1, (0, 1): 2, (1, 2): 6 ]
+ *
+ * Dense printing does not wrap by column count; each row is printed on its
+ * own output line after the first row.
+ *
+ * Sparse printing wraps at 70 columns. If appending the next `(row, col): value`
+ * entry would exceed column 70, output continues on the next line with a
+ * two-space indentation.
+ *
+ * Sparse output is printed in row-major logical order, independent of the
+ * underlying sparse storage format.
+ *
+ * @param mat
+ * Pointer to the source @ref uint16_matrix_t to print. Must not be NULL.
+ *
+ * @param stream
+ * Output stream to write to, such as `stdout`, `stderr`, or an open file.
+ * Must not be NULL.
+ *
+ * @return NO_ERROR on success, or:
+ *         - NULL_POINTER if @p mat or @p stream is NULL
+ *         - ILLEGAL_STATE if the matrix format is unrecognized
+ *         - any error returned by get_uint16_matrix during sparse traversal
+ *
+ * @note
+ * - Dense matrices print all elements, including zeros.
+ * - Sparse matrices print only logical nonzero values.
+ * - No trailing newline is appended automatically.
+ */
+error_code_t print_uint16_matrix(const uint16_matrix_t* mat, FILE* stream);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

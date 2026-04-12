@@ -6587,7 +6587,6 @@ static void test_convert_uint8_matrix_zero_default_omits_zero_in_csr(void** stat
     return_uint8_matrix(r.u.value);
     return_uint8_matrix(src);
 }
-
 // ================================================================================
 // Registry
 // ================================================================================

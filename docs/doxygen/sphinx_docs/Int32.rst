@@ -530,6 +530,11 @@ Vector Queries
 .. doxygenfunction:: int32_matrix_is_vector
 .. doxygenfunction:: int32_matrix_vector_length
 
+Print 
+-----
+
+.. doxygenfunction:: print_int32_matrix
+
 Generic Introspection
 ---------------------
 

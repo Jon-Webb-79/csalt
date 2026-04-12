@@ -522,6 +522,11 @@ Vector Queries
 .. doxygenfunction:: uint16_matrix_is_vector
 .. doxygenfunction:: uint16_matrix_vector_length
 
+Print 
+-----
+
+.. doxygenfunction:: print_uint16_matrix
+
 Generic Introspection
 ---------------------
 

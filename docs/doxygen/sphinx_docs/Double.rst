@@ -546,6 +546,11 @@ Vector Queries
 .. doxygenfunction:: double_matrix_is_vector
 .. doxygenfunction:: double_matrix_vector_length
 
+Print 
+-----
+
+.. doxygenfunction:: print_double_matrix
+
 Generic Introspection
 ---------------------
 

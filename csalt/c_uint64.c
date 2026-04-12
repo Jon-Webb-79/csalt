@@ -1573,6 +1573,154 @@ uint64_matrix_expect_t convert_uint64_matrix_zero(const uint64_matrix_t* src,
         .u.error   = ILLEGAL_STATE
     };
 }
+// -------------------------------------------------------------------------------- 
+
+static error_code_t _print_uint64_dense_matrix(const uint64_matrix_t* mat,
+                                               FILE*                  stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+    if (mat->format != DENSE_MATRIX)   return ILLEGAL_STATE;
+
+    const uint64_t* data = (const uint64_t*)mat->rep.dense.data;
+
+    if (fputs("[ ", stream) == EOF) return ILLEGAL_STATE;
+
+    for (size_t i = 0u; i < mat->rows; ++i) {
+        if (i == 0u) {
+            if (fputs("[ ", stream) == EOF) return ILLEGAL_STATE;
+        } else {
+            if (fputs("\n  [ ", stream) == EOF) return ILLEGAL_STATE;
+        }
+
+        for (size_t j = 0u; j < mat->cols; ++j) {
+            size_t idx = (i * mat->cols) + j;
+
+            if (fprintf(stream, "%" PRIu64, data[idx]) < 0) {
+                return ILLEGAL_STATE;
+            }
+
+            if (j + 1u < mat->cols) {
+                if (fputs(", ", stream) == EOF) return ILLEGAL_STATE;
+            }
+        }
+
+        if (fputs(" ]", stream) == EOF) return ILLEGAL_STATE;
+
+        if (i + 1u < mat->rows) {
+            if (fputc(',', stream) == EOF) return ILLEGAL_STATE;
+        }
+    }
+
+    if (fputs(" ]", stream) == EOF) return ILLEGAL_STATE;
+    return NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
+static error_code_t _print_uint64_sparse_row_major(const uint64_matrix_t* mat,
+                                                   FILE*                  stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+
+    size_t col = 0u;
+    bool first = true;
+
+    if (fputs("[ ", stream) == EOF) return ILLEGAL_STATE;
+    col = 2u;
+
+    for (size_t i = 0u; i < mat->rows; ++i) {
+        for (size_t j = 0u; j < mat->cols; ++j) {
+            uint64_t value = 0u;
+
+            error_code_t err = get_uint64_matrix(mat, i, j, &value);
+            if (err != NO_ERROR) return err;
+
+            if (value == 0u) continue;
+
+            char token[96];
+            int n = snprintf(token, sizeof(token),
+                             "(%zu, %zu): %" PRIu64, i, j, value);
+            size_t token_len = (n > 0) ? (size_t)n : 0u;
+
+            if (!first) {
+                if ((col + 2u + token_len) > 70u) {
+                    if (fputs(",\n  ", stream) == EOF) return ILLEGAL_STATE;
+                    col = 2u;
+                } else {
+                    if (fputs(", ", stream) == EOF) return ILLEGAL_STATE;
+                    col += 2u;
+                }
+            } else if ((col + token_len) > 70u) {
+                if (fputc('\n', stream) == EOF) return ILLEGAL_STATE;
+                if (fputs("  ", stream) == EOF) return ILLEGAL_STATE;
+                col = 2u;
+            }
+
+            if (fputs(token, stream) == EOF) return ILLEGAL_STATE;
+            col += token_len;
+            first = false;
+        }
+    }
+
+    if (first) {
+        if (fputs("]", stream) == EOF) return ILLEGAL_STATE;
+        return NO_ERROR;
+    }
+
+    if ((col + 2u) > 70u) {
+        if (fputc('\n', stream) == EOF) return ILLEGAL_STATE;
+        if (fputs("  ]", stream) == EOF) return ILLEGAL_STATE;
+    } else {
+        if (fputs(" ]", stream) == EOF) return ILLEGAL_STATE;
+    }
+
+    return NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
+static error_code_t _print_uint64_coo_matrix(const uint64_matrix_t* mat,
+                                             FILE*                  stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+    if (mat->format != COO_MATRIX)     return ILLEGAL_STATE;
+    return _print_uint64_sparse_row_major(mat, stream);
+}
+
+// -----------------------------------------------------------------------------
+
+static error_code_t _print_uint64_csr_matrix(const uint64_matrix_t* mat,
+                                             FILE*                  stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+    if (mat->format != CSR_MATRIX)     return ILLEGAL_STATE;
+    return _print_uint64_sparse_row_major(mat, stream);
+}
+
+// -----------------------------------------------------------------------------
+
+static error_code_t _print_uint64_csc_matrix(const uint64_matrix_t* mat,
+                                             FILE*                  stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+    if (mat->format != CSC_MATRIX)     return ILLEGAL_STATE;
+    return _print_uint64_sparse_row_major(mat, stream);
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t print_uint64_matrix(const uint64_matrix_t* mat, FILE* stream) {
+    if (mat == NULL || stream == NULL) return NULL_POINTER;
+
+    switch (mat->format) {
+        case DENSE_MATRIX:
+            return _print_uint64_dense_matrix(mat, stream);
+
+        case COO_MATRIX:
+            return _print_uint64_coo_matrix(mat, stream);
+
+        case CSR_MATRIX:
+            return _print_uint64_csr_matrix(mat, stream);
+
+        case CSC_MATRIX:
+            return _print_uint64_csc_matrix(mat, stream);
+
+        default:
+            return ILLEGAL_STATE;
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof

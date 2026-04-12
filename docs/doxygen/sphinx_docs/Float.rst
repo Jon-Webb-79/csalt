@@ -542,6 +542,11 @@ Vector Queries
 .. doxygenfunction:: float_matrix_is_vector
 .. doxygenfunction:: float_matrix_vector_length
 
+Print 
+-----
+
+.. doxygenfunction:: print_float_matrix
+
 Generic Introspection
 ---------------------
 
