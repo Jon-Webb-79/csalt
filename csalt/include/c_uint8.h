@@ -1281,6 +1281,46 @@ uint8_expect_t uint8_array_max(const uint8_array_t* array);
  * @endcode
  */
 error_code_t print_uint8_array(const uint8_array_t* array, FILE* stream);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two uint8 arrays for exact equality using a SIMD-accelerated path.
+ *
+ * Two arrays are considered equal if:
+ *   1. Both pointers are non-NULL.
+ *   2. They contain the same number of elements (len).
+ *   3. Every element compares equal using exact integer comparison.
+ *
+ * This function uses a SIMD-accelerated implementation when available
+ * (e.g., AVX2, SSE, NEON) to compare elements in blocks, with a scalar
+ * fallback for any remaining elements. The comparison is exact and
+ * bitwise for each element — no tolerance or normalization is applied.
+ *
+ * This function does NOT compare allocator state, capacity, or any
+ * metadata beyond element count and data values.
+ *
+ * @param a  Pointer to the first uint8 array.
+ * @param b  Pointer to the second uint8 array.
+ *
+ * @return true if both arrays are equal, false otherwise. Returns false if:
+ *         - Either pointer is NULL
+ *         - The array lengths differ
+ *         - Any element differs
+ *
+ * @note This function assumes both arrays are valid and initialized.
+ *       Behavior is undefined if internal data pointers are invalid.
+ *
+ * @code
+ *     uint8_array_t* a = ...; // [1, 2, 3]
+ *     uint8_array_t* b = ...; // [1, 2, 3]
+ *     uint8_array_t* c = ...; // [1, 2, 4]
+ *
+ *     assert_true(uint8_array_equal(a, b));
+ *     assert_false(uint8_array_equal(a, c));
+ * @endcode
+ */
+bool uint8_array_equal(const uint8_array_t* a,
+                       const uint8_array_t* b);
 // ================================================================================ 
 // ================================================================================ 
 

@@ -364,6 +364,32 @@ error_code_t print_int8_array(const int8_array_t* array, FILE* stream) {
 
     return NO_ERROR;
 }
+// -------------------------------------------------------------------------------- 
+
+bool int8_array_equal(const int8_array_t* a,
+                      const int8_array_t* b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+
+    if (a == b) {
+        return true;
+    }
+
+    if (a->base.len != b->base.len) {
+        return false;
+    }
+
+    if (a->base.len == 0u) {
+        return true;
+    }
+
+    return simd_int8_arrays_equal(
+        (const int8_t*)a->base.data,
+        (const int8_t*)b->base.data,
+        a->base.len
+    );
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -948,7 +974,7 @@ int8_matrix_expect_t convert_int8_matrix(const int8_matrix_t* src,
 
         dst->rep.csr.row_ptr = row_ptr;
         dst->rep.csr.col_idx = col_idx;
-        dst->rep.csr.values  = (int8_t*)values;
+        dst->rep.csr.values  = (uint8_t*)values;
 
         return (int8_matrix_expect_t){
             .has_value = true,
@@ -1410,7 +1436,7 @@ int8_matrix_expect_t convert_int8_matrix_zero(const int8_matrix_t* src,
         dst->rep.csr.nnz     = k;
         dst->rep.csr.row_ptr = row_ptr;
         dst->rep.csr.col_idx = col_idx;
-        dst->rep.csr.values  = (int8_t*)values;
+        dst->rep.csr.values  = (uint8_t*)values;
 
         return (int8_matrix_expect_t){
             .has_value = true,
@@ -1525,7 +1551,7 @@ int8_matrix_expect_t convert_int8_matrix_zero(const int8_matrix_t* src,
         dst->rep.csc.nnz     = k;
         dst->rep.csc.col_ptr = col_ptr;
         dst->rep.csc.row_idx = row_idx;
-        dst->rep.csc.values  = (int8_t*)values;
+        dst->rep.csc.values  = (uint8_t*)values;
 
         return (int8_matrix_expect_t){
             .has_value = true,

@@ -112,6 +112,10 @@ Utility Operations
 
 .. doxygenfunction:: print_ldouble_array
 
+.. doxygenfunction:: ldouble_array_equal
+
+
+
 Algorithms
 ----------
 

@@ -423,6 +423,32 @@ error_code_t print_double_array(const double_array_t* array, FILE* stream) {
 
     return NO_ERROR;
 }
+// -------------------------------------------------------------------------------- 
+
+bool double_array_equal(const double_array_t* a,
+                        const double_array_t* b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+
+    if (a == b) {
+        return true;
+    }
+
+    if (a->base.len != b->base.len) {
+        return false;
+    }
+
+    if (a->base.len == 0u) {
+        return true;
+    }
+
+    return simd_double_arrays_equal(
+        (const double*)a->base.data,
+        (const double*)b->base.data,
+        a->base.len
+    );
+}
 // ================================================================================ 
 // ================================================================================ 
 

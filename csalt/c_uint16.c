@@ -369,6 +369,32 @@ error_code_t print_uint16_array(const uint16_array_t* array, FILE* stream) {
 
     return NO_ERROR;
 }
+// -------------------------------------------------------------------------------- 
+
+bool uint16_array_equal(const uint16_array_t* a,
+                        const uint16_array_t* b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+
+    if (a == b) {
+        return true;
+    }
+
+    if (a->base.len != b->base.len) {
+        return false;
+    }
+
+    if (a->base.len == 0u) {
+        return true;
+    }
+
+    return simd_uint16_arrays_equal(
+        (const uint16_t*)a->base.data,
+        (const uint16_t*)b->base.data,
+        a->base.len
+    );
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -953,7 +979,7 @@ uint16_matrix_expect_t convert_uint16_matrix(const uint16_matrix_t* src,
 
         dst->rep.csr.row_ptr = row_ptr;
         dst->rep.csr.col_idx = col_idx;
-        dst->rep.csr.values  = (uint16_t*)values;
+        dst->rep.csr.values  = (uint8_t*)values;
 
         return (uint16_matrix_expect_t){
             .has_value = true,
@@ -1415,7 +1441,7 @@ uint16_matrix_expect_t convert_uint16_matrix_zero(const uint16_matrix_t* src,
         dst->rep.csr.nnz     = k;
         dst->rep.csr.row_ptr = row_ptr;
         dst->rep.csr.col_idx = col_idx;
-        dst->rep.csr.values  = (uint16_t*)values;
+        dst->rep.csr.values  = (uint8_t*)values;
 
         return (uint16_matrix_expect_t){
             .has_value = true,
@@ -1530,7 +1556,7 @@ uint16_matrix_expect_t convert_uint16_matrix_zero(const uint16_matrix_t* src,
         dst->rep.csc.nnz     = k;
         dst->rep.csc.col_ptr = col_ptr;
         dst->rep.csc.row_idx = row_idx;
-        dst->rep.csc.values  = (uint16_t*)values;
+        dst->rep.csc.values  = (uint8_t*)values;
 
         return (uint16_matrix_expect_t){
             .has_value = true,

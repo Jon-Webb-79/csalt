@@ -1349,6 +1349,31 @@ uint32_array_expect_t cumulative_uint32_array(const uint32_array_t* src,
  * @endcode
  */
 error_code_t print_uint32_array(const uint32_array_t* array, FILE* stream);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two uint32 arrays for exact equality using a SIMD-accelerated path.
+ *
+ * Two arrays are considered equal if:
+ *   1. Both pointers are non-NULL.
+ *   2. They contain the same number of elements (len).
+ *   3. Every element compares equal using exact integer comparison.
+ *
+ * This function uses a SIMD-accelerated implementation when available
+ * (e.g., AVX2, SSE, NEON) to compare elements in blocks, with a scalar
+ * fallback for any remaining elements. The comparison is exact and
+ * bitwise for each element.
+ *
+ * This function does NOT compare allocator state, capacity, or any
+ * metadata beyond element count and data values.
+ *
+ * @param a  Pointer to the first uint32 array.
+ * @param b  Pointer to the second uint32 array.
+ *
+ * @return true if both arrays are equal, false otherwise.
+ */
+bool uint32_array_equal(const uint32_array_t* a,
+                        const uint32_array_t* b);
 // ================================================================================ 
 // ================================================================================ 
 

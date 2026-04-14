@@ -1022,6 +1022,35 @@ bool is_float_array_ptr(const float_array_t* array, const float* ptr);
  * @endcode
  */
 error_code_t print_float_array(const float_array_t* array, FILE* stream);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two float arrays for exact numeric equality using a
+ *        SIMD-accelerated path.
+ *
+ * Two arrays are considered equal if:
+ *   1. Both pointers are non-NULL.
+ *   2. They contain the same number of elements (len).
+ *   3. Every element compares equal using IEEE floating-point equality.
+ *
+ * This function uses a SIMD-accelerated implementation when available
+ * (e.g., AVX, SSE, NEON) to compare elements in blocks, with a scalar
+ * fallback for any remaining elements.
+ *
+ * Equality follows normal floating-point comparison rules:
+ *   - +0.0f and -0.0f compare equal
+ *   - NaN does not compare equal to any value, including itself
+ *
+ * This function does NOT compare allocator state, capacity, or any
+ * metadata beyond element count and data values.
+ *
+ * @param a  Pointer to the first float array.
+ * @param b  Pointer to the second float array.
+ *
+ * @return true if both arrays are equal, false otherwise.
+ */
+bool float_array_equal(const float_array_t* a,
+                       const float_array_t* b);
 // ================================================================================ 
 // ================================================================================ 
 

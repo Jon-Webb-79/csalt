@@ -110,6 +110,8 @@ Utility Operations
 
 .. doxygenfunction:: print_int8_array
 
+.. doxygenfunction:: int8_array_equal
+
 Algorithms
 ----------
 

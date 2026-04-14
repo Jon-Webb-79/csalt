@@ -110,6 +110,8 @@ Utility Operations
 
 .. doxygenfunction:: print_uint16_array
 
+.. doxygenfunction:: uint16_array_equal
+
 Algorithms
 ----------
 

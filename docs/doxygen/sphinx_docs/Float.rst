@@ -112,6 +112,8 @@ Utility Operations
 
 .. doxygenfunction:: print_float_array
 
+.. doxygenfunction:: float_array_equal
+
 Algorithms
 ----------
 

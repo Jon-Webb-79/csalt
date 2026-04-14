@@ -400,6 +400,32 @@ error_code_t print_int64_array(const int64_array_t* array, FILE* stream) {
 
     return NO_ERROR;
 }
+// -------------------------------------------------------------------------------- 
+
+bool int64_array_equal(const int64_array_t* a,
+                       const int64_array_t* b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+
+    if (a == b) {
+        return true;
+    }
+
+    if (a->base.len != b->base.len) {
+        return false;
+    }
+
+    if (a->base.len == 0u) {
+        return true;
+    }
+
+    return simd_int64_arrays_equal(
+        (const int64_t*)a->base.data,
+        (const int64_t*)b->base.data,
+        a->base.len
+    );
+}
 // ================================================================================ 
 // ================================================================================ 
 
@@ -984,7 +1010,7 @@ int64_matrix_expect_t convert_int64_matrix(const int64_matrix_t* src,
 
         dst->rep.csr.row_ptr = row_ptr;
         dst->rep.csr.col_idx = col_idx;
-        dst->rep.csr.values  = (int64_t*)values;
+        dst->rep.csr.values  = (uint8_t*)values;
 
         return (int64_matrix_expect_t){
             .has_value = true,

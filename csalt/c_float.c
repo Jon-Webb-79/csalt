@@ -437,6 +437,32 @@ error_code_t print_float_array(const float_array_t* array, FILE* stream) {
 
     return NO_ERROR;
 }
+// -------------------------------------------------------------------------------- 
+
+bool float_array_equal(const float_array_t* a,
+                       const float_array_t* b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+
+    if (a == b) {
+        return true;
+    }
+
+    if (a->base.len != b->base.len) {
+        return false;
+    }
+
+    if (a->base.len == 0u) {
+        return true;
+    }
+
+    return simd_float_arrays_equal(
+        (const float*)a->base.data,
+        (const float*)b->base.data,
+        a->base.len
+    );
+}
 // ================================================================================ 
 // ================================================================================ 
 

@@ -536,6 +536,34 @@ bool is_ldouble_array_ptr(const ldouble_array_t* array, const long double* ptr);
  * @endcode
  */
 error_code_t print_ldouble_array(const ldouble_array_t* array, FILE* stream);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two long double arrays for exact numeric equality.
+ *
+ * Two arrays are considered equal if:
+ *   1. Both pointers are non-NULL.
+ *   2. They contain the same number of elements (len).
+ *   3. Every element compares equal using IEEE floating-point equality.
+ *
+ * This function performs a scalar element-by-element comparison because
+ * long double does not have a portable SIMD fast path across supported
+ * targets.
+ *
+ * Equality follows normal floating-point comparison rules:
+ *   - +0.0L and -0.0L compare equal
+ *   - NaN does not compare equal to any value, including itself
+ *
+ * This function does NOT compare allocator state, capacity, or any
+ * metadata beyond element count and data values.
+ *
+ * @param a  Pointer to the first long double array.
+ * @param b  Pointer to the second long double array.
+ *
+ * @return true if both arrays are equal, false otherwise.
+ */
+bool ldouble_array_equal(const ldouble_array_t* a,
+                         const ldouble_array_t* b);
 // ================================================================================ 
 // ================================================================================ 
 

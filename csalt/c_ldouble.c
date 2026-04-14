@@ -526,6 +526,37 @@ error_code_t print_ldouble_array(const ldouble_array_t* array, FILE* stream) {
 
     return NO_ERROR;
 }
+// -------------------------------------------------------------------------------- 
+
+bool ldouble_array_equal(const ldouble_array_t* a,
+                         const ldouble_array_t* b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+
+    /* Fast path: same object */
+    if (a == b) {
+        return true;
+    }
+
+    /* Length must match */
+    if (a->base.len != b->base.len) {
+        return false;
+    }
+
+    /* Empty arrays are equal */
+    if (a->base.len == 0u) {
+        return true;
+    }
+
+    for (size_t i = 0u; i < a->base.len; ++i) {
+        if (a->base.data[i] != b->base.data[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 

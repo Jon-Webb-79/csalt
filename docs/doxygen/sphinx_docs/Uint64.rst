@@ -112,6 +112,8 @@ Utility Operations
 
 .. doxygenfunction:: print_uint64_array
 
+.. doxygenfunction:: uint64_array_equal
+
 Algorithms
 ----------
 

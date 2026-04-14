@@ -171,6 +171,8 @@ Utility Operations
 
 .. doxygenfunction:: slice_array
 
+.. doxygenfunction:: array_equal
+
 Type Query
 ----------
 
