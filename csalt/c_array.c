@@ -1022,6 +1022,27 @@ array_expect_t cumulative_array(const array_t*     src,
 
     return (array_expect_t){ .has_value = true, .u.value = dst };
 }
+// -------------------------------------------------------------------------------- 
+
+bool array_equal(const array_t* a, const array_t* b) {
+    if (a == NULL || b == NULL) return false;
+
+    /* Fast path: pointer equality */
+    if (a == b) return true;
+
+    /* Must match in structure */
+    if (a->len       != b->len)       return false;
+    if (a->dtype     != b->dtype)     return false;
+    if (a->data_size != b->data_size) return false;
+
+    /* Empty arrays are equal */
+    if (a->len == 0u) return true;
+
+    /* Byte-wise comparison */
+    size_t total_bytes = a->len * a->data_size;
+
+    return memcmp(a->data, b->data, total_bytes) == 0;
+}
 // ================================================================================ 
 // ================================================================================ 
 

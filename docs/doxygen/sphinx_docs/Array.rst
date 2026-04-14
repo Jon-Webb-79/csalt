@@ -223,3 +223,5 @@ dereferencing it.
 .. doxygenfunction:: array_min
 
 .. doxygenfunction:: array_sum
+
+.. doxygenfunction:: array_equal

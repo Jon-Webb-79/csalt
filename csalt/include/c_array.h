@@ -877,6 +877,25 @@ array_expect_t cumulative_array(const array_t*     src,
                                                         const void* element),
                                 allocator_vtable_t alloc_v,
                                 dtype_id_t         dtype);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two arrays for exact equality.
+ *
+ * Two arrays are considered equal if:
+ *   1. Both are non-NULL
+ *   2. They have the same length
+ *   3. They have the same dtype
+ *   4. Their element data matches exactly (byte-wise comparison)
+ *
+ * This function performs an exact bitwise comparison of the underlying
+ * data buffer. No tolerance is applied for floating point types.
+ *
+ * @param a  Pointer to the first array.
+ * @param b  Pointer to the second array.
+ * @return true if arrays are equal, false otherwise.
+ */
+bool array_equal(const array_t* a, const array_t* b);
 // ================================================================================ 
 // ================================================================================ 
 
