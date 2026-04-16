@@ -307,6 +307,8 @@ Access Operations
 
 .. doxygenfunction:: set_matrix
 
+.. doxygenfunction:: set_matrix
+
 COO Operations
 ~~~~~~~~~~~~~~
 

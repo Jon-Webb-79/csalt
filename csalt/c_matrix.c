@@ -2526,6 +2526,116 @@ bool is_zero_matrix(const matrix_t* mat) {
             return false;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+static size_expect_t _dense_matrix_min(const matrix_t* mat,
+                                       int (*cmp)(const void*, const void*)) {
+    size_t count;
+
+    if (mat == NULL || cmp == NULL) {
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    if ((mat->rows != 0u) && (mat->cols > SIZE_MAX / mat->rows)) {
+        return (size_expect_t){ .has_value = false, .u.error = LENGTH_OVERFLOW };
+    }
+
+    count = mat->rows * mat->cols;
+    if (count == 0u) {
+        return (size_expect_t){ .has_value = false, .u.error = EMPTY };
+    }
+
+    size_t idx = simd_min_uint8(mat->rep.dense.data,
+                                count,
+                                mat->data_size,
+                                cmp);
+    return (size_expect_t){ .has_value = true, .u.value = idx };
+}
+
+// --------------------------------------------------------------------------------
+
+static size_expect_t _coo_matrix_min(const matrix_t* mat,
+                                     int (*cmp)(const void*, const void*)) {
+    if (mat == NULL || cmp == NULL) {
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+    if (mat->rep.coo.nnz == 0u) {
+        return (size_expect_t){ .has_value = false, .u.error = EMPTY };
+    }
+
+    size_t idx = simd_min_uint8(mat->rep.coo.values,
+                                mat->rep.coo.nnz,
+                                mat->data_size,
+                                cmp);
+    return (size_expect_t){ .has_value = true, .u.value = idx };
+}
+
+// --------------------------------------------------------------------------------
+
+static size_expect_t _csc_matrix_min(const matrix_t* mat,
+                                     int (*cmp)(const void*, const void*)) {
+    if (mat == NULL || cmp == NULL) {
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+    if (mat->rep.csc.nnz == 0u) {
+        return (size_expect_t){ .has_value = false, .u.error = EMPTY };
+    }
+
+    size_t idx = simd_min_uint8(mat->rep.csc.values,
+                                mat->rep.csc.nnz,
+                                mat->data_size,
+                                cmp);
+    return (size_expect_t){ .has_value = true, .u.value = idx };
+}
+
+// --------------------------------------------------------------------------------
+
+static size_expect_t _csr_matrix_min(const matrix_t* mat,
+                                     int (*cmp)(const void*, const void*)) {
+    if (mat == NULL || cmp == NULL) {
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+    if (mat->rep.csr.nnz == 0u) {
+        return (size_expect_t){ .has_value = false, .u.error = EMPTY };
+    }
+
+    size_t idx = simd_min_uint8(mat->rep.csr.values,
+                                mat->rep.csr.nnz,
+                                mat->data_size,
+                                cmp);
+    return (size_expect_t){ .has_value = true, .u.value = idx };
+}
+
+// --------------------------------------------------------------------------------
+
+size_expect_t matrix_min(const matrix_t* mat,
+                         int (*cmp)(const void*, const void*),
+                         dtype_id_t dtype) {
+    if (mat == NULL || cmp == NULL) {
+        return (size_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    if (dtype != mat->dtype) {
+        return (size_expect_t){ .has_value = false, .u.error = TYPE_MISMATCH };
+    }
+
+    switch (mat->format) {
+        case DENSE_MATRIX:
+            return _dense_matrix_min(mat, cmp);
+
+        case COO_MATRIX:
+            return _coo_matrix_min(mat, cmp);
+
+        case CSR_MATRIX:
+            return _csr_matrix_min(mat, cmp);
+
+        case CSC_MATRIX:
+            return _csc_matrix_min(mat, cmp);
+
+        default:
+            return (size_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof
