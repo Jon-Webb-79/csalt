@@ -1739,22 +1739,26 @@ int16_expect_t int16_matrix_min(const int16_matrix_t* mat) {
 
     switch (mat->format) {
         case DENSE_MATRIX: {
-            int16_t val = mat->rep.dense.data[idx.u.value];
+            const int16_t* vals = (const int16_t*)mat->rep.dense.data;
+            int16_t val = vals[idx.u.value];
             return (int16_expect_t){ .has_value = true, .u.value = val };
         }
 
         case COO_MATRIX: {
-            int16_t val = mat->rep.coo.values[idx.u.value];
+            const int16_t* vals = (const int16_t*)mat->rep.coo.values;
+            int16_t val = vals[idx.u.value];
             return (int16_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSR_MATRIX: {
-            int16_t val = mat->rep.csr.values[idx.u.value];
+            const int16_t* vals = (const int16_t*)mat->rep.csr.values;
+            int16_t val = vals[idx.u.value];
             return (int16_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSC_MATRIX: {
-            int16_t val = mat->rep.csc.values[idx.u.value];
+            const int16_t* vals = (const int16_t*)mat->rep.csc.values;
+            int16_t val = vals[idx.u.value];
             return (int16_expect_t){ .has_value = true, .u.value = val };
         }
 

@@ -1800,22 +1800,26 @@ float_expect_t float_matrix_min(const float_matrix_t* mat) {
 
     switch (mat->format) {
         case DENSE_MATRIX: {
-            float val = mat->rep.dense.data[idx.u.value];
+            const float_t* vals = (const float*)mat->rep.dense.data;
+            float_t val = vals[idx.u.value];
             return (float_expect_t){ .has_value = true, .u.value = val };
         }
 
         case COO_MATRIX: {
-            float val = mat->rep.coo.values[idx.u.value];
+            const float_t* vals = (const float*)mat->rep.coo.values;
+            float_t val = vals[idx.u.value];
             return (float_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSR_MATRIX: {
-            float val = mat->rep.csr.values[idx.u.value];
+            const float_t* vals = (const float*)mat->rep.csr.values;
+            float_t val = vals[idx.u.value];
             return (float_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSC_MATRIX: {
-            float val = mat->rep.csc.values[idx.u.value];
+            const float_t* vals = (const float*)mat->rep.csc.values;
+            float_t val = vals[idx.u.value];
             return (float_expect_t){ .has_value = true, .u.value = val };
         }
 

@@ -1761,22 +1761,26 @@ uint64_expect_t uint64_matrix_min(const uint64_matrix_t* mat) {
 
     switch (mat->format) {
         case DENSE_MATRIX: {
-            uint64_t val = mat->rep.dense.data[idx.u.value];
+            const uint64_t* vals = (const uint64_t*)mat->rep.dense.data;
+            uint64_t val = vals[idx.u.value];
             return (uint64_expect_t){ .has_value = true, .u.value = val };
         }
 
         case COO_MATRIX: {
-            uint64_t val = mat->rep.coo.values[idx.u.value];
+            const uint64_t* vals = (const uint64_t*)mat->rep.coo.values;
+            uint64_t val = vals[idx.u.value];
             return (uint64_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSR_MATRIX: {
-            uint64_t val = mat->rep.csr.values[idx.u.value];
+            const uint64_t* vals = (const uint64_t*)mat->rep.csr.values;
+            uint64_t val = vals[idx.u.value];
             return (uint64_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSC_MATRIX: {
-            uint64_t val = mat->rep.csc.values[idx.u.value];
+            const uint64_t* vals = (const uint64_t*)mat->rep.csc.values;
+            uint64_t val = vals[idx.u.value];
             return (uint64_expect_t){ .has_value = true, .u.value = val };
         }
 

@@ -1756,22 +1756,26 @@ uint32_expect_t uint32_matrix_min(const uint32_matrix_t* mat) {
 
     switch (mat->format) {
         case DENSE_MATRIX: {
-            uint32_t val = mat->rep.dense.data[idx.u.value];
+            const uint32_t* vals = (const uint32_t*)mat->rep.dense.data;
+            uint32_t val = vals[idx.u.value];
             return (uint32_expect_t){ .has_value = true, .u.value = val };
         }
 
         case COO_MATRIX: {
-            uint32_t val = mat->rep.coo.values[idx.u.value];
+            const uint32_t* vals = (const uint32_t*)mat->rep.coo.values;
+            uint32_t val = vals[idx.u.value];
             return (uint32_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSR_MATRIX: {
-            uint32_t val = mat->rep.csr.values[idx.u.value];
+            const uint32_t* vals = (const uint32_t*)mat->rep.csr.values;
+            uint32_t val = vals[idx.u.value];
             return (uint32_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSC_MATRIX: {
-            uint32_t val = mat->rep.csc.values[idx.u.value];
+            const uint32_t* vals = (const uint32_t*)mat->rep.csc.values;
+            uint32_t val = vals[idx.u.value];
             return (uint32_expect_t){ .has_value = true, .u.value = val };
         }
 
