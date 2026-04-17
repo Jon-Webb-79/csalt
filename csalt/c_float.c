@@ -1786,6 +1786,43 @@ error_code_t print_float_matrix(const float_matrix_t* mat, FILE* stream) {
             return ILLEGAL_STATE;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+float_expect_t float_matrix_min(const float_matrix_t* mat) {
+    if (mat == NULL) {
+        return (float_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    size_expect_t idx = matrix_min(mat, _cmp_float, FLOAT_TYPE);
+    if (!idx.has_value) {
+        return (float_expect_t){ .has_value = false, .u.error = idx.u.error };
+    }
+
+    switch (mat->format) {
+        case DENSE_MATRIX: {
+            float val = mat->rep.dense.data[idx.u.value];
+            return (float_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case COO_MATRIX: {
+            float val = mat->rep.coo.values[idx.u.value];
+            return (float_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSR_MATRIX: {
+            float val = mat->rep.csr.values[idx.u.value];
+            return (float_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSC_MATRIX: {
+            float val = mat->rep.csc.values[idx.u.value];
+            return (float_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        default:
+            return (float_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof

@@ -1011,7 +1011,7 @@ int32_matrix_expect_t convert_int32_matrix(const int32_matrix_t* src,
 
         dst->rep.csr.row_ptr = row_ptr;
         dst->rep.csr.col_idx = col_idx;
-        dst->rep.csr.values  = (int32_t*)values;
+        dst->rep.csr.values  = (uint8_t*)values;
 
         return (int32_matrix_expect_t){
             .has_value = true,
@@ -1473,7 +1473,7 @@ int32_matrix_expect_t convert_int32_matrix_zero(const int32_matrix_t* src,
         dst->rep.csr.nnz     = k;
         dst->rep.csr.row_ptr = row_ptr;
         dst->rep.csr.col_idx = col_idx;
-        dst->rep.csr.values  = (int32_t*)values;
+        dst->rep.csr.values  = (uint8_t*)values;
 
         return (int32_matrix_expect_t){
             .has_value = true,
@@ -1588,7 +1588,7 @@ int32_matrix_expect_t convert_int32_matrix_zero(const int32_matrix_t* src,
         dst->rep.csc.nnz     = k;
         dst->rep.csc.col_ptr = col_ptr;
         dst->rep.csc.row_idx = row_idx;
-        dst->rep.csc.values  = (int32_t*)values;
+        dst->rep.csc.values  = (uint8_t*)values;
 
         return (int32_matrix_expect_t){
             .has_value = true,
@@ -1747,6 +1747,43 @@ error_code_t print_int32_matrix(const int32_matrix_t* mat, FILE* stream) {
 
         default:
             return ILLEGAL_STATE;
+    }
+}
+// -------------------------------------------------------------------------------- 
+
+int32_expect_t int32_matrix_min(const int32_matrix_t* mat) {
+    if (mat == NULL) {
+        return (int32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    size_expect_t idx = matrix_min(mat, _cmp_int32, INT32_TYPE);
+    if (!idx.has_value) {
+        return (int32_expect_t){ .has_value = false, .u.error = idx.u.error };
+    }
+
+    switch (mat->format) {
+        case DENSE_MATRIX: {
+            int32_t val = mat->rep.dense.data[idx.u.value];
+            return (int32_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case COO_MATRIX: {
+            int32_t val = mat->rep.coo.values[idx.u.value];
+            return (int32_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSR_MATRIX: {
+            int32_t val = mat->rep.csr.values[idx.u.value];
+            return (int32_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSC_MATRIX: {
+            int32_t val = mat->rep.csc.values[idx.u.value];
+            return (int32_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        default:
+            return (int32_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 }
 // ================================================================================

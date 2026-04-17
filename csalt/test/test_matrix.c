@@ -6587,6 +6587,274 @@ static void test_convert_uint8_matrix_zero_default_omits_zero_in_csr(void** stat
     return_uint8_matrix(r.u.value);
     return_uint8_matrix(src);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// Group: uint8_matrix_min
+// ================================================================================
+
+static uint8_matrix_t* _make_uint8_dense_matrix(size_t rows, size_t cols) {
+    allocator_vtable_t a = heap_allocator();
+    uint8_matrix_expect_t r = init_uint8_dense_matrix(rows, cols, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static uint8_matrix_t* _make_uint8_coo_matrix(size_t rows,
+                                              size_t cols,
+                                              size_t cap,
+                                              bool   growth) {
+    allocator_vtable_t a = heap_allocator();
+    uint8_matrix_expect_t r = init_uint8_coo_matrix(rows, cols, cap, growth, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static uint8_matrix_t* _make_sample_uint8_dense_matrix(void) {
+    uint8_matrix_t* mat = _make_uint8_dense_matrix(3u, 4u);
+
+    assert_int_equal(set_uint8_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 2u, 3u),  NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 2u, 3u, 44u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+
+    return mat;
+}
+
+// --------------------------------------------------------------------------------
+
+static uint8_matrix_t* _make_sample_uint8_coo_matrix(void) {
+    uint8_matrix_t* mat = _make_uint8_coo_matrix(3u, 4u, 8u, true);
+
+    assert_int_equal(set_uint8_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 2u, 3u),  NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 2u, 3u, 44u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+
+    return mat;
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    uint8_expect_t r = uint8_matrix_min(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_dense_matrix(2u, 3u);
+
+    uint8_expect_t r = uint8_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_dense_finds_minimum_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_sample_uint8_dense_matrix();
+
+    uint8_expect_t r = uint8_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_dense_matrix(1u, 1u);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+
+    uint8_expect_t r = uint8_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 42u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_dense_duplicate_min_returns_minimum_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_uint8_matrix(mat, 0u, 0u, 9u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 1u, 2u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 2u, 5u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 0u, 2u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 1u, 8u), NO_ERROR);
+
+    uint8_expect_t r = uint8_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_coo_matrix(3u, 4u, 8u, true);
+
+    uint8_expect_t r = uint8_matrix_min(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_coo_finds_minimum_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_sample_uint8_coo_matrix();
+
+    uint8_expect_t r = uint8_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 3u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_uint8_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+
+    uint8_expect_t r = uint8_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 55u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_csr_finds_minimum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint8_matrix_t* dense = _make_sample_uint8_dense_matrix();
+
+    uint8_matrix_expect_t conv = convert_uint8_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint8_matrix_t* csr = conv.u.value;
+
+    uint8_expect_t r = uint8_matrix_min(csr);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 3u);
+
+    return_uint8_matrix(csr);
+    return_uint8_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint8_matrix_t* dense = _make_uint8_dense_matrix(2u, 2u);
+
+    uint8_matrix_expect_t conv = convert_uint8_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint8_matrix_t* csr = conv.u.value;
+
+    uint8_expect_t r = uint8_matrix_min(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint8_matrix(csr);
+    return_uint8_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_csc_finds_minimum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint8_matrix_t* dense = _make_sample_uint8_dense_matrix();
+
+    uint8_matrix_expect_t conv = convert_uint8_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    uint8_matrix_t* csc = conv.u.value;
+
+    uint8_expect_t r = uint8_matrix_min(csc);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 3u);
+
+    return_uint8_matrix(csc);
+    return_uint8_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_min_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    uint8_matrix_t* dense = _make_sample_uint8_dense_matrix();
+
+    uint8_matrix_expect_t coo_r = convert_uint8_matrix(dense, COO_MATRIX, a);
+    uint8_matrix_expect_t csr_r = convert_uint8_matrix(dense, CSR_MATRIX, a);
+    uint8_matrix_expect_t csc_r = convert_uint8_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    uint8_expect_t rd = uint8_matrix_min(dense);
+    uint8_expect_t ro = uint8_matrix_min(coo_r.u.value);
+    uint8_expect_t rr = uint8_matrix_min(csr_r.u.value);
+    uint8_expect_t rc = uint8_matrix_min(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_int_equal(rd.u.value, 0u);
+    assert_int_equal(ro.u.value, 3u);
+    assert_int_equal(rr.u.value, 3u);
+    assert_int_equal(rc.u.value, 3u);
+
+    return_uint8_matrix(csc_r.u.value);
+    return_uint8_matrix(csr_r.u.value);
+    return_uint8_matrix(coo_r.u.value);
+    return_uint8_matrix(dense);
+}
 // ================================================================================
 // Registry
 // ================================================================================
@@ -6660,6 +6928,19 @@ const struct CMUnitTest test_uint8_matrix[] = {
 
     cmocka_unit_test(test_convert_uint8_matrix_zero_default_omits_zero_in_coo),
     cmocka_unit_test(test_convert_uint8_matrix_zero_default_omits_zero_in_csr),
+
+    cmocka_unit_test(test_uint8_matrix_min_null_returns_null_pointer),
+    cmocka_unit_test(test_uint8_matrix_min_empty_dense_returns_zero),
+    cmocka_unit_test(test_uint8_matrix_min_dense_finds_minimum_value),
+    cmocka_unit_test(test_uint8_matrix_min_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_uint8_matrix_min_dense_duplicate_min_returns_minimum_value),
+    cmocka_unit_test(test_uint8_matrix_min_empty_coo_returns_empty),
+    cmocka_unit_test(test_uint8_matrix_min_coo_finds_minimum_value),
+    cmocka_unit_test(test_uint8_matrix_min_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_uint8_matrix_min_csr_finds_minimum_value),
+    cmocka_unit_test(test_uint8_matrix_min_empty_csr_returns_empty),
+    cmocka_unit_test(test_uint8_matrix_min_csc_finds_minimum_value),
+    cmocka_unit_test(test_uint8_matrix_min_all_formats_agree_on_same_data),
 };
 
 const size_t test_uint8_matrix_count =

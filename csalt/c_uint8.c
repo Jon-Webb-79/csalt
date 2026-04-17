@@ -1721,6 +1721,43 @@ error_code_t print_uint8_matrix(const uint8_matrix_t* mat, FILE* stream) {
             return ILLEGAL_STATE;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+uint8_expect_t uint8_matrix_min(const uint8_matrix_t* mat) {
+    if (mat == NULL) {
+        return (uint8_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    size_expect_t idx = matrix_min(mat, _cmp_uint8, UINT8_TYPE);
+    if (!idx.has_value) {
+        return (uint8_expect_t){ .has_value = false, .u.error = idx.u.error };
+    }
+
+    switch (mat->format) {
+        case DENSE_MATRIX: {
+            uint8_t val = mat->rep.dense.data[idx.u.value];
+            return (uint8_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case COO_MATRIX: {
+            uint8_t val = mat->rep.coo.values[idx.u.value];
+            return (uint8_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSR_MATRIX: {
+            uint8_t val = mat->rep.csr.values[idx.u.value];
+            return (uint8_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSC_MATRIX: {
+            uint8_t val = mat->rep.csc.values[idx.u.value];
+            return (uint8_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        default:
+            return (uint8_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof

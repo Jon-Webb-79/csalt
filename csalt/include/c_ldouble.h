@@ -1930,6 +1930,50 @@ ldouble_matrix_expect_t convert_ldouble_matrix_zero(const ldouble_matrix_t* src,
  * - No trailing newline is appended automatically.
  */
 error_code_t print_ldouble_matrix(const ldouble_matrix_t* mat, FILE* stream);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Retrieve the minimum value from a ldouble matrix.
+ *
+ * This function determines the minimum element in a matrix of type
+ * `ldouble_matrix_t`. It delegates the index computation to the generic
+ * `matrix_min()` function and then retrieves the corresponding value
+ * based on the matrix storage format.
+ *
+ * The comparison is performed using unsigned 8-bit integer ordering.
+ *
+ * @param mat Pointer to the int16 matrix.
+ *
+ * @return int16_expect_t
+ * @retval has_value = true   The minimum value was found and is stored in u.value.
+ * @retval has_value = false  An error occurred, and the error code is stored in u.error.
+ *
+ * @errors
+ * - NULL_POINTER   if @p mat is NULL.
+ * - TYPE_MISMATCH  if the matrix dtype is not int16_TYPE.
+ * - EMPTY          if the matrix contains no elements:
+ *                  - dense: rows * cols == 0
+ *                  - sparse: nnz == 0
+ * - INVALID_ARG    if the matrix format is not recognized.
+ * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
+ *
+ * @note
+ * This function relies on the generic `matrix_min()` function to determine the
+ * index of the minimum element. The returned index is interpreted according to
+ * the matrix format:
+ *
+ * - DENSE_MATRIX: index is a row-major offset.
+ * - COO_MATRIX:   index refers to entries in row_idx[], col_idx[], and values[].
+ * - CSR_MATRIX:   index refers to entries in col_idx[] and values[].
+ * - CSC_MATRIX:   index refers to entries in row_idx[] and values[].
+ *
+ * @warning
+ * For sparse matrices, only stored values (nnz) are considered. Implicit zero
+ * elements are not included in the comparison.
+ *
+ * @see matrix_min
+ */
+ldouble_expect_t ldouble_matrix_min(const ldouble_matrix_t* mat);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

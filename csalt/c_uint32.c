@@ -1742,6 +1742,43 @@ error_code_t print_uint32_matrix(const uint32_matrix_t* mat, FILE* stream) {
             return ILLEGAL_STATE;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+uint32_expect_t uint32_matrix_min(const uint32_matrix_t* mat) {
+    if (mat == NULL) {
+        return (uint32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    size_expect_t idx = matrix_min(mat, _cmp_uint32, UINT32_TYPE);
+    if (!idx.has_value) {
+        return (uint32_expect_t){ .has_value = false, .u.error = idx.u.error };
+    }
+
+    switch (mat->format) {
+        case DENSE_MATRIX: {
+            uint32_t val = mat->rep.dense.data[idx.u.value];
+            return (uint32_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case COO_MATRIX: {
+            uint32_t val = mat->rep.coo.values[idx.u.value];
+            return (uint32_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSR_MATRIX: {
+            uint32_t val = mat->rep.csr.values[idx.u.value];
+            return (uint32_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSC_MATRIX: {
+            uint32_t val = mat->rep.csc.values[idx.u.value];
+            return (uint32_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        default:
+            return (uint32_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof
