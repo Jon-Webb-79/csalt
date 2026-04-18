@@ -549,6 +549,11 @@ Print
 
 .. doxygenfunction:: print_float_matrix
 
+Introspection 
+-------------
+
+.. doxygenfunction:: float_matrix_min
+
 Generic Introspection
 ---------------------
 

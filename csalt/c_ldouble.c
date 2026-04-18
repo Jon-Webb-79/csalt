@@ -1890,22 +1890,26 @@ ldouble_expect_t ldouble_matrix_min(const ldouble_matrix_t* mat) {
 
     switch (mat->format) {
         case DENSE_MATRIX: {
-            long double val = mat->rep.dense.data[idx.u.value];
+            const long double* vals = (const long double*)mat->rep.dense.data;
+            long double val = vals[idx.u.value];
             return (ldouble_expect_t){ .has_value = true, .u.value = val };
         }
 
         case COO_MATRIX: {
-            long double val = mat->rep.coo.values[idx.u.value];
+            const long double* vals = (const long double*)mat->rep.coo.values;
+            long double val = vals[idx.u.value];
             return (ldouble_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSR_MATRIX: {
-            long double val = mat->rep.csr.values[idx.u.value];
+            const long double* vals = (const long double*)mat->rep.csr.values;
+            long double val = vals[idx.u.value];
             return (ldouble_expect_t){ .has_value = true, .u.value = val };
         }
 
         case CSC_MATRIX: {
-            long double val = mat->rep.csc.values[idx.u.value];
+            const long double* vals = (const long double*)mat->rep.csc.values;
+            long double val = vals[idx.u.value];
             return (ldouble_expect_t){ .has_value = true, .u.value = val };
         }
 

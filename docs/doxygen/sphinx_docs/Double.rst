@@ -553,6 +553,11 @@ Print
 
 .. doxygenfunction:: print_double_matrix
 
+Introspection 
+-------------
+
+.. doxygenfunction:: double_matrix_min
+
 Generic Introspection
 ---------------------
 

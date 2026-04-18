@@ -3843,7 +3843,6 @@ static void test_float_matrix_min_dense_finds_minimum_value(void** state) {
     print_float_matrix(mat, stdout);
     float_expect_t r = float_matrix_min(mat);
     assert_true(r.has_value);
-    printf("%f\n", r.u.value);
     assert_float_equal(r.u.value, 0.0, 1.0e-3);
 
     return_float_matrix(mat);
@@ -4989,7 +4988,268 @@ static void test_convert_double_matrix_zero_treats_negative_zero_as_zero_in_csr(
     return_double_matrix(r.u.value);
     return_double_matrix(src);
 }
+// -------------------------------------------------------------------------------- 
 
+static double_matrix_t* _make_double_dense_matrix(size_t rows, size_t cols) {
+    allocator_vtable_t a = heap_allocator();
+    double_matrix_expect_t r = init_double_dense_matrix(rows, cols, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static double_matrix_t* _make_double_coo_matrix(size_t rows,
+                                              size_t cols,
+                                              size_t cap,
+                                              bool   growth) {
+    allocator_vtable_t a = heap_allocator();
+    double_matrix_expect_t r = init_double_coo_matrix(rows, cols, cap, growth, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static double_matrix_t* _make_sample_double_dense_matrix(void) {
+    double_matrix_t* mat = _make_double_dense_matrix(3u, 4u);
+
+    assert_int_equal(set_double_matrix(mat, 0u, 0u, 12.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 0u, 1u, 99.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 2u, 3.00),  NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 2u, 3u, 44.00), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 0u, 7.00),  NO_ERROR);
+
+    return mat;
+}
+
+// --------------------------------------------------------------------------------
+
+static double_matrix_t* _make_sample_double_coo_matrix(void) {
+    double_matrix_t* mat = _make_double_coo_matrix(3u, 4u, 8u, true);
+
+    assert_int_equal(set_double_matrix(mat, 0u, 0u, 12.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 0u, 1u, 99.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 2u, 3.0),  NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 2u, 3u, 44.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 0u, 7.0),  NO_ERROR);
+
+    return mat;
+}
+
+static void test_double_matrix_min_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    double_expect_t r = double_matrix_min(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_dense_matrix(2u, 3u);
+
+    double_expect_t r = double_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_dense_finds_minimum_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_sample_double_dense_matrix();
+    print_double_matrix(mat, stdout);
+    double_expect_t r = double_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 0.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_dense_matrix(1u, 1u);
+    assert_int_equal(set_double_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
+
+    double_expect_t r = double_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 42.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_dense_duplicate_min_returns_minimum_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_double_matrix(mat, 0u, 0u, 9.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 0u, 1u, 2.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 0u, 2u, 5.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 0u, 2.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 1u, 8.0), NO_ERROR);
+
+    double_expect_t r = double_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 0.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_coo_matrix(3u, 4u, 8.0, true);
+
+    double_expect_t r = double_matrix_min(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_coo_finds_minimum_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_sample_double_coo_matrix();
+
+    double_expect_t r = double_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 3.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_coo_matrix(3u, 3u, 4.0, true);
+    assert_int_equal(set_double_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
+
+    double_expect_t r = double_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 55.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_csr_finds_minimum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    double_matrix_t* dense = _make_sample_double_dense_matrix();
+
+    double_matrix_expect_t conv = convert_double_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    double_matrix_t* csr = conv.u.value;
+
+    double_expect_t r = double_matrix_min(csr);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 3.0, 1.0e-3);
+
+    return_double_matrix(csr);
+    return_double_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    double_matrix_t* dense = _make_double_dense_matrix(2u, 2u);
+
+    double_matrix_expect_t conv = convert_double_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    double_matrix_t* csr = conv.u.value;
+
+    double_expect_t r = double_matrix_min(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_double_matrix(csr);
+    return_double_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_csc_finds_minimum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    double_matrix_t* dense = _make_sample_double_dense_matrix();
+
+    double_matrix_expect_t conv = convert_double_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    double_matrix_t* csc = conv.u.value;
+
+    double_expect_t r = double_matrix_min(csc);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 3.0, 1.0e-3);
+
+    return_double_matrix(csc);
+    return_double_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_min_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    double_matrix_t* dense = _make_sample_double_dense_matrix();
+
+    double_matrix_expect_t coo_r = convert_double_matrix(dense, COO_MATRIX, a);
+    double_matrix_expect_t csr_r = convert_double_matrix(dense, CSR_MATRIX, a);
+    double_matrix_expect_t csc_r = convert_double_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    double_expect_t rd = double_matrix_min(dense);
+    double_expect_t ro = double_matrix_min(coo_r.u.value);
+    double_expect_t rr = double_matrix_min(csr_r.u.value);
+    double_expect_t rc = double_matrix_min(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_double_equal(rd.u.value, 0.0, 1.0e-3);
+    assert_double_equal(ro.u.value, 3.0, 1.0e-3);
+    assert_double_equal(rr.u.value, 3.0, 1.0e-3);
+    assert_double_equal(rc.u.value, 3.0, 1.0e-3);
+
+    return_double_matrix(csc_r.u.value);
+    return_double_matrix(csr_r.u.value);
+    return_double_matrix(coo_r.u.value);
+    return_double_matrix(dense);
+}
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -5063,6 +5323,19 @@ const struct CMUnitTest test_double_matrix[] = {
 
     cmocka_unit_test(test_convert_double_matrix_zero_treats_negative_zero_as_zero_in_coo),
     cmocka_unit_test(test_convert_double_matrix_zero_treats_negative_zero_as_zero_in_csr),
+
+    cmocka_unit_test(test_double_matrix_min_null_returns_null_pointer),
+    cmocka_unit_test(test_double_matrix_min_empty_dense_returns_zero),
+    cmocka_unit_test(test_double_matrix_min_dense_finds_minimum_value),
+    cmocka_unit_test(test_double_matrix_min_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_double_matrix_min_dense_duplicate_min_returns_minimum_value),
+    cmocka_unit_test(test_double_matrix_min_empty_coo_returns_empty),
+    cmocka_unit_test(test_double_matrix_min_coo_finds_minimum_value),
+    cmocka_unit_test(test_double_matrix_min_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_double_matrix_min_csr_finds_minimum_value),
+    cmocka_unit_test(test_double_matrix_min_empty_csr_returns_empty),
+    cmocka_unit_test(test_double_matrix_min_csc_finds_minimum_value),
+    cmocka_unit_test(test_double_matrix_min_all_formats_agree_on_same_data),
 };
 
 const size_t test_double_matrix_count =
@@ -5942,7 +6215,268 @@ static void test_convert_ldouble_matrix_zero_treats_negative_zero_as_zero_in_csr
     return_ldouble_matrix(r.u.value);
     return_ldouble_matrix(src);
 }
+// -------------------------------------------------------------------------------- 
 
+static ldouble_matrix_t* _make_ldouble_dense_matrix(size_t rows, size_t cols) {
+    allocator_vtable_t a = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_dense_matrix(rows, cols, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static ldouble_matrix_t* _make_ldouble_coo_matrix(size_t rows,
+                                              size_t cols,
+                                              size_t cap,
+                                              bool   growth) {
+    allocator_vtable_t a = heap_allocator();
+    ldouble_matrix_expect_t r = init_ldouble_coo_matrix(rows, cols, cap, growth, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static ldouble_matrix_t* _make_sample_ldouble_dense_matrix(void) {
+    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(3u, 4u);
+
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 12.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 1u, 99.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 2u, 3.00),  NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 2u, 3u, 44.00), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 0u, 7.00),  NO_ERROR);
+
+    return mat;
+}
+
+// --------------------------------------------------------------------------------
+
+static ldouble_matrix_t* _make_sample_ldouble_coo_matrix(void) {
+    ldouble_matrix_t* mat = _make_ldouble_coo_matrix(3u, 4u, 8u, true);
+
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 12.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 1u, 99.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 2u, 3.0),  NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 2u, 3u, 44.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 0u, 7.0),  NO_ERROR);
+
+    return mat;
+}
+
+static void test_ldouble_matrix_min_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    ldouble_expect_t r = ldouble_matrix_min(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(2u, 3u);
+
+    ldouble_expect_t r = ldouble_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_dense_finds_minimum_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_sample_ldouble_dense_matrix();
+    print_ldouble_matrix(mat, stdout);
+    ldouble_expect_t r = ldouble_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 0.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(1u, 1u);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
+
+    ldouble_expect_t r = ldouble_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 42.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_dense_duplicate_min_returns_minimum_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 9.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 1u, 2.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 2u, 5.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 0u, 2.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 1u, 8.0), NO_ERROR);
+
+    ldouble_expect_t r = ldouble_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 0.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_coo_matrix(3u, 4u, 8.0, true);
+
+    ldouble_expect_t r = ldouble_matrix_min(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_coo_finds_minimum_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_sample_ldouble_coo_matrix();
+
+    ldouble_expect_t r = ldouble_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 3.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_coo_matrix(3u, 3u, 4.0, true);
+    assert_int_equal(set_ldouble_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
+
+    ldouble_expect_t r = ldouble_matrix_min(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 55.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_csr_finds_minimum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
+
+    ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    ldouble_matrix_t* csr = conv.u.value;
+
+    ldouble_expect_t r = ldouble_matrix_min(csr);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 3.0, 1.0e-3);
+
+    return_ldouble_matrix(csr);
+    return_ldouble_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    ldouble_matrix_t* dense = _make_ldouble_dense_matrix(2u, 2u);
+
+    ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    ldouble_matrix_t* csr = conv.u.value;
+
+    ldouble_expect_t r = ldouble_matrix_min(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_ldouble_matrix(csr);
+    return_ldouble_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_csc_finds_minimum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
+
+    ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    ldouble_matrix_t* csc = conv.u.value;
+
+    ldouble_expect_t r = ldouble_matrix_min(csc);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 3.0, 1.0e-3);
+
+    return_ldouble_matrix(csc);
+    return_ldouble_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_min_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
+
+    ldouble_matrix_expect_t coo_r = convert_ldouble_matrix(dense, COO_MATRIX, a);
+    ldouble_matrix_expect_t csr_r = convert_ldouble_matrix(dense, CSR_MATRIX, a);
+    ldouble_matrix_expect_t csc_r = convert_ldouble_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    ldouble_expect_t rd = ldouble_matrix_min(dense);
+    ldouble_expect_t ro = ldouble_matrix_min(coo_r.u.value);
+    ldouble_expect_t rr = ldouble_matrix_min(csr_r.u.value);
+    ldouble_expect_t rc = ldouble_matrix_min(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_double_equal(rd.u.value, 0.0, 1.0e-3);
+    assert_double_equal(ro.u.value, 3.0, 1.0e-3);
+    assert_double_equal(rr.u.value, 3.0, 1.0e-3);
+    assert_double_equal(rc.u.value, 3.0, 1.0e-3);
+
+    return_ldouble_matrix(csc_r.u.value);
+    return_ldouble_matrix(csr_r.u.value);
+    return_ldouble_matrix(coo_r.u.value);
+    return_ldouble_matrix(dense);
+}
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -6016,6 +6550,19 @@ const struct CMUnitTest test_ldouble_matrix[] = {
 
     cmocka_unit_test(test_convert_ldouble_matrix_zero_treats_negative_zero_as_zero_in_coo),
     cmocka_unit_test(test_convert_ldouble_matrix_zero_treats_negative_zero_as_zero_in_csr),
+
+    cmocka_unit_test(test_ldouble_matrix_min_null_returns_null_pointer),
+    cmocka_unit_test(test_ldouble_matrix_min_empty_dense_returns_zero),
+    cmocka_unit_test(test_ldouble_matrix_min_dense_finds_minimum_value),
+    cmocka_unit_test(test_ldouble_matrix_min_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_ldouble_matrix_min_dense_duplicate_min_returns_minimum_value),
+    cmocka_unit_test(test_ldouble_matrix_min_empty_coo_returns_empty),
+    cmocka_unit_test(test_ldouble_matrix_min_coo_finds_minimum_value),
+    cmocka_unit_test(test_ldouble_matrix_min_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_ldouble_matrix_min_csr_finds_minimum_value),
+    cmocka_unit_test(test_ldouble_matrix_min_empty_csr_returns_empty),
+    cmocka_unit_test(test_ldouble_matrix_min_csc_finds_minimum_value),
+    cmocka_unit_test(test_ldouble_matrix_min_all_formats_agree_on_same_data),
 };
 
 const size_t test_ldouble_matrix_count =

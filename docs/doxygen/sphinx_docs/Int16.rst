@@ -529,6 +529,11 @@ Print
 
 .. doxygenfunction:: print_int16_matrix
 
+Introspection 
+-------------
+
+.. doxygenfunction:: int16_matrix_min
+
 Generic Introspection
 ---------------------
 

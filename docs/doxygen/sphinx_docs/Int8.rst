@@ -530,6 +530,11 @@ Print
 
 .. doxygenfunction:: print_int8_matrix
 
+Introspection 
+-------------
+
+.. doxygenfunction:: int8_matrix_min
+
 Generic Introspection
 ---------------------
 

@@ -544,6 +544,11 @@ Print
 
 .. doxygenfunction:: print_ldouble_matrix
 
+Introspection 
+-------------
+
+.. doxygenfunction:: ldouble_matrix_min
+
 Generic Introspection
 ---------------------
 

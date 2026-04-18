@@ -537,6 +537,11 @@ Print
 
 .. doxygenfunction:: print_int32_matrix
 
+Introspection 
+-------------
+
+.. doxygenfunction:: int32_matrix_min
+
 Generic Introspection
 ---------------------
 
