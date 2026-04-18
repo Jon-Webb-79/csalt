@@ -1917,6 +1917,47 @@ ldouble_expect_t ldouble_matrix_min(const ldouble_matrix_t* mat) {
             return (ldouble_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 }
+// -------------------------------------------------------------------------------- 
+
+ldouble_expect_t ldouble_matrix_max(const ldouble_matrix_t* mat) {
+    if (mat == NULL) {
+        return (ldouble_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    size_expect_t idx = matrix_max(mat, _cmp_ldouble, LDOUBLE_TYPE);
+    if (!idx.has_value) {
+        return (ldouble_expect_t){ .has_value = false, .u.error = idx.u.error };
+    }
+
+    switch (mat->format) {
+        case DENSE_MATRIX: {
+            const long double* vals = (const long double*)mat->rep.dense.data;
+            long double val = vals[idx.u.value];
+            return (ldouble_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case COO_MATRIX: {
+            const long double* vals = (const long double*)mat->rep.coo.values;
+            long double val = vals[idx.u.value];
+            return (ldouble_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSR_MATRIX: {
+            const long double* vals = (const long double*)mat->rep.csr.values;
+            long double val = vals[idx.u.value];
+            return (ldouble_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSC_MATRIX: {
+            const long double* vals = (const long double*)mat->rep.csc.values;
+            long double val = vals[idx.u.value];
+            return (ldouble_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        default:
+            return (ldouble_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof

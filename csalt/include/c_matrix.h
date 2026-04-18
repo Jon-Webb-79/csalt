@@ -1798,6 +1798,60 @@ size_t matrix_vector_length(const matrix_t* mat);
 size_expect_t matrix_min(const matrix_t* mat,
                          int (*cm)(const void*, const void*),
                          dtype_id_t);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the index of the maximum element in a matrix.
+ *
+ * This function scans the underlying storage of a matrix and returns the index
+ * of the maximum element according to a user-provided comparison function.
+ * The returned index refers to the internal storage layout of the matrix and
+ * must be interpreted by the caller based on the matrix format.
+ *
+ * The comparison function must return:
+ * - a negative value if a < b
+ * - zero if a == b
+ * - a positive value if a > b
+ *
+ * @param mat   Pointer to the matrix.
+ * @param cmp   Comparison function for elements of the matrix.
+ * @param dtype Expected data type of the matrix (must match mat->dtype).
+ *
+ * @return size_expect_t
+ * @retval has_value = true   The maximum index was found and is stored in u.value.
+ * @retval has_value = false  An error occurred, and the error code is stored in u.error.
+ *
+ * @errors
+ * - NULL_POINTER   if @p mat or @p cmp is NULL.
+ * - TYPE_MISMATCH  if @p dtype does not match mat->dtype.
+ * - EMPTY          if the matrix contains no elements:
+ *                  - dense: rows * cols == 0
+ *                  - sparse: nnz == 0
+ * - INVALID_ARG    if the matrix format is not recognized.
+ * - LENGTH_OVERFLOW if rows * cols overflows size_t (dense matrices only).
+ *
+ * @note
+ * The returned index depends on the matrix format:
+ * - DENSE_MATRIX: index is the row-major offset
+ *                 (row = idx / cols, col = idx % cols).
+ * - COO_MATRIX:   index refers to the position in row_idx[], col_idx[], and values[].
+ * - CSR_MATRIX:   index refers to the position in col_idx[] and values[].
+ * - CSC_MATRIX:   index refers to the position in row_idx[] and values[].
+ *
+ * @warning
+ * For sparse matrices, this function operates only on stored elements (nnz).
+ * Implicit zero elements are not considered in the comparison.
+ *
+ * @note
+ * This function does not return the value itself. Type-specific wrapper
+ * functions should use the returned index to retrieve the corresponding value.
+ *
+ * @see matrix_max
+ * @see matrix_equal
+ */
+size_expect_t matrix_max(const matrix_t* mat,
+                         int (*cmp)(const void*, const void*),
+                         dtype_id_t dtype);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

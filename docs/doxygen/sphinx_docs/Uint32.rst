@@ -541,6 +541,7 @@ Introspection
 -------------
 
 .. doxygenfunction:: uint32_matrix_min
+.. doxygenfunction:: uint32_matrix_max
 
 Generic Introspection
 ---------------------

@@ -330,7 +330,6 @@ Structural Operations
 
 .. doxygenfunction:: clear_matrix
 
-
 .. doxygenfunction:: fill_matrix
 
 .. doxygenfunction:: swap_matrix_rows
@@ -345,6 +344,10 @@ Diagnostics
 .. doxygenfunction:: is_zero_matrix
 
 .. doxygenfunction:: matrix_storage_bytes
+
+.. doxygenfunction:: matrix_min 
+
+.. doxygenfunction:: matrix_max
 
 Compatibility Checks
 ~~~~~~~~~~~~~~~~~~~~

@@ -553,6 +553,7 @@ Introspection
 -------------
 
 .. doxygenfunction:: float_matrix_min
+.. doxygenfunction:: float_matrix_max
 
 Generic Introspection
 ---------------------

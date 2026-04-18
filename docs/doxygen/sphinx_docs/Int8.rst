@@ -534,6 +534,7 @@ Introspection
 -------------
 
 .. doxygenfunction:: int8_matrix_min
+.. doxygenfunction:: int8_matrix_max
 
 Generic Introspection
 ---------------------

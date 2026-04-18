@@ -4023,6 +4023,240 @@ static void test_float_matrix_min_all_formats_agree_on_same_data(void** state) {
     return_float_matrix(coo_r.u.value);
     return_float_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_float_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    float_expect_t r = float_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_float_dense_matrix(2u, 3u);
+
+    float_expect_t r = float_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_float_equal(r.u.value, 0.0, 1.0e-3);
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_sample_float_dense_matrix();
+
+    float_expect_t r = float_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_float_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_float_dense_matrix(1u, 1u);
+    assert_int_equal(set_float_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
+
+    float_expect_t r = float_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_float_equal(r.u.value, 42.0, 1.0e-3);
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_float_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_float_matrix(mat, 0u, 0u, 9.0),  NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 0u, 1u, 15.0), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 0u, 2u, 5.0),  NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 0u, 15.0), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 1u, 8.0),  NO_ERROR);
+
+    float_expect_t r = float_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_float_equal(r.u.value, 15.0, 1.0e-3);
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_float_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_float_matrix(mat, 0u, 0u, 12.0), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 0u, 1u, 99.0), NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 0u, 2u, 8.0),  NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 0u, 7.0),  NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 1u, 3.0),  NO_ERROR);
+    assert_int_equal(set_float_matrix(mat, 1u, 2u, 44.0), NO_ERROR);
+
+    float_expect_t r = float_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_float_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_float_coo_matrix(3u, 4u, 8u, true);
+
+    float_expect_t r = float_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_sample_float_coo_matrix();
+
+    float_expect_t r = float_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_float_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    float_matrix_t* mat = _make_float_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_float_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
+
+    float_expect_t r = float_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_float_equal(r.u.value, 55.0, 1.0e-3);
+
+    return_float_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_t* dense = _make_sample_float_dense_matrix();
+
+    float_matrix_expect_t conv = convert_float_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    float_matrix_t* csr = conv.u.value;
+
+    float_expect_t r = float_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_float_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_float_matrix(csr);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_t* dense = _make_float_dense_matrix(2u, 2u);
+
+    float_matrix_expect_t conv = convert_float_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    float_matrix_t* csr = conv.u.value;
+
+    float_expect_t r = float_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_float_matrix(csr);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    float_matrix_t* dense = _make_sample_float_dense_matrix();
+
+    float_matrix_expect_t conv = convert_float_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    float_matrix_t* csc = conv.u.value;
+
+    float_expect_t r = float_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_float_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_float_matrix(csc);
+    return_float_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_float_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    float_matrix_t* dense = _make_sample_float_dense_matrix();
+
+    float_matrix_expect_t coo_r = convert_float_matrix(dense, COO_MATRIX, a);
+    float_matrix_expect_t csr_r = convert_float_matrix(dense, CSR_MATRIX, a);
+    float_matrix_expect_t csc_r = convert_float_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    float_expect_t rd = float_matrix_max(dense);
+    float_expect_t ro = float_matrix_max(coo_r.u.value);
+    float_expect_t rr = float_matrix_max(csr_r.u.value);
+    float_expect_t rc = float_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_float_equal(rd.u.value, 99.0, 1.0e-3);
+    assert_float_equal(ro.u.value, 99.0, 1.0e-3);
+    assert_float_equal(rr.u.value, 99.0, 1.0e-3);
+    assert_float_equal(rc.u.value, 99.0, 1.0e-3);
+
+    return_float_matrix(csc_r.u.value);
+    return_float_matrix(csr_r.u.value);
+    return_float_matrix(coo_r.u.value);
+    return_float_matrix(dense);
+}
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -4109,6 +4343,20 @@ const struct CMUnitTest test_float_matrix[] = {
     cmocka_unit_test(test_float_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_float_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_float_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_float_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_float_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_float_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_float_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_float_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_float_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_float_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_float_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_float_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_float_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_float_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_float_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_float_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_float_matrix_count =
@@ -5250,6 +5498,240 @@ static void test_double_matrix_min_all_formats_agree_on_same_data(void** state) 
     return_double_matrix(coo_r.u.value);
     return_double_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_double_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    double_expect_t r = double_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_dense_matrix(2u, 3u);
+
+    double_expect_t r = double_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 0.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_sample_double_dense_matrix();
+
+    double_expect_t r = double_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_dense_matrix(1u, 1u);
+    assert_int_equal(set_double_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
+
+    double_expect_t r = double_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 42.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_double_matrix(mat, 0u, 0u, 9.0),  NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 0u, 1u, 15.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 0u, 2u, 5.0),  NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 0u, 15.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 1u, 8.0),  NO_ERROR);
+
+    double_expect_t r = double_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 15.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_double_matrix(mat, 0u, 0u, 12.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 0u, 1u, 99.0), NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 0u, 2u, 8.0),  NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 0u, 7.0),  NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 1u, 3.0),  NO_ERROR);
+    assert_int_equal(set_double_matrix(mat, 1u, 2u, 44.0), NO_ERROR);
+
+    double_expect_t r = double_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_coo_matrix(3u, 4u, 8u, true);
+
+    double_expect_t r = double_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_sample_double_coo_matrix();
+
+    double_expect_t r = double_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    double_matrix_t* mat = _make_double_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_double_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
+
+    double_expect_t r = double_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 55.0, 1.0e-3);
+
+    return_double_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    double_matrix_t* dense = _make_sample_double_dense_matrix();
+
+    double_matrix_expect_t conv = convert_double_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    double_matrix_t* csr = conv.u.value;
+
+    double_expect_t r = double_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_double_matrix(csr);
+    return_double_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    double_matrix_t* dense = _make_double_dense_matrix(2u, 2u);
+
+    double_matrix_expect_t conv = convert_double_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    double_matrix_t* csr = conv.u.value;
+
+    double_expect_t r = double_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_double_matrix(csr);
+    return_double_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    double_matrix_t* dense = _make_sample_double_dense_matrix();
+
+    double_matrix_expect_t conv = convert_double_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    double_matrix_t* csc = conv.u.value;
+
+    double_expect_t r = double_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_double_matrix(csc);
+    return_double_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_double_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    double_matrix_t* dense = _make_sample_double_dense_matrix();
+
+    double_matrix_expect_t coo_r = convert_double_matrix(dense, COO_MATRIX, a);
+    double_matrix_expect_t csr_r = convert_double_matrix(dense, CSR_MATRIX, a);
+    double_matrix_expect_t csc_r = convert_double_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    double_expect_t rd = double_matrix_max(dense);
+    double_expect_t ro = double_matrix_max(coo_r.u.value);
+    double_expect_t rr = double_matrix_max(csr_r.u.value);
+    double_expect_t rc = double_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_double_equal(rd.u.value, 99.0, 1.0e-3);
+    assert_double_equal(ro.u.value, 99.0, 1.0e-3);
+    assert_double_equal(rr.u.value, 99.0, 1.0e-3);
+    assert_double_equal(rc.u.value, 99.0, 1.0e-3);
+
+    return_double_matrix(csc_r.u.value);
+    return_double_matrix(csr_r.u.value);
+    return_double_matrix(coo_r.u.value);
+    return_double_matrix(dense);
+}
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -5336,6 +5818,20 @@ const struct CMUnitTest test_double_matrix[] = {
     cmocka_unit_test(test_double_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_double_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_double_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_double_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_double_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_double_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_double_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_double_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_double_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_double_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_double_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_double_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_double_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_double_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_double_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_double_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_double_matrix_count =
@@ -6477,6 +6973,240 @@ static void test_ldouble_matrix_min_all_formats_agree_on_same_data(void** state)
     return_ldouble_matrix(coo_r.u.value);
     return_ldouble_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_ldouble_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    ldouble_expect_t r = ldouble_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(2u, 3u);
+
+    ldouble_expect_t r = ldouble_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 0.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_sample_ldouble_dense_matrix();
+
+    ldouble_expect_t r = ldouble_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(1u, 1u);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
+
+    ldouble_expect_t r = ldouble_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 42.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 9.0),  NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 1u, 15.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 2u, 5.0),  NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 0u, 15.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 1u, 8.0),  NO_ERROR);
+
+    ldouble_expect_t r = ldouble_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 15.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 12.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 1u, 99.0), NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 0u, 2u, 8.0),  NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 0u, 7.0),  NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 1u, 3.0),  NO_ERROR);
+    assert_int_equal(set_ldouble_matrix(mat, 1u, 2u, 44.0), NO_ERROR);
+
+    ldouble_expect_t r = ldouble_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_coo_matrix(3u, 4u, 8u, true);
+
+    ldouble_expect_t r = ldouble_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_sample_ldouble_coo_matrix();
+
+    ldouble_expect_t r = ldouble_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    ldouble_matrix_t* mat = _make_ldouble_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_ldouble_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
+
+    ldouble_expect_t r = ldouble_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 55.0, 1.0e-3);
+
+    return_ldouble_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
+
+    ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    ldouble_matrix_t* csr = conv.u.value;
+
+    ldouble_expect_t r = ldouble_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_ldouble_matrix(csr);
+    return_ldouble_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    ldouble_matrix_t* dense = _make_ldouble_dense_matrix(2u, 2u);
+
+    ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    ldouble_matrix_t* csr = conv.u.value;
+
+    ldouble_expect_t r = ldouble_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_ldouble_matrix(csr);
+    return_ldouble_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
+
+    ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    ldouble_matrix_t* csc = conv.u.value;
+
+    ldouble_expect_t r = ldouble_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_double_equal(r.u.value, 99.0, 1.0e-3);
+
+    return_ldouble_matrix(csc);
+    return_ldouble_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_ldouble_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
+
+    ldouble_matrix_expect_t coo_r = convert_ldouble_matrix(dense, COO_MATRIX, a);
+    ldouble_matrix_expect_t csr_r = convert_ldouble_matrix(dense, CSR_MATRIX, a);
+    ldouble_matrix_expect_t csc_r = convert_ldouble_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    ldouble_expect_t rd = ldouble_matrix_max(dense);
+    ldouble_expect_t ro = ldouble_matrix_max(coo_r.u.value);
+    ldouble_expect_t rr = ldouble_matrix_max(csr_r.u.value);
+    ldouble_expect_t rc = ldouble_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_double_equal(rd.u.value, 99.0, 1.0e-3);
+    assert_double_equal(ro.u.value, 99.0, 1.0e-3);
+    assert_double_equal(rr.u.value, 99.0, 1.0e-3);
+    assert_double_equal(rc.u.value, 99.0, 1.0e-3);
+
+    return_ldouble_matrix(csc_r.u.value);
+    return_ldouble_matrix(csr_r.u.value);
+    return_ldouble_matrix(coo_r.u.value);
+    return_ldouble_matrix(dense);
+}
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -6563,6 +7293,20 @@ const struct CMUnitTest test_ldouble_matrix[] = {
     cmocka_unit_test(test_ldouble_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_ldouble_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_ldouble_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_ldouble_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_ldouble_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_ldouble_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_ldouble_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_ldouble_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_ldouble_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_ldouble_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_ldouble_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_ldouble_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_ldouble_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_ldouble_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_ldouble_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_ldouble_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_ldouble_matrix_count =
@@ -7677,6 +8421,240 @@ static void test_uint8_matrix_min_all_formats_agree_on_same_data(void** state) {
     return_uint8_matrix(coo_r.u.value);
     return_uint8_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_uint8_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    uint8_expect_t r = uint8_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_dense_matrix(2u, 3u);
+
+    uint8_expect_t r = uint8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_sample_uint8_dense_matrix();
+
+    uint8_expect_t r = uint8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_dense_matrix(1u, 1u);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+
+    uint8_expect_t r = uint8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 42u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_uint8_matrix(mat, 0u, 0u, 9u),  NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 1u, 15u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 2u, 5u),  NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 0u, 15u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 1u, 8u),  NO_ERROR);
+
+    uint8_expect_t r = uint8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 15u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_uint8_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 0u, 2u, 8u),  NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 1u, 3u),  NO_ERROR);
+    assert_int_equal(set_uint8_matrix(mat, 1u, 2u, 44u), NO_ERROR);
+
+    uint8_expect_t r = uint8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_coo_matrix(3u, 4u, 8u, true);
+
+    uint8_expect_t r = uint8_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_sample_uint8_coo_matrix();
+
+    uint8_expect_t r = uint8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint8_matrix_t* mat = _make_uint8_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_uint8_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+
+    uint8_expect_t r = uint8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 55u);
+
+    return_uint8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint8_matrix_t* dense = _make_sample_uint8_dense_matrix();
+
+    uint8_matrix_expect_t conv = convert_uint8_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint8_matrix_t* csr = conv.u.value;
+
+    uint8_expect_t r = uint8_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint8_matrix(csr);
+    return_uint8_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint8_matrix_t* dense = _make_uint8_dense_matrix(2u, 2u);
+
+    uint8_matrix_expect_t conv = convert_uint8_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint8_matrix_t* csr = conv.u.value;
+
+    uint8_expect_t r = uint8_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint8_matrix(csr);
+    return_uint8_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint8_matrix_t* dense = _make_sample_uint8_dense_matrix();
+
+    uint8_matrix_expect_t conv = convert_uint8_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    uint8_matrix_t* csc = conv.u.value;
+
+    uint8_expect_t r = uint8_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint8_matrix(csc);
+    return_uint8_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    uint8_matrix_t* dense = _make_sample_uint8_dense_matrix();
+
+    uint8_matrix_expect_t coo_r = convert_uint8_matrix(dense, COO_MATRIX, a);
+    uint8_matrix_expect_t csr_r = convert_uint8_matrix(dense, CSR_MATRIX, a);
+    uint8_matrix_expect_t csc_r = convert_uint8_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    uint8_expect_t rd = uint8_matrix_max(dense);
+    uint8_expect_t ro = uint8_matrix_max(coo_r.u.value);
+    uint8_expect_t rr = uint8_matrix_max(csr_r.u.value);
+    uint8_expect_t rc = uint8_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_int_equal(rd.u.value, 99u);
+    assert_int_equal(ro.u.value, 99u);
+    assert_int_equal(rr.u.value, 99u);
+    assert_int_equal(rc.u.value, 99u);
+
+    return_uint8_matrix(csc_r.u.value);
+    return_uint8_matrix(csr_r.u.value);
+    return_uint8_matrix(coo_r.u.value);
+    return_uint8_matrix(dense);
+}
 // ================================================================================
 // Registry
 // ================================================================================
@@ -7763,6 +8741,20 @@ const struct CMUnitTest test_uint8_matrix[] = {
     cmocka_unit_test(test_uint8_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_uint8_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_uint8_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_uint8_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_uint8_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_uint8_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_uint8_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_uint8_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_uint8_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_uint8_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_uint8_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_uint8_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_uint8_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_uint8_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_uint8_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_uint8_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_uint8_matrix_count =
@@ -8955,6 +9947,240 @@ static void test_int8_matrix_min_all_formats_agree_on_same_data(void** state) {
     return_int8_matrix(coo_r.u.value);
     return_int8_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_int8_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    int8_expect_t r = int8_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    int8_matrix_t* mat = _make_int8_dense_matrix(2u, 3u);
+
+    int8_expect_t r = int8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_int8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    int8_matrix_t* mat = _make_sample_int8_dense_matrix();
+
+    int8_expect_t r = int8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    int8_matrix_t* mat = _make_int8_dense_matrix(1u, 1u);
+    assert_int_equal(set_int8_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+
+    int8_expect_t r = int8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 42u);
+
+    return_int8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    int8_matrix_t* mat = _make_int8_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_int8_matrix(mat, 0u, 0u, 9u),  NO_ERROR);
+    assert_int_equal(set_int8_matrix(mat, 0u, 1u, 15u), NO_ERROR);
+    assert_int_equal(set_int8_matrix(mat, 0u, 2u, 5u),  NO_ERROR);
+    assert_int_equal(set_int8_matrix(mat, 1u, 0u, 15u), NO_ERROR);
+    assert_int_equal(set_int8_matrix(mat, 1u, 1u, 8u),  NO_ERROR);
+
+    int8_expect_t r = int8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 15u);
+
+    return_int8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    int8_matrix_t* mat = _make_int8_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_int8_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_int8_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_int8_matrix(mat, 0u, 2u, 8u),  NO_ERROR);
+    assert_int_equal(set_int8_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+    assert_int_equal(set_int8_matrix(mat, 1u, 1u, 3u),  NO_ERROR);
+    assert_int_equal(set_int8_matrix(mat, 1u, 2u, 44u), NO_ERROR);
+
+    int8_expect_t r = int8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    int8_matrix_t* mat = _make_int8_coo_matrix(3u, 4u, 8u, true);
+
+    int8_expect_t r = int8_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_int8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    int8_matrix_t* mat = _make_sample_int8_coo_matrix();
+
+    int8_expect_t r = int8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    int8_matrix_t* mat = _make_int8_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_int8_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+
+    int8_expect_t r = int8_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 55u);
+
+    return_int8_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int8_matrix_t* dense = _make_sample_int8_dense_matrix();
+
+    int8_matrix_expect_t conv = convert_int8_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    int8_matrix_t* csr = conv.u.value;
+
+    int8_expect_t r = int8_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int8_matrix(csr);
+    return_int8_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int8_matrix_t* dense = _make_int8_dense_matrix(2u, 2u);
+
+    int8_matrix_expect_t conv = convert_int8_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    int8_matrix_t* csr = conv.u.value;
+
+    int8_expect_t r = int8_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_int8_matrix(csr);
+    return_int8_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int8_matrix_t* dense = _make_sample_int8_dense_matrix();
+
+    int8_matrix_expect_t conv = convert_int8_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    int8_matrix_t* csc = conv.u.value;
+
+    int8_expect_t r = int8_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int8_matrix(csc);
+    return_int8_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    int8_matrix_t* dense = _make_sample_int8_dense_matrix();
+
+    int8_matrix_expect_t coo_r = convert_int8_matrix(dense, COO_MATRIX, a);
+    int8_matrix_expect_t csr_r = convert_int8_matrix(dense, CSR_MATRIX, a);
+    int8_matrix_expect_t csc_r = convert_int8_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    int8_expect_t rd = int8_matrix_max(dense);
+    int8_expect_t ro = int8_matrix_max(coo_r.u.value);
+    int8_expect_t rr = int8_matrix_max(csr_r.u.value);
+    int8_expect_t rc = int8_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_int_equal(rd.u.value, 99u);
+    assert_int_equal(ro.u.value, 99u);
+    assert_int_equal(rr.u.value, 99u);
+    assert_int_equal(rc.u.value, 99u);
+
+    return_int8_matrix(csc_r.u.value);
+    return_int8_matrix(csr_r.u.value);
+    return_int8_matrix(coo_r.u.value);
+    return_int8_matrix(dense);
+}
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -9041,6 +10267,21 @@ const struct CMUnitTest test_int8_matrix[] = {
     cmocka_unit_test(test_int8_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_int8_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_int8_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_int8_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_int8_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_int8_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_int8_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_int8_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_int8_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_int8_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_int8_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_int8_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_int8_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_int8_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_int8_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_int8_matrix_max_all_formats_agree_on_same_data),
+
 };
 
 const size_t test_int8_matrix_count =
@@ -9962,7 +11203,6 @@ static void test_uint16_matrix_min_empty_dense_returns_zero(void** state) {
 }
 
 // --------------------------------------------------------------------------------
-#include <inttypes.h>
 static void test_uint16_matrix_min_dense_finds_minimum_value(void** state) {
     (void)state;
 
@@ -10150,6 +11390,240 @@ static void test_uint16_matrix_min_all_formats_agree_on_same_data(void** state) 
     return_uint16_matrix(coo_r.u.value);
     return_uint16_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_uint16_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    uint16_expect_t r = uint16_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_uint16_dense_matrix(2u, 3u);
+
+    uint16_expect_t r = uint16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_uint16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_sample_uint16_dense_matrix();
+
+    uint16_expect_t r = uint16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_uint16_dense_matrix(1u, 1u);
+    assert_int_equal(set_uint16_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+
+    uint16_expect_t r = uint16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 42u);
+
+    return_uint16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_uint16_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_uint16_matrix(mat, 0u, 0u, 9u),  NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 0u, 1u, 15u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 0u, 2u, 5u),  NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 0u, 15u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 1u, 8u),  NO_ERROR);
+
+    uint16_expect_t r = uint16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 15u);
+
+    return_uint16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_uint16_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_uint16_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 0u, 2u, 8u),  NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 1u, 3u),  NO_ERROR);
+    assert_int_equal(set_uint16_matrix(mat, 1u, 2u, 44u), NO_ERROR);
+
+    uint16_expect_t r = uint16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_uint16_coo_matrix(3u, 4u, 8u, true);
+
+    uint16_expect_t r = uint16_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_sample_uint16_coo_matrix();
+
+    uint16_expect_t r = uint16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint16_matrix_t* mat = _make_uint16_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_uint16_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+
+    uint16_expect_t r = uint16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 55u);
+
+    return_uint16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_t* dense = _make_sample_uint16_dense_matrix();
+
+    uint16_matrix_expect_t conv = convert_uint16_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint16_matrix_t* csr = conv.u.value;
+
+    uint16_expect_t r = uint16_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint16_matrix(csr);
+    return_uint16_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_t* dense = _make_uint16_dense_matrix(2u, 2u);
+
+    uint16_matrix_expect_t conv = convert_uint16_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint16_matrix_t* csr = conv.u.value;
+
+    uint16_expect_t r = uint16_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint16_matrix(csr);
+    return_uint16_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint16_matrix_t* dense = _make_sample_uint16_dense_matrix();
+
+    uint16_matrix_expect_t conv = convert_uint16_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    uint16_matrix_t* csc = conv.u.value;
+
+    uint16_expect_t r = uint16_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint16_matrix(csc);
+    return_uint16_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    uint16_matrix_t* dense = _make_sample_uint16_dense_matrix();
+
+    uint16_matrix_expect_t coo_r = convert_uint16_matrix(dense, COO_MATRIX, a);
+    uint16_matrix_expect_t csr_r = convert_uint16_matrix(dense, CSR_MATRIX, a);
+    uint16_matrix_expect_t csc_r = convert_uint16_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    uint16_expect_t rd = uint16_matrix_max(dense);
+    uint16_expect_t ro = uint16_matrix_max(coo_r.u.value);
+    uint16_expect_t rr = uint16_matrix_max(csr_r.u.value);
+    uint16_expect_t rc = uint16_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_int_equal(rd.u.value, 99u);
+    assert_int_equal(ro.u.value, 99u);
+    assert_int_equal(rr.u.value, 99u);
+    assert_int_equal(rc.u.value, 99u);
+
+    return_uint16_matrix(csc_r.u.value);
+    return_uint16_matrix(csr_r.u.value);
+    return_uint16_matrix(coo_r.u.value);
+    return_uint16_matrix(dense);
+}
 // ================================================================================
 // Registry
 // ================================================================================
@@ -10236,6 +11710,20 @@ const struct CMUnitTest test_uint16_matrix[] = {
     cmocka_unit_test(test_uint16_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_uint16_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_uint16_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_uint16_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_uint16_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_uint16_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_uint16_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_uint16_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_uint16_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_uint16_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_uint16_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_uint16_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_uint16_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_uint16_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_uint16_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_uint16_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_uint16_matrix_count =
@@ -11428,6 +12916,240 @@ static void test_int16_matrix_min_all_formats_agree_on_same_data(void** state) {
     return_int16_matrix(coo_r.u.value);
     return_int16_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_int16_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    int16_expect_t r = int16_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    int16_matrix_t* mat = _make_int16_dense_matrix(2u, 3u);
+
+    int16_expect_t r = int16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_int16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    int16_matrix_t* mat = _make_sample_int16_dense_matrix();
+
+    int16_expect_t r = int16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    int16_matrix_t* mat = _make_int16_dense_matrix(1u, 1u);
+    assert_int_equal(set_int16_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+
+    int16_expect_t r = int16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 42u);
+
+    return_int16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    int16_matrix_t* mat = _make_int16_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_int16_matrix(mat, 0u, 0u, 9u),  NO_ERROR);
+    assert_int_equal(set_int16_matrix(mat, 0u, 1u, 15u), NO_ERROR);
+    assert_int_equal(set_int16_matrix(mat, 0u, 2u, 5u),  NO_ERROR);
+    assert_int_equal(set_int16_matrix(mat, 1u, 0u, 15u), NO_ERROR);
+    assert_int_equal(set_int16_matrix(mat, 1u, 1u, 8u),  NO_ERROR);
+
+    int16_expect_t r = int16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 15u);
+
+    return_int16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    int16_matrix_t* mat = _make_int16_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_int16_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_int16_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_int16_matrix(mat, 0u, 2u, 8u),  NO_ERROR);
+    assert_int_equal(set_int16_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+    assert_int_equal(set_int16_matrix(mat, 1u, 1u, 3u),  NO_ERROR);
+    assert_int_equal(set_int16_matrix(mat, 1u, 2u, 44u), NO_ERROR);
+
+    int16_expect_t r = int16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    int16_matrix_t* mat = _make_int16_coo_matrix(3u, 4u, 8u, true);
+
+    int16_expect_t r = int16_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_int16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    int16_matrix_t* mat = _make_sample_int16_coo_matrix();
+
+    int16_expect_t r = int16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    int16_matrix_t* mat = _make_int16_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_int16_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+
+    int16_expect_t r = int16_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 55u);
+
+    return_int16_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int16_matrix_t* dense = _make_sample_int16_dense_matrix();
+
+    int16_matrix_expect_t conv = convert_int16_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    int16_matrix_t* csr = conv.u.value;
+
+    int16_expect_t r = int16_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int16_matrix(csr);
+    return_int16_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int16_matrix_t* dense = _make_int16_dense_matrix(2u, 2u);
+
+    int16_matrix_expect_t conv = convert_int16_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    int16_matrix_t* csr = conv.u.value;
+
+    int16_expect_t r = int16_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_int16_matrix(csr);
+    return_int16_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int16_matrix_t* dense = _make_sample_int16_dense_matrix();
+
+    int16_matrix_expect_t conv = convert_int16_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    int16_matrix_t* csc = conv.u.value;
+
+    int16_expect_t r = int16_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int16_matrix(csc);
+    return_int16_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    int16_matrix_t* dense = _make_sample_int16_dense_matrix();
+
+    int16_matrix_expect_t coo_r = convert_int16_matrix(dense, COO_MATRIX, a);
+    int16_matrix_expect_t csr_r = convert_int16_matrix(dense, CSR_MATRIX, a);
+    int16_matrix_expect_t csc_r = convert_int16_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    int16_expect_t rd = int16_matrix_max(dense);
+    int16_expect_t ro = int16_matrix_max(coo_r.u.value);
+    int16_expect_t rr = int16_matrix_max(csr_r.u.value);
+    int16_expect_t rc = int16_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_int_equal(rd.u.value, 99u);
+    assert_int_equal(ro.u.value, 99u);
+    assert_int_equal(rr.u.value, 99u);
+    assert_int_equal(rc.u.value, 99u);
+
+    return_int16_matrix(csc_r.u.value);
+    return_int16_matrix(csr_r.u.value);
+    return_int16_matrix(coo_r.u.value);
+    return_int16_matrix(dense);
+}
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -11514,6 +13236,20 @@ const struct CMUnitTest test_int16_matrix[] = {
     cmocka_unit_test(test_int16_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_int16_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_int16_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_int16_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_int16_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_int16_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_int16_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_int16_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_int16_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_int16_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_int16_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_int16_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_int16_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_int16_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_int16_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_int16_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_int16_matrix_count =
@@ -12622,6 +14358,240 @@ static void test_uint32_matrix_min_all_formats_agree_on_same_data(void** state) 
     return_uint32_matrix(coo_r.u.value);
     return_uint32_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_uint32_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    uint32_expect_t r = uint32_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    uint32_matrix_t* mat = _make_uint32_dense_matrix(2u, 3u);
+
+    uint32_expect_t r = uint32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_uint32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint32_matrix_t* mat = _make_sample_uint32_dense_matrix();
+
+    uint32_expect_t r = uint32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint32_matrix_t* mat = _make_uint32_dense_matrix(1u, 1u);
+    assert_int_equal(set_uint32_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+
+    uint32_expect_t r = uint32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 42u);
+
+    return_uint32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    uint32_matrix_t* mat = _make_uint32_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_uint32_matrix(mat, 0u, 0u, 9u),  NO_ERROR);
+    assert_int_equal(set_uint32_matrix(mat, 0u, 1u, 15u), NO_ERROR);
+    assert_int_equal(set_uint32_matrix(mat, 0u, 2u, 5u),  NO_ERROR);
+    assert_int_equal(set_uint32_matrix(mat, 1u, 0u, 15u), NO_ERROR);
+    assert_int_equal(set_uint32_matrix(mat, 1u, 1u, 8u),  NO_ERROR);
+
+    uint32_expect_t r = uint32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 15u);
+
+    return_uint32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint32_matrix_t* mat = _make_uint32_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_uint32_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_uint32_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_uint32_matrix(mat, 0u, 2u, 8u),  NO_ERROR);
+    assert_int_equal(set_uint32_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+    assert_int_equal(set_uint32_matrix(mat, 1u, 1u, 3u),  NO_ERROR);
+    assert_int_equal(set_uint32_matrix(mat, 1u, 2u, 44u), NO_ERROR);
+
+    uint32_expect_t r = uint32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    uint32_matrix_t* mat = _make_uint32_coo_matrix(3u, 4u, 8u, true);
+
+    uint32_expect_t r = uint32_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint32_matrix_t* mat = _make_sample_uint32_coo_matrix();
+
+    uint32_expect_t r = uint32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint32_matrix_t* mat = _make_uint32_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_uint32_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+
+    uint32_expect_t r = uint32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 55u);
+
+    return_uint32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint32_matrix_t* dense = _make_sample_uint32_dense_matrix();
+
+    uint32_matrix_expect_t conv = convert_uint32_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint32_matrix_t* csr = conv.u.value;
+
+    uint32_expect_t r = uint32_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint32_matrix(csr);
+    return_uint32_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint32_matrix_t* dense = _make_uint32_dense_matrix(2u, 2u);
+
+    uint32_matrix_expect_t conv = convert_uint32_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint32_matrix_t* csr = conv.u.value;
+
+    uint32_expect_t r = uint32_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint32_matrix(csr);
+    return_uint32_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint32_matrix_t* dense = _make_sample_uint32_dense_matrix();
+
+    uint32_matrix_expect_t conv = convert_uint32_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    uint32_matrix_t* csc = conv.u.value;
+
+    uint32_expect_t r = uint32_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint32_matrix(csc);
+    return_uint32_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint32_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    uint32_matrix_t* dense = _make_sample_uint32_dense_matrix();
+
+    uint32_matrix_expect_t coo_r = convert_uint32_matrix(dense, COO_MATRIX, a);
+    uint32_matrix_expect_t csr_r = convert_uint32_matrix(dense, CSR_MATRIX, a);
+    uint32_matrix_expect_t csc_r = convert_uint32_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    uint32_expect_t rd = uint32_matrix_max(dense);
+    uint32_expect_t ro = uint32_matrix_max(coo_r.u.value);
+    uint32_expect_t rr = uint32_matrix_max(csr_r.u.value);
+    uint32_expect_t rc = uint32_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_int_equal(rd.u.value, 99u);
+    assert_int_equal(ro.u.value, 99u);
+    assert_int_equal(rr.u.value, 99u);
+    assert_int_equal(rc.u.value, 99u);
+
+    return_uint32_matrix(csc_r.u.value);
+    return_uint32_matrix(csr_r.u.value);
+    return_uint32_matrix(coo_r.u.value);
+    return_uint32_matrix(dense);
+}
 // ================================================================================
 // Registry
 // ================================================================================
@@ -12696,7 +14666,7 @@ const struct CMUnitTest test_uint32_matrix[] = {
     cmocka_unit_test(test_convert_uint32_matrix_zero_default_omits_zero_in_coo),
     cmocka_unit_test(test_convert_uint32_matrix_zero_default_omits_zero_in_csr),
 
-   cmocka_unit_test(test_uint32_matrix_min_null_returns_null_pointer),
+    cmocka_unit_test(test_uint32_matrix_min_null_returns_null_pointer),
     cmocka_unit_test(test_uint32_matrix_min_empty_dense_returns_zero),
     cmocka_unit_test(test_uint32_matrix_min_dense_finds_minimum_value),
     cmocka_unit_test(test_uint32_matrix_min_dense_single_value_returns_that_value),
@@ -12708,6 +14678,20 @@ const struct CMUnitTest test_uint32_matrix[] = {
     cmocka_unit_test(test_uint32_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_uint32_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_uint32_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_uint32_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_uint32_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_uint32_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_uint32_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_uint32_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_uint32_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_uint32_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_uint32_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_uint32_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_uint32_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_uint32_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_uint32_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_uint32_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_uint32_matrix_count =
@@ -13892,6 +15876,240 @@ static void test_int32_matrix_min_all_formats_agree_on_same_data(void** state) {
     return_int32_matrix(coo_r.u.value);
     return_int32_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_int32_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    int32_expect_t r = int32_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    int32_matrix_t* mat = _make_int32_dense_matrix(2u, 3u);
+
+    int32_expect_t r = int32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_int32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    int32_matrix_t* mat = _make_sample_int32_dense_matrix();
+
+    int32_expect_t r = int32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    int32_matrix_t* mat = _make_int32_dense_matrix(1u, 1u);
+    assert_int_equal(set_int32_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+
+    int32_expect_t r = int32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 42u);
+
+    return_int32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    int32_matrix_t* mat = _make_int32_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_int32_matrix(mat, 0u, 0u, 9u),  NO_ERROR);
+    assert_int_equal(set_int32_matrix(mat, 0u, 1u, 15u), NO_ERROR);
+    assert_int_equal(set_int32_matrix(mat, 0u, 2u, 5u),  NO_ERROR);
+    assert_int_equal(set_int32_matrix(mat, 1u, 0u, 15u), NO_ERROR);
+    assert_int_equal(set_int32_matrix(mat, 1u, 1u, 8u),  NO_ERROR);
+
+    int32_expect_t r = int32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 15u);
+
+    return_int32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    int32_matrix_t* mat = _make_int32_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_int32_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_int32_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_int32_matrix(mat, 0u, 2u, 8u),  NO_ERROR);
+    assert_int_equal(set_int32_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+    assert_int_equal(set_int32_matrix(mat, 1u, 1u, 3u),  NO_ERROR);
+    assert_int_equal(set_int32_matrix(mat, 1u, 2u, 44u), NO_ERROR);
+
+    int32_expect_t r = int32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    int32_matrix_t* mat = _make_int32_coo_matrix(3u, 4u, 8u, true);
+
+    int32_expect_t r = int32_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_int32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    int32_matrix_t* mat = _make_sample_int32_coo_matrix();
+
+    int32_expect_t r = int32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    int32_matrix_t* mat = _make_int32_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_int32_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+
+    int32_expect_t r = int32_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 55u);
+
+    return_int32_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int32_matrix_t* dense = _make_sample_int32_dense_matrix();
+
+    int32_matrix_expect_t conv = convert_int32_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    int32_matrix_t* csr = conv.u.value;
+
+    int32_expect_t r = int32_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int32_matrix(csr);
+    return_int32_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int32_matrix_t* dense = _make_int32_dense_matrix(2u, 2u);
+
+    int32_matrix_expect_t conv = convert_int32_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    int32_matrix_t* csr = conv.u.value;
+
+    int32_expect_t r = int32_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_int32_matrix(csr);
+    return_int32_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int32_matrix_t* dense = _make_sample_int32_dense_matrix();
+
+    int32_matrix_expect_t conv = convert_int32_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    int32_matrix_t* csc = conv.u.value;
+
+    int32_expect_t r = int32_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int32_matrix(csc);
+    return_int32_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int32_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    int32_matrix_t* dense = _make_sample_int32_dense_matrix();
+
+    int32_matrix_expect_t coo_r = convert_int32_matrix(dense, COO_MATRIX, a);
+    int32_matrix_expect_t csr_r = convert_int32_matrix(dense, CSR_MATRIX, a);
+    int32_matrix_expect_t csc_r = convert_int32_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    int32_expect_t rd = int32_matrix_max(dense);
+    int32_expect_t ro = int32_matrix_max(coo_r.u.value);
+    int32_expect_t rr = int32_matrix_max(csr_r.u.value);
+    int32_expect_t rc = int32_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_int_equal(rd.u.value, 99u);
+    assert_int_equal(ro.u.value, 99u);
+    assert_int_equal(rr.u.value, 99u);
+    assert_int_equal(rc.u.value, 99u);
+
+    return_int32_matrix(csc_r.u.value);
+    return_int32_matrix(csr_r.u.value);
+    return_int32_matrix(coo_r.u.value);
+    return_int32_matrix(dense);
+}
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -13978,6 +16196,20 @@ const struct CMUnitTest test_int32_matrix[] = {
     cmocka_unit_test(test_int32_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_int32_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_int32_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_int32_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_int32_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_int32_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_int32_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_int32_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_int32_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_int32_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_int32_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_int32_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_int32_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_int32_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_int32_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_int32_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_int32_matrix_count =
@@ -15082,6 +17314,240 @@ static void test_uint64_matrix_min_all_formats_agree_on_same_data(void** state) 
     return_uint64_matrix(coo_r.u.value);
     return_uint64_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_uint64_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    uint64_expect_t r = uint64_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    uint64_matrix_t* mat = _make_uint64_dense_matrix(2u, 3u);
+
+    uint64_expect_t r = uint64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_uint64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint64_matrix_t* mat = _make_sample_uint64_dense_matrix();
+
+    uint64_expect_t r = uint64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint64_matrix_t* mat = _make_uint64_dense_matrix(1u, 1u);
+    assert_int_equal(set_uint64_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+
+    uint64_expect_t r = uint64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 42u);
+
+    return_uint64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    uint64_matrix_t* mat = _make_uint64_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_uint64_matrix(mat, 0u, 0u, 9u),  NO_ERROR);
+    assert_int_equal(set_uint64_matrix(mat, 0u, 1u, 15u), NO_ERROR);
+    assert_int_equal(set_uint64_matrix(mat, 0u, 2u, 5u),  NO_ERROR);
+    assert_int_equal(set_uint64_matrix(mat, 1u, 0u, 15u), NO_ERROR);
+    assert_int_equal(set_uint64_matrix(mat, 1u, 1u, 8u),  NO_ERROR);
+
+    uint64_expect_t r = uint64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 15u);
+
+    return_uint64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint64_matrix_t* mat = _make_uint64_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_uint64_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_uint64_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_uint64_matrix(mat, 0u, 2u, 8u),  NO_ERROR);
+    assert_int_equal(set_uint64_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+    assert_int_equal(set_uint64_matrix(mat, 1u, 1u, 3u),  NO_ERROR);
+    assert_int_equal(set_uint64_matrix(mat, 1u, 2u, 44u), NO_ERROR);
+
+    uint64_expect_t r = uint64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    uint64_matrix_t* mat = _make_uint64_coo_matrix(3u, 4u, 8u, true);
+
+    uint64_expect_t r = uint64_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    uint64_matrix_t* mat = _make_sample_uint64_coo_matrix();
+
+    uint64_expect_t r = uint64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    uint64_matrix_t* mat = _make_uint64_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_uint64_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+
+    uint64_expect_t r = uint64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 55u);
+
+    return_uint64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint64_matrix_t* dense = _make_sample_uint64_dense_matrix();
+
+    uint64_matrix_expect_t conv = convert_uint64_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint64_matrix_t* csr = conv.u.value;
+
+    uint64_expect_t r = uint64_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint64_matrix(csr);
+    return_uint64_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint64_matrix_t* dense = _make_uint64_dense_matrix(2u, 2u);
+
+    uint64_matrix_expect_t conv = convert_uint64_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    uint64_matrix_t* csr = conv.u.value;
+
+    uint64_expect_t r = uint64_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_uint64_matrix(csr);
+    return_uint64_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    uint64_matrix_t* dense = _make_sample_uint64_dense_matrix();
+
+    uint64_matrix_expect_t conv = convert_uint64_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    uint64_matrix_t* csc = conv.u.value;
+
+    uint64_expect_t r = uint64_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_uint64_matrix(csc);
+    return_uint64_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint64_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    uint64_matrix_t* dense = _make_sample_uint64_dense_matrix();
+
+    uint64_matrix_expect_t coo_r = convert_uint64_matrix(dense, COO_MATRIX, a);
+    uint64_matrix_expect_t csr_r = convert_uint64_matrix(dense, CSR_MATRIX, a);
+    uint64_matrix_expect_t csc_r = convert_uint64_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    uint64_expect_t rd = uint64_matrix_max(dense);
+    uint64_expect_t ro = uint64_matrix_max(coo_r.u.value);
+    uint64_expect_t rr = uint64_matrix_max(csr_r.u.value);
+    uint64_expect_t rc = uint64_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_int_equal(rd.u.value, 99u);
+    assert_int_equal(ro.u.value, 99u);
+    assert_int_equal(rr.u.value, 99u);
+    assert_int_equal(rc.u.value, 99u);
+
+    return_uint64_matrix(csc_r.u.value);
+    return_uint64_matrix(csr_r.u.value);
+    return_uint64_matrix(coo_r.u.value);
+    return_uint64_matrix(dense);
+}
 // ================================================================================
 // Registry
 // ================================================================================
@@ -15168,6 +17634,20 @@ const struct CMUnitTest test_uint64_matrix[] = {
     cmocka_unit_test(test_uint64_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_uint64_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_uint64_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_uint64_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_uint64_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_uint64_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_uint64_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_uint64_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_uint64_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_uint64_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_uint64_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_uint64_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_uint64_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_uint64_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_uint64_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_uint64_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_uint64_matrix_count =
@@ -16352,6 +18832,240 @@ static void test_int64_matrix_min_all_formats_agree_on_same_data(void** state) {
     return_int64_matrix(coo_r.u.value);
     return_int64_matrix(dense);
 }
+// -------------------------------------------------------------------------------- 
+
+static void test_int64_matrix_max_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    int64_expect_t r = int64_matrix_max(NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_empty_dense_returns_zero(void** state) {
+    (void)state;
+
+    int64_matrix_t* mat = _make_int64_dense_matrix(2u, 3u);
+
+    int64_expect_t r = int64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 0u);
+
+    return_int64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_dense_finds_maximum_value(void** state) {
+    (void)state;
+
+    int64_matrix_t* mat = _make_sample_int64_dense_matrix();
+
+    int64_expect_t r = int64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_dense_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    int64_matrix_t* mat = _make_int64_dense_matrix(1u, 1u);
+    assert_int_equal(set_int64_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+
+    int64_expect_t r = int64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 42u);
+
+    return_int64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_dense_duplicate_max_returns_maximum_value(void** state) {
+    (void)state;
+
+    int64_matrix_t* mat = _make_int64_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_int64_matrix(mat, 0u, 0u, 9u),  NO_ERROR);
+    assert_int_equal(set_int64_matrix(mat, 0u, 1u, 15u), NO_ERROR);
+    assert_int_equal(set_int64_matrix(mat, 0u, 2u, 5u),  NO_ERROR);
+    assert_int_equal(set_int64_matrix(mat, 1u, 0u, 15u), NO_ERROR);
+    assert_int_equal(set_int64_matrix(mat, 1u, 1u, 8u),  NO_ERROR);
+
+    int64_expect_t r = int64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 15u);
+
+    return_int64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_dense_fully_populated_finds_maximum_value(void** state) {
+    (void)state;
+
+    int64_matrix_t* mat = _make_int64_dense_matrix(2u, 3u);
+
+    assert_int_equal(set_int64_matrix(mat, 0u, 0u, 12u), NO_ERROR);
+    assert_int_equal(set_int64_matrix(mat, 0u, 1u, 99u), NO_ERROR);
+    assert_int_equal(set_int64_matrix(mat, 0u, 2u, 8u),  NO_ERROR);
+    assert_int_equal(set_int64_matrix(mat, 1u, 0u, 7u),  NO_ERROR);
+    assert_int_equal(set_int64_matrix(mat, 1u, 1u, 3u),  NO_ERROR);
+    assert_int_equal(set_int64_matrix(mat, 1u, 2u, 44u), NO_ERROR);
+
+    int64_expect_t r = int64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_empty_coo_returns_empty(void** state) {
+    (void)state;
+
+    int64_matrix_t* mat = _make_int64_coo_matrix(3u, 4u, 8u, true);
+
+    int64_expect_t r = int64_matrix_max(mat);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_int64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_coo_finds_maximum_value(void** state) {
+    (void)state;
+
+    int64_matrix_t* mat = _make_sample_int64_coo_matrix();
+
+    int64_expect_t r = int64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_coo_single_value_returns_that_value(void** state) {
+    (void)state;
+
+    int64_matrix_t* mat = _make_int64_coo_matrix(3u, 3u, 4u, true);
+    assert_int_equal(set_int64_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+
+    int64_expect_t r = int64_matrix_max(mat);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 55u);
+
+    return_int64_matrix(mat);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_csr_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int64_matrix_t* dense = _make_sample_int64_dense_matrix();
+
+    int64_matrix_expect_t conv = convert_int64_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    int64_matrix_t* csr = conv.u.value;
+
+    int64_expect_t r = int64_matrix_max(csr);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int64_matrix(csr);
+    return_int64_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_empty_csr_returns_empty(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int64_matrix_t* dense = _make_int64_dense_matrix(2u, 2u);
+
+    int64_matrix_expect_t conv = convert_int64_matrix(dense, CSR_MATRIX, a);
+    assert_true(conv.has_value);
+    int64_matrix_t* csr = conv.u.value;
+
+    int64_expect_t r = int64_matrix_max(csr);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+
+    return_int64_matrix(csr);
+    return_int64_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_csc_finds_maximum_value(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+    int64_matrix_t* dense = _make_sample_int64_dense_matrix();
+
+    int64_matrix_expect_t conv = convert_int64_matrix(dense, CSC_MATRIX, a);
+    assert_true(conv.has_value);
+    int64_matrix_t* csc = conv.u.value;
+
+    int64_expect_t r = int64_matrix_max(csc);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value, 99u);
+
+    return_int64_matrix(csc);
+    return_int64_matrix(dense);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int64_matrix_max_all_formats_agree_on_same_data(void** state) {
+    (void)state;
+
+    allocator_vtable_t a = heap_allocator();
+
+    int64_matrix_t* dense = _make_sample_int64_dense_matrix();
+
+    int64_matrix_expect_t coo_r = convert_int64_matrix(dense, COO_MATRIX, a);
+    int64_matrix_expect_t csr_r = convert_int64_matrix(dense, CSR_MATRIX, a);
+    int64_matrix_expect_t csc_r = convert_int64_matrix(dense, CSC_MATRIX, a);
+
+    assert_true(coo_r.has_value);
+    assert_true(csr_r.has_value);
+    assert_true(csc_r.has_value);
+
+    int64_expect_t rd = int64_matrix_max(dense);
+    int64_expect_t ro = int64_matrix_max(coo_r.u.value);
+    int64_expect_t rr = int64_matrix_max(csr_r.u.value);
+    int64_expect_t rc = int64_matrix_max(csc_r.u.value);
+
+    assert_true(rd.has_value);
+    assert_true(ro.has_value);
+    assert_true(rr.has_value);
+    assert_true(rc.has_value);
+
+    assert_int_equal(rd.u.value, 99u);
+    assert_int_equal(ro.u.value, 99u);
+    assert_int_equal(rr.u.value, 99u);
+    assert_int_equal(rc.u.value, 99u);
+
+    return_int64_matrix(csc_r.u.value);
+    return_int64_matrix(csr_r.u.value);
+    return_int64_matrix(coo_r.u.value);
+    return_int64_matrix(dense);
+}
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -16438,6 +19152,20 @@ const struct CMUnitTest test_int64_matrix[] = {
     cmocka_unit_test(test_int64_matrix_min_empty_csr_returns_empty),
     cmocka_unit_test(test_int64_matrix_min_csc_finds_minimum_value),
     cmocka_unit_test(test_int64_matrix_min_all_formats_agree_on_same_data),
+
+    cmocka_unit_test(test_int64_matrix_max_null_returns_null_pointer),
+    cmocka_unit_test(test_int64_matrix_max_empty_dense_returns_zero),
+    cmocka_unit_test(test_int64_matrix_max_dense_finds_maximum_value),
+    cmocka_unit_test(test_int64_matrix_max_dense_single_value_returns_that_value),
+    cmocka_unit_test(test_int64_matrix_max_dense_duplicate_max_returns_maximum_value),
+    cmocka_unit_test(test_int64_matrix_max_dense_fully_populated_finds_maximum_value),
+    cmocka_unit_test(test_int64_matrix_max_empty_coo_returns_empty),
+    cmocka_unit_test(test_int64_matrix_max_coo_finds_maximum_value),
+    cmocka_unit_test(test_int64_matrix_max_coo_single_value_returns_that_value),
+    cmocka_unit_test(test_int64_matrix_max_csr_finds_maximum_value),
+    cmocka_unit_test(test_int64_matrix_max_empty_csr_returns_empty),
+    cmocka_unit_test(test_int64_matrix_max_csc_finds_maximum_value),
+    cmocka_unit_test(test_int64_matrix_max_all_formats_agree_on_same_data),
 };
 
 const size_t test_int64_matrix_count =

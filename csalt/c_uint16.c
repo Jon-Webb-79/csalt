@@ -1761,6 +1761,47 @@ uint16_expect_t uint16_matrix_min(const uint16_matrix_t* mat) {
             return (uint16_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 }
+// -------------------------------------------------------------------------------- 
+
+uint16_expect_t uint16_matrix_max(const uint16_matrix_t* mat) {
+    if (mat == NULL) {
+        return (uint16_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    size_expect_t idx = matrix_max(mat, _cmp_uint16, UINT16_TYPE);
+    if (!idx.has_value) {
+        return (uint16_expect_t){ .has_value = false, .u.error = idx.u.error };
+    }
+
+    switch (mat->format) {
+        case DENSE_MATRIX: {
+            const uint16_t* vals = (const uint16_t*)mat->rep.dense.data;
+            uint16_t val = vals[idx.u.value];
+            return (uint16_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case COO_MATRIX: {
+            const uint16_t* vals = (const uint16_t*)mat->rep.coo.values;
+            uint16_t val = vals[idx.u.value];
+            return (uint16_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSR_MATRIX: {
+            const uint16_t* vals = (const uint16_t*)mat->rep.csr.values;
+            uint16_t val = vals[idx.u.value];
+            return (uint16_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSC_MATRIX: {
+            const uint16_t* vals = (const uint16_t*)mat->rep.csc.values;
+            uint16_t val = vals[idx.u.value];
+            return (uint16_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        default:
+            return (uint16_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof

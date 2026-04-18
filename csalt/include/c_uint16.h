@@ -2647,6 +2647,50 @@ error_code_t print_uint16_matrix(const uint16_matrix_t* mat, FILE* stream);
  * @see matrix_min
  */
 uint16_expect_t uint16_matrix_min(const uint16_matrix_t* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Retrieve the maximum value from a uint16 matrix.
+ *
+ * This function determines the maximum element in a matrix of type
+ * `uint16_matrix_t`. It delegates the index computation to the generic
+ * `matrix_max()` function and then retrieves the corresponding value
+ * based on the matrix storage format.
+ *
+ * The comparison is performed using unsigned 8-bit integer ordering.
+ *
+ * @param mat Pointer to the uint16 matrix.
+ *
+ * @return uint16_expect_t
+ * @retval has_value = true   The maximum value was found and is stored in u.value.
+ * @retval has_value = false  An error occurred, and the error code is stored in u.error.
+ *
+ * @errors
+ * - NULL_POINTER   if @p mat is NULL.
+ * - TYPE_MISMATCH  if the matrix dtype is not uint16_TYPE.
+ * - EMPTY          if the matrix contains no elements:
+ *                  - dense: rows * cols == 0
+ *                  - sparse: nnz == 0
+ * - INVALID_ARG    if the matrix format is not recognized.
+ * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
+ *
+ * @note
+ * This function relies on the generic `matrix_max()` function to determine the
+ * index of the maximum element. The returned index is interpreted according to
+ * the matrix format:
+ *
+ * - DENSE_MATRIX: index is a row-major offset.
+ * - COO_MATRIX:   index refers to entries in row_idx[], col_idx[], and values[].
+ * - CSR_MATRIX:   index refers to entries in col_idx[] and values[].
+ * - CSC_MATRIX:   index refers to entries in row_idx[] and values[].
+ *
+ * @warning
+ * For sparse matrices, only stored values (nnz) are considered. Implicit zero
+ * elements are not included in the comparison.
+ *
+ * @see matrix_max
+ */
+uint16_expect_t uint16_matrix_max(const uint16_matrix_t* mat);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

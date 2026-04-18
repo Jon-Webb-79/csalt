@@ -1827,6 +1827,47 @@ float_expect_t float_matrix_min(const float_matrix_t* mat) {
             return (float_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 }
+// -------------------------------------------------------------------------------- 
+
+float_expect_t float_matrix_max(const float_matrix_t* mat) {
+    if (mat == NULL) {
+        return (float_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    size_expect_t idx = matrix_max(mat, _cmp_float, FLOAT_TYPE);
+    if (!idx.has_value) {
+        return (float_expect_t){ .has_value = false, .u.error = idx.u.error };
+    }
+
+    switch (mat->format) {
+        case DENSE_MATRIX: {
+            const float* vals = (const float*)mat->rep.dense.data;
+            float val = vals[idx.u.value];
+            return (float_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case COO_MATRIX: {
+            const float* vals = (const float*)mat->rep.coo.values;
+            float val = vals[idx.u.value];
+            return (float_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSR_MATRIX: {
+            const float* vals = (const float*)mat->rep.csr.values;
+            float val = vals[idx.u.value];
+            return (float_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        case CSC_MATRIX: {
+            const float* vals = (const float*)mat->rep.csc.values;
+            float val = vals[idx.u.value];
+            return (float_expect_t){ .has_value = true, .u.value = val };
+        }
+
+        default:
+            return (float_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+    }
+}
 // ================================================================================
 // ================================================================================
 // eof
