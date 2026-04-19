@@ -1043,6 +1043,30 @@ bool array_equal(const array_t* a, const array_t* b) {
 
     return memcmp(a->data, b->data, total_bytes) == 0;
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t add_scalar_array(array_t*       array,
+                              const void*    scalar,
+                              void         (*add_scalar)(void* element,
+                                                         const void* scalar),
+                              dtype_id_t     dtype) {
+    if (array == NULL || scalar == NULL || add_scalar == NULL) {
+        return NULL_POINTER;
+    }
+    if (dtype != array->dtype) {
+        return TYPE_MISMATCH;
+    }
+    if (array->len == 0u) {
+        return EMPTY;
+    }
+
+    simd_add_scalar_uint8(array->data,
+                          array->len,
+                          array->data_size,
+                          scalar,
+                          add_scalar);
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 

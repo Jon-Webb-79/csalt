@@ -586,6 +586,73 @@ static inline bool simd_is_all_zero_uint8(const uint8_t* data, size_t count) {
  
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline void simd_add_scalar_uint8(uint8_t*      data,
+                                         size_t        len,
+                                         size_t        data_size,
+                                         const void*   scalar,
+                                         void        (*add_scalar)(void* element,
+                                                                   const void* scalar)) {
+    size_t i = 0u;
+
+    switch (data_size) {
+        case 1u: {
+            const __m256i s = _mm256_set1_epi8((char)(*(const uint8_t*)scalar));
+            size_t vec_end = (len / 32u) * 32u;
+            for (; i < vec_end; i += 32u) {
+                __m256i v = _mm256_loadu_si256((const __m256i*)(data + i));
+                v = _mm256_add_epi8(v, s);
+                _mm256_storeu_si256((__m256i*)(data + i), v);
+            }
+            for (; i < len; ++i) ((uint8_t*)data)[i] += *(const uint8_t*)scalar;
+            return;
+        }
+
+        case 2u: {
+            uint16_t* d = (uint16_t*)data;
+            const __m256i s = _mm256_set1_epi16((short)(*(const uint16_t*)scalar));
+            size_t vec_end = (len / 16u) * 16u;
+            for (; i < vec_end; i += 16u) {
+                __m256i v = _mm256_loadu_si256((const __m256i*)(d + i));
+                v = _mm256_add_epi16(v, s);
+                _mm256_storeu_si256((__m256i*)(d + i), v);
+            }
+            for (; i < len; ++i) d[i] += *(const uint16_t*)scalar;
+            return;
+        }
+
+        case 4u: {
+            uint32_t* d = (uint32_t*)data;
+            const __m256i s = _mm256_set1_epi32((int)(*(const uint32_t*)scalar));
+            size_t vec_end = (len / 8u) * 8u;
+            for (; i < vec_end; i += 8u) {
+                __m256i v = _mm256_loadu_si256((const __m256i*)(d + i));
+                v = _mm256_add_epi32(v, s);
+                _mm256_storeu_si256((__m256i*)(d + i), v);
+            }
+            for (; i < len; ++i) d[i] += *(const uint32_t*)scalar;
+            return;
+        }
+
+        case 8u: {
+            uint64_t* d = (uint64_t*)data;
+            const __m256i s = _mm256_set1_epi64x((long long)(*(const uint64_t*)scalar));
+            size_t vec_end = (len / 4u) * 4u;
+            for (; i < vec_end; i += 4u) {
+                __m256i v = _mm256_loadu_si256((const __m256i*)(d + i));
+                v = _mm256_add_epi64(v, s);
+                _mm256_storeu_si256((__m256i*)(d + i), v);
+            }
+            for (; i < len; ++i) d[i] += *(const uint64_t*)scalar;
+            return;
+        }
+
+        default:
+            for (i = 0u; i < len; ++i) add_scalar(data + i * data_size, scalar);
+            return;
+    }
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_AVX2_UINT8_INL */

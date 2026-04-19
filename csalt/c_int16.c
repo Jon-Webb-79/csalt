@@ -400,6 +400,24 @@ bool int16_array_equal(const int16_array_t* a,
         a->base.len
     );
 }
+// -------------------------------------------------------------------------------- 
+
+static void _add_scalar_int16(void* element, const void* scalar) {
+    int16_t*       e = (int16_t*)element;
+    const int16_t* s = (const int16_t*)scalar;
+    *e += *s;
+}
+
+error_code_t int16_add_scalar_array(int16_array_t* array, int16_t value) {
+    if (array == NULL) {
+        return NULL_POINTER;
+    }
+
+    return add_scalar_array(array,
+                            &value,
+                            _add_scalar_int16,
+                            INT16_TYPE);
+}
 // ================================================================================ 
 // ================================================================================ 
 

@@ -505,6 +505,74 @@ static inline bool simd_is_all_zero_uint8(const uint8_t* data, size_t count) {
  
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline void simd_add_scalar_uint8(uint8_t*      data,
+                                         size_t        len,
+                                         size_t        data_size,
+                                         const void*   scalar,
+                                         void        (*add_scalar)(void* element,
+                                                                   const void* scalar)) {
+    size_t i = 0u;
+
+    switch (data_size) {
+        case 1u: {
+            uint8_t* d = (uint8_t*)data;
+            svuint8_t s = svdup_n_u8(*(const uint8_t*)scalar);
+            while (i < len) {
+                svbool_t pg = svwhilelt_b8(i, len);
+                svuint8_t v = svld1_u8(pg, d + i);
+                v = svadd_u8_x(pg, v, s);
+                svst1_u8(pg, d + i, v);
+                i += svcntb();
+            }
+            return;
+        }
+
+        case 2u: {
+            uint16_t* d = (uint16_t*)data;
+            svuint16_t s = svdup_n_u16(*(const uint16_t*)scalar);
+            while (i < len) {
+                svbool_t pg = svwhilelt_b16(i, len);
+                svuint16_t v = svld1_u16(pg, d + i);
+                v = svadd_u16_x(pg, v, s);
+                svst1_u16(pg, d + i, v);
+                i += svcnth();
+            }
+            return;
+        }
+
+        case 4u: {
+            uint32_t* d = (uint32_t*)data;
+            svuint32_t s = svdup_n_u32(*(const uint32_t*)scalar);
+            while (i < len) {
+                svbool_t pg = svwhilelt_b32(i, len);
+                svuint32_t v = svld1_u32(pg, d + i);
+                v = svadd_u32_x(pg, v, s);
+                svst1_u32(pg, d + i, v);
+                i += svcntw();
+            }
+            return;
+        }
+
+        case 8u: {
+            uint64_t* d = (uint64_t*)data;
+            svuint64_t s = svdup_n_u64(*(const uint64_t*)scalar);
+            while (i < len) {
+                svbool_t pg = svwhilelt_b64(i, len);
+                svuint64_t v = svld1_u64(pg, d + i);
+                v = svadd_u64_x(pg, v, s);
+                svst1_u64(pg, d + i, v);
+                i += svcntd();
+            }
+            return;
+        }
+
+        default:
+            for (i = 0u; i < len; ++i) add_scalar(data + i * data_size, scalar);
+            return;
+    }
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_SVE_UINT8_INL */

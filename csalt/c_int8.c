@@ -390,6 +390,24 @@ bool int8_array_equal(const int8_array_t* a,
         a->base.len
     );
 }
+// -------------------------------------------------------------------------------- 
+
+static void _add_scalar_int8(void* element, const void* scalar) {
+    int8_t*       e = (int8_t*)element;
+    const int8_t* s = (const int8_t*)scalar;
+    *e += *s;
+}
+
+error_code_t int8_add_scalar_array(int8_array_t* array, int8_t value) {
+    if (array == NULL) {
+        return NULL_POINTER;
+    }
+
+    return add_scalar_array(array,
+                            &value,
+                            _add_scalar_int8,
+                            INT8_TYPE);
+}
 // ================================================================================ 
 // ================================================================================ 
 

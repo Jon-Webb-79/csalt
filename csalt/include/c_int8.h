@@ -1252,6 +1252,39 @@ error_code_t print_int8_array(const int8_array_t* array, FILE* stream);
  */
 bool int8_array_equal(const int8_array_t* a,
                       const int8_array_t* b);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Add a scalar value to every element of a int8 array.
+ *
+ * This function adds the specified scalar value to each element in the
+ * array in place. The operation is applied to all elements currently
+ * stored in the array and preserves the array length and capacity.
+ *
+ * Internally, this function delegates to the generic add_scalar_array()
+ * routine, which may utilize SIMD-accelerated paths when available,
+ * falling back to scalar iteration otherwise.
+ *
+ * @param array Pointer to the int8 array to modify.
+ * @param value Scalar value to add to each element.
+ *
+ * @return error_code_t
+ * @retval NO_ERROR       The operation completed successfully.
+ * @retval NULL_POINTER   If @p array is NULL.
+ * @retval EMPTY          If the array contains no elements.
+ * @retval TYPE_MISMATCH  If the underlying dtype does not match int8_TYPE.
+ *
+ * @note
+ * The addition uses standard unsigned 8-bit arithmetic. If the result of
+ * adding @p value to an element exceeds int8_MAX, it wraps around modulo 256.
+ *
+ * @warning
+ * This function modifies the array in place. No copy of the data is made.
+ *
+ * @see add_scalar_array
+ * @see int8_array_sum
+ */
+error_code_t int8_add_scalar_array(int8_array_t* array, int8_t value);
 // ================================================================================ 
 // ================================================================================ 
 

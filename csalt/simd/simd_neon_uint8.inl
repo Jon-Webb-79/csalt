@@ -515,6 +515,81 @@ static inline bool simd_is_all_zero_uint8(const uint8_t* data, size_t count) {
  
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline void simd_add_scalar_uint8(uint8_t*      data,
+                                         size_t        len,
+                                         size_t        data_size,
+                                         const void*   scalar,
+                                         void        (*add_scalar)(void* element,
+                                                                   const void* scalar)) {
+    size_t i = 0u;
+
+    switch (data_size) {
+        case 1u: {
+            uint8_t* d = (uint8_t*)data;
+            const uint8x16_t s = vdupq_n_u8(*(const uint8_t*)scalar);
+            size_t vec_end = (len / 16u) * 16u;
+            for (; i < vec_end; i += 16u) {
+                uint8x16_t v = vld1q_u8(d + i);
+                v = vaddq_u8(v, s);
+                vst1q_u8(d + i, v);
+            }
+            for (; i < len; ++i) d[i] += *(const uint8_t*)scalar;
+            return;
+        }
+
+        case 2u: {
+            uint16_t* d = (uint16_t*)data;
+            const uint16x8_t s = vdupq_n_u16(*(const uint16_t*)scalar);
+            size_t vec_end = (len / 8u) * 8u;
+            for (; i < vec_end; i += 8u) {
+                uint16x8_t v = vld1q_u16(d + i);
+                v = vaddq_u16(v, s);
+                vst1q_u16(d + i, v);
+            }
+            for (; i < len; ++i) d[i] += *(const uint16_t*)scalar;
+            return;
+        }
+
+        case 4u: {
+            uint32_t* d = (uint32_t*)data;
+            const uint32x4_t s = vdupq_n_u32(*(const uint32_t*)scalar);
+            size_t vec_end = (len / 4u) * 4u;
+            for (; i < vec_end; i += 4u) {
+                uint32x4_t v = vld1q_u32(d + i);
+                v = vaddq_u32(v, s);
+                vst1q_u32(d + i, v);
+            }
+            for (; i < len; ++i) d[i] += *(const uint32_t*)scalar;
+            return;
+        }
+
+        case 8u: {
+#if defined(__aarch64__)
+            uint64_t* d = (uint64_t*)data;
+            const uint64x2_t s = vdupq_n_u64(*(const uint64_t*)scalar);
+            size_t vec_end = (len / 2u) * 2u;
+            for (; i < vec_end; i += 2u) {
+                uint64x2_t v = vld1q_u64(d + i);
+                v = vaddq_u64(v, s);
+                vst1q_u64(d + i, v);
+            }
+            for (; i < len; ++i) d[i] += *(const uint64_t*)scalar;
+            return;
+#else
+            for (i = 0u; i < len; ++i) {
+                ((uint64_t*)data)[i] += *(const uint64_t*)scalar;
+            }
+            return;
+#endif
+        }
+
+        default:
+            for (i = 0u; i < len; ++i) add_scalar(data + i * data_size, scalar);
+            return;
+    }
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_NEON_UINT8_INL */

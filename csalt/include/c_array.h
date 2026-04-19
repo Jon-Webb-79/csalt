@@ -896,6 +896,40 @@ array_expect_t cumulative_array(const array_t*     src,
  * @return true if arrays are equal, false otherwise.
  */
 bool array_equal(const array_t* a, const array_t* b);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Add a scalar value to every element of the array in place.
+ *
+ * Applies the caller-supplied update callback to each element in the array:
+ *
+ *     add_scalar(element, scalar);
+ *
+ * where element points to the current array slot and scalar points to the
+ * caller-provided scalar value. The callback must update the element in place.
+ *
+ * The implementation dispatches to a SIMD-capable backend for element sizes
+ * of 1, 2, 4, and 8 bytes when a compatible instruction set is available at
+ * compile time. All other element sizes fall back to scalar iteration.
+ *
+ * @param array       Pointer to the array to update. Must not be NULL.
+ * @param scalar      Pointer to the scalar value to add. Must not be NULL.
+ *                    Must point to exactly array->data_size bytes.
+ * @param add_scalar  Callback that updates one element in place using scalar.
+ *                    Must not be NULL. Signature:
+ *                        void add_scalar(void* element, const void* scalar)
+ * @param dtype       Type identifier. Must match array->dtype.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER  if array, scalar, or add_scalar is NULL
+ *         - TYPE_MISMATCH if dtype != array->dtype
+ *         - EMPTY         if array->len == 0
+ */
+error_code_t add_scalar_array(array_t*       array,
+                              const void*    scalar,
+                              void         (*add_scalar)(void* element,
+                                                         const void* scalar),
+                              dtype_id_t     dtype);
 // ================================================================================ 
 // ================================================================================ 
 

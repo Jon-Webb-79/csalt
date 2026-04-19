@@ -3398,6 +3398,195 @@ static void test_bracket_null_array_returns_null_pointer(void** state) {
     assert_false(br.has_value);
     assert_int_equal(br.u.error, NULL_POINTER);
 }
+// -------------------------------------------------------------------------------- 
+
+static uint8_array_t* _make_uint8_array(size_t capacity, bool growth) {
+    allocator_vtable_t a = heap_allocator();
+    uint8_array_expect_t r = init_uint8_array(capacity, growth, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static uint8_array_t* _make_sample_uint8_array(void) {
+    uint8_array_t* array = _make_uint8_array(8u, true);
+
+    assert_int_equal(push_back_uint8_array(array, 1u), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(array, 2u), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(array, 3u), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(array, 4u), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(array, 5u), NO_ERROR);
+
+    return array;
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_uint8_add_scalar_array_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    assert_int_equal(uint8_add_scalar_array(NULL, 5u), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_add_scalar_array_empty_returns_empty(void** state) {
+    (void)state;
+
+    uint8_array_t* array = _make_uint8_array(4u, true);
+
+    assert_int_equal(uint8_add_scalar_array(array, 5u), EMPTY);
+
+    return_uint8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+    (void)state;
+
+    uint8_array_t* array = _make_sample_uint8_array();
+
+    assert_int_equal(uint8_add_scalar_array(array, 0u), NO_ERROR);
+
+    uint8_t out = 0u;
+
+    assert_int_equal(get_uint8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 1u);
+
+    assert_int_equal(get_uint8_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 2u);
+
+    assert_int_equal(get_uint8_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 3u);
+
+    assert_int_equal(get_uint8_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 4u);
+
+    assert_int_equal(get_uint8_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 5u);
+
+    return_uint8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_add_scalar_array_single_element_updates_value(void** state) {
+    (void)state;
+
+    uint8_array_t* array = _make_uint8_array(4u, true);
+    assert_int_equal(push_back_uint8_array(array, 10u), NO_ERROR);
+
+    assert_int_equal(uint8_add_scalar_array(array, 7u), NO_ERROR);
+
+    uint8_t out = 0u;
+    assert_int_equal(get_uint8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 17u);
+
+    return_uint8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_add_scalar_array_updates_all_elements(void** state) {
+    (void)state;
+
+    uint8_array_t* array = _make_sample_uint8_array();
+
+    assert_int_equal(uint8_add_scalar_array(array, 10u), NO_ERROR);
+
+    uint8_t out = 0u;
+
+    assert_int_equal(get_uint8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+
+    assert_int_equal(get_uint8_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+
+    assert_int_equal(get_uint8_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 13u);
+
+    assert_int_equal(get_uint8_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 14u);
+
+    assert_int_equal(get_uint8_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 15u);
+
+    return_uint8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_add_scalar_array_wraps_on_overflow(void** state) {
+    (void)state;
+
+    uint8_array_t* array = _make_uint8_array(4u, true);
+
+    assert_int_equal(push_back_uint8_array(array, 250u), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(array, 251u), NO_ERROR);
+    assert_int_equal(push_back_uint8_array(array, 255u), NO_ERROR);
+
+    assert_int_equal(uint8_add_scalar_array(array, 10u), NO_ERROR);
+
+    uint8_t out = 0u;
+
+    assert_int_equal(get_uint8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, (uint8_t)4u);   /* 250 + 10 = 260 -> 4 */
+
+    assert_int_equal(get_uint8_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, (uint8_t)5u);   /* 251 + 10 = 261 -> 5 */
+
+    assert_int_equal(get_uint8_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, (uint8_t)9u);   /* 255 + 10 = 265 -> 9 */
+
+    return_uint8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_add_scalar_array_preserves_length(void** state) {
+    (void)state;
+
+    uint8_array_t* array = _make_sample_uint8_array();
+    size_t before = uint8_array_size(array);
+
+    assert_int_equal(uint8_add_scalar_array(array, 3u), NO_ERROR);
+
+    assert_int_equal(uint8_array_size(array), before);
+
+    return_uint8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint8_add_scalar_array_multiple_calls_accumulate(void** state) {
+    (void)state;
+
+    uint8_array_t* array = _make_sample_uint8_array();
+
+    assert_int_equal(uint8_add_scalar_array(array, 2u), NO_ERROR);
+    assert_int_equal(uint8_add_scalar_array(array, 3u), NO_ERROR);
+
+    uint8_t out = 0u;
+
+    assert_int_equal(get_uint8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 6u);
+
+    assert_int_equal(get_uint8_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 7u);
+
+    assert_int_equal(get_uint8_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 8u);
+
+    assert_int_equal(get_uint8_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 9u);
+
+    assert_int_equal(get_uint8_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+
+    return_uint8_array(array);
+}
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -3613,6 +3802,15 @@ const struct CMUnitTest test_uint8_array[] = {
     cmocka_unit_test(test_bracket_single_element_out_of_range),
     cmocka_unit_test(test_bracket_empty_array_returns_empty),
     cmocka_unit_test(test_bracket_null_array_returns_null_pointer),
+
+    cmocka_unit_test(test_uint8_add_scalar_array_null_returns_null_pointer),
+    cmocka_unit_test(test_uint8_add_scalar_array_empty_returns_empty),
+    cmocka_unit_test(test_uint8_add_scalar_array_add_zero_leaves_values_unchanged),
+    cmocka_unit_test(test_uint8_add_scalar_array_single_element_updates_value),
+    cmocka_unit_test(test_uint8_add_scalar_array_updates_all_elements),
+    cmocka_unit_test(test_uint8_add_scalar_array_wraps_on_overflow),
+    cmocka_unit_test(test_uint8_add_scalar_array_preserves_length),
+    cmocka_unit_test(test_uint8_add_scalar_array_multiple_calls_accumulate),
 };
 
 const size_t test_uint8_array_count = sizeof(test_uint8_array) / sizeof(test_uint8_array[0]);
@@ -4437,7 +4635,195 @@ static void test_int8_is_ptr_valid_and_invalid(void** state) {
 
     return_int8_array(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+static int8_array_t* _make_int8_array(size_t capacity, bool growth) {
+    allocator_vtable_t a = heap_allocator();
+    int8_array_expect_t r = init_int8_array(capacity, growth, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static int8_array_t* _make_sample_int8_array(void) {
+    int8_array_t* array = _make_int8_array(8u, true);
+
+    assert_int_equal(push_back_int8_array(array, 1u), NO_ERROR);
+    assert_int_equal(push_back_int8_array(array, 2u), NO_ERROR);
+    assert_int_equal(push_back_int8_array(array, 3u), NO_ERROR);
+    assert_int_equal(push_back_int8_array(array, 4u), NO_ERROR);
+    assert_int_equal(push_back_int8_array(array, 5u), NO_ERROR);
+
+    return array;
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_int8_add_scalar_array_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    assert_int_equal(int8_add_scalar_array(NULL, 5u), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_add_scalar_array_empty_returns_empty(void** state) {
+    (void)state;
+
+    int8_array_t* array = _make_int8_array(4u, true);
+
+    assert_int_equal(int8_add_scalar_array(array, 5u), EMPTY);
+
+    return_int8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+    (void)state;
+
+    int8_array_t* array = _make_sample_int8_array();
+
+    assert_int_equal(int8_add_scalar_array(array, 0u), NO_ERROR);
+
+    int8_t out = 0u;
+
+    assert_int_equal(get_int8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 1u);
+
+    assert_int_equal(get_int8_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 2u);
+
+    assert_int_equal(get_int8_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 3u);
+
+    assert_int_equal(get_int8_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 4u);
+
+    assert_int_equal(get_int8_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 5u);
+
+    return_int8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_add_scalar_array_single_element_updates_value(void** state) {
+    (void)state;
+
+    int8_array_t* array = _make_int8_array(4u, true);
+    assert_int_equal(push_back_int8_array(array, 10u), NO_ERROR);
+
+    assert_int_equal(int8_add_scalar_array(array, 7u), NO_ERROR);
+
+    int8_t out = 0u;
+    assert_int_equal(get_int8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 17u);
+
+    return_int8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_add_scalar_array_updates_all_elements(void** state) {
+    (void)state;
+
+    int8_array_t* array = _make_sample_int8_array();
+
+    assert_int_equal(int8_add_scalar_array(array, 10u), NO_ERROR);
+
+    int8_t out = 0u;
+
+    assert_int_equal(get_int8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+
+    assert_int_equal(get_int8_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+
+    assert_int_equal(get_int8_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 13u);
+
+    assert_int_equal(get_int8_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 14u);
+
+    assert_int_equal(get_int8_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 15u);
+
+    return_int8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_add_scalar_array_wraps_on_overflow(void** state) {
+    (void)state;
+
+    int8_array_t* array = _make_int8_array(4u, true);
+
+    assert_int_equal(push_back_int8_array(array, 250u), NO_ERROR);
+    assert_int_equal(push_back_int8_array(array, 251u), NO_ERROR);
+    assert_int_equal(push_back_int8_array(array, 255u), NO_ERROR);
+
+    assert_int_equal(int8_add_scalar_array(array, 10u), NO_ERROR);
+
+    int8_t out = 0u;
+
+    assert_int_equal(get_int8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, (int8_t)4u);   /* 250 + 10 = 260 -> 4 */
+
+    assert_int_equal(get_int8_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, (int8_t)5u);   /* 251 + 10 = 261 -> 5 */
+
+    assert_int_equal(get_int8_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, (int8_t)9u);   /* 255 + 10 = 265 -> 9 */
+
+    return_int8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_add_scalar_array_preserves_length(void** state) {
+    (void)state;
+
+    int8_array_t* array = _make_sample_int8_array();
+    size_t before = int8_array_size(array);
+
+    assert_int_equal(int8_add_scalar_array(array, 3u), NO_ERROR);
+
+    assert_int_equal(int8_array_size(array), before);
+
+    return_int8_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int8_add_scalar_array_multiple_calls_accumulate(void** state) {
+    (void)state;
+
+    int8_array_t* array = _make_sample_int8_array();
+
+    assert_int_equal(int8_add_scalar_array(array, 2u), NO_ERROR);
+    assert_int_equal(int8_add_scalar_array(array, 3u), NO_ERROR);
+
+    int8_t out = 0u;
+
+    assert_int_equal(get_int8_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 6u);
+
+    assert_int_equal(get_int8_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 7u);
+
+    assert_int_equal(get_int8_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 8u);
+
+    assert_int_equal(get_int8_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 9u);
+
+    assert_int_equal(get_int8_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+
+    return_int8_array(array);
+}
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -4546,6 +4932,15 @@ const struct CMUnitTest test_int8_array[] = {
     /* Group 25: is_int8_array_ptr */
     cmocka_unit_test(test_int8_is_ptr_null_array_returns_false),
     cmocka_unit_test(test_int8_is_ptr_valid_and_invalid),
+
+    cmocka_unit_test(test_int8_add_scalar_array_null_returns_null_pointer),
+    cmocka_unit_test(test_int8_add_scalar_array_empty_returns_empty),
+    cmocka_unit_test(test_int8_add_scalar_array_add_zero_leaves_values_unchanged),
+    cmocka_unit_test(test_int8_add_scalar_array_single_element_updates_value),
+    cmocka_unit_test(test_int8_add_scalar_array_updates_all_elements),
+    cmocka_unit_test(test_int8_add_scalar_array_wraps_on_overflow),
+    cmocka_unit_test(test_int8_add_scalar_array_preserves_length),
+    cmocka_unit_test(test_int8_add_scalar_array_multiple_calls_accumulate),
 };
 const size_t test_int8_array_count = sizeof(test_int8_array) / sizeof(test_int8_array[0]);
 // ================================================================================ 
@@ -5370,7 +5765,195 @@ static void test_uint16_is_ptr_valid_and_invalid(void** state) {
 
     return_uint16_array(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+static uint16_array_t* _make_uint16_array(size_t capacity, bool growth) {
+    allocator_vtable_t a = heap_allocator();
+    uint16_array_expect_t r = init_uint16_array(capacity, growth, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static uint16_array_t* _make_sample_uint16_array(void) {
+    uint16_array_t* array = _make_uint16_array(8u, true);
+
+    assert_int_equal(push_back_uint16_array(array, 1u), NO_ERROR);
+    assert_int_equal(push_back_uint16_array(array, 2u), NO_ERROR);
+    assert_int_equal(push_back_uint16_array(array, 3u), NO_ERROR);
+    assert_int_equal(push_back_uint16_array(array, 4u), NO_ERROR);
+    assert_int_equal(push_back_uint16_array(array, 5u), NO_ERROR);
+
+    return array;
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_uint16_add_scalar_array_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    assert_int_equal(uint16_add_scalar_array(NULL, 5u), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_add_scalar_array_empty_returns_empty(void** state) {
+    (void)state;
+
+    uint16_array_t* array = _make_uint16_array(4u, true);
+
+    assert_int_equal(uint16_add_scalar_array(array, 5u), EMPTY);
+
+    return_uint16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+    (void)state;
+
+    uint16_array_t* array = _make_sample_uint16_array();
+
+    assert_int_equal(uint16_add_scalar_array(array, 0u), NO_ERROR);
+
+    uint16_t out = 0u;
+
+    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 1u);
+
+    assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 2u);
+
+    assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 3u);
+
+    assert_int_equal(get_uint16_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 4u);
+
+    assert_int_equal(get_uint16_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 5u);
+
+    return_uint16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_add_scalar_array_single_element_updates_value(void** state) {
+    (void)state;
+
+    uint16_array_t* array = _make_uint16_array(4u, true);
+    assert_int_equal(push_back_uint16_array(array, 10u), NO_ERROR);
+
+    assert_int_equal(uint16_add_scalar_array(array, 7u), NO_ERROR);
+
+    uint16_t out = 0u;
+    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 17u);
+
+    return_uint16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_add_scalar_array_updates_all_elements(void** state) {
+    (void)state;
+
+    uint16_array_t* array = _make_sample_uint16_array();
+
+    assert_int_equal(uint16_add_scalar_array(array, 10u), NO_ERROR);
+
+    uint16_t out = 0u;
+
+    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+
+    assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+
+    assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 13u);
+
+    assert_int_equal(get_uint16_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 14u);
+
+    assert_int_equal(get_uint16_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 15u);
+
+    return_uint16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_add_scalar_array_wraps_on_overflow(void** state) {
+    (void)state;
+
+    uint16_array_t* array = _make_uint16_array(4u, true);
+
+    assert_int_equal(push_back_uint16_array(array, 65530u), NO_ERROR);
+    assert_int_equal(push_back_uint16_array(array, 65531u), NO_ERROR);
+    assert_int_equal(push_back_uint16_array(array, 65535u), NO_ERROR);
+
+    assert_int_equal(uint16_add_scalar_array(array, 10u), NO_ERROR);
+
+    uint16_t out = 0u;
+
+    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, (uint16_t)4u);   /* 65530 + 10 -> 4 */
+
+    assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, (uint16_t)5u);   /* 65531 + 10 -> 5 */
+
+    assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, (uint16_t)9u);   /* 65535 + 10 -> 9 */
+
+    return_uint16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_add_scalar_array_preserves_length(void** state) {
+    (void)state;
+
+    uint16_array_t* array = _make_sample_uint16_array();
+    size_t before = uint16_array_size(array);
+
+    assert_int_equal(uint16_add_scalar_array(array, 3u), NO_ERROR);
+
+    assert_int_equal(uint16_array_size(array), before);
+
+    return_uint16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_uint16_add_scalar_array_multiple_calls_accumulate(void** state) {
+    (void)state;
+
+    uint16_array_t* array = _make_sample_uint16_array();
+
+    assert_int_equal(uint16_add_scalar_array(array, 2u), NO_ERROR);
+    assert_int_equal(uint16_add_scalar_array(array, 3u), NO_ERROR);
+
+    uint16_t out = 0u;
+
+    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 6u);
+
+    assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 7u);
+
+    assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 8u);
+
+    assert_int_equal(get_uint16_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 9u);
+
+    assert_int_equal(get_uint16_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+
+    return_uint16_array(array);
+}
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -5479,6 +6062,15 @@ const struct CMUnitTest test_uint16_array[] = {
     /* Group 25: is_uint16_array_ptr */
     cmocka_unit_test(test_uint16_is_ptr_null_array_returns_false),
     cmocka_unit_test(test_uint16_is_ptr_valid_and_invalid),
+
+    cmocka_unit_test(test_uint16_add_scalar_array_null_returns_null_pointer),
+    cmocka_unit_test(test_uint16_add_scalar_array_empty_returns_empty),
+    cmocka_unit_test(test_uint16_add_scalar_array_add_zero_leaves_values_unchanged),
+    cmocka_unit_test(test_uint16_add_scalar_array_single_element_updates_value),
+    cmocka_unit_test(test_uint16_add_scalar_array_updates_all_elements),
+    cmocka_unit_test(test_uint16_add_scalar_array_wraps_on_overflow),
+    cmocka_unit_test(test_uint16_add_scalar_array_preserves_length),
+    cmocka_unit_test(test_uint16_add_scalar_array_multiple_calls_accumulate),
 };
 
 const size_t test_uint16_array_count = sizeof(test_uint16_array) / sizeof(test_uint16_array[0]);
@@ -8469,7 +9061,195 @@ static void test_int32_cumulative_mixed_signs(void** state) {
     return_int32_array(src);
     return_int32_array(dst);
 }
+// -------------------------------------------------------------------------------- 
 
+static int16_array_t* _make_int16_array(size_t capacity, bool growth) {
+    allocator_vtable_t a = heap_allocator();
+    int16_array_expect_t r = init_int16_array(capacity, growth, a);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    return r.u.value;
+}
+
+// --------------------------------------------------------------------------------
+
+static int16_array_t* _make_sample_int16_array(void) {
+    int16_array_t* array = _make_int16_array(8u, true);
+
+    assert_int_equal(push_back_int16_array(array, 1u), NO_ERROR);
+    assert_int_equal(push_back_int16_array(array, 2u), NO_ERROR);
+    assert_int_equal(push_back_int16_array(array, 3u), NO_ERROR);
+    assert_int_equal(push_back_int16_array(array, 4u), NO_ERROR);
+    assert_int_equal(push_back_int16_array(array, 5u), NO_ERROR);
+
+    return array;
+}
+// -------------------------------------------------------------------------------- 
+
+static void test_int16_add_scalar_array_null_returns_null_pointer(void** state) {
+    (void)state;
+
+    assert_int_equal(int16_add_scalar_array(NULL, 5u), NULL_POINTER);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_add_scalar_array_empty_returns_empty(void** state) {
+    (void)state;
+
+    int16_array_t* array = _make_int16_array(4u, true);
+
+    assert_int_equal(int16_add_scalar_array(array, 5u), EMPTY);
+
+    return_int16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+    (void)state;
+
+    int16_array_t* array = _make_sample_int16_array();
+
+    assert_int_equal(int16_add_scalar_array(array, 0u), NO_ERROR);
+
+    int16_t out = 0u;
+
+    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 1u);
+
+    assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 2u);
+
+    assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 3u);
+
+    assert_int_equal(get_int16_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 4u);
+
+    assert_int_equal(get_int16_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 5u);
+
+    return_int16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_add_scalar_array_single_element_updates_value(void** state) {
+    (void)state;
+
+    int16_array_t* array = _make_int16_array(4u, true);
+    assert_int_equal(push_back_int16_array(array, 10u), NO_ERROR);
+
+    assert_int_equal(int16_add_scalar_array(array, 7u), NO_ERROR);
+
+    int16_t out = 0u;
+    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 17u);
+
+    return_int16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_add_scalar_array_updates_all_elements(void** state) {
+    (void)state;
+
+    int16_array_t* array = _make_sample_int16_array();
+
+    assert_int_equal(int16_add_scalar_array(array, 10u), NO_ERROR);
+
+    int16_t out = 0u;
+
+    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+
+    assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+
+    assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 13u);
+
+    assert_int_equal(get_int16_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 14u);
+
+    assert_int_equal(get_int16_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 15u);
+
+    return_int16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_add_scalar_array_wraps_on_overflow(void** state) {
+    (void)state;
+
+    int16_array_t* array = _make_int16_array(4u, true);
+
+    assert_int_equal(push_back_int16_array(array, 65530u), NO_ERROR);
+    assert_int_equal(push_back_int16_array(array, 65531u), NO_ERROR);
+    assert_int_equal(push_back_int16_array(array, 65535u), NO_ERROR);
+
+    assert_int_equal(int16_add_scalar_array(array, 10u), NO_ERROR);
+
+    int16_t out = 0u;
+
+    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, (int16_t)4u);   /* 65530 + 10 -> 4 */
+
+    assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, (int16_t)5u);   /* 65531 + 10 -> 5 */
+
+    assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, (int16_t)9u);   /* 65535 + 10 -> 9 */
+
+    return_int16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_add_scalar_array_preserves_length(void** state) {
+    (void)state;
+
+    int16_array_t* array = _make_sample_int16_array();
+    size_t before = int16_array_size(array);
+
+    assert_int_equal(int16_add_scalar_array(array, 3u), NO_ERROR);
+
+    assert_int_equal(int16_array_size(array), before);
+
+    return_int16_array(array);
+}
+
+// --------------------------------------------------------------------------------
+
+static void test_int16_add_scalar_array_multiple_calls_accumulate(void** state) {
+    (void)state;
+
+    int16_array_t* array = _make_sample_int16_array();
+
+    assert_int_equal(int16_add_scalar_array(array, 2u), NO_ERROR);
+    assert_int_equal(int16_add_scalar_array(array, 3u), NO_ERROR);
+
+    int16_t out = 0u;
+
+    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 6u);
+
+    assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 7u);
+
+    assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 8u);
+
+    assert_int_equal(get_int16_array_index(array, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 9u);
+
+    assert_int_equal(get_int16_array_index(array, 4u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+
+    return_int16_array(array);
+}
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -8597,6 +9377,15 @@ const struct CMUnitTest test_int32_array[] = {
     cmocka_unit_test(test_int32_cumulative_null_array_returns_null_pointer),
     cmocka_unit_test(test_int32_cumulative_produces_prefix_sum),
     cmocka_unit_test(test_int32_cumulative_mixed_signs),
+
+    cmocka_unit_test(test_int16_add_scalar_array_null_returns_null_pointer),
+    cmocka_unit_test(test_int16_add_scalar_array_empty_returns_empty),
+    cmocka_unit_test(test_int16_add_scalar_array_add_zero_leaves_values_unchanged),
+    cmocka_unit_test(test_int16_add_scalar_array_single_element_updates_value),
+    cmocka_unit_test(test_int16_add_scalar_array_updates_all_elements),
+    cmocka_unit_test(test_int16_add_scalar_array_wraps_on_overflow),
+    cmocka_unit_test(test_int16_add_scalar_array_preserves_length),
+    cmocka_unit_test(test_int16_add_scalar_array_multiple_calls_accumulate),
    };
 const size_t test_int32_array_count = sizeof(test_int32_array) / sizeof(test_int32_array[0]);
 // ================================================================================ 

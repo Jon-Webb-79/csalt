@@ -385,6 +385,24 @@ bool uint8_array_equal(const uint8_array_t* a,
         a->base.len
     );
 }
+// -------------------------------------------------------------------------------- 
+
+static void _add_scalar_uint8(void* element, const void* scalar) {
+    uint8_t*       e = (uint8_t*)element;
+    const uint8_t* s = (const uint8_t*)scalar;
+    *e += *s;
+}
+
+error_code_t uint8_add_scalar_array(uint8_array_t* array, uint8_t value) {
+    if (array == NULL) {
+        return NULL_POINTER;
+    }
+
+    return add_scalar_array(array,
+                            &value,
+                            _add_scalar_uint8,
+                            UINT8_TYPE);
+}
 // ================================================================================ 
 // ================================================================================ 
 

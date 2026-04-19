@@ -194,6 +194,18 @@ static inline bool simd_is_all_zero_uint8(const uint8_t* data, size_t count) {
     }
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline void simd_add_scalar_uint8(uint8_t*      data,
+                                         size_t        len,
+                                         size_t        data_size,
+                                         const void*   scalar,
+                                         void        (*add_scalar)(void* element,
+                                                                   const void* scalar)) {
+    for (size_t i = 0u; i < len; ++i) {
+        add_scalar(data + i * data_size, scalar);
+    }
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_SCALAR_UINT8_INL */
