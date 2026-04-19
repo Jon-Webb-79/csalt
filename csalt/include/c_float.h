@@ -2498,6 +2498,47 @@ float_expect_t float_matrix_min(const float_matrix_t* mat);
  * @see matrix_max
  */
 float_expect_t float_matrix_max(const float_matrix_t* mat);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compute the sum of all elements in a float matrix.
+ *
+ * This function computes the sum of all elements in a matrix of type
+ * `float_matrix_t`. It delegates traversal to the generic `matrix_sum()`
+ * function and accumulates the result using unsigned 32-bit arithmetic.
+ *
+ * The accumulator is initialized to zero and updated for each element in
+ * the matrix using standard C unsigned integer addition.
+ *
+ * @param mat Pointer to the float matrix.
+ *
+ * @return float_expect_t
+ * @retval has_value = true   The sum was successfully computed and is stored in u.value.
+ * @retval has_value = false  An error occurred, and the error code is stored in u.error.
+ *
+ * @errors
+ * - NULL_POINTER   if @p mat is NULL.
+ * - TYPE_MISMATCH  if the matrix dtype is not float_TYPE.
+ * - EMPTY          if the matrix contains no elements:
+ *                  - dense: rows * cols == 0
+ *                  - sparse: nnz == 0
+ * - INVALID_ARG    if the matrix format is not recognized.
+ * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
+ *
+ * @note
+ * For dense matrices, all elements (rows * cols) are included in the sum.
+ * For sparse matrices (COO, CSR, CSC), only stored elements (nnz) are included.
+ *
+ * @warning
+ * This function uses standard unsigned 32-bit arithmetic. If the mathematical
+ * sum exceeds `float_MAX`, the result will wrap around modulo 2^32. Overflow
+ * is not detected or reported.
+ *
+ * @see matrix_sum
+ * @see float_matrix_min
+ * @see float_matrix_max
+ */
+float_expect_t float_matrix_sum(const float_matrix_t* mat);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

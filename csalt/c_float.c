@@ -1868,6 +1868,21 @@ float_expect_t float_matrix_max(const float_matrix_t* mat) {
             return (float_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 }
+// -------------------------------------------------------------------------------- 
+
+float_expect_t float_matrix_sum(const float_matrix_t* mat) {
+    if (mat == NULL) {
+        return (float_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    float_t total = 0u;
+    error_code_t err = matrix_sum(mat, &total, _add_float, FLOAT_TYPE);
+    if (err != NO_ERROR) {
+        return (float_expect_t){ .has_value = false, .u.error = err };
+    }
+
+    return (float_expect_t){ .has_value = true, .u.value = total };
+}
 // ================================================================================
 // ================================================================================
 // eof

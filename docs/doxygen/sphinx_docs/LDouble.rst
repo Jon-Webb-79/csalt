@@ -548,6 +548,8 @@ Introspection
 -------------
 
 .. doxygenfunction:: ldouble_matrix_min
+.. doxygenfunction:: ldouble_matrix_max
+.. doxygenfunction:: ldouble_matrix_sum
 
 Generic Introspection
 ---------------------

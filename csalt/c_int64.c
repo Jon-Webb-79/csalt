@@ -1830,6 +1830,21 @@ int64_expect_t int64_matrix_max(const int64_matrix_t* mat) {
             return (int64_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 }
+// -------------------------------------------------------------------------------- 
+
+int64_expect_t int64_matrix_sum(const int64_matrix_t* mat) {
+    if (mat == NULL) {
+        return (int64_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    int64_t total = 0u;
+    error_code_t err = matrix_sum(mat, &total, _add_int64, INT64_TYPE);
+    if (err != NO_ERROR) {
+        return (int64_expect_t){ .has_value = false, .u.error = err };
+    }
+
+    return (int64_expect_t){ .has_value = true, .u.value = total };
+}
 // ================================================================================
 // ================================================================================
 // eof

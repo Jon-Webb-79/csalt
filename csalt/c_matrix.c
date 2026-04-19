@@ -2768,6 +2768,83 @@ size_expect_t matrix_max(const matrix_t* mat,
             return (size_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t matrix_sum(const matrix_t* mat,
+                        void* accum,
+                        void (*add)(void* accum, const void* element),
+                        dtype_id_t dtype) {
+    size_t count;
+
+    /* Check inputs */
+    if (mat == NULL || accum == NULL || add == NULL) {
+        return NULL_POINTER;
+    }
+
+    if (dtype != mat->dtype) {
+        return TYPE_MISMATCH;
+    }
+
+    switch (mat->format) {
+        case DENSE_MATRIX:
+            if ((mat->rows != 0u) && (mat->cols > SIZE_MAX / mat->rows)) {
+                return LENGTH_OVERFLOW;
+            }
+
+            count = mat->rows * mat->cols;
+            if (count == 0u) {
+                return EMPTY;
+            }
+
+            simd_sum_uint8(mat->rep.dense.data,
+                           count,
+                           mat->data_size,
+                           accum,
+                           add);
+            break;
+
+        case COO_MATRIX:
+            if (mat->rep.coo.nnz == 0u) {
+                return EMPTY;
+            }
+
+            simd_sum_uint8(mat->rep.coo.values,
+                           mat->rep.coo.nnz,
+                           mat->data_size,
+                           accum,
+                           add);
+            break;
+
+        case CSR_MATRIX:
+            if (mat->rep.csr.nnz == 0u) {
+                return EMPTY;
+            }
+
+            simd_sum_uint8(mat->rep.csr.values,
+                           mat->rep.csr.nnz,
+                           mat->data_size,
+                           accum,
+                           add);
+            break;
+
+        case CSC_MATRIX:
+            if (mat->rep.csc.nnz == 0u) {
+                return EMPTY;
+            }
+
+            simd_sum_uint8(mat->rep.csc.values,
+                           mat->rep.csc.nnz,
+                           mat->data_size,
+                           accum,
+                           add);
+            break;
+
+        default:
+            return INVALID_ARG;
+    }
+
+    return NO_ERROR;
+}
 // ================================================================================
 // ================================================================================
 // eof

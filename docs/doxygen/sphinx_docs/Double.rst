@@ -558,6 +558,7 @@ Introspection
 
 .. doxygenfunction:: double_matrix_min
 .. doxygenfunction:: double_matrix_max
+.. doxygenfunction:: double_matrix_sum
 
 Generic Introspection
 ---------------------

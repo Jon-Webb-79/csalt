@@ -349,6 +349,8 @@ Diagnostics
 
 .. doxygenfunction:: matrix_max
 
+.. doxygenfunction:: matrix_sum
+
 Compatibility Checks
 ~~~~~~~~~~~~~~~~~~~~
 

@@ -1958,6 +1958,21 @@ ldouble_expect_t ldouble_matrix_max(const ldouble_matrix_t* mat) {
             return (ldouble_expect_t){ .has_value = false, .u.error = INVALID_ARG };
     }
 }
+// -------------------------------------------------------------------------------- 
+
+ldouble_expect_t ldouble_matrix_sum(const ldouble_matrix_t* mat) {
+    if (mat == NULL) {
+        return (ldouble_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    }
+
+    long double total = 0u;
+    error_code_t err = matrix_sum(mat, &total, _add_ldouble, LDOUBLE_TYPE);
+    if (err != NO_ERROR) {
+        return (ldouble_expect_t){ .has_value = false, .u.error = err };
+    }
+
+    return (ldouble_expect_t){ .has_value = true, .u.value = total };
+}
 // ================================================================================
 // ================================================================================
 // eof
