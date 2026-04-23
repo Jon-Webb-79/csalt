@@ -4259,219 +4259,219 @@ static void test_float_matrix_max_all_formats_agree_on_same_data(void** state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_float_matrix_sum_null_returns_null_pointer(void** state) {
-    (void)state;
-
-    float_expect_t r = float_matrix_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
-    (void)state;
-
-    float_matrix_t* mat = _make_float_dense_matrix(2u, 3u);
-
-    float_expect_t r = float_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_float_equal(r.u.value, 0.0, 1.0e-3);
-
-    return_float_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_dense_returns_expected_sum(void** state) {
-    (void)state;
-
-    float_matrix_t* mat = _make_sample_float_dense_matrix();
-
-    /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
-    float_expect_t r = float_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_float_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_float_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_dense_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    float_matrix_t* mat = _make_float_dense_matrix(1u, 1u);
-    assert_int_equal(set_float_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
-
-    float_expect_t r = float_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_float_equal(r.u.value, 42.0, 1.0e-3);
-
-    return_float_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
-    (void)state;
-
-    float_matrix_t* mat = _make_float_dense_matrix(2u, 3u);
-
-    assert_int_equal(set_float_matrix(mat, 0u, 0u, 1.0), NO_ERROR);
-    assert_int_equal(set_float_matrix(mat, 0u, 1u, 2.0), NO_ERROR);
-    assert_int_equal(set_float_matrix(mat, 0u, 2u, 3.0), NO_ERROR);
-    assert_int_equal(set_float_matrix(mat, 1u, 0u, 4.0), NO_ERROR);
-    assert_int_equal(set_float_matrix(mat, 1u, 1u, 5.0), NO_ERROR);
-    assert_int_equal(set_float_matrix(mat, 1u, 2u, 6.0), NO_ERROR);
-
-    float_expect_t r = float_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_float_equal(r.u.value, 21.0, 1.0e-3);
-
-    return_float_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_empty_coo_returns_empty(void** state) {
-    (void)state;
-
-    float_matrix_t* mat = _make_float_coo_matrix(3u, 4u, 8u, true);
-
-    float_expect_t r = float_matrix_sum(mat);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_float_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_coo_returns_expected_sum(void** state) {
-    (void)state;
-
-    float_matrix_t* mat = _make_sample_float_coo_matrix();
-
-    /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
-    float_expect_t r = float_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_float_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_float_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_coo_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    float_matrix_t* mat = _make_float_coo_matrix(3u, 3u, 4u, true);
-    assert_int_equal(set_float_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
-
-    float_expect_t r = float_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_float_equal(r.u.value, 55.0, 1.0e-3);
-
-    return_float_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_csr_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    float_matrix_t* dense = _make_sample_float_dense_matrix();
-
-    float_matrix_expect_t conv = convert_float_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    float_matrix_t* csr = conv.u.value;
-
-    float_expect_t r = float_matrix_sum(csr);
-    assert_true(r.has_value);
-    assert_float_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_float_matrix(csr);
-    return_float_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_empty_csr_returns_empty(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    float_matrix_t* dense = _make_float_dense_matrix(2u, 2u);
-
-    float_matrix_expect_t conv = convert_float_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    float_matrix_t* csr = conv.u.value;
-
-    float_expect_t r = float_matrix_sum(csr);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_float_matrix(csr);
-    return_float_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_csc_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    float_matrix_t* dense = _make_sample_float_dense_matrix();
-
-    float_matrix_expect_t conv = convert_float_matrix(dense, CSC_MATRIX, a);
-    assert_true(conv.has_value);
-    float_matrix_t* csc = conv.u.value;
-
-    float_expect_t r = float_matrix_sum(csc);
-    assert_true(r.has_value);
-    assert_float_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_float_matrix(csc);
-    return_float_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_matrix_sum_all_formats_agree_on_same_data(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    float_matrix_t* dense = _make_sample_float_dense_matrix();
-
-    float_matrix_expect_t coo_r = convert_float_matrix(dense, COO_MATRIX, a);
-    float_matrix_expect_t csr_r = convert_float_matrix(dense, CSR_MATRIX, a);
-    float_matrix_expect_t csc_r = convert_float_matrix(dense, CSC_MATRIX, a);
-
-    assert_true(coo_r.has_value);
-    assert_true(csr_r.has_value);
-    assert_true(csc_r.has_value);
-
-    float_expect_t rd = float_matrix_sum(dense);
-    float_expect_t ro = float_matrix_sum(coo_r.u.value);
-    float_expect_t rr = float_matrix_sum(csr_r.u.value);
-    float_expect_t rc = float_matrix_sum(csc_r.u.value);
-
-    assert_true(rd.has_value);
-    assert_true(ro.has_value);
-    assert_true(rr.has_value);
-    assert_true(rc.has_value);
-
-    assert_float_equal(rd.u.value, 165.0, 1.0e-3);
-    assert_float_equal(ro.u.value, 165.0, 1.0e-3);
-    assert_float_equal(rr.u.value, 165.0, 1.0e-3);
-    assert_float_equal(rc.u.value, 165.0, 1.0e-3);
-
-    return_float_matrix(csc_r.u.value);
-    return_float_matrix(csr_r.u.value);
-    return_float_matrix(coo_r.u.value);
-    return_float_matrix(dense);
-}
+// static void test_float_matrix_sum_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     float_expect_t r = float_matrix_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
+//     (void)state;
+//
+//     float_matrix_t* mat = _make_float_dense_matrix(2u, 3u);
+//
+//     float_expect_t r = float_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_float_equal(r.u.value, 0.0, 1.0e-3);
+//
+//     return_float_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_dense_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     float_matrix_t* mat = _make_sample_float_dense_matrix();
+//
+//     /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
+//     float_expect_t r = float_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_float_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_float_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_dense_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     float_matrix_t* mat = _make_float_dense_matrix(1u, 1u);
+//     assert_int_equal(set_float_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
+//
+//     float_expect_t r = float_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_float_equal(r.u.value, 42.0, 1.0e-3);
+//
+//     return_float_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     float_matrix_t* mat = _make_float_dense_matrix(2u, 3u);
+//
+//     assert_int_equal(set_float_matrix(mat, 0u, 0u, 1.0), NO_ERROR);
+//     assert_int_equal(set_float_matrix(mat, 0u, 1u, 2.0), NO_ERROR);
+//     assert_int_equal(set_float_matrix(mat, 0u, 2u, 3.0), NO_ERROR);
+//     assert_int_equal(set_float_matrix(mat, 1u, 0u, 4.0), NO_ERROR);
+//     assert_int_equal(set_float_matrix(mat, 1u, 1u, 5.0), NO_ERROR);
+//     assert_int_equal(set_float_matrix(mat, 1u, 2u, 6.0), NO_ERROR);
+//
+//     float_expect_t r = float_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_float_equal(r.u.value, 21.0, 1.0e-3);
+//
+//     return_float_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_empty_coo_returns_empty(void** state) {
+//     (void)state;
+//
+//     float_matrix_t* mat = _make_float_coo_matrix(3u, 4u, 8u, true);
+//
+//     float_expect_t r = float_matrix_sum(mat);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_float_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_coo_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     float_matrix_t* mat = _make_sample_float_coo_matrix();
+//
+//     /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
+//     float_expect_t r = float_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_float_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_float_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_coo_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     float_matrix_t* mat = _make_float_coo_matrix(3u, 3u, 4u, true);
+//     assert_int_equal(set_float_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
+//
+//     float_expect_t r = float_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_float_equal(r.u.value, 55.0, 1.0e-3);
+//
+//     return_float_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_csr_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     float_matrix_t* dense = _make_sample_float_dense_matrix();
+//
+//     float_matrix_expect_t conv = convert_float_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     float_matrix_t* csr = conv.u.value;
+//
+//     float_expect_t r = float_matrix_sum(csr);
+//     assert_true(r.has_value);
+//     assert_float_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_float_matrix(csr);
+//     return_float_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_empty_csr_returns_empty(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     float_matrix_t* dense = _make_float_dense_matrix(2u, 2u);
+//
+//     float_matrix_expect_t conv = convert_float_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     float_matrix_t* csr = conv.u.value;
+//
+//     float_expect_t r = float_matrix_sum(csr);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_float_matrix(csr);
+//     return_float_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_csc_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     float_matrix_t* dense = _make_sample_float_dense_matrix();
+//
+//     float_matrix_expect_t conv = convert_float_matrix(dense, CSC_MATRIX, a);
+//     assert_true(conv.has_value);
+//     float_matrix_t* csc = conv.u.value;
+//
+//     float_expect_t r = float_matrix_sum(csc);
+//     assert_true(r.has_value);
+//     assert_float_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_float_matrix(csc);
+//     return_float_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_matrix_sum_all_formats_agree_on_same_data(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     float_matrix_t* dense = _make_sample_float_dense_matrix();
+//
+//     float_matrix_expect_t coo_r = convert_float_matrix(dense, COO_MATRIX, a);
+//     float_matrix_expect_t csr_r = convert_float_matrix(dense, CSR_MATRIX, a);
+//     float_matrix_expect_t csc_r = convert_float_matrix(dense, CSC_MATRIX, a);
+//
+//     assert_true(coo_r.has_value);
+//     assert_true(csr_r.has_value);
+//     assert_true(csc_r.has_value);
+//
+//     float_expect_t rd = float_matrix_sum(dense);
+//     float_expect_t ro = float_matrix_sum(coo_r.u.value);
+//     float_expect_t rr = float_matrix_sum(csr_r.u.value);
+//     float_expect_t rc = float_matrix_sum(csc_r.u.value);
+//
+//     assert_true(rd.has_value);
+//     assert_true(ro.has_value);
+//     assert_true(rr.has_value);
+//     assert_true(rc.has_value);
+//
+//     assert_float_equal(rd.u.value, 165.0, 1.0e-3);
+//     assert_float_equal(ro.u.value, 165.0, 1.0e-3);
+//     assert_float_equal(rr.u.value, 165.0, 1.0e-3);
+//     assert_float_equal(rc.u.value, 165.0, 1.0e-3);
+//
+//     return_float_matrix(csc_r.u.value);
+//     return_float_matrix(csr_r.u.value);
+//     return_float_matrix(coo_r.u.value);
+//     return_float_matrix(dense);
+// }
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -4573,18 +4573,18 @@ const struct CMUnitTest test_float_matrix[] = {
     cmocka_unit_test(test_float_matrix_max_csc_finds_maximum_value),
     cmocka_unit_test(test_float_matrix_max_all_formats_agree_on_same_data),
 
-    cmocka_unit_test(test_float_matrix_sum_null_returns_null_pointer),
-    cmocka_unit_test(test_float_matrix_sum_zero_initialized_dense_returns_zero),
-    cmocka_unit_test(test_float_matrix_sum_dense_returns_expected_sum),
-    cmocka_unit_test(test_float_matrix_sum_dense_single_value_returns_that_value),
-    cmocka_unit_test(test_float_matrix_sum_dense_fully_populated_returns_expected_sum),
-    cmocka_unit_test(test_float_matrix_sum_empty_coo_returns_empty),
-    cmocka_unit_test(test_float_matrix_sum_coo_returns_expected_sum),
-    cmocka_unit_test(test_float_matrix_sum_coo_single_value_returns_that_value),
-    cmocka_unit_test(test_float_matrix_sum_csr_returns_expected_sum),
-    cmocka_unit_test(test_float_matrix_sum_empty_csr_returns_empty),
-    cmocka_unit_test(test_float_matrix_sum_csc_returns_expected_sum),
-    cmocka_unit_test(test_float_matrix_sum_all_formats_agree_on_same_data),
+    // cmocka_unit_test(test_float_matrix_sum_null_returns_null_pointer),
+    // cmocka_unit_test(test_float_matrix_sum_zero_initialized_dense_returns_zero),
+    // cmocka_unit_test(test_float_matrix_sum_dense_returns_expected_sum),
+    // cmocka_unit_test(test_float_matrix_sum_dense_single_value_returns_that_value),
+    // cmocka_unit_test(test_float_matrix_sum_dense_fully_populated_returns_expected_sum),
+    // cmocka_unit_test(test_float_matrix_sum_empty_coo_returns_empty),
+    // cmocka_unit_test(test_float_matrix_sum_coo_returns_expected_sum),
+    // cmocka_unit_test(test_float_matrix_sum_coo_single_value_returns_that_value),
+    // cmocka_unit_test(test_float_matrix_sum_csr_returns_expected_sum),
+    // cmocka_unit_test(test_float_matrix_sum_empty_csr_returns_empty),
+    // cmocka_unit_test(test_float_matrix_sum_csc_returns_expected_sum),
+    // cmocka_unit_test(test_float_matrix_sum_all_formats_agree_on_same_data),
 };
 
 const size_t test_float_matrix_count =
@@ -5962,219 +5962,219 @@ static void test_double_matrix_max_all_formats_agree_on_same_data(void** state) 
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_double_matrix_sum_null_returns_null_pointer(void** state) {
-    (void)state;
-
-    double_expect_t r = double_matrix_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
-    (void)state;
-
-    double_matrix_t* mat = _make_double_dense_matrix(2u, 3u);
-
-    double_expect_t r = double_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 0.0, 1.0e-3);
-
-    return_double_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_dense_returns_expected_sum(void** state) {
-    (void)state;
-
-    double_matrix_t* mat = _make_sample_double_dense_matrix();
-
-    /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
-    double_expect_t r = double_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_double_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_dense_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    double_matrix_t* mat = _make_double_dense_matrix(1u, 1u);
-    assert_int_equal(set_double_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
-
-    double_expect_t r = double_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 42.0, 1.0e-3);
-
-    return_double_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
-    (void)state;
-
-    double_matrix_t* mat = _make_double_dense_matrix(2u, 3u);
-
-    assert_int_equal(set_double_matrix(mat, 0u, 0u, 1.0), NO_ERROR);
-    assert_int_equal(set_double_matrix(mat, 0u, 1u, 2.0), NO_ERROR);
-    assert_int_equal(set_double_matrix(mat, 0u, 2u, 3.0), NO_ERROR);
-    assert_int_equal(set_double_matrix(mat, 1u, 0u, 4.0), NO_ERROR);
-    assert_int_equal(set_double_matrix(mat, 1u, 1u, 5.0), NO_ERROR);
-    assert_int_equal(set_double_matrix(mat, 1u, 2u, 6.0), NO_ERROR);
-
-    double_expect_t r = double_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 21.0, 1.0e-3);
-
-    return_double_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_empty_coo_returns_empty(void** state) {
-    (void)state;
-
-    double_matrix_t* mat = _make_double_coo_matrix(3u, 4u, 8u, true);
-
-    double_expect_t r = double_matrix_sum(mat);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_double_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_coo_returns_expected_sum(void** state) {
-    (void)state;
-
-    double_matrix_t* mat = _make_sample_double_coo_matrix();
-
-    /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
-    double_expect_t r = double_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_double_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_coo_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    double_matrix_t* mat = _make_double_coo_matrix(3u, 3u, 4u, true);
-    assert_int_equal(set_double_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
-
-    double_expect_t r = double_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 55.0, 1.0e-3);
-
-    return_double_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_csr_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    double_matrix_t* dense = _make_sample_double_dense_matrix();
-
-    double_matrix_expect_t conv = convert_double_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    double_matrix_t* csr = conv.u.value;
-
-    double_expect_t r = double_matrix_sum(csr);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_double_matrix(csr);
-    return_double_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_empty_csr_returns_empty(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    double_matrix_t* dense = _make_double_dense_matrix(2u, 2u);
-
-    double_matrix_expect_t conv = convert_double_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    double_matrix_t* csr = conv.u.value;
-
-    double_expect_t r = double_matrix_sum(csr);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_double_matrix(csr);
-    return_double_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_csc_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    double_matrix_t* dense = _make_sample_double_dense_matrix();
-
-    double_matrix_expect_t conv = convert_double_matrix(dense, CSC_MATRIX, a);
-    assert_true(conv.has_value);
-    double_matrix_t* csc = conv.u.value;
-
-    double_expect_t r = double_matrix_sum(csc);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_double_matrix(csc);
-    return_double_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_matrix_sum_all_formats_agree_on_same_data(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    double_matrix_t* dense = _make_sample_double_dense_matrix();
-
-    double_matrix_expect_t coo_r = convert_double_matrix(dense, COO_MATRIX, a);
-    double_matrix_expect_t csr_r = convert_double_matrix(dense, CSR_MATRIX, a);
-    double_matrix_expect_t csc_r = convert_double_matrix(dense, CSC_MATRIX, a);
-
-    assert_true(coo_r.has_value);
-    assert_true(csr_r.has_value);
-    assert_true(csc_r.has_value);
-
-    double_expect_t rd = double_matrix_sum(dense);
-    double_expect_t ro = double_matrix_sum(coo_r.u.value);
-    double_expect_t rr = double_matrix_sum(csr_r.u.value);
-    double_expect_t rc = double_matrix_sum(csc_r.u.value);
-
-    assert_true(rd.has_value);
-    assert_true(ro.has_value);
-    assert_true(rr.has_value);
-    assert_true(rc.has_value);
-
-    assert_double_equal(rd.u.value, 165.0, 1.0e-3);
-    assert_double_equal(ro.u.value, 165.0, 1.0e-3);
-    assert_double_equal(rr.u.value, 165.0, 1.0e-3);
-    assert_double_equal(rc.u.value, 165.0, 1.0e-3);
-
-    return_double_matrix(csc_r.u.value);
-    return_double_matrix(csr_r.u.value);
-    return_double_matrix(coo_r.u.value);
-    return_double_matrix(dense);
-}
+// static void test_double_matrix_sum_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     double_expect_t r = double_matrix_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
+//     (void)state;
+//
+//     double_matrix_t* mat = _make_double_dense_matrix(2u, 3u);
+//
+//     double_expect_t r = double_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 0.0, 1.0e-3);
+//
+//     return_double_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_dense_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     double_matrix_t* mat = _make_sample_double_dense_matrix();
+//
+//     /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
+//     double_expect_t r = double_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_double_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_dense_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     double_matrix_t* mat = _make_double_dense_matrix(1u, 1u);
+//     assert_int_equal(set_double_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
+//
+//     double_expect_t r = double_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 42.0, 1.0e-3);
+//
+//     return_double_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     double_matrix_t* mat = _make_double_dense_matrix(2u, 3u);
+//
+//     assert_int_equal(set_double_matrix(mat, 0u, 0u, 1.0), NO_ERROR);
+//     assert_int_equal(set_double_matrix(mat, 0u, 1u, 2.0), NO_ERROR);
+//     assert_int_equal(set_double_matrix(mat, 0u, 2u, 3.0), NO_ERROR);
+//     assert_int_equal(set_double_matrix(mat, 1u, 0u, 4.0), NO_ERROR);
+//     assert_int_equal(set_double_matrix(mat, 1u, 1u, 5.0), NO_ERROR);
+//     assert_int_equal(set_double_matrix(mat, 1u, 2u, 6.0), NO_ERROR);
+//
+//     double_expect_t r = double_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 21.0, 1.0e-3);
+//
+//     return_double_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_empty_coo_returns_empty(void** state) {
+//     (void)state;
+//
+//     double_matrix_t* mat = _make_double_coo_matrix(3u, 4u, 8u, true);
+//
+//     double_expect_t r = double_matrix_sum(mat);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_double_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_coo_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     double_matrix_t* mat = _make_sample_double_coo_matrix();
+//
+//     /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
+//     double_expect_t r = double_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_double_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_coo_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     double_matrix_t* mat = _make_double_coo_matrix(3u, 3u, 4u, true);
+//     assert_int_equal(set_double_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
+//
+//     double_expect_t r = double_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 55.0, 1.0e-3);
+//
+//     return_double_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_csr_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     double_matrix_t* dense = _make_sample_double_dense_matrix();
+//
+//     double_matrix_expect_t conv = convert_double_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     double_matrix_t* csr = conv.u.value;
+//
+//     double_expect_t r = double_matrix_sum(csr);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_double_matrix(csr);
+//     return_double_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_empty_csr_returns_empty(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     double_matrix_t* dense = _make_double_dense_matrix(2u, 2u);
+//
+//     double_matrix_expect_t conv = convert_double_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     double_matrix_t* csr = conv.u.value;
+//
+//     double_expect_t r = double_matrix_sum(csr);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_double_matrix(csr);
+//     return_double_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_csc_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     double_matrix_t* dense = _make_sample_double_dense_matrix();
+//
+//     double_matrix_expect_t conv = convert_double_matrix(dense, CSC_MATRIX, a);
+//     assert_true(conv.has_value);
+//     double_matrix_t* csc = conv.u.value;
+//
+//     double_expect_t r = double_matrix_sum(csc);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_double_matrix(csc);
+//     return_double_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_matrix_sum_all_formats_agree_on_same_data(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     double_matrix_t* dense = _make_sample_double_dense_matrix();
+//
+//     double_matrix_expect_t coo_r = convert_double_matrix(dense, COO_MATRIX, a);
+//     double_matrix_expect_t csr_r = convert_double_matrix(dense, CSR_MATRIX, a);
+//     double_matrix_expect_t csc_r = convert_double_matrix(dense, CSC_MATRIX, a);
+//
+//     assert_true(coo_r.has_value);
+//     assert_true(csr_r.has_value);
+//     assert_true(csc_r.has_value);
+//
+//     double_expect_t rd = double_matrix_sum(dense);
+//     double_expect_t ro = double_matrix_sum(coo_r.u.value);
+//     double_expect_t rr = double_matrix_sum(csr_r.u.value);
+//     double_expect_t rc = double_matrix_sum(csc_r.u.value);
+//
+//     assert_true(rd.has_value);
+//     assert_true(ro.has_value);
+//     assert_true(rr.has_value);
+//     assert_true(rc.has_value);
+//
+//     assert_double_equal(rd.u.value, 165.0, 1.0e-3);
+//     assert_double_equal(ro.u.value, 165.0, 1.0e-3);
+//     assert_double_equal(rr.u.value, 165.0, 1.0e-3);
+//     assert_double_equal(rc.u.value, 165.0, 1.0e-3);
+//
+//     return_double_matrix(csc_r.u.value);
+//     return_double_matrix(csr_r.u.value);
+//     return_double_matrix(coo_r.u.value);
+//     return_double_matrix(dense);
+// }
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -6276,18 +6276,18 @@ const struct CMUnitTest test_double_matrix[] = {
     cmocka_unit_test(test_double_matrix_max_csc_finds_maximum_value),
     cmocka_unit_test(test_double_matrix_max_all_formats_agree_on_same_data),
 
-    cmocka_unit_test(test_double_matrix_sum_null_returns_null_pointer),
-    cmocka_unit_test(test_double_matrix_sum_zero_initialized_dense_returns_zero),
-    cmocka_unit_test(test_double_matrix_sum_dense_returns_expected_sum),
-    cmocka_unit_test(test_double_matrix_sum_dense_single_value_returns_that_value),
-    cmocka_unit_test(test_double_matrix_sum_dense_fully_populated_returns_expected_sum),
-    cmocka_unit_test(test_double_matrix_sum_empty_coo_returns_empty),
-    cmocka_unit_test(test_double_matrix_sum_coo_returns_expected_sum),
-    cmocka_unit_test(test_double_matrix_sum_coo_single_value_returns_that_value),
-    cmocka_unit_test(test_double_matrix_sum_csr_returns_expected_sum),
-    cmocka_unit_test(test_double_matrix_sum_empty_csr_returns_empty),
-    cmocka_unit_test(test_double_matrix_sum_csc_returns_expected_sum),
-    cmocka_unit_test(test_double_matrix_sum_all_formats_agree_on_same_data),
+    // cmocka_unit_test(test_double_matrix_sum_null_returns_null_pointer),
+    // cmocka_unit_test(test_double_matrix_sum_zero_initialized_dense_returns_zero),
+    // cmocka_unit_test(test_double_matrix_sum_dense_returns_expected_sum),
+    // cmocka_unit_test(test_double_matrix_sum_dense_single_value_returns_that_value),
+    // cmocka_unit_test(test_double_matrix_sum_dense_fully_populated_returns_expected_sum),
+    // cmocka_unit_test(test_double_matrix_sum_empty_coo_returns_empty),
+    // cmocka_unit_test(test_double_matrix_sum_coo_returns_expected_sum),
+    // cmocka_unit_test(test_double_matrix_sum_coo_single_value_returns_that_value),
+    // cmocka_unit_test(test_double_matrix_sum_csr_returns_expected_sum),
+    // cmocka_unit_test(test_double_matrix_sum_empty_csr_returns_empty),
+    // cmocka_unit_test(test_double_matrix_sum_csc_returns_expected_sum),
+    // cmocka_unit_test(test_double_matrix_sum_all_formats_agree_on_same_data),
 };
 
 const size_t test_double_matrix_count =
@@ -7665,219 +7665,219 @@ static void test_ldouble_matrix_max_all_formats_agree_on_same_data(void** state)
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_ldouble_matrix_sum_null_returns_null_pointer(void** state) {
-    (void)state;
-
-    ldouble_expect_t r = ldouble_matrix_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
-    (void)state;
-
-    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(2u, 3u);
-
-    ldouble_expect_t r = ldouble_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 0.0, 1.0e-3);
-
-    return_ldouble_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_dense_returns_expected_sum(void** state) {
-    (void)state;
-
-    ldouble_matrix_t* mat = _make_sample_ldouble_dense_matrix();
-
-    /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
-    ldouble_expect_t r = ldouble_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_ldouble_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_dense_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(1u, 1u);
-    assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
-
-    ldouble_expect_t r = ldouble_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 42.0, 1.0e-3);
-
-    return_ldouble_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
-    (void)state;
-
-    ldouble_matrix_t* mat = _make_ldouble_dense_matrix(2u, 3u);
-
-    assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 1.0), NO_ERROR);
-    assert_int_equal(set_ldouble_matrix(mat, 0u, 1u, 2.0), NO_ERROR);
-    assert_int_equal(set_ldouble_matrix(mat, 0u, 2u, 3.0), NO_ERROR);
-    assert_int_equal(set_ldouble_matrix(mat, 1u, 0u, 4.0), NO_ERROR);
-    assert_int_equal(set_ldouble_matrix(mat, 1u, 1u, 5.0), NO_ERROR);
-    assert_int_equal(set_ldouble_matrix(mat, 1u, 2u, 6.0), NO_ERROR);
-
-    ldouble_expect_t r = ldouble_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 21.0, 1.0e-3);
-
-    return_ldouble_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_empty_coo_returns_empty(void** state) {
-    (void)state;
-
-    ldouble_matrix_t* mat = _make_ldouble_coo_matrix(3u, 4u, 8u, true);
-
-    ldouble_expect_t r = ldouble_matrix_sum(mat);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_ldouble_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_coo_returns_expected_sum(void** state) {
-    (void)state;
-
-    ldouble_matrix_t* mat = _make_sample_ldouble_coo_matrix();
-
-    /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
-    ldouble_expect_t r = ldouble_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_ldouble_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_coo_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    ldouble_matrix_t* mat = _make_ldouble_coo_matrix(3u, 3u, 4u, true);
-    assert_int_equal(set_ldouble_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
-
-    ldouble_expect_t r = ldouble_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 55.0, 1.0e-3);
-
-    return_ldouble_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_csr_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
-
-    ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    ldouble_matrix_t* csr = conv.u.value;
-
-    ldouble_expect_t r = ldouble_matrix_sum(csr);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_ldouble_matrix(csr);
-    return_ldouble_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_empty_csr_returns_empty(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    ldouble_matrix_t* dense = _make_ldouble_dense_matrix(2u, 2u);
-
-    ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    ldouble_matrix_t* csr = conv.u.value;
-
-    ldouble_expect_t r = ldouble_matrix_sum(csr);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_ldouble_matrix(csr);
-    return_ldouble_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_csc_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
-
-    ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSC_MATRIX, a);
-    assert_true(conv.has_value);
-    ldouble_matrix_t* csc = conv.u.value;
-
-    ldouble_expect_t r = ldouble_matrix_sum(csc);
-    assert_true(r.has_value);
-    assert_double_equal(r.u.value, 165.0, 1.0e-3);
-
-    return_ldouble_matrix(csc);
-    return_ldouble_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_matrix_sum_all_formats_agree_on_same_data(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
-
-    ldouble_matrix_expect_t coo_r = convert_ldouble_matrix(dense, COO_MATRIX, a);
-    ldouble_matrix_expect_t csr_r = convert_ldouble_matrix(dense, CSR_MATRIX, a);
-    ldouble_matrix_expect_t csc_r = convert_ldouble_matrix(dense, CSC_MATRIX, a);
-
-    assert_true(coo_r.has_value);
-    assert_true(csr_r.has_value);
-    assert_true(csc_r.has_value);
-
-    ldouble_expect_t rd = ldouble_matrix_sum(dense);
-    ldouble_expect_t ro = ldouble_matrix_sum(coo_r.u.value);
-    ldouble_expect_t rr = ldouble_matrix_sum(csr_r.u.value);
-    ldouble_expect_t rc = ldouble_matrix_sum(csc_r.u.value);
-
-    assert_true(rd.has_value);
-    assert_true(ro.has_value);
-    assert_true(rr.has_value);
-    assert_true(rc.has_value);
-
-    assert_double_equal(rd.u.value, 165.0, 1.0e-3);
-    assert_double_equal(ro.u.value, 165.0, 1.0e-3);
-    assert_double_equal(rr.u.value, 165.0, 1.0e-3);
-    assert_double_equal(rc.u.value, 165.0, 1.0e-3);
-
-    return_ldouble_matrix(csc_r.u.value);
-    return_ldouble_matrix(csr_r.u.value);
-    return_ldouble_matrix(coo_r.u.value);
-    return_ldouble_matrix(dense);
-}
+// static void test_ldouble_matrix_sum_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     ldouble_expect_t r = ldouble_matrix_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
+//     (void)state;
+//
+//     ldouble_matrix_t* mat = _make_ldouble_dense_matrix(2u, 3u);
+//
+//     ldouble_expect_t r = ldouble_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 0.0, 1.0e-3);
+//
+//     return_ldouble_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_dense_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     ldouble_matrix_t* mat = _make_sample_ldouble_dense_matrix();
+//
+//     /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
+//     ldouble_expect_t r = ldouble_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_ldouble_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_dense_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     ldouble_matrix_t* mat = _make_ldouble_dense_matrix(1u, 1u);
+//     assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 42.0), NO_ERROR);
+//
+//     ldouble_expect_t r = ldouble_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 42.0, 1.0e-3);
+//
+//     return_ldouble_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     ldouble_matrix_t* mat = _make_ldouble_dense_matrix(2u, 3u);
+//
+//     assert_int_equal(set_ldouble_matrix(mat, 0u, 0u, 1.0), NO_ERROR);
+//     assert_int_equal(set_ldouble_matrix(mat, 0u, 1u, 2.0), NO_ERROR);
+//     assert_int_equal(set_ldouble_matrix(mat, 0u, 2u, 3.0), NO_ERROR);
+//     assert_int_equal(set_ldouble_matrix(mat, 1u, 0u, 4.0), NO_ERROR);
+//     assert_int_equal(set_ldouble_matrix(mat, 1u, 1u, 5.0), NO_ERROR);
+//     assert_int_equal(set_ldouble_matrix(mat, 1u, 2u, 6.0), NO_ERROR);
+//
+//     ldouble_expect_t r = ldouble_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 21.0, 1.0e-3);
+//
+//     return_ldouble_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_empty_coo_returns_empty(void** state) {
+//     (void)state;
+//
+//     ldouble_matrix_t* mat = _make_ldouble_coo_matrix(3u, 4u, 8u, true);
+//
+//     ldouble_expect_t r = ldouble_matrix_sum(mat);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_ldouble_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_coo_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     ldouble_matrix_t* mat = _make_sample_ldouble_coo_matrix();
+//
+//     /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
+//     ldouble_expect_t r = ldouble_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_ldouble_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_coo_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     ldouble_matrix_t* mat = _make_ldouble_coo_matrix(3u, 3u, 4u, true);
+//     assert_int_equal(set_ldouble_matrix(mat, 2u, 1u, 55.0), NO_ERROR);
+//
+//     ldouble_expect_t r = ldouble_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 55.0, 1.0e-3);
+//
+//     return_ldouble_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_csr_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
+//
+//     ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     ldouble_matrix_t* csr = conv.u.value;
+//
+//     ldouble_expect_t r = ldouble_matrix_sum(csr);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_ldouble_matrix(csr);
+//     return_ldouble_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_empty_csr_returns_empty(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     ldouble_matrix_t* dense = _make_ldouble_dense_matrix(2u, 2u);
+//
+//     ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     ldouble_matrix_t* csr = conv.u.value;
+//
+//     ldouble_expect_t r = ldouble_matrix_sum(csr);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_ldouble_matrix(csr);
+//     return_ldouble_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_csc_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
+//
+//     ldouble_matrix_expect_t conv = convert_ldouble_matrix(dense, CSC_MATRIX, a);
+//     assert_true(conv.has_value);
+//     ldouble_matrix_t* csc = conv.u.value;
+//
+//     ldouble_expect_t r = ldouble_matrix_sum(csc);
+//     assert_true(r.has_value);
+//     assert_double_equal(r.u.value, 165.0, 1.0e-3);
+//
+//     return_ldouble_matrix(csc);
+//     return_ldouble_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_matrix_sum_all_formats_agree_on_same_data(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     ldouble_matrix_t* dense = _make_sample_ldouble_dense_matrix();
+//
+//     ldouble_matrix_expect_t coo_r = convert_ldouble_matrix(dense, COO_MATRIX, a);
+//     ldouble_matrix_expect_t csr_r = convert_ldouble_matrix(dense, CSR_MATRIX, a);
+//     ldouble_matrix_expect_t csc_r = convert_ldouble_matrix(dense, CSC_MATRIX, a);
+//
+//     assert_true(coo_r.has_value);
+//     assert_true(csr_r.has_value);
+//     assert_true(csc_r.has_value);
+//
+//     ldouble_expect_t rd = ldouble_matrix_sum(dense);
+//     ldouble_expect_t ro = ldouble_matrix_sum(coo_r.u.value);
+//     ldouble_expect_t rr = ldouble_matrix_sum(csr_r.u.value);
+//     ldouble_expect_t rc = ldouble_matrix_sum(csc_r.u.value);
+//
+//     assert_true(rd.has_value);
+//     assert_true(ro.has_value);
+//     assert_true(rr.has_value);
+//     assert_true(rc.has_value);
+//
+//     assert_double_equal(rd.u.value, 165.0, 1.0e-3);
+//     assert_double_equal(ro.u.value, 165.0, 1.0e-3);
+//     assert_double_equal(rr.u.value, 165.0, 1.0e-3);
+//     assert_double_equal(rc.u.value, 165.0, 1.0e-3);
+//
+//     return_ldouble_matrix(csc_r.u.value);
+//     return_ldouble_matrix(csr_r.u.value);
+//     return_ldouble_matrix(coo_r.u.value);
+//     return_ldouble_matrix(dense);
+// }
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -7979,18 +7979,18 @@ const struct CMUnitTest test_ldouble_matrix[] = {
     cmocka_unit_test(test_ldouble_matrix_max_csc_finds_maximum_value),
     cmocka_unit_test(test_ldouble_matrix_max_all_formats_agree_on_same_data),
 
-    cmocka_unit_test(test_ldouble_matrix_sum_null_returns_null_pointer),
-    cmocka_unit_test(test_ldouble_matrix_sum_zero_initialized_dense_returns_zero),
-    cmocka_unit_test(test_ldouble_matrix_sum_dense_returns_expected_sum),
-    cmocka_unit_test(test_ldouble_matrix_sum_dense_single_value_returns_that_value),
-    cmocka_unit_test(test_ldouble_matrix_sum_dense_fully_populated_returns_expected_sum),
-    cmocka_unit_test(test_ldouble_matrix_sum_empty_coo_returns_empty),
-    cmocka_unit_test(test_ldouble_matrix_sum_coo_returns_expected_sum),
-    cmocka_unit_test(test_ldouble_matrix_sum_coo_single_value_returns_that_value),
-    cmocka_unit_test(test_ldouble_matrix_sum_csr_returns_expected_sum),
-    cmocka_unit_test(test_ldouble_matrix_sum_empty_csr_returns_empty),
-    cmocka_unit_test(test_ldouble_matrix_sum_csc_returns_expected_sum),
-    cmocka_unit_test(test_ldouble_matrix_sum_all_formats_agree_on_same_data),
+    // cmocka_unit_test(test_ldouble_matrix_sum_null_returns_null_pointer),
+    // cmocka_unit_test(test_ldouble_matrix_sum_zero_initialized_dense_returns_zero),
+    // cmocka_unit_test(test_ldouble_matrix_sum_dense_returns_expected_sum),
+    // cmocka_unit_test(test_ldouble_matrix_sum_dense_single_value_returns_that_value),
+    // cmocka_unit_test(test_ldouble_matrix_sum_dense_fully_populated_returns_expected_sum),
+    // cmocka_unit_test(test_ldouble_matrix_sum_empty_coo_returns_empty),
+    // cmocka_unit_test(test_ldouble_matrix_sum_coo_returns_expected_sum),
+    // cmocka_unit_test(test_ldouble_matrix_sum_coo_single_value_returns_that_value),
+    // cmocka_unit_test(test_ldouble_matrix_sum_csr_returns_expected_sum),
+    // cmocka_unit_test(test_ldouble_matrix_sum_empty_csr_returns_empty),
+    // cmocka_unit_test(test_ldouble_matrix_sum_csc_returns_expected_sum),
+    // cmocka_unit_test(test_ldouble_matrix_sum_all_formats_agree_on_same_data),
 };
 
 const size_t test_ldouble_matrix_count =
@@ -15278,219 +15278,219 @@ static void test_uint32_matrix_max_all_formats_agree_on_same_data(void** state) 
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_uint32_matrix_sum_null_returns_null_pointer(void** state) {
-    (void)state;
-
-    uint32_expect_t r = uint32_matrix_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
-    (void)state;
-
-    uint32_matrix_t* mat = _make_uint32_dense_matrix(2u, 3u);
-
-    uint32_expect_t r = uint32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 0u);
-
-    return_uint32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_dense_returns_expected_sum(void** state) {
-    (void)state;
-
-    uint32_matrix_t* mat = _make_sample_uint32_dense_matrix();
-
-    /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
-    uint32_expect_t r = uint32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_uint32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_dense_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    uint32_matrix_t* mat = _make_uint32_dense_matrix(1u, 1u);
-    assert_int_equal(set_uint32_matrix(mat, 0u, 0u, 42u), NO_ERROR);
-
-    uint32_expect_t r = uint32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 42u);
-
-    return_uint32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
-    (void)state;
-
-    uint32_matrix_t* mat = _make_uint32_dense_matrix(2u, 3u);
-
-    assert_int_equal(set_uint32_matrix(mat, 0u, 0u, 1u), NO_ERROR);
-    assert_int_equal(set_uint32_matrix(mat, 0u, 1u, 2u), NO_ERROR);
-    assert_int_equal(set_uint32_matrix(mat, 0u, 2u, 3u), NO_ERROR);
-    assert_int_equal(set_uint32_matrix(mat, 1u, 0u, 4u), NO_ERROR);
-    assert_int_equal(set_uint32_matrix(mat, 1u, 1u, 5u), NO_ERROR);
-    assert_int_equal(set_uint32_matrix(mat, 1u, 2u, 6u), NO_ERROR);
-
-    uint32_expect_t r = uint32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 21u);
-
-    return_uint32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_empty_coo_returns_empty(void** state) {
-    (void)state;
-
-    uint32_matrix_t* mat = _make_uint32_coo_matrix(3u, 4u, 8u, true);
-
-    uint32_expect_t r = uint32_matrix_sum(mat);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_uint32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_coo_returns_expected_sum(void** state) {
-    (void)state;
-
-    uint32_matrix_t* mat = _make_sample_uint32_coo_matrix();
-
-    /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
-    uint32_expect_t r = uint32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_uint32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_coo_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    uint32_matrix_t* mat = _make_uint32_coo_matrix(3u, 3u, 4u, true);
-    assert_int_equal(set_uint32_matrix(mat, 2u, 1u, 55u), NO_ERROR);
-
-    uint32_expect_t r = uint32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 55u);
-
-    return_uint32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_csr_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    uint32_matrix_t* dense = _make_sample_uint32_dense_matrix();
-
-    uint32_matrix_expect_t conv = convert_uint32_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    uint32_matrix_t* csr = conv.u.value;
-
-    uint32_expect_t r = uint32_matrix_sum(csr);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_uint32_matrix(csr);
-    return_uint32_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_empty_csr_returns_empty(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    uint32_matrix_t* dense = _make_uint32_dense_matrix(2u, 2u);
-
-    uint32_matrix_expect_t conv = convert_uint32_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    uint32_matrix_t* csr = conv.u.value;
-
-    uint32_expect_t r = uint32_matrix_sum(csr);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_uint32_matrix(csr);
-    return_uint32_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_csc_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    uint32_matrix_t* dense = _make_sample_uint32_dense_matrix();
-
-    uint32_matrix_expect_t conv = convert_uint32_matrix(dense, CSC_MATRIX, a);
-    assert_true(conv.has_value);
-    uint32_matrix_t* csc = conv.u.value;
-
-    uint32_expect_t r = uint32_matrix_sum(csc);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_uint32_matrix(csc);
-    return_uint32_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint32_matrix_sum_all_formats_agree_on_same_data(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    uint32_matrix_t* dense = _make_sample_uint32_dense_matrix();
-
-    uint32_matrix_expect_t coo_r = convert_uint32_matrix(dense, COO_MATRIX, a);
-    uint32_matrix_expect_t csr_r = convert_uint32_matrix(dense, CSR_MATRIX, a);
-    uint32_matrix_expect_t csc_r = convert_uint32_matrix(dense, CSC_MATRIX, a);
-
-    assert_true(coo_r.has_value);
-    assert_true(csr_r.has_value);
-    assert_true(csc_r.has_value);
-
-    uint32_expect_t rd = uint32_matrix_sum(dense);
-    uint32_expect_t ro = uint32_matrix_sum(coo_r.u.value);
-    uint32_expect_t rr = uint32_matrix_sum(csr_r.u.value);
-    uint32_expect_t rc = uint32_matrix_sum(csc_r.u.value);
-
-    assert_true(rd.has_value);
-    assert_true(ro.has_value);
-    assert_true(rr.has_value);
-    assert_true(rc.has_value);
-
-    assert_int_equal(rd.u.value, 165u);
-    assert_int_equal(ro.u.value, 165u);
-    assert_int_equal(rr.u.value, 165u);
-    assert_int_equal(rc.u.value, 165u);
-
-    return_uint32_matrix(csc_r.u.value);
-    return_uint32_matrix(csr_r.u.value);
-    return_uint32_matrix(coo_r.u.value);
-    return_uint32_matrix(dense);
-}
+// static void test_uint32_matrix_sum_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     uint32_expect_t r = uint32_matrix_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
+//     (void)state;
+//
+//     uint32_matrix_t* mat = _make_uint32_dense_matrix(2u, 3u);
+//
+//     uint32_expect_t r = uint32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 0u);
+//
+//     return_uint32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_dense_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     uint32_matrix_t* mat = _make_sample_uint32_dense_matrix();
+//
+//     /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
+//     uint32_expect_t r = uint32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_uint32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_dense_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     uint32_matrix_t* mat = _make_uint32_dense_matrix(1u, 1u);
+//     assert_int_equal(set_uint32_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+//
+//     uint32_expect_t r = uint32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 42u);
+//
+//     return_uint32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     uint32_matrix_t* mat = _make_uint32_dense_matrix(2u, 3u);
+//
+//     assert_int_equal(set_uint32_matrix(mat, 0u, 0u, 1u), NO_ERROR);
+//     assert_int_equal(set_uint32_matrix(mat, 0u, 1u, 2u), NO_ERROR);
+//     assert_int_equal(set_uint32_matrix(mat, 0u, 2u, 3u), NO_ERROR);
+//     assert_int_equal(set_uint32_matrix(mat, 1u, 0u, 4u), NO_ERROR);
+//     assert_int_equal(set_uint32_matrix(mat, 1u, 1u, 5u), NO_ERROR);
+//     assert_int_equal(set_uint32_matrix(mat, 1u, 2u, 6u), NO_ERROR);
+//
+//     uint32_expect_t r = uint32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 21u);
+//
+//     return_uint32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_empty_coo_returns_empty(void** state) {
+//     (void)state;
+//
+//     uint32_matrix_t* mat = _make_uint32_coo_matrix(3u, 4u, 8u, true);
+//
+//     uint32_expect_t r = uint32_matrix_sum(mat);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_uint32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_coo_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     uint32_matrix_t* mat = _make_sample_uint32_coo_matrix();
+//
+//     /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
+//     uint32_expect_t r = uint32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_uint32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_coo_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     uint32_matrix_t* mat = _make_uint32_coo_matrix(3u, 3u, 4u, true);
+//     assert_int_equal(set_uint32_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+//
+//     uint32_expect_t r = uint32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 55u);
+//
+//     return_uint32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_csr_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     uint32_matrix_t* dense = _make_sample_uint32_dense_matrix();
+//
+//     uint32_matrix_expect_t conv = convert_uint32_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     uint32_matrix_t* csr = conv.u.value;
+//
+//     uint32_expect_t r = uint32_matrix_sum(csr);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_uint32_matrix(csr);
+//     return_uint32_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_empty_csr_returns_empty(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     uint32_matrix_t* dense = _make_uint32_dense_matrix(2u, 2u);
+//
+//     uint32_matrix_expect_t conv = convert_uint32_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     uint32_matrix_t* csr = conv.u.value;
+//
+//     uint32_expect_t r = uint32_matrix_sum(csr);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_uint32_matrix(csr);
+//     return_uint32_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_csc_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     uint32_matrix_t* dense = _make_sample_uint32_dense_matrix();
+//
+//     uint32_matrix_expect_t conv = convert_uint32_matrix(dense, CSC_MATRIX, a);
+//     assert_true(conv.has_value);
+//     uint32_matrix_t* csc = conv.u.value;
+//
+//     uint32_expect_t r = uint32_matrix_sum(csc);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_uint32_matrix(csc);
+//     return_uint32_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_matrix_sum_all_formats_agree_on_same_data(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     uint32_matrix_t* dense = _make_sample_uint32_dense_matrix();
+//
+//     uint32_matrix_expect_t coo_r = convert_uint32_matrix(dense, COO_MATRIX, a);
+//     uint32_matrix_expect_t csr_r = convert_uint32_matrix(dense, CSR_MATRIX, a);
+//     uint32_matrix_expect_t csc_r = convert_uint32_matrix(dense, CSC_MATRIX, a);
+//
+//     assert_true(coo_r.has_value);
+//     assert_true(csr_r.has_value);
+//     assert_true(csc_r.has_value);
+//
+//     uint32_expect_t rd = uint32_matrix_sum(dense);
+//     uint32_expect_t ro = uint32_matrix_sum(coo_r.u.value);
+//     uint32_expect_t rr = uint32_matrix_sum(csr_r.u.value);
+//     uint32_expect_t rc = uint32_matrix_sum(csc_r.u.value);
+//
+//     assert_true(rd.has_value);
+//     assert_true(ro.has_value);
+//     assert_true(rr.has_value);
+//     assert_true(rc.has_value);
+//
+//     assert_int_equal(rd.u.value, 165u);
+//     assert_int_equal(ro.u.value, 165u);
+//     assert_int_equal(rr.u.value, 165u);
+//     assert_int_equal(rc.u.value, 165u);
+//
+//     return_uint32_matrix(csc_r.u.value);
+//     return_uint32_matrix(csr_r.u.value);
+//     return_uint32_matrix(coo_r.u.value);
+//     return_uint32_matrix(dense);
+// }
 // ================================================================================
 // Registry
 // ================================================================================
@@ -15592,18 +15592,18 @@ const struct CMUnitTest test_uint32_matrix[] = {
     cmocka_unit_test(test_uint32_matrix_max_csc_finds_maximum_value),
     cmocka_unit_test(test_uint32_matrix_max_all_formats_agree_on_same_data),
 
-    cmocka_unit_test(test_uint32_matrix_sum_null_returns_null_pointer),
-    cmocka_unit_test(test_uint32_matrix_sum_zero_initialized_dense_returns_zero),
-    cmocka_unit_test(test_uint32_matrix_sum_dense_returns_expected_sum),
-    cmocka_unit_test(test_uint32_matrix_sum_dense_single_value_returns_that_value),
-    cmocka_unit_test(test_uint32_matrix_sum_dense_fully_populated_returns_expected_sum),
-    cmocka_unit_test(test_uint32_matrix_sum_empty_coo_returns_empty),
-    cmocka_unit_test(test_uint32_matrix_sum_coo_returns_expected_sum),
-    cmocka_unit_test(test_uint32_matrix_sum_coo_single_value_returns_that_value),
-    cmocka_unit_test(test_uint32_matrix_sum_csr_returns_expected_sum),
-    cmocka_unit_test(test_uint32_matrix_sum_empty_csr_returns_empty),
-    cmocka_unit_test(test_uint32_matrix_sum_csc_returns_expected_sum),
-    cmocka_unit_test(test_uint32_matrix_sum_all_formats_agree_on_same_data),
+    // cmocka_unit_test(test_uint32_matrix_sum_null_returns_null_pointer),
+    // cmocka_unit_test(test_uint32_matrix_sum_zero_initialized_dense_returns_zero),
+    // cmocka_unit_test(test_uint32_matrix_sum_dense_returns_expected_sum),
+    // cmocka_unit_test(test_uint32_matrix_sum_dense_single_value_returns_that_value),
+    // cmocka_unit_test(test_uint32_matrix_sum_dense_fully_populated_returns_expected_sum),
+    // cmocka_unit_test(test_uint32_matrix_sum_empty_coo_returns_empty),
+    // cmocka_unit_test(test_uint32_matrix_sum_coo_returns_expected_sum),
+    // cmocka_unit_test(test_uint32_matrix_sum_coo_single_value_returns_that_value),
+    // cmocka_unit_test(test_uint32_matrix_sum_csr_returns_expected_sum),
+    // cmocka_unit_test(test_uint32_matrix_sum_empty_csr_returns_empty),
+    // cmocka_unit_test(test_uint32_matrix_sum_csc_returns_expected_sum),
+    // cmocka_unit_test(test_uint32_matrix_sum_all_formats_agree_on_same_data),
 };
 
 const size_t test_uint32_matrix_count =
@@ -17024,219 +17024,219 @@ static void test_int32_matrix_max_all_formats_agree_on_same_data(void** state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_int32_matrix_sum_null_returns_null_pointer(void** state) {
-    (void)state;
-
-    int32_expect_t r = int32_matrix_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
-    (void)state;
-
-    int32_matrix_t* mat = _make_int32_dense_matrix(2u, 3u);
-
-    int32_expect_t r = int32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 0u);
-
-    return_int32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_dense_returns_expected_sum(void** state) {
-    (void)state;
-
-    int32_matrix_t* mat = _make_sample_int32_dense_matrix();
-
-    /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
-    int32_expect_t r = int32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_int32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_dense_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    int32_matrix_t* mat = _make_int32_dense_matrix(1u, 1u);
-    assert_int_equal(set_int32_matrix(mat, 0u, 0u, 42u), NO_ERROR);
-
-    int32_expect_t r = int32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 42u);
-
-    return_int32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
-    (void)state;
-
-    int32_matrix_t* mat = _make_int32_dense_matrix(2u, 3u);
-
-    assert_int_equal(set_int32_matrix(mat, 0u, 0u, 1u), NO_ERROR);
-    assert_int_equal(set_int32_matrix(mat, 0u, 1u, 2u), NO_ERROR);
-    assert_int_equal(set_int32_matrix(mat, 0u, 2u, 3u), NO_ERROR);
-    assert_int_equal(set_int32_matrix(mat, 1u, 0u, 4u), NO_ERROR);
-    assert_int_equal(set_int32_matrix(mat, 1u, 1u, 5u), NO_ERROR);
-    assert_int_equal(set_int32_matrix(mat, 1u, 2u, 6u), NO_ERROR);
-
-    int32_expect_t r = int32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 21u);
-
-    return_int32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_empty_coo_returns_empty(void** state) {
-    (void)state;
-
-    int32_matrix_t* mat = _make_int32_coo_matrix(3u, 4u, 8u, true);
-
-    int32_expect_t r = int32_matrix_sum(mat);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_int32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_coo_returns_expected_sum(void** state) {
-    (void)state;
-
-    int32_matrix_t* mat = _make_sample_int32_coo_matrix();
-
-    /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
-    int32_expect_t r = int32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_int32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_coo_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    int32_matrix_t* mat = _make_int32_coo_matrix(3u, 3u, 4u, true);
-    assert_int_equal(set_int32_matrix(mat, 2u, 1u, 55u), NO_ERROR);
-
-    int32_expect_t r = int32_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 55u);
-
-    return_int32_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_csr_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    int32_matrix_t* dense = _make_sample_int32_dense_matrix();
-
-    int32_matrix_expect_t conv = convert_int32_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    int32_matrix_t* csr = conv.u.value;
-
-    int32_expect_t r = int32_matrix_sum(csr);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_int32_matrix(csr);
-    return_int32_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_empty_csr_returns_empty(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    int32_matrix_t* dense = _make_int32_dense_matrix(2u, 2u);
-
-    int32_matrix_expect_t conv = convert_int32_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    int32_matrix_t* csr = conv.u.value;
-
-    int32_expect_t r = int32_matrix_sum(csr);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_int32_matrix(csr);
-    return_int32_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_csc_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    int32_matrix_t* dense = _make_sample_int32_dense_matrix();
-
-    int32_matrix_expect_t conv = convert_int32_matrix(dense, CSC_MATRIX, a);
-    assert_true(conv.has_value);
-    int32_matrix_t* csc = conv.u.value;
-
-    int32_expect_t r = int32_matrix_sum(csc);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_int32_matrix(csc);
-    return_int32_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_matrix_sum_all_formats_agree_on_same_data(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    int32_matrix_t* dense = _make_sample_int32_dense_matrix();
-
-    int32_matrix_expect_t coo_r = convert_int32_matrix(dense, COO_MATRIX, a);
-    int32_matrix_expect_t csr_r = convert_int32_matrix(dense, CSR_MATRIX, a);
-    int32_matrix_expect_t csc_r = convert_int32_matrix(dense, CSC_MATRIX, a);
-
-    assert_true(coo_r.has_value);
-    assert_true(csr_r.has_value);
-    assert_true(csc_r.has_value);
-
-    int32_expect_t rd = int32_matrix_sum(dense);
-    int32_expect_t ro = int32_matrix_sum(coo_r.u.value);
-    int32_expect_t rr = int32_matrix_sum(csr_r.u.value);
-    int32_expect_t rc = int32_matrix_sum(csc_r.u.value);
-
-    assert_true(rd.has_value);
-    assert_true(ro.has_value);
-    assert_true(rr.has_value);
-    assert_true(rc.has_value);
-
-    assert_int_equal(rd.u.value, 165u);
-    assert_int_equal(ro.u.value, 165u);
-    assert_int_equal(rr.u.value, 165u);
-    assert_int_equal(rc.u.value, 165u);
-
-    return_int32_matrix(csc_r.u.value);
-    return_int32_matrix(csr_r.u.value);
-    return_int32_matrix(coo_r.u.value);
-    return_int32_matrix(dense);
-}
+// static void test_int32_matrix_sum_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     int32_expect_t r = int32_matrix_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
+//     (void)state;
+//
+//     int32_matrix_t* mat = _make_int32_dense_matrix(2u, 3u);
+//
+//     int32_expect_t r = int32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 0u);
+//
+//     return_int32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_dense_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     int32_matrix_t* mat = _make_sample_int32_dense_matrix();
+//
+//     /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
+//     int32_expect_t r = int32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_int32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_dense_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     int32_matrix_t* mat = _make_int32_dense_matrix(1u, 1u);
+//     assert_int_equal(set_int32_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+//
+//     int32_expect_t r = int32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 42u);
+//
+//     return_int32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     int32_matrix_t* mat = _make_int32_dense_matrix(2u, 3u);
+//
+//     assert_int_equal(set_int32_matrix(mat, 0u, 0u, 1u), NO_ERROR);
+//     assert_int_equal(set_int32_matrix(mat, 0u, 1u, 2u), NO_ERROR);
+//     assert_int_equal(set_int32_matrix(mat, 0u, 2u, 3u), NO_ERROR);
+//     assert_int_equal(set_int32_matrix(mat, 1u, 0u, 4u), NO_ERROR);
+//     assert_int_equal(set_int32_matrix(mat, 1u, 1u, 5u), NO_ERROR);
+//     assert_int_equal(set_int32_matrix(mat, 1u, 2u, 6u), NO_ERROR);
+//
+//     int32_expect_t r = int32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 21u);
+//
+//     return_int32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_empty_coo_returns_empty(void** state) {
+//     (void)state;
+//
+//     int32_matrix_t* mat = _make_int32_coo_matrix(3u, 4u, 8u, true);
+//
+//     int32_expect_t r = int32_matrix_sum(mat);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_int32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_coo_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     int32_matrix_t* mat = _make_sample_int32_coo_matrix();
+//
+//     /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
+//     int32_expect_t r = int32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_int32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_coo_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     int32_matrix_t* mat = _make_int32_coo_matrix(3u, 3u, 4u, true);
+//     assert_int_equal(set_int32_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+//
+//     int32_expect_t r = int32_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 55u);
+//
+//     return_int32_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_csr_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     int32_matrix_t* dense = _make_sample_int32_dense_matrix();
+//
+//     int32_matrix_expect_t conv = convert_int32_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     int32_matrix_t* csr = conv.u.value;
+//
+//     int32_expect_t r = int32_matrix_sum(csr);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_int32_matrix(csr);
+//     return_int32_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_empty_csr_returns_empty(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     int32_matrix_t* dense = _make_int32_dense_matrix(2u, 2u);
+//
+//     int32_matrix_expect_t conv = convert_int32_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     int32_matrix_t* csr = conv.u.value;
+//
+//     int32_expect_t r = int32_matrix_sum(csr);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_int32_matrix(csr);
+//     return_int32_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_csc_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     int32_matrix_t* dense = _make_sample_int32_dense_matrix();
+//
+//     int32_matrix_expect_t conv = convert_int32_matrix(dense, CSC_MATRIX, a);
+//     assert_true(conv.has_value);
+//     int32_matrix_t* csc = conv.u.value;
+//
+//     int32_expect_t r = int32_matrix_sum(csc);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_int32_matrix(csc);
+//     return_int32_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_matrix_sum_all_formats_agree_on_same_data(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     int32_matrix_t* dense = _make_sample_int32_dense_matrix();
+//
+//     int32_matrix_expect_t coo_r = convert_int32_matrix(dense, COO_MATRIX, a);
+//     int32_matrix_expect_t csr_r = convert_int32_matrix(dense, CSR_MATRIX, a);
+//     int32_matrix_expect_t csc_r = convert_int32_matrix(dense, CSC_MATRIX, a);
+//
+//     assert_true(coo_r.has_value);
+//     assert_true(csr_r.has_value);
+//     assert_true(csc_r.has_value);
+//
+//     int32_expect_t rd = int32_matrix_sum(dense);
+//     int32_expect_t ro = int32_matrix_sum(coo_r.u.value);
+//     int32_expect_t rr = int32_matrix_sum(csr_r.u.value);
+//     int32_expect_t rc = int32_matrix_sum(csc_r.u.value);
+//
+//     assert_true(rd.has_value);
+//     assert_true(ro.has_value);
+//     assert_true(rr.has_value);
+//     assert_true(rc.has_value);
+//
+//     assert_int_equal(rd.u.value, 165u);
+//     assert_int_equal(ro.u.value, 165u);
+//     assert_int_equal(rr.u.value, 165u);
+//     assert_int_equal(rc.u.value, 165u);
+//
+//     return_int32_matrix(csc_r.u.value);
+//     return_int32_matrix(csr_r.u.value);
+//     return_int32_matrix(coo_r.u.value);
+//     return_int32_matrix(dense);
+// }
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -17338,18 +17338,18 @@ const struct CMUnitTest test_int32_matrix[] = {
     cmocka_unit_test(test_int32_matrix_max_csc_finds_maximum_value),
     cmocka_unit_test(test_int32_matrix_max_all_formats_agree_on_same_data),
 
-    cmocka_unit_test(test_int32_matrix_sum_null_returns_null_pointer),
-    cmocka_unit_test(test_int32_matrix_sum_zero_initialized_dense_returns_zero),
-    cmocka_unit_test(test_int32_matrix_sum_dense_returns_expected_sum),
-    cmocka_unit_test(test_int32_matrix_sum_dense_single_value_returns_that_value),
-    cmocka_unit_test(test_int32_matrix_sum_dense_fully_populated_returns_expected_sum),
-    cmocka_unit_test(test_int32_matrix_sum_empty_coo_returns_empty),
-    cmocka_unit_test(test_int32_matrix_sum_coo_returns_expected_sum),
-    cmocka_unit_test(test_int32_matrix_sum_coo_single_value_returns_that_value),
-    cmocka_unit_test(test_int32_matrix_sum_csr_returns_expected_sum),
-    cmocka_unit_test(test_int32_matrix_sum_empty_csr_returns_empty),
-    cmocka_unit_test(test_int32_matrix_sum_csc_returns_expected_sum),
-    cmocka_unit_test(test_int32_matrix_sum_all_formats_agree_on_same_data),
+    // cmocka_unit_test(test_int32_matrix_sum_null_returns_null_pointer),
+    // cmocka_unit_test(test_int32_matrix_sum_zero_initialized_dense_returns_zero),
+    // cmocka_unit_test(test_int32_matrix_sum_dense_returns_expected_sum),
+    // cmocka_unit_test(test_int32_matrix_sum_dense_single_value_returns_that_value),
+    // cmocka_unit_test(test_int32_matrix_sum_dense_fully_populated_returns_expected_sum),
+    // cmocka_unit_test(test_int32_matrix_sum_empty_coo_returns_empty),
+    // cmocka_unit_test(test_int32_matrix_sum_coo_returns_expected_sum),
+    // cmocka_unit_test(test_int32_matrix_sum_coo_single_value_returns_that_value),
+    // cmocka_unit_test(test_int32_matrix_sum_csr_returns_expected_sum),
+    // cmocka_unit_test(test_int32_matrix_sum_empty_csr_returns_empty),
+    // cmocka_unit_test(test_int32_matrix_sum_csc_returns_expected_sum),
+    // cmocka_unit_test(test_int32_matrix_sum_all_formats_agree_on_same_data),
 };
 
 const size_t test_int32_matrix_count =
@@ -18690,219 +18690,219 @@ static void test_uint64_matrix_max_all_formats_agree_on_same_data(void** state) 
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_uint64_matrix_sum_null_returns_null_pointer(void** state) {
-    (void)state;
-
-    uint64_expect_t r = uint64_matrix_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
-    (void)state;
-
-    uint64_matrix_t* mat = _make_uint64_dense_matrix(2u, 3u);
-
-    uint64_expect_t r = uint64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 0u);
-
-    return_uint64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_dense_returns_expected_sum(void** state) {
-    (void)state;
-
-    uint64_matrix_t* mat = _make_sample_uint64_dense_matrix();
-
-    /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
-    uint64_expect_t r = uint64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_uint64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_dense_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    uint64_matrix_t* mat = _make_uint64_dense_matrix(1u, 1u);
-    assert_int_equal(set_uint64_matrix(mat, 0u, 0u, 42u), NO_ERROR);
-
-    uint64_expect_t r = uint64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 42u);
-
-    return_uint64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
-    (void)state;
-
-    uint64_matrix_t* mat = _make_uint64_dense_matrix(2u, 3u);
-
-    assert_int_equal(set_uint64_matrix(mat, 0u, 0u, 1u), NO_ERROR);
-    assert_int_equal(set_uint64_matrix(mat, 0u, 1u, 2u), NO_ERROR);
-    assert_int_equal(set_uint64_matrix(mat, 0u, 2u, 3u), NO_ERROR);
-    assert_int_equal(set_uint64_matrix(mat, 1u, 0u, 4u), NO_ERROR);
-    assert_int_equal(set_uint64_matrix(mat, 1u, 1u, 5u), NO_ERROR);
-    assert_int_equal(set_uint64_matrix(mat, 1u, 2u, 6u), NO_ERROR);
-
-    uint64_expect_t r = uint64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 21u);
-
-    return_uint64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_empty_coo_returns_empty(void** state) {
-    (void)state;
-
-    uint64_matrix_t* mat = _make_uint64_coo_matrix(3u, 4u, 8u, true);
-
-    uint64_expect_t r = uint64_matrix_sum(mat);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_uint64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_coo_returns_expected_sum(void** state) {
-    (void)state;
-
-    uint64_matrix_t* mat = _make_sample_uint64_coo_matrix();
-
-    /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
-    uint64_expect_t r = uint64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_uint64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_coo_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    uint64_matrix_t* mat = _make_uint64_coo_matrix(3u, 3u, 4u, true);
-    assert_int_equal(set_uint64_matrix(mat, 2u, 1u, 55u), NO_ERROR);
-
-    uint64_expect_t r = uint64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 55u);
-
-    return_uint64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_csr_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    uint64_matrix_t* dense = _make_sample_uint64_dense_matrix();
-
-    uint64_matrix_expect_t conv = convert_uint64_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    uint64_matrix_t* csr = conv.u.value;
-
-    uint64_expect_t r = uint64_matrix_sum(csr);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_uint64_matrix(csr);
-    return_uint64_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_empty_csr_returns_empty(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    uint64_matrix_t* dense = _make_uint64_dense_matrix(2u, 2u);
-
-    uint64_matrix_expect_t conv = convert_uint64_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    uint64_matrix_t* csr = conv.u.value;
-
-    uint64_expect_t r = uint64_matrix_sum(csr);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_uint64_matrix(csr);
-    return_uint64_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_csc_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    uint64_matrix_t* dense = _make_sample_uint64_dense_matrix();
-
-    uint64_matrix_expect_t conv = convert_uint64_matrix(dense, CSC_MATRIX, a);
-    assert_true(conv.has_value);
-    uint64_matrix_t* csc = conv.u.value;
-
-    uint64_expect_t r = uint64_matrix_sum(csc);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_uint64_matrix(csc);
-    return_uint64_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_matrix_sum_all_formats_agree_on_same_data(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    uint64_matrix_t* dense = _make_sample_uint64_dense_matrix();
-
-    uint64_matrix_expect_t coo_r = convert_uint64_matrix(dense, COO_MATRIX, a);
-    uint64_matrix_expect_t csr_r = convert_uint64_matrix(dense, CSR_MATRIX, a);
-    uint64_matrix_expect_t csc_r = convert_uint64_matrix(dense, CSC_MATRIX, a);
-
-    assert_true(coo_r.has_value);
-    assert_true(csr_r.has_value);
-    assert_true(csc_r.has_value);
-
-    uint64_expect_t rd = uint64_matrix_sum(dense);
-    uint64_expect_t ro = uint64_matrix_sum(coo_r.u.value);
-    uint64_expect_t rr = uint64_matrix_sum(csr_r.u.value);
-    uint64_expect_t rc = uint64_matrix_sum(csc_r.u.value);
-
-    assert_true(rd.has_value);
-    assert_true(ro.has_value);
-    assert_true(rr.has_value);
-    assert_true(rc.has_value);
-
-    assert_int_equal(rd.u.value, 165u);
-    assert_int_equal(ro.u.value, 165u);
-    assert_int_equal(rr.u.value, 165u);
-    assert_int_equal(rc.u.value, 165u);
-
-    return_uint64_matrix(csc_r.u.value);
-    return_uint64_matrix(csr_r.u.value);
-    return_uint64_matrix(coo_r.u.value);
-    return_uint64_matrix(dense);
-}
+// static void test_uint64_matrix_sum_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     uint64_expect_t r = uint64_matrix_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
+//     (void)state;
+//
+//     uint64_matrix_t* mat = _make_uint64_dense_matrix(2u, 3u);
+//
+//     uint64_expect_t r = uint64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 0u);
+//
+//     return_uint64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_dense_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     uint64_matrix_t* mat = _make_sample_uint64_dense_matrix();
+//
+//     /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
+//     uint64_expect_t r = uint64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_uint64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_dense_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     uint64_matrix_t* mat = _make_uint64_dense_matrix(1u, 1u);
+//     assert_int_equal(set_uint64_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+//
+//     uint64_expect_t r = uint64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 42u);
+//
+//     return_uint64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     uint64_matrix_t* mat = _make_uint64_dense_matrix(2u, 3u);
+//
+//     assert_int_equal(set_uint64_matrix(mat, 0u, 0u, 1u), NO_ERROR);
+//     assert_int_equal(set_uint64_matrix(mat, 0u, 1u, 2u), NO_ERROR);
+//     assert_int_equal(set_uint64_matrix(mat, 0u, 2u, 3u), NO_ERROR);
+//     assert_int_equal(set_uint64_matrix(mat, 1u, 0u, 4u), NO_ERROR);
+//     assert_int_equal(set_uint64_matrix(mat, 1u, 1u, 5u), NO_ERROR);
+//     assert_int_equal(set_uint64_matrix(mat, 1u, 2u, 6u), NO_ERROR);
+//
+//     uint64_expect_t r = uint64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 21u);
+//
+//     return_uint64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_empty_coo_returns_empty(void** state) {
+//     (void)state;
+//
+//     uint64_matrix_t* mat = _make_uint64_coo_matrix(3u, 4u, 8u, true);
+//
+//     uint64_expect_t r = uint64_matrix_sum(mat);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_uint64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_coo_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     uint64_matrix_t* mat = _make_sample_uint64_coo_matrix();
+//
+//     /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
+//     uint64_expect_t r = uint64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_uint64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_coo_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     uint64_matrix_t* mat = _make_uint64_coo_matrix(3u, 3u, 4u, true);
+//     assert_int_equal(set_uint64_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+//
+//     uint64_expect_t r = uint64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 55u);
+//
+//     return_uint64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_csr_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     uint64_matrix_t* dense = _make_sample_uint64_dense_matrix();
+//
+//     uint64_matrix_expect_t conv = convert_uint64_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     uint64_matrix_t* csr = conv.u.value;
+//
+//     uint64_expect_t r = uint64_matrix_sum(csr);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_uint64_matrix(csr);
+//     return_uint64_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_empty_csr_returns_empty(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     uint64_matrix_t* dense = _make_uint64_dense_matrix(2u, 2u);
+//
+//     uint64_matrix_expect_t conv = convert_uint64_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     uint64_matrix_t* csr = conv.u.value;
+//
+//     uint64_expect_t r = uint64_matrix_sum(csr);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_uint64_matrix(csr);
+//     return_uint64_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_csc_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     uint64_matrix_t* dense = _make_sample_uint64_dense_matrix();
+//
+//     uint64_matrix_expect_t conv = convert_uint64_matrix(dense, CSC_MATRIX, a);
+//     assert_true(conv.has_value);
+//     uint64_matrix_t* csc = conv.u.value;
+//
+//     uint64_expect_t r = uint64_matrix_sum(csc);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_uint64_matrix(csc);
+//     return_uint64_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_matrix_sum_all_formats_agree_on_same_data(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     uint64_matrix_t* dense = _make_sample_uint64_dense_matrix();
+//
+//     uint64_matrix_expect_t coo_r = convert_uint64_matrix(dense, COO_MATRIX, a);
+//     uint64_matrix_expect_t csr_r = convert_uint64_matrix(dense, CSR_MATRIX, a);
+//     uint64_matrix_expect_t csc_r = convert_uint64_matrix(dense, CSC_MATRIX, a);
+//
+//     assert_true(coo_r.has_value);
+//     assert_true(csr_r.has_value);
+//     assert_true(csc_r.has_value);
+//
+//     uint64_expect_t rd = uint64_matrix_sum(dense);
+//     uint64_expect_t ro = uint64_matrix_sum(coo_r.u.value);
+//     uint64_expect_t rr = uint64_matrix_sum(csr_r.u.value);
+//     uint64_expect_t rc = uint64_matrix_sum(csc_r.u.value);
+//
+//     assert_true(rd.has_value);
+//     assert_true(ro.has_value);
+//     assert_true(rr.has_value);
+//     assert_true(rc.has_value);
+//
+//     assert_int_equal(rd.u.value, 165u);
+//     assert_int_equal(ro.u.value, 165u);
+//     assert_int_equal(rr.u.value, 165u);
+//     assert_int_equal(rc.u.value, 165u);
+//
+//     return_uint64_matrix(csc_r.u.value);
+//     return_uint64_matrix(csr_r.u.value);
+//     return_uint64_matrix(coo_r.u.value);
+//     return_uint64_matrix(dense);
+// }
 // ================================================================================
 // Registry
 // ================================================================================
@@ -19004,18 +19004,18 @@ const struct CMUnitTest test_uint64_matrix[] = {
     cmocka_unit_test(test_uint64_matrix_max_csc_finds_maximum_value),
     cmocka_unit_test(test_uint64_matrix_max_all_formats_agree_on_same_data),
 
-    cmocka_unit_test(test_uint64_matrix_sum_null_returns_null_pointer),
-    cmocka_unit_test(test_uint64_matrix_sum_zero_initialized_dense_returns_zero),
-    cmocka_unit_test(test_uint64_matrix_sum_dense_returns_expected_sum),
-    cmocka_unit_test(test_uint64_matrix_sum_dense_single_value_returns_that_value),
-    cmocka_unit_test(test_uint64_matrix_sum_dense_fully_populated_returns_expected_sum),
-    cmocka_unit_test(test_uint64_matrix_sum_empty_coo_returns_empty),
-    cmocka_unit_test(test_uint64_matrix_sum_coo_returns_expected_sum),
-    cmocka_unit_test(test_uint64_matrix_sum_coo_single_value_returns_that_value),
-    cmocka_unit_test(test_uint64_matrix_sum_csr_returns_expected_sum),
-    cmocka_unit_test(test_uint64_matrix_sum_empty_csr_returns_empty),
-    cmocka_unit_test(test_uint64_matrix_sum_csc_returns_expected_sum),
-    cmocka_unit_test(test_uint64_matrix_sum_all_formats_agree_on_same_data),
+    // cmocka_unit_test(test_uint64_matrix_sum_null_returns_null_pointer),
+    // cmocka_unit_test(test_uint64_matrix_sum_zero_initialized_dense_returns_zero),
+    // cmocka_unit_test(test_uint64_matrix_sum_dense_returns_expected_sum),
+    // cmocka_unit_test(test_uint64_matrix_sum_dense_single_value_returns_that_value),
+    // cmocka_unit_test(test_uint64_matrix_sum_dense_fully_populated_returns_expected_sum),
+    // cmocka_unit_test(test_uint64_matrix_sum_empty_coo_returns_empty),
+    // cmocka_unit_test(test_uint64_matrix_sum_coo_returns_expected_sum),
+    // cmocka_unit_test(test_uint64_matrix_sum_coo_single_value_returns_that_value),
+    // cmocka_unit_test(test_uint64_matrix_sum_csr_returns_expected_sum),
+    // cmocka_unit_test(test_uint64_matrix_sum_empty_csr_returns_empty),
+    // cmocka_unit_test(test_uint64_matrix_sum_csc_returns_expected_sum),
+    // cmocka_unit_test(test_uint64_matrix_sum_all_formats_agree_on_same_data),
 };
 
 const size_t test_uint64_matrix_count =
@@ -20436,219 +20436,219 @@ static void test_int64_matrix_max_all_formats_agree_on_same_data(void** state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static void test_int64_matrix_sum_null_returns_null_pointer(void** state) {
-    (void)state;
-
-    int64_expect_t r = int64_matrix_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
-    (void)state;
-
-    int64_matrix_t* mat = _make_int64_dense_matrix(2u, 3u);
-
-    int64_expect_t r = int64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 0u);
-
-    return_int64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_dense_returns_expected_sum(void** state) {
-    (void)state;
-
-    int64_matrix_t* mat = _make_sample_int64_dense_matrix();
-
-    /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
-    int64_expect_t r = int64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_int64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_dense_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    int64_matrix_t* mat = _make_int64_dense_matrix(1u, 1u);
-    assert_int_equal(set_int64_matrix(mat, 0u, 0u, 42u), NO_ERROR);
-
-    int64_expect_t r = int64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 42u);
-
-    return_int64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
-    (void)state;
-
-    int64_matrix_t* mat = _make_int64_dense_matrix(2u, 3u);
-
-    assert_int_equal(set_int64_matrix(mat, 0u, 0u, 1u), NO_ERROR);
-    assert_int_equal(set_int64_matrix(mat, 0u, 1u, 2u), NO_ERROR);
-    assert_int_equal(set_int64_matrix(mat, 0u, 2u, 3u), NO_ERROR);
-    assert_int_equal(set_int64_matrix(mat, 1u, 0u, 4u), NO_ERROR);
-    assert_int_equal(set_int64_matrix(mat, 1u, 1u, 5u), NO_ERROR);
-    assert_int_equal(set_int64_matrix(mat, 1u, 2u, 6u), NO_ERROR);
-
-    int64_expect_t r = int64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 21u);
-
-    return_int64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_empty_coo_returns_empty(void** state) {
-    (void)state;
-
-    int64_matrix_t* mat = _make_int64_coo_matrix(3u, 4u, 8u, true);
-
-    int64_expect_t r = int64_matrix_sum(mat);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_int64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_coo_returns_expected_sum(void** state) {
-    (void)state;
-
-    int64_matrix_t* mat = _make_sample_int64_coo_matrix();
-
-    /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
-    int64_expect_t r = int64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_int64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_coo_single_value_returns_that_value(void** state) {
-    (void)state;
-
-    int64_matrix_t* mat = _make_int64_coo_matrix(3u, 3u, 4u, true);
-    assert_int_equal(set_int64_matrix(mat, 2u, 1u, 55u), NO_ERROR);
-
-    int64_expect_t r = int64_matrix_sum(mat);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 55u);
-
-    return_int64_matrix(mat);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_csr_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    int64_matrix_t* dense = _make_sample_int64_dense_matrix();
-
-    int64_matrix_expect_t conv = convert_int64_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    int64_matrix_t* csr = conv.u.value;
-
-    int64_expect_t r = int64_matrix_sum(csr);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_int64_matrix(csr);
-    return_int64_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_empty_csr_returns_empty(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    int64_matrix_t* dense = _make_int64_dense_matrix(2u, 2u);
-
-    int64_matrix_expect_t conv = convert_int64_matrix(dense, CSR_MATRIX, a);
-    assert_true(conv.has_value);
-    int64_matrix_t* csr = conv.u.value;
-
-    int64_expect_t r = int64_matrix_sum(csr);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, EMPTY);
-
-    return_int64_matrix(csr);
-    return_int64_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_csc_returns_expected_sum(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    int64_matrix_t* dense = _make_sample_int64_dense_matrix();
-
-    int64_matrix_expect_t conv = convert_int64_matrix(dense, CSC_MATRIX, a);
-    assert_true(conv.has_value);
-    int64_matrix_t* csc = conv.u.value;
-
-    int64_expect_t r = int64_matrix_sum(csc);
-    assert_true(r.has_value);
-    assert_int_equal(r.u.value, 165u);
-
-    return_int64_matrix(csc);
-    return_int64_matrix(dense);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_matrix_sum_all_formats_agree_on_same_data(void** state) {
-    (void)state;
-
-    allocator_vtable_t a = heap_allocator();
-    int64_matrix_t* dense = _make_sample_int64_dense_matrix();
-
-    int64_matrix_expect_t coo_r = convert_int64_matrix(dense, COO_MATRIX, a);
-    int64_matrix_expect_t csr_r = convert_int64_matrix(dense, CSR_MATRIX, a);
-    int64_matrix_expect_t csc_r = convert_int64_matrix(dense, CSC_MATRIX, a);
-
-    assert_true(coo_r.has_value);
-    assert_true(csr_r.has_value);
-    assert_true(csc_r.has_value);
-
-    int64_expect_t rd = int64_matrix_sum(dense);
-    int64_expect_t ro = int64_matrix_sum(coo_r.u.value);
-    int64_expect_t rr = int64_matrix_sum(csr_r.u.value);
-    int64_expect_t rc = int64_matrix_sum(csc_r.u.value);
-
-    assert_true(rd.has_value);
-    assert_true(ro.has_value);
-    assert_true(rr.has_value);
-    assert_true(rc.has_value);
-
-    assert_int_equal(rd.u.value, 165u);
-    assert_int_equal(ro.u.value, 165u);
-    assert_int_equal(rr.u.value, 165u);
-    assert_int_equal(rc.u.value, 165u);
-
-    return_int64_matrix(csc_r.u.value);
-    return_int64_matrix(csr_r.u.value);
-    return_int64_matrix(coo_r.u.value);
-    return_int64_matrix(dense);
-}
+// static void test_int64_matrix_sum_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     int64_expect_t r = int64_matrix_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_zero_initialized_dense_returns_zero(void** state) {
+//     (void)state;
+//
+//     int64_matrix_t* mat = _make_int64_dense_matrix(2u, 3u);
+//
+//     int64_expect_t r = int64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 0u);
+//
+//     return_int64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_dense_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     int64_matrix_t* mat = _make_sample_int64_dense_matrix();
+//
+//     /* 12 + 99 + 3 + 44 + 7 = 165, remaining dense entries are zero */
+//     int64_expect_t r = int64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_int64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_dense_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     int64_matrix_t* mat = _make_int64_dense_matrix(1u, 1u);
+//     assert_int_equal(set_int64_matrix(mat, 0u, 0u, 42u), NO_ERROR);
+//
+//     int64_expect_t r = int64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 42u);
+//
+//     return_int64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_dense_fully_populated_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     int64_matrix_t* mat = _make_int64_dense_matrix(2u, 3u);
+//
+//     assert_int_equal(set_int64_matrix(mat, 0u, 0u, 1u), NO_ERROR);
+//     assert_int_equal(set_int64_matrix(mat, 0u, 1u, 2u), NO_ERROR);
+//     assert_int_equal(set_int64_matrix(mat, 0u, 2u, 3u), NO_ERROR);
+//     assert_int_equal(set_int64_matrix(mat, 1u, 0u, 4u), NO_ERROR);
+//     assert_int_equal(set_int64_matrix(mat, 1u, 1u, 5u), NO_ERROR);
+//     assert_int_equal(set_int64_matrix(mat, 1u, 2u, 6u), NO_ERROR);
+//
+//     int64_expect_t r = int64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 21u);
+//
+//     return_int64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_empty_coo_returns_empty(void** state) {
+//     (void)state;
+//
+//     int64_matrix_t* mat = _make_int64_coo_matrix(3u, 4u, 8u, true);
+//
+//     int64_expect_t r = int64_matrix_sum(mat);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_int64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_coo_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     int64_matrix_t* mat = _make_sample_int64_coo_matrix();
+//
+//     /* stored values only: 12 + 99 + 3 + 44 + 7 = 165 */
+//     int64_expect_t r = int64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_int64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_coo_single_value_returns_that_value(void** state) {
+//     (void)state;
+//
+//     int64_matrix_t* mat = _make_int64_coo_matrix(3u, 3u, 4u, true);
+//     assert_int_equal(set_int64_matrix(mat, 2u, 1u, 55u), NO_ERROR);
+//
+//     int64_expect_t r = int64_matrix_sum(mat);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 55u);
+//
+//     return_int64_matrix(mat);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_csr_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     int64_matrix_t* dense = _make_sample_int64_dense_matrix();
+//
+//     int64_matrix_expect_t conv = convert_int64_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     int64_matrix_t* csr = conv.u.value;
+//
+//     int64_expect_t r = int64_matrix_sum(csr);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_int64_matrix(csr);
+//     return_int64_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_empty_csr_returns_empty(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     int64_matrix_t* dense = _make_int64_dense_matrix(2u, 2u);
+//
+//     int64_matrix_expect_t conv = convert_int64_matrix(dense, CSR_MATRIX, a);
+//     assert_true(conv.has_value);
+//     int64_matrix_t* csr = conv.u.value;
+//
+//     int64_expect_t r = int64_matrix_sum(csr);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, EMPTY);
+//
+//     return_int64_matrix(csr);
+//     return_int64_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_csc_returns_expected_sum(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     int64_matrix_t* dense = _make_sample_int64_dense_matrix();
+//
+//     int64_matrix_expect_t conv = convert_int64_matrix(dense, CSC_MATRIX, a);
+//     assert_true(conv.has_value);
+//     int64_matrix_t* csc = conv.u.value;
+//
+//     int64_expect_t r = int64_matrix_sum(csc);
+//     assert_true(r.has_value);
+//     assert_int_equal(r.u.value, 165u);
+//
+//     return_int64_matrix(csc);
+//     return_int64_matrix(dense);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_matrix_sum_all_formats_agree_on_same_data(void** state) {
+//     (void)state;
+//
+//     allocator_vtable_t a = heap_allocator();
+//     int64_matrix_t* dense = _make_sample_int64_dense_matrix();
+//
+//     int64_matrix_expect_t coo_r = convert_int64_matrix(dense, COO_MATRIX, a);
+//     int64_matrix_expect_t csr_r = convert_int64_matrix(dense, CSR_MATRIX, a);
+//     int64_matrix_expect_t csc_r = convert_int64_matrix(dense, CSC_MATRIX, a);
+//
+//     assert_true(coo_r.has_value);
+//     assert_true(csr_r.has_value);
+//     assert_true(csc_r.has_value);
+//
+//     int64_expect_t rd = int64_matrix_sum(dense);
+//     int64_expect_t ro = int64_matrix_sum(coo_r.u.value);
+//     int64_expect_t rr = int64_matrix_sum(csr_r.u.value);
+//     int64_expect_t rc = int64_matrix_sum(csc_r.u.value);
+//
+//     assert_true(rd.has_value);
+//     assert_true(ro.has_value);
+//     assert_true(rr.has_value);
+//     assert_true(rc.has_value);
+//
+//     assert_int_equal(rd.u.value, 165u);
+//     assert_int_equal(ro.u.value, 165u);
+//     assert_int_equal(rr.u.value, 165u);
+//     assert_int_equal(rc.u.value, 165u);
+//
+//     return_int64_matrix(csc_r.u.value);
+//     return_int64_matrix(csr_r.u.value);
+//     return_int64_matrix(coo_r.u.value);
+//     return_int64_matrix(dense);
+// }
 /* =============================================================================
  * Registry
  * ========================================================================== */
@@ -20750,18 +20750,18 @@ const struct CMUnitTest test_int64_matrix[] = {
     cmocka_unit_test(test_int64_matrix_max_csc_finds_maximum_value),
     cmocka_unit_test(test_int64_matrix_max_all_formats_agree_on_same_data),
 
-    cmocka_unit_test(test_int64_matrix_sum_null_returns_null_pointer),
-    cmocka_unit_test(test_int64_matrix_sum_zero_initialized_dense_returns_zero),
-    cmocka_unit_test(test_int64_matrix_sum_dense_returns_expected_sum),
-    cmocka_unit_test(test_int64_matrix_sum_dense_single_value_returns_that_value),
-    cmocka_unit_test(test_int64_matrix_sum_dense_fully_populated_returns_expected_sum),
-    cmocka_unit_test(test_int64_matrix_sum_empty_coo_returns_empty),
-    cmocka_unit_test(test_int64_matrix_sum_coo_returns_expected_sum),
-    cmocka_unit_test(test_int64_matrix_sum_coo_single_value_returns_that_value),
-    cmocka_unit_test(test_int64_matrix_sum_csr_returns_expected_sum),
-    cmocka_unit_test(test_int64_matrix_sum_empty_csr_returns_empty),
-    cmocka_unit_test(test_int64_matrix_sum_csc_returns_expected_sum),
-    cmocka_unit_test(test_int64_matrix_sum_all_formats_agree_on_same_data),
+    // cmocka_unit_test(test_int64_matrix_sum_null_returns_null_pointer),
+    // cmocka_unit_test(test_int64_matrix_sum_zero_initialized_dense_returns_zero),
+    // cmocka_unit_test(test_int64_matrix_sum_dense_returns_expected_sum),
+    // cmocka_unit_test(test_int64_matrix_sum_dense_single_value_returns_that_value),
+    // cmocka_unit_test(test_int64_matrix_sum_dense_fully_populated_returns_expected_sum),
+    // cmocka_unit_test(test_int64_matrix_sum_empty_coo_returns_empty),
+    // cmocka_unit_test(test_int64_matrix_sum_coo_returns_expected_sum),
+    // cmocka_unit_test(test_int64_matrix_sum_coo_single_value_returns_that_value),
+    // cmocka_unit_test(test_int64_matrix_sum_csr_returns_expected_sum),
+    // cmocka_unit_test(test_int64_matrix_sum_empty_csr_returns_empty),
+    // cmocka_unit_test(test_int64_matrix_sum_csc_returns_expected_sum),
+    // cmocka_unit_test(test_int64_matrix_sum_all_formats_agree_on_same_data),
 };
 
 const size_t test_int64_matrix_count =

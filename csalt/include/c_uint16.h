@@ -1269,7 +1269,6 @@ bool uint16_array_equal(const uint16_array_t* a,
  * This function modifies the array in place. No copy of the data is made.
  *
  * @see add_scalar_array
- * @see uint16_array_sum
  */
 error_code_t uint16_add_scalar_array(uint16_array_t* array, uint16_t value);
 // ================================================================================ 

@@ -288,57 +288,8 @@ static size_t simd_max_uint8(const uint8_t* data,
         if (cmp(data+i*data_size, data+best*data_size) > 0) best = i;
     return best;
 }
-// -------------------------------------------------------------------------------- 
 
-static void simd_sum_uint8(const uint8_t* data,
-                            size_t         len,
-                            size_t         data_size,
-                            void*          accum,
-                            void         (*add)(void* accum, const void* element)) {
-    size_t i = 0u;
-    if (data_size == 1u) {
-        while (i + 16u <= len) {
-            uint8x16_t c = vld1q_u8(data + i);
-            uint8_t v;
-            v=vgetq_lane_u8(c, 0);add(accum,&v); v=vgetq_lane_u8(c, 1);add(accum,&v);
-            v=vgetq_lane_u8(c, 2);add(accum,&v); v=vgetq_lane_u8(c, 3);add(accum,&v);
-            v=vgetq_lane_u8(c, 4);add(accum,&v); v=vgetq_lane_u8(c, 5);add(accum,&v);
-            v=vgetq_lane_u8(c, 6);add(accum,&v); v=vgetq_lane_u8(c, 7);add(accum,&v);
-            v=vgetq_lane_u8(c, 8);add(accum,&v); v=vgetq_lane_u8(c, 9);add(accum,&v);
-            v=vgetq_lane_u8(c,10);add(accum,&v); v=vgetq_lane_u8(c,11);add(accum,&v);
-            v=vgetq_lane_u8(c,12);add(accum,&v); v=vgetq_lane_u8(c,13);add(accum,&v);
-            v=vgetq_lane_u8(c,14);add(accum,&v); v=vgetq_lane_u8(c,15);add(accum,&v);
-            i += 16u;
-        }
-    } else if (data_size == 2u) {
-        while (i + 8u <= len) {
-            uint16x8_t c = vld1q_u16((const uint16_t*)(data + i * 2u));
-            uint16_t v;
-            v=vgetq_lane_u16(c,0);add(accum,&v); v=vgetq_lane_u16(c,1);add(accum,&v);
-            v=vgetq_lane_u16(c,2);add(accum,&v); v=vgetq_lane_u16(c,3);add(accum,&v);
-            v=vgetq_lane_u16(c,4);add(accum,&v); v=vgetq_lane_u16(c,5);add(accum,&v);
-            v=vgetq_lane_u16(c,6);add(accum,&v); v=vgetq_lane_u16(c,7);add(accum,&v);
-            i += 8u;
-        }
-    } else if (data_size == 4u) {
-        while (i + 4u <= len) {
-            uint32x4_t c = vld1q_u32((const uint32_t*)(data + i * 4u));
-            uint32_t v;
-            v=vgetq_lane_u32(c,0);add(accum,&v); v=vgetq_lane_u32(c,1);add(accum,&v);
-            v=vgetq_lane_u32(c,2);add(accum,&v); v=vgetq_lane_u32(c,3);add(accum,&v);
-            i += 4u;
-        }
-    } else if (data_size == 8u) {
-        while (i + 2u <= len) {
-            uint64x2_t c = vld1q_u64((const uint64_t*)(data + i * 8u));
-            uint64_t v;
-            v=vgetq_lane_u64(c,0);add(accum,&v);
-            v=vgetq_lane_u64(c,1);add(accum,&v);
-            i += 2u;
-        }
-    }
-    for (; i < len; i++) add(accum, data + i * data_size);
-}
+
 // ================================================================================ 
 // ================================================================================ 
 

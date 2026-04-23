@@ -316,49 +316,7 @@ static size_t simd_max_uint8(const uint8_t* data,
         if (cmp(data+i*data_size, data+best*data_size) > 0) best = i;
     return best;
 }
-// -------------------------------------------------------------------------------- 
 
-static void simd_sum_uint8(const uint8_t* data,
-                            size_t         len,
-                            size_t         data_size,
-                            void*          accum,
-                            void         (*add)(void* accum, const void* element)) {
-    size_t i = 0u;
-    if (data_size == 1u) {
-        size_t vl = svcntb(); svbool_t pg = svptrue_b8();
-        uint8_t buf[256];
-        while (i + vl <= len) {
-            svst1_u8(pg, buf, svld1_u8(pg, data + i));
-            for (size_t e = 0u; e < vl; e++) add(accum, &buf[e]);
-            i += vl;
-        }
-    } else if (data_size == 2u) {
-        size_t vl = svcnth(); svbool_t pg = svptrue_b16();
-        uint16_t buf[128];
-        while (i + vl <= len) {
-            svst1_u16(pg, buf, svld1_u16(pg, (const uint16_t*)(data + i * 2u)));
-            for (size_t e = 0u; e < vl; e++) add(accum, &buf[e]);
-            i += vl;
-        }
-    } else if (data_size == 4u) {
-        size_t vl = svcntw(); svbool_t pg = svptrue_b32();
-        uint32_t buf[64];
-        while (i + vl <= len) {
-            svst1_u32(pg, buf, svld1_u32(pg, (const uint32_t*)(data + i * 4u)));
-            for (size_t e = 0u; e < vl; e++) add(accum, &buf[e]);
-            i += vl;
-        }
-    } else if (data_size == 8u) {
-        size_t vl = svcntd(); svbool_t pg = svptrue_b64();
-        uint64_t buf[32];
-        while (i + vl <= len) {
-            svst1_u64(pg, buf, svld1_u64(pg, (const uint64_t*)(data + i * 8u)));
-            for (size_t e = 0u; e < vl; e++) add(accum, &buf[e]);
-            i += vl;
-        }
-    }
-    for (; i < len; i++) add(accum, data + i * data_size);
-}
 // ================================================================================ 
 // ================================================================================ 
 

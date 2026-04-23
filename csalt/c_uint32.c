@@ -326,15 +326,15 @@ static void _add_uint32(void* accum, const void* element) {
     *(uint32_t*)accum += *(const uint32_t*)element;
 }
 
-uint32_expect_t uint32_array_sum(const uint32_array_t* array) {
-    if (array == NULL)
-        return (uint32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    uint32_t total = 0;
-    error_code_t err = array_sum(&array->base, &total, _add_uint32, UINT32_TYPE);
-    if (err != NO_ERROR)
-        return (uint32_expect_t){ .has_value = false, .u.error = err };
-    return (uint32_expect_t){ .has_value = true, .u.value = total };
-}
+// uint32_expect_t uint32_array_sum(const uint32_array_t* array) {
+//     if (array == NULL)
+//         return (uint32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     uint32_t total = 0;
+//     error_code_t err = array_sum(&array->base, &total, _add_uint32, UINT32_TYPE);
+//     if (err != NO_ERROR)
+//         return (uint32_expect_t){ .has_value = false, .u.error = err };
+//     return (uint32_expect_t){ .has_value = true, .u.value = total };
+// }
 // -------------------------------------------------------------------------------- 
 
 uint32_array_expect_t cumulative_uint32_array(const uint32_array_t* src,
@@ -347,6 +347,92 @@ uint32_array_expect_t cumulative_uint32_array(const uint32_array_t* src,
     return (uint32_array_expect_t){ .has_value = true,
                                     .u.value   = (uint32_array_t*)r.u.value };
 }
+// uint32_array_expect_t cumulative_uint32_array(const uint32_array_t* src,
+//                                               allocator_vtable_t    alloc_v) {
+//     if (src == NULL) {
+//         return (uint32_array_expect_t){
+//             .has_value = false,
+//             .u.error   = NULL_POINTER
+//         };
+//     }
+//
+//     if (src->len == 0u) {
+//         return (uint32_array_expect_t){
+//             .has_value = false,
+//             .u.error   = EMPTY
+//         };
+//     }
+//
+//     if (alloc_v.allocate == NULL) {
+//         alloc_v = src->alloc_v;
+//     }
+//
+//     uint32_array_expect_t pre_array = init_uint32_array(src->len, false, alloc_v);
+//     if (!pre_array.has_value) {
+//         return (uint32_array_expect_t){
+//             .has_value = false,
+//             .u.error   = pre_array.u.error
+//         };
+//     }
+//
+//     uint32_array_t* dst = pre_array.u.value;
+//
+//     uint32_t sum = 0u;
+//     uint32_t iter = 0u;
+//
+//     error_code_t err = get_uint32_array_index(src, 0u, &sum);
+//     if (err != NO_ERROR) {
+//         return_uint32_array(dst);
+//         return (uint32_array_expect_t){
+//             .has_value = false,
+//             .u.error   = err
+//         };
+//     }
+//
+//     err = push_back_uint32_array(dst, sum);
+//     if (err != NO_ERROR) {
+//         return_uint32_array(dst);
+//         return (uint32_array_expect_t){
+//             .has_value = false,
+//             .u.error   = err
+//         };
+//     }
+//
+//     for (size_t i = 1u; i < src->len; ++i) {
+//         err = get_uint32_array_index(src, i, &iter);
+//         if (err != NO_ERROR) {
+//             return_uint32_array(dst);
+//             return (uint32_array_expect_t){
+//                 .has_value = false,
+//                 .u.error   = err
+//             };
+//         }
+//
+//         if (sum > UINT32_MAX - iter) {
+//             return_uint32_array(dst);
+//             return (uint32_array_expect_t){
+//                 .has_value = false,
+//                 .u.error   = NUMERIC_OVERFLOW
+//             };
+//         }
+//
+//         sum += iter;
+//
+//         err = push_back_uint32_array(dst, sum);
+//         if (err != NO_ERROR) {
+//             return_uint32_array(dst);
+//             return (uint32_array_expect_t){
+//                 .has_value = false,
+//                 .u.error   = err
+//             };
+//         }
+//     }
+//
+//     return (uint32_array_expect_t){
+//         .has_value = true,
+//         .u.value   = dst
+//     };
+// }
 // -------------------------------------------------------------------------------- 
 
 error_code_t print_uint32_array(const uint32_array_t* array, FILE* stream) {
@@ -426,6 +512,24 @@ bool uint32_array_equal(const uint32_array_t* a,
         (const uint32_t*)b->base.data,
         a->base.len
     );
+}
+// -------------------------------------------------------------------------------- 
+
+static void _add_scalar_uint32(void* element, const void* scalar) {
+    uint32_t*       e = (uint32_t*)element;
+    const uint32_t* s = (const uint32_t*)scalar;
+    *e += *s;
+}
+
+error_code_t uint32_add_scalar_array(uint32_array_t* array, uint32_t value) {
+    if (array == NULL) {
+        return NULL_POINTER;
+    }
+
+    return add_scalar_array(array,
+                            &value,
+                            _add_scalar_uint32,
+                            UINT32_TYPE);
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -1826,19 +1930,19 @@ uint32_expect_t uint32_matrix_max(const uint32_matrix_t* mat) {
 }
 // -------------------------------------------------------------------------------- 
 
-uint32_expect_t uint32_matrix_sum(const uint32_matrix_t* mat) {
-    if (mat == NULL) {
-        return (uint32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    }
-
-    uint32_t total = 0u;
-    error_code_t err = matrix_sum(mat, &total, _add_uint32, UINT32_TYPE);
-    if (err != NO_ERROR) {
-        return (uint32_expect_t){ .has_value = false, .u.error = err };
-    }
-
-    return (uint32_expect_t){ .has_value = true, .u.value = total };
-}
+// uint32_expect_t uint32_matrix_sum(const uint32_matrix_t* mat) {
+//     if (mat == NULL) {
+//         return (uint32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     }
+//
+//     uint32_t total = 0u;
+//     error_code_t err = matrix_sum(mat, &total, _add_uint32, UINT32_TYPE);
+//     if (err != NO_ERROR) {
+//         return (uint32_expect_t){ .has_value = false, .u.error = err };
+//     }
+//
+//     return (uint32_expect_t){ .has_value = true, .u.value = total };
+// }
 // ================================================================================
 // ================================================================================
 // eof

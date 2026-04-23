@@ -244,15 +244,15 @@ static void _add_uint64(void* accum, const void* element) {
     *(uint64_t*)accum += *(const uint64_t*)element;
 }
 
-uint64_expect_t uint64_array_sum(const uint64_array_t* array) {
-    if (array == NULL)
-        return (uint64_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    uint64_t total = 0;
-    error_code_t err = array_sum(&array->base, &total, _add_uint64, UINT64_TYPE);
-    if (err != NO_ERROR)
-        return (uint64_expect_t){ .has_value = false, .u.error = err };
-    return (uint64_expect_t){ .has_value = true, .u.value = total };
-}
+// uint64_expect_t uint64_array_sum(const uint64_array_t* array) {
+//     if (array == NULL)
+//         return (uint64_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     uint64_t total = 0;
+//     error_code_t err = array_sum(&array->base, &total, _add_uint64, UINT64_TYPE);
+//     if (err != NO_ERROR)
+//         return (uint64_expect_t){ .has_value = false, .u.error = err };
+//     return (uint64_expect_t){ .has_value = true, .u.value = total };
+// }
 
 // --------------------------------------------------------------------------------
 
@@ -424,6 +424,24 @@ bool uint64_array_equal(const uint64_array_t* a,
         (const uint64_t*)b->base.data,
         a->base.len
     );
+}
+// -------------------------------------------------------------------------------- 
+
+static void _add_scalar_uint64(void* element, const void* scalar) {
+    uint64_t*       e = (uint64_t*)element;
+    const uint64_t* s = (const uint64_t*)scalar;
+    *e += *s;
+}
+
+error_code_t uint64_add_scalar_array(uint64_array_t* array, uint64_t value) {
+    if (array == NULL) {
+        return NULL_POINTER;
+    }
+
+    return add_scalar_array(array,
+                            &value,
+                            _add_scalar_uint64,
+                            UINT64_TYPE);
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -1831,19 +1849,19 @@ uint64_expect_t uint64_matrix_max(const uint64_matrix_t* mat) {
 }
 // -------------------------------------------------------------------------------- 
 
-uint64_expect_t uint64_matrix_sum(const uint64_matrix_t* mat) {
-    if (mat == NULL) {
-        return (uint64_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    }
-
-    uint64_t total = 0u;
-    error_code_t err = matrix_sum(mat, &total, _add_uint64, UINT64_TYPE);
-    if (err != NO_ERROR) {
-        return (uint64_expect_t){ .has_value = false, .u.error = err };
-    }
-
-    return (uint64_expect_t){ .has_value = true, .u.value = total };
-}
+// uint64_expect_t uint64_matrix_sum(const uint64_matrix_t* mat) {
+//     if (mat == NULL) {
+//         return (uint64_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     }
+//
+//     uint64_t total = 0u;
+//     error_code_t err = matrix_sum(mat, &total, _add_uint64, UINT64_TYPE);
+//     if (err != NO_ERROR) {
+//         return (uint64_expect_t){ .has_value = false, .u.error = err };
+//     }
+//
+//     return (uint64_expect_t){ .has_value = true, .u.value = total };
+// }
 // ================================================================================
 // ================================================================================
 // eof

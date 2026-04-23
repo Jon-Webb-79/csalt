@@ -225,16 +225,16 @@ ldouble_expect_t ldouble_array_max(const ldouble_array_t* array) {
 
 // --------------------------------------------------------------------------------
 
-ldouble_expect_t ldouble_array_sum(const ldouble_array_t* array) {
-    if (array == NULL)
-        return (ldouble_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    long double total = 0.0L;
-    error_code_t err = array_sum(&array->base, &total, _add_ldouble,
-                                 LDOUBLE_TYPE);
-    if (err != NO_ERROR)
-        return (ldouble_expect_t){ .has_value = false, .u.error = err };
-    return (ldouble_expect_t){ .has_value = true, .u.value = total };
-}
+// ldouble_expect_t ldouble_array_sum(const ldouble_array_t* array) {
+//     if (array == NULL)
+//         return (ldouble_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     long double total = 0.0L;
+//     error_code_t err = array_sum(&array->base, &total, _add_ldouble,
+//                                  LDOUBLE_TYPE);
+//     if (err != NO_ERROR)
+//         return (ldouble_expect_t){ .has_value = false, .u.error = err };
+//     return (ldouble_expect_t){ .has_value = true, .u.value = total };
+// }
 
 // --------------------------------------------------------------------------------
 
@@ -1960,19 +1960,19 @@ ldouble_expect_t ldouble_matrix_max(const ldouble_matrix_t* mat) {
 }
 // -------------------------------------------------------------------------------- 
 
-ldouble_expect_t ldouble_matrix_sum(const ldouble_matrix_t* mat) {
-    if (mat == NULL) {
-        return (ldouble_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    }
-
-    long double total = 0u;
-    error_code_t err = matrix_sum(mat, &total, _add_ldouble, LDOUBLE_TYPE);
-    if (err != NO_ERROR) {
-        return (ldouble_expect_t){ .has_value = false, .u.error = err };
-    }
-
-    return (ldouble_expect_t){ .has_value = true, .u.value = total };
-}
+// ldouble_expect_t ldouble_matrix_sum(const ldouble_matrix_t* mat) {
+//     if (mat == NULL) {
+//         return (ldouble_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     }
+//
+//     long double total = 0u;
+//     error_code_t err = matrix_sum(mat, &total, _add_ldouble, LDOUBLE_TYPE);
+//     if (err != NO_ERROR) {
+//         return (ldouble_expect_t){ .has_value = false, .u.error = err };
+//     }
+//
+//     return (ldouble_expect_t){ .has_value = true, .u.value = total };
+// }
 // ================================================================================
 // ================================================================================
 // eof

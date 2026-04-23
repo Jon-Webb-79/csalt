@@ -233,71 +233,7 @@ static size_t simd_max_uint8(const uint8_t* data,
         if (cmp(data + i * data_size, data + best * data_size) > 0) best = i;
     return best;
 }
-// -------------------------------------------------------------------------------- 
 
-static void simd_sum_uint8(const uint8_t* data,
-                            size_t         len,
-                            size_t         data_size,
-                            void*          accum,
-                            void         (*add)(void* accum, const void* element)) {
-    size_t i = 0u;
-    if (data_size == 1u) {
-        while (i + 16u <= len) {
-            __m128i chunk = _mm_loadu_si128((__m128i*)(data + i));
-            uint8_t v;
-            v=(uint8_t)_mm_extract_epi8(chunk, 0);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk, 1);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk, 2);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk, 3);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk, 4);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk, 5);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk, 6);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk, 7);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk, 8);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk, 9);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk,10);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk,11);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk,12);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk,13);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk,14);add(accum,&v);
-            v=(uint8_t)_mm_extract_epi8(chunk,15);add(accum,&v);
-            i += 16u;
-        }
-    } else if (data_size == 2u) {
-        while (i + 8u <= len) {
-            __m128i chunk = _mm_loadu_si128((__m128i*)(data + i * 2u));
-            uint16_t v;
-            v=(uint16_t)_mm_extract_epi16(chunk,0);add(accum,&v);
-            v=(uint16_t)_mm_extract_epi16(chunk,1);add(accum,&v);
-            v=(uint16_t)_mm_extract_epi16(chunk,2);add(accum,&v);
-            v=(uint16_t)_mm_extract_epi16(chunk,3);add(accum,&v);
-            v=(uint16_t)_mm_extract_epi16(chunk,4);add(accum,&v);
-            v=(uint16_t)_mm_extract_epi16(chunk,5);add(accum,&v);
-            v=(uint16_t)_mm_extract_epi16(chunk,6);add(accum,&v);
-            v=(uint16_t)_mm_extract_epi16(chunk,7);add(accum,&v);
-            i += 8u;
-        }
-    } else if (data_size == 4u) {
-        while (i + 4u <= len) {
-            __m128i chunk = _mm_loadu_si128((__m128i*)(data + i * 4u));
-            uint32_t v;
-            v=(uint32_t)_mm_extract_epi32(chunk,0);add(accum,&v);
-            v=(uint32_t)_mm_extract_epi32(chunk,1);add(accum,&v);
-            v=(uint32_t)_mm_extract_epi32(chunk,2);add(accum,&v);
-            v=(uint32_t)_mm_extract_epi32(chunk,3);add(accum,&v);
-            i += 4u;
-        }
-    } else if (data_size == 8u) {
-        while (i + 2u <= len) {
-            __m128i chunk = _mm_loadu_si128((__m128i*)(data + i * 8u));
-            uint64_t v;
-            v=(uint64_t)_mm_extract_epi64(chunk,0);add(accum,&v);
-            v=(uint64_t)_mm_extract_epi64(chunk,1);add(accum,&v);
-            i += 2u;
-        }
-    }
-    for (; i < len; i++) add(accum, data + i * data_size);
-}
 // ================================================================================ 
 // ================================================================================ 
 

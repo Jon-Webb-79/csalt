@@ -1854,56 +1854,56 @@ size_expect_t matrix_max(const matrix_t* mat,
                          dtype_id_t dtype);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Compute the sum of all elements in a matrix.
- *
- * This function performs a generic reduction over the elements of a matrix and
- * accumulates the result into a user-provided accumulator using a user-defined
- * addition function.
- *
- * The function iterates over the underlying storage of the matrix:
- * - For dense matrices, all elements (rows * cols) are processed.
- * - For sparse matrices (COO, CSR, CSC), only stored elements (nnz) are processed.
- *
- * The accumulation behavior is controlled by the @p add callback, which is
- * invoked for each element in the matrix:
- *
- *     add(accum, element);
- *
- * The caller is responsible for:
- * - Initializing @p accum to an appropriate starting value (e.g., 0).
- * - Providing a compatible @p add function for the matrix data type.
- *
- * @param mat   Pointer to the matrix.
- * @param accum Pointer to the accumulator where the result will be stored.
- * @param add   Function used to accumulate each element into @p accum.
- * @param dtype Expected data type of the matrix (must match mat->dtype).
- *
- * @return error_code_t
- * @retval NO_ERROR        The sum was successfully computed.
- * @retval NULL_POINTER    If @p mat, @p accum, or @p add is NULL.
- * @retval TYPE_MISMATCH   If @p dtype does not match mat->dtype.
- * @retval EMPTY           If the matrix contains no elements:
- *                         - dense: rows * cols == 0
- *                         - sparse: nnz == 0
- * @retval INVALID_ARG     If the matrix format is not recognized.
- * @retval LENGTH_OVERFLOW If rows * cols overflows size_t (dense matrices only).
- *
- * @note
- * For sparse matrices, implicit zero elements are not explicitly processed.
- * Since zero does not affect summation, this yields the correct logical result.
- *
- * @warning
- * The accumulator type and the add function must be compatible with the matrix
- * element type. Passing incompatible types results in undefined behavior.
- *
- * @see matrix_min
- * @see matrix_max
- */
-error_code_t matrix_sum(const matrix_t* mat,
-                        void* accum,
-                        void (*add)(void* accum, const void* element),
-                        dtype_id_t dtype);
+// /**
+//  * @brief Compute the sum of all elements in a matrix.
+//  *
+//  * This function performs a generic reduction over the elements of a matrix and
+//  * accumulates the result into a user-provided accumulator using a user-defined
+//  * addition function.
+//  *
+//  * The function iterates over the underlying storage of the matrix:
+//  * - For dense matrices, all elements (rows * cols) are processed.
+//  * - For sparse matrices (COO, CSR, CSC), only stored elements (nnz) are processed.
+//  *
+//  * The accumulation behavior is controlled by the @p add callback, which is
+//  * invoked for each element in the matrix:
+//  *
+//  *     add(accum, element);
+//  *
+//  * The caller is responsible for:
+//  * - Initializing @p accum to an appropriate starting value (e.g., 0).
+//  * - Providing a compatible @p add function for the matrix data type.
+//  *
+//  * @param mat   Pointer to the matrix.
+//  * @param accum Pointer to the accumulator where the result will be stored.
+//  * @param add   Function used to accumulate each element into @p accum.
+//  * @param dtype Expected data type of the matrix (must match mat->dtype).
+//  *
+//  * @return error_code_t
+//  * @retval NO_ERROR        The sum was successfully computed.
+//  * @retval NULL_POINTER    If @p mat, @p accum, or @p add is NULL.
+//  * @retval TYPE_MISMATCH   If @p dtype does not match mat->dtype.
+//  * @retval EMPTY           If the matrix contains no elements:
+//  *                         - dense: rows * cols == 0
+//  *                         - sparse: nnz == 0
+//  * @retval INVALID_ARG     If the matrix format is not recognized.
+//  * @retval LENGTH_OVERFLOW If rows * cols overflows size_t (dense matrices only).
+//  *
+//  * @note
+//  * For sparse matrices, implicit zero elements are not explicitly processed.
+//  * Since zero does not affect summation, this yields the correct logical result.
+//  *
+//  * @warning
+//  * The accumulator type and the add function must be compatible with the matrix
+//  * element type. Passing incompatible types results in undefined behavior.
+//  *
+//  * @see matrix_min
+//  * @see matrix_max
+//  */
+// error_code_t matrix_sum(const matrix_t* mat,
+//                         void* accum,
+//                         void (*add)(void* accum, const void* element),
+//                         dtype_id_t dtype);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

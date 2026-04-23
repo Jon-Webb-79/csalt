@@ -1324,6 +1324,57 @@ bool uint8_array_equal(const uint8_array_t* a,
 // -------------------------------------------------------------------------------- 
 
 /**
+ * @brief Compute the sum of all elements in a uint8 array with overflow checking.
+ *
+ * Iterates over all elements in @p arr and accumulates their sum into @p sum.
+ * The accumulation is performed using uint8_t arithmetic with explicit
+ * overflow detection. If any addition would exceed UINT8_MAX, the function
+ * terminates early and returns NUMERIC_OVERFLOW.
+ *
+ * The input array is not modified.
+ *
+ * @param arr  Pointer to the source uint8 array. Must not be NULL and must
+ *             contain at least one element.
+ * @param sum  Pointer to the output accumulator. Must not be NULL. On success,
+ *             the computed sum is written to *sum.
+ *
+ * @return error_code_t
+ * @retval NO_ERROR          Sum successfully computed and stored in @p sum.
+ * @retval NULL_POINTER      If @p arr or @p sum is NULL.
+ * @retval PRECONDITION_FAIL If the array contains no elements.
+ * @retval NUMERIC_OVERFLOW  If the sum would exceed UINT8_MAX.
+ * @retval <other>           Propagated error from get_uint8_array_index().
+ *
+ * @note
+ * This function performs checked arithmetic. Unlike typical uint8_t addition,
+ * overflow does not wrap modulo 256; instead, it is detected and reported.
+ *
+ * @code
+ *     allocator_vtable_t alloc = heap_allocator();
+ *     uint8_array_expect_t r = init_uint8_array(4, true, alloc);
+ *     if (!r.has_value) { return; }
+ *
+ *     uint8_array_t* arr = r.u.value;
+ *     push_back_uint8_array(arr, 10u);
+ *     push_back_uint8_array(arr, 20u);
+ *     push_back_uint8_array(arr, 30u);
+ *
+ *     uint8_t total = 0u;
+ *     error_code_t err = uint8_array_sum(arr, &total);
+ *
+ *     if (err == NO_ERROR) {
+ *         // total == 60
+ *     } else if (err == NUMERIC_OVERFLOW) {
+ *         // sum exceeded UINT8_MAX
+ *     }
+ *
+ *     return_uint8_array(arr);
+ * @endcode
+ */
+error_code_t uint8_array_sum(uint8_array_t* arr, uint8_t* sum);
+// -------------------------------------------------------------------------------- 
+
+/**
  * @brief Add a scalar value to every element of a uint8 array.
  *
  * This function adds the specified scalar value to each element in the

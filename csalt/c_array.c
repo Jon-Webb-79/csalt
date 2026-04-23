@@ -935,20 +935,22 @@ size_expect_t array_max(const array_t* array,
 }
 // -------------------------------------------------------------------------------- 
 
-error_code_t array_sum(const array_t* array,
-                       void*          accum,
-                       void         (*add)(void* accum, const void* element),
-                       dtype_id_t     dtype) {
-    if (array == NULL || accum == NULL || add == NULL)
-        return NULL_POINTER;
-    if (dtype != array->dtype)
-        return TYPE_MISMATCH;
-    if (array->len == 0u)
-        return EMPTY;
-
-    simd_sum_uint8(array->data, array->len, array->data_size, accum, add);
-    return NO_ERROR;
-}
+// error_code_t array_sum(const array_t* array,
+//                        void*          accum,
+//                        error_code_t (*add)(void* accum, const void* element),
+//                        dtype_id_t     dtype) {
+//     if (array == NULL || accum == NULL || add == NULL) {
+//         return NULL_POINTER;
+//     }
+//     if (dtype != array->dtype) {
+//         return TYPE_MISMATCH;
+//     }
+//     if (array->len == 0u) {
+//         return EMPTY;
+//     }
+//
+//     return simd_sum_uint8(array->data, array->len, array->data_size, accum, add);
+// }
 
 // ================================================================================
 // cumulative_array

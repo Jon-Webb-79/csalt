@@ -326,18 +326,18 @@ ldouble_expect_t ldouble_array_max(const ldouble_array_t* array);
 
 // --------------------------------------------------------------------------------
 
-/**
- * @brief Sum all elements and return the result as a long double.
- *
- * NaN propagates from any NaN element. IEEE 754 rounding applies for large
- * arrays; consider Kahan summation externally if precision is critical.
- *
- * @param array  Must not be NULL.
- *
- * @return ldouble_expect_t: has_value true + u.value == sum on success, or
- *         has_value false + u.error (NULL_POINTER or EMPTY) on failure.
- */
-ldouble_expect_t ldouble_array_sum(const ldouble_array_t* array);
+// /**
+//  * @brief Sum all elements and return the result as a long double.
+//  *
+//  * NaN propagates from any NaN element. IEEE 754 rounding applies for large
+//  * arrays; consider Kahan summation externally if precision is critical.
+//  *
+//  * @param array  Must not be NULL.
+//  *
+//  * @return ldouble_expect_t: has_value true + u.value == sum on success, or
+//  *         has_value false + u.error (NULL_POINTER or EMPTY) on failure.
+//  */
+// ldouble_expect_t ldouble_array_sum(const ldouble_array_t* array);
 
 // --------------------------------------------------------------------------------
 
@@ -2020,45 +2020,45 @@ ldouble_expect_t ldouble_matrix_min(const ldouble_matrix_t* mat);
 ldouble_expect_t ldouble_matrix_max(const ldouble_matrix_t* mat);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Compute the sum of all elements in a ldouble matrix.
- *
- * This function computes the sum of all elements in a matrix of type
- * `ldouble_matrix_t`. It delegates traversal to the generic `matrix_sum()`
- * function and accumulates the result using unsigned 32-bit arithmetic.
- *
- * The accumulator is initialized to zero and updated for each element in
- * the matrix using standard C unsigned integer addition.
- *
- * @param mat Pointer to the ldouble matrix.
- *
- * @return ldouble_expect_t
- * @retval has_value = true   The sum was successfully computed and is stored in u.value.
- * @retval has_value = false  An error occurred, and the error code is stored in u.error.
- *
- * @errors
- * - NULL_POINTER   if @p mat is NULL.
- * - TYPE_MISMATCH  if the matrix dtype is not ldouble_TYPE.
- * - EMPTY          if the matrix contains no elements:
- *                  - dense: rows * cols == 0
- *                  - sparse: nnz == 0
- * - INVALID_ARG    if the matrix format is not recognized.
- * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
- *
- * @note
- * For dense matrices, all elements (rows * cols) are included in the sum.
- * For sparse matrices (COO, CSR, CSC), only stored elements (nnz) are included.
- *
- * @warning
- * This function uses standard unsigned 32-bit arithmetic. If the mathematical
- * sum exceeds `ldouble_MAX`, the result will wrap around modulo 2^32. Overflow
- * is not detected or reported.
- *
- * @see matrix_sum
- * @see ldouble_matrix_min
- * @see ldouble_matrix_max
- */
-ldouble_expect_t ldouble_matrix_sum(const ldouble_matrix_t* mat);
+// /**
+//  * @brief Compute the sum of all elements in a ldouble matrix.
+//  *
+//  * This function computes the sum of all elements in a matrix of type
+//  * `ldouble_matrix_t`. It delegates traversal to the generic `matrix_sum()`
+//  * function and accumulates the result using unsigned 32-bit arithmetic.
+//  *
+//  * The accumulator is initialized to zero and updated for each element in
+//  * the matrix using standard C unsigned integer addition.
+//  *
+//  * @param mat Pointer to the ldouble matrix.
+//  *
+//  * @return ldouble_expect_t
+//  * @retval has_value = true   The sum was successfully computed and is stored in u.value.
+//  * @retval has_value = false  An error occurred, and the error code is stored in u.error.
+//  *
+//  * @errors
+//  * - NULL_POINTER   if @p mat is NULL.
+//  * - TYPE_MISMATCH  if the matrix dtype is not ldouble_TYPE.
+//  * - EMPTY          if the matrix contains no elements:
+//  *                  - dense: rows * cols == 0
+//  *                  - sparse: nnz == 0
+//  * - INVALID_ARG    if the matrix format is not recognized.
+//  * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
+//  *
+//  * @note
+//  * For dense matrices, all elements (rows * cols) are included in the sum.
+//  * For sparse matrices (COO, CSR, CSC), only stored elements (nnz) are included.
+//  *
+//  * @warning
+//  * This function uses standard unsigned 32-bit arithmetic. If the mathematical
+//  * sum exceeds `ldouble_MAX`, the result will wrap around modulo 2^32. Overflow
+//  * is not detected or reported.
+//  *
+//  * @see matrix_sum
+//  * @see ldouble_matrix_min
+//  * @see ldouble_matrix_max
+//  */
+// ldouble_expect_t ldouble_matrix_sum(const ldouble_matrix_t* mat);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

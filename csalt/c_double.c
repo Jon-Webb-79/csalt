@@ -243,15 +243,15 @@ static void _add_double(void* accum, const void* element) {
     *(double*)accum += *(const double*)element;
 }
 
-double_expect_t double_array_sum(const double_array_t* array) {
-    if (array == NULL)
-        return (double_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    double total = 0.0;
-    error_code_t err = array_sum(&array->base, &total, _add_double, DOUBLE_TYPE);
-    if (err != NO_ERROR)
-        return (double_expect_t){ .has_value = false, .u.error = err };
-    return (double_expect_t){ .has_value = true, .u.value = total };
-}
+// double_expect_t double_array_sum(const double_array_t* array) {
+//     if (array == NULL)
+//         return (double_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     double total = 0.0;
+//     error_code_t err = array_sum(&array->base, &total, _add_double, DOUBLE_TYPE);
+//     if (err != NO_ERROR)
+//         return (double_expect_t){ .has_value = false, .u.error = err };
+//     return (double_expect_t){ .has_value = true, .u.value = total };
+// }
 
 // --------------------------------------------------------------------------------
 
@@ -1855,19 +1855,19 @@ double_expect_t double_matrix_max(const double_matrix_t* mat) {
 }
 // -------------------------------------------------------------------------------- 
 
-double_expect_t double_matrix_sum(const double_matrix_t* mat) {
-    if (mat == NULL) {
-        return (double_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    }
-
-    double total = 0u;
-    error_code_t err = matrix_sum(mat, &total, _add_double, DOUBLE_TYPE);
-    if (err != NO_ERROR) {
-        return (double_expect_t){ .has_value = false, .u.error = err };
-    }
-
-    return (double_expect_t){ .has_value = true, .u.value = total };
-}
+// double_expect_t double_matrix_sum(const double_matrix_t* mat) {
+//     if (mat == NULL) {
+//         return (double_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     }
+//
+//     double total = 0u;
+//     error_code_t err = matrix_sum(mat, &total, _add_double, DOUBLE_TYPE);
+//     if (err != NO_ERROR) {
+//         return (double_expect_t){ .has_value = false, .u.error = err };
+//     }
+//
+//     return (double_expect_t){ .has_value = true, .u.value = total };
+// }
 // ================================================================================
 // ================================================================================
 // eof

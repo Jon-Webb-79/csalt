@@ -326,15 +326,15 @@ static void _add_int32(void* accum, const void* element) {
     *(int32_t*)accum += *(const int32_t*)element;
 }
 
-int32_expect_t int32_array_sum(const int32_array_t* array) {
-    if (array == NULL)
-        return (int32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    int32_t total = 0;
-    error_code_t err = array_sum(&array->base, &total, _add_int32, INT32_TYPE);
-    if (err != NO_ERROR)
-        return (int32_expect_t){ .has_value = false, .u.error = err };
-    return (int32_expect_t){ .has_value = true, .u.value = total };
-}
+// int32_expect_t int32_array_sum(const int32_array_t* array) {
+//     if (array == NULL)
+//         return (int32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     int32_t total = 0;
+//     error_code_t err = array_sum(&array->base, &total, _add_int32, INT32_TYPE);
+//     if (err != NO_ERROR)
+//         return (int32_expect_t){ .has_value = false, .u.error = err };
+//     return (int32_expect_t){ .has_value = true, .u.value = total };
+// }
 // -------------------------------------------------------------------------------- 
 
 int32_array_expect_t cumulative_int32_array(const int32_array_t* src,
@@ -426,6 +426,24 @@ bool int32_array_equal(const int32_array_t* a,
         (const int32_t*)b->base.data,
         a->base.len
     );
+}
+// -------------------------------------------------------------------------------- 
+
+static void _add_scalar_int32(void* element, const void* scalar) {
+    int32_t*       e = (int32_t*)element;
+    const int32_t* s = (const int32_t*)scalar;
+    *e += *s;
+}
+
+error_code_t int32_add_scalar_array(int32_array_t* array, int32_t value) {
+    if (array == NULL) {
+        return NULL_POINTER;
+    }
+
+    return add_scalar_array(array,
+                            &value,
+                            _add_scalar_int32,
+                            INT32_TYPE);
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -1833,19 +1851,19 @@ int32_expect_t int32_matrix_max(const int32_matrix_t* mat) {
 }
 // -------------------------------------------------------------------------------- 
 
-int32_expect_t int32_matrix_sum(const int32_matrix_t* mat) {
-    if (mat == NULL) {
-        return (int32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    }
-
-    int32_t total = 0u;
-    error_code_t err = matrix_sum(mat, &total, _add_int32, INT32_TYPE);
-    if (err != NO_ERROR) {
-        return (int32_expect_t){ .has_value = false, .u.error = err };
-    }
-
-    return (int32_expect_t){ .has_value = true, .u.value = total };
-}
+// int32_expect_t int32_matrix_sum(const int32_matrix_t* mat) {
+//     if (mat == NULL) {
+//         return (int32_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     }
+//
+//     int32_t total = 0u;
+//     error_code_t err = matrix_sum(mat, &total, _add_int32, INT32_TYPE);
+//     if (err != NO_ERROR) {
+//         return (int32_expect_t){ .has_value = false, .u.error = err };
+//     }
+//
+//     return (int32_expect_t){ .has_value = true, .u.value = total };
+// }
 // ================================================================================
 // ================================================================================
 // eof

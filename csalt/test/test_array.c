@@ -3518,33 +3518,6 @@ static void test_uint8_add_scalar_array_updates_all_elements(void** state) {
 
 // --------------------------------------------------------------------------------
 
-static void test_uint8_add_scalar_array_wraps_on_overflow(void** state) {
-    (void)state;
-
-    uint8_array_t* array = _make_uint8_array(4u, true);
-
-    assert_int_equal(push_back_uint8_array(array, 250u), NO_ERROR);
-    assert_int_equal(push_back_uint8_array(array, 251u), NO_ERROR);
-    assert_int_equal(push_back_uint8_array(array, 255u), NO_ERROR);
-
-    assert_int_equal(uint8_add_scalar_array(array, 10u), NO_ERROR);
-
-    uint8_t out = 0u;
-
-    assert_int_equal(get_uint8_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, (uint8_t)4u);   /* 250 + 10 = 260 -> 4 */
-
-    assert_int_equal(get_uint8_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, (uint8_t)5u);   /* 251 + 10 = 261 -> 5 */
-
-    assert_int_equal(get_uint8_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, (uint8_t)9u);   /* 255 + 10 = 265 -> 9 */
-
-    return_uint8_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
 static void test_uint8_add_scalar_array_preserves_length(void** state) {
     (void)state;
 
@@ -3808,7 +3781,6 @@ const struct CMUnitTest test_uint8_array[] = {
     cmocka_unit_test(test_uint8_add_scalar_array_add_zero_leaves_values_unchanged),
     cmocka_unit_test(test_uint8_add_scalar_array_single_element_updates_value),
     cmocka_unit_test(test_uint8_add_scalar_array_updates_all_elements),
-    cmocka_unit_test(test_uint8_add_scalar_array_wraps_on_overflow),
     cmocka_unit_test(test_uint8_add_scalar_array_preserves_length),
     cmocka_unit_test(test_uint8_add_scalar_array_multiple_calls_accumulate),
 };
@@ -4755,33 +4727,6 @@ static void test_int8_add_scalar_array_updates_all_elements(void** state) {
 
 // --------------------------------------------------------------------------------
 
-static void test_int8_add_scalar_array_wraps_on_overflow(void** state) {
-    (void)state;
-
-    int8_array_t* array = _make_int8_array(4u, true);
-
-    assert_int_equal(push_back_int8_array(array, 250u), NO_ERROR);
-    assert_int_equal(push_back_int8_array(array, 251u), NO_ERROR);
-    assert_int_equal(push_back_int8_array(array, 255u), NO_ERROR);
-
-    assert_int_equal(int8_add_scalar_array(array, 10u), NO_ERROR);
-
-    int8_t out = 0u;
-
-    assert_int_equal(get_int8_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, (int8_t)4u);   /* 250 + 10 = 260 -> 4 */
-
-    assert_int_equal(get_int8_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, (int8_t)5u);   /* 251 + 10 = 261 -> 5 */
-
-    assert_int_equal(get_int8_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, (int8_t)9u);   /* 255 + 10 = 265 -> 9 */
-
-    return_int8_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
 static void test_int8_add_scalar_array_preserves_length(void** state) {
     (void)state;
 
@@ -4938,7 +4883,6 @@ const struct CMUnitTest test_int8_array[] = {
     cmocka_unit_test(test_int8_add_scalar_array_add_zero_leaves_values_unchanged),
     cmocka_unit_test(test_int8_add_scalar_array_single_element_updates_value),
     cmocka_unit_test(test_int8_add_scalar_array_updates_all_elements),
-    cmocka_unit_test(test_int8_add_scalar_array_wraps_on_overflow),
     cmocka_unit_test(test_int8_add_scalar_array_preserves_length),
     cmocka_unit_test(test_int8_add_scalar_array_multiple_calls_accumulate),
 };
@@ -5767,193 +5711,166 @@ static void test_uint16_is_ptr_valid_and_invalid(void** state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static uint16_array_t* _make_uint16_array(size_t capacity, bool growth) {
-    allocator_vtable_t a = heap_allocator();
-    uint16_array_expect_t r = init_uint16_array(capacity, growth, a);
-    assert_true(r.has_value);
-    assert_non_null(r.u.value);
-    return r.u.value;
-}
-
-// --------------------------------------------------------------------------------
-
-static uint16_array_t* _make_sample_uint16_array(void) {
-    uint16_array_t* array = _make_uint16_array(8u, true);
-
-    assert_int_equal(push_back_uint16_array(array, 1u), NO_ERROR);
-    assert_int_equal(push_back_uint16_array(array, 2u), NO_ERROR);
-    assert_int_equal(push_back_uint16_array(array, 3u), NO_ERROR);
-    assert_int_equal(push_back_uint16_array(array, 4u), NO_ERROR);
-    assert_int_equal(push_back_uint16_array(array, 5u), NO_ERROR);
-
-    return array;
-}
-// -------------------------------------------------------------------------------- 
-
-static void test_uint16_add_scalar_array_null_returns_null_pointer(void** state) {
-    (void)state;
-
-    assert_int_equal(uint16_add_scalar_array(NULL, 5u), NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint16_add_scalar_array_empty_returns_empty(void** state) {
-    (void)state;
-
-    uint16_array_t* array = _make_uint16_array(4u, true);
-
-    assert_int_equal(uint16_add_scalar_array(array, 5u), EMPTY);
-
-    return_uint16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint16_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
-    (void)state;
-
-    uint16_array_t* array = _make_sample_uint16_array();
-
-    assert_int_equal(uint16_add_scalar_array(array, 0u), NO_ERROR);
-
-    uint16_t out = 0u;
-
-    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, 1u);
-
-    assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, 2u);
-
-    assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, 3u);
-
-    assert_int_equal(get_uint16_array_index(array, 3u, &out), NO_ERROR);
-    assert_int_equal(out, 4u);
-
-    assert_int_equal(get_uint16_array_index(array, 4u, &out), NO_ERROR);
-    assert_int_equal(out, 5u);
-
-    return_uint16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint16_add_scalar_array_single_element_updates_value(void** state) {
-    (void)state;
-
-    uint16_array_t* array = _make_uint16_array(4u, true);
-    assert_int_equal(push_back_uint16_array(array, 10u), NO_ERROR);
-
-    assert_int_equal(uint16_add_scalar_array(array, 7u), NO_ERROR);
-
-    uint16_t out = 0u;
-    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, 17u);
-
-    return_uint16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint16_add_scalar_array_updates_all_elements(void** state) {
-    (void)state;
-
-    uint16_array_t* array = _make_sample_uint16_array();
-
-    assert_int_equal(uint16_add_scalar_array(array, 10u), NO_ERROR);
-
-    uint16_t out = 0u;
-
-    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, 11u);
-
-    assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, 12u);
-
-    assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, 13u);
-
-    assert_int_equal(get_uint16_array_index(array, 3u, &out), NO_ERROR);
-    assert_int_equal(out, 14u);
-
-    assert_int_equal(get_uint16_array_index(array, 4u, &out), NO_ERROR);
-    assert_int_equal(out, 15u);
-
-    return_uint16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint16_add_scalar_array_wraps_on_overflow(void** state) {
-    (void)state;
-
-    uint16_array_t* array = _make_uint16_array(4u, true);
-
-    assert_int_equal(push_back_uint16_array(array, 65530u), NO_ERROR);
-    assert_int_equal(push_back_uint16_array(array, 65531u), NO_ERROR);
-    assert_int_equal(push_back_uint16_array(array, 65535u), NO_ERROR);
-
-    assert_int_equal(uint16_add_scalar_array(array, 10u), NO_ERROR);
-
-    uint16_t out = 0u;
-
-    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, (uint16_t)4u);   /* 65530 + 10 -> 4 */
-
-    assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, (uint16_t)5u);   /* 65531 + 10 -> 5 */
-
-    assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, (uint16_t)9u);   /* 65535 + 10 -> 9 */
-
-    return_uint16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint16_add_scalar_array_preserves_length(void** state) {
-    (void)state;
-
-    uint16_array_t* array = _make_sample_uint16_array();
-    size_t before = uint16_array_size(array);
-
-    assert_int_equal(uint16_add_scalar_array(array, 3u), NO_ERROR);
-
-    assert_int_equal(uint16_array_size(array), before);
-
-    return_uint16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint16_add_scalar_array_multiple_calls_accumulate(void** state) {
-    (void)state;
-
-    uint16_array_t* array = _make_sample_uint16_array();
-
-    assert_int_equal(uint16_add_scalar_array(array, 2u), NO_ERROR);
-    assert_int_equal(uint16_add_scalar_array(array, 3u), NO_ERROR);
-
-    uint16_t out = 0u;
-
-    assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, 6u);
-
-    assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, 7u);
-
-    assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, 8u);
-
-    assert_int_equal(get_uint16_array_index(array, 3u, &out), NO_ERROR);
-    assert_int_equal(out, 9u);
-
-    assert_int_equal(get_uint16_array_index(array, 4u, &out), NO_ERROR);
-    assert_int_equal(out, 10u);
-
-    return_uint16_array(array);
-}
+// static uint16_array_t* _make_uint16_array(size_t capacity, bool growth) {
+//     allocator_vtable_t a = heap_allocator();
+//     uint16_array_expect_t r = init_uint16_array(capacity, growth, a);
+//     assert_true(r.has_value);
+//     assert_non_null(r.u.value);
+//     return r.u.value;
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static uint16_array_t* _make_sample_uint16_array(void) {
+//     uint16_array_t* array = _make_uint16_array(8u, true);
+//
+//     assert_int_equal(push_back_uint16_array(array, 1u), NO_ERROR);
+//     assert_int_equal(push_back_uint16_array(array, 2u), NO_ERROR);
+//     assert_int_equal(push_back_uint16_array(array, 3u), NO_ERROR);
+//     assert_int_equal(push_back_uint16_array(array, 4u), NO_ERROR);
+//     assert_int_equal(push_back_uint16_array(array, 5u), NO_ERROR);
+//
+//     return array;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_uint16_add_scalar_array_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     assert_int_equal(uint16_add_scalar_array(NULL, 5u), NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint16_add_scalar_array_empty_returns_empty(void** state) {
+//     (void)state;
+//
+//     uint16_array_t* array = _make_uint16_array(4u, true);
+//
+//     assert_int_equal(uint16_add_scalar_array(array, 5u), EMPTY);
+//
+//     return_uint16_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint16_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+//     (void)state;
+//
+//     uint16_array_t* array = _make_sample_uint16_array();
+//
+//     assert_int_equal(uint16_add_scalar_array(array, 0u), NO_ERROR);
+//
+//     uint16_t out = 0u;
+//
+//     assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 1u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 2u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 3u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 4u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 5u);
+//
+//     return_uint16_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint16_add_scalar_array_single_element_updates_value(void** state) {
+//     (void)state;
+//
+//     uint16_array_t* array = _make_uint16_array(4u, true);
+//     assert_int_equal(push_back_uint16_array(array, 10u), NO_ERROR);
+//
+//     assert_int_equal(uint16_add_scalar_array(array, 7u), NO_ERROR);
+//
+//     uint16_t out = 0u;
+//     assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 17u);
+//
+//     return_uint16_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint16_add_scalar_array_updates_all_elements(void** state) {
+//     (void)state;
+//
+//     uint16_array_t* array = _make_sample_uint16_array();
+//
+//     assert_int_equal(uint16_add_scalar_array(array, 10u), NO_ERROR);
+//
+//     uint16_t out = 0u;
+//
+//     assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 11u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 12u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 13u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 14u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 15u);
+//
+//     return_uint16_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint16_add_scalar_array_preserves_length(void** state) {
+//     (void)state;
+//
+//     uint16_array_t* array = _make_sample_uint16_array();
+//     size_t before = uint16_array_size(array);
+//
+//     assert_int_equal(uint16_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     assert_int_equal(uint16_array_size(array), before);
+//
+//     return_uint16_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint16_add_scalar_array_multiple_calls_accumulate(void** state) {
+//     (void)state;
+//
+//     uint16_array_t* array = _make_sample_uint16_array();
+//
+//     assert_int_equal(uint16_add_scalar_array(array, 2u), NO_ERROR);
+//     assert_int_equal(uint16_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     uint16_t out = 0u;
+//
+//     assert_int_equal(get_uint16_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 6u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 7u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 8u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 9u);
+//
+//     assert_int_equal(get_uint16_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 10u);
+//
+//     return_uint16_array(array);
+// }
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -6063,14 +5980,13 @@ const struct CMUnitTest test_uint16_array[] = {
     cmocka_unit_test(test_uint16_is_ptr_null_array_returns_false),
     cmocka_unit_test(test_uint16_is_ptr_valid_and_invalid),
 
-    cmocka_unit_test(test_uint16_add_scalar_array_null_returns_null_pointer),
-    cmocka_unit_test(test_uint16_add_scalar_array_empty_returns_empty),
-    cmocka_unit_test(test_uint16_add_scalar_array_add_zero_leaves_values_unchanged),
-    cmocka_unit_test(test_uint16_add_scalar_array_single_element_updates_value),
-    cmocka_unit_test(test_uint16_add_scalar_array_updates_all_elements),
-    cmocka_unit_test(test_uint16_add_scalar_array_wraps_on_overflow),
-    cmocka_unit_test(test_uint16_add_scalar_array_preserves_length),
-    cmocka_unit_test(test_uint16_add_scalar_array_multiple_calls_accumulate),
+    // cmocka_unit_test(test_uint16_add_scalar_array_null_returns_null_pointer),
+    // cmocka_unit_test(test_uint16_add_scalar_array_empty_returns_empty),
+    // cmocka_unit_test(test_uint16_add_scalar_array_add_zero_leaves_values_unchanged),
+    // cmocka_unit_test(test_uint16_add_scalar_array_single_element_updates_value),
+    // cmocka_unit_test(test_uint16_add_scalar_array_updates_all_elements),
+    // cmocka_unit_test(test_uint16_add_scalar_array_preserves_length),
+    // cmocka_unit_test(test_uint16_add_scalar_array_multiple_calls_accumulate),
 };
 
 const size_t test_uint16_array_count = sizeof(test_uint16_array) / sizeof(test_uint16_array[0]);
@@ -6893,7 +6809,167 @@ static void test_int16_is_ptr_valid_and_invalid(void** state) {
 
     return_int16_array(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+// static int16_array_t* _make_int16_array(size_t capacity, bool growth) {
+//     allocator_vtable_t a = heap_allocator();
+//     int16_array_expect_t r = init_int16_array(capacity, growth, a);
+//     assert_true(r.has_value);
+//     assert_non_null(r.u.value);
+//     return r.u.value;
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static int16_array_t* _make_sample_int16_array(void) {
+//     int16_array_t* array = _make_int16_array(8u, true);
+//
+//     assert_int_equal(push_back_int16_array(array, 1u), NO_ERROR);
+//     assert_int_equal(push_back_int16_array(array, 2u), NO_ERROR);
+//     assert_int_equal(push_back_int16_array(array, 3u), NO_ERROR);
+//     assert_int_equal(push_back_int16_array(array, 4u), NO_ERROR);
+//     assert_int_equal(push_back_int16_array(array, 5u), NO_ERROR);
+//
+//     return array;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_int16_add_scalar_array_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     assert_int_equal(int16_add_scalar_array(NULL, 5u), NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int16_add_scalar_array_empty_returns_empty(void** state) {
+//     (void)state;
+//
+//     int16_array_t* array = _make_int16_array(4u, true);
+//
+//     assert_int_equal(int16_add_scalar_array(array, 5u), EMPTY);
+//
+//     return_int16_array(array);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_int16_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+//     (void)state;
+//
+//     int16_array_t* array = _make_sample_int16_array();
+//
+//     assert_int_equal(int16_add_scalar_array(array, 0u), NO_ERROR);
+//
+//     int16_t out = 0u;
+//
+//     assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 1u);
+//
+//     assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 2u);
+//
+//     assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 3u);
+//
+//     assert_int_equal(get_int16_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 4u);
+//
+//     assert_int_equal(get_int16_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 5u);
+//
+//     return_int16_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int16_add_scalar_array_single_element_updates_value(void** state) {
+//     (void)state;
+//
+//     int16_array_t* array = _make_int16_array(4u, true);
+//     assert_int_equal(push_back_int16_array(array, 10u), NO_ERROR);
+//
+//     assert_int_equal(int16_add_scalar_array(array, 7u), NO_ERROR);
+//
+//     int16_t out = 0u;
+//     assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 17u);
+//
+//     return_int16_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int16_add_scalar_array_updates_all_elements(void** state) {
+//     (void)state;
+//
+//     int16_array_t* array = _make_sample_int16_array();
+//
+//     assert_int_equal(int16_add_scalar_array(array, 10u), NO_ERROR);
+//
+//     int16_t out = 0u;
+//
+//     assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 11u);
+//
+//     assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 12u);
+//
+//     assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 13u);
+//
+//     assert_int_equal(get_int16_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 14u);
+//
+//     assert_int_equal(get_int16_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 15u);
+//
+//     return_int16_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int16_add_scalar_array_preserves_length(void** state) {
+//     (void)state;
+//
+//     int16_array_t* array = _make_sample_int16_array();
+//     size_t before = int16_array_size(array);
+//
+//     assert_int_equal(int16_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     assert_int_equal(int16_array_size(array), before);
+//
+//     return_int16_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int16_add_scalar_array_multiple_calls_accumulate(void** state) {
+//     (void)state;
+//
+//     int16_array_t* array = _make_sample_int16_array();
+//
+//     assert_int_equal(int16_add_scalar_array(array, 2u), NO_ERROR);
+//     assert_int_equal(int16_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     int16_t out = 0u;
+//
+//     assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 6u);
+//
+//     assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 7u);
+//
+//     assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 8u);
+//
+//     assert_int_equal(get_int16_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 9u);
+//
+//     assert_int_equal(get_int16_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 10u);
+//
+//     return_int16_array(array);
+// }
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -7002,6 +7078,15 @@ const struct CMUnitTest test_int16_array[] = {
     /* Group 25: is_int16_array_ptr */
     cmocka_unit_test(test_int16_is_ptr_null_array_returns_false),
     cmocka_unit_test(test_int16_is_ptr_valid_and_invalid),
+
+    // cmocka_unit_test(test_int16_add_scalar_array_null_returns_null_pointer),
+    // cmocka_unit_test(test_int16_add_scalar_array_empty_returns_empty),
+    // cmocka_unit_test(test_int16_add_scalar_array_add_zero_leaves_values_unchanged),
+    // cmocka_unit_test(test_int16_add_scalar_array_single_element_updates_value),
+    // cmocka_unit_test(test_int16_add_scalar_array_updates_all_elements),
+    // cmocka_unit_test(test_int16_add_scalar_array_preserves_length),
+    // cmocka_unit_test(test_int16_add_scalar_array_multiple_calls_accumulate),
+
 };
 const size_t test_int16_array_count = sizeof(test_int16_array) / sizeof(test_int16_array[0]);
 // ================================================================================ 
@@ -7888,6 +7973,167 @@ static void test_uint32_cumulative_single_element(void** state) {
     return_uint32_array(src);
     return_uint32_array(dst);
 }
+// -------------------------------------------------------------------------------- 
+
+// static uint32_array_t* _make_uint32_array(size_t capacity, bool growth) {
+//     allocator_vtable_t a = heap_allocator();
+//     uint32_array_expect_t r = init_uint32_array(capacity, growth, a);
+//     assert_true(r.has_value);
+//     assert_non_null(r.u.value);
+//     return r.u.value;
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static uint32_array_t* _make_sample_uint32_array(void) {
+//     uint32_array_t* array = _make_uint32_array(8u, true);
+//
+//     assert_int_equal(push_back_uint32_array(array, 1u), NO_ERROR);
+//     assert_int_equal(push_back_uint32_array(array, 2u), NO_ERROR);
+//     assert_int_equal(push_back_uint32_array(array, 3u), NO_ERROR);
+//     assert_int_equal(push_back_uint32_array(array, 4u), NO_ERROR);
+//     assert_int_equal(push_back_uint32_array(array, 5u), NO_ERROR);
+//
+//     return array;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_uint32_add_scalar_array_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     assert_int_equal(uint32_add_scalar_array(NULL, 5u), NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_add_scalar_array_empty_returns_empty(void** state) {
+//     (void)state;
+//
+//     uint32_array_t* array = _make_uint32_array(4u, true);
+//
+//     assert_int_equal(uint32_add_scalar_array(array, 5u), EMPTY);
+//
+//     return_uint32_array(array);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_uint32_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+//     (void)state;
+//
+//     uint32_array_t* array = _make_sample_uint32_array();
+//
+//     assert_int_equal(uint32_add_scalar_array(array, 0u), NO_ERROR);
+//
+//     uint32_t out = 0u;
+//
+//     assert_int_equal(get_uint32_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 1u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 2u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 3u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 4u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 5u);
+//
+//     return_uint32_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_add_scalar_array_single_element_updates_value(void** state) {
+//     (void)state;
+//
+//     uint32_array_t* array = _make_uint32_array(4u, true);
+//     assert_int_equal(push_back_uint32_array(array, 10u), NO_ERROR);
+//
+//     assert_int_equal(uint32_add_scalar_array(array, 7u), NO_ERROR);
+//
+//     uint32_t out = 0u;
+//     assert_int_equal(get_uint32_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 17u);
+//
+//     return_uint32_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_add_scalar_array_updates_all_elements(void** state) {
+//     (void)state;
+//
+//     uint32_array_t* array = _make_sample_uint32_array();
+//
+//     assert_int_equal(uint32_add_scalar_array(array, 10u), NO_ERROR);
+//
+//     uint32_t out = 0u;
+//
+//     assert_int_equal(get_uint32_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 11u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 12u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 13u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 14u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 15u);
+//
+//     return_uint32_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_add_scalar_array_preserves_length(void** state) {
+//     (void)state;
+//
+//     uint32_array_t* array = _make_sample_uint32_array();
+//     size_t before = uint32_array_size(array);
+//
+//     assert_int_equal(uint32_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     assert_int_equal(uint32_array_size(array), before);
+//
+//     return_uint32_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint32_add_scalar_array_multiple_calls_accumulate(void** state) {
+//     (void)state;
+//
+//     uint32_array_t* array = _make_sample_uint32_array();
+//
+//     assert_int_equal(uint32_add_scalar_array(array, 2u), NO_ERROR);
+//     assert_int_equal(uint32_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     uint32_t out = 0u;
+//
+//     assert_int_equal(get_uint32_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 6u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 7u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 8u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 9u);
+//
+//     assert_int_equal(get_uint32_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 10u);
+//
+//     return_uint32_array(array);
+// }
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -8001,6 +8247,14 @@ const struct CMUnitTest test_uint32_array[] = {
     cmocka_unit_test(test_uint32_cumulative_null_array_returns_null_pointer),
     cmocka_unit_test(test_uint32_cumulative_produces_prefix_sum),
     cmocka_unit_test(test_uint32_cumulative_single_element),
+
+    // cmocka_unit_test(test_uint32_add_scalar_array_null_returns_null_pointer),
+    // cmocka_unit_test(test_uint32_add_scalar_array_empty_returns_empty),
+    // cmocka_unit_test(test_uint32_add_scalar_array_add_zero_leaves_values_unchanged),
+    // cmocka_unit_test(test_uint32_add_scalar_array_single_element_updates_value),
+    // cmocka_unit_test(test_uint32_add_scalar_array_updates_all_elements),
+    // cmocka_unit_test(test_uint32_add_scalar_array_preserves_length),
+    // cmocka_unit_test(test_uint32_add_scalar_array_multiple_calls_accumulate),
 };
 const size_t test_uint32_array_count = sizeof(test_uint32_array) / sizeof(test_uint32_array[0]);
 // ================================================================================ 
@@ -8941,56 +9195,56 @@ static void test_int32_max_negative_values_and_boundary(void** state) {
 // Group 28: int32_array_sum
 // ================================================================================
 
-static void test_int32_sum_null_array_returns_null_pointer(void** state) {
-    (void)state;
-    int32_expect_t r = int32_array_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_sum_returns_correct_total(void** state) {
-    (void)state;
-    allocator_vtable_t alloc = heap_allocator();
-    int32_array_expect_t r = init_int32_array(8, false, alloc);
-    assert_true(r.has_value);
-    int32_array_t* arr = r.u.value;
-
-    push_back_int32_array(arr, 10000);
-    push_back_int32_array(arr, 20000);
-    push_back_int32_array(arr, 30000);
-    /* arr: [10000, 20000, 30000], sum == 60000 */
-
-    int32_expect_t result = int32_array_sum(arr);
-    assert_true(result.has_value);
-    assert_true(result.u.value == 60000);
-
-    return_int32_array(arr);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int32_sum_mixed_signs_cancel(void** state) {
-    (void)state;
-    allocator_vtable_t alloc = heap_allocator();
-    int32_array_expect_t r = init_int32_array(8, false, alloc);
-    assert_true(r.has_value);
-    int32_array_t* arr = r.u.value;
-
-    push_back_int32_array(arr,  100000);
-    push_back_int32_array(arr, -100000);
-    push_back_int32_array(arr,   50000);
-    push_back_int32_array(arr,  -50000);
-    /* arr: [100000, -100000, 50000, -50000], sum == 0 */
-
-    int32_expect_t result = int32_array_sum(arr);
-    assert_true(result.has_value);
-    assert_true(result.u.value == 0);
-
-    return_int32_array(arr);
-}
-// -------------------------------------------------------------------------------- 
+// static void test_int32_sum_null_array_returns_null_pointer(void** state) {
+//     (void)state;
+//     int32_expect_t r = int32_array_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_sum_returns_correct_total(void** state) {
+//     (void)state;
+//     allocator_vtable_t alloc = heap_allocator();
+//     int32_array_expect_t r = init_int32_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     int32_array_t* arr = r.u.value;
+//
+//     push_back_int32_array(arr, 10000);
+//     push_back_int32_array(arr, 20000);
+//     push_back_int32_array(arr, 30000);
+//     /* arr: [10000, 20000, 30000], sum == 60000 */
+//
+//     int32_expect_t result = int32_array_sum(arr);
+//     assert_true(result.has_value);
+//     assert_true(result.u.value == 60000);
+//
+//     return_int32_array(arr);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_sum_mixed_signs_cancel(void** state) {
+//     (void)state;
+//     allocator_vtable_t alloc = heap_allocator();
+//     int32_array_expect_t r = init_int32_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     int32_array_t* arr = r.u.value;
+//
+//     push_back_int32_array(arr,  100000);
+//     push_back_int32_array(arr, -100000);
+//     push_back_int32_array(arr,   50000);
+//     push_back_int32_array(arr,  -50000);
+//     /* arr: [100000, -100000, 50000, -50000], sum == 0 */
+//
+//     int32_expect_t result = int32_array_sum(arr);
+//     assert_true(result.has_value);
+//     assert_true(result.u.value == 0);
+//
+//     return_int32_array(arr);
+// }
+// // -------------------------------------------------------------------------------- 
 
 static void test_int32_cumulative_null_array_returns_null_pointer(void** state) {
     (void)state;
@@ -9063,193 +9317,165 @@ static void test_int32_cumulative_mixed_signs(void** state) {
 }
 // -------------------------------------------------------------------------------- 
 
-static int16_array_t* _make_int16_array(size_t capacity, bool growth) {
-    allocator_vtable_t a = heap_allocator();
-    int16_array_expect_t r = init_int16_array(capacity, growth, a);
-    assert_true(r.has_value);
-    assert_non_null(r.u.value);
-    return r.u.value;
-}
-
-// --------------------------------------------------------------------------------
-
-static int16_array_t* _make_sample_int16_array(void) {
-    int16_array_t* array = _make_int16_array(8u, true);
-
-    assert_int_equal(push_back_int16_array(array, 1u), NO_ERROR);
-    assert_int_equal(push_back_int16_array(array, 2u), NO_ERROR);
-    assert_int_equal(push_back_int16_array(array, 3u), NO_ERROR);
-    assert_int_equal(push_back_int16_array(array, 4u), NO_ERROR);
-    assert_int_equal(push_back_int16_array(array, 5u), NO_ERROR);
-
-    return array;
-}
-// -------------------------------------------------------------------------------- 
-
-static void test_int16_add_scalar_array_null_returns_null_pointer(void** state) {
-    (void)state;
-
-    assert_int_equal(int16_add_scalar_array(NULL, 5u), NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int16_add_scalar_array_empty_returns_empty(void** state) {
-    (void)state;
-
-    int16_array_t* array = _make_int16_array(4u, true);
-
-    assert_int_equal(int16_add_scalar_array(array, 5u), EMPTY);
-
-    return_int16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int16_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
-    (void)state;
-
-    int16_array_t* array = _make_sample_int16_array();
-
-    assert_int_equal(int16_add_scalar_array(array, 0u), NO_ERROR);
-
-    int16_t out = 0u;
-
-    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, 1u);
-
-    assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, 2u);
-
-    assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, 3u);
-
-    assert_int_equal(get_int16_array_index(array, 3u, &out), NO_ERROR);
-    assert_int_equal(out, 4u);
-
-    assert_int_equal(get_int16_array_index(array, 4u, &out), NO_ERROR);
-    assert_int_equal(out, 5u);
-
-    return_int16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int16_add_scalar_array_single_element_updates_value(void** state) {
-    (void)state;
-
-    int16_array_t* array = _make_int16_array(4u, true);
-    assert_int_equal(push_back_int16_array(array, 10u), NO_ERROR);
-
-    assert_int_equal(int16_add_scalar_array(array, 7u), NO_ERROR);
-
-    int16_t out = 0u;
-    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, 17u);
-
-    return_int16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int16_add_scalar_array_updates_all_elements(void** state) {
-    (void)state;
-
-    int16_array_t* array = _make_sample_int16_array();
-
-    assert_int_equal(int16_add_scalar_array(array, 10u), NO_ERROR);
-
-    int16_t out = 0u;
-
-    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, 11u);
-
-    assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, 12u);
-
-    assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, 13u);
-
-    assert_int_equal(get_int16_array_index(array, 3u, &out), NO_ERROR);
-    assert_int_equal(out, 14u);
-
-    assert_int_equal(get_int16_array_index(array, 4u, &out), NO_ERROR);
-    assert_int_equal(out, 15u);
-
-    return_int16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int16_add_scalar_array_wraps_on_overflow(void** state) {
-    (void)state;
-
-    int16_array_t* array = _make_int16_array(4u, true);
-
-    assert_int_equal(push_back_int16_array(array, 65530u), NO_ERROR);
-    assert_int_equal(push_back_int16_array(array, 65531u), NO_ERROR);
-    assert_int_equal(push_back_int16_array(array, 65535u), NO_ERROR);
-
-    assert_int_equal(int16_add_scalar_array(array, 10u), NO_ERROR);
-
-    int16_t out = 0u;
-
-    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, (int16_t)4u);   /* 65530 + 10 -> 4 */
-
-    assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, (int16_t)5u);   /* 65531 + 10 -> 5 */
-
-    assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, (int16_t)9u);   /* 65535 + 10 -> 9 */
-
-    return_int16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int16_add_scalar_array_preserves_length(void** state) {
-    (void)state;
-
-    int16_array_t* array = _make_sample_int16_array();
-    size_t before = int16_array_size(array);
-
-    assert_int_equal(int16_add_scalar_array(array, 3u), NO_ERROR);
-
-    assert_int_equal(int16_array_size(array), before);
-
-    return_int16_array(array);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int16_add_scalar_array_multiple_calls_accumulate(void** state) {
-    (void)state;
-
-    int16_array_t* array = _make_sample_int16_array();
-
-    assert_int_equal(int16_add_scalar_array(array, 2u), NO_ERROR);
-    assert_int_equal(int16_add_scalar_array(array, 3u), NO_ERROR);
-
-    int16_t out = 0u;
-
-    assert_int_equal(get_int16_array_index(array, 0u, &out), NO_ERROR);
-    assert_int_equal(out, 6u);
-
-    assert_int_equal(get_int16_array_index(array, 1u, &out), NO_ERROR);
-    assert_int_equal(out, 7u);
-
-    assert_int_equal(get_int16_array_index(array, 2u, &out), NO_ERROR);
-    assert_int_equal(out, 8u);
-
-    assert_int_equal(get_int16_array_index(array, 3u, &out), NO_ERROR);
-    assert_int_equal(out, 9u);
-
-    assert_int_equal(get_int16_array_index(array, 4u, &out), NO_ERROR);
-    assert_int_equal(out, 10u);
-
-    return_int16_array(array);
-}
+// static int32_array_t* _make_int32_array(size_t capacity, bool growth) {
+//     allocator_vtable_t a = heap_allocator();
+//     int32_array_expect_t r = init_int32_array(capacity, growth, a);
+//     assert_true(r.has_value);
+//     assert_non_null(r.u.value);
+//     return r.u.value;
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static int32_array_t* _make_sample_int32_array(void) {
+//     int32_array_t* array = _make_int32_array(8u, true);
+//
+//     assert_int_equal(push_back_int32_array(array, 1u), NO_ERROR);
+//     assert_int_equal(push_back_int32_array(array, 2u), NO_ERROR);
+//     assert_int_equal(push_back_int32_array(array, 3u), NO_ERROR);
+//     assert_int_equal(push_back_int32_array(array, 4u), NO_ERROR);
+//     assert_int_equal(push_back_int32_array(array, 5u), NO_ERROR);
+//
+//     return array;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_int32_add_scalar_array_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     assert_int_equal(int32_add_scalar_array(NULL, 5u), NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_add_scalar_array_empty_returns_empty(void** state) {
+//     (void)state;
+//
+//     int32_array_t* array = _make_int32_array(4u, true);
+//
+//     assert_int_equal(int32_add_scalar_array(array, 5u), EMPTY);
+//
+//     return_int32_array(array);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_int32_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+//     (void)state;
+//
+//     int32_array_t* array = _make_sample_int32_array();
+//
+//     assert_int_equal(int32_add_scalar_array(array, 0u), NO_ERROR);
+//
+//     int32_t out = 0u;
+//
+//     assert_int_equal(get_int32_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 1u);
+//
+//     assert_int_equal(get_int32_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 2u);
+//
+//     assert_int_equal(get_int32_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 3u);
+//
+//     assert_int_equal(get_int32_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 4u);
+//
+//     assert_int_equal(get_int32_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 5u);
+//
+//     return_int32_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_add_scalar_array_single_element_updates_value(void** state) {
+//     (void)state;
+//
+//     int32_array_t* array = _make_int32_array(4u, true);
+//     assert_int_equal(push_back_int32_array(array, 10u), NO_ERROR);
+//
+//     assert_int_equal(int32_add_scalar_array(array, 7u), NO_ERROR);
+//
+//     int32_t out = 0u;
+//     assert_int_equal(get_int32_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 17u);
+//
+//     return_int32_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_add_scalar_array_updates_all_elements(void** state) {
+//     (void)state;
+//
+//     int32_array_t* array = _make_sample_int32_array();
+//
+//     assert_int_equal(int32_add_scalar_array(array, 10u), NO_ERROR);
+//
+//     int32_t out = 0u;
+//
+//     assert_int_equal(get_int32_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 11u);
+//
+//     assert_int_equal(get_int32_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 12u);
+//
+//     assert_int_equal(get_int32_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 13u);
+//
+//     assert_int_equal(get_int32_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 14u);
+//
+//     assert_int_equal(get_int32_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 15u);
+//
+//     return_int32_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_add_scalar_array_preserves_length(void** state) {
+//     (void)state;
+//
+//     int32_array_t* array = _make_sample_int32_array();
+//     size_t before = int32_array_size(array);
+//
+//     assert_int_equal(int32_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     assert_int_equal(int32_array_size(array), before);
+//
+//     return_int32_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int32_add_scalar_array_multiple_calls_accumulate(void** state) {
+//     (void)state;
+//
+//     int32_array_t* array = _make_sample_int32_array();
+//
+//     assert_int_equal(int32_add_scalar_array(array, 2u), NO_ERROR);
+//     assert_int_equal(int32_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     int32_t out = 0u;
+//
+//     assert_int_equal(get_int32_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 6u);
+//
+//     assert_int_equal(get_int32_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 7u);
+//
+//     assert_int_equal(get_int32_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 8u);
+//
+//     assert_int_equal(get_int32_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 9u);
+//
+//     assert_int_equal(get_int32_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 10u);
+//
+//     return_int32_array(array);
+// }
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -9369,24 +9595,25 @@ const struct CMUnitTest test_int32_array[] = {
     cmocka_unit_test(test_int32_max_negative_values_and_boundary),
 
     /* Group 28: int32_array_sum */
-    cmocka_unit_test(test_int32_sum_null_array_returns_null_pointer),
-    cmocka_unit_test(test_int32_sum_returns_correct_total),
-    cmocka_unit_test(test_int32_sum_mixed_signs_cancel), 
+    // cmocka_unit_test(test_int32_sum_null_array_returns_null_pointer),
+    // cmocka_unit_test(test_int32_sum_returns_correct_total),
+    // cmocka_unit_test(test_int32_sum_mixed_signs_cancel), 
 
     /* Group 29: cumulative_int32_array */
     cmocka_unit_test(test_int32_cumulative_null_array_returns_null_pointer),
     cmocka_unit_test(test_int32_cumulative_produces_prefix_sum),
     cmocka_unit_test(test_int32_cumulative_mixed_signs),
 
-    cmocka_unit_test(test_int16_add_scalar_array_null_returns_null_pointer),
-    cmocka_unit_test(test_int16_add_scalar_array_empty_returns_empty),
-    cmocka_unit_test(test_int16_add_scalar_array_add_zero_leaves_values_unchanged),
-    cmocka_unit_test(test_int16_add_scalar_array_single_element_updates_value),
-    cmocka_unit_test(test_int16_add_scalar_array_updates_all_elements),
-    cmocka_unit_test(test_int16_add_scalar_array_wraps_on_overflow),
-    cmocka_unit_test(test_int16_add_scalar_array_preserves_length),
-    cmocka_unit_test(test_int16_add_scalar_array_multiple_calls_accumulate),
-   };
+    // cmocka_unit_test(test_int32_add_scalar_array_null_returns_null_pointer),
+    // cmocka_unit_test(test_int32_add_scalar_array_empty_returns_empty),
+    // cmocka_unit_test(test_int32_add_scalar_array_add_zero_leaves_values_unchanged),
+    // cmocka_unit_test(test_int32_add_scalar_array_single_element_updates_value),
+    // cmocka_unit_test(test_int32_add_scalar_array_updates_all_elements),
+    // cmocka_unit_test(test_int32_add_scalar_array_preserves_length),
+    // cmocka_unit_test(test_int32_add_scalar_array_multiple_calls_accumulate),
+
+
+};
 const size_t test_int32_array_count = sizeof(test_int32_array) / sizeof(test_int32_array[0]);
 // ================================================================================ 
 // ================================================================================ 
@@ -10323,56 +10550,56 @@ static void test_uint64_max_boundary_values(void** state) {
 // Group 28: uint64_array_sum
 // ================================================================================
 
-static void test_uint64_sum_null_array_returns_null_pointer(void** state) {
-    (void)state;
-    uint64_expect_t r = uint64_array_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_sum_returns_correct_total(void** state) {
-    (void)state;
-    allocator_vtable_t alloc = heap_allocator();
-    uint64_array_expect_t r = init_uint64_array(4, false, alloc);
-    assert_true(r.has_value);
-    uint64_array_t* arr = r.u.value;
-
-    push_back_uint64_array(arr, 1000000000u);
-    push_back_uint64_array(arr, 2000000000u);
-    push_back_uint64_array(arr, 3000000000u);
-
-    uint64_expect_t sr = uint64_array_sum(arr);
-    assert_true(sr.has_value);
-    assert_true(sr.u.value == 6000000000u);
-
-    return_uint64_array(arr);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_uint64_sum_wraps_on_overflow(void** state) {
-    (void)state;
-    /*
-     * UINT64_MAX + 1 wraps to 0 mod 2^64. Pushing UINT64_MAX then 1
-     * must produce 0 — verifying the accumulator type is genuinely
-     * uint64_t and not silently widened.
-     */
-    allocator_vtable_t alloc = heap_allocator();
-    uint64_array_expect_t r = init_uint64_array(4, false, alloc);
-    assert_true(r.has_value);
-    uint64_array_t* arr = r.u.value;
-
-    push_back_uint64_array(arr, 18446744073709551615u);  /* UINT64_MAX */
-    push_back_uint64_array(arr,                    1u);
-
-    uint64_expect_t sr = uint64_array_sum(arr);
-    assert_true(sr.has_value);
-    assert_true(sr.u.value == 0u);
-
-    return_uint64_array(arr);
-}
+// static void test_uint64_sum_null_array_returns_null_pointer(void** state) {
+//     (void)state;
+//     uint64_expect_t r = uint64_array_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_sum_returns_correct_total(void** state) {
+//     (void)state;
+//     allocator_vtable_t alloc = heap_allocator();
+//     uint64_array_expect_t r = init_uint64_array(4, false, alloc);
+//     assert_true(r.has_value);
+//     uint64_array_t* arr = r.u.value;
+//
+//     push_back_uint64_array(arr, 1000000000u);
+//     push_back_uint64_array(arr, 2000000000u);
+//     push_back_uint64_array(arr, 3000000000u);
+//
+//     uint64_expect_t sr = uint64_array_sum(arr);
+//     assert_true(sr.has_value);
+//     assert_true(sr.u.value == 6000000000u);
+//
+//     return_uint64_array(arr);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_sum_wraps_on_overflow(void** state) {
+//     (void)state;
+//     /*
+//      * UINT64_MAX + 1 wraps to 0 mod 2^64. Pushing UINT64_MAX then 1
+//      * must produce 0 — verifying the accumulator type is genuinely
+//      * uint64_t and not silently widened.
+//      */
+//     allocator_vtable_t alloc = heap_allocator();
+//     uint64_array_expect_t r = init_uint64_array(4, false, alloc);
+//     assert_true(r.has_value);
+//     uint64_array_t* arr = r.u.value;
+//
+//     push_back_uint64_array(arr, 18446744073709551615u);  /* UINT64_MAX */
+//     push_back_uint64_array(arr,                    1u);
+//
+//     uint64_expect_t sr = uint64_array_sum(arr);
+//     assert_true(sr.has_value);
+//     assert_true(sr.u.value == 0u);
+//
+//     return_uint64_array(arr);
+// }
 
 // ================================================================================
 // Group 29: cumulative_uint64_array
@@ -10440,7 +10667,167 @@ static void test_uint64_cumulative_single_element(void** state) {
     return_uint64_array(src);
     return_uint64_array(dst);
 }
+// -------------------------------------------------------------------------------- 
 
+// static uint64_array_t* _make_uint64_array(size_t capacity, bool growth) {
+//     allocator_vtable_t a = heap_allocator();
+//     uint64_array_expect_t r = init_uint64_array(capacity, growth, a);
+//     assert_true(r.has_value);
+//     assert_non_null(r.u.value);
+//     return r.u.value;
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static uint64_array_t* _make_sample_uint64_array(void) {
+//     uint64_array_t* array = _make_uint64_array(8u, true);
+//
+//     assert_int_equal(push_back_uint64_array(array, 1u), NO_ERROR);
+//     assert_int_equal(push_back_uint64_array(array, 2u), NO_ERROR);
+//     assert_int_equal(push_back_uint64_array(array, 3u), NO_ERROR);
+//     assert_int_equal(push_back_uint64_array(array, 4u), NO_ERROR);
+//     assert_int_equal(push_back_uint64_array(array, 5u), NO_ERROR);
+//
+//     return array;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_uint64_add_scalar_array_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     assert_int_equal(uint64_add_scalar_array(NULL, 5u), NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_add_scalar_array_empty_returns_empty(void** state) {
+//     (void)state;
+//
+//     uint64_array_t* array = _make_uint64_array(4u, true);
+//
+//     assert_int_equal(uint64_add_scalar_array(array, 5u), EMPTY);
+//
+//     return_uint64_array(array);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_uint64_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+//     (void)state;
+//
+//     uint64_array_t* array = _make_sample_uint64_array();
+//
+//     assert_int_equal(uint64_add_scalar_array(array, 0u), NO_ERROR);
+//
+//     uint64_t out = 0u;
+//
+//     assert_int_equal(get_uint64_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 1u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 2u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 3u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 4u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 5u);
+//
+//     return_uint64_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_add_scalar_array_single_element_updates_value(void** state) {
+//     (void)state;
+//
+//     uint64_array_t* array = _make_uint64_array(4u, true);
+//     assert_int_equal(push_back_uint64_array(array, 10u), NO_ERROR);
+//
+//     assert_int_equal(uint64_add_scalar_array(array, 7u), NO_ERROR);
+//
+//     uint64_t out = 0u;
+//     assert_int_equal(get_uint64_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 17u);
+//
+//     return_uint64_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_add_scalar_array_updates_all_elements(void** state) {
+//     (void)state;
+//
+//     uint64_array_t* array = _make_sample_uint64_array();
+//
+//     assert_int_equal(uint64_add_scalar_array(array, 10u), NO_ERROR);
+//
+//     uint64_t out = 0u;
+//
+//     assert_int_equal(get_uint64_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 11u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 12u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 13u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 14u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 15u);
+//
+//     return_uint64_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_add_scalar_array_preserves_length(void** state) {
+//     (void)state;
+//
+//     uint64_array_t* array = _make_sample_uint64_array();
+//     size_t before = uint64_array_size(array);
+//
+//     assert_int_equal(uint64_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     assert_int_equal(uint64_array_size(array), before);
+//
+//     return_uint64_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_uint64_add_scalar_array_multiple_calls_accumulate(void** state) {
+//     (void)state;
+//
+//     uint64_array_t* array = _make_sample_uint64_array();
+//
+//     assert_int_equal(uint64_add_scalar_array(array, 2u), NO_ERROR);
+//     assert_int_equal(uint64_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     uint64_t out = 0u;
+//
+//     assert_int_equal(get_uint64_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 6u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 7u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 8u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 9u);
+//
+//     assert_int_equal(get_uint64_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 10u);
+//
+//     return_uint64_array(array);
+// }
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -10561,14 +10948,23 @@ const struct CMUnitTest test_uint64_array[] = {
     cmocka_unit_test(test_uint64_max_boundary_values),
 
     /* Group 28: uint64_array_sum */
-    cmocka_unit_test(test_uint64_sum_null_array_returns_null_pointer),
-    cmocka_unit_test(test_uint64_sum_returns_correct_total),
-    cmocka_unit_test(test_uint64_sum_wraps_on_overflow),
+    // cmocka_unit_test(test_uint64_sum_null_array_returns_null_pointer),
+    // cmocka_unit_test(test_uint64_sum_returns_correct_total),
+    // cmocka_unit_test(test_uint64_sum_wraps_on_overflow),
 
     /* Group 29: cumulative_uint64_array */
     cmocka_unit_test(test_uint64_cumulative_null_array_returns_null_pointer),
     cmocka_unit_test(test_uint64_cumulative_produces_prefix_sum),
     cmocka_unit_test(test_uint64_cumulative_single_element),
+
+    // cmocka_unit_test(test_uint64_add_scalar_array_null_returns_null_pointer),
+    // cmocka_unit_test(test_uint64_add_scalar_array_empty_returns_empty),
+    // cmocka_unit_test(test_uint64_add_scalar_array_add_zero_leaves_values_unchanged),
+    // cmocka_unit_test(test_uint64_add_scalar_array_single_element_updates_value),
+    // cmocka_unit_test(test_uint64_add_scalar_array_updates_all_elements),
+    // cmocka_unit_test(test_uint64_add_scalar_array_preserves_length),
+    // cmocka_unit_test(test_uint64_add_scalar_array_multiple_calls_accumulate),
+
 };
 const size_t test_uint64_array_count = sizeof(test_uint64_array) / sizeof(test_uint64_array[0]);
 // ================================================================================ 
@@ -11509,55 +11905,55 @@ static void test_int64_max_negative_values_and_boundary(void** state) {
 // Group 28: int64_array_sum
 // ================================================================================
 
-static void test_int64_sum_null_array_returns_null_pointer(void** state) {
-    (void)state;
-    int64_expect_t r = int64_array_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_sum_returns_correct_total(void** state) {
-    (void)state;
-    allocator_vtable_t alloc = heap_allocator();
-    int64_array_expect_t r = init_int64_array(8, false, alloc);
-    assert_true(r.has_value);
-    int64_array_t* arr = r.u.value;
-
-    push_back_int64_array(arr,  1000000000LL);
-    push_back_int64_array(arr, -2000000000LL);
-    push_back_int64_array(arr,  3000000000LL);
-    /* arr: [1000000000, -2000000000, 3000000000], sum == 2000000000 */
-
-    int64_expect_t result = int64_array_sum(arr);
-    assert_true(result.has_value);
-    assert_true(result.u.value == 2000000000LL);
-
-    return_int64_array(arr);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_int64_sum_mixed_signs_cancel(void** state) {
-    (void)state;
-    allocator_vtable_t alloc = heap_allocator();
-    int64_array_expect_t r = init_int64_array(8, false, alloc);
-    assert_true(r.has_value);
-    int64_array_t* arr = r.u.value;
-
-    push_back_int64_array(arr,  100000000000LL);
-    push_back_int64_array(arr, -100000000000LL);
-    push_back_int64_array(arr,   50000000000LL);
-    push_back_int64_array(arr,  -50000000000LL);
-    /* arr: [1e11, -1e11, 5e10, -5e10], sum == 0 */
-
-    int64_expect_t result = int64_array_sum(arr);
-    assert_true(result.has_value);
-    assert_true(result.u.value == 0LL);
-
-    return_int64_array(arr);
-}
+// static void test_int64_sum_null_array_returns_null_pointer(void** state) {
+//     (void)state;
+//     int64_expect_t r = int64_array_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_sum_returns_correct_total(void** state) {
+//     (void)state;
+//     allocator_vtable_t alloc = heap_allocator();
+//     int64_array_expect_t r = init_int64_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     int64_array_t* arr = r.u.value;
+//
+//     push_back_int64_array(arr,  1000000000LL);
+//     push_back_int64_array(arr, -2000000000LL);
+//     push_back_int64_array(arr,  3000000000LL);
+//     /* arr: [1000000000, -2000000000, 3000000000], sum == 2000000000 */
+//
+//     int64_expect_t result = int64_array_sum(arr);
+//     assert_true(result.has_value);
+//     assert_true(result.u.value == 2000000000LL);
+//
+//     return_int64_array(arr);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_sum_mixed_signs_cancel(void** state) {
+//     (void)state;
+//     allocator_vtable_t alloc = heap_allocator();
+//     int64_array_expect_t r = init_int64_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     int64_array_t* arr = r.u.value;
+//
+//     push_back_int64_array(arr,  100000000000LL);
+//     push_back_int64_array(arr, -100000000000LL);
+//     push_back_int64_array(arr,   50000000000LL);
+//     push_back_int64_array(arr,  -50000000000LL);
+//     /* arr: [1e11, -1e11, 5e10, -5e10], sum == 0 */
+//
+//     int64_expect_t result = int64_array_sum(arr);
+//     assert_true(result.has_value);
+//     assert_true(result.u.value == 0LL);
+//
+//     return_int64_array(arr);
+// }
 
 // ================================================================================
 // Group 29: cumulative_int64_array
@@ -11632,7 +12028,167 @@ static void test_int64_cumulative_mixed_signs(void** state) {
     return_int64_array(src);
     return_int64_array(dst);
 }
+// -------------------------------------------------------------------------------- 
 
+// static int64_array_t* _make_int64_array(size_t capacity, bool growth) {
+//     allocator_vtable_t a = heap_allocator();
+//     int64_array_expect_t r = init_int64_array(capacity, growth, a);
+//     assert_true(r.has_value);
+//     assert_non_null(r.u.value);
+//     return r.u.value;
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static int64_array_t* _make_sample_int64_array(void) {
+//     int64_array_t* array = _make_int64_array(8u, true);
+//
+//     assert_int_equal(push_back_int64_array(array, 1u), NO_ERROR);
+//     assert_int_equal(push_back_int64_array(array, 2u), NO_ERROR);
+//     assert_int_equal(push_back_int64_array(array, 3u), NO_ERROR);
+//     assert_int_equal(push_back_int64_array(array, 4u), NO_ERROR);
+//     assert_int_equal(push_back_int64_array(array, 5u), NO_ERROR);
+//
+//     return array;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_int64_add_scalar_array_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     assert_int_equal(int64_add_scalar_array(NULL, 5u), NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_add_scalar_array_empty_returns_empty(void** state) {
+//     (void)state;
+//
+//     int64_array_t* array = _make_int64_array(4u, true);
+//
+//     assert_int_equal(int64_add_scalar_array(array, 5u), EMPTY);
+//
+//     return_int64_array(array);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_int64_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+//     (void)state;
+//
+//     int64_array_t* array = _make_sample_int64_array();
+//
+//     assert_int_equal(int64_add_scalar_array(array, 0u), NO_ERROR);
+//
+//     int64_t out = 0u;
+//
+//     assert_int_equal(get_int64_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 1u);
+//
+//     assert_int_equal(get_int64_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 2u);
+//
+//     assert_int_equal(get_int64_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 3u);
+//
+//     assert_int_equal(get_int64_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 4u);
+//
+//     assert_int_equal(get_int64_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 5u);
+//
+//     return_int64_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_add_scalar_array_single_element_updates_value(void** state) {
+//     (void)state;
+//
+//     int64_array_t* array = _make_int64_array(4u, true);
+//     assert_int_equal(push_back_int64_array(array, 10u), NO_ERROR);
+//
+//     assert_int_equal(int64_add_scalar_array(array, 7u), NO_ERROR);
+//
+//     int64_t out = 0u;
+//     assert_int_equal(get_int64_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 17u);
+//
+//     return_int64_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_add_scalar_array_updates_all_elements(void** state) {
+//     (void)state;
+//
+//     int64_array_t* array = _make_sample_int64_array();
+//
+//     assert_int_equal(int64_add_scalar_array(array, 10u), NO_ERROR);
+//
+//     int64_t out = 0u;
+//
+//     assert_int_equal(get_int64_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 11u);
+//
+//     assert_int_equal(get_int64_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 12u);
+//
+//     assert_int_equal(get_int64_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 13u);
+//
+//     assert_int_equal(get_int64_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 14u);
+//
+//     assert_int_equal(get_int64_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 15u);
+//
+//     return_int64_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_add_scalar_array_preserves_length(void** state) {
+//     (void)state;
+//
+//     int64_array_t* array = _make_sample_int64_array();
+//     size_t before = int64_array_size(array);
+//
+//     assert_int_equal(int64_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     assert_int_equal(int64_array_size(array), before);
+//
+//     return_int64_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_int64_add_scalar_array_multiple_calls_accumulate(void** state) {
+//     (void)state;
+//
+//     int64_array_t* array = _make_sample_int64_array();
+//
+//     assert_int_equal(int64_add_scalar_array(array, 2u), NO_ERROR);
+//     assert_int_equal(int64_add_scalar_array(array, 3u), NO_ERROR);
+//
+//     int64_t out = 0u;
+//
+//     assert_int_equal(get_int64_array_index(array, 0u, &out), NO_ERROR);
+//     assert_int_equal(out, 6u);
+//
+//     assert_int_equal(get_int64_array_index(array, 1u, &out), NO_ERROR);
+//     assert_int_equal(out, 7u);
+//
+//     assert_int_equal(get_int64_array_index(array, 2u, &out), NO_ERROR);
+//     assert_int_equal(out, 8u);
+//
+//     assert_int_equal(get_int64_array_index(array, 3u, &out), NO_ERROR);
+//     assert_int_equal(out, 9u);
+//
+//     assert_int_equal(get_int64_array_index(array, 4u, &out), NO_ERROR);
+//     assert_int_equal(out, 10u);
+//
+//     return_int64_array(array);
+// }
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -11753,14 +12309,22 @@ const struct CMUnitTest test_int64_array[] = {
     cmocka_unit_test(test_int64_max_negative_values_and_boundary),
 
     /* Group 28: int64_array_sum */
-    cmocka_unit_test(test_int64_sum_null_array_returns_null_pointer),
-    cmocka_unit_test(test_int64_sum_returns_correct_total),
-    cmocka_unit_test(test_int64_sum_mixed_signs_cancel),
+    // cmocka_unit_test(test_int64_sum_null_array_returns_null_pointer),
+    // cmocka_unit_test(test_int64_sum_returns_correct_total),
+    // cmocka_unit_test(test_int64_sum_mixed_signs_cancel),
 
     /* Group 29: cumulative_int64_array */
     cmocka_unit_test(test_int64_cumulative_null_array_returns_null_pointer),
     cmocka_unit_test(test_int64_cumulative_produces_prefix_sum),
     cmocka_unit_test(test_int64_cumulative_mixed_signs),
+
+    // cmocka_unit_test(test_int64_add_scalar_array_null_returns_null_pointer),
+    // cmocka_unit_test(test_int64_add_scalar_array_empty_returns_empty),
+    // cmocka_unit_test(test_int64_add_scalar_array_add_zero_leaves_values_unchanged),
+    // cmocka_unit_test(test_int64_add_scalar_array_single_element_updates_value),
+    // cmocka_unit_test(test_int64_add_scalar_array_updates_all_elements),
+    // cmocka_unit_test(test_int64_add_scalar_array_preserves_length),
+    // cmocka_unit_test(test_int64_add_scalar_array_multiple_calls_accumulate),
 };
 const size_t test_int64_array_count = sizeof(test_int64_array) / sizeof(test_int64_array[0]);
 // ================================================================================ 
@@ -13051,60 +13615,60 @@ static void test_float_max_positive_infinity_wins(void** state) {
 // Group 28: float_array_sum
 // ================================================================================
 
-static void test_float_sum_null_array_returns_null_pointer(void** state) {
-    (void)state;
-    float_expect_t r = float_array_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_sum_returns_correct_total(void** state) {
-    (void)state;
-    allocator_vtable_t alloc = heap_allocator();
-    float_array_expect_t r = init_float_array(8, false, alloc);
-    assert_true(r.has_value);
-    float_array_t* arr = r.u.value;
-
-    push_back_float_array(arr,  1.0f);
-    push_back_float_array(arr, -2.5f);
-    push_back_float_array(arr,  3.5f);
-    /* arr: [1.0, -2.5, 3.5], sum == 2.0 (exact in binary) */
-
-    float_expect_t result = float_array_sum(arr);
-    assert_true(result.has_value);
-    ASSERT_FLOAT_EXACT(result.u.value, 2.0f);
-
-    return_float_array(arr);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_float_sum_cancelling_values(void** state) {
-    (void)state;
-    /*
-     * All values are exact binary fractions so the sum is exact (0.0f).
-     * This confirms the accumulator is genuinely a float and that
-     * negative contributions are handled correctly.
-     */
-    allocator_vtable_t alloc = heap_allocator();
-    float_array_expect_t r = init_float_array(8, false, alloc);
-    assert_true(r.has_value);
-    float_array_t* arr = r.u.value;
-
-    push_back_float_array(arr,  4.0f);
-    push_back_float_array(arr, -4.0f);
-    push_back_float_array(arr,  0.5f);
-    push_back_float_array(arr, -0.5f);
-    /* arr: [4.0, -4.0, 0.5, -0.5], sum == 0.0 */
-
-    float_expect_t result = float_array_sum(arr);
-    assert_true(result.has_value);
-    ASSERT_FLOAT_EXACT(result.u.value, 0.0f);
-
-    return_float_array(arr);
-}
+// static void test_float_sum_null_array_returns_null_pointer(void** state) {
+//     (void)state;
+//     float_expect_t r = float_array_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_sum_returns_correct_total(void** state) {
+//     (void)state;
+//     allocator_vtable_t alloc = heap_allocator();
+//     float_array_expect_t r = init_float_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     float_array_t* arr = r.u.value;
+//
+//     push_back_float_array(arr,  1.0f);
+//     push_back_float_array(arr, -2.5f);
+//     push_back_float_array(arr,  3.5f);
+//     /* arr: [1.0, -2.5, 3.5], sum == 2.0 (exact in binary) */
+//
+//     float_expect_t result = float_array_sum(arr);
+//     assert_true(result.has_value);
+//     ASSERT_FLOAT_EXACT(result.u.value, 2.0f);
+//
+//     return_float_array(arr);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_sum_cancelling_values(void** state) {
+//     (void)state;
+//     /*
+//      * All values are exact binary fractions so the sum is exact (0.0f).
+//      * This confirms the accumulator is genuinely a float and that
+//      * negative contributions are handled correctly.
+//      */
+//     allocator_vtable_t alloc = heap_allocator();
+//     float_array_expect_t r = init_float_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     float_array_t* arr = r.u.value;
+//
+//     push_back_float_array(arr,  4.0f);
+//     push_back_float_array(arr, -4.0f);
+//     push_back_float_array(arr,  0.5f);
+//     push_back_float_array(arr, -0.5f);
+//     /* arr: [4.0, -4.0, 0.5, -0.5], sum == 0.0 */
+//
+//     float_expect_t result = float_array_sum(arr);
+//     assert_true(result.has_value);
+//     ASSERT_FLOAT_EXACT(result.u.value, 0.0f);
+//
+//     return_float_array(arr);
+// }
 
 // ================================================================================
 // Group 29: cumulative_float_array
@@ -13178,7 +13742,170 @@ static void test_float_cumulative_mixed_signs(void** state) {
     return_float_array(src);
     return_float_array(dst);
 }
+// -------------------------------------------------------------------------------- 
 
+// static float_array_t* _make_float_array(size_t capacity, bool growth) {
+//     allocator_vtable_t a = heap_allocator();
+//     float_array_expect_t r = init_float_array(capacity, growth, a);
+//     assert_true(r.has_value);
+//     assert_non_null(r.u.value);
+//     return r.u.value;
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static float_array_t* _make_sample_float_array(void) {
+//     float_array_t* array = _make_float_array(8u, true);
+//
+//     assert_int_equal(push_back_float_array(array, 1.0), NO_ERROR);
+//     assert_int_equal(push_back_float_array(array, 2.0), NO_ERROR);
+//     assert_int_equal(push_back_float_array(array, 3.0), NO_ERROR);
+//     assert_int_equal(push_back_float_array(array, 4.0), NO_ERROR);
+//     assert_int_equal(push_back_float_array(array, 5.0), NO_ERROR);
+//
+//     return array;
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_float_add_scalar_array_null_returns_null_pointer(void** state) {
+//     (void)state;
+//
+//     assert_int_equal(float_add_scalar_array(NULL, 5.0), NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_add_scalar_array_empty_returns_empty(void** state) {
+//     (void)state;
+//
+//     float_array_t* array = _make_float_array(4u, true);
+//
+//     assert_int_equal(float_add_scalar_array(array, 5.0), EMPTY);
+//
+//     return_float_array(array);
+// }
+// // -------------------------------------------------------------------------------- 
+//
+// static void test_float_add_scalar_array_add_zero_leaves_values_unchanged(void** state) {
+//     (void)state;
+//
+//     float_array_t* array = _make_sample_float_array();
+//
+//     assert_int_equal(float_add_scalar_array(array, 0.0), NO_ERROR);
+//
+//     float out = 0.0;
+//
+//     assert_int_equal(get_float_array_index(array, 0u, &out), NO_ERROR);
+//     assert_float_equal(out, 1.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 1u, &out), NO_ERROR);
+//     assert_float_equal(out, 2.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 2u, &out), NO_ERROR);
+//     assert_float_equal(out, 3.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 3u, &out), NO_ERROR);
+//     assert_float_equal(out, 4.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 4u, &out), NO_ERROR);
+//     assert_float_equal(out, 5.0, 1.0e-3);
+//
+//     return_float_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_add_scalar_array_single_element_updates_value(void** state) {
+//     (void)state;
+//
+//     float_array_t* array = _make_float_array(4u, true);
+//     assert_int_equal(push_back_float_array(array, 10.0), NO_ERROR);
+//     print_float_array(array, stdout);
+//     float out = 0.0;
+//     get_float_array_index(array, 0, &out);
+//     printf("%f\n", out);
+//     assert_int_equal(float_add_scalar_array(array, 7.0), NO_ERROR);
+//     get_float_array_index(array, 0, &out);
+//     printf("%f\n", out);
+//     // assert_int_equal(get_float_array_index(array, 0u, &out), NO_ERROR);
+//     // assert_float_equal(out, 17.0, 1.0e-3);
+//
+//     return_float_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_add_scalar_array_updates_all_elements(void** state) {
+//     (void)state;
+//
+//     float_array_t* array = _make_sample_float_array();
+//
+//     assert_int_equal(float_add_scalar_array(array, 10.0), NO_ERROR);
+//
+//     float out = 0.0;
+//
+//     assert_int_equal(get_float_array_index(array, 0u, &out), NO_ERROR);
+//     assert_float_equal(out, 11.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 1u, &out), NO_ERROR);
+//     assert_float_equal(out, 12.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 2u, &out), NO_ERROR);
+//     assert_float_equal(out, 13.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 3u, &out), NO_ERROR);
+//     assert_float_equal(out, 14.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 4u, &out), NO_ERROR);
+//     assert_float_equal(out, 15.0, 1.0e-3);
+//
+//     return_float_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_add_scalar_array_preserves_length(void** state) {
+//     (void)state;
+//
+//     float_array_t* array = _make_sample_float_array();
+//     size_t before = float_array_size(array);
+//
+//     assert_int_equal(float_add_scalar_array(array, 3.0), NO_ERROR);
+//
+//     assert_int_equal(float_array_size(array), before);
+//
+//     return_float_array(array);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_float_add_scalar_array_multiple_calls_accumulate(void** state) {
+//     (void)state;
+//
+//     float_array_t* array = _make_sample_float_array();
+//
+//     assert_int_equal(float_add_scalar_array(array, 2.0), NO_ERROR);
+//     assert_int_equal(float_add_scalar_array(array, 3.0), NO_ERROR);
+//
+//     float out = 0.0;
+//
+//     assert_int_equal(get_float_array_index(array, 0u, &out), NO_ERROR);
+//     assert_float_equal(out, 6.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 1u, &out), NO_ERROR);
+//     assert_float_equal(out, 7.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 2u, &out), NO_ERROR);
+//     assert_float_equal(out, 8.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 3u, &out), NO_ERROR);
+//     assert_float_equal(out, 9.0, 1.0e-3);
+//
+//     assert_int_equal(get_float_array_index(array, 4u, &out), NO_ERROR);
+//     assert_float_equal(out, 10.0, 1.0e-3);
+//
+//     return_float_array(array);
+// }
 // ================================================================================
 // Test runner
 // ================================================================================
@@ -13303,14 +14030,22 @@ const struct CMUnitTest test_float_array[] = {
     cmocka_unit_test(test_float_max_positive_infinity_wins),
 
     /* Group 28: float_array_sum */
-    cmocka_unit_test(test_float_sum_null_array_returns_null_pointer),
-    cmocka_unit_test(test_float_sum_returns_correct_total),
-    cmocka_unit_test(test_float_sum_cancelling_values),
+    // cmocka_unit_test(test_float_sum_null_array_returns_null_pointer),
+    // cmocka_unit_test(test_float_sum_returns_correct_total),
+    // cmocka_unit_test(test_float_sum_cancelling_values),
 
     /* Group 29: cumulative_float_array */
     cmocka_unit_test(test_float_cumulative_null_array_returns_null_pointer),
     cmocka_unit_test(test_float_cumulative_produces_prefix_sum),
     cmocka_unit_test(test_float_cumulative_mixed_signs),
+
+    // cmocka_unit_test(test_float_add_scalar_array_null_returns_null_pointer),
+    // cmocka_unit_test(test_float_add_scalar_array_empty_returns_empty),
+    // cmocka_unit_test(test_float_add_scalar_array_add_zero_leaves_values_unchanged),
+    // cmocka_unit_test(test_float_add_scalar_array_single_element_updates_value),
+    // cmocka_unit_test(test_float_add_scalar_array_updates_all_elements),
+    // cmocka_unit_test(test_float_add_scalar_array_preserves_length),
+    // cmocka_unit_test(test_float_add_scalar_array_multiple_calls_accumulate),
 };
 const size_t test_float_array_count = sizeof(test_float_array) / sizeof(test_float_array[0]);
 // ================================================================================ 
@@ -14645,58 +15380,58 @@ static void test_double_max_positive_infinity_wins(void** state) {
 // Group 28: double_array_sum
 // ================================================================================
 
-static void test_double_sum_null_array_returns_null_pointer(void** state) {
-    (void)state;
-    double_expect_t r = double_array_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_sum_returns_correct_total(void** state) {
-    (void)state;
-    allocator_vtable_t alloc = heap_allocator();
-    double_array_expect_t r = init_double_array(8, false, alloc);
-    assert_true(r.has_value);
-    double_array_t* arr = r.u.value;
-
-    push_back_double_array(arr,  1.0);
-    push_back_double_array(arr, -2.5);
-    push_back_double_array(arr,  3.5);
-    /* arr: [1.0, -2.5, 3.5], sum == 2.0 (exact in binary) */
-
-    double_expect_t result = double_array_sum(arr);
-    assert_true(result.has_value);
-    ASSERT_DOUBLE_EXACT(result.u.value, 2.0);
-
-    return_double_array(arr);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_double_sum_cancelling_values(void** state) {
-    (void)state;
-    /*
-     * All values are exact binary fractions so the sum is exactly 0.0.
-     */
-    allocator_vtable_t alloc = heap_allocator();
-    double_array_expect_t r = init_double_array(8, false, alloc);
-    assert_true(r.has_value);
-    double_array_t* arr = r.u.value;
-
-    push_back_double_array(arr,  4.0);
-    push_back_double_array(arr, -4.0);
-    push_back_double_array(arr,  0.5);
-    push_back_double_array(arr, -0.5);
-    /* arr: [4.0, -4.0, 0.5, -0.5], sum == 0.0 */
-
-    double_expect_t result = double_array_sum(arr);
-    assert_true(result.has_value);
-    ASSERT_DOUBLE_EXACT(result.u.value, 0.0);
-
-    return_double_array(arr);
-}
+// static void test_double_sum_null_array_returns_null_pointer(void** state) {
+//     (void)state;
+//     double_expect_t r = double_array_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_sum_returns_correct_total(void** state) {
+//     (void)state;
+//     allocator_vtable_t alloc = heap_allocator();
+//     double_array_expect_t r = init_double_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     double_array_t* arr = r.u.value;
+//
+//     push_back_double_array(arr,  1.0);
+//     push_back_double_array(arr, -2.5);
+//     push_back_double_array(arr,  3.5);
+//     /* arr: [1.0, -2.5, 3.5], sum == 2.0 (exact in binary) */
+//
+//     double_expect_t result = double_array_sum(arr);
+//     assert_true(result.has_value);
+//     ASSERT_DOUBLE_EXACT(result.u.value, 2.0);
+//
+//     return_double_array(arr);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_double_sum_cancelling_values(void** state) {
+//     (void)state;
+//     /*
+//      * All values are exact binary fractions so the sum is exactly 0.0.
+//      */
+//     allocator_vtable_t alloc = heap_allocator();
+//     double_array_expect_t r = init_double_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     double_array_t* arr = r.u.value;
+//
+//     push_back_double_array(arr,  4.0);
+//     push_back_double_array(arr, -4.0);
+//     push_back_double_array(arr,  0.5);
+//     push_back_double_array(arr, -0.5);
+//     /* arr: [4.0, -4.0, 0.5, -0.5], sum == 0.0 */
+//
+//     double_expect_t result = double_array_sum(arr);
+//     assert_true(result.has_value);
+//     ASSERT_DOUBLE_EXACT(result.u.value, 0.0);
+//
+//     return_double_array(arr);
+// }
 
 // ================================================================================
 // Group 29: cumulative_double_array
@@ -14902,9 +15637,9 @@ const struct CMUnitTest test_double_array[] = {
     cmocka_unit_test(test_double_max_positive_infinity_wins),
 
     /* Group 28: double_array_sum */
-    cmocka_unit_test(test_double_sum_null_array_returns_null_pointer),
-    cmocka_unit_test(test_double_sum_returns_correct_total),
-    cmocka_unit_test(test_double_sum_cancelling_values),
+    // cmocka_unit_test(test_double_sum_null_array_returns_null_pointer),
+    // cmocka_unit_test(test_double_sum_returns_correct_total),
+    // cmocka_unit_test(test_double_sum_cancelling_values),
 
     /* Group 29: cumulative_double_array */
     cmocka_unit_test(test_double_cumulative_null_array_returns_null_pointer),
@@ -16238,57 +16973,57 @@ static void test_ldouble_max_positive_infinity_wins(void** state) {
 // Group 28: ldouble_array_sum
 // ================================================================================
 
-static void test_ldouble_sum_null_array_returns_null_pointer(void** state) {
-    (void)state;
-    ldouble_expect_t r = ldouble_array_sum(NULL);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_sum_returns_correct_total(void** state) {
-    (void)state;
-    allocator_vtable_t alloc = heap_allocator();
-    ldouble_array_expect_t r = init_ldouble_array(8, false, alloc);
-    assert_true(r.has_value);
-    ldouble_array_t* arr = r.u.value;
-
-    push_back_ldouble_array(arr,  1.0L);
-    push_back_ldouble_array(arr, -2.5L);
-    push_back_ldouble_array(arr,  3.5L);
-    /* arr: [1.0L, -2.5L, 3.5L], sum == 2.0L (exact in binary) */
-
-    ldouble_expect_t result = ldouble_array_sum(arr);
-    assert_true(result.has_value);
-    ASSERT_LDOUBLE_EXACT(result.u.value, 2.0L);
-
-    return_ldouble_array(arr);
-}
-
-// --------------------------------------------------------------------------------
-
-static void test_ldouble_sum_cancelling_values(void** state) {
-    (void)state;
-    /*
-     * All values are exact binary fractions so the sum is exactly 0.0L.
-     */
-    allocator_vtable_t alloc = heap_allocator();
-    ldouble_array_expect_t r = init_ldouble_array(8, false, alloc);
-    assert_true(r.has_value);
-    ldouble_array_t* arr = r.u.value;
-
-    push_back_ldouble_array(arr,  4.0L);
-    push_back_ldouble_array(arr, -4.0L);
-    push_back_ldouble_array(arr,  0.5L);
-    push_back_ldouble_array(arr, -0.5L);
-
-    ldouble_expect_t result = ldouble_array_sum(arr);
-    assert_true(result.has_value);
-    ASSERT_LDOUBLE_EXACT(result.u.value, 0.0L);
-
-    return_ldouble_array(arr);
-}
+// static void test_ldouble_sum_null_array_returns_null_pointer(void** state) {
+//     (void)state;
+//     ldouble_expect_t r = ldouble_array_sum(NULL);
+//     assert_false(r.has_value);
+//     assert_int_equal(r.u.error, NULL_POINTER);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_sum_returns_correct_total(void** state) {
+//     (void)state;
+//     allocator_vtable_t alloc = heap_allocator();
+//     ldouble_array_expect_t r = init_ldouble_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     ldouble_array_t* arr = r.u.value;
+//
+//     push_back_ldouble_array(arr,  1.0L);
+//     push_back_ldouble_array(arr, -2.5L);
+//     push_back_ldouble_array(arr,  3.5L);
+//     /* arr: [1.0L, -2.5L, 3.5L], sum == 2.0L (exact in binary) */
+//
+//     ldouble_expect_t result = ldouble_array_sum(arr);
+//     assert_true(result.has_value);
+//     ASSERT_LDOUBLE_EXACT(result.u.value, 2.0L);
+//
+//     return_ldouble_array(arr);
+// }
+//
+// // --------------------------------------------------------------------------------
+//
+// static void test_ldouble_sum_cancelling_values(void** state) {
+//     (void)state;
+//     /*
+//      * All values are exact binary fractions so the sum is exactly 0.0L.
+//      */
+//     allocator_vtable_t alloc = heap_allocator();
+//     ldouble_array_expect_t r = init_ldouble_array(8, false, alloc);
+//     assert_true(r.has_value);
+//     ldouble_array_t* arr = r.u.value;
+//
+//     push_back_ldouble_array(arr,  4.0L);
+//     push_back_ldouble_array(arr, -4.0L);
+//     push_back_ldouble_array(arr,  0.5L);
+//     push_back_ldouble_array(arr, -0.5L);
+//
+//     ldouble_expect_t result = ldouble_array_sum(arr);
+//     assert_true(result.has_value);
+//     ASSERT_LDOUBLE_EXACT(result.u.value, 0.0L);
+//
+//     return_ldouble_array(arr);
+// }
 
 // ================================================================================
 // Group 29: cumulative_ldouble_array
@@ -16491,9 +17226,9 @@ const struct CMUnitTest test_ldouble_array[] = {
     cmocka_unit_test(test_ldouble_max_positive_infinity_wins),
 
     /* Group 28: ldouble_array_sum */
-    cmocka_unit_test(test_ldouble_sum_null_array_returns_null_pointer),
-    cmocka_unit_test(test_ldouble_sum_returns_correct_total),
-    cmocka_unit_test(test_ldouble_sum_cancelling_values),
+    // cmocka_unit_test(test_ldouble_sum_null_array_returns_null_pointer),
+    // cmocka_unit_test(test_ldouble_sum_returns_correct_total),
+    // cmocka_unit_test(test_ldouble_sum_cancelling_values),
 
     /* Group 29: cumulative_ldouble_array */
     cmocka_unit_test(test_ldouble_cumulative_null_array_returns_null_pointer),

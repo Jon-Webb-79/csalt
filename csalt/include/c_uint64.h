@@ -633,33 +633,33 @@ uint64_expect_t uint64_array_max(const uint64_array_t* array);
 
 // --------------------------------------------------------------------------------
 
-/**
- * @brief Sum all elements and return the result as a uint64_t.
- *
- * Iterates over every element and accumulates the total in a uint64_t. The
- * inner loop dispatches to the best SIMD load path available at compile time.
- *
- * Overflow: the accumulator is a uint64_t. If the true sum exceeds UINT64_MAX
- * the result wraps modulo 2^64. The caller is responsible for ensuring the
- * array is small enough that overflow will not occur.
- *
- * @param array  Pointer to the array to sum. Must not be NULL.
- *
- * @return uint64_expect_t with has_value true and u.value == the sum on
- *         success. On failure, has_value is false and u.error is one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if array->base.len == 0
- *
- * @code
- *     push_back_uint64_array(arr, 1000000u);
- *     push_back_uint64_array(arr, 2000000u);
- *     push_back_uint64_array(arr, 3000000u);
- *
- *     uint64_expect_t r = uint64_array_sum(arr);
- *     // r.has_value == true, r.u.value == 6000000.
- * @endcode
- */
-uint64_expect_t uint64_array_sum(const uint64_array_t* array);
+// /**
+//  * @brief Sum all elements and return the result as a uint64_t.
+//  *
+//  * Iterates over every element and accumulates the total in a uint64_t. The
+//  * inner loop dispatches to the best SIMD load path available at compile time.
+//  *
+//  * Overflow: the accumulator is a uint64_t. If the true sum exceeds UINT64_MAX
+//  * the result wraps modulo 2^64. The caller is responsible for ensuring the
+//  * array is small enough that overflow will not occur.
+//  *
+//  * @param array  Pointer to the array to sum. Must not be NULL.
+//  *
+//  * @return uint64_expect_t with has_value true and u.value == the sum on
+//  *         success. On failure, has_value is false and u.error is one of:
+//  *         - NULL_POINTER  if array is NULL
+//  *         - EMPTY         if array->base.len == 0
+//  *
+//  * @code
+//  *     push_back_uint64_array(arr, 1000000u);
+//  *     push_back_uint64_array(arr, 2000000u);
+//  *     push_back_uint64_array(arr, 3000000u);
+//  *
+//  *     uint64_expect_t r = uint64_array_sum(arr);
+//  *     // r.has_value == true, r.u.value == 6000000.
+//  * @endcode
+//  */
+// uint64_expect_t uint64_array_sum(const uint64_array_t* array);
 
 // --------------------------------------------------------------------------------
 
@@ -982,6 +982,39 @@ error_code_t print_uint64_array(const uint64_array_t* array, FILE* stream);
  */
 bool uint64_array_equal(const uint64_array_t* a,
                         const uint64_array_t* b);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Add a scalar value to every element of a uint64 array.
+ *
+ * This function adds the specified scalar value to each element in the
+ * array in place. The operation is applied to all elements currently
+ * stored in the array and preserves the array length and capacity.
+ *
+ * Internally, this function delegates to the generic add_scalar_array()
+ * routine, which may utilize SIMD-accelerated paths when available,
+ * falling back to scalar iteration otherwise.
+ *
+ * @param array Pointer to the uint64 array to modify.
+ * @param value Scalar value to add to each element.
+ *
+ * @return error_code_t
+ * @retval NO_ERROR       The operation completed successfully.
+ * @retval NULL_POINTER   If @p array is NULL.
+ * @retval EMPTY          If the array contains no elements.
+ * @retval TYPE_MISMATCH  If the underlying dtype does not match uint64_TYPE.
+ *
+ * @note
+ * The addition uses standard unsigned 8-bit arithmetic. If the result of
+ * adding @p value to an element exceeds uint64_MAX, it wraps around modulo 256.
+ *
+ * @warning
+ * This function modifies the array in place. No copy of the data is made.
+ *
+ * @see add_scalar_array
+ * @see uint64_array_sum
+ */
+error_code_t uint64_add_scalar_array(uint64_array_t* array, uint64_t value);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -2426,45 +2459,45 @@ uint64_expect_t uint64_matrix_min(const uint64_matrix_t* mat);
 uint64_expect_t uint64_matrix_max(const uint64_matrix_t* mat);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Compute the sum of all elements in a uint64 matrix.
- *
- * This function computes the sum of all elements in a matrix of type
- * `uint64_matrix_t`. It delegates traversal to the generic `matrix_sum()`
- * function and accumulates the result using unsigned 32-bit arithmetic.
- *
- * The accumulator is initialized to zero and updated for each element in
- * the matrix using standard C unsigned integer addition.
- *
- * @param mat Pointer to the uint64 matrix.
- *
- * @return uint64_expect_t
- * @retval has_value = true   The sum was successfully computed and is stored in u.value.
- * @retval has_value = false  An error occurred, and the error code is stored in u.error.
- *
- * @errors
- * - NULL_POINTER   if @p mat is NULL.
- * - TYPE_MISMATCH  if the matrix dtype is not uint64_TYPE.
- * - EMPTY          if the matrix contains no elements:
- *                  - dense: rows * cols == 0
- *                  - sparse: nnz == 0
- * - INVALID_ARG    if the matrix format is not recognized.
- * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
- *
- * @note
- * For dense matrices, all elements (rows * cols) are included in the sum.
- * For sparse matrices (COO, CSR, CSC), only stored elements (nnz) are included.
- *
- * @warning
- * This function uses standard unsigned 32-bit arithmetic. If the mathematical
- * sum exceeds `uint64_MAX`, the result will wrap around modulo 2^32. Overflow
- * is not detected or reported.
- *
- * @see matrix_sum
- * @see uint64_matrix_min
- * @see uint64_matrix_max
- */
-uint64_expect_t uint64_matrix_sum(const uint64_matrix_t* mat);
+// /**
+//  * @brief Compute the sum of all elements in a uint64 matrix.
+//  *
+//  * This function computes the sum of all elements in a matrix of type
+//  * `uint64_matrix_t`. It delegates traversal to the generic `matrix_sum()`
+//  * function and accumulates the result using unsigned 32-bit arithmetic.
+//  *
+//  * The accumulator is initialized to zero and updated for each element in
+//  * the matrix using standard C unsigned integer addition.
+//  *
+//  * @param mat Pointer to the uint64 matrix.
+//  *
+//  * @return uint64_expect_t
+//  * @retval has_value = true   The sum was successfully computed and is stored in u.value.
+//  * @retval has_value = false  An error occurred, and the error code is stored in u.error.
+//  *
+//  * @errors
+//  * - NULL_POINTER   if @p mat is NULL.
+//  * - TYPE_MISMATCH  if the matrix dtype is not uint64_TYPE.
+//  * - EMPTY          if the matrix contains no elements:
+//  *                  - dense: rows * cols == 0
+//  *                  - sparse: nnz == 0
+//  * - INVALID_ARG    if the matrix format is not recognized.
+//  * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
+//  *
+//  * @note
+//  * For dense matrices, all elements (rows * cols) are included in the sum.
+//  * For sparse matrices (COO, CSR, CSC), only stored elements (nnz) are included.
+//  *
+//  * @warning
+//  * This function uses standard unsigned 32-bit arithmetic. If the mathematical
+//  * sum exceeds `uint64_MAX`, the result will wrap around modulo 2^32. Overflow
+//  * is not detected or reported.
+//  *
+//  * @see matrix_sum
+//  * @see uint64_matrix_min
+//  * @see uint64_matrix_max
+//  */
+// uint64_expect_t uint64_matrix_sum(const uint64_matrix_t* mat);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

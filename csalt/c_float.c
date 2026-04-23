@@ -254,15 +254,15 @@ static void _add_float(void* accum, const void* element) {
     *(float*)accum += *(const float*)element;
 }
 
-float_expect_t float_array_sum(const float_array_t* array) {
-    if (array == NULL)
-        return (float_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    float total = 0.0f;
-    error_code_t err = array_sum(&array->base, &total, _add_float, FLOAT_TYPE);
-    if (err != NO_ERROR)
-        return (float_expect_t){ .has_value = false, .u.error = err };
-    return (float_expect_t){ .has_value = true, .u.value = total };
-}
+// float_expect_t float_array_sum(const float_array_t* array) {
+//     if (array == NULL)
+//         return (float_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     float total = 0.0f;
+//     error_code_t err = array_sum(&array->base, &total, _add_float, FLOAT_TYPE);
+//     if (err != NO_ERROR)
+//         return (float_expect_t){ .has_value = false, .u.error = err };
+//     return (float_expect_t){ .has_value = true, .u.value = total };
+// }
 
 // --------------------------------------------------------------------------------
 
@@ -462,6 +462,24 @@ bool float_array_equal(const float_array_t* a,
         (const float*)b->base.data,
         a->base.len
     );
+}
+// -------------------------------------------------------------------------------- 
+
+static void _add_scalar_float(void* element, const void* scalar) {
+    float*       e = (float*)element;
+    const float* s = (const float*)scalar;
+    *e += *s;
+}
+
+error_code_t float_add_scalar_array(float_array_t* array, float value) {
+    if (array == NULL) {
+        return NULL_POINTER;
+    }
+
+    return add_scalar_array(array,
+                            &value,
+                            _add_scalar_float,
+                            FLOAT_TYPE);
 }
 // ================================================================================ 
 // ================================================================================ 
@@ -1870,19 +1888,19 @@ float_expect_t float_matrix_max(const float_matrix_t* mat) {
 }
 // -------------------------------------------------------------------------------- 
 
-float_expect_t float_matrix_sum(const float_matrix_t* mat) {
-    if (mat == NULL) {
-        return (float_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-    }
-
-    float_t total = 0u;
-    error_code_t err = matrix_sum(mat, &total, _add_float, FLOAT_TYPE);
-    if (err != NO_ERROR) {
-        return (float_expect_t){ .has_value = false, .u.error = err };
-    }
-
-    return (float_expect_t){ .has_value = true, .u.value = total };
-}
+// float_expect_t float_matrix_sum(const float_matrix_t* mat) {
+//     if (mat == NULL) {
+//         return (float_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+//     }
+//
+//     float_t total = 0u;
+//     error_code_t err = matrix_sum(mat, &total, _add_float, FLOAT_TYPE);
+//     if (err != NO_ERROR) {
+//         return (float_expect_t){ .has_value = false, .u.error = err };
+//     }
+//
+//     return (float_expect_t){ .has_value = true, .u.value = total };
+// }
 // ================================================================================
 // ================================================================================
 // eof

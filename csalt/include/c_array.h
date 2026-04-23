@@ -776,53 +776,53 @@ size_expect_t array_max(const array_t* array,
 
 // --------------------------------------------------------------------------------
 
-/**
- * @brief Accumulate all elements into a caller-provided buffer using add.
- *
- * Iterates over all len elements and calls add(accum, &element) once per
- * element. The caller is responsible for:
- *   1. Providing accum pointing to a buffer large enough to hold one element
- *      of the type being accumulated (or a wider accumulator type if the add
- *      function widens internally).
- *   2. Initialising *accum to the identity value for the addition operation
- *      (e.g. 0 for integer/float summation) before calling this function.
- *   3. Reading the final result from *accum after the call returns.
- *
- * The add callback signature is:
- *   void add(void* accum, const void* element)
- * where accum points to the running total and element points to the current
- * array element. Both pointers are guaranteed non-NULL during the callback.
- *
- * The inner loop dispatches to a SIMD fast path for element sizes of 1, 2, 4,
- * and 8 bytes when a compatible instruction set is detected at compile time,
- * using the SIMD path to load batches and then calling add on each loaded
- * scalar. For all other element sizes the loop falls back to scalar iteration.
- *
- * @param array  Pointer to the array to sum. Must not be NULL.
- * @param accum  Pointer to the accumulator buffer. Must not be NULL.
- *               Must remain valid for the duration of the call.
- * @param add    Callback that adds one element into *accum. Must not be NULL.
- * @param dtype  Type identifier. Must match array->dtype.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER  if array, accum, or add is NULL
- *         - TYPE_MISMATCH if dtype != array->dtype
- *         - EMPTY         if array->len == 0
- *
- * @code
- *     // Sum a uint16_array_t containing [100, 200, 300].
- *     static void add_u16(void* accum, const void* elem) {
- *         *(uint32_t*)accum += *(const uint16_t*)elem;
- *     }
- *     uint32_t total = 0;
- *     array_sum(&arr->base, &total, add_u16, UINT16_TYPE);
- *     // total == 600.
- * @endcode
- */
-error_code_t array_sum(const array_t* array,
-                       void*          accum,
-                       void         (*add)(void* accum, const void* element),
-                       dtype_id_t     dtype);
+// /**
+//  * @brief Accumulate all elements into a caller-provided buffer using add.
+//  *
+//  * Iterates over all len elements and calls add(accum, &element) once per
+//  * element. The caller is responsible for:
+//  *   1. Providing accum pointing to a buffer large enough to hold one element
+//  *      of the type being accumulated (or a wider accumulator type if the add
+//  *      function widens internally).
+//  *   2. Initialising *accum to the identity value for the addition operation
+//  *      (e.g. 0 for integer/float summation) before calling this function.
+//  *   3. Reading the final result from *accum after the call returns.
+//  *
+//  * The add callback signature is:
+//  *   void add(void* accum, const void* element)
+//  * where accum points to the running total and element points to the current
+//  * array element. Both pointers are guaranteed non-NULL during the callback.
+//  *
+//  * The inner loop dispatches to a SIMD fast path for element sizes of 1, 2, 4,
+//  * and 8 bytes when a compatible instruction set is detected at compile time,
+//  * using the SIMD path to load batches and then calling add on each loaded
+//  * scalar. For all other element sizes the loop falls back to scalar iteration.
+//  *
+//  * @param array  Pointer to the array to sum. Must not be NULL.
+//  * @param accum  Pointer to the accumulator buffer. Must not be NULL.
+//  *               Must remain valid for the duration of the call.
+//  * @param add    Callback that adds one element into *accum. Must not be NULL.
+//  * @param dtype  Type identifier. Must match array->dtype.
+//  *
+//  * @return NO_ERROR on success, or one of:
+//  *         - NULL_POINTER  if array, accum, or add is NULL
+//  *         - TYPE_MISMATCH if dtype != array->dtype
+//  *         - EMPTY         if array->len == 0
+//  *
+//  * @code
+//  *     // Sum a uint16_array_t containing [100, 200, 300].
+//  *     static void add_u16(void* accum, const void* elem) {
+//  *         *(uint32_t*)accum += *(const uint16_t*)elem;
+//  *     }
+//  *     uint32_t total = 0;
+//  *     array_sum(&arr->base, &total, add_u16, UINT16_TYPE);
+//  *     // total == 600.
+//  * @endcode
+//  */
+// error_code_t array_sum(const array_t* array,
+//                        void*          accum,
+//                        void         (*add)(void* accum, const void* element),
+//                        dtype_id_t     dtype);
 
 // --------------------------------------------------------------------------------
 

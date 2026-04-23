@@ -1193,31 +1193,31 @@ int32_expect_t int32_array_min(const int32_array_t* array);
 int32_expect_t int32_array_max(const int32_array_t* array);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Sum all elements and return the result as an int32_t.
- *
- * Iterates over every element and accumulates the total in an int32_t. The
- * inner loop dispatches to the best SIMD load path available at compile time.
- *
- * Overflow: the accumulator is an int32_t. If the true sum exceeds INT32_MAX
- * or falls below INT32_MIN the result wraps with signed overflow. The caller
- * is responsible for ensuring the array is small enough that overflow will
- * not occur.
- *
- * @param array  Pointer to the array to sum. Must not be NULL.
- *
- * @return int32_expect_t with has_value true and u.value == the sum on
- *         success. On failure, has_value is false and u.error is one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if array->base.len == 0
- *
- * @code
- *     int32_expect_t r = int32_array_sum(arr);
- *     // For arr containing [70000, -10000, 40000]:
- *     // r.has_value == true, r.u.value == 100000.
- * @endcode
- */
-int32_expect_t int32_array_sum(const int32_array_t* array);
+// /**
+//  * @brief Sum all elements and return the result as an int32_t.
+//  *
+//  * Iterates over every element and accumulates the total in an int32_t. The
+//  * inner loop dispatches to the best SIMD load path available at compile time.
+//  *
+//  * Overflow: the accumulator is an int32_t. If the true sum exceeds INT32_MAX
+//  * or falls below INT32_MIN the result wraps with signed overflow. The caller
+//  * is responsible for ensuring the array is small enough that overflow will
+//  * not occur.
+//  *
+//  * @param array  Pointer to the array to sum. Must not be NULL.
+//  *
+//  * @return int32_expect_t with has_value true and u.value == the sum on
+//  *         success. On failure, has_value is false and u.error is one of:
+//  *         - NULL_POINTER  if array is NULL
+//  *         - EMPTY         if array->base.len == 0
+//  *
+//  * @code
+//  *     int32_expect_t r = int32_array_sum(arr);
+//  *     // For arr containing [70000, -10000, 40000]:
+//  *     // r.has_value == true, r.u.value == 100000.
+//  * @endcode
+//  */
+// int32_expect_t int32_array_sum(const int32_array_t* array);
 // -------------------------------------------------------------------------------- 
 
 /**
@@ -1315,6 +1315,39 @@ error_code_t print_int32_array(const int32_array_t* array, FILE* stream);
  */
 bool int32_array_equal(const int32_array_t* a,
                        const int32_array_t* b);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Add a scalar value to every element of a int32 array.
+ *
+ * This function adds the specified scalar value to each element in the
+ * array in place. The operation is applied to all elements currently
+ * stored in the array and preserves the array length and capacity.
+ *
+ * Internally, this function delegates to the generic add_scalar_array()
+ * routine, which may utilize SIMD-accelerated paths when available,
+ * falling back to scalar iteration otherwise.
+ *
+ * @param array Pointer to the int32 array to modify.
+ * @param value Scalar value to add to each element.
+ *
+ * @return error_code_t
+ * @retval NO_ERROR       The operation completed successfully.
+ * @retval NULL_POINTER   If @p array is NULL.
+ * @retval EMPTY          If the array contains no elements.
+ * @retval TYPE_MISMATCH  If the underlying dtype does not match int32_TYPE.
+ *
+ * @note
+ * The addition uses standard unsigned 8-bit arithmetic. If the result of
+ * adding @p value to an element exceeds int32_MAX, it wraps around modulo 256.
+ *
+ * @warning
+ * This function modifies the array in place. No copy of the data is made.
+ *
+ * @see add_scalar_array
+ * @see int32_array_sum
+ */
+error_code_t int32_add_scalar_array(int32_array_t* array, int32_t value);
 // ================================================================================ 
 // ================================================================================ 
 
@@ -2759,45 +2792,45 @@ int32_expect_t int32_matrix_min(const int32_matrix_t* mat);
 int32_expect_t int32_matrix_max(const int32_matrix_t* mat);
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Compute the sum of all elements in a int32 matrix.
- *
- * This function computes the sum of all elements in a matrix of type
- * `int32_matrix_t`. It delegates traversal to the generic `matrix_sum()`
- * function and accumulates the result using unsigned 32-bit arithmetic.
- *
- * The accumulator is initialized to zero and updated for each element in
- * the matrix using standard C unsigned integer addition.
- *
- * @param mat Pointer to the int32 matrix.
- *
- * @return int32_expect_t
- * @retval has_value = true   The sum was successfully computed and is stored in u.value.
- * @retval has_value = false  An error occurred, and the error code is stored in u.error.
- *
- * @errors
- * - NULL_POINTER   if @p mat is NULL.
- * - TYPE_MISMATCH  if the matrix dtype is not int32_TYPE.
- * - EMPTY          if the matrix contains no elements:
- *                  - dense: rows * cols == 0
- *                  - sparse: nnz == 0
- * - INVALID_ARG    if the matrix format is not recognized.
- * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
- *
- * @note
- * For dense matrices, all elements (rows * cols) are included in the sum.
- * For sparse matrices (COO, CSR, CSC), only stored elements (nnz) are included.
- *
- * @warning
- * This function uses standard unsigned 32-bit arithmetic. If the mathematical
- * sum exceeds `int32_MAX`, the result will wrap around modulo 2^32. Overflow
- * is not detected or reported.
- *
- * @see matrix_sum
- * @see int32_matrix_min
- * @see int32_matrix_max
- */
-int32_expect_t int32_matrix_sum(const int32_matrix_t* mat);
+// /**
+//  * @brief Compute the sum of all elements in a int32 matrix.
+//  *
+//  * This function computes the sum of all elements in a matrix of type
+//  * `int32_matrix_t`. It delegates traversal to the generic `matrix_sum()`
+//  * function and accumulates the result using unsigned 32-bit arithmetic.
+//  *
+//  * The accumulator is initialized to zero and updated for each element in
+//  * the matrix using standard C unsigned integer addition.
+//  *
+//  * @param mat Pointer to the int32 matrix.
+//  *
+//  * @return int32_expect_t
+//  * @retval has_value = true   The sum was successfully computed and is stored in u.value.
+//  * @retval has_value = false  An error occurred, and the error code is stored in u.error.
+//  *
+//  * @errors
+//  * - NULL_POINTER   if @p mat is NULL.
+//  * - TYPE_MISMATCH  if the matrix dtype is not int32_TYPE.
+//  * - EMPTY          if the matrix contains no elements:
+//  *                  - dense: rows * cols == 0
+//  *                  - sparse: nnz == 0
+//  * - INVALID_ARG    if the matrix format is not recognized.
+//  * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
+//  *
+//  * @note
+//  * For dense matrices, all elements (rows * cols) are included in the sum.
+//  * For sparse matrices (COO, CSR, CSC), only stored elements (nnz) are included.
+//  *
+//  * @warning
+//  * This function uses standard unsigned 32-bit arithmetic. If the mathematical
+//  * sum exceeds `int32_MAX`, the result will wrap around modulo 2^32. Overflow
+//  * is not detected or reported.
+//  *
+//  * @see matrix_sum
+//  * @see int32_matrix_min
+//  * @see int32_matrix_max
+//  */
+// int32_expect_t int32_matrix_sum(const int32_matrix_t* mat);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

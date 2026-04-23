@@ -387,6 +387,35 @@ bool uint8_array_equal(const uint8_array_t* a,
 }
 // -------------------------------------------------------------------------------- 
 
+error_code_t uint8_array_sum(const uint8_array_t* arr, uint8_t* sum) {
+    if (arr == NULL || sum == NULL) {
+        return NULL_POINTER;
+    }
+
+    if (arr->len == 0u) {
+        return PRECONDITION_FAIL;
+    }
+
+    *sum = 0u;
+
+    for (size_t i = 0u; i < arr->len; ++i) {
+        uint8_t value = 0u;
+        error_code_t err = get_uint8_array_index(arr, i, &value);
+        if (err != NO_ERROR) {
+            return err;
+        }
+
+        if (*sum > (uint8_t)(UINT8_MAX - value)) {
+            return NUMERIC_OVERFLOW;
+        }
+
+        *sum = (uint8_t)(*sum + value);
+    }
+
+    return NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
 static void _add_scalar_uint8(void* element, const void* scalar) {
     uint8_t*       e = (uint8_t*)element;
     const uint8_t* s = (const uint8_t*)scalar;

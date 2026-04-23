@@ -619,33 +619,33 @@ float_expect_t float_array_max(const float_array_t* array);
 
 // --------------------------------------------------------------------------------
 
-/**
- * @brief Sum all elements and return the result as a float.
- *
- * Iterates over every element and accumulates the total in a float. The
- * result is subject to the usual IEEE 754 rounding: for large arrays with
- * widely varying magnitudes, consider using Kahan summation externally if
- * accuracy is critical.
- *
- * NaN propagation: if any element is NaN the sum will be NaN.
- *
- * @param array  Pointer to the array to sum. Must not be NULL.
- *
- * @return float_expect_t with has_value true and u.value == the sum on
- *         success. On failure, has_value is false and u.error is one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if array->base.len == 0
- *
- * @code
- *     push_back_float_array(arr,  1.0f);
- *     push_back_float_array(arr, -2.5f);
- *     push_back_float_array(arr,  3.5f);
- *
- *     float_expect_t r = float_array_sum(arr);
- *     // r.has_value == true, r.u.value == 2.0f.
- * @endcode
- */
-float_expect_t float_array_sum(const float_array_t* array);
+// /**
+//  * @brief Sum all elements and return the result as a float.
+//  *
+//  * Iterates over every element and accumulates the total in a float. The
+//  * result is subject to the usual IEEE 754 rounding: for large arrays with
+//  * widely varying magnitudes, consider using Kahan summation externally if
+//  * accuracy is critical.
+//  *
+//  * NaN propagation: if any element is NaN the sum will be NaN.
+//  *
+//  * @param array  Pointer to the array to sum. Must not be NULL.
+//  *
+//  * @return float_expect_t with has_value true and u.value == the sum on
+//  *         success. On failure, has_value is false and u.error is one of:
+//  *         - NULL_POINTER  if array is NULL
+//  *         - EMPTY         if array->base.len == 0
+//  *
+//  * @code
+//  *     push_back_float_array(arr,  1.0f);
+//  *     push_back_float_array(arr, -2.5f);
+//  *     push_back_float_array(arr,  3.5f);
+//  *
+//  *     float_expect_t r = float_array_sum(arr);
+//  *     // r.has_value == true, r.u.value == 2.0f.
+//  * @endcode
+//  */
+// float_expect_t float_array_sum(const float_array_t* array);
 
 // --------------------------------------------------------------------------------
 
@@ -1051,6 +1051,39 @@ error_code_t print_float_array(const float_array_t* array, FILE* stream);
  */
 bool float_array_equal(const float_array_t* a,
                        const float_array_t* b);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Add a scalar value to every element of a float array.
+ *
+ * This function adds the specified scalar value to each element in the
+ * array in place. The operation is applied to all elements currently
+ * stored in the array and preserves the array length and capacity.
+ *
+ * Internally, this function delegates to the generic add_scalar_array()
+ * routine, which may utilize SIMD-accelerated paths when available,
+ * falling back to scalar iteration otherwise.
+ *
+ * @param array Pointer to the float array to modify.
+ * @param value Scalar value to add to each element.
+ *
+ * @return error_code_t
+ * @retval NO_ERROR       The operation completed successfully.
+ * @retval NULL_POINTER   If @p array is NULL.
+ * @retval EMPTY          If the array contains no elements.
+ * @retval TYPE_MISMATCH  If the underlying dtype does not match float_TYPE.
+ *
+ * @note
+ * The addition uses standard unsigned 8-bit arithmetic. If the result of
+ * adding @p value to an element exceeds float_MAX, it wraps around modulo 256.
+ *
+ * @warning
+ * This function modifies the array in place. No copy of the data is made.
+ *
+ * @see add_scalar_array
+ * @see float_array_sum
+ */
+error_code_t float_add_scalar_array(float_array_t* array, float_t value);
 // ================================================================================ 
 // ================================================================================ 
 
