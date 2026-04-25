@@ -16,6 +16,7 @@
 
 #include "c_dtypes.h"
 #include "c_allocator.h"
+#include "c_error.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -30,18 +31,27 @@ extern "C" {
 // ================================================================================ 
 // STRUCTS AND DERIVED DATA TYPES 
 
+typedef enum {
+    TENSOR_FIXED_SHAPE,   /* N-D fixed capacity; all slots zero-initialised;
+                             len == alloc == product of shape at all times     */
+    TENSOR_DYNAMIC_1D     /* 1-D only; len tracks populated count;
+                             growth flag controls automatic reallocation       */
+} tensor_mode_t;
+
 typedef struct {
-    uint8_t*           data;        // type-erased element buffer
-    size_t             len;         // total number of elements (product of shape)
-    size_t             alloc;       // allocated capacity in elements
-    size_t             data_size;   // bytes per element, cached from dtype
-    dtype_id_t         dtype;       // runtime type identity
-    bool               growth;      // whether data buffer may grow
-    allocator_vtable_t alloc_v;     // allocator for all memory ops
-    uint32_t           ndim;        // number of dimensions
-    size_t*            shape;       // points into meta[] — ndim elements
-    size_t*            strides;     // points into meta[] — ndim elements, in bytes
-    size_t             meta[];      // FAM: 2*ndim elements, shape then strides
+    uint8_t*           data;        /* type-erased element buffer              */
+    size_t             len;         /* FIXED:   == alloc (all slots live)
+                                       DYNAMIC: populated element count        */
+    size_t             alloc;       /* allocated capacity in elements          */
+    size_t             data_size;   /* bytes per element, cached from dtype    */
+    dtype_id_t         dtype;       /* runtime type identity                   */
+    tensor_mode_t      mode;        /* FIXED_SHAPE or DYNAMIC_1D               */
+    bool               growth;      /* DYNAMIC_1D only: auto-grow when full    */
+    allocator_vtable_t alloc_v;     /* allocator for all memory operations     */
+    uint8_t            ndim;        /* number of dimensions (max 255)          */
+    size_t*            shape;       /* points to meta[0]                       */
+    size_t*            strides;     /* points to meta[ndim]                    */
+    size_t             meta[];      /* FAM: shape[0..ndim-1], strides[0..ndim-1] */
 } tensor_t;
 // -------------------------------------------------------------------------------- 
 
@@ -57,15 +67,73 @@ typedef struct {
 // ================================================================================ 
 // INITIALIZATION AND TEARDOWN
 
-
+/**
+ * @brief Initialize a new fixed-shape tensor.
+ *
+ * Allocates the tensor_t struct (including the inline FAM block holding
+ * shape and strides) and its data buffer through the provided allocator
+ * vtable. The dtype must be registered in the dtype registry before
+ * calling this function. data_size is resolved from the registry once at
+ * init and cached on the struct — no further registry lookups are
+ * performed during the lifetime of the tensor.
+ *
+ * The tensor is created in TENSOR_FIXED_SHAPE mode. All allocated slots
+ * are considered live at construction time, so the data buffer is
+ * zero-initialised. len is set equal to alloc, which equals the product
+ * of all shape dimensions. growth is set to false. To create a
+ * TENSOR_DYNAMIC_1D tensor, initialise with ndim == 1 and then set
+ * mode and growth via the typed wrapper init function (e.g. init_array).
+ *
+ * Strides are computed in C-order (row-major):
+ *   strides[ndim - 1] = data_size
+ *   strides[i]        = strides[i + 1] * shape[i + 1]   for i < ndim - 1
+ *
+ * @param ndim     Number of dimensions. Must be > 0. Values above a few
+ *                 dozen are unusual in practice; the field is uint8_t so
+ *                 the maximum is 255.
+ * @param shape    Array of ndim dimension sizes. Must not be NULL.
+ *                 Each shape[i] must be > 0. The product of all shape
+ *                 dimensions must not overflow size_t.
+ * @param dtype    Type identifier. Must not be UNKNOWN_TYPE and must be
+ *                 registered in the dtype registry before this call.
+ * @param alloc_v  Allocator vtable used for all memory operations.
+ *                 alloc_v.allocate must not be NULL.
+ *
+ * @return tensor_expect_t with has_value true and a valid tensor_t* on
+ *         success. On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER    if alloc_v.allocate is NULL or shape is NULL
+ *         - INVALID_ARG     if ndim is 0 or any shape[i] is 0
+ *         - INVALID_ARG     if dtype is UNKNOWN_TYPE
+ *         - ILLEGAL_STATE   if the dtype registry could not be initialised
+ *         - TYPE_MISMATCH   if dtype is not registered in the dtype registry
+ *         - LENGTH_OVERFLOW if the product of shape dimensions overflows
+ *                           size_t, or if len * data_size overflows size_t
+ *         - BAD_ALLOC       if the allocator fails to allocate the struct
+ *                           and FAM metadata block
+ *         - OUT_OF_MEMORY   if the allocator fails to allocate the data
+ *                           buffer
+ */
 tensor_expect_t init_tensor(uint8_t            ndim,
                             const size_t*      shape,
                             dtype_id_t         dtype,
-                            bool               growth,
                             allocator_vtable_t alloc_v);
-
 // -------------------------------------------------------------------------------- 
 
+/**
+ * @brief Return a tensor's memory back to its allocator.
+ *
+ * Returns the data buffer and the tensor_t struct (including the inline
+ * FAM block holding shape and strides) to the allocator via
+ * return_element. Because shape and strides point into the FAM which is
+ * contiguous with the struct header, both are freed by the single
+ * return_element call on the struct — there is no separate call needed
+ * for shape or strides.
+ *
+ * This does NOT free or destroy the allocator itself. After this call
+ * the pointer must not be used.
+ *
+ * @param t  Pointer to the tensor to return. Silently ignored if NULL.
+ */
 void return_tensor(tensor_t* t);
 
 // ================================================================================ 
@@ -277,15 +345,24 @@ error_code_t clear_tensor(tensor_t* t);
 // --------------------------------------------------------------------------------
 
 /**
- * @brief Overwrite the element at a flat index without changing len.
+ * @brief Overwrite the element at a flat index without changing len or alloc.
  *
- * Copies exactly data_size bytes from data into the slot at index, replacing
- * the current value. The flat index addresses elements in the order they are
- * laid out in the data buffer — for a C-order tensor this is row-major order.
- * The tensor length is unchanged.
+ * Copies exactly data_size bytes from data into the slot at index in the
+ * tensor's internal buffer. The flat index addresses elements in the order
+ * they are laid out in memory — for a C-order tensor this is row-major order.
+ *
+ * The bound check depends on mode:
+ *   TENSOR_FIXED_SHAPE: index must be < t->alloc. All allocated slots are
+ *                       always live regardless of len, so this function
+ *                       remains valid after clear_tensor.
+ *   TENSOR_DYNAMIC_1D: index must be < t->len. Only populated slots are
+ *                       addressable; slots in [len, alloc) are off-limits
+ *                       until exposed by a push operation.
  *
  * @param t      Pointer to the target tensor. Must not be NULL.
- * @param index  Zero-based flat index of the slot to overwrite. Must be < t->len.
+ * @param index  Zero-based flat index of the slot to overwrite.
+ *               FIXED_SHAPE: must be < t->alloc.
+ *               DYNAMIC_1D:  must be < t->len.
  * @param data   Pointer to the replacement value. Must not be NULL.
  *               Must point to at least t->data_size bytes.
  * @param dtype  Type identifier. Must match t->dtype.
@@ -293,7 +370,8 @@ error_code_t clear_tensor(tensor_t* t);
  * @return NO_ERROR on success, or one of:
  *         - NULL_POINTER  if t or data is NULL
  *         - TYPE_MISMATCH if dtype != t->dtype
- *         - OUT_OF_BOUNDS if index >= t->len
+ *         - OUT_OF_BOUNDS if index >= t->alloc (FIXED_SHAPE) or
+ *                                   index >= t->len  (DYNAMIC_1D)
  */
 error_code_t set_tensor_index(tensor_t*   t,
                               size_t      index,
@@ -303,16 +381,23 @@ error_code_t set_tensor_index(tensor_t*   t,
 // --------------------------------------------------------------------------------
 
 /**
- * @brief Overwrite the element at an N-dimensional index without changing len.
+ * @brief Overwrite the element at an N-dimensional index without changing
+ *        len or alloc.
  *
- * Resolves the N-dimensional index into a flat byte offset using the tensor's
- * stride array, then copies exactly data_size bytes from data into that slot.
- * This is the natural access pattern for matrix and higher-dimensional tensor
- * operations. The tensor length is unchanged.
+ * Resolves the N-dimensional index into a flat byte offset using the
+ * tensor's stride array, then copies exactly data_size bytes from data
+ * into that slot. This is the natural access pattern for matrix and
+ * higher-dimensional tensor operations and is consistent with the
+ * C-order (row-major) strides computed at init time.
+ *
+ * This function is only valid for TENSOR_FIXED_SHAPE tensors. A
+ * TENSOR_DYNAMIC_1D tensor has no row or column structure and must be
+ * accessed via set_tensor_index instead.
  *
  * @param t      Pointer to the target tensor. Must not be NULL.
- * @param idx    Array of ndim indices, one per dimension. Must not be NULL.
- *               idx[i] must be < t->shape[i] for all i.
+ * @param idx    Array of t->ndim indices, one per dimension. Must not be
+ *               NULL. idx[i] must be < t->shape[i] for all i in
+ *               [0, t->ndim).
  * @param data   Pointer to the replacement value. Must not be NULL.
  *               Must point to at least t->data_size bytes.
  * @param dtype  Type identifier. Must match t->dtype.
@@ -320,6 +405,7 @@ error_code_t set_tensor_index(tensor_t*   t,
  * @return NO_ERROR on success, or one of:
  *         - NULL_POINTER  if t, idx, or data is NULL
  *         - TYPE_MISMATCH if dtype != t->dtype
+ *         - ILLEGAL_STATE if t->mode != TENSOR_FIXED_SHAPE
  *         - OUT_OF_BOUNDS if any idx[i] >= t->shape[i]
  */
 error_code_t set_tensor_nd_index(tensor_t*      t,
@@ -334,12 +420,22 @@ error_code_t set_tensor_nd_index(tensor_t*      t,
  *
  * Copies exactly t->data_size bytes from the tensor's internal buffer at
  * the given flat index into the caller-provided output buffer. The flat
- * index addresses elements in the order they are laid out in the data
- * buffer — for a C-order tensor this is row-major order.
+ * index addresses elements in the order they are laid out in memory —
+ * for a C-order tensor this is row-major order. The tensor is not
+ * modified.
+ *
+ * The bound check depends on mode:
+ *   TENSOR_FIXED_SHAPE: index must be < t->alloc. All allocated slots are
+ *                       always live regardless of len, so this function
+ *                       remains valid after clear_tensor.
+ *   TENSOR_DYNAMIC_1D: index must be < t->len. Only populated slots are
+ *                       addressable; slots in [len, alloc) are off-limits
+ *                       until exposed by a push operation.
  *
  * @param t      Pointer to the source tensor. Must not be NULL.
  * @param index  Zero-based flat index of the element to retrieve.
- *               Must be < t->len.
+ *               FIXED_SHAPE: must be < t->alloc.
+ *               DYNAMIC_1D:  must be < t->len.
  * @param out    Caller-provided buffer to copy the element into.
  *               Must not be NULL. Must be at least t->data_size bytes.
  * @param dtype  Type identifier. Must match t->dtype.
@@ -347,7 +443,8 @@ error_code_t set_tensor_nd_index(tensor_t*      t,
  * @return NO_ERROR on success, or one of:
  *         - NULL_POINTER  if t or out is NULL
  *         - TYPE_MISMATCH if dtype != t->dtype
- *         - OUT_OF_BOUNDS if index >= t->len
+ *         - OUT_OF_BOUNDS if index >= t->alloc (FIXED_SHAPE) or
+ *                                   index >= t->len  (DYNAMIC_1D)
  */
 error_code_t get_tensor_index(const tensor_t* t,
                               size_t          index,
@@ -362,11 +459,18 @@ error_code_t get_tensor_index(const tensor_t* t,
  * Resolves the N-dimensional index into a flat byte offset using the
  * tensor's stride array, then copies exactly data_size bytes from that
  * slot into the caller-provided output buffer. This is the natural access
- * pattern for matrix and higher-dimensional tensor operations.
+ * pattern for matrix and higher-dimensional tensor operations and is
+ * consistent with the C-order (row-major) strides computed at init time.
+ * The tensor is not modified.
+ *
+ * This function is only valid for TENSOR_FIXED_SHAPE tensors. A
+ * TENSOR_DYNAMIC_1D tensor has no row or column structure and must be
+ * accessed via get_tensor_index instead.
  *
  * @param t      Pointer to the source tensor. Must not be NULL.
- * @param idx    Array of ndim indices, one per dimension. Must not be NULL.
- *               idx[i] must be < t->shape[i] for all i.
+ * @param idx    Array of t->ndim indices, one per dimension. Must not be
+ *               NULL. idx[i] must be < t->shape[i] for all i in
+ *               [0, t->ndim).
  * @param out    Caller-provided buffer to copy the element into.
  *               Must not be NULL. Must be at least t->data_size bytes.
  * @param dtype  Type identifier. Must match t->dtype.
@@ -374,6 +478,7 @@ error_code_t get_tensor_index(const tensor_t* t,
  * @return NO_ERROR on success, or one of:
  *         - NULL_POINTER  if t, idx, or out is NULL
  *         - TYPE_MISMATCH if dtype != t->dtype
+ *         - ILLEGAL_STATE if t->mode != TENSOR_FIXED_SHAPE
  *         - OUT_OF_BOUNDS if any idx[i] >= t->shape[i]
  */
 error_code_t get_tensor_nd_index(const tensor_t* t,

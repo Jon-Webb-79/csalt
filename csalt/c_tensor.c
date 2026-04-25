@@ -21,7 +21,6 @@
 tensor_expect_t init_tensor(uint8_t            ndim,
                             const size_t*      shape,
                             dtype_id_t         dtype,
-                            bool               growth,
                             allocator_vtable_t alloc_v) {
 
     // ---- input validation ------------------------------------------------
@@ -77,8 +76,11 @@ tensor_expect_t init_tensor(uint8_t            ndim,
     for (size_t i = ndim - 1u; i > 0u; i--)
         t->strides[i - 1u] = t->strides[i] * t->shape[i];
 
-    // ---- allocate data buffer --------------------------------------------
-    void_ptr_expect_t data_result = alloc_v.allocate(alloc_v.ctx, len * data_size, false);
+    // ---- allocate and zero-initialise data buffer ------------------------
+    // TENSOR_FIXED_SHAPE: all slots are considered live at init time so the
+    // buffer must be zeroed — there is no push_back mechanism to signal which
+    // slots have been written.
+    void_ptr_expect_t data_result = alloc_v.allocate(alloc_v.ctx, len * data_size, true);
     if (data_result.has_value == false) {
         alloc_v.return_element(alloc_v.ctx, t);
         return (tensor_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
@@ -90,7 +92,8 @@ tensor_expect_t init_tensor(uint8_t            ndim,
     t->alloc     = len;
     t->data_size = data_size;
     t->dtype     = dtype;
-    t->growth    = growth;
+    t->mode      = TENSOR_FIXED_SHAPE;
+    t->growth    = false;   /* ignored for TENSOR_FIXED_SHAPE; set defensively */
     t->alloc_v   = alloc_v;
     t->ndim      = ndim;
 
@@ -282,7 +285,13 @@ error_code_t clear_tensor(tensor_t* t) {
     if (t == NULL) return NULL_POINTER;
 
     memset(t->data, 0, t->alloc * t->data_size);
-    t->len = 0u;
+
+    /* DYNAMIC_1D: reset populated count to zero.
+     * FIXED_SHAPE: len == alloc always; zeroing the buffer does not
+     *              change the number of live slots. */
+    if (t->mode == TENSOR_DYNAMIC_1D)
+        t->len = 0u;
+
     return NO_ERROR;
 }
 
@@ -294,7 +303,12 @@ error_code_t set_tensor_index(tensor_t*   t,
                               dtype_id_t  dtype) {
     if (t == NULL || data == NULL) return NULL_POINTER;
     if (dtype != t->dtype)         return TYPE_MISMATCH;
-    if (index >= t->len)           return OUT_OF_BOUNDS;
+
+    /* Bound check depends on mode:
+     *   DYNAMIC_1D:   only populated slots [0, len) are addressable
+     *   FIXED_SHAPE:  all allocated slots  [0, alloc) are addressable */
+    size_t limit = (t->mode == TENSOR_DYNAMIC_1D) ? t->len : t->alloc;
+    if (index >= limit) return OUT_OF_BOUNDS;
 
     memcpy(t->data + index * t->data_size, data, t->data_size);
     return NO_ERROR;
@@ -309,7 +323,10 @@ error_code_t set_tensor_nd_index(tensor_t*      t,
     if (t == NULL || idx == NULL || data == NULL) return NULL_POINTER;
     if (dtype != t->dtype)                        return TYPE_MISMATCH;
 
-    // Validate each dimension index and compute byte offset via strides
+    /* N-D indexing is only meaningful for fixed-shape tensors.
+     * A dynamic 1-D array has no row/column structure. */
+    if (t->mode != TENSOR_FIXED_SHAPE) return ILLEGAL_STATE;
+
     size_t offset = 0u;
     for (uint8_t i = 0u; i < t->ndim; i++) {
         if (idx[i] >= t->shape[i]) return OUT_OF_BOUNDS;
@@ -319,7 +336,6 @@ error_code_t set_tensor_nd_index(tensor_t*      t,
     memcpy(t->data + offset, data, t->data_size);
     return NO_ERROR;
 }
-
 // --------------------------------------------------------------------------------
 
 error_code_t get_tensor_index(const tensor_t* t,
@@ -328,7 +344,9 @@ error_code_t get_tensor_index(const tensor_t* t,
                               dtype_id_t      dtype) {
     if (t == NULL || out == NULL) return NULL_POINTER;
     if (dtype != t->dtype)        return TYPE_MISMATCH;
-    if (index >= t->len)          return OUT_OF_BOUNDS;
+
+    size_t limit = (t->mode == TENSOR_DYNAMIC_1D) ? t->len : t->alloc;
+    if (index >= limit) return OUT_OF_BOUNDS;
 
     memcpy(out, t->data + index * t->data_size, t->data_size);
     return NO_ERROR;
@@ -343,7 +361,8 @@ error_code_t get_tensor_nd_index(const tensor_t* t,
     if (t == NULL || idx == NULL || out == NULL) return NULL_POINTER;
     if (dtype != t->dtype)                       return TYPE_MISMATCH;
 
-    // Validate each dimension index and compute byte offset via strides
+    if (t->mode != TENSOR_FIXED_SHAPE) return ILLEGAL_STATE;
+
     size_t offset = 0u;
     for (uint8_t i = 0u; i < t->ndim; i++) {
         if (idx[i] >= t->shape[i]) return OUT_OF_BOUNDS;
@@ -396,6 +415,7 @@ tensor_expect_t copy_tensor(const tensor_t*    src,
     dst->alloc     = src->alloc;
     dst->data_size = src->data_size;
     dst->dtype     = src->dtype;
+    dst->mode      = src->mode;     /* was missing */
     dst->growth    = src->growth;
     dst->ndim      = src->ndim;
     dst->alloc_v   = alloc_v;

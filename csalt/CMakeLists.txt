@@ -53,22 +53,23 @@ set(CSALT_SOURCES
   c_allocator.c
   c_string.c
   c_error.c
-  c_array.c
-  c_dict.c
-  c_uint8.c
-  c_int8.c
-  c_uint16.c
-  c_int16.c
-  c_uint32.c
-  c_int32.c
-  c_uint64.c
-  c_int64.c
-  c_float.c
-  c_double.c
-  c_ldouble.c
-  c_list.c
-  c_tree.c
-  c_matrix.c
+  c_tensor.c
+  # c_array.c
+  # c_dict.c
+  # c_uint8.c
+  # c_int8.c
+  # c_uint16.c
+  # c_int16.c
+  # c_uint32.c
+  # c_int32.c
+  # c_uint64.c
+  # c_int64.c
+  # c_float.c
+  # c_double.c
+  # c_ldouble.c
+  # c_list.c
+  # c_tree.c
+  # c_matrix.c
 )
 
 set(CSALT_PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
