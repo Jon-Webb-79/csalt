@@ -182,6 +182,30 @@ tensor_expect_t init_tensor_array(size_t             capacity,
                                   dtype_id_t         dtype,
                                   bool               growth,
                                   allocator_vtable_t alloc_v);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Create a deep copy of src into a newly initialized tensor.
+ *
+ * Allocates a new tensor_t (including its FAM metadata block) and a new
+ * data buffer through alloc_v, then copies all len elements and the full
+ * shape and strides arrays from src. The copy has the same dtype, ndim,
+ * shape, strides, data_size, and growth setting as src. The caller is
+ * responsible for calling return_tensor on the returned tensor when done.
+ * The copy may use a different allocator than src.
+ *
+ * @param src      Pointer to the source tensor. Must not be NULL.
+ * @param alloc_v  Allocator vtable to use for the new tensor's memory.
+ *                 alloc_v.allocate must not be NULL.
+ *
+ * @return tensor_expect_t with has_value true and a valid tensor_t* on success.
+ *         On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER  if src is NULL or alloc_v.allocate is NULL
+ *         - BAD_ALLOC     if the allocator fails to allocate the new header
+ *         - OUT_OF_MEMORY if the allocator fails to allocate the new data buffer
+ */
+tensor_expect_t copy_tensor(const tensor_t*    src,
+                            allocator_vtable_t alloc_v);
 // ================================================================================ 
 // ================================================================================ 
 // INTROSPECTION
@@ -418,6 +442,103 @@ error_code_t tensor_shape_str(const tensor_t* t, char* buf, size_t buf_len);
  */
 error_code_t clear_tensor(tensor_t* t);
 
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Append all elements of src to the back of dst.
+ *
+ * Copies exactly src->len * src->data_size bytes from src's data buffer
+ * into the first available slot in dst's data buffer and increments
+ * dst->len by src->len. Both tensors must be in ARRAY_STRUCT mode and
+ * must share the same dtype.
+ *
+ * Rather than appending elements one at a time, the function computes the
+ * total capacity needed upfront and performs at most one reallocation
+ * before the copy. When growth is required the new allocation is the
+ * larger of the tiered growth target (_compute_new_alloc) and the exact
+ * capacity needed, so that small concatenations still benefit from the
+ * tiered growth headroom and large concatenations are never undersized.
+ *
+ * If src is empty (src->len == 0) the function returns NO_ERROR without
+ * modifying dst.
+ *
+ * @param dst    Pointer to the destination tensor. Must not be NULL.
+ *               Must have mode == ARRAY_STRUCT.
+ *               Must have the same dtype as src.
+ *               If dst is full and growth is true, its data buffer will
+ *               be reallocated to accommodate all of src's elements.
+ * @param src    Pointer to the source tensor. Must not be NULL.
+ *               Must have mode == ARRAY_STRUCT.
+ *               Must have the same dtype as dst.
+ *               src and dst must not refer to the same tensor.
+ * @param dtype  Type identifier. Must match dst->dtype and src->dtype.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER      if dst or src is NULL
+ *         - PRECONDITION_FAIL if dst->mode != ARRAY_STRUCT or
+ *                             src->mode != ARRAY_STRUCT
+ *         - TYPE_MISMATCH     if dtype != dst->dtype or
+ *                             dst->dtype != src->dtype
+ *         - LENGTH_OVERFLOW   if dst->len + src->len overflows size_t
+ *         - CAPACITY_OVERFLOW if the combined length exceeds dst->alloc
+ *                             and growth is false, or if the allocator
+ *                             does not support reallocation
+ *         - OUT_OF_MEMORY     if reallocation fails
+ */
+error_code_t concat_tensor_array(tensor_t*       dst,
+                                 const tensor_t* src,
+                                 dtype_id_t      dtype);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a new dynamic 1-D tensor containing a copy of the elements
+ *        in src at positions [start, end).
+ *
+ * Allocates a new tensor_t and data buffer, copies exactly
+ * (end - start) * src->data_size bytes from src's buffer starting at
+ * position start, and returns the result as an independent ARRAY_STRUCT
+ * tensor. The slice is a deep copy — mutations to the slice do not affect
+ * src and vice versa.
+ *
+ * The slice is always returned with growth == false and alloc == len.
+ * The caller may enable growth after construction if dynamic behaviour
+ * is needed.
+ *
+ * The range [start, end) is half-open: start is inclusive, end is
+ * exclusive. Both start and end must be <= src->len, and start must be
+ * strictly less than end. A zero-length slice (start == end) is
+ * considered invalid and returns INVALID_ARG.
+ *
+ * If alloc_v.allocate is NULL the allocator is inherited from src,
+ * so the slice is managed by the same allocator as the source tensor.
+ * The caller is responsible for calling return_tensor on the returned
+ * tensor when it is no longer needed.
+ *
+ * @param src     Pointer to the source tensor. Must not be NULL.
+ *                Must have mode == ARRAY_STRUCT.
+ * @param start   Zero-based index of the first element to include.
+ *                Must be < end and <= src->len.
+ * @param end     Zero-based index one past the last element to include.
+ *                Must be > start and <= src->len.
+ * @param alloc_v Allocator vtable for the new tensor's memory. If
+ *                alloc_v.allocate is NULL the allocator is inherited
+ *                from src.
+ *
+ * @return tensor_expect_t with has_value true and a valid tensor_t* on
+ *         success. On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER      if src is NULL
+ *         - PRECONDITION_FAIL if src->mode != ARRAY_STRUCT
+ *         - OUT_OF_BOUNDS     if start > src->len or end > src->len
+ *         - INVALID_ARG       if start >= end
+ *         - BAD_ALLOC         if the allocator fails to allocate the
+ *                             struct and FAM metadata block
+ *         - OUT_OF_MEMORY     if the allocator fails to allocate the
+ *                             data buffer
+ */
+tensor_expect_t slice_tensor_array(const tensor_t*    src,
+                                   size_t             start,
+                                   size_t             end,
+                                   allocator_vtable_t alloc_v);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA
@@ -775,31 +896,6 @@ error_code_t get_tensor_nd_index(const tensor_t* t,
                                  const size_t*   idx,
                                  void*           out,
                                  dtype_id_t      dtype);
-
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Create a deep copy of src into a newly initialized tensor.
- *
- * Allocates a new tensor_t (including its FAM metadata block) and a new
- * data buffer through alloc_v, then copies all len elements and the full
- * shape and strides arrays from src. The copy has the same dtype, ndim,
- * shape, strides, data_size, and growth setting as src. The caller is
- * responsible for calling return_tensor on the returned tensor when done.
- * The copy may use a different allocator than src.
- *
- * @param src      Pointer to the source tensor. Must not be NULL.
- * @param alloc_v  Allocator vtable to use for the new tensor's memory.
- *                 alloc_v.allocate must not be NULL.
- *
- * @return tensor_expect_t with has_value true and a valid tensor_t* on success.
- *         On failure, has_value is false and u.error is one of:
- *         - NULL_POINTER  if src is NULL or alloc_v.allocate is NULL
- *         - BAD_ALLOC     if the allocator fails to allocate the new header
- *         - OUT_OF_MEMORY if the allocator fails to allocate the new data buffer
- */
-tensor_expect_t copy_tensor(const tensor_t*    src,
-                            allocator_vtable_t alloc_v);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

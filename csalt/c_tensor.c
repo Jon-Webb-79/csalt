@@ -16,6 +16,75 @@
 #include "c_tensor.h"
 // ================================================================================ 
 // ================================================================================ 
+
+// ================================================================================ 
+// ================================================================================ 
+// Internal growth strategy
+//
+// Tiered to avoid runaway allocation at large sizes while maintaining fast
+// ramp-up at small sizes:
+//   0 elements       -> 1
+//   < 1024 elements  -> 2x
+//   < 8192 elements  -> 1.5x  (alloc + alloc/2)
+//   < 65536 elements -> 1.25x (alloc + alloc/4)
+//   >= 65536 elements -> linear increment of 256
+// ================================================================================
+
+static size_t _compute_new_alloc(size_t current) {
+    if (current == 0u)    return 1u;
+    if (current < 1024u)  return current * 2u;
+    if (current < 8192u)  return current + current / 2u;
+    if (current < 65536u) return current + current / 4u;
+    return current + 256u;
+}
+
+// ================================================================================
+// Internal grow helper
+//
+// Reallocates the data buffer to new_alloc elements using the cached data_size.
+// Returns NO_ERROR on success. On failure the array is left untouched.
+// ================================================================================
+
+static error_code_t _grow_array(tensor_t* t, size_t new_alloc) {
+    /* Overflow guard: new_alloc * data_size must not wrap */
+    if (new_alloc > SIZE_MAX / t->data_size) return LENGTH_OVERFLOW;
+
+    size_t old_bytes = t->alloc * t->data_size;
+    size_t new_bytes = new_alloc    * t->data_size;
+
+    void_ptr_expect_t result = t->alloc_v.reallocate(
+        t->alloc_v.ctx,
+        t->data,
+        old_bytes,
+        new_bytes,
+        false
+    );
+
+    if (result.has_value == false) return OUT_OF_MEMORY;
+
+    t->data  = (uint8_t*)result.u.value;
+    t->alloc = new_alloc;
+    return NO_ERROR;
+}
+
+// ================================================================================
+// Internal capacity helper
+//
+// Ensures at least one free slot exists, growing if permitted.
+// Returns NO_ERROR when there is room to write, or an error code otherwise.
+// ================================================================================
+
+static error_code_t _ensure_capacity(tensor_t* t) {
+    if (t->len < t->alloc) return NO_ERROR;
+
+    if (t->growth == false)              return CAPACITY_OVERFLOW;
+    if (t->alloc_v.reallocate == NULL)   return CAPACITY_OVERFLOW;
+
+    size_t new_alloc = _compute_new_alloc(t->alloc);
+    return _grow_array(t, new_alloc);
+}
+// ================================================================================ 
+// ================================================================================ 
 // INITIALIZATION AND TEARDOWN
 
 tensor_expect_t init_tensor(uint8_t            ndim,
@@ -131,6 +200,55 @@ tensor_expect_t init_tensor_array(size_t             capacity,
     return r;
 }
 
+// -------------------------------------------------------------------------------- 
+
+tensor_expect_t copy_tensor(const tensor_t*    src,
+                            allocator_vtable_t alloc_v) {
+    if (src == NULL || alloc_v.allocate == NULL)
+        return (tensor_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+
+    // Allocate new header + FAM block sized for src->ndim
+    size_t header_bytes = sizeof(tensor_t) + 2u * src->ndim * sizeof(size_t);
+
+    void_ptr_expect_t struct_result = alloc_v.allocate(alloc_v.ctx, header_bytes, true);
+    if (struct_result.has_value == false)
+        return (tensor_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
+
+    tensor_t* dst = (tensor_t*)struct_result.u.value;
+
+    // Wire shape and strides into the new FAM then copy from src
+    dst->shape   = dst->meta;
+    dst->strides = dst->meta + src->ndim;
+
+    for (uint8_t i = 0u; i < src->ndim; i++) {
+        dst->shape[i]   = src->shape[i];
+        dst->strides[i] = src->strides[i];
+    }
+
+    // Allocate and copy the data buffer
+    void_ptr_expect_t data_result = alloc_v.allocate(alloc_v.ctx,
+                                                      src->alloc * src->data_size,
+                                                      false);
+    if (data_result.has_value == false) {
+        alloc_v.return_element(alloc_v.ctx, dst);
+        return (tensor_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+    }
+
+    dst->data = (uint8_t*)data_result.u.value;
+    memcpy(dst->data, src->data, src->len * src->data_size);
+
+    // Copy all scalar fields
+    dst->len       = src->len;
+    dst->alloc     = src->alloc;
+    dst->data_size = src->data_size;
+    dst->dtype     = src->dtype;
+    dst->mode      = src->mode;     /* was missing */
+    dst->growth    = src->growth;
+    dst->ndim      = src->ndim;
+    dst->alloc_v   = alloc_v;
+
+    return (tensor_expect_t){ .has_value = true, .u.value = dst };
+}
 // ================================================================================ 
 // ================================================================================ 
 // INTROSPECTION 
@@ -243,6 +361,103 @@ error_code_t clear_tensor(tensor_t* t) {
 
     return NO_ERROR;
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t concat_tensor_array(tensor_t*       dst,
+                                 const tensor_t* src,
+                                 dtype_id_t      dtype) {
+    if (dst == NULL || src == NULL)  return NULL_POINTER;
+    if (dst->mode != ARRAY_STRUCT)   return PRECONDITION_FAIL;
+    if (src->mode != ARRAY_STRUCT)   return PRECONDITION_FAIL;
+    if (dtype != dst->dtype)         return TYPE_MISMATCH;
+    if (dst->dtype != src->dtype)    return TYPE_MISMATCH;
+    if (src->len == 0u)              return NO_ERROR;
+    if (src->len > SIZE_MAX - dst->len) return LENGTH_OVERFLOW;
+
+    size_t needed = dst->len + src->len;
+
+    if (needed > dst->alloc) {
+        if (dst->growth == false)            return CAPACITY_OVERFLOW;
+        if (dst->alloc_v.reallocate == NULL) return CAPACITY_OVERFLOW;
+        size_t tiered    = _compute_new_alloc(dst->alloc);
+        size_t new_alloc = (tiered > needed) ? tiered : needed;
+        error_code_t err = _grow_array(dst, new_alloc);
+        if (err != NO_ERROR) return err;
+    }
+
+    memcpy(dst->data + dst->len * dst->data_size,
+           src->data,
+           src->len * src->data_size);
+    dst->len = needed;
+    return NO_ERROR;
+}
+
+// -------------------------------------------------------------------------------- 
+
+tensor_expect_t slice_tensor_array(const tensor_t* src,
+                                   size_t          start,
+                                   size_t          end,
+                                   allocator_vtable_t alloc_v) {
+    if (src == NULL)
+        return (tensor_expect_t){ .has_value = false, .u.error = NULL_POINTER };
+    if (src->mode != ARRAY_STRUCT)
+        return (tensor_expect_t){ .has_value = false, .u.error = PRECONDITION_FAIL };
+
+    /* Default to src's own allocator when none is supplied */
+    if (alloc_v.allocate == NULL)
+        alloc_v = src->alloc_v;
+
+    /* Validate range — end is exclusive, start must be strictly less */
+    if (start > src->len || end > src->len)
+        return (tensor_expect_t){ .has_value = false, .u.error = OUT_OF_BOUNDS };
+    if (start >= end)
+        return (tensor_expect_t){ .has_value = false, .u.error = INVALID_ARG };
+
+    size_t slice_len = end - start;
+
+    /* Allocate header + FAM for a 1-D tensor */
+    size_t header_bytes = sizeof(tensor_t) + 2u * sizeof(size_t);
+
+    void_ptr_expect_t struct_result = alloc_v.allocate(alloc_v.ctx,
+                                                        header_bytes, true);
+    if (struct_result.has_value == false)
+        return (tensor_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
+
+    tensor_t* t = (tensor_t*)struct_result.u.value;
+
+    /* Wire shape and strides into the FAM */
+    t->shape   = t->meta;
+    t->strides = t->meta + 1u;
+
+    t->shape[0]   = slice_len;
+    t->strides[0] = src->data_size;
+
+    /* Allocate and populate the data buffer */
+    void_ptr_expect_t data_result = alloc_v.allocate(alloc_v.ctx,
+                                                      slice_len * src->data_size,
+                                                      false);
+    if (data_result.has_value == false) {
+        alloc_v.return_element(alloc_v.ctx, t);
+        return (tensor_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
+    }
+
+    t->data = (uint8_t*)data_result.u.value;
+    memcpy(t->data,
+           src->data + start * src->data_size,
+           slice_len * src->data_size);
+
+    /* Populate scalar fields */
+    t->len       = slice_len;
+    t->alloc     = slice_len;
+    t->data_size = src->data_size;
+    t->dtype     = src->dtype;
+    t->mode      = ARRAY_STRUCT;
+    t->growth    = false;
+    t->ndim      = 1u;
+    t->alloc_v   = alloc_v;
+
+    return (tensor_expect_t){ .has_value = true, .u.value = t };
+}
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA
@@ -285,73 +500,6 @@ error_code_t set_tensor_nd_index(tensor_t*      t,
 
     memcpy(t->data + offset, data, t->data_size);
     return NO_ERROR;
-}
-
-// ================================================================================ 
-// ================================================================================ 
-// Internal growth strategy
-//
-// Tiered to avoid runaway allocation at large sizes while maintaining fast
-// ramp-up at small sizes:
-//   0 elements       -> 1
-//   < 1024 elements  -> 2x
-//   < 8192 elements  -> 1.5x  (alloc + alloc/2)
-//   < 65536 elements -> 1.25x (alloc + alloc/4)
-//   >= 65536 elements -> linear increment of 256
-// ================================================================================
-
-static size_t _compute_new_alloc(size_t current) {
-    if (current == 0u)    return 1u;
-    if (current < 1024u)  return current * 2u;
-    if (current < 8192u)  return current + current / 2u;
-    if (current < 65536u) return current + current / 4u;
-    return current + 256u;
-}
-
-// ================================================================================
-// Internal grow helper
-//
-// Reallocates the data buffer to new_alloc elements using the cached data_size.
-// Returns NO_ERROR on success. On failure the array is left untouched.
-// ================================================================================
-
-static error_code_t _grow_array(tensor_t* t, size_t new_alloc) {
-    /* Overflow guard: new_alloc * data_size must not wrap */
-    if (new_alloc > SIZE_MAX / t->data_size) return LENGTH_OVERFLOW;
-
-    size_t old_bytes = t->alloc * t->data_size;
-    size_t new_bytes = new_alloc    * t->data_size;
-
-    void_ptr_expect_t result = t->alloc_v.reallocate(
-        t->alloc_v.ctx,
-        t->data,
-        old_bytes,
-        new_bytes,
-        false
-    );
-
-    if (result.has_value == false) return OUT_OF_MEMORY;
-
-    t->data  = (uint8_t*)result.u.value;
-    t->alloc = new_alloc;
-    return NO_ERROR;
-}
-
-// ================================================================================
-// Internal capacity helper
-//
-// Ensures at least one free slot exists, growing if permitted.
-// Returns NO_ERROR when there is room to write, or an error code otherwise.
-// ================================================================================
-
-static error_code_t _ensure_capacity(tensor_t* t) {
-    if (t->len < t->alloc) return NO_ERROR;
-
-    if (t->growth == false)              return CAPACITY_OVERFLOW;
-    if (t->alloc_v.reallocate == NULL)   return CAPACITY_OVERFLOW;
-
-    size_t new_alloc = _compute_new_alloc(t->alloc);
-    return _grow_array(t, new_alloc);
 }
 
 // -------------------------------------------------------------------------------- 
@@ -527,55 +675,6 @@ error_code_t get_tensor_nd_index(const tensor_t* t,
     return NO_ERROR;
 }
 
-// --------------------------------------------------------------------------------
-
-tensor_expect_t copy_tensor(const tensor_t*    src,
-                            allocator_vtable_t alloc_v) {
-    if (src == NULL || alloc_v.allocate == NULL)
-        return (tensor_expect_t){ .has_value = false, .u.error = NULL_POINTER };
-
-    // Allocate new header + FAM block sized for src->ndim
-    size_t header_bytes = sizeof(tensor_t) + 2u * src->ndim * sizeof(size_t);
-
-    void_ptr_expect_t struct_result = alloc_v.allocate(alloc_v.ctx, header_bytes, true);
-    if (struct_result.has_value == false)
-        return (tensor_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
-
-    tensor_t* dst = (tensor_t*)struct_result.u.value;
-
-    // Wire shape and strides into the new FAM then copy from src
-    dst->shape   = dst->meta;
-    dst->strides = dst->meta + src->ndim;
-
-    for (uint8_t i = 0u; i < src->ndim; i++) {
-        dst->shape[i]   = src->shape[i];
-        dst->strides[i] = src->strides[i];
-    }
-
-    // Allocate and copy the data buffer
-    void_ptr_expect_t data_result = alloc_v.allocate(alloc_v.ctx,
-                                                      src->alloc * src->data_size,
-                                                      false);
-    if (data_result.has_value == false) {
-        alloc_v.return_element(alloc_v.ctx, dst);
-        return (tensor_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
-    }
-
-    dst->data = (uint8_t*)data_result.u.value;
-    memcpy(dst->data, src->data, src->len * src->data_size);
-
-    // Copy all scalar fields
-    dst->len       = src->len;
-    dst->alloc     = src->alloc;
-    dst->data_size = src->data_size;
-    dst->dtype     = src->dtype;
-    dst->mode      = src->mode;     /* was missing */
-    dst->growth    = src->growth;
-    dst->ndim      = src->ndim;
-    dst->alloc_v   = alloc_v;
-
-    return (tensor_expect_t){ .has_value = true, .u.value = dst };
-}
 // ================================================================================
 // ================================================================================
 // eof

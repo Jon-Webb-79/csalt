@@ -190,6 +190,10 @@ Utility Operations
 
 .. doxygenfunction:: copy_tensor
 
+.. doxygenfunction:: concat_tensor_array
+
+.. doxygenfunction:: slice_tensor_array
+
 Type Query
 ----------
 

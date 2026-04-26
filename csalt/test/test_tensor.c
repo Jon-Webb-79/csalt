@@ -3013,6 +3013,764 @@ static void test_pop_interleaved(void** state) {
  
     return_tensor(t);
 }
+
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// CONCAT TENSOR ARRAY (concat_tensor_array)
+// ================================================================================
+ 
+// ---- NULL / guard tests -----------------------------------------------------
+ 
+/** NULL dst or src must return NULL_POINTER. */
+static void test_concat_null(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    assert_int_equal(concat_tensor_array(NULL, t,    INT32_TYPE), NULL_POINTER);
+    assert_int_equal(concat_tensor_array(t,    NULL, INT32_TYPE), NULL_POINTER);
+ 
+    return_tensor(t);
+}
+ 
+/** Wrong dtype must return TYPE_MISMATCH. */
+static void test_concat_type_mismatch_dtype_arg(void** state) {
+    (void)state;
+    tensor_expect_t r1 = _make_array(4u, INT32_TYPE, false);
+    tensor_expect_t r2 = _make_array(4u, INT32_TYPE, false);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+ 
+    /* Caller passes FLOAT_TYPE but both tensors are INT32_TYPE */
+    assert_int_equal(
+        concat_tensor_array(r1.u.value, r2.u.value, FLOAT_TYPE),
+        TYPE_MISMATCH
+    );
+ 
+    return_tensor(r1.u.value);
+    return_tensor(r2.u.value);
+}
+ 
+/** Mismatched dtypes between dst and src must return TYPE_MISMATCH. */
+static void test_concat_type_mismatch_between_tensors(void** state) {
+    (void)state;
+    tensor_expect_t r1 = _make_array(4u, INT32_TYPE,  false);
+    tensor_expect_t r2 = _make_array(4u, FLOAT_TYPE,  false);
+    assert_true(r1.has_value);
+    assert_true(r2.has_value);
+ 
+    assert_int_equal(
+        concat_tensor_array(r1.u.value, r2.u.value, INT32_TYPE),
+        TYPE_MISMATCH
+    );
+ 
+    return_tensor(r1.u.value);
+    return_tensor(r2.u.value);
+}
+ 
+/**
+ * TENSOR_STRUCT mode on dst or src must return PRECONDITION_FAIL.
+ */
+static void test_concat_wrong_mode(void** state) {
+    (void)state;
+    const size_t shape[] = { 4u };
+    tensor_expect_t fixed = _make_tensor(1u, shape, INT32_TYPE);
+    tensor_expect_t arr   = _make_array(4u, INT32_TYPE, false);
+    assert_true(fixed.has_value);
+    assert_true(arr.has_value);
+ 
+    /* Fixed-shape dst */
+    assert_int_equal(
+        concat_tensor_array(fixed.u.value, arr.u.value, INT32_TYPE),
+        PRECONDITION_FAIL
+    );
+ 
+    /* Fixed-shape src */
+    assert_int_equal(
+        concat_tensor_array(arr.u.value, fixed.u.value, INT32_TYPE),
+        PRECONDITION_FAIL
+    );
+ 
+    return_tensor(fixed.u.value);
+    return_tensor(arr.u.value);
+}
+ 
+// ---- Empty source fast path -------------------------------------------------
+ 
+/**
+ * Concatenating an empty src must return NO_ERROR without modifying dst.
+ */
+static void test_concat_empty_src(void** state) {
+    (void)state;
+    tensor_expect_t r_dst = _make_array(4u, INT32_TYPE, false);
+    tensor_expect_t r_src = _make_array(4u, INT32_TYPE, false);
+    assert_true(r_dst.has_value);
+    assert_true(r_src.has_value);
+ 
+    tensor_t* dst = r_dst.u.value;
+    tensor_t* src = r_src.u.value;
+ 
+    int32_t a = 1, b = 2;
+    assert_int_equal(push_back_tensor(dst, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(dst, &b, INT32_TYPE), NO_ERROR);
+ 
+    /* src has len == 0 */
+    assert_int_equal(concat_tensor_array(dst, src, INT32_TYPE), NO_ERROR);
+    assert_int_equal(dst->len, 2u);
+ 
+    return_tensor(dst);
+    return_tensor(src);
+}
+ 
+// ---- Correctness tests ------------------------------------------------------
+ 
+/**
+ * Basic concatenation: elements from src are appended to the back of dst
+ * in the correct order and dst->len is updated correctly.
+ */
+static void test_concat_basic(void** state) {
+    (void)state;
+    tensor_expect_t r_dst = _make_array(8u, INT32_TYPE, false);
+    tensor_expect_t r_src = _make_array(4u, INT32_TYPE, false);
+    assert_true(r_dst.has_value);
+    assert_true(r_src.has_value);
+ 
+    tensor_t* dst = r_dst.u.value;
+    tensor_t* src = r_src.u.value;
+ 
+    /* dst = [1, 2, 3] */
+    int32_t a = 1, b = 2, c = 3;
+    assert_int_equal(push_back_tensor(dst, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(dst, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(dst, &c, INT32_TYPE), NO_ERROR);
+ 
+    /* src = [4, 5] */
+    int32_t d = 4, e = 5;
+    assert_int_equal(push_back_tensor(src, &d, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(src, &e, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(concat_tensor_array(dst, src, INT32_TYPE), NO_ERROR);
+    assert_int_equal(dst->len, 5u);
+ 
+    int32_t expected[] = { 1, 2, 3, 4, 5 };
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(dst, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(dst);
+    return_tensor(src);
+}
+ 
+/**
+ * Concatenate into an empty dst — result should contain exactly the
+ * elements of src in the original order.
+ */
+static void test_concat_into_empty_dst(void** state) {
+    (void)state;
+    tensor_expect_t r_dst = _make_array(8u, INT32_TYPE, false);
+    tensor_expect_t r_src = _make_array(4u, INT32_TYPE, false);
+    assert_true(r_dst.has_value);
+    assert_true(r_src.has_value);
+ 
+    tensor_t* dst = r_dst.u.value;
+    tensor_t* src = r_src.u.value;
+ 
+    int32_t vals[] = { 10, 20, 30 };
+    for (size_t i = 0u; i < 3u; i++)
+        assert_int_equal(push_back_tensor(src, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(concat_tensor_array(dst, src, INT32_TYPE), NO_ERROR);
+    assert_int_equal(dst->len, 3u);
+ 
+    for (size_t i = 0u; i < 3u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(dst, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, vals[i]);
+    }
+ 
+    return_tensor(dst);
+    return_tensor(src);
+}
+ 
+/**
+ * src must not be modified by the concatenation — its len, alloc, and
+ * element values must be identical before and after the call.
+ */
+static void test_concat_src_unmodified(void** state) {
+    (void)state;
+    tensor_expect_t r_dst = _make_array(8u, INT32_TYPE, false);
+    tensor_expect_t r_src = _make_array(4u, INT32_TYPE, false);
+    assert_true(r_dst.has_value);
+    assert_true(r_src.has_value);
+ 
+    tensor_t* dst = r_dst.u.value;
+    tensor_t* src = r_src.u.value;
+ 
+    int32_t vals[] = { 7, 8, 9 };
+    for (size_t i = 0u; i < 3u; i++)
+        assert_int_equal(push_back_tensor(src, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    size_t src_len_before   = src->len;
+    size_t src_alloc_before = src->alloc;
+ 
+    assert_int_equal(concat_tensor_array(dst, src, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(src->len,   src_len_before);
+    assert_int_equal(src->alloc, src_alloc_before);
+ 
+    for (size_t i = 0u; i < 3u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(src, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, vals[i]);
+    }
+ 
+    return_tensor(dst);
+    return_tensor(src);
+}
+ 
+// ---- Capacity and growth tests ----------------------------------------------
+ 
+/**
+ * Concatenation that fits within existing capacity must not reallocate —
+ * alloc must be unchanged after the call.
+ */
+static void test_concat_fits_in_existing_capacity(void** state) {
+    (void)state;
+    /* dst has capacity 6, will hold 2 elements before concat */
+    tensor_expect_t r_dst = _make_array(6u, INT32_TYPE, false);
+    tensor_expect_t r_src = _make_array(3u, INT32_TYPE, false);
+    assert_true(r_dst.has_value);
+    assert_true(r_src.has_value);
+ 
+    tensor_t* dst = r_dst.u.value;
+    tensor_t* src = r_src.u.value;
+ 
+    int32_t a = 1, b = 2;
+    assert_int_equal(push_back_tensor(dst, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(dst, &b, INT32_TYPE), NO_ERROR);
+ 
+    int32_t c = 3, d = 4, e = 5;
+    assert_int_equal(push_back_tensor(src, &c, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(src, &d, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(src, &e, INT32_TYPE), NO_ERROR);
+ 
+    size_t alloc_before = dst->alloc;
+ 
+    /* 2 + 3 == 5 <= 6: no reallocation needed */
+    assert_int_equal(concat_tensor_array(dst, src, INT32_TYPE), NO_ERROR);
+    assert_int_equal(dst->len,   5u);
+    assert_int_equal(dst->alloc, alloc_before);
+ 
+    return_tensor(dst);
+    return_tensor(src);
+}
+ 
+/**
+ * Concatenation that exceeds capacity on a growable dst must reallocate
+ * once and produce the correct element sequence.
+ */
+static void test_concat_triggers_growth(void** state) {
+    (void)state;
+    tensor_expect_t r_dst = _make_array(2u, INT32_TYPE, true);
+    tensor_expect_t r_src = _make_array(4u, INT32_TYPE, false);
+    assert_true(r_dst.has_value);
+    assert_true(r_src.has_value);
+ 
+    tensor_t* dst = r_dst.u.value;
+    tensor_t* src = r_src.u.value;
+ 
+    int32_t a = 1, b = 2;
+    assert_int_equal(push_back_tensor(dst, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(dst, &b, INT32_TYPE), NO_ERROR);
+ 
+    int32_t vals[] = { 3, 4, 5, 6 };
+    for (size_t i = 0u; i < 4u; i++)
+        assert_int_equal(push_back_tensor(src, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    /* dst is full (len==alloc==2); concat must grow and succeed */
+    assert_int_equal(concat_tensor_array(dst, src, INT32_TYPE), NO_ERROR);
+    assert_int_equal(dst->len, 6u);
+    assert_true(dst->alloc >= 6u);
+ 
+    int32_t expected[] = { 1, 2, 3, 4, 5, 6 };
+    for (size_t i = 0u; i < 6u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(dst, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(dst);
+    return_tensor(src);
+}
+ 
+/**
+ * Concatenation that exceeds capacity on a fixed-capacity dst must return
+ * CAPACITY_OVERFLOW and leave dst unchanged.
+ */
+static void test_concat_exceeds_fixed_capacity(void** state) {
+    (void)state;
+    tensor_expect_t r_dst = _make_array(3u, INT32_TYPE, false);
+    tensor_expect_t r_src = _make_array(4u, INT32_TYPE, false);
+    assert_true(r_dst.has_value);
+    assert_true(r_src.has_value);
+ 
+    tensor_t* dst = r_dst.u.value;
+    tensor_t* src = r_src.u.value;
+ 
+    int32_t a = 1, b = 2;
+    assert_int_equal(push_back_tensor(dst, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(dst, &b, INT32_TYPE), NO_ERROR);
+ 
+    int32_t vals[] = { 3, 4, 5 };
+    for (size_t i = 0u; i < 3u; i++)
+        assert_int_equal(push_back_tensor(src, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    /* 2 + 3 == 5 > 3: must fail */
+    assert_int_equal(
+        concat_tensor_array(dst, src, INT32_TYPE),
+        CAPACITY_OVERFLOW
+    );
+    assert_int_equal(dst->len, 2u);
+ 
+    return_tensor(dst);
+    return_tensor(src);
+}
+ 
+/**
+ * Concatenate two non-trivial sequences and verify the full combined
+ * element order end-to-end.
+ */
+static void test_concat_full_sequence(void** state) {
+    (void)state;
+    tensor_expect_t r_dst = _make_array(10u, INT32_TYPE, false);
+    tensor_expect_t r_src = _make_array(5u,  INT32_TYPE, false);
+    assert_true(r_dst.has_value);
+    assert_true(r_src.has_value);
+ 
+    tensor_t* dst = r_dst.u.value;
+    tensor_t* src = r_src.u.value;
+ 
+    for (int32_t i = 1; i <= 5; i++)
+        assert_int_equal(push_back_tensor(dst, &i, INT32_TYPE), NO_ERROR);
+ 
+    for (int32_t i = 6; i <= 10; i++)
+        assert_int_equal(push_back_tensor(src, &i, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(concat_tensor_array(dst, src, INT32_TYPE), NO_ERROR);
+    assert_int_equal(dst->len, 10u);
+ 
+    for (size_t i = 0u; i < 10u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(dst, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, (int32_t)(i + 1u));
+    }
+ 
+    return_tensor(dst);
+    return_tensor(src);
+}
+
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// SLICE TENSOR ARRAY (slice_tensor_array)
+// ================================================================================
+ 
+// ---- NULL / guard tests -----------------------------------------------------
+ 
+/** NULL src must return NULL_POINTER. */
+static void test_slice_null_src(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t r = slice_tensor_array(NULL, 0u, 1u, alloc);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+/** TENSOR_STRUCT mode must return PRECONDITION_FAIL. */
+static void test_slice_wrong_mode(void** state) {
+    (void)state;
+    const size_t shape[] = { 4u };
+    tensor_expect_t r = _make_tensor(1u, shape, INT32_TYPE);
+    assert_true(r.has_value);
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(r.u.value, 0u, 2u, alloc);
+    assert_false(s.has_value);
+    assert_int_equal(s.u.error, PRECONDITION_FAIL);
+ 
+    return_tensor(r.u.value);
+}
+ 
+/** start > src->len must return OUT_OF_BOUNDS. */
+static void test_slice_start_out_of_bounds(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+    t->len = 3u;
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(t, 4u, 5u, alloc);
+    assert_false(s.has_value);
+    assert_int_equal(s.u.error, OUT_OF_BOUNDS);
+ 
+    return_tensor(t);
+}
+ 
+/** end > src->len must return OUT_OF_BOUNDS. */
+static void test_slice_end_out_of_bounds(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+    t->len = 3u;
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(t, 0u, 4u, alloc);
+    assert_false(s.has_value);
+    assert_int_equal(s.u.error, OUT_OF_BOUNDS);
+ 
+    return_tensor(t);
+}
+ 
+/** start == end must return INVALID_ARG (zero-length slice). */
+static void test_slice_zero_length(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+    t->len = 4u;
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(t, 2u, 2u, alloc);
+    assert_false(s.has_value);
+    assert_int_equal(s.u.error, INVALID_ARG);
+ 
+    return_tensor(t);
+}
+ 
+/** start > end must return INVALID_ARG. */
+static void test_slice_start_greater_than_end(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+    t->len = 4u;
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(t, 3u, 1u, alloc);
+    assert_false(s.has_value);
+    assert_int_equal(s.u.error, INVALID_ARG);
+ 
+    return_tensor(t);
+}
+ 
+// ---- Allocator inheritance --------------------------------------------------
+ 
+/**
+ * Passing a NULL allocate pointer must cause the slice to inherit src's
+ * allocator — the slice must still be constructed successfully.
+ */
+static void test_slice_inherits_allocator(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+ 
+    int32_t vals[] = { 1, 2, 3, 4, 5 };
+    src->len = 5u;
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    /* Pass a zeroed vtable — allocate is NULL so src's allocator is used */
+    allocator_vtable_t null_alloc = { 0 };
+    tensor_expect_t s = slice_tensor_array(src, 1u, 4u, null_alloc);
+    assert_true(s.has_value);
+ 
+    assert_int_equal(s.u.value->len, 3u);
+ 
+    return_tensor(src);
+    return_tensor(s.u.value);
+}
+ 
+// ---- Scalar field correctness -----------------------------------------------
+ 
+/**
+ * The returned slice must have the correct scalar fields: ndim == 1,
+ * len == end - start, alloc == len, data_size == src->data_size,
+ * dtype == src->dtype, mode == ARRAY_STRUCT, growth == false.
+ */
+static void test_slice_scalar_fields(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(8u, DOUBLE_TYPE, true);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+    src->len = 8u;
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(src, 2u, 6u, alloc);
+    assert_true(s.has_value);
+    tensor_t* sl = s.u.value;
+ 
+    assert_int_equal(sl->ndim,      1u);
+    assert_int_equal(sl->len,       4u);
+    assert_int_equal(sl->alloc,     4u);
+    assert_int_equal(sl->data_size, sizeof(double));
+    assert_int_equal(sl->dtype,     DOUBLE_TYPE);
+    assert_int_equal(sl->mode,      ARRAY_STRUCT);
+    assert_false(sl->growth);
+ 
+    return_tensor(src);
+    return_tensor(sl);
+}
+ 
+/** Shape and stride of the returned slice must be correct. */
+static void test_slice_shape_and_strides(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(6u, FLOAT_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+    src->len = 6u;
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(src, 1u, 4u, alloc);
+    assert_true(s.has_value);
+    tensor_t* sl = s.u.value;
+ 
+    assert_int_equal(sl->shape[0],   3u);
+    assert_int_equal(sl->strides[0], sizeof(float));
+    assert_ptr_equal(sl->shape,      sl->meta);
+    assert_ptr_equal(sl->strides,    sl->meta + 1u);
+ 
+    return_tensor(src);
+    return_tensor(sl);
+}
+ 
+// ---- Element correctness ----------------------------------------------------
+ 
+/** Slice from the front of the array. */
+static void test_slice_front(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(6u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+ 
+    int32_t vals[] = { 10, 20, 30, 40, 50, 60 };
+    src->len = 6u;
+    for (size_t i = 0u; i < 6u; i++)
+        assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(src, 0u, 3u, alloc);
+    assert_true(s.has_value);
+    tensor_t* sl = s.u.value;
+ 
+    assert_int_equal(sl->len, 3u);
+    int32_t expected[] = { 10, 20, 30 };
+    for (size_t i = 0u; i < 3u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(sl, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(src);
+    return_tensor(sl);
+}
+ 
+/** Slice from the back of the array. */
+static void test_slice_back(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(6u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+ 
+    int32_t vals[] = { 10, 20, 30, 40, 50, 60 };
+    src->len = 6u;
+    for (size_t i = 0u; i < 6u; i++)
+        assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(src, 3u, 6u, alloc);
+    assert_true(s.has_value);
+    tensor_t* sl = s.u.value;
+ 
+    assert_int_equal(sl->len, 3u);
+    int32_t expected[] = { 40, 50, 60 };
+    for (size_t i = 0u; i < 3u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(sl, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(src);
+    return_tensor(sl);
+}
+ 
+/** Slice from the middle of the array. */
+static void test_slice_middle(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(6u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+ 
+    int32_t vals[] = { 10, 20, 30, 40, 50, 60 };
+    src->len = 6u;
+    for (size_t i = 0u; i < 6u; i++)
+        assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(src, 2u, 5u, alloc);
+    assert_true(s.has_value);
+    tensor_t* sl = s.u.value;
+ 
+    assert_int_equal(sl->len, 3u);
+    int32_t expected[] = { 30, 40, 50 };
+    for (size_t i = 0u; i < 3u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(sl, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(src);
+    return_tensor(sl);
+}
+ 
+/** A single-element slice (end == start + 1) must succeed. */
+static void test_slice_single_element(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+ 
+    int32_t vals[] = { 1, 2, 3, 4, 5 };
+    src->len = 5u;
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(src, 3u, 4u, alloc);
+    assert_true(s.has_value);
+    tensor_t* sl = s.u.value;
+ 
+    assert_int_equal(sl->len, 1u);
+    int32_t out = -1;
+    assert_int_equal(get_tensor_index(sl, 0u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 4);
+ 
+    return_tensor(src);
+    return_tensor(sl);
+}
+ 
+/** A full-length slice (start == 0, end == len) must equal the source. */
+static void test_slice_full_length(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+ 
+    int32_t vals[] = { 1, 2, 3, 4, 5 };
+    src->len = 5u;
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(src, 0u, src->len, alloc);
+    assert_true(s.has_value);
+    tensor_t* sl = s.u.value;
+ 
+    assert_int_equal(sl->len, src->len);
+    for (size_t i = 0u; i < src->len; i++) {
+        int32_t src_val = -1, sl_val = -1;
+        assert_int_equal(get_tensor_index(src, i, &src_val, INT32_TYPE), NO_ERROR);
+        assert_int_equal(get_tensor_index(sl,  i, &sl_val,  INT32_TYPE), NO_ERROR);
+        assert_int_equal(sl_val, src_val);
+    }
+ 
+    return_tensor(src);
+    return_tensor(sl);
+}
+ 
+// ---- Deep copy independence -------------------------------------------------
+ 
+/**
+ * Mutating an element in the slice must not affect the source, and
+ * mutating the source must not affect the slice.
+ */
+static void test_slice_deep_copy_independence(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+ 
+    int32_t vals[] = { 10, 20, 30, 40, 50 };
+    src->len = 5u;
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(src, 1u, 4u, alloc);
+    assert_true(s.has_value);
+    tensor_t* sl = s.u.value;
+ 
+    /* Mutate slot 0 of the slice — src slot 1 must be unchanged */
+    int32_t new_val = 999;
+    assert_int_equal(set_tensor_index(sl, 0u, &new_val, INT32_TYPE), NO_ERROR);
+ 
+    int32_t src_val = -1;
+    assert_int_equal(get_tensor_index(src, 1u, &src_val, INT32_TYPE), NO_ERROR);
+    assert_int_equal(src_val, 20);
+ 
+    /* Mutate src slot 2 — slice slot 1 must be unchanged */
+    int32_t src_new = 777;
+    assert_int_equal(set_tensor_index(src, 2u, &src_new, INT32_TYPE), NO_ERROR);
+ 
+    int32_t sl_val = -1;
+    assert_int_equal(get_tensor_index(sl, 1u, &sl_val, INT32_TYPE), NO_ERROR);
+    assert_int_equal(sl_val, 30);
+ 
+    return_tensor(src);
+    return_tensor(sl);
+}
+ 
+/**
+ * src must be unmodified after slice_tensor_array — len, alloc, and all
+ * element values must be identical before and after the call.
+ */
+static void test_slice_src_unmodified(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* src = r.u.value;
+ 
+    int32_t vals[] = { 1, 2, 3, 4, 5 };
+    src->len = 5u;
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    size_t len_before   = src->len;
+    size_t alloc_before = src->alloc;
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    tensor_expect_t s = slice_tensor_array(src, 1u, 3u, alloc);
+    assert_true(s.has_value);
+ 
+    assert_int_equal(src->len,   len_before);
+    assert_int_equal(src->alloc, alloc_before);
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(src, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, vals[i]);
+    }
+ 
+    return_tensor(src);
+    return_tensor(s.u.value);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -3237,6 +3995,52 @@ const struct CMUnitTest test_tensor[] = {
     /* push / pop round-trip */
     cmocka_unit_test(test_push_back_pop_back_lifo),
     cmocka_unit_test(test_pop_interleaved),
+
+    /* concat_tensor_array — null/guard */
+    cmocka_unit_test(test_concat_null),
+    cmocka_unit_test(test_concat_type_mismatch_dtype_arg),
+    cmocka_unit_test(test_concat_type_mismatch_between_tensors),
+    cmocka_unit_test(test_concat_wrong_mode),
+
+    /* concat_tensor_array — empty source fast path */
+    cmocka_unit_test(test_concat_empty_src),
+
+    /* concat_tensor_array — correctness */
+    cmocka_unit_test(test_concat_basic),
+    cmocka_unit_test(test_concat_into_empty_dst),
+    cmocka_unit_test(test_concat_src_unmodified),
+
+    /* concat_tensor_array — capacity and growth */
+    cmocka_unit_test(test_concat_fits_in_existing_capacity),
+    cmocka_unit_test(test_concat_triggers_growth),
+    cmocka_unit_test(test_concat_exceeds_fixed_capacity),
+    cmocka_unit_test(test_concat_full_sequence),
+
+    /* slice_tensor_array — null/guard */
+    cmocka_unit_test(test_slice_null_src),
+    cmocka_unit_test(test_slice_wrong_mode),
+    cmocka_unit_test(test_slice_start_out_of_bounds),
+    cmocka_unit_test(test_slice_end_out_of_bounds),
+    cmocka_unit_test(test_slice_zero_length),
+    cmocka_unit_test(test_slice_start_greater_than_end),
+ 
+    /* slice_tensor_array — allocator inheritance */
+    cmocka_unit_test(test_slice_inherits_allocator),
+ 
+    /* slice_tensor_array — scalar fields */
+    cmocka_unit_test(test_slice_scalar_fields),
+    cmocka_unit_test(test_slice_shape_and_strides),
+ 
+    /* slice_tensor_array — element correctness */
+    cmocka_unit_test(test_slice_front),
+    cmocka_unit_test(test_slice_back),
+    cmocka_unit_test(test_slice_middle),
+    cmocka_unit_test(test_slice_single_element),
+    cmocka_unit_test(test_slice_full_length),
+ 
+    /* slice_tensor_array — deep copy independence */
+    cmocka_unit_test(test_slice_deep_copy_independence),
+    cmocka_unit_test(test_slice_src_unmodified),
 };
 
 const size_t test_tensor_count = sizeof(test_tensor) / sizeof(test_tensor[0]);
