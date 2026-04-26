@@ -117,46 +117,6 @@ void return_tensor(tensor_t* t) {
 // ================================================================================ 
 // INTROSPECTION 
 
-size_t tensor_size(const tensor_t* t) {
-    if (t == NULL) return 0u;
-    return t->len;
-}
-
-// --------------------------------------------------------------------------------
-
-size_t tensor_alloc(const tensor_t* t) {
-    if (t == NULL) return 0u;
-    return t->alloc;
-}
-
-// --------------------------------------------------------------------------------
-
-size_t tensor_data_size(const tensor_t* t) {
-    if (t == NULL) return 0u;
-    return t->data_size;
-}
-// -------------------------------------------------------------------------------- 
-
-dtype_id_t tensor_type(const tensor_t* t) {
-    if (t == NULL) return UNKNOWN_TYPE;
-    return t->dtype;
-}
-// --------------------------------------------------------------------------------
-
-bool is_tensor_empty(const tensor_t* t) {
-    if (t == NULL) return true;
-    return t->len == 0u;
-}
-
-// --------------------------------------------------------------------------------
-
-bool is_tensor_full(const tensor_t* t) {
-    if (t == NULL) return true;
-    return t->len == t->alloc;
-}
-
-// --------------------------------------------------------------------------------
-
 bool is_tensor_ptr(const tensor_t* t, const void* ptr) {
     if (t == NULL || ptr == NULL)   return false;
     if (t->data == NULL)            return false;
@@ -172,21 +132,6 @@ bool is_tensor_ptr(const tensor_t* t, const void* ptr) {
 
 // --------------------------------------------------------------------------------
 
-uint8_t tensor_ndim(const tensor_t* t) {
-    if (t == NULL) return 0u;
-    return t->ndim;
-}
-
-// --------------------------------------------------------------------------------
-
-size_t tensor_shape_dim(const tensor_t* t, uint8_t dim) {
-    if (t == NULL)        return 0u;
-    if (dim >= t->ndim)   return 0u;
-    return t->shape[dim];
-}
-
-// --------------------------------------------------------------------------------
-
 error_code_t tensor_shape(const tensor_t* t, size_t* out, uint8_t count) {
     if (t == NULL || out == NULL) return NULL_POINTER;
 
@@ -195,20 +140,6 @@ error_code_t tensor_shape(const tensor_t* t, size_t* out, uint8_t count) {
         out[i] = t->shape[i];
 
     return count < t->ndim ? INVALID_ARG : NO_ERROR;
-}
-
-// --------------------------------------------------------------------------------
-
-const size_t* tensor_shape_ptr(const tensor_t* t) {
-    if (t == NULL) return NULL;
-    return t->shape;
-}
-
-// --------------------------------------------------------------------------------
-
-const size_t* tensor_strides_ptr(const tensor_t* t) {
-    if (t == NULL) return NULL;
-    return t->strides;
 }
 
 // --------------------------------------------------------------------------------

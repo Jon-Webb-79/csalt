@@ -148,7 +148,10 @@ void return_tensor(tensor_t* t);
  * @param t  Pointer to the tensor.
  * @return Total element count, or 0 if t is NULL.
  */
-size_t tensor_size(const tensor_t* t);
+static inline size_t tensor_size(const tensor_t* t) {
+    if (t == NULL) return 0u;
+    return t->len;
+}
 
 // --------------------------------------------------------------------------------
 
@@ -158,7 +161,10 @@ size_t tensor_size(const tensor_t* t);
  * @param t  Pointer to the tensor.
  * @return Allocated capacity in elements, or 0 if t is NULL.
  */
-size_t tensor_alloc(const tensor_t* t);
+static inline size_t tensor_alloc(const tensor_t* t) {
+    if (t == NULL) return 0u;
+    return t->alloc;
+}
 
 // --------------------------------------------------------------------------------
 
@@ -168,7 +174,10 @@ size_t tensor_alloc(const tensor_t* t);
  * @param t  Pointer to the tensor.
  * @return Element size in bytes, or 0 if t is NULL.
  */
-size_t tensor_data_size(const tensor_t* t);
+static inline size_t tensor_data_size(const tensor_t* t) {
+    if (t == NULL) return 0u;
+    return t->data_size;
+}
 
 // -------------------------------------------------------------------------------- 
 
@@ -181,7 +190,10 @@ size_t tensor_data_size(const tensor_t* t);
  * @param array  Pointer to the array.
  * @return The dtype_id_t of the array, or UNKNOWN_TYPE if array is NULL.
  */
-dtype_id_t tensor_type(const tensor_t* t);
+static inline dtype_id_t tensor_dtype(const tensor_t* t) {
+    if (t == NULL) return UNKNOWN_TYPE;
+    return t->dtype;
+}
 
 // --------------------------------------------------------------------------------
 
@@ -191,7 +203,10 @@ dtype_id_t tensor_type(const tensor_t* t);
  * @param t  Pointer to the tensor.
  * @return true if len == 0 or t is NULL, false otherwise.
  */
-bool is_tensor_empty(const tensor_t* t);
+static inline bool is_tensor_empty(const tensor_t* t) {
+    if (t == NULL) return true;
+    return t->len == 0u;
+}
 
 // --------------------------------------------------------------------------------
 
@@ -201,7 +216,10 @@ bool is_tensor_empty(const tensor_t* t);
  * @param t  Pointer to the tensor.
  * @return true if len == alloc or t is NULL, false otherwise.
  */
-bool is_tensor_full(const tensor_t* t);
+static inline bool is_tensor_full(const tensor_t* t) {
+    if (t == NULL) return true;
+    return t->len == t->alloc;
+}
 
 // --------------------------------------------------------------------------------
 
@@ -229,7 +247,10 @@ bool is_tensor_ptr(const tensor_t* t, const void* ptr);
  * @param t  Pointer to the tensor.
  * @return Number of dimensions, or 0 if t is NULL.
  */
-uint8_t tensor_ndim(const tensor_t* t);
+static inline uint8_t tensor_ndim(const tensor_t* t) {
+    if (t == NULL) return 0u;
+    return t->ndim;
+}
 
 // --------------------------------------------------------------------------------
 
@@ -244,7 +265,11 @@ uint8_t tensor_ndim(const tensor_t* t);
  * @return Size of the requested dimension, or 0 if t is NULL or dim is
  *         out of range.
  */
-size_t tensor_shape_dim(const tensor_t* t, uint8_t dim);
+static inline size_t tensor_shape_dim(const tensor_t* t, uint8_t dim) {
+    if (t == NULL) return 0u;
+    if (dim >= t->ndim) return 0u;
+    return t->shape[dim];
+}
 
 // --------------------------------------------------------------------------------
 
@@ -279,7 +304,10 @@ error_code_t tensor_shape(const tensor_t* t, size_t* out, uint8_t count);
  * @return Pointer to the first element of the shape array, or NULL if t
  *         is NULL.
  */
-const size_t* tensor_shape_ptr(const tensor_t* t);
+static inline const size_t* tensor_shape_ptr(const tensor_t* t) {
+    if (t == NULL) return NULL;
+    return t->shape;
+}
 
 // --------------------------------------------------------------------------------
 
@@ -299,8 +327,10 @@ const size_t* tensor_shape_ptr(const tensor_t* t);
  * @return Pointer to the first element of the strides array, or NULL if
  *         t is NULL.
  */
-const size_t* tensor_strides_ptr(const tensor_t* t);
-
+static inline const size_t* tensor_strides_ptr(const tensor_t* t) {
+    if (t == NULL) return NULL;
+    return t->strides;
+}
 // --------------------------------------------------------------------------------
 
 /**

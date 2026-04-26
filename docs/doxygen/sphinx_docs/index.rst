@@ -81,15 +81,37 @@ String  (``string_t``)
 * Provides functions for standard string operations 
 * Provides an iterator for access methods
 
-Array (``array_t``)
--------------------
-* Utilizes allocators from the ``c_allocator.h`` file or user developed custom 
+Tensor (``tensor_t``)
+---------------------
+* Utilizes allocators from the ``c_allocator.h`` file or user developed custom
   allocators to manage memory.
-* Automatically manages memory allocation and resizing
-* Maintains size and capacity information
-* Provides safe element access with bounds checking
-* Supports efficient append and insert operations
-* Functions to support advanced options such as sort, binary search, min, max, etc.
+* Serves as a unified container for one-dimensional arrays, two-dimensional
+  matrices, and arbitrary N-dimensional tensors up to rank 255 using a single
+  struct and allocator pipeline.
+* Runtime behaviour is governed by a ``tensor_mode_t`` field:
+
+  - ``TENSOR_FIXED_SHAPE`` — all slots are zero-initialised at construction;
+    ``len`` equals ``alloc`` equals the product of all shape dimensions at all
+    times; used for matrices and higher-rank tensors.
+  - ``TENSOR_DYNAMIC_1D`` — ``len`` tracks the populated element count;
+    automatic reallocation is optionally enabled via the ``growth`` flag;
+    used for one-dimensional array operations.
+
+* Shape and strides are stored in a Flexible Array Member (FAM) contiguous
+  with the struct header, keeping the entire tensor descriptor in a single
+  allocator-managed block. Strides are computed in C-order (row-major) at
+  initialisation.
+* Element types are resolved through the dtype registry (``c_dtypes.h``);
+  user-defined types can be registered via ``ensure_dtype_registered``.
+  Every access function validates the caller-supplied ``dtype_id_t`` at the
+  call site, providing runtime type safety over the type-erased byte buffer.
+* Typed wrappers embed ``tensor_t`` as their first member, enabling safe
+  upcasting to ``tensor_t*`` so any generic tensor function can be called
+  on a typed wrapper without an intermediate copy.
+* Supports array-specific operations (push, pop, insert, remove),
+  matrix and tensor operations (N-dimensional indexed access via strides),
+  shared operations (flat-index access, clear, deep copy), and standard
+  introspection (size, capacity, shape, strides, element size).
 
 Dictionary (``dict_t``)
 -----------------------
@@ -192,36 +214,6 @@ AVL Tree (``avl_t``)
   find, min/max retrieval, ordered traversal, range traversal, copy, and
   introspection.
 
-Matrix (``matrix_t``)
----------------------
-
-* Utilizes allocators from the ``c_allocator.h`` file or user-developed custom
-  allocators to manage memory for the matrix header and all internal storage
-  buffers across supported formats.
-* Implements a generic, type-erased matrix container supporting multiple
-  storage formats:
-  - Dense (row-major contiguous storage)
-  - COO (coordinate list sparse format)
-  - CSR (compressed sparse row)
-  - CSC (compressed sparse column)
-* Stores values as fixed-size byte buffers identified by a runtime
-  ``dtype_id_t``, enabling generic storage of arbitrary data types.
-* Provides safe element access via copy semantics; sparse formats return zero
-  values for entries not explicitly stored.
-* Supports format-aware operations including conversion between storage
-  formats and transpose across all supported representations.
-* Includes structural operations such as zeroing, filling (dense-only for
-  nonzero values), row and column swapping (dense and COO), and compatibility
-  checks for addition and multiplication.
-* Supports vector-style usage through row and column vector construction and
-  introspection helpers (e.g., ``matrix_is_vector``).
-* Designed strictly as a container abstraction — no numerical algorithms
-  (e.g., multiplication, inversion, decomposition) are implemented in this
-  module.
-* Intended to serve as the foundation for type-specific numerical extensions,
-  where optimized operations (including SIMD-enabled implementations) are
-  defined in separate modules layered on top of the generic container.
-
 Work Forward 
 ------------
 The following are areas for future improvement in the code base 
@@ -241,23 +233,10 @@ The following are areas for future improvement in the code base
     c_error <Error>
     c_allocator <Allocator>
     c_string <Strings>
-    c_uint8 <Uint8>
-    c_int8 <Int8>
-    c_uint16 <Uint16>
-    c_int16 <Int16>
-    c_uint32 <Uint32>
-    c_int32 <Int32>
-    c_uint64 <Uint64>
-    c_int64 <Int64>
-    c_float <Float>
-    c_double <Double>
-    c_ldouble <LDouble>
-    c_array <Array>
+    c_tensor <Tensor>
     c_dict <Dict>
     c_list <List>
-    c_heap <Heap>
     c_tree <Tree>
-    c_matrix <Matrix>
     
 Indices and tables
 ==================
