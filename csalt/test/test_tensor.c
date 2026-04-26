@@ -2602,6 +2602,417 @@ static void test_push_interleaved(void** state) {
  
     return_tensor(t);
 }
+
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// POP OPERATIONS (pop_back_tensor / pop_front_tensor / pop_at_tensor)
+// ================================================================================
+ 
+// ---- Shared guard tests -----------------------------------------------------
+ 
+/** NULL tensor must return NULL_POINTER for all three pop variants. */
+static void test_pop_null_tensor(void** state) {
+    (void)state;
+    int32_t out = 0;
+    assert_int_equal(pop_back_tensor(NULL,  &out, INT32_TYPE), NULL_POINTER);
+    assert_int_equal(pop_front_tensor(NULL, &out, INT32_TYPE), NULL_POINTER);
+    assert_int_equal(pop_at_tensor(NULL,    &out, 0u, INT32_TYPE), NULL_POINTER);
+}
+ 
+/** Wrong dtype must return TYPE_MISMATCH for all three pop variants. */
+static void test_pop_type_mismatch(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+    t->len = 2u;
+ 
+    float out = 0.0f;
+    assert_int_equal(pop_back_tensor(t,  &out, FLOAT_TYPE), TYPE_MISMATCH);
+    assert_int_equal(pop_front_tensor(t, &out, FLOAT_TYPE), TYPE_MISMATCH);
+    assert_int_equal(pop_at_tensor(t,    &out, 0u, FLOAT_TYPE), TYPE_MISMATCH);
+    assert_int_equal(t->len, 2u);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * TENSOR_STRUCT mode must return PRECONDITION_FAIL for all three pop
+ * variants.
+ */
+static void test_pop_wrong_mode(void** state) {
+    (void)state;
+    const size_t shape[] = { 4u };
+    tensor_expect_t r = _make_tensor(1u, shape, INT32_TYPE);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t out = 0;
+    assert_int_equal(pop_back_tensor(t,  &out, INT32_TYPE), PRECONDITION_FAIL);
+    assert_int_equal(pop_front_tensor(t, &out, INT32_TYPE), PRECONDITION_FAIL);
+    assert_int_equal(pop_at_tensor(t,    &out, 0u, INT32_TYPE), PRECONDITION_FAIL);
+ 
+    return_tensor(t);
+}
+ 
+/** Popping from an empty array must return EMPTY for all three variants. */
+static void test_pop_empty(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    assert_int_equal(t->len, 0u);
+    int32_t out = 0;
+    assert_int_equal(pop_back_tensor(t,  &out, INT32_TYPE), EMPTY);
+    assert_int_equal(pop_front_tensor(t, &out, INT32_TYPE), EMPTY);
+    assert_int_equal(pop_at_tensor(t,    &out, 0u, INT32_TYPE), EMPTY);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * Passing NULL for out must succeed — the removed value is discarded
+ * without a copy.  Applies to all three variants.
+ */
+static void test_pop_null_out_discards_value(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 1, b = 2, c = 3;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &c, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(pop_back_tensor(t,  NULL, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 2u);
+ 
+    assert_int_equal(pop_front_tensor(t, NULL, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 1u);
+ 
+    assert_int_equal(pop_at_tensor(t, NULL, 0u, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 0u);
+ 
+    return_tensor(t);
+}
+ 
+// ---- pop_back_tensor --------------------------------------------------------
+ 
+/** pop_back removes the last element, copies it to out, and decrements len. */
+static void test_pop_back_basic(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 10, b = 20, c = 30;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &c, INT32_TYPE), NO_ERROR);
+ 
+    int32_t out = 0;
+    assert_int_equal(pop_back_tensor(t, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 30);
+    assert_int_equal(t->len, 2u);
+ 
+    assert_int_equal(pop_back_tensor(t, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 20);
+    assert_int_equal(t->len, 1u);
+ 
+    assert_int_equal(pop_back_tensor(t, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 10);
+    assert_int_equal(t->len, 0u);
+ 
+    /* Now empty — next pop must return EMPTY */
+    assert_int_equal(pop_back_tensor(t, &out, INT32_TYPE), EMPTY);
+ 
+    return_tensor(t);
+}
+ 
+/** pop_back does not disturb elements before the removed slot. */
+static void test_pop_back_preserves_preceding_elements(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t vals[] = { 1, 2, 3, 4, 5 };
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    int32_t out = 0;
+    assert_int_equal(pop_back_tensor(t, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 5);
+ 
+    /* Remaining elements must be [1, 2, 3, 4] */
+    for (size_t i = 0u; i < 4u; i++) {
+        int32_t val = -1;
+        assert_int_equal(get_tensor_index(t, i, &val, INT32_TYPE), NO_ERROR);
+        assert_int_equal(val, (int32_t)(i + 1u));
+    }
+ 
+    return_tensor(t);
+}
+ 
+// ---- pop_front_tensor -------------------------------------------------------
+ 
+/** pop_front removes the first element, copies it to out, shifts remaining
+ *  elements left, and decrements len. */
+static void test_pop_front_basic(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 10, b = 20, c = 30;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &c, INT32_TYPE), NO_ERROR);
+ 
+    int32_t out = 0;
+    assert_int_equal(pop_front_tensor(t, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 10);
+    assert_int_equal(t->len, 2u);
+ 
+    /* Remaining elements must be [20, 30] */
+    int32_t v0 = -1, v1 = -1;
+    assert_int_equal(get_tensor_index(t, 0u, &v0, INT32_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 1u, &v1, INT32_TYPE), NO_ERROR);
+    assert_int_equal(v0, 20);
+    assert_int_equal(v1, 30);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * pop_front on a single-element array must leave the array empty without
+ * calling memmove (shift count would be zero).
+ */
+static void test_pop_front_single_element(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t val = 42;
+    assert_int_equal(push_back_tensor(t, &val, INT32_TYPE), NO_ERROR);
+ 
+    int32_t out = 0;
+    assert_int_equal(pop_front_tensor(t, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 42);
+    assert_int_equal(t->len, 0u);
+ 
+    /* Array is now empty */
+    assert_int_equal(pop_front_tensor(t, &out, INT32_TYPE), EMPTY);
+ 
+    return_tensor(t);
+}
+ 
+/** Repeated pop_front drains the array in FIFO order. */
+static void test_pop_front_fifo_order(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t vals[] = { 1, 2, 3, 4, 5 };
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(pop_front_tensor(t, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, (int32_t)(i + 1u));
+    }
+ 
+    assert_int_equal(t->len, 0u);
+ 
+    return_tensor(t);
+}
+ 
+// ---- pop_at_tensor ----------------------------------------------------------
+ 
+/** index >= len must return OUT_OF_BOUNDS without modifying the array. */
+static void test_pop_at_out_of_bounds(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 1, b = 2;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+ 
+    int32_t out = 0;
+    assert_int_equal(pop_at_tensor(t, &out, 2u, INT32_TYPE), OUT_OF_BOUNDS);
+    assert_int_equal(t->len, 2u);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * index == 0 must delegate to pop_front_tensor — element at slot 0 is
+ * removed and remaining elements shift left.
+ */
+static void test_pop_at_zero_delegates_to_front(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 10, b = 20, c = 30;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &c, INT32_TYPE), NO_ERROR);
+ 
+    int32_t out = 0;
+    assert_int_equal(pop_at_tensor(t, &out, 0u, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 10);
+    assert_int_equal(t->len, 2u);
+ 
+    /* Remaining elements must be [20, 30] */
+    int32_t v0 = -1, v1 = -1;
+    assert_int_equal(get_tensor_index(t, 0u, &v0, INT32_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 1u, &v1, INT32_TYPE), NO_ERROR);
+    assert_int_equal(v0, 20);
+    assert_int_equal(v1, 30);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * index == len - 1 must delegate to pop_back_tensor — last element is
+ * removed without a shift.
+ */
+static void test_pop_at_last_delegates_to_back(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 10, b = 20, c = 30;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &c, INT32_TYPE), NO_ERROR);
+ 
+    int32_t out = 0;
+    assert_int_equal(pop_at_tensor(t, &out, t->len - 1u, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 30);
+    assert_int_equal(t->len, 2u);
+ 
+    /* Remaining elements must be [10, 20] */
+    int32_t v0 = -1, v1 = -1;
+    assert_int_equal(get_tensor_index(t, 0u, &v0, INT32_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 1u, &v1, INT32_TYPE), NO_ERROR);
+    assert_int_equal(v0, 10);
+    assert_int_equal(v1, 20);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * Remove from the middle: elements before index are unchanged, elements
+ * after index shift left by one.
+ */
+static void test_pop_at_middle(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    /* Build [10, 20, 30, 40, 50] */
+    int32_t vals[] = { 10, 20, 30, 40, 50 };
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    /* Remove index 2 (value 30) → [10, 20, 40, 50] */
+    int32_t out = 0;
+    assert_int_equal(pop_at_tensor(t, &out, 2u, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 30);
+    assert_int_equal(t->len, 4u);
+ 
+    int32_t expected[] = { 10, 20, 40, 50 };
+    for (size_t i = 0u; i < 4u; i++) {
+        int32_t val = -1;
+        assert_int_equal(get_tensor_index(t, i, &val, INT32_TYPE), NO_ERROR);
+        assert_int_equal(val, expected[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+// ---- Push / pop round-trip --------------------------------------------------
+ 
+/**
+ * Push a sequence then pop it from the back — values must come out in
+ * LIFO order and the array must be empty at the end.
+ */
+static void test_push_back_pop_back_lifo(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t vals[] = { 1, 2, 3, 4, 5 };
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    for (size_t i = 5u; i > 0u; i--) {
+        int32_t out = -1;
+        assert_int_equal(pop_back_tensor(t, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, (int32_t)i);
+    }
+ 
+    assert_int_equal(t->len, 0u);
+    return_tensor(t);
+}
+ 
+/**
+ * Interleaved push and pop across all three variants to confirm consistent
+ * element order is maintained throughout.
+ */
+static void test_pop_interleaved(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(8u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    /* Build [10, 20, 30, 40] via push_back */
+    int32_t vals[] = { 10, 20, 30, 40 };
+    for (size_t i = 0u; i < 4u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    /* pop_front → removes 10, array is [20, 30, 40] */
+    int32_t out = 0;
+    assert_int_equal(pop_front_tensor(t, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 10);
+ 
+    /* pop_at 1 → removes 30, array is [20, 40] */
+    assert_int_equal(pop_at_tensor(t, &out, 1u, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 30);
+ 
+    /* push_front 5 → array is [5, 20, 40] */
+    int32_t five = 5;
+    assert_int_equal(push_front_tensor(t, &five, INT32_TYPE), NO_ERROR);
+ 
+    /* pop_back → removes 40, array is [5, 20] */
+    assert_int_equal(pop_back_tensor(t, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 40);
+ 
+    assert_int_equal(t->len, 2u);
+ 
+    int32_t v0 = -1, v1 = -1;
+    assert_int_equal(get_tensor_index(t, 0u, &v0, INT32_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 1u, &v1, INT32_TYPE), NO_ERROR);
+    assert_int_equal(v0, 5);
+    assert_int_equal(v1, 20);
+ 
+    return_tensor(t);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -2797,6 +3208,35 @@ const struct CMUnitTest test_tensor[] = {
  
     /* push — interleaved correctness */
     cmocka_unit_test(test_push_interleaved),
+
+    /* push — interleaved correctness */
+    cmocka_unit_test(test_push_interleaved),
+ 
+    /* pop — shared guards */
+    cmocka_unit_test(test_pop_null_tensor),
+    cmocka_unit_test(test_pop_type_mismatch),
+    cmocka_unit_test(test_pop_wrong_mode),
+    cmocka_unit_test(test_pop_empty),
+    cmocka_unit_test(test_pop_null_out_discards_value),
+ 
+    /* pop_back_tensor */
+    cmocka_unit_test(test_pop_back_basic),
+    cmocka_unit_test(test_pop_back_preserves_preceding_elements),
+ 
+    /* pop_front_tensor */
+    cmocka_unit_test(test_pop_front_basic),
+    cmocka_unit_test(test_pop_front_single_element),
+    cmocka_unit_test(test_pop_front_fifo_order),
+ 
+    /* pop_at_tensor */
+    cmocka_unit_test(test_pop_at_out_of_bounds),
+    cmocka_unit_test(test_pop_at_zero_delegates_to_front),
+    cmocka_unit_test(test_pop_at_last_delegates_to_back),
+    cmocka_unit_test(test_pop_at_middle),
+ 
+    /* push / pop round-trip */
+    cmocka_unit_test(test_push_back_pop_back_lifo),
+    cmocka_unit_test(test_pop_interleaved),
 };
 
 const size_t test_tensor_count = sizeof(test_tensor) / sizeof(test_tensor[0]);

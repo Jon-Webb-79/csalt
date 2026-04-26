@@ -373,8 +373,8 @@ error_code_t push_back_tensor(tensor_t*    t,
 // -------------------------------------------------------------------------------- 
 
 error_code_t push_front_tensor(tensor_t*  t,
-                              const void* data,
-                              dtype_id_t  dtype) {
+                               const void* data,
+                               dtype_id_t  dtype) {
     if (t == NULL || data == NULL) return NULL_POINTER;
     if (t->mode != ARRAY_STRUCT)   return PRECONDITION_FAIL;
     if (dtype != t->dtype)         return TYPE_MISMATCH;
@@ -420,6 +420,74 @@ error_code_t push_at_tensor(tensor_t*    t,
     t->len++;
     return NO_ERROR;
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t pop_back_tensor(tensor_t*   t,
+                             void*       out,
+                             dtype_id_t  dtype) {
+    if (t == NULL)             return NULL_POINTER;
+    if (t->mode != ARRAY_STRUCT) return PRECONDITION_FAIL;
+    if (dtype != t->dtype)     return TYPE_MISMATCH;
+    if (t->len == 0u)          return EMPTY;
+
+    t->len--;
+    if (out != NULL)
+        memcpy(out, t->data + t->len * t->data_size, t->data_size);
+
+    return NO_ERROR;
+}
+
+// --------------------------------------------------------------------------------
+
+error_code_t pop_front_tensor(tensor_t*   t,
+                              void*       out,
+                              dtype_id_t  dtype) {
+    if (t == NULL)             return NULL_POINTER;
+    if (t->mode != ARRAY_STRUCT) return PRECONDITION_FAIL;
+    if (dtype != t->dtype)     return TYPE_MISMATCH;
+    if (t->len == 0u)          return EMPTY;
+
+    if (out != NULL)
+        memcpy(out, t->data, t->data_size);
+
+    t->len--;
+    if (t->len > 0u) {
+        memmove(t->data,
+                t->data + t->data_size,
+                t->len * t->data_size);
+    }
+
+    return NO_ERROR;
+}
+
+// --------------------------------------------------------------------------------
+
+error_code_t pop_at_tensor(tensor_t*   t,
+                           void*       out,
+                           size_t      index,
+                           dtype_id_t  dtype) {
+    if (t == NULL)             return NULL_POINTER;
+    if (t->mode != ARRAY_STRUCT) return PRECONDITION_FAIL;
+    if (dtype != t->dtype)     return TYPE_MISMATCH;
+    if (t->len == 0u)          return EMPTY;
+    if (index >= t->len)       return OUT_OF_BOUNDS;
+
+    if (index == 0u)              return pop_front_tensor(t, out, dtype);
+    if (index == t->len - 1u)    return pop_back_tensor(t, out, dtype);
+
+    if (out != NULL)
+        memcpy(out, t->data + index * t->data_size, t->data_size);
+
+    /* Compute shift count before decrementing len for clarity */
+    size_t shift_count = t->len - index - 1u;
+    t->len--;
+    memmove(t->data + index * t->data_size,
+            t->data + (index + 1u) * t->data_size,
+            shift_count * t->data_size);
+
+    return NO_ERROR;
+}
+
 // ================================================================================ 
 // ================================================================================ 
 // RETRIEVE DATA

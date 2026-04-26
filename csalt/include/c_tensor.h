@@ -600,6 +600,107 @@ error_code_t push_at_tensor(tensor_t*   t,
                             const void* data,
                             size_t      index,
                             dtype_id_t  dtype);
+
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Remove and optionally retrieve the last element of a dynamic
+ *        1-D tensor.
+ *
+ * Decrements len by one, exposing the vacated slot as spare capacity.
+ * If out is non-NULL, copies exactly data_size bytes from the removed
+ * slot into the caller-provided buffer before the slot is considered
+ * free. The element bytes remain in the buffer until overwritten by a
+ * subsequent push — the caller must not rely on them after this call.
+ *
+ * This is an O(1) operation.
+ *
+ * @param t      Pointer to the target tensor. Must not be NULL.
+ *               Must have mode == ARRAY_STRUCT.
+ * @param out    Caller-provided buffer to receive the removed element.
+ *               May be NULL if the value is not needed. When non-NULL,
+ *               must point to at least t->data_size bytes.
+ * @param dtype  Type identifier. Must match t->dtype.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER      if t is NULL
+ *         - PRECONDITION_FAIL if t->mode != ARRAY_STRUCT
+ *         - TYPE_MISMATCH     if dtype != t->dtype
+ *         - EMPTY             if t->len == 0
+ */
+error_code_t pop_back_tensor(tensor_t*   t,
+                             void*       out,
+                             dtype_id_t  dtype);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Remove and optionally retrieve the first element of a dynamic
+ *        1-D tensor.
+ *
+ * Copies exactly data_size bytes from slot 0 into out (if non-NULL),
+ * then shifts all remaining elements one slot toward the front via
+ * memmove and decrements len by one. The shift is skipped when len
+ * reaches zero after the removal.
+ *
+ * This is an O(n) operation due to the element shift.
+ *
+ * @param t      Pointer to the target tensor. Must not be NULL.
+ *               Must have mode == ARRAY_STRUCT.
+ * @param out    Caller-provided buffer to receive the removed element.
+ *               May be NULL if the value is not needed. When non-NULL,
+ *               must point to at least t->data_size bytes.
+ * @param dtype  Type identifier. Must match t->dtype.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER      if t is NULL
+ *         - PRECONDITION_FAIL if t->mode != ARRAY_STRUCT
+ *         - TYPE_MISMATCH     if dtype != t->dtype
+ *         - EMPTY             if t->len == 0
+ */
+error_code_t pop_front_tensor(tensor_t*   t,
+                              void*       out,
+                              dtype_id_t  dtype);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Remove and optionally retrieve the element at an arbitrary index
+ *        in a dynamic 1-D tensor.
+ *
+ * Copies exactly data_size bytes from the slot at index into out (if
+ * non-NULL), then shifts all elements at positions (index, len) one slot
+ * toward the front via memmove and decrements len by one.
+ *
+ * As fast paths, index == 0 delegates to pop_front_tensor and
+ * index == len - 1 delegates to pop_back_tensor, avoiding an unnecessary
+ * memmove in both cases.
+ *
+ * Valid index range is [0, len). Passing index >= len returns
+ * OUT_OF_BOUNDS without modifying the tensor.
+ *
+ * This is an O(n) operation due to the element shift.
+ *
+ * @param t      Pointer to the target tensor. Must not be NULL.
+ *               Must have mode == ARRAY_STRUCT.
+ * @param out    Caller-provided buffer to receive the removed element.
+ *               May be NULL if the value is not needed. When non-NULL,
+ *               must point to at least t->data_size bytes.
+ * @param index  Zero-based position of the element to remove.
+ *               Must be < t->len.
+ * @param dtype  Type identifier. Must match t->dtype.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER      if t is NULL
+ *         - PRECONDITION_FAIL if t->mode != ARRAY_STRUCT
+ *         - TYPE_MISMATCH     if dtype != t->dtype
+ *         - EMPTY             if t->len == 0
+ *         - OUT_OF_BOUNDS     if index >= t->len
+ */
+error_code_t pop_at_tensor(tensor_t*   t,
+                           void*       out,
+                           size_t      index,
+                           dtype_id_t  dtype);
 // ================================================================================ 
 // ================================================================================ 
 // RETRIEVE DATA
