@@ -32,10 +32,11 @@ extern "C" {
 // STRUCTS AND DERIVED DATA TYPES 
 
 typedef enum {
-    TENSOR_FIXED_SHAPE,   /* N-D fixed capacity; all slots zero-initialised;
-                             len == alloc == product of shape at all times     */
-    TENSOR_DYNAMIC_1D     /* 1-D only; len tracks populated count;
-                             growth flag controls automatic reallocation       */
+    TENSOR_STRUCT,   /* N-D fixed capacity; all slots zero-initialised;
+                      len == alloc == product of shape at all times     */
+
+    ARRAY_STRUCT     /* 1-D only; len tracks populated count;
+                      growth flag controls automatic reallocation       */
 } tensor_mode_t;
 
 typedef struct {
@@ -136,6 +137,51 @@ tensor_expect_t init_tensor(uint8_t            ndim,
  */
 void return_tensor(tensor_t* t);
 
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Initialize a new dynamic 1-D tensor operating in ARRAY_STRUCT mode.
+ *
+ * Convenience wrapper around init_tensor that constructs a single-dimension
+ * tensor and configures it for dynamic array semantics. The underlying
+ * allocation is identical to a rank-1 init_tensor call — one header+FAM
+ * block and one data buffer — but the mode, growth flag, and len are set
+ * to reflect ARRAY_STRUCT invariants:
+ *
+ *   - mode  = ARRAY_STRUCT  (1-D dynamic array semantics)
+ *   - len   = 0             (no elements populated at construction)
+ *   - alloc = capacity      (total allocated capacity in elements)
+ *   - growth controls whether push operations may trigger reallocation
+ *     when len reaches alloc
+ *
+ * The data buffer is zero-initialised at construction. The dtype must be
+ * registered in the dtype registry before calling this function. For
+ * type-safe access prefer a typed wrapper such as init_float_array which
+ * fixes the dtype at compile time and hides it from every call site.
+ *
+ * @param capacity  Number of elements to allocate. Must be > 0.
+ * @param dtype     Type identifier. Must not be UNKNOWN_TYPE and must be
+ *                  registered in the dtype registry before this call.
+ * @param growth    If true, push operations will automatically reallocate
+ *                  the data buffer when len reaches alloc. If false, pushing
+ *                  onto a full array returns CAPACITY_OVERFLOW.
+ * @param alloc_v   Allocator vtable used for all memory operations.
+ *                  alloc_v.allocate must not be NULL.
+ *
+ * @return tensor_expect_t with has_value true and a valid tensor_t* on
+ *         success. On failure, has_value is false and u.error is one of:
+ *         - NULL_POINTER    if alloc_v.allocate is NULL
+ *         - INVALID_ARG     if capacity is 0 or dtype is UNKNOWN_TYPE
+ *         - ILLEGAL_STATE   if the dtype registry could not be initialised
+ *         - TYPE_MISMATCH   if dtype is not registered in the dtype registry
+ *         - BAD_ALLOC       if the allocator fails to allocate the struct
+ *                           and FAM metadata block
+ *         - OUT_OF_MEMORY   if the allocator fails to allocate the data buffer
+ */
+tensor_expect_t init_tensor_array(size_t             capacity,
+                                  dtype_id_t         dtype,
+                                  bool               growth,
+                                  allocator_vtable_t alloc_v);
 // ================================================================================ 
 // ================================================================================ 
 // INTROSPECTION
@@ -372,7 +418,9 @@ error_code_t tensor_shape_str(const tensor_t* t, char* buf, size_t buf_len);
  */
 error_code_t clear_tensor(tensor_t* t);
 
-// --------------------------------------------------------------------------------
+// ================================================================================ 
+// ================================================================================ 
+// ADD AND REMOVE DATA
 
 /**
  * @brief Overwrite the element at a flat index without changing len or alloc.
@@ -442,8 +490,119 @@ error_code_t set_tensor_nd_index(tensor_t*      t,
                                  const size_t*  idx,
                                  const void*    data,
                                  dtype_id_t     dtype);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Append one element to the back of a dynamic 1-D tensor.
+ *
+ * Copies exactly data_size bytes from data into the next available slot
+ * at index len, then increments len by one. If the tensor is full and
+ * growth is true, the data buffer is reallocated before the copy using
+ * the tiered growth strategy (_compute_new_alloc). If growth is false
+ * and the tensor is full, no data is written and CAPACITY_OVERFLOW is
+ * returned.
+ *
+ * This is an O(1) amortised operation when growth is enabled.
+ *
+ * @param t      Pointer to the target tensor. Must not be NULL.
+ *               Must have mode == ARRAY_STRUCT.
+ * @param data   Pointer to the value to append. Must not be NULL.
+ *               Must point to at least t->data_size bytes.
+ * @param dtype  Type identifier. Must match t->dtype.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER      if t or data is NULL
+ *         - PRECONDITION_FAIL if t->mode != ARRAY_STRUCT
+ *         - TYPE_MISMATCH     if dtype != t->dtype
+ *         - CAPACITY_OVERFLOW if the tensor is full and growth is false,
+ *                             or if the allocator does not support
+ *                             reallocation
+ *         - LENGTH_OVERFLOW   if the new capacity would overflow size_t
+ *         - OUT_OF_MEMORY     if reallocation fails
+ */
+error_code_t push_back_tensor(tensor_t*   t,
+                              const void* data,
+                              dtype_id_t  dtype);
 
 // --------------------------------------------------------------------------------
+
+/**
+ * @brief Prepend one element to the front of a dynamic 1-D tensor.
+ *
+ * Shifts all existing elements one slot toward the back via memmove, then
+ * copies exactly data_size bytes from data into slot 0 and increments len
+ * by one. If the tensor is full and growth is true, the data buffer is
+ * reallocated before the shift. The reallocation is performed first so
+ * that the buffer pointer is stable during the memmove.
+ *
+ * This is an O(n) operation due to the element shift.
+ *
+ * @param t      Pointer to the target tensor. Must not be NULL.
+ *               Must have mode == ARRAY_STRUCT.
+ * @param data   Pointer to the value to prepend. Must not be NULL.
+ *               Must point to at least t->data_size bytes.
+ * @param dtype  Type identifier. Must match t->dtype.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER      if t or data is NULL
+ *         - PRECONDITION_FAIL if t->mode != ARRAY_STRUCT
+ *         - TYPE_MISMATCH     if dtype != t->dtype
+ *         - CAPACITY_OVERFLOW if the tensor is full and growth is false,
+ *                             or if the allocator does not support
+ *                             reallocation
+ *         - LENGTH_OVERFLOW   if the new capacity would overflow size_t
+ *         - OUT_OF_MEMORY     if reallocation fails
+ */
+error_code_t push_front_tensor(tensor_t*   t,
+                               const void* data,
+                               dtype_id_t  dtype);
+
+// --------------------------------------------------------------------------------
+
+/**
+ * @brief Insert one element at an arbitrary index in a dynamic 1-D tensor.
+ *
+ * Inserts data at the given index by shifting all elements at positions
+ * [index, len) one slot toward the back via memmove, then copying exactly
+ * data_size bytes from data into the vacated slot and incrementing len by
+ * one. The reallocation is performed before the shift so that the buffer
+ * pointer is stable during the memmove.
+ *
+ * As fast paths, index == 0 delegates to push_front_tensor and
+ * index == len delegates to push_back_tensor, avoiding an unnecessary
+ * memmove in both cases.
+ *
+ * Valid index range is [0, len] inclusive. Passing index == len is
+ * equivalent to push_back_tensor. Passing index > len returns
+ * OUT_OF_BOUNDS without modifying the tensor.
+ *
+ * This is an O(n) operation due to the element shift.
+ *
+ * @param t      Pointer to the target tensor. Must not be NULL.
+ *               Must have mode == ARRAY_STRUCT.
+ * @param data   Pointer to the value to insert. Must not be NULL.
+ *               Must point to at least t->data_size bytes.
+ * @param index  Zero-based position at which to insert. Must be <= t->len.
+ * @param dtype  Type identifier. Must match t->dtype.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER      if t or data is NULL
+ *         - PRECONDITION_FAIL if t->mode != ARRAY_STRUCT
+ *         - TYPE_MISMATCH     if dtype != t->dtype
+ *         - OUT_OF_BOUNDS     if index > t->len
+ *         - CAPACITY_OVERFLOW if the tensor is full and growth is false,
+ *                             or if the allocator does not support
+ *                             reallocation
+ *         - LENGTH_OVERFLOW   if the new capacity would overflow size_t
+ *         - OUT_OF_MEMORY     if reallocation fails
+ */
+error_code_t push_at_tensor(tensor_t*   t,
+                            const void* data,
+                            size_t      index,
+                            dtype_id_t  dtype);
+// ================================================================================ 
+// ================================================================================ 
+// RETRIEVE DATA
 
 /**
  * @brief Copy one element out of the tensor by flat index.

@@ -77,7 +77,7 @@ tensor_expect_t init_tensor(uint8_t            ndim,
         t->strides[i - 1u] = t->strides[i] * t->shape[i];
 
     // ---- allocate and zero-initialise data buffer ------------------------
-    // TENSOR_FIXED_SHAPE: all slots are considered live at init time so the
+    // TENSOR_STRUCT: all slots are considered live at init time so the
     // buffer must be zeroed — there is no push_back mechanism to signal which
     // slots have been written.
     void_ptr_expect_t data_result = alloc_v.allocate(alloc_v.ctx, len * data_size, true);
@@ -92,8 +92,8 @@ tensor_expect_t init_tensor(uint8_t            ndim,
     t->alloc     = len;
     t->data_size = data_size;
     t->dtype     = dtype;
-    t->mode      = TENSOR_FIXED_SHAPE;
-    t->growth    = false;   /* ignored for TENSOR_FIXED_SHAPE; set defensively */
+    t->mode      = TENSOR_STRUCT;
+    t->growth    = false;   /* ignored for TENSOR_STRUCT; set defensively */
     t->alloc_v   = alloc_v;
     t->ndim      = ndim;
 
@@ -113,6 +113,24 @@ void return_tensor(tensor_t* t) {
 
     t->alloc_v.return_element(t->alloc_v.ctx, t);
 }
+
+// -------------------------------------------------------------------------------- 
+
+tensor_expect_t init_tensor_array(size_t             capacity,
+                                  dtype_id_t         dtype,
+                                  bool               growth,
+                                  allocator_vtable_t alloc_v) {
+    const size_t shape[] = { capacity };
+    tensor_expect_t r = init_tensor(1u, shape, dtype, alloc_v);
+    if (!r.has_value) return r;
+
+    r.u.value->mode   = ARRAY_STRUCT;
+    r.u.value->growth = growth;
+    r.u.value->len    = 0u;
+
+    return r;
+}
+
 // ================================================================================ 
 // ================================================================================ 
 // INTROSPECTION 
@@ -220,13 +238,14 @@ error_code_t clear_tensor(tensor_t* t) {
     /* DYNAMIC_1D: reset populated count to zero.
      * FIXED_SHAPE: len == alloc always; zeroing the buffer does not
      *              change the number of live slots. */
-    if (t->mode == TENSOR_DYNAMIC_1D)
+    if (t->mode == ARRAY_STRUCT)
         t->len = 0u;
 
     return NO_ERROR;
 }
-
-// --------------------------------------------------------------------------------
+// ================================================================================ 
+// ================================================================================ 
+// ADD AND REMOVE DATA
 
 error_code_t set_tensor_index(tensor_t*   t,
                               size_t      index,
@@ -238,7 +257,7 @@ error_code_t set_tensor_index(tensor_t*   t,
     /* Bound check depends on mode:
      *   DYNAMIC_1D:   only populated slots [0, len) are addressable
      *   FIXED_SHAPE:  all allocated slots  [0, alloc) are addressable */
-    size_t limit = (t->mode == TENSOR_DYNAMIC_1D) ? t->len : t->alloc;
+    size_t limit = (t->mode == ARRAY_STRUCT) ? t->len : t->alloc;
     if (index >= limit) return OUT_OF_BOUNDS;
 
     memcpy(t->data + index * t->data_size, data, t->data_size);
@@ -256,7 +275,7 @@ error_code_t set_tensor_nd_index(tensor_t*      t,
 
     /* N-D indexing is only meaningful for fixed-shape tensors.
      * A dynamic 1-D array has no row/column structure. */
-    if (t->mode != TENSOR_FIXED_SHAPE) return ILLEGAL_STATE;
+    if (t->mode != TENSOR_STRUCT) return ILLEGAL_STATE;
 
     size_t offset = 0u;
     for (uint8_t i = 0u; i < t->ndim; i++) {
@@ -267,7 +286,143 @@ error_code_t set_tensor_nd_index(tensor_t*      t,
     memcpy(t->data + offset, data, t->data_size);
     return NO_ERROR;
 }
+
+// ================================================================================ 
+// ================================================================================ 
+// Internal growth strategy
+//
+// Tiered to avoid runaway allocation at large sizes while maintaining fast
+// ramp-up at small sizes:
+//   0 elements       -> 1
+//   < 1024 elements  -> 2x
+//   < 8192 elements  -> 1.5x  (alloc + alloc/2)
+//   < 65536 elements -> 1.25x (alloc + alloc/4)
+//   >= 65536 elements -> linear increment of 256
+// ================================================================================
+
+static size_t _compute_new_alloc(size_t current) {
+    if (current == 0u)    return 1u;
+    if (current < 1024u)  return current * 2u;
+    if (current < 8192u)  return current + current / 2u;
+    if (current < 65536u) return current + current / 4u;
+    return current + 256u;
+}
+
+// ================================================================================
+// Internal grow helper
+//
+// Reallocates the data buffer to new_alloc elements using the cached data_size.
+// Returns NO_ERROR on success. On failure the array is left untouched.
+// ================================================================================
+
+static error_code_t _grow_array(tensor_t* t, size_t new_alloc) {
+    /* Overflow guard: new_alloc * data_size must not wrap */
+    if (new_alloc > SIZE_MAX / t->data_size) return LENGTH_OVERFLOW;
+
+    size_t old_bytes = t->alloc * t->data_size;
+    size_t new_bytes = new_alloc    * t->data_size;
+
+    void_ptr_expect_t result = t->alloc_v.reallocate(
+        t->alloc_v.ctx,
+        t->data,
+        old_bytes,
+        new_bytes,
+        false
+    );
+
+    if (result.has_value == false) return OUT_OF_MEMORY;
+
+    t->data  = (uint8_t*)result.u.value;
+    t->alloc = new_alloc;
+    return NO_ERROR;
+}
+
+// ================================================================================
+// Internal capacity helper
+//
+// Ensures at least one free slot exists, growing if permitted.
+// Returns NO_ERROR when there is room to write, or an error code otherwise.
+// ================================================================================
+
+static error_code_t _ensure_capacity(tensor_t* t) {
+    if (t->len < t->alloc) return NO_ERROR;
+
+    if (t->growth == false)              return CAPACITY_OVERFLOW;
+    if (t->alloc_v.reallocate == NULL)   return CAPACITY_OVERFLOW;
+
+    size_t new_alloc = _compute_new_alloc(t->alloc);
+    return _grow_array(t, new_alloc);
+}
+
+// -------------------------------------------------------------------------------- 
+
+error_code_t push_back_tensor(tensor_t*    t,
+                              const void* data,
+                              dtype_id_t  dtype) {
+    if (t == NULL || data == NULL) return NULL_POINTER;
+    if (t->mode != ARRAY_STRUCT)   return PRECONDITION_FAIL;
+    if (dtype != t->dtype)         return TYPE_MISMATCH;
+
+    error_code_t err = _ensure_capacity(t);
+    if (err != NO_ERROR) return err;
+
+    memcpy(t->data + t->len * t->data_size, data, t->data_size);
+    t->len++;
+    return NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t push_front_tensor(tensor_t*  t,
+                              const void* data,
+                              dtype_id_t  dtype) {
+    if (t == NULL || data == NULL) return NULL_POINTER;
+    if (t->mode != ARRAY_STRUCT)   return PRECONDITION_FAIL;
+    if (dtype != t->dtype)         return TYPE_MISMATCH;
+
+    /* Grow before shifting so the buffer pointer is stable during memmove */
+    error_code_t err = _ensure_capacity(t);
+    if (err != NO_ERROR) return err;
+
+    if (t->len > 0u) {
+        memmove(t->data + t->data_size,
+                t->data,
+                t->len * t->data_size);
+}
+
+    memcpy(t->data, data, t->data_size);
+    t->len++;
+    return NO_ERROR;
+}
+
 // --------------------------------------------------------------------------------
+
+error_code_t push_at_tensor(tensor_t*    t,
+                            const void* data,
+                            size_t      index,
+                            dtype_id_t  dtype) {
+    if (t == NULL || data == NULL) return NULL_POINTER;
+    if (t->mode != ARRAY_STRUCT)   return PRECONDITION_FAIL;
+    if (dtype != t->dtype)         return TYPE_MISMATCH;
+    if (index > t->len)            return OUT_OF_BOUNDS;
+
+    if (index == 0u)         return push_front_tensor(t, data, dtype);
+    if (index == t->len) return push_back_tensor(t, data, dtype);
+
+    /* Grow before shifting so the buffer pointer is stable during memmove */
+    error_code_t err = _ensure_capacity(t);
+    if (err != NO_ERROR) return err;
+
+    memmove(t->data + (index + 1u) * t->data_size,
+            t->data + index * t->data_size,
+            (t->len - index) * t->data_size);
+
+    memcpy(t->data + index * t->data_size, data, t->data_size);
+    t->len++;
+    return NO_ERROR;
+}
+// ================================================================================ 
+// ================================================================================ 
+// RETRIEVE DATA
 
 error_code_t get_tensor_index(const tensor_t* t,
                               size_t          index,
@@ -276,7 +431,7 @@ error_code_t get_tensor_index(const tensor_t* t,
     if (t == NULL || out == NULL) return NULL_POINTER;
     if (dtype != t->dtype)        return TYPE_MISMATCH;
 
-    size_t limit = (t->mode == TENSOR_DYNAMIC_1D) ? t->len : t->alloc;
+    size_t limit = (t->mode == ARRAY_STRUCT) ? t->len : t->alloc;
     if (index >= limit) return OUT_OF_BOUNDS;
 
     memcpy(out, t->data + index * t->data_size, t->data_size);
@@ -292,7 +447,7 @@ error_code_t get_tensor_nd_index(const tensor_t* t,
     if (t == NULL || idx == NULL || out == NULL) return NULL_POINTER;
     if (dtype != t->dtype)                       return TYPE_MISMATCH;
 
-    if (t->mode != TENSOR_FIXED_SHAPE) return ILLEGAL_STATE;
+    if (t->mode != TENSOR_STRUCT) return ILLEGAL_STATE;
 
     size_t offset = 0u;
     for (uint8_t i = 0u; i < t->ndim; i++) {

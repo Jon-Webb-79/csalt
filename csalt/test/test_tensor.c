@@ -27,7 +27,7 @@
 // ================================================================================
 // HELPERS
 
-/** Shorthand: build a heap allocator and call init_tensor (TENSOR_FIXED_SHAPE). */
+/** Shorthand: build a heap allocator and call init_tensor (TENSOR_STRUCT). */
 static tensor_expect_t _make_tensor(uint8_t ndim, const size_t* shape,
                                     dtype_id_t dtype) {
     allocator_vtable_t alloc = heap_allocator();
@@ -35,7 +35,7 @@ static tensor_expect_t _make_tensor(uint8_t ndim, const size_t* shape,
 }
 
 /**
- * Shorthand: construct a TENSOR_DYNAMIC_1D tensor with a given capacity.
+ * Shorthand: construct a TENSOR_DYNAMIC_ tensor with a given capacity.
  * len starts at 0; the caller populates slots via set_tensor_index or
  * push operations.  growth controls whether automatic reallocation is
  * permitted when the buffer is full.
@@ -47,11 +47,11 @@ static tensor_expect_t _make_array(size_t capacity, dtype_id_t dtype,
     tensor_expect_t r = init_tensor(1u, shape, dtype, alloc);
     if (!r.has_value) return r;
 
-    /* Flip mode and reset len to match TENSOR_DYNAMIC_1D invariants.
+    /* Flip mode and reset len to match TENSOR_DYNAMIC_ invariants.
      * In a real init_array wrapper this would be done inside that function;
      * here we set it directly so the test file has no dependency on an
      * init_array function that may not exist yet. */
-    r.u.value->mode   = TENSOR_DYNAMIC_1D;
+    r.u.value->mode   = ARRAY_STRUCT;
     r.u.value->growth = growth;
     r.u.value->len    = 0u;
     return r;
@@ -158,7 +158,7 @@ static void test_init_tensor_zero_in_shape(void** state) {
 
 /**
  * 1-D tensor (array mode shape): verify all scalar fields are set correctly
- * and that mode is TENSOR_FIXED_SHAPE.
+ * and that mode is TENSOR_STRUCT.
  */
 static void test_init_tensor_1d_scalar_fields(void** state) {
     (void)state;
@@ -176,7 +176,7 @@ static void test_init_tensor_1d_scalar_fields(void** state) {
     assert_int_equal(t->alloc,     8u);
     assert_int_equal(t->data_size, sizeof(int32_t));
     assert_int_equal(t->dtype,     INT32_TYPE);
-    assert_int_equal(t->mode,      TENSOR_FIXED_SHAPE);
+    assert_int_equal(t->mode,      TENSOR_STRUCT);
     assert_false(t->growth);
 
     return_tensor(t);
@@ -261,7 +261,7 @@ static void test_init_tensor_3d_shape_and_strides(void** state) {
 // --------------------------------------------------------------------------------
 
 /**
- * TENSOR_FIXED_SHAPE: data buffer must be zero-initialised at construction.
+ * TENSOR_STRUCT: data buffer must be zero-initialised at construction.
  * Check every byte directly so no stale value can hide behind a typed read.
  */
 static void test_init_tensor_data_zeroed(void** state) {
@@ -421,7 +421,7 @@ static void test_tensor_size_and_alloc_equal_for_fixed(void** state) {
     assert_true(r.has_value);
     tensor_t* t = r.u.value;
 
-    /* For TENSOR_FIXED_SHAPE, len == alloc == product of shape */
+    /* For TENSOR_STRUCT, len == alloc == product of shape */
     assert_int_equal(tensor_size(t),  12u);
     assert_int_equal(tensor_alloc(t), 12u);
     assert_int_equal(tensor_data_size(t), sizeof(int32_t));
@@ -443,7 +443,7 @@ static void test_is_tensor_full_null(void** state) {
     assert_true(is_tensor_full(NULL));
 }
 
-/** TENSOR_FIXED_SHAPE is never empty (len == alloc > 0) and always full. */
+/** TENSOR_STRUCT is never empty (len == alloc > 0) and always full. */
 static void test_is_tensor_empty_and_full_fixed_shape(void** state) {
     (void)state;
     const size_t shape[] = { 2u, 3u };
@@ -866,7 +866,7 @@ static void test_init_tensor_user_dtype_vec3(void** state) {
     assert_int_equal(t->alloc,     12u);
     assert_int_equal(t->data_size, sizeof(vec3_t));
     assert_int_equal(t->dtype,     VEC3_TYPE);
-    assert_int_equal(t->mode,      TENSOR_FIXED_SHAPE);
+    assert_int_equal(t->mode,      TENSOR_STRUCT);
 
     /* C-order strides:
      *   strides[1] = data_size                  = sizeof(vec3_t)
@@ -1287,7 +1287,7 @@ static void test_get_tensor_index_type_mismatch(void** state) {
     return_tensor(r.u.value);
 }
 
-// ---- TENSOR_FIXED_SHAPE bound checks ----------------------------------------
+// ---- TENSOR_STRUCT bound checks ----------------------------------------
 
 /**
  * FIXED_SHAPE: index == alloc must be OUT_OF_BOUNDS (one past end).
@@ -1382,10 +1382,10 @@ static void test_set_get_fixed_shape_2d_flat_index(void** state) {
     return_tensor(t);
 }
 
-// ---- TENSOR_DYNAMIC_1D bound checks -----------------------------------------
+// ---- TENSOR_DYNAMIC_ bound checks -----------------------------------------
 
 /**
- * DYNAMIC_1D: with len == 0, index 0 must be OUT_OF_BOUNDS for both set
+ * DYNAMIC_: with len == 0, index 0 must be OUT_OF_BOUNDS for both set
  * and get because no slots have been populated yet.
  */
 static void test_set_get_dynamic_1d_empty(void** state) {
@@ -1406,7 +1406,7 @@ static void test_set_get_dynamic_1d_empty(void** state) {
 }
 
 /**
- * DYNAMIC_1D: manually advance len then confirm only indices in [0, len)
+ * DYNAMIC_: manually advance len then confirm only indices in [0, len)
  * are accessible and that index == len is OUT_OF_BOUNDS.
  */
 static void test_set_get_dynamic_1d_len_boundary(void** state) {
@@ -1437,7 +1437,7 @@ static void test_set_get_dynamic_1d_len_boundary(void** state) {
 }
 
 /**
- * DYNAMIC_1D: index within [0, alloc) but beyond len must be OUT_OF_BOUNDS,
+ * DYNAMIC_: index within [0, alloc) but beyond len must be OUT_OF_BOUNDS,
  * confirming that alloc is NOT used as the limit in dynamic mode.
  */
 static void test_set_get_dynamic_1d_beyond_len_but_within_alloc(void** state) {
@@ -1482,7 +1482,7 @@ static void test_set_get_fixed_shape_round_trip_float(void** state) {
     return_tensor(t);
 }
 
-/** DYNAMIC_1D round-trip confirming populated slots return correct values. */
+/** DYNAMIC_ round-trip confirming populated slots return correct values. */
 static void test_set_get_dynamic_1d_round_trip(void** state) {
     (void)state;
     tensor_expect_t r = _make_array(5u, FLOAT_TYPE, false);
@@ -1566,7 +1566,7 @@ static void test_set_tensor_nd_index_type_mismatch(void** state) {
 }
 
 /**
- * DYNAMIC_1D tensor must return ILLEGAL_STATE for nd set,
+ * DYNAMIC_ tensor must return ILLEGAL_STATE for nd set,
  * because N-D indexing has no meaning on a 1-D dynamic array.
  */
 static void test_set_tensor_nd_index_illegal_on_dynamic(void** state) {
@@ -1640,7 +1640,7 @@ static void test_get_tensor_nd_index_type_mismatch(void** state) {
 }
 
 /**
- * DYNAMIC_1D tensor must return ILLEGAL_STATE for nd get.
+ * DYNAMIC_ tensor must return ILLEGAL_STATE for nd get.
  */
 static void test_get_tensor_nd_index_illegal_on_dynamic(void** state) {
     (void)state;
@@ -2041,7 +2041,7 @@ static void test_copy_tensor_deep_copy_independence(void** state) {
 // ---- Mode-specific correctness ----------------------------------------------
  
 /**
- * Copy of a TENSOR_DYNAMIC_1D tensor: len must reflect the populated
+ * Copy of a TENSOR_DYNAMIC_ tensor: len must reflect the populated
  * count at copy time, not alloc, and the copy must remain independent.
  */
 static void test_copy_tensor_dynamic_1d(void** state) {
@@ -2063,7 +2063,7 @@ static void test_copy_tensor_dynamic_1d(void** state) {
     assert_true(dst_r.has_value);
     tensor_t* dst = dst_r.u.value;
 
-    assert_int_equal(dst->mode,  TENSOR_DYNAMIC_1D);
+    assert_int_equal(dst->mode, ARRAY_STRUCT);
     assert_int_equal(dst->len,   4u);
     assert_int_equal(dst->alloc, src->alloc);
 
@@ -2135,7 +2135,7 @@ static void test_copy_tensor_mode_preserved(void** state) {
     tensor_expect_t src_r = _make_tensor(1u, shape, INT32_TYPE);
     assert_true(src_r.has_value);
     tensor_t* src = src_r.u.value;
-    assert_int_equal(src->mode, TENSOR_FIXED_SHAPE);
+    assert_int_equal(src->mode, TENSOR_STRUCT);
  
     allocator_vtable_t alloc = heap_allocator();
     tensor_expect_t dst_r = copy_tensor(src, alloc);
@@ -2146,6 +2146,461 @@ static void test_copy_tensor_mode_preserved(void** state) {
  
     return_tensor(src);
     return_tensor(dst);
+}
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// PUSH OPERATIONS (push_back_tensor / push_front_tensor / push_at_tensor)
+// ================================================================================
+ 
+// ---- Shared guard tests -----------------------------------------------------
+ 
+/** NULL tensor must return NULL_POINTER for all three push variants. */
+static void test_push_null_tensor(void** state) {
+    (void)state;
+    int32_t val = 1;
+    assert_int_equal(push_back_tensor(NULL,  &val, INT32_TYPE), NULL_POINTER);
+    assert_int_equal(push_front_tensor(NULL, &val, INT32_TYPE), NULL_POINTER);
+    assert_int_equal(push_at_tensor(NULL,    &val, 0u, INT32_TYPE), NULL_POINTER);
+}
+ 
+/** NULL data must return NULL_POINTER for all three push variants. */
+static void test_push_null_data(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    assert_int_equal(push_back_tensor(t,  NULL, INT32_TYPE), NULL_POINTER);
+    assert_int_equal(push_front_tensor(t, NULL, INT32_TYPE), NULL_POINTER);
+    assert_int_equal(push_at_tensor(t,    NULL, 0u, INT32_TYPE), NULL_POINTER);
+ 
+    return_tensor(t);
+}
+ 
+/** Wrong dtype must return TYPE_MISMATCH for all three push variants. */
+static void test_push_type_mismatch(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    float val = 1.0f;
+    assert_int_equal(push_back_tensor(t,  &val, FLOAT_TYPE), TYPE_MISMATCH);
+    assert_int_equal(push_front_tensor(t, &val, FLOAT_TYPE), TYPE_MISMATCH);
+    assert_int_equal(push_at_tensor(t,    &val, 0u, FLOAT_TYPE), TYPE_MISMATCH);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * TENSOR_STRUCT mode must return PRECONDITION_FAIL for all three push
+ * variants — push operations are only valid on ARRAY_STRUCT tensors.
+ */
+static void test_push_wrong_mode(void** state) {
+    (void)state;
+    const size_t shape[] = { 4u };
+    tensor_expect_t r = _make_tensor(1u, shape, INT32_TYPE);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t val = 1;
+    assert_int_equal(push_back_tensor(t,  &val, INT32_TYPE), PRECONDITION_FAIL);
+    assert_int_equal(push_front_tensor(t, &val, INT32_TYPE), PRECONDITION_FAIL);
+    assert_int_equal(push_at_tensor(t,    &val, 0u, INT32_TYPE), PRECONDITION_FAIL);
+ 
+    return_tensor(t);
+}
+ 
+// ---- push_back_tensor -------------------------------------------------------
+ 
+/** push_back appends to the back and increments len. */
+static void test_push_back_basic(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 10, b = 20, c = 30;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &c, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 3u);
+ 
+    int32_t out = 0;
+    assert_int_equal(get_tensor_index(t, 0u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 10);
+    assert_int_equal(get_tensor_index(t, 1u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 20);
+    assert_int_equal(get_tensor_index(t, 2u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 30);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * push_back on a full fixed-capacity array must return CAPACITY_OVERFLOW
+ * and leave the array unchanged.
+ */
+static void test_push_back_full_no_growth(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(2u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 1, b = 2, c = 3;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 2u);
+ 
+    /* Array is now full — next push must fail */
+    assert_int_equal(push_back_tensor(t, &c, INT32_TYPE), CAPACITY_OVERFLOW);
+    assert_int_equal(t->len, 2u);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * push_back on a full growable array must reallocate and succeed.
+ * len must be incremented and the new element must be readable.
+ */
+static void test_push_back_growth(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(2u, INT32_TYPE, true);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 1, b = 2, c = 3;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+ 
+    /* This push triggers reallocation */
+    assert_int_equal(push_back_tensor(t, &c, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 3u);
+    assert_true(t->alloc >= 3u);
+ 
+    int32_t out = 0;
+    assert_int_equal(get_tensor_index(t, 2u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 3);
+ 
+    return_tensor(t);
+}
+ 
+/** push_back fills every slot and confirms order is preserved. */
+static void test_push_back_fill_to_capacity(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    for (int32_t i = 0; i < 5; i++)
+        assert_int_equal(push_back_tensor(t, &i, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(t->len, 5u);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, (int32_t)i);
+    }
+ 
+    return_tensor(t);
+}
+ 
+// ---- push_front_tensor ------------------------------------------------------
+ 
+/** push_front prepends to the front, shifts existing elements, and
+ *  increments len. */
+static void test_push_front_basic(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 10, b = 20, c = 30;
+    assert_int_equal(push_front_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_front_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_front_tensor(t, &c, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 3u);
+ 
+    /* Expected order: 30, 20, 10 */
+    int32_t out = 0;
+    assert_int_equal(get_tensor_index(t, 0u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 30);
+    assert_int_equal(get_tensor_index(t, 1u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 20);
+    assert_int_equal(get_tensor_index(t, 2u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 10);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * push_front onto an empty array must not call memmove (len == 0)
+ * and must place the element at index 0.
+ */
+static void test_push_front_into_empty(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    assert_int_equal(t->len, 0u);
+    int32_t val = 42;
+    assert_int_equal(push_front_tensor(t, &val, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 1u);
+ 
+    int32_t out = 0;
+    assert_int_equal(get_tensor_index(t, 0u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 42);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * push_front on a full fixed-capacity array must return CAPACITY_OVERFLOW
+ * and leave the array unchanged.
+ */
+static void test_push_front_full_no_growth(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(2u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 1, b = 2, c = 3;
+    assert_int_equal(push_front_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_front_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 2u);
+ 
+    assert_int_equal(push_front_tensor(t, &c, INT32_TYPE), CAPACITY_OVERFLOW);
+    assert_int_equal(t->len, 2u);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * push_front on a full growable array must reallocate, shift all
+ * existing elements, and place the new value at index 0.
+ */
+static void test_push_front_growth(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(2u, INT32_TYPE, true);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 1, b = 2, c = 99;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+ 
+    /* This push_front triggers reallocation then shifts [1, 2] right */
+    assert_int_equal(push_front_tensor(t, &c, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 3u);
+    assert_true(t->alloc >= 3u);
+ 
+    int32_t out = 0;
+    assert_int_equal(get_tensor_index(t, 0u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 99);
+    assert_int_equal(get_tensor_index(t, 1u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 1);
+    assert_int_equal(get_tensor_index(t, 2u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 2);
+ 
+    return_tensor(t);
+}
+ 
+// ---- push_at_tensor ---------------------------------------------------------
+ 
+/** index > len must return OUT_OF_BOUNDS without modifying the array. */
+static void test_push_at_out_of_bounds(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    t->len = 2u;
+    int32_t val = 1;
+ 
+    /* index 3 > len 2 */
+    assert_int_equal(push_at_tensor(t, &val, 3u, INT32_TYPE), OUT_OF_BOUNDS);
+    assert_int_equal(t->len, 2u);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * index == 0 must delegate to push_front_tensor — new element at slot 0,
+ * existing elements shifted right.
+ */
+static void test_push_at_zero_delegates_to_front(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 10, b = 20, front = 99;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(push_at_tensor(t, &front, 0u, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 3u);
+ 
+    int32_t out = 0;
+    assert_int_equal(get_tensor_index(t, 0u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 99);
+    assert_int_equal(get_tensor_index(t, 1u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 10);
+    assert_int_equal(get_tensor_index(t, 2u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 20);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * index == len must delegate to push_back_tensor — new element appended
+ * at the back without any shift.
+ */
+static void test_push_at_len_delegates_to_back(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 10, b = 20, back = 99;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(push_at_tensor(t, &back, t->len, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 3u);
+ 
+    int32_t out = 0;
+    assert_int_equal(get_tensor_index(t, 0u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 10);
+    assert_int_equal(get_tensor_index(t, 1u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 20);
+    assert_int_equal(get_tensor_index(t, 2u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 99);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * Insert in the middle: elements before index are unchanged, new element
+ * appears at index, elements from index onward are shifted right by one.
+ */
+static void test_push_at_middle(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    /* Build [10, 20, 30, 40] */
+    int32_t vals[] = { 10, 20, 30, 40 };
+    for (size_t i = 0u; i < 4u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    /* Insert 99 at index 2 → [10, 20, 99, 30, 40] */
+    int32_t ins = 99;
+    assert_int_equal(push_at_tensor(t, &ins, 2u, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 5u);
+ 
+    int32_t expected[] = { 10, 20, 99, 30, 40 };
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * push_at on a full fixed-capacity array must return CAPACITY_OVERFLOW
+ * regardless of the index.
+ */
+static void test_push_at_full_no_growth(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(3u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 1, b = 2, c = 3, d = 4;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &c, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 3u);
+ 
+    assert_int_equal(push_at_tensor(t, &d, 1u, INT32_TYPE), CAPACITY_OVERFLOW);
+    assert_int_equal(t->len, 3u);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * push_at in the middle of a growable array must reallocate, shift
+ * elements correctly, and place the new value at the right position.
+ */
+static void test_push_at_growth(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(2u, INT32_TYPE, true);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 1, b = 2, ins = 99;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+ 
+    /* Insert at index 1 triggers reallocation → [1, 99, 2] */
+    assert_int_equal(push_at_tensor(t, &ins, 1u, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 3u);
+    assert_true(t->alloc >= 3u);
+ 
+    int32_t expected[] = { 1, 99, 2 };
+    for (size_t i = 0u; i < 3u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * Interleaved push_back, push_front, and push_at to confirm all three
+ * functions maintain a consistent, correct element order.
+ */
+static void test_push_interleaved(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(8u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    /* push_back  → [1]          */
+    int32_t v1 = 1;
+    assert_int_equal(push_back_tensor(t, &v1, INT32_TYPE), NO_ERROR);
+ 
+    /* push_front → [2, 1]       */
+    int32_t v2 = 2;
+    assert_int_equal(push_front_tensor(t, &v2, INT32_TYPE), NO_ERROR);
+ 
+    /* push_at 1  → [2, 3, 1]   */
+    int32_t v3 = 3;
+    assert_int_equal(push_at_tensor(t, &v3, 1u, INT32_TYPE), NO_ERROR);
+ 
+    /* push_back  → [2, 3, 1, 4] */
+    int32_t v4 = 4;
+    assert_int_equal(push_back_tensor(t, &v4, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(t->len, 4u);
+ 
+    int32_t expected[] = { 2, 3, 1, 4 };
+    for (size_t i = 0u; i < 4u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(t);
 }
 // ================================================================================
 // ================================================================================
@@ -2259,7 +2714,7 @@ const struct CMUnitTest test_tensor[] = {
     cmocka_unit_test(test_set_get_fixed_shape_after_clear),
     cmocka_unit_test(test_set_get_fixed_shape_2d_flat_index),
 
-    /* set_tensor_index / get_tensor_index — DYNAMIC_1D bounds */
+    /* set_tensor_index / get_tensor_index — DYNAMIC_ bounds */
     cmocka_unit_test(test_set_get_dynamic_1d_empty),
     cmocka_unit_test(test_set_get_dynamic_1d_len_boundary),
     cmocka_unit_test(test_set_get_dynamic_1d_beyond_len_but_within_alloc),
@@ -2313,6 +2768,35 @@ const struct CMUnitTest test_tensor[] = {
 
     /* copy_tensor — regression: mode field must be copied */
     cmocka_unit_test(test_copy_tensor_mode_preserved),
+
+     /* push — shared guards */
+    cmocka_unit_test(test_push_null_tensor),
+    cmocka_unit_test(test_push_null_data),
+    cmocka_unit_test(test_push_type_mismatch),
+    cmocka_unit_test(test_push_wrong_mode),
+ 
+    /* push_back_tensor */
+    cmocka_unit_test(test_push_back_basic),
+    cmocka_unit_test(test_push_back_full_no_growth),
+    cmocka_unit_test(test_push_back_growth),
+    cmocka_unit_test(test_push_back_fill_to_capacity),
+ 
+    /* push_front_tensor */
+    cmocka_unit_test(test_push_front_basic),
+    cmocka_unit_test(test_push_front_into_empty),
+    cmocka_unit_test(test_push_front_full_no_growth),
+    cmocka_unit_test(test_push_front_growth),
+ 
+    /* push_at_tensor */
+    cmocka_unit_test(test_push_at_out_of_bounds),
+    cmocka_unit_test(test_push_at_zero_delegates_to_front),
+    cmocka_unit_test(test_push_at_len_delegates_to_back),
+    cmocka_unit_test(test_push_at_middle),
+    cmocka_unit_test(test_push_at_full_no_growth),
+    cmocka_unit_test(test_push_at_growth),
+ 
+    /* push — interleaved correctness */
+    cmocka_unit_test(test_push_interleaved),
 };
 
 const size_t test_tensor_count = sizeof(test_tensor) / sizeof(test_tensor[0]);

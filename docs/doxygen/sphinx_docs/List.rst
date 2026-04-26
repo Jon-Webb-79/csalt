@@ -9,7 +9,7 @@ of the csalt allocator and dtype systems.  It is designed for flexibility,
 allocator control, and predictable performance, while remaining fully
 agnostic to the stored data type.
 
-Unlike :ref:`array`, this module does not provide primitive typed wrappers.
+This module does not provide primitive typed wrappers.
 Instead, it is intended to serve as a foundation for user-defined data
 structures, where the caller defines the stored type via
 :c:type:`dtype_id_t` and builds thin wrappers around the generic API.

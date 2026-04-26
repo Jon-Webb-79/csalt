@@ -138,10 +138,6 @@ registration is required — the dict engine uses only ``memcpy`` and
        return get_dict_value(d, DICT_KEY(key), out);
    }
 
-For a complete worked example see the :ref:`uint8_dict` wrapper in
-``uint8_dict.h``, which maps C-string keys to ``uint8_t`` values and also
-demonstrates the ``_n`` (explicit-length) variant pattern.
-
 Hash Function
 =============
 
