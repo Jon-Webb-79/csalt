@@ -1854,26 +1854,9 @@ static void test_flat_set_nd_get_consistency(void** state) {
 static void test_copy_tensor_null_src(void** state) {
     (void)state;
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t r = copy_tensor(NULL, alloc);
+    tensor_expect_t r = copy_tensor(NULL, &alloc);
     assert_false(r.has_value);
     assert_int_equal(r.u.error, NULL_POINTER);
-}
- 
-/** NULL allocate function pointer must return NULL_POINTER. */
-static void test_copy_tensor_null_allocator(void** state) {
-    (void)state;
-    const size_t shape[] = { 4u };
-    tensor_expect_t src_r = _make_tensor(1u, shape, FLOAT_TYPE);
-    assert_true(src_r.has_value);
- 
-    allocator_vtable_t bad_alloc = heap_allocator();
-    bad_alloc.allocate = NULL;
- 
-    tensor_expect_t r = copy_tensor(src_r.u.value, bad_alloc);
-    assert_false(r.has_value);
-    assert_int_equal(r.u.error, NULL_POINTER);
- 
-    return_tensor(src_r.u.value);
 }
  
 // ---- Scalar field correctness -----------------------------------------------
@@ -1890,7 +1873,7 @@ static void test_copy_tensor_scalar_fields(void** state) {
     tensor_t* src = src_r.u.value;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t dst_r = copy_tensor(src, alloc);
+    tensor_expect_t dst_r = copy_tensor(src, &alloc);
     assert_true(dst_r.has_value);
     tensor_t* dst = dst_r.u.value;
  
@@ -1917,7 +1900,7 @@ static void test_copy_tensor_shape_and_strides(void** state) {
     tensor_t* src = src_r.u.value;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t dst_r = copy_tensor(src, alloc);
+    tensor_expect_t dst_r = copy_tensor(src, &alloc);
     assert_true(dst_r.has_value);
     tensor_t* dst = dst_r.u.value;
  
@@ -1942,7 +1925,7 @@ static void test_copy_tensor_fam_independence(void** state) {
     tensor_t* src = src_r.u.value;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t dst_r = copy_tensor(src, alloc);
+    tensor_expect_t dst_r = copy_tensor(src, &alloc);
     assert_true(dst_r.has_value);
     tensor_t* dst = dst_r.u.value;
  
@@ -1975,7 +1958,7 @@ static void test_copy_tensor_data_copied(void** state) {
     }
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t dst_r = copy_tensor(src, alloc);
+    tensor_expect_t dst_r = copy_tensor(src, &alloc);
     assert_true(dst_r.has_value);
     tensor_t* dst = dst_r.u.value;
  
@@ -2012,7 +1995,7 @@ static void test_copy_tensor_deep_copy_independence(void** state) {
     }
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t dst_r = copy_tensor(src, alloc);
+    tensor_expect_t dst_r = copy_tensor(src, &alloc);
     assert_true(dst_r.has_value);
     tensor_t* dst = dst_r.u.value;
  
@@ -2059,7 +2042,7 @@ static void test_copy_tensor_dynamic_1d(void** state) {
         );
 
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t dst_r = copy_tensor(src, alloc);
+    tensor_expect_t dst_r = copy_tensor(src, &alloc);
     assert_true(dst_r.has_value);
     tensor_t* dst = dst_r.u.value;
 
@@ -2098,7 +2081,7 @@ static void test_copy_tensor_user_dtype_3d(void** state) {
         assert_int_equal(set_tensor_index(src, i, &val, VEC3_TYPE), NO_ERROR);
     }
  
-    tensor_expect_t dst_r = copy_tensor(src, alloc);
+    tensor_expect_t dst_r = copy_tensor(src, &alloc);
     assert_true(dst_r.has_value);
     tensor_t* dst = dst_r.u.value;
  
@@ -2138,7 +2121,7 @@ static void test_copy_tensor_mode_preserved(void** state) {
     assert_int_equal(src->mode, TENSOR_STRUCT);
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t dst_r = copy_tensor(src, alloc);
+    tensor_expect_t dst_r = copy_tensor(src, &alloc);
     assert_true(dst_r.has_value);
     tensor_t* dst = dst_r.u.value;
  
@@ -3387,7 +3370,7 @@ static void test_concat_full_sequence(void** state) {
 static void test_slice_null_src(void** state) {
     (void)state;
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t r = slice_tensor_array(NULL, 0u, 1u, alloc);
+    tensor_expect_t r = slice_tensor_array(NULL, 0u, 1u, &alloc);
     assert_false(r.has_value);
     assert_int_equal(r.u.error, NULL_POINTER);
 }
@@ -3400,7 +3383,7 @@ static void test_slice_wrong_mode(void** state) {
     assert_true(r.has_value);
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(r.u.value, 0u, 2u, alloc);
+    tensor_expect_t s = slice_tensor_array(r.u.value, 0u, 2u, &alloc);
     assert_false(s.has_value);
     assert_int_equal(s.u.error, PRECONDITION_FAIL);
  
@@ -3416,7 +3399,7 @@ static void test_slice_start_out_of_bounds(void** state) {
     t->len = 3u;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(t, 4u, 5u, alloc);
+    tensor_expect_t s = slice_tensor_array(t, 4u, 5u, &alloc);
     assert_false(s.has_value);
     assert_int_equal(s.u.error, OUT_OF_BOUNDS);
  
@@ -3432,7 +3415,7 @@ static void test_slice_end_out_of_bounds(void** state) {
     t->len = 3u;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(t, 0u, 4u, alloc);
+    tensor_expect_t s = slice_tensor_array(t, 0u, 4u, &alloc);
     assert_false(s.has_value);
     assert_int_equal(s.u.error, OUT_OF_BOUNDS);
  
@@ -3448,7 +3431,7 @@ static void test_slice_zero_length(void** state) {
     t->len = 4u;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(t, 2u, 2u, alloc);
+    tensor_expect_t s = slice_tensor_array(t, 2u, 2u, &alloc);
     assert_false(s.has_value);
     assert_int_equal(s.u.error, INVALID_ARG);
  
@@ -3464,39 +3447,11 @@ static void test_slice_start_greater_than_end(void** state) {
     t->len = 4u;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(t, 3u, 1u, alloc);
+    tensor_expect_t s = slice_tensor_array(t, 3u, 1u, &alloc);
     assert_false(s.has_value);
     assert_int_equal(s.u.error, INVALID_ARG);
  
     return_tensor(t);
-}
- 
-// ---- Allocator inheritance --------------------------------------------------
- 
-/**
- * Passing a NULL allocate pointer must cause the slice to inherit src's
- * allocator — the slice must still be constructed successfully.
- */
-static void test_slice_inherits_allocator(void** state) {
-    (void)state;
-    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
-    assert_true(r.has_value);
-    tensor_t* src = r.u.value;
- 
-    int32_t vals[] = { 1, 2, 3, 4, 5 };
-    src->len = 5u;
-    for (size_t i = 0u; i < 5u; i++)
-        assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
- 
-    /* Pass a zeroed vtable — allocate is NULL so src's allocator is used */
-    allocator_vtable_t null_alloc = { 0 };
-    tensor_expect_t s = slice_tensor_array(src, 1u, 4u, null_alloc);
-    assert_true(s.has_value);
- 
-    assert_int_equal(s.u.value->len, 3u);
- 
-    return_tensor(src);
-    return_tensor(s.u.value);
 }
  
 // ---- Scalar field correctness -----------------------------------------------
@@ -3514,7 +3469,7 @@ static void test_slice_scalar_fields(void** state) {
     src->len = 8u;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(src, 2u, 6u, alloc);
+    tensor_expect_t s = slice_tensor_array(src, 2u, 6u, &alloc);
     assert_true(s.has_value);
     tensor_t* sl = s.u.value;
  
@@ -3539,7 +3494,7 @@ static void test_slice_shape_and_strides(void** state) {
     src->len = 6u;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(src, 1u, 4u, alloc);
+    tensor_expect_t s = slice_tensor_array(src, 1u, 4u, &alloc);
     assert_true(s.has_value);
     tensor_t* sl = s.u.value;
  
@@ -3567,7 +3522,7 @@ static void test_slice_front(void** state) {
         assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(src, 0u, 3u, alloc);
+    tensor_expect_t s = slice_tensor_array(src, 0u, 3u, &alloc);
     assert_true(s.has_value);
     tensor_t* sl = s.u.value;
  
@@ -3596,7 +3551,7 @@ static void test_slice_back(void** state) {
         assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(src, 3u, 6u, alloc);
+    tensor_expect_t s = slice_tensor_array(src, 3u, 6u, &alloc);
     assert_true(s.has_value);
     tensor_t* sl = s.u.value;
  
@@ -3625,7 +3580,7 @@ static void test_slice_middle(void** state) {
         assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(src, 2u, 5u, alloc);
+    tensor_expect_t s = slice_tensor_array(src, 2u, 5u, &alloc);
     assert_true(s.has_value);
     tensor_t* sl = s.u.value;
  
@@ -3654,7 +3609,7 @@ static void test_slice_single_element(void** state) {
         assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(src, 3u, 4u, alloc);
+    tensor_expect_t s = slice_tensor_array(src, 3u, 4u, &alloc);
     assert_true(s.has_value);
     tensor_t* sl = s.u.value;
  
@@ -3680,7 +3635,7 @@ static void test_slice_full_length(void** state) {
         assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(src, 0u, src->len, alloc);
+    tensor_expect_t s = slice_tensor_array(src, 0u, src->len, &alloc);
     assert_true(s.has_value);
     tensor_t* sl = s.u.value;
  
@@ -3714,7 +3669,7 @@ static void test_slice_deep_copy_independence(void** state) {
         assert_int_equal(set_tensor_index(src, i, &vals[i], INT32_TYPE), NO_ERROR);
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(src, 1u, 4u, alloc);
+    tensor_expect_t s = slice_tensor_array(src, 1u, 4u, &alloc);
     assert_true(s.has_value);
     tensor_t* sl = s.u.value;
  
@@ -3757,7 +3712,7 @@ static void test_slice_src_unmodified(void** state) {
     size_t alloc_before = src->alloc;
  
     allocator_vtable_t alloc = heap_allocator();
-    tensor_expect_t s = slice_tensor_array(src, 1u, 3u, alloc);
+    tensor_expect_t s = slice_tensor_array(src, 1u, 3u, &alloc);
     assert_true(s.has_value);
  
     assert_int_equal(src->len,   len_before);
@@ -3918,7 +3873,6 @@ const struct CMUnitTest test_tensor[] = {
 
    /* copy_tensor — null/guard */
     cmocka_unit_test(test_copy_tensor_null_src),
-    cmocka_unit_test(test_copy_tensor_null_allocator),
  
     /* copy_tensor — scalar fields */
     cmocka_unit_test(test_copy_tensor_scalar_fields),
@@ -4023,9 +3977,6 @@ const struct CMUnitTest test_tensor[] = {
     cmocka_unit_test(test_slice_end_out_of_bounds),
     cmocka_unit_test(test_slice_zero_length),
     cmocka_unit_test(test_slice_start_greater_than_end),
- 
-    /* slice_tensor_array — allocator inheritance */
-    cmocka_unit_test(test_slice_inherits_allocator),
  
     /* slice_tensor_array — scalar fields */
     cmocka_unit_test(test_slice_scalar_fields),

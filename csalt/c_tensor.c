@@ -202,21 +202,24 @@ tensor_expect_t init_tensor_array(size_t             capacity,
 
 // -------------------------------------------------------------------------------- 
 
-tensor_expect_t copy_tensor(const tensor_t*    src,
-                            allocator_vtable_t alloc_v) {
-    if (src == NULL || alloc_v.allocate == NULL)
+tensor_expect_t copy_tensor(const tensor_t*     src,
+                            allocator_vtable_t* alloc_v) {
+    if (src == NULL)
         return (tensor_expect_t){ .has_value = false, .u.error = NULL_POINTER };
 
-    // Allocate new header + FAM block sized for src->ndim
+    /* Use src's own allocator when none is supplied */
+    allocator_vtable_t av = (alloc_v != NULL) ? *alloc_v : src->alloc_v;
+
+    /* Allocate new header + FAM block sized for src->ndim */
     size_t header_bytes = sizeof(tensor_t) + 2u * src->ndim * sizeof(size_t);
 
-    void_ptr_expect_t struct_result = alloc_v.allocate(alloc_v.ctx, header_bytes, true);
+    void_ptr_expect_t struct_result = av.allocate(av.ctx, header_bytes, true);
     if (struct_result.has_value == false)
         return (tensor_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
 
     tensor_t* dst = (tensor_t*)struct_result.u.value;
 
-    // Wire shape and strides into the new FAM then copy from src
+    /* Wire shape and strides into the new FAM then copy from src */
     dst->shape   = dst->meta;
     dst->strides = dst->meta + src->ndim;
 
@@ -225,27 +228,27 @@ tensor_expect_t copy_tensor(const tensor_t*    src,
         dst->strides[i] = src->strides[i];
     }
 
-    // Allocate and copy the data buffer
-    void_ptr_expect_t data_result = alloc_v.allocate(alloc_v.ctx,
-                                                      src->alloc * src->data_size,
-                                                      false);
+    /* Allocate and copy the data buffer */
+    void_ptr_expect_t data_result = av.allocate(av.ctx,
+                                                 src->alloc * src->data_size,
+                                                 false);
     if (data_result.has_value == false) {
-        alloc_v.return_element(alloc_v.ctx, dst);
+        av.return_element(av.ctx, dst);
         return (tensor_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
     }
 
     dst->data = (uint8_t*)data_result.u.value;
     memcpy(dst->data, src->data, src->len * src->data_size);
 
-    // Copy all scalar fields
+    /* Copy all scalar fields */
     dst->len       = src->len;
     dst->alloc     = src->alloc;
     dst->data_size = src->data_size;
     dst->dtype     = src->dtype;
-    dst->mode      = src->mode;     /* was missing */
+    dst->mode      = src->mode;
     dst->growth    = src->growth;
     dst->ndim      = src->ndim;
-    dst->alloc_v   = alloc_v;
+    dst->alloc_v   = av;
 
     return (tensor_expect_t){ .has_value = true, .u.value = dst };
 }
@@ -394,18 +397,17 @@ error_code_t concat_tensor_array(tensor_t*       dst,
 
 // -------------------------------------------------------------------------------- 
 
-tensor_expect_t slice_tensor_array(const tensor_t* src,
-                                   size_t          start,
-                                   size_t          end,
-                                   allocator_vtable_t alloc_v) {
+tensor_expect_t slice_tensor_array(const tensor_t*     src,
+                                   size_t              start,
+                                   size_t              end,
+                                   allocator_vtable_t* alloc_v) {
     if (src == NULL)
         return (tensor_expect_t){ .has_value = false, .u.error = NULL_POINTER };
     if (src->mode != ARRAY_STRUCT)
         return (tensor_expect_t){ .has_value = false, .u.error = PRECONDITION_FAIL };
 
     /* Default to src's own allocator when none is supplied */
-    if (alloc_v.allocate == NULL)
-        alloc_v = src->alloc_v;
+    allocator_vtable_t av = (alloc_v != NULL) ? *alloc_v : src->alloc_v;
 
     /* Validate range — end is exclusive, start must be strictly less */
     if (start > src->len || end > src->len)
@@ -418,26 +420,24 @@ tensor_expect_t slice_tensor_array(const tensor_t* src,
     /* Allocate header + FAM for a 1-D tensor */
     size_t header_bytes = sizeof(tensor_t) + 2u * sizeof(size_t);
 
-    void_ptr_expect_t struct_result = alloc_v.allocate(alloc_v.ctx,
-                                                        header_bytes, true);
+    void_ptr_expect_t struct_result = av.allocate(av.ctx, header_bytes, true);
     if (struct_result.has_value == false)
         return (tensor_expect_t){ .has_value = false, .u.error = BAD_ALLOC };
 
     tensor_t* t = (tensor_t*)struct_result.u.value;
 
     /* Wire shape and strides into the FAM */
-    t->shape   = t->meta;
-    t->strides = t->meta + 1u;
-
+    t->shape      = t->meta;
+    t->strides    = t->meta + 1u;
     t->shape[0]   = slice_len;
     t->strides[0] = src->data_size;
 
     /* Allocate and populate the data buffer */
-    void_ptr_expect_t data_result = alloc_v.allocate(alloc_v.ctx,
-                                                      slice_len * src->data_size,
-                                                      false);
+    void_ptr_expect_t data_result = av.allocate(av.ctx,
+                                                 slice_len * src->data_size,
+                                                 false);
     if (data_result.has_value == false) {
-        alloc_v.return_element(alloc_v.ctx, t);
+        av.return_element(av.ctx, t);
         return (tensor_expect_t){ .has_value = false, .u.error = OUT_OF_MEMORY };
     }
 
@@ -454,7 +454,7 @@ tensor_expect_t slice_tensor_array(const tensor_t* src,
     t->mode      = ARRAY_STRUCT;
     t->growth    = false;
     t->ndim      = 1u;
-    t->alloc_v   = alloc_v;
+    t->alloc_v   = av;
 
     return (tensor_expect_t){ .has_value = true, .u.value = t };
 }

@@ -200,12 +200,12 @@ tensor_expect_t init_tensor_array(size_t             capacity,
  *
  * @return tensor_expect_t with has_value true and a valid tensor_t* on success.
  *         On failure, has_value is false and u.error is one of:
- *         - NULL_POINTER  if src is NULL or alloc_v.allocate is NULL
+ *         - NULL_POINTER  if src is NULL
  *         - BAD_ALLOC     if the allocator fails to allocate the new header
  *         - OUT_OF_MEMORY if the allocator fails to allocate the new data buffer
  */
 tensor_expect_t copy_tensor(const tensor_t*    src,
-                            allocator_vtable_t alloc_v);
+                            allocator_vtable_t* alloc_v);
 // ================================================================================ 
 // ================================================================================ 
 // INTROSPECTION
@@ -538,7 +538,7 @@ error_code_t concat_tensor_array(tensor_t*       dst,
 tensor_expect_t slice_tensor_array(const tensor_t*    src,
                                    size_t             start,
                                    size_t             end,
-                                   allocator_vtable_t alloc_v);
+                                   allocator_vtable_t* alloc_v);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA

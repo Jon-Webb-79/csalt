@@ -234,6 +234,7 @@ The following are areas for future improvement in the code base
     c_allocator <Allocator>
     c_string <Strings>
     c_tensor <Tensor>
+    c_uint8 <Uint8>
     c_dict <Dict>
     c_list <List>
     c_tree <Tree>

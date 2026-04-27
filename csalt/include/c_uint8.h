@@ -20,9 +20,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "c_array.h"
-#include "c_dict.h"
-#include "c_matrix.h"
+#include "c_tensor.h"
+#include "c_error.h"
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
@@ -32,2921 +31,731 @@ extern "C" {
 // ================================================================================ 
 
 /**
- * @brief A type-safe dynamic array of uint8_t elements.
+ * @brief Type-safe wrapper for a tensor containing uint8_t elements.
  *
- * Wraps array_t with the dtype fixed to UINT8_TYPE at initialization.
- * All operations enforce UINT8_TYPE at the call site so the caller never
- * needs to pass a dtype_id_t argument. The underlying array_t is embedded
- * by value so the struct can be stack- or heap-allocated by the caller.
+ * Holds a pointer to the underlying generic tensor rather than embedding
+ * it by value, which is required because tensor_t contains a flexible
+ * array member and cannot legally appear as a struct member in C99/C11.
+ * All generic tensor operations are reached through the base pointer.
+ * Use the typed wrapper functions (init_uint8_array, push_back_uint8_tensor,
+ * etc.) rather than accessing base directly.
  */
 typedef struct {
-    array_t base; /**< Underlying generic array. Do not modify directly. */
-} uint8_array_t;
-
-// ================================================================================
-// Expected type
-// ================================================================================
-
-/**
- * @brief Expected return type for uint8_array_t initialization and copy/slice.
- */
-typedef struct {
-    bool has_value;
-    union {
-        uint8_array_t* value;
-        error_code_t   error;
-    } u;
-} uint8_array_expect_t;
-// ================================================================================
-// Initialization and teardown
-// ================================================================================
-
-/**
- * @brief Initialize a new heap-allocated uint8_array_t.
- *
- * Allocates both the array_t struct and its internal data buffer through
- * alloc_v. The element type is fixed to UINT8_TYPE and the element size is
- * cached as 1 byte. The array starts empty (len == 0) with the full capacity
- * reserved. When growth is true the data buffer will be reallocated
- * automatically whenever a push operation would exceed the current capacity;
- * when false any push beyond capacity returns CAPACITY_OVERFLOW without
- * modifying the array. The caller is responsible for calling
- * return_uint8_array when the array is no longer needed.
- *
- * @param capacity  Initial number of elements the buffer can hold.
- *                  Must be > 0.
- * @param growth    Pass true to allow the buffer to grow automatically on
- *                  overflow, false to use a fixed-capacity buffer.
- * @param alloc_v   Allocator vtable used for all internal memory operations.
- *                  alloc_v.allocate must not be NULL.
- *
- * @return uint8_array_expect_t with has_value true and u.value pointing to
- *         the initialized array on success. On failure has_value is false
- *         and u.error is one of:
- *         - NULL_POINTER    if alloc_v.allocate is NULL
- *         - INVALID_ARG     if capacity is 0
- *         - ILLEGAL_STATE   if the dtype registry could not be initialized
- *         - LENGTH_OVERFLOW if capacity would overflow size_t
- *         - BAD_ALLOC       if the struct allocation fails
- *         - OUT_OF_MEMORY   if the data buffer allocation fails
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *
- *     // Fixed-capacity buffer of 32 elements, no automatic growth.
- *     uint8_array_expect_t result = init_uint8_array(32, false, alloc);
- *     if (!result.has_value) {
- *         fprintf(stderr, "init failed: %d\n", result.u.error);
- *         return;
- *     }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr now contains [10, 20, 30], len == 3, alloc == 32.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-uint8_array_expect_t init_uint8_array(size_t             capacity,
-                                      bool               growth,
-                                      allocator_vtable_t alloc_v);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Release all memory owned by a uint8_array_t back to its allocator.
- *
- * Frees the internal data buffer and then the array_t struct itself using
- * the allocator vtable that was supplied at initialization. After this call
- * the pointer is invalid and must not be dereferenced. Passing NULL is safe
- * and has no effect, making it suitable for use in cleanup paths without a
- * prior NULL check.
- *
- * @param array  Pointer to the array to release. May be NULL.
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 255);
- *
- *     // Release all memory. arr must not be used after this point.
- *     return_uint8_array(arr);
- *     arr = NULL;  // Optional but recommended to prevent accidental reuse.
- *
- *     // Passing NULL is always safe.
- *     return_uint8_array(NULL);
- * @endcode
- */
-void return_uint8_array(uint8_array_t* array);
-// ================================================================================
-// Push operations
-// ================================================================================
-
-/**
- * @brief Append one uint8_t to the end of the array.
- *
- * Copies value into the next available slot at index array->base.len and
- * increments len by one. If the array is full and growth is true the data
- * buffer is reallocated before the value is written; if growth is false the
- * call fails immediately with CAPACITY_OVERFLOW and the array is left
- * unmodified. This is an O(1) amortised operation when growth is true and
- * strictly O(1) when the buffer has spare capacity.
- *
- * @param array  Pointer to the target array. Must not be NULL.
- * @param value  The uint8_t value to append.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER      if array is NULL
- *         - CAPACITY_OVERFLOW if the array is full and growth is false
- *         - OUT_OF_MEMORY     if growth is true but reallocation fails
- *         - LENGTH_OVERFLOW   if the new capacity would overflow size_t
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(4, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [10, 20, 30], len == 3.
- *
- *     uint8_t out = 0;
- *     get_uint8_array_index(arr, 2, &out);  // out == 30
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t push_back_uint8_array(uint8_array_t* array, uint8_t value);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Prepend one uint8_t to the front of the array.
- *
- * Shifts all existing elements one position toward the back using memmove,
- * writes value into index 0, and increments len by one. If the array is full
- * and growth is true the data buffer is reallocated before the shift; if
- * growth is false the call fails immediately with CAPACITY_OVERFLOW and the
- * array is left unmodified. Because every existing element must be moved this
- * is an O(n) operation — prefer push_back_uint8_array for performance-sensitive
- * append-heavy workloads.
- *
- * @param array  Pointer to the target array. Must not be NULL.
- * @param value  The uint8_t value to prepend.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER      if array is NULL
- *         - CAPACITY_OVERFLOW if the array is full and growth is false
- *         - OUT_OF_MEMORY     if growth is true but reallocation fails
- *         - LENGTH_OVERFLOW   if the new capacity would overflow size_t
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [20, 30].
- *
- *     push_front_uint8_array(arr, 10);
- *     // arr now contains [10, 20, 30].
- *
- *     // Prepending in sequence reverses insertion order:
- *     // push_front(1), push_front(2), push_front(3) -> [3, 2, 1].
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t push_front_uint8_array(uint8_array_t* array, uint8_t value);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Insert one uint8_t at an arbitrary position in the array.
- *
- * Shifts all elements from index onward one position toward the back using
- * memmove, writes value at the given index, and increments len by one. If
- * the array is full and growth is true the data buffer is reallocated before
- * the shift; if growth is false the call fails with CAPACITY_OVERFLOW and
- * the array is left unmodified. Inserting at index 0 is equivalent to
- * push_front_uint8_array; inserting at index == len is equivalent to
- * push_back_uint8_array. Both boundary cases are accepted without error.
- * Inserting at any other valid position is an O(n) operation due to the
- * element shift.
- *
- * @param array  Pointer to the target array. Must not be NULL.
- * @param index  Position at which to insert. Must be <= array->base.len.
- *               Elements at [index, len) are shifted right by one.
- * @param value  The uint8_t value to insert.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER      if array is NULL
- *         - OUT_OF_BOUNDS     if index > array->base.len
- *         - CAPACITY_OVERFLOW if the array is full and growth is false
- *         - OUT_OF_MEMORY     if growth is true but reallocation fails
- *         - LENGTH_OVERFLOW   if the new capacity would overflow size_t
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [10, 30].
- *
- *     push_at_uint8_array(arr, 1, 20);
- *     // arr now contains [10, 20, 30].
- *
- *     // Boundary cases:
- *     push_at_uint8_array(arr, 0, 5);   // prepend -> [5, 10, 20, 30]
- *     push_at_uint8_array(arr, 4, 40);  // append  -> [5, 10, 20, 30, 40]
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t push_at_uint8_array(uint8_array_t* array,
-                                  size_t         index,
-                                  uint8_t        value);
-// ================================================================================
-// Get operation
-// ================================================================================
-
-/**
- * @brief Retrieve the uint8_t at a given index, copying it into out.
- *
- * Performs a bounds-checked read of the element at index. The value is
- * copied into the memory pointed to by out — the array itself is not
- * modified and len is unchanged. The function is safe to call on a const
- * array and may be called repeatedly on the same index without side effects.
- *
- * @param array  Pointer to the source array. Must not be NULL.
- * @param index  Zero-based position to read. Must be < array->base.len.
- *               Passing an index equal to len or beyond it is an error even
- *               if spare capacity exists at that offset in the buffer.
- * @param out    Pointer to a uint8_t that receives the copied value.
- *               Must not be NULL.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER  if array or out is NULL
- *         - OUT_OF_BOUNDS if index >= array->base.len
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [10, 20, 30], len == 3.
- *
- *     uint8_t val = 0;
- *     get_uint8_array_index(arr, 0, &val);  // val == 10
- *     get_uint8_array_index(arr, 1, &val);  // val == 20
- *     get_uint8_array_index(arr, 2, &val);  // val == 30
- *
- *     // Reading past the end is an error regardless of buffer capacity.
- *     error_code_t err = get_uint8_array_index(arr, 3, &val);
- *     // err == OUT_OF_BOUNDS, val is unchanged.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t get_uint8_array_index(const uint8_array_t* array,
-                                    size_t               index,
-                                    uint8_t*             out);
-// ================================================================================
-// Pop operations
-// ================================================================================
-
-/**
- * @brief Remove the last element from the array and optionally retrieve it.
- *
- * Decrements len by one. If out is non-NULL the removed value is copied into
- * it before len is decremented; if out is NULL the value is silently
- * discarded. The data buffer is not reallocated or zeroed — the element slot
- * becomes spare capacity. This is an O(1) operation. The array must contain
- * at least one element; calling on an empty array is an error.
- *
- * @param array  Pointer to the target array. Must not be NULL.
- * @param out    Pointer that receives the removed value. May be NULL if the
- *               value is not needed.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if the array contains no elements
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [10, 20, 30], len == 3.
- *
- *     uint8_t val = 0;
- *     pop_back_uint8_array(arr, &val);  // val == 30, len == 2
- *     pop_back_uint8_array(arr, &val);  // val == 20, len == 1
- *     pop_back_uint8_array(arr, NULL);  // discard,   len == 0
- *
- *     // Popping from an empty array is an error.
- *     error_code_t err = pop_back_uint8_array(arr, &val);
- *     // err == EMPTY, arr and val are unchanged.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t pop_back_uint8_array(uint8_array_t* array, uint8_t* out);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Remove the first element from the array and optionally retrieve it.
- *
- * Copies the value at index 0 into out (if non-NULL), then shifts all
- * remaining elements one position toward the front using memmove, and
- * decrements len by one. The data buffer is not reallocated. Because every
- * remaining element must be moved this is an O(n) operation — prefer
- * pop_back_uint8_array for performance-sensitive drain loops. The array must
- * contain at least one element; calling on an empty array is an error.
- *
- * @param array  Pointer to the target array. Must not be NULL.
- * @param out    Pointer that receives the removed value. May be NULL if the
- *               value is not needed.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if the array contains no elements
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [10, 20, 30], len == 3.
- *
- *     uint8_t val = 0;
- *     pop_front_uint8_array(arr, &val);  // val == 10, arr is [20, 30]
- *     pop_front_uint8_array(arr, &val);  // val == 20, arr is [30]
- *     pop_front_uint8_array(arr, NULL);  // discard,   arr is []
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t pop_front_uint8_array(uint8_array_t* array, uint8_t* out);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Remove the element at an arbitrary index and optionally retrieve it.
- *
- * Copies the value at index into out (if non-NULL), then shifts all elements
- * from index + 1 onward one position toward the front using memmove, and
- * decrements len by one. The data buffer is not reallocated. Removing from
- * index 0 is equivalent to pop_front_uint8_array; removing from index
- * len - 1 is equivalent to pop_back_uint8_array. Both boundary cases are
- * accepted without error. Removing from any other position is an O(n)
- * operation due to the element shift. The array must contain at least one
- * element and index must be within the live region.
- *
- * @param array  Pointer to the target array. Must not be NULL.
- * @param out    Pointer that receives the removed value. May be NULL if the
- *               value is not needed.
- * @param index  Zero-based position to remove. Must be < array->base.len.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if the array contains no elements
- *         - OUT_OF_BOUNDS if index >= array->base.len
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     push_back_uint8_array(arr, 40);
- *     // arr contains [10, 20, 30, 40], len == 4.
- *
- *     uint8_t val = 0;
- *     pop_any_uint8_array(arr, &val, 1);  // val == 20, arr is [10, 30, 40]
- *     pop_any_uint8_array(arr, &val, 0);  // val == 10, arr is [30, 40]
- *     pop_any_uint8_array(arr, &val, 1);  // val == 40, arr is [30]
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t pop_any_uint8_array(uint8_array_t* array,
-                                  uint8_t*       out,
-                                  size_t         index);
-// ================================================================================
-// Utility operations
-// ================================================================================
-
-/**
- * @brief Reset the array to empty without releasing the data buffer.
- *
- * Sets len to zero and zeroes the contents of the data buffer with memset.
- * The allocated capacity is preserved — the buffer can be reused immediately
- * after the call without any reallocation. This is an O(n) operation
- * proportional to the number of bytes zeroed (alloc * data_size). If you
- * only need to reset len without zeroing the buffer contents, and security
- * or data-hiding is not a concern, you can instead assign array->base.len = 0
- * directly. Use clear_uint8_array when you need a guaranteed clean slate.
- *
- * @param array  Pointer to the target array. Must not be NULL.
- *
- * @return NO_ERROR on success, or NULL_POINTER if array is NULL.
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [10, 20, 30], len == 3, alloc == 8.
- *
- *     clear_uint8_array(arr);
- *     // arr is now empty: len == 0, alloc == 8 (buffer retained).
- *
- *     // The array is immediately ready for reuse.
- *     push_back_uint8_array(arr, 99);
- *     // arr contains [99], len == 1.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t clear_uint8_array(uint8_array_t* array);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Overwrite the element at a given index in place.
- *
- * Copies value into the slot at index, replacing the current occupant.
- * len, alloc, and all other elements are unchanged. This is a bounds-checked
- * in-place write — it cannot extend the array and will not trigger
- * reallocation. Use push_at_uint8_array to insert a new element and shift
- * existing ones.
- *
- * @param array  Pointer to the target array. Must not be NULL.
- * @param index  Zero-based position to overwrite. Must be < array->base.len.
- * @param value  The replacement uint8_t value.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER  if array is NULL
- *         - OUT_OF_BOUNDS if index >= array->base.len
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(4, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [10, 20, 30].
- *
- *     set_uint8_array_index(arr, 1, 99);
- *     // arr now contains [10, 99, 30]. len is still 3.
- *
- *     // Writing past the live region is an error even if capacity exists.
- *     error_code_t err = set_uint8_array_index(arr, 3, 42);
- *     // err == OUT_OF_BOUNDS, arr is unchanged.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t set_uint8_array_index(uint8_array_t* array,
-                                    size_t         index,
-                                    uint8_t        value);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Create an independent deep copy of src using the given allocator.
- *
- * Allocates a new uint8_array_t struct and a new data buffer through alloc_v,
- * then copies all len elements from src into the new array. The copy has the
- * same len, alloc, growth setting, and dtype as src but owns its own buffer —
- * subsequent modifications to src do not affect the copy and vice versa. The
- * copy may be given a different allocator than src. The caller is responsible
- * for calling return_uint8_array on the returned array when it is no longer
- * needed.
- *
- * @param src      Pointer to the source array. Must not be NULL.
- * @param alloc_v  Allocator vtable for the new array's memory.
- *                 alloc_v.allocate must not be NULL.
- *
- * @return uint8_array_expect_t with has_value true and u.value pointing to
- *         the new array on success. On failure has_value is false and
- *         u.error is one of:
- *         - NULL_POINTER  if src is NULL or alloc_v.allocate is NULL
- *         - BAD_ALLOC     if the struct allocation fails
- *         - OUT_OF_MEMORY if the data buffer allocation fails
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* src = result.u.value;
- *
- *     push_back_uint8_array(src, 10);
- *     push_back_uint8_array(src, 20);
- *     push_back_uint8_array(src, 30);
- *
- *     uint8_array_expect_t copy_result = copy_uint8_array(src, alloc);
- *     if (!copy_result.has_value) { return_uint8_array(src); return; }
- *     uint8_array_t* dst = copy_result.u.value;
- *     // src and dst both contain [10, 20, 30] but own separate buffers.
- *
- *     set_uint8_array_index(src, 0, 99);
- *     // src is [99, 20, 30], dst is still [10, 20, 30].
- *
- *     return_uint8_array(src);
- *     return_uint8_array(dst);
- * @endcode
- */
-uint8_array_expect_t copy_uint8_array(const uint8_array_t* src,
-                                       allocator_vtable_t   alloc_v);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Append all elements of src onto the end of dst in a single operation.
- *
- * Copies all len elements from src into dst starting at dst's current len,
- * then increments dst->base.len by src->base.len. src is treated as read-only
- * and is not modified. If src is empty the function returns NO_ERROR
- * immediately without touching dst. If dst does not have sufficient spare
- * capacity and growth is true, dst's buffer is reallocated once to fit all of
- * src's elements before any data is copied; if growth is false and dst lacks
- * the space, the call fails with CAPACITY_OVERFLOW and dst is left entirely
- * unmodified — no partial copy is performed.
- *
- * @param dst  Pointer to the destination array. Must not be NULL.
- * @param src  Pointer to the source array. Must not be NULL.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER      if dst or src is NULL
- *         - CAPACITY_OVERFLOW if dst lacks space and growth is false
- *         - OUT_OF_MEMORY     if growth is true but reallocation fails
- *         - LENGTH_OVERFLOW   if the combined length would overflow size_t
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *
- *     uint8_array_expect_t r1 = init_uint8_array(8, false, alloc);
- *     uint8_array_expect_t r2 = init_uint8_array(4, false, alloc);
- *     if (!r1.has_value || !r2.has_value) { return; }
- *     uint8_array_t* dst = r1.u.value;
- *     uint8_array_t* src = r2.u.value;
- *
- *     push_back_uint8_array(dst, 10);
- *     push_back_uint8_array(dst, 20);
- *     push_back_uint8_array(src, 30);
- *     push_back_uint8_array(src, 40);
- *
- *     concat_uint8_array(dst, src);
- *     // dst contains [10, 20, 30, 40], src is unchanged as [30, 40].
- *
- *     return_uint8_array(dst);
- *     return_uint8_array(src);
- * @endcode
- */
-error_code_t concat_uint8_array(uint8_array_t*       dst,
-                                 const uint8_array_t* src);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Allocate a new array containing the elements of src in [start, end).
- *
- * Allocates a new uint8_array_t and data buffer through alloc_v, then copies
- * the elements at indices [start, end) from src into it. The resulting array
- * has len == end - start and alloc == end - start. src is treated as
- * read-only and is not modified. The returned array owns its own buffer and
- * is completely independent of src — subsequent changes to src do not affect
- * the slice and vice versa. The range is half-open: start is inclusive, end
- * is exclusive. The caller is responsible for calling return_uint8_array on
- * the returned array when it is no longer needed.
- *
- * @param src      Pointer to the source array. Must not be NULL.
- * @param start    Zero-based index of the first element to include (inclusive).
- * @param end      Zero-based index one past the last element to include
- *                 (exclusive). Must be > start and <= src->base.len.
- * @param alloc_v  Allocator vtable for the new array's memory.
- *                 alloc_v.allocate must not be NULL.
- *
- * @return uint8_array_expect_t with has_value true and u.value pointing to
- *         the new array on success. On failure has_value is false and
- *         u.error is one of:
- *         - NULL_POINTER  if src is NULL or alloc_v.allocate is NULL
- *         - INVALID_ARG   if start >= end
- *         - OUT_OF_BOUNDS if end > src->base.len
- *         - BAD_ALLOC     if the struct allocation fails
- *         - OUT_OF_MEMORY if the data buffer allocation fails
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* src = result.u.value;
- *
- *     push_back_uint8_array(src, 10);
- *     push_back_uint8_array(src, 20);
- *     push_back_uint8_array(src, 30);
- *     push_back_uint8_array(src, 40);
- *     push_back_uint8_array(src, 50);
- *     // src contains [10, 20, 30, 40, 50].
- *
- *     uint8_array_expect_t sr = slice_uint8_array(src, 1, 4, alloc);
- *     if (!sr.has_value) { return_uint8_array(src); return; }
- *     uint8_array_t* slc = sr.u.value;
- *     // slc contains [20, 30, 40], len == 3.
- *
- *     // Modifying src does not affect slc.
- *     set_uint8_array_index(src, 1, 99);
- *     // src is [10, 99, 30, 40, 50], slc is still [20, 30, 40].
- *
- *     return_uint8_array(src);
- *     return_uint8_array(slc);
- * @endcode
- */
-uint8_array_expect_t slice_uint8_array(const uint8_array_t* src,
-                                        size_t               start,
-                                        size_t               end,
-                                        allocator_vtable_t   alloc_v);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Reverse the elements of the array in place.
- *
- * Swaps elements symmetrically around the midpoint so that the element
- * previously at index 0 moves to index len - 1, index 1 moves to
- * len - 2, and so on. The swap is performed using the best SIMD instruction
- * set available at compile time for element sizes of 1, 2, 4, and 8 bytes,
- * falling back to a scalar memcpy swap for all other sizes. len, alloc, and
- * the data buffer pointer are unchanged — no allocation is performed.
- *
- * @param array  Pointer to the target array. Must not be NULL.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER if array is NULL
- *         - EMPTY        if array->base.len < 2 (zero or one element,
- *                        nothing to swap)
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     push_back_uint8_array(arr, 40);
- *     // arr contains [10, 20, 30, 40].
- *
- *     reverse_uint8_array(arr);
- *     // arr now contains [40, 30, 20, 10].
- *
- *     // Reversing twice restores the original order.
- *     reverse_uint8_array(arr);
- *     // arr is [10, 20, 30, 40] again.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t reverse_uint8_array(uint8_array_t* array);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Sort the elements of the array in place.
- *
- * Sorts using median-of-three quicksort with an insertion sort fallback for
- * partitions of fewer than 10 elements and tail-call optimisation to keep
- * stack depth O(log n). The comparator is a built-in unsigned byte comparison
- * so no comparator function needs to be supplied. The sort is not stable —
- * equal elements may change relative order. FORWARD produces ascending order
- * (smallest value first); REVERSE produces descending order (largest value
- * first).
- *
- * @param array  Pointer to the target array. Must not be NULL.
- * @param dir    FORWARD for ascending order, REVERSE for descending order.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER if array is NULL
- *         - EMPTY        if array->base.len < 2 (nothing to sort)
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 50);
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 40);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [50, 10, 40, 20, 30].
- *
- *     sort_uint8_array(arr, FORWARD);
- *     // arr is now [10, 20, 30, 40, 50].
- *
- *     sort_uint8_array(arr, REVERSE);
- *     // arr is now [50, 40, 30, 20, 10].
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t sort_uint8_array(uint8_array_t* array, direction_t dir);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Search for the first occurrence of value using binary search.
- *
- * Uses a built-in unsigned byte comparator — the caller does not need to
- * supply one. When sort is true the array is sorted in place in ascending
- * order before searching; the sorted order persists after the call. When
- * sort is false the array must already be sorted in ascending order.
- * After any matching element is found the implementation scans leftward to
- * return the index of the first occurrence, consistent with
- * uint8_array_contains.
- *
- * @param array  Pointer to the array to search. Must not be NULL.
- * @param value  The uint8_t value to search for.
- * @param sort   If true, sort the array in place before searching.
- *               If false, the array must already be sorted ascending.
- *
- * @return size_expect_t with has_value true and u.value holding the
- *         zero-based index of the first match on success. On failure
- *         has_value is false and u.error is one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if the array contains no elements
- *         - NOT_FOUND     if value does not exist in the array
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 40);
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 30);
- *     push_back_uint8_array(arr, 20);
- *     // arr contains [40, 10, 10, 30, 20].
- *
- *     // sort == true: arr is sorted in place to [10, 10, 20, 30, 40].
- *     size_expect_t r = uint8_array_binary_search(arr, 10, true);
- *     // r.has_value == true, r.u.value == 0 (first of two 10s).
- *
- *     // arr is now sorted; sort == false is safe for subsequent calls.
- *     r = uint8_array_binary_search(arr, 30, false);
- *     // r.has_value == true, r.u.value == 3.
- *
- *     r = uint8_array_binary_search(arr, 99, false);
- *     // r.has_value == false, r.u.error == NOT_FOUND.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-size_expect_t uint8_array_binary_search(uint8_array_t* array,
-                                         uint8_t        value,
-                                         bool           sort);
+    tensor_t* base; /**< Underlying generic tensor. Do not access directly. */
+} uint8_tensor_t;
 
 // --------------------------------------------------------------------------------
 
 /**
- * @brief Find the bracketing indices around value using binary search.
+ * @brief Expected-value return type for functions that produce a
+ *        uint8_tensor_t.
  *
- * Locates the largest element <= value (lower bound) and the smallest
- * element >= value (upper bound) within the array. If value exists in
- * the array u.value.lower == u.value.upper and both point to the first
- * occurrence. If value is outside the range [min, max] of the array's
- * values the call returns has_value false with NOT_FOUND.
- *
- * Uses a built-in unsigned byte comparator. When sort is true the array
- * is sorted in place in ascending order before searching; the sorted order
- * persists after the call. When sort is false the array must already be
- * sorted in ascending order.
- *
- * @param array  Pointer to the array to search. Must not be NULL.
- * @param value  The uint8_t value to bracket.
- * @param sort   If true, sort the array in place before searching.
- *               If false, the array must already be sorted ascending.
- *
- * @return bracket_expect_t with has_value true on success:
- *           u.value.lower — index of the largest element  <= value.
- *           u.value.upper — index of the smallest element >= value.
- *           lower == upper indicates value was found exactly; both
- *           point to the first occurrence.
- *         On failure has_value is false and u.error is one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if the array contains no elements
- *         - NOT_FOUND     if value is outside [min, max] of the array
+ * has_value must be checked before accessing either union member.
  *
  * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 30);
- *     push_back_uint8_array(arr, 50);
- *     push_back_uint8_array(arr, 70);
- *     // arr contains [10, 30, 50, 70] (already sorted).
- *
- *     // Value exists exactly — lower == upper, both at first occurrence.
- *     bracket_expect_t r = uint8_array_binary_bracket(arr, 30, false);
- *     // r.has_value == true, r.u.value.lower == 1, r.u.value.upper == 1.
- *
- *     // Value falls between elements.
- *     r = uint8_array_binary_bracket(arr, 40, false);
- *     // r.has_value == true, r.u.value.lower == 1 (30), upper == 2 (50).
- *
- *     // Value outside range returns NOT_FOUND.
- *     r = uint8_array_binary_bracket(arr, 5, false);
- *     // r.has_value == false, r.u.error == NOT_FOUND.
- *
- *     return_uint8_array(arr);
+ * uint8_tensor_expect_t r = init_uint8_array(8, true, heap_allocator());
+ * if (!r.has_value) { handle(r.u.error); }
+ * uint8_tensor_t* a = r.u.value;
  * @endcode
- */
-bracket_expect_t uint8_array_binary_bracket(uint8_array_t* array,
-                                             uint8_t        value,
-                                             bool           sort);
-// ================================================================================
-// Introspection
-// ================================================================================
-
-/**
- * @brief Search for the first occurrence of value in the range [start, end).
- *
- * Scans elements at indices [start, end) using the best SIMD instruction set
- * available at compile time. The search performs an exact bitwise comparison —
- * the first element whose stored byte equals value is returned. If the value
- * appears more than once only the lowest index within the range is returned.
- * The array is not modified. Floating-point types stored in a uint8_array are
- * not applicable here since the element type is fixed to uint8_t; no epsilon
- * tolerance is relevant.
- *
- * @param array  Pointer to the array to search. Must not be NULL.
- * @param value  The uint8_t value to search for.
- * @param start  Zero-based index of the first element to examine (inclusive).
- * @param end    Zero-based index one past the last element to examine
- *               (exclusive). Must be > start and <= array->base.len.
- *
- * @return size_expect_t with has_value true and u.value holding the zero-based
- *         index of the first match on success. On failure has_value is false
- *         and u.error is one of:
- *         - NULL_POINTER  if array is NULL
- *         - INVALID_ARG   if start >= end
- *         - OUT_OF_BOUNDS if end > array->base.len
- *         - NOT_FOUND     if no element in [start, end) equals value
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 30);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     push_back_uint8_array(arr, 40);
- *     // arr contains [10, 30, 20, 30, 40].
- *
- *     size_expect_t r = uint8_array_contains(arr, 30, 0, 5);
- *     // r.has_value == true, r.u.value == 1  (first occurrence).
- *
- *     r = uint8_array_contains(arr, 30, 2, 5);
- *     // r.has_value == true, r.u.value == 3  (search starts after index 1).
- *
- *     r = uint8_array_contains(arr, 99, 0, 5);
- *     // r.has_value == false, r.u.error == NOT_FOUND.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-size_expect_t uint8_array_contains(const uint8_array_t* array,
-                                    uint8_t              value,
-                                    size_t               start,
-                                    size_t               end);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Return the number of elements currently stored in the array.
- *
- * Reads array->base.len. This value reflects only elements that have been
- * pushed and not yet popped or cleared — it does not include any spare
- * capacity reserved in the buffer. The call is O(1) and does not modify
- * the array.
- *
- * @param array  Pointer to the array. May be NULL.
- *
- * @return The current element count, or 0 if array is NULL.
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     // uint8_array_size(arr) == 0 after init.
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     // uint8_array_size(arr) == 2.
- *
- *     pop_back_uint8_array(arr, NULL);
- *     // uint8_array_size(arr) == 1.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-size_t uint8_array_size(const uint8_array_t* array);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Return the number of elements the buffer can currently hold.
- *
- * Reads array->base.alloc. This is the total capacity of the allocated data
- * buffer in element units, not the number of elements currently stored. The
- * spare capacity available for new pushes without reallocation is
- * uint8_array_alloc(arr) - uint8_array_size(arr). When growth is true alloc
- * may increase after a push that triggers reallocation; it never decreases
- * automatically. The call is O(1) and does not modify the array.
- *
- * @param array  Pointer to the array. May be NULL.
- *
- * @return The allocated capacity in elements, or 0 if array is NULL.
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(4, true, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     // uint8_array_alloc(arr) == 4 after init.
- *     push_back_uint8_array(arr, 1);
- *     push_back_uint8_array(arr, 2);
- *     push_back_uint8_array(arr, 3);
- *     push_back_uint8_array(arr, 4);
- *     // Buffer is full: size == 4, alloc == 4.
- *
- *     push_back_uint8_array(arr, 5);
- *     // Growth triggered: size == 5, alloc > 4.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-size_t uint8_array_alloc(const uint8_array_t* array);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Return the size in bytes of one element in the array.
- *
- * Reads array->base.data_size, which is fixed to 1 for all uint8_array_t
- * instances — a uint8_t is always one byte. This function exists to keep the
- * introspection API uniform with other typed array wrappers where element
- * sizes differ. The call is O(1) and does not modify the array.
- *
- * @param array  Pointer to the array. May be NULL.
- *
- * @return 1 when array is non-NULL, or 0 if array is NULL.
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     size_t elem_bytes = uint8_array_data_size(arr);  // always 1
- *
- *     // Useful when writing code that is generic across array types:
- *     size_t total_bytes = uint8_array_alloc(arr) * uint8_array_data_size(arr);
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-size_t uint8_array_data_size(const uint8_array_t* array);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Return true if the array currently contains no elements.
- *
- * Compares array->base.len to zero. A freshly initialised array is always
- * empty. The result may change after any push or pop call. This function is
- * the idiomatic guard before attempting a pop — calling any pop variant on
- * an empty array returns EMPTY, so callers should check is_uint8_array_empty
- * first in loops that drain the array. The call is O(1) and does not modify
- * the array.
- *
- * @param array  Pointer to the array. May be NULL.
- *
- * @return true if array is NULL or array->base.len == 0, false otherwise.
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(4, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     // is_uint8_array_empty(arr) == true immediately after init.
- *
- *     push_back_uint8_array(arr, 42);
- *     // is_uint8_array_empty(arr) == false.
- *
- *     // Idiomatic drain loop:
- *     uint8_t val = 0;
- *     while (!is_uint8_array_empty(arr)) {
- *         pop_back_uint8_array(arr, &val);
- *         // process val ...
- *     }
- *     // is_uint8_array_empty(arr) == true again.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-bool is_uint8_array_empty(const uint8_array_t* array);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Return true if the array has no remaining spare capacity.
- *
- * Compares array->base.len to array->base.alloc. When this returns true any
- * subsequent push to an array with growth == false will return
- * CAPACITY_OVERFLOW. When growth == true a push will instead trigger a
- * reallocation and is_uint8_array_full will return false afterward. The call
- * is O(1) and does not modify the array.
- *
- * @param array  Pointer to the array. May be NULL.
- *
- * @return true if array is NULL or array->base.len == array->base.alloc,
- *         false otherwise.
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(3, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     // is_uint8_array_full(arr) == false, one slot remains.
- *
- *     push_back_uint8_array(arr, 30);
- *     // is_uint8_array_full(arr) == true, size == alloc == 3.
- *
- *     // With growth == false, the next push fails.
- *     error_code_t err = push_back_uint8_array(arr, 40);
- *     // err == CAPACITY_OVERFLOW, arr is unchanged.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-bool is_uint8_array_full(const uint8_array_t* array);
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Return true if ptr points to a valid element within the live region
- *        of the array's data buffer.
- *
- * A pointer is considered valid if all of the following hold:
- *   1. array and ptr are both non-NULL.
- *   2. ptr >= array->base.data  (at or after the start of the buffer).
- *   3. ptr <  array->base.data + array->base.len  (before the end of the
- *      live region — spare capacity beyond len is not considered valid).
- *   4. (ptr - array->base.data) is an exact multiple of 1 (always satisfied
- *      for uint8_t, included for consistency with the generic is_array_ptr).
- *
- * This is useful for validating a pointer obtained by direct buffer access
- * before using it in a subsequent operation. It does not validate pointers
- * into spare capacity. The call is O(1) and does not modify the array.
- *
- * @param array  Pointer to the array to check against. May be NULL.
- * @param ptr    Pointer to test. May be NULL.
- *
- * @return true only if both arguments are non-NULL and ptr falls within the
- *         live element region [data, data + len). Returns false in all other
- *         cases including when either argument is NULL.
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 20);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [10, 20, 30], len == 3, alloc == 8.
- *
- *     // Obtain a pointer to the second element via direct buffer access.
- *     const uint8_t* p = arr->base.data + 1;
- *
- *     is_uint8_array_ptr(arr, p);               // true  — inside live region
- *     is_uint8_array_ptr(arr, arr->base.data);  // true  — first element
- *     is_uint8_array_ptr(arr, arr->base.data + 2); // true  — last element
- *     is_uint8_array_ptr(arr, arr->base.data + 3); // false — spare capacity
- *     is_uint8_array_ptr(arr, NULL);            // false — NULL ptr
- *     is_uint8_array_ptr(NULL, p);              // false — NULL array
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-bool is_uint8_array_ptr(const uint8_array_t* array, const uint8_t* ptr);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Find the minimum value in the array.
- *
- * Scans all elements using an unsigned byte comparison and returns the
- * smallest value found. When two or more elements share the minimum value
- * the value of the first occurrence is returned, consistent with the
- * behaviour of uint8_array_contains. The array is not modified. The scan
- * dispatches to the best SIMD horizontal-reduction path available at compile
- * time (AVX-512, AVX2, AVX, SSE4.1, SSSE3, SSE2, SVE2, SVE, NEON) and
- * falls back to a scalar loop on unsupported targets.
- *
- * @param array  Pointer to the array to scan. Must not be NULL and must
- *               contain at least one element.
- *
- * @return uint8_expect_t with has_value true and u.value == the minimum
- *         element on success. On failure, has_value is false and u.error
- *         is one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if array->base.len == 0
- *
- * @code
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 50);
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [50, 10, 30].
- *
- *     uint8_expect_t r = uint8_array_min(arr);
- *     // r.has_value == true, r.u.value == 10.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-uint8_expect_t uint8_array_min(const uint8_array_t* array);
-
-// --------------------------------------------------------------------------------
-
-/**
- * @brief Find the maximum value in the array.
- *
- * Scans all elements using an unsigned byte comparison and returns the
- * largest value found. When two or more elements share the maximum value
- * the value of the first occurrence is returned, consistent with the
- * behaviour of uint8_array_contains. The array is not modified. The scan
- * dispatches to the best SIMD horizontal-reduction path available at compile
- * time (AVX-512, AVX2, AVX, SSE4.1, SSSE3, SSE2, SVE2, SVE, NEON) and
- * falls back to a scalar loop on unsupported targets.
- *
- * @param array  Pointer to the array to scan. Must not be NULL and must
- *               contain at least one element.
- *
- * @return uint8_expect_t with has_value true and u.value == the maximum
- *         element on success. On failure, has_value is false and u.error
- *         is one of:
- *         - NULL_POINTER  if array is NULL
- *         - EMPTY         if array->base.len == 0
- *
- * @code
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t result = init_uint8_array(8, false, alloc);
- *     if (!result.has_value) { return; }
- *     uint8_array_t* arr = result.u.value;
- *
- *     push_back_uint8_array(arr, 50);
- *     push_back_uint8_array(arr, 10);
- *     push_back_uint8_array(arr, 30);
- *     // arr contains [50, 10, 30].
- *
- *     uint8_expect_t r = uint8_array_max(arr);
- *     // r.has_value == true, r.u.value == 50.
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-uint8_expect_t uint8_array_max(const uint8_array_t* array);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Print a uint8 array in bracketed form with line wrapping.
- *
- * Prints the array in the form:
- *
- *     [ 1, 5, 2, 3, 6 ]
- *
- * If appending the next value would cause the current line to exceed
- * 70 columns, printing continues on the next line. Continuation lines
- * are indented by two spaces.
- *
- * @param array   Array to print. Must not be NULL.
- * @param stream  Output stream to write to. Must not be NULL.
- *
- * @return NO_ERROR on success, or NULL_POINTER if array or stream is NULL.
- *
- * @code{.c}
- *     print_uint8_array(arr, stdout);
- * @endcode
- */
-error_code_t print_uint8_array(const uint8_array_t* array, FILE* stream);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Compare two uint8 arrays for exact equality using a SIMD-accelerated path.
- *
- * Two arrays are considered equal if:
- *   1. Both pointers are non-NULL.
- *   2. They contain the same number of elements (len).
- *   3. Every element compares equal using exact integer comparison.
- *
- * This function uses a SIMD-accelerated implementation when available
- * (e.g., AVX2, SSE, NEON) to compare elements in blocks, with a scalar
- * fallback for any remaining elements. The comparison is exact and
- * bitwise for each element — no tolerance or normalization is applied.
- *
- * This function does NOT compare allocator state, capacity, or any
- * metadata beyond element count and data values.
- *
- * @param a  Pointer to the first uint8 array.
- * @param b  Pointer to the second uint8 array.
- *
- * @return true if both arrays are equal, false otherwise. Returns false if:
- *         - Either pointer is NULL
- *         - The array lengths differ
- *         - Any element differs
- *
- * @note This function assumes both arrays are valid and initialized.
- *       Behavior is undefined if internal data pointers are invalid.
- *
- * @code
- *     uint8_array_t* a = ...; // [1, 2, 3]
- *     uint8_array_t* b = ...; // [1, 2, 3]
- *     uint8_array_t* c = ...; // [1, 2, 4]
- *
- *     assert_true(uint8_array_equal(a, b));
- *     assert_false(uint8_array_equal(a, c));
- * @endcode
- */
-bool uint8_array_equal(const uint8_array_t* a,
-                       const uint8_array_t* b);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Compute the sum of all elements in a uint8 array with overflow checking.
- *
- * Iterates over all elements in @p arr and accumulates their sum into @p sum.
- * The accumulation is performed using uint8_t arithmetic with explicit
- * overflow detection. If any addition would exceed UINT8_MAX, the function
- * terminates early and returns NUMERIC_OVERFLOW.
- *
- * The input array is not modified.
- *
- * @param arr  Pointer to the source uint8 array. Must not be NULL and must
- *             contain at least one element.
- * @param sum  Pointer to the output accumulator. Must not be NULL. On success,
- *             the computed sum is written to *sum.
- *
- * @return error_code_t
- * @retval NO_ERROR          Sum successfully computed and stored in @p sum.
- * @retval NULL_POINTER      If @p arr or @p sum is NULL.
- * @retval PRECONDITION_FAIL If the array contains no elements.
- * @retval NUMERIC_OVERFLOW  If the sum would exceed UINT8_MAX.
- * @retval <other>           Propagated error from get_uint8_array_index().
- *
- * @note
- * This function performs checked arithmetic. Unlike typical uint8_t addition,
- * overflow does not wrap modulo 256; instead, it is detected and reported.
- *
- * @code
- *     allocator_vtable_t alloc = heap_allocator();
- *     uint8_array_expect_t r = init_uint8_array(4, true, alloc);
- *     if (!r.has_value) { return; }
- *
- *     uint8_array_t* arr = r.u.value;
- *     push_back_uint8_array(arr, 10u);
- *     push_back_uint8_array(arr, 20u);
- *     push_back_uint8_array(arr, 30u);
- *
- *     uint8_t total = 0u;
- *     error_code_t err = uint8_array_sum(arr, &total);
- *
- *     if (err == NO_ERROR) {
- *         // total == 60
- *     } else if (err == NUMERIC_OVERFLOW) {
- *         // sum exceeded UINT8_MAX
- *     }
- *
- *     return_uint8_array(arr);
- * @endcode
- */
-error_code_t uint8_array_sum(uint8_array_t* arr, uint8_t* sum);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Add a scalar value to every element of a uint8 array.
- *
- * This function adds the specified scalar value to each element in the
- * array in place. The operation is applied to all elements currently
- * stored in the array and preserves the array length and capacity.
- *
- * Internally, this function delegates to the generic add_scalar_array()
- * routine, which may utilize SIMD-accelerated paths when available,
- * falling back to scalar iteration otherwise.
- *
- * @param array Pointer to the uint8 array to modify.
- * @param value Scalar value to add to each element.
- *
- * @return error_code_t
- * @retval NO_ERROR       The operation completed successfully.
- * @retval NULL_POINTER   If @p array is NULL.
- * @retval EMPTY          If the array contains no elements.
- * @retval TYPE_MISMATCH  If the underlying dtype does not match UINT8_TYPE.
- *
- * @note
- * The addition uses standard unsigned 8-bit arithmetic. If the result of
- * adding @p value to an element exceeds UINT8_MAX, it wraps around modulo 256.
- *
- * @warning
- * This function modifies the array in place. No copy of the data is made.
- *
- * @see add_scalar_array
- * @see uint8_array_sum
- */
-error_code_t uint8_add_scalar_array(uint8_array_t* array, uint8_t value);
-// ================================================================================ 
-// ================================================================================ 
-
-/**
- * @brief A dictionary that maps null-terminated C-string keys to uint8_t values.
- *
- * This is a typedef alias for @ref dict_t with the convention that
- * @c data_size is always @c sizeof(uint8_t) and @c dtype is always
- * @c UINT8_TYPE.  Do not use the raw @ref dict_t API directly on a
- * @c uint8_dict_t — always go through the functions declared in this header
- * so that the type constraints are enforced.
- *
- * @code
- *     allocator_vtable_t a = heap_allocator();
- *     uint8_dict_expect_t r = init_uint8_dict(16, true, a);
- *     if (!r.has_value) { // handle r.u.error }
- *     uint8_dict_t* d = r.u.value;
- *
- *     insert_uint8_dict(d, "red",   255u, a);
- *     insert_uint8_dict(d, "green", 128u, a);
- *     insert_uint8_dict(d, "blue",    0u, a);
- *
- *     uint8_t v;
- *     get_uint8_dict_value(d, "green", &v);   // v == 128
- *
- *     return_uint8_dict(d);
- * @endcode
- */
-typedef dict_t uint8_dict_t;
- 
-/**
- * @brief Expected return type for @ref init_uint8_dict and
- *        @ref copy_uint8_dict.
- *
- * Check @c has_value before using @c u.value.  On failure @c u.error
- * contains the relevant @ref error_code_t.
  */
 typedef struct {
     bool has_value;
     union {
-        uint8_dict_t* value;
-        error_code_t  error;
-    } u;
-} uint8_dict_expect_t;
- 
-// ================================================================================
-// Iterator type
-// ================================================================================
- 
-/**
- * @brief Typed iterator callback for @ref foreach_uint8_dict.
- *
- * @param key       Null-terminated C-string key (points into the dict's
- *                  internal storage — do not free or store beyond the
- *                  callback).
- * @param key_len   Length of @p key in bytes, excluding the null terminator.
- * @param value     The uint8_t value associated with @p key.
- * @param user_data Caller-supplied context pointer passed unchanged from
- *                  @ref foreach_uint8_dict; may be NULL.
- *
- * @code
- *     static void print_entry(const char* key, size_t key_len,
- *                             uint8_t value, void* ud) {
- *         (void)ud;
- *         printf("  %.*s => %u\n", (int)key_len, key, (unsigned)value);
- *     }
- *     foreach_uint8_dict(d, print_entry, NULL);
- * @endcode
- */
-typedef void (*uint8_dict_iter_fn)(const char* key,
-                                   size_t      key_len,
-                                   uint8_t     value,
-                                   void*       user_data);
- 
-// ================================================================================
-// Initialisation and teardown
-// ================================================================================
- 
-/**
- * @brief Allocate and initialise a new uint8_dict_t.
- *
- * The underlying @ref dict_t is created with @c data_size = sizeof(uint8_t)
- * and @c dtype = UINT8_TYPE.  The bucket count is rounded up to the next
- * power of two internally.
- *
- * @param capacity  Initial bucket count.  Must be > 0.
- * @param growth    If true the table resizes automatically when the load
- *                  factor exceeds 0.75.
- * @param alloc_v   Allocator for all internal memory.  @c alloc_v.allocate
- *                  must not be NULL.
- *
- * @return @ref uint8_dict_expect_t with @c has_value true on success.
- *         On failure @c u.error is one of NULL_POINTER, INVALID_ARG, or
- *         OUT_OF_MEMORY.
- *
- * @code
- *     allocator_vtable_t a = heap_allocator();
- *
- *     // Create a small dict with automatic growth enabled
- *     uint8_dict_expect_t r = init_uint8_dict(8, true, a);
- *     if (!r.has_value) {
- *         fprintf(stderr, "init failed: %d\n", r.u.error);
- *         return;
- *     }
- *     uint8_dict_t* d = r.u.value;
- *
- *     insert_uint8_dict(d, "alpha", 1u, a);
- *     insert_uint8_dict(d, "beta",  2u, a);
- *
- *     return_uint8_dict(d);
- * @endcode
- */
-uint8_dict_expect_t init_uint8_dict(size_t             capacity,
-                                    bool               growth,
-                                    allocator_vtable_t alloc_v);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Release all memory owned by a uint8_dict_t.
- *
- * Frees every node (key copy + value byte), the bucket array, and the
- * dict struct itself.  Passing NULL is safe and performs no action.
- *
- * @param dict  Dictionary to release.
- *
- * @code
- *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
- *     insert_uint8_dict(d, "x", 42u, a);
- *     // ... use the dict ...
- *     return_uint8_dict(d);   // d must not be used after this point
- * @endcode
- */
-void return_uint8_dict(uint8_dict_t* dict);
- 
-// ================================================================================
-// Insert
-// ================================================================================
- 
-/**
- * @brief Insert a null-terminated string key with a uint8_t value.
- *
- * The key length is measured with @c strlen(key).  The key bytes are copied
- * into the dict's own storage — the caller may free or reuse @p key
- * immediately after this call returns.
- *
- * If the key already exists the insertion is rejected and INVALID_ARG is
- * returned.  To overwrite an existing value use @ref update_uint8_dict.
- *
- * @param dict    Must not be NULL.
- * @param key     Null-terminated C-string key.  Must not be NULL.
- * @param value   The uint8_t value to store.
- * @param alloc_v Allocator used to allocate the new node.
- *
- * @return NO_ERROR, NULL_POINTER, INVALID_ARG (duplicate key),
- *         CAPACITY_OVERFLOW (growth == false and table is full), or
- *         OUT_OF_MEMORY.
- *
- * @code
- *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
- *
- *     insert_uint8_dict(d, "level",  5u, a);   // OK
- *     insert_uint8_dict(d, "health", 100u, a); // OK
- *
- *     // Duplicate key — returns INVALID_ARG, dict is unchanged
- *     error_code_t err = insert_uint8_dict(d, "level", 99u, a);
- *     assert(err == INVALID_ARG);
- *
- *     return_uint8_dict(d);
- * @endcode
- */
-error_code_t insert_uint8_dict(uint8_dict_t*      dict,
-                                const char*        key,
-                                uint8_t            value,
-                                allocator_vtable_t alloc_v);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Insert a bounded key (explicit length) with a uint8_t value.
- *
- * Identical to @ref insert_uint8_dict but the key length is supplied by the
- * caller rather than measured with @c strlen.  This is useful when:
- * - The key is a sub-string of a larger buffer and is not null-terminated at
- *   the desired boundary.
- * - You want to avoid the @c strlen scan on a key whose length is already
- *   known.
- *
- * @param dict    Must not be NULL.
- * @param key     Pointer to the first byte of the key.  Must not be NULL.
- * @param key_len Number of bytes in the key.  Must be > 0.
- * @param value   The uint8_t value to store.
- * @param alloc_v Allocator used to allocate the new node.
- *
- * @return NO_ERROR, NULL_POINTER, INVALID_ARG, CAPACITY_OVERFLOW, or
- *         OUT_OF_MEMORY.
- *
- * @code
- *     // Key is a sub-string: "hello world", take only "hello" (5 bytes)
- *     const char* buf = "hello world";
- *     insert_uint8_dict_n(d, buf, 5, 77u, a);
- *
- *     uint8_t v;
- *     // Retrieve using the same bounded key
- *     get_uint8_dict_value_n(d, buf, 5, &v);   // v == 77
- * @endcode
- */
-error_code_t insert_uint8_dict_n(uint8_dict_t*      dict,
-                                  const char*        key,
-                                  size_t             key_len,
-                                  uint8_t            value,
-                                  allocator_vtable_t alloc_v);
- 
-// ================================================================================
-// Pop (remove and retrieve)
-// ================================================================================
- 
-/**
- * @brief Remove the entry for a null-terminated key and return its value.
- *
- * If the key is found the node is freed and the stored value is written into
- * @p out_value (if non-NULL).  If the key is not found @p out_value is not
- * written.
- *
- * @param dict       Must not be NULL.
- * @param key        Null-terminated C-string key.  Must not be NULL.
- * @param out_value  Destination for the removed value, or NULL to discard.
- *
- * @return NO_ERROR, NULL_POINTER, or NOT_FOUND.
- *
- * @code
- *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
- *     insert_uint8_dict(d, "score", 42u, a);
- *
- *     uint8_t removed;
- *     error_code_t err = pop_uint8_dict(d, "score", &removed);
- *     assert(err == NO_ERROR && removed == 42u);
- *
- *     // Key is gone — next pop returns NOT_FOUND
- *     err = pop_uint8_dict(d, "score", NULL);
- *     assert(err == NOT_FOUND);
- *
- *     return_uint8_dict(d);
- * @endcode
- */
-error_code_t pop_uint8_dict(uint8_dict_t* dict,
-                             const char*   key,
-                             uint8_t*      out_value);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Remove the entry for a bounded key and return its value.
- *
- * Identical to @ref pop_uint8_dict but the key length is supplied explicitly.
- *
- * @param dict       Must not be NULL.
- * @param key        Pointer to the key bytes.  Must not be NULL.
- * @param key_len    Number of bytes in the key.  Must be > 0.
- * @param out_value  Destination for the removed value, or NULL to discard.
- *
- * @return NO_ERROR, NULL_POINTER, INVALID_ARG, or NOT_FOUND.
- *
- * @code
- *     const char* buf = "score_total";
- *     insert_uint8_dict_n(d, buf, 5, 99u, a);   // key = "score"
- *
- *     uint8_t v;
- *     pop_uint8_dict_n(d, buf, 5, &v);           // removes "score", v == 99
- * @endcode
- */
-error_code_t pop_uint8_dict_n(uint8_dict_t* dict,
-                               const char*   key,
-                               size_t        key_len,
-                               uint8_t*      out_value);
- 
-// ================================================================================
-// Update
-// ================================================================================
- 
-/**
- * @brief Overwrite the value of an existing null-terminated key.
- *
- * No allocation is performed.  If the key does not exist NOT_FOUND is
- * returned and the dict is unchanged.  To insert a new entry use
- * @ref insert_uint8_dict.
- *
- * @param dict   Must not be NULL.
- * @param key    Null-terminated C-string key.  Must not be NULL.
- * @param value  New uint8_t value to store.
- *
- * @return NO_ERROR, NULL_POINTER, or NOT_FOUND.
- *
- * @code
- *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
- *     insert_uint8_dict(d, "lives", 3u, a);
- *
- *     update_uint8_dict(d, "lives", 2u);   // decrement
- *
- *     uint8_t v;
- *     get_uint8_dict_value(d, "lives", &v);
- *     assert(v == 2u);
- *
- *     return_uint8_dict(d);
- * @endcode
- */
-error_code_t update_uint8_dict(uint8_dict_t* dict,
-                                const char*   key,
-                                uint8_t       value);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Overwrite the value of an existing bounded key.
- *
- * Identical to @ref update_uint8_dict but the key length is supplied
- * explicitly, avoiding a @c strlen call.
- *
- * @param dict     Must not be NULL.
- * @param key      Pointer to the key bytes.  Must not be NULL.
- * @param key_len  Number of bytes in the key.  Must be > 0.
- * @param value    New uint8_t value to store.
- *
- * @return NO_ERROR, NULL_POINTER, INVALID_ARG, or NOT_FOUND.
- *
- * @code
- *     const char* buf = "lives_total";
- *     insert_uint8_dict_n(d, buf, 5, 3u, a);   // key = "lives"
- *     update_uint8_dict_n(d, buf, 5, 2u);       // update "lives" to 2
- * @endcode
- */
-error_code_t update_uint8_dict_n(uint8_dict_t* dict,
-                                  const char*   key,
-                                  size_t        key_len,
-                                  uint8_t       value);
- 
-// ================================================================================
-// Lookup
-// ================================================================================
- 
-/**
- * @brief Copy the value for a null-terminated key into a caller-supplied
- *        variable.
- *
- * @param dict       Must not be NULL.
- * @param key        Null-terminated C-string key.  Must not be NULL.
- * @param out_value  Destination for the retrieved value.  Must not be NULL.
- *
- * @return NO_ERROR, NULL_POINTER, or NOT_FOUND.
- *
- * @code
- *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
- *     insert_uint8_dict(d, "brightness", 200u, a);
- *
- *     uint8_t v;
- *     if (get_uint8_dict_value(d, "brightness", &v) == NO_ERROR) {
- *         printf("brightness = %u\n", (unsigned)v);
- *     }
- *
- *     return_uint8_dict(d);
- * @endcode
- */
-error_code_t get_uint8_dict_value(const uint8_dict_t* dict,
-                                   const char*         key,
-                                   uint8_t*            out_value);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Copy the value for a bounded key into a caller-supplied variable.
- *
- * Identical to @ref get_uint8_dict_value but the key length is supplied
- * explicitly.
- *
- * @param dict       Must not be NULL.
- * @param key        Pointer to the key bytes.  Must not be NULL.
- * @param key_len    Number of bytes in the key.  Must be > 0.
- * @param out_value  Destination for the retrieved value.  Must not be NULL.
- *
- * @return NO_ERROR, NULL_POINTER, INVALID_ARG, or NOT_FOUND.
- *
- * @code
- *     const char* buf = "brightness_max";
- *     insert_uint8_dict_n(d, buf, 10, 200u, a);   // key = "brightness"
- *
- *     uint8_t v;
- *     get_uint8_dict_value_n(d, buf, 10, &v);      // v == 200
- * @endcode
- */
-error_code_t get_uint8_dict_value_n(const uint8_dict_t* dict,
-                                     const char*         key,
-                                     size_t              key_len,
-                                     uint8_t*            out_value);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Return a read-only pointer directly into the node's value byte for
- *        a null-terminated key.
- *
- * The pointer is valid until the next mutation of the dict.  The caller must
- * not free it or write through it.  Use @ref get_uint8_dict_value when a
- * copy is preferred.
- *
- * @param dict  Must not be NULL.
- * @param key   Null-terminated C-string key.  Must not be NULL.
- *
- * @return Pointer to the stored uint8_t on success, NULL if not found or on
- *         error.
- *
- * @code
- *     insert_uint8_dict(d, "flags", 0b00110101, a);
- *
- *     const uint8_t* p = get_uint8_dict_ptr(d, "flags");
- *     if (p) printf("flags = 0x%02X\n", *p);
- *     // Do not store p — it may be invalidated by the next insert or pop.
- * @endcode
- */
-const uint8_t* get_uint8_dict_ptr(const uint8_dict_t* dict, const char* key);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Return a read-only pointer directly into the node's value byte for
- *        a bounded key.
- *
- * Identical to @ref get_uint8_dict_ptr but the key length is supplied
- * explicitly.
- *
- * @param dict     Must not be NULL.
- * @param key      Pointer to the key bytes.  Must not be NULL.
- * @param key_len  Number of bytes in the key.  Must be > 0.
- *
- * @return Pointer to the stored uint8_t on success, NULL if not found or on
- *         error.
- *
- * @code
- *     const char* buf = "flags_extended";
- *     insert_uint8_dict_n(d, buf, 5, 0xAB, a);   // key = "flags"
- *
- *     const uint8_t* p = get_uint8_dict_ptr_n(d, buf, 5);
- *     if (p) printf("flags = 0x%02X\n", *p);
- * @endcode
- */
-const uint8_t* get_uint8_dict_ptr_n(const uint8_dict_t* dict,
-                                     const char*         key,
-                                     size_t              key_len);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Test whether a null-terminated key exists in the dict.
- *
- * @param dict  Must not be NULL.
- * @param key   Null-terminated C-string key.  Must not be NULL.
- *
- * @return true if the key exists, false otherwise (including on error).
- *
- * @code
- *     insert_uint8_dict(d, "active", 1u, a);
- *
- *     if (has_uint8_dict_key(d, "active"))
- *         printf("active is set\n");
- *
- *     if (!has_uint8_dict_key(d, "inactive"))
- *         printf("inactive is not set\n");
- * @endcode
- */
-bool has_uint8_dict_key(const uint8_dict_t* dict, const char* key);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Test whether a bounded key exists in the dict.
- *
- * Identical to @ref has_uint8_dict_key but the key length is supplied
- * explicitly.
- *
- * @param dict     Must not be NULL.
- * @param key      Pointer to the key bytes.  Must not be NULL.
- * @param key_len  Number of bytes in the key.  Must be > 0.
- *
- * @return true if the key exists, false otherwise.
- *
- * @code
- *     const char* buf = "active_flag";
- *     insert_uint8_dict_n(d, buf, 6, 1u, a);   // key = "active"
- *     assert(has_uint8_dict_key_n(d, buf, 6));
- * @endcode
- */
-bool has_uint8_dict_key_n(const uint8_dict_t* dict,
-                           const char*         key,
-                           size_t              key_len);
- 
-// ================================================================================
-// Utility
-// ================================================================================
- 
-/**
- * @brief Remove all entries without freeing the dict or its bucket array.
- *
- * All nodes are freed via the dict's stored allocator.  The bucket array is
- * retained and zeroed, ready for reuse.  @c len and @c hash_size are reset
- * to 0.
- *
- * @param dict  Must not be NULL.
- *
- * @return NO_ERROR or NULL_POINTER.
- *
- * @code
- *     insert_uint8_dict(d, "a", 1u, a);
- *     insert_uint8_dict(d, "b", 2u, a);
- *     assert(uint8_dict_hash_size(d) == 2);
- *
- *     clear_uint8_dict(d);
- *     assert(uint8_dict_hash_size(d) == 0);
- *
- *     // The dict is still usable after clear
- *     insert_uint8_dict(d, "c", 3u, a);
- * @endcode
- */
-error_code_t clear_uint8_dict(uint8_dict_t* dict);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Allocate a deep copy of a uint8_dict_t.
- *
- * All nodes are copied into a fresh bucket array of the same capacity.  The
- * new dict uses @p alloc_v for all of its allocations.
- *
- * @param src     Must not be NULL.
- * @param alloc_v Allocator for the new dict and its nodes.
- *
- * @return @ref uint8_dict_expect_t with @c has_value true on success.
- *
- * @code
- *     uint8_dict_t* orig = init_uint8_dict(8, true, a).u.value;
- *     insert_uint8_dict(orig, "x", 10u, a);
- *     insert_uint8_dict(orig, "y", 20u, a);
- *
- *     uint8_dict_expect_t cr = copy_uint8_dict(orig, a);
- *     assert(cr.has_value);
- *     uint8_dict_t* copy = cr.u.value;
- *
- *     // The copy is independent — mutating orig does not affect copy
- *     update_uint8_dict(orig, "x", 99u);
- *     uint8_t v;
- *     get_uint8_dict_value(copy, "x", &v);
- *     assert(v == 10u);
- *
- *     return_uint8_dict(copy);
- *     return_uint8_dict(orig);
- * @endcode
- */
-uint8_dict_expect_t copy_uint8_dict(const uint8_dict_t* src,
-                                    allocator_vtable_t  alloc_v);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Merge two uint8_dict_t instances into a new dict.
- *
- * All entries from @p a are inserted first.  Entries from @p b are then
- * processed:
- * - If the key does not exist in the result it is inserted.
- * - If the key already exists and @p overwrite is true the value from @p b
- *   replaces the value from @p a.
- * - If the key already exists and @p overwrite is false the value from @p a
- *   is kept.
- *
- * Neither source dict is modified.
- *
- * @param a          First source dict.  Must not be NULL.
- * @param b          Second source dict.  Must not be NULL.
- * @param overwrite  If true, @p b's values win on key conflicts.
- * @param alloc_v    Allocator for the new dict.
- *
- * @return @ref uint8_dict_expect_t with @c has_value true on success.
- *
- * @code
- *     uint8_dict_t* da = init_uint8_dict(8, true, a).u.value;
- *     uint8_dict_t* db = init_uint8_dict(8, true, a).u.value;
- *
- *     insert_uint8_dict(da, "shared", 10u, a);
- *     insert_uint8_dict(da, "only_a", 1u,  a);
- *     insert_uint8_dict(db, "shared", 99u, a);
- *     insert_uint8_dict(db, "only_b", 2u,  a);
- *
- *     // Merge without overwrite — "shared" keeps da's value of 10
- *     uint8_dict_expect_t mr = merge_uint8_dict(da, db, false, a);
- *     uint8_t v;
- *     get_uint8_dict_value(mr.u.value, "shared", &v);
- *     assert(v == 10u);
- *     get_uint8_dict_value(mr.u.value, "only_b", &v);
- *     assert(v == 2u);
- *
- *     return_uint8_dict(mr.u.value);
- *     return_uint8_dict(da);
- *     return_uint8_dict(db);
- * @endcode
- */
-uint8_dict_expect_t merge_uint8_dict(const uint8_dict_t* a,
-                                     const uint8_dict_t* b,
-                                     bool                overwrite,
-                                     allocator_vtable_t  alloc_v);
- 
-// ================================================================================
-// Iteration
-// ================================================================================
- 
-/**
- * @brief Call @p fn once for every entry in the dict.
- *
- * Traversal order follows bucket order, which is not guaranteed to match
- * insertion order.  The callback receives the key as a null-terminated
- * C-string pointer (into internal storage), its length, and the uint8_t
- * value.  The callback must not insert or remove entries during traversal.
- *
- * @param dict       Must not be NULL.
- * @param fn         Typed callback.  Must not be NULL.
- * @param user_data  Passed unchanged to @p fn; may be NULL.
- *
- * @return NO_ERROR or NULL_POINTER.
- *
- * @code
- *     static void print_entry(const char* key, size_t key_len,
- *                             uint8_t value, void* ud) {
- *         (void)key_len; (void)ud;
- *         printf("  %s = %u\n", key, (unsigned)value);
- *     }
- *
- *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
- *     insert_uint8_dict(d, "r", 255u, a);
- *     insert_uint8_dict(d, "g", 128u, a);
- *     insert_uint8_dict(d, "b",   0u, a);
- *
- *     foreach_uint8_dict(d, print_entry, NULL);
- *     // Output (order may vary):
- *     //   r = 255
- *     //   g = 128
- *     //   b = 0
- *
- *     return_uint8_dict(d);
- * @endcode
- */
-error_code_t foreach_uint8_dict(const uint8_dict_t* dict,
-                                 uint8_dict_iter_fn  fn,
-                                 void*               user_data);
- 
-// ================================================================================
-// Introspection
-// ================================================================================
- 
-/**
- * @brief Number of occupied buckets (chains with at least one entry).
- *
- * Returns 0 if @p dict is NULL.
- *
- * @code
- *     insert_uint8_dict(d, "a", 1u, a);
- *     insert_uint8_dict(d, "b", 2u, a);
- *     printf("occupied buckets: %zu\n", uint8_dict_size(d));
- * @endcode
- */
-size_t uint8_dict_size(const uint8_dict_t* dict);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Total number of key-value pairs stored.
- *
- * Returns 0 if @p dict is NULL.
- *
- * @code
- *     insert_uint8_dict(d, "a", 1u, a);
- *     insert_uint8_dict(d, "b", 2u, a);
- *     assert(uint8_dict_hash_size(d) == 2);
- * @endcode
- */
-size_t uint8_dict_hash_size(const uint8_dict_t* dict);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief Number of buckets currently allocated.
- *
- * Returns 0 if @p dict is NULL.
- *
- * @code
- *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
- *     // alloc is rounded up to next power of two >= 8
- *     assert(uint8_dict_alloc(d) >= 8);
- * @endcode
- */
-size_t uint8_dict_alloc(const uint8_dict_t* dict);
- 
-// --------------------------------------------------------------------------------
- 
-/**
- * @brief true if @p dict is NULL or contains no entries.
- *
- * @code
- *     uint8_dict_t* d = init_uint8_dict(8, true, a).u.value;
- *     assert(is_uint8_dict_empty(d));
- *     insert_uint8_dict(d, "x", 1u, a);
- *     assert(!is_uint8_dict_empty(d));
- * @endcode
- */
-bool is_uint8_dict_empty(const uint8_dict_t* dict);
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Print a uint8_dict_t in a JSON-like key-value format with line wrapping.
- *
- * Writes the contents of the dictionary to the given output stream in the form:
- *
- *     { "key1": 3, "key2": 4, "key3": 7 }
- *
- * Each key is printed as a quoted string followed by a colon and its
- * associated uint8_t value. Entries are separated by a comma and space.
- *
- * If appending the next key-value pair would cause the current line to exceed
- * 70 columns, the output is wrapped to a new line. Continuation lines are
- * indented by two spaces for readability.
- *
- * The dictionary is traversed using its internal iteration order. This order
- * is not guaranteed to match insertion order or lexical ordering of keys.
- *
- * The function does not modify the dictionary and performs no allocations.
- *
- * @param dict    Pointer to the dictionary to print. Must not be NULL.
- * @param stream  Output stream to write to (e.g., stdout, stderr, or a file).
- *                Must not be NULL.
- *
- * @return NO_ERROR on success, or one of:
- *         - NULL_POINTER if dict or stream is NULL
- *         - any error propagated from foreach_uint8_dict (implementation-dependent)
- *
- * @note Keys are printed verbatim without escaping. If keys may contain
- *       special characters such as quotes or backslashes, additional escaping
- *       logic may be required for strict JSON compatibility.
- *
- * @code{.c}
- *     allocator_vtable_t alloc = heap_allocator();
- *
- *     uint8_dict_expect_t r = init_uint8_dict(8, true, alloc);
- *     if (!r.has_value) { return; }
- *
- *     uint8_dict_t* d = r.u.value;
- *
- *     insert_uint8_dict(d, "alpha",  3u, alloc);
- *     insert_uint8_dict(d, "beta",   4u, alloc);
- *     insert_uint8_dict(d, "gamma",  7u, alloc);
- *
- *     print_uint8_dict(d, stdout);
- *     // Possible output:
- *     // { "alpha": 3, "beta": 4, "gamma": 7 }
- *
- *     return_uint8_dict(d);
- * @endcode
-  */
-error_code_t print_uint8_dict(const uint8_dict_t* dict, FILE* stream);
-// ================================================================================ 
-// ================================================================================ 
-
-// ================================================================================ 
-// ================================================================================ 
-// uint8_matrix_t — type-safe uint8 wrapper around matrix_t
-//
-// This section provides a uint8-specialised interface to the generic matrix_t
-// type.  uint8_matrix_t is a typedef for matrix_t; all functions below fix
-// the dtype to uint8_TYPE and accept / return uint8 values directly so that
-// callers never need to pass a dtype_id_t or void* value.
-//
-// The wrapper covers every public function in c_matrix.h that either:
-//   (a) takes a dtype_id_t argument (replaced with uint8_TYPE), or
-//   (b) takes or returns void* element pointers (replaced with uint8 / uint8*).
-//
-// Functions that are already type-agnostic (matrix_rows, matrix_cols,
-// matrix_is_square, matrix_has_same_shape, etc.) are wrapped with a
-// uint8_matrix_t* signature for consistency, but simply delegate.
-// ================================================================================ 
-// ================================================================================ 
-
-typedef matrix_t uint8_matrix_t;
-
-typedef struct {
-    bool has_value;
-    union {
-        uint8_matrix_t* value;
+        uint8_tensor_t* value;
         error_code_t    error;
     } u;
-} uint8_matrix_expect_t;
-
-/* =============================================================================
- * Comparator / Predicate Function Types
- * ========================================================================== */
-
-/**
- * @brief Predicate function to determine semantic zero for uint8 values.
- *
- * This function defines what values should be treated as "zero" during
- * dense-to-sparse conversion operations. It is primarily used by:
- *
- * - convert_uint8_matrix_zero()
- *
- * @param value The uint8 value to evaluate.
- *
- * @return true if the value should be treated as zero, false otherwise.
- *
- * @note If NULL is passed, the default behavior is:
- *       value == 0.0f
- *
- * @example
- * Treat both 0.0 and -1.0 as zero:
- * @code{.c}
- * bool zero_or_neg_one(uint8 v) {
- *     return (v == 0u) || (v == 3u);
- * }
- * @endcode
- */
-typedef bool (*uint8_zero_fn)(uint8_t value);
+} uint8_tensor_expect_t;
 
 // ================================================================================
 // Initialization and teardown
 // ================================================================================
 
 /**
- * @brief Initialize a dense uint8 matrix with zero-initialized storage.
+ * @brief Initialise a fixed-shape N-dimensional tensor of uint8_t elements.
  *
- * Creates a dense matrix of shape @p rows by @p cols with the dtype fixed to
- * uint8_TYPE. All elements are initialised to zero.
+ * Allocates the underlying tensor_t via init_tensor and then allocates a
+ * thin uint8_tensor_t wrapper struct through the same allocator. All slots
+ * are zero-initialised at construction and considered live for the lifetime
+ * of the tensor — len equals alloc equals the product of all shape
+ * dimensions. Both allocations must be returned by calling
+ * return_uint8_tensor when the tensor is no longer needed.
  *
- * @param rows     Number of matrix rows. Must be > 0.
- * @param cols     Number of matrix columns. Must be > 0.
- * @param alloc_v  Allocator for the matrix header and data buffer.
+ * @param ndim    Number of dimensions. Must be > 0 and <= 255.
+ * @param shape   Array of ndim dimension sizes. Must not be NULL.
+ *                Each shape[i] must be > 0.
+ * @param alloc_v Allocator vtable for all memory operations.
+ *                alloc_v.allocate must not be NULL.
  *
- * @return uint8_matrix_expect_t with has_value true on success.
- *
- * @code{.c}
- *     allocator_vtable_t a = heap_allocator();
- *     uint8_matrix_expect_t r = init_uint8_dense_matrix(3, 4, a);
- *     if (!r.has_value) { fprintf(stderr, "%d\n", r.u.error); return; }
- *     uint8_matrix_t* m = r.u.value;
- *
- *     set_uint8_matrix(m, 0, 0, 1u);
- *     set_uint8_matrix(m, 1, 2, 5u);
- *
- *     return_uint8_matrix(m);
- * @endcode
- */
-uint8_matrix_expect_t init_uint8_dense_matrix(size_t             rows,
-                                              size_t             cols,
-                                              allocator_vtable_t alloc_v);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Initialize an empty COO sparse uint8 matrix.
- *
- * Creates a coordinate-list sparse matrix with storage for up to @p capacity
- * entries. The dtype is fixed to uint8_TYPE.
- *
- * @param rows      Number of matrix rows. Must be > 0.
- * @param cols      Number of matrix columns. Must be > 0.
- * @param capacity  Initial entry capacity. Must be > 0.
- * @param growth    If true, the COO storage may grow when full.
- * @param alloc_v   Allocator for the matrix header and COO buffers.
- *
- * @return uint8_matrix_expect_t with has_value true on success.
+ * @return uint8_tensor_expect_t with has_value true on success.
+ *         On failure has_value is false and u.error is set.
  *
  * @code{.c}
- *     allocator_vtable_t a = heap_allocator();
- *     uint8_matrix_expect_t r = init_uint8_coo_matrix(100, 100, 16, true, a);
- *     uint8_matrix_t* m = r.u.value;
+ * // Create a 3x4 matrix of uint8_t values
+ * size_t shape[] = { 3u, 4u };
+ * uint8_tensor_expect_t r = init_uint8_tensor(2u, shape, heap_allocator());
+ * if (!r.has_value) { fprintf(stderr, "%s\n", error_to_string(r.u.error)); }
+ * uint8_tensor_t* mat = r.u.value;
  *
- *     push_back_uint8_coo_matrix(m, 0, 5, 3u);
- *     push_back_uint8_coo_matrix(m, 42, 99, 7u);
+ * // Write to element (1, 2)
+ * size_t idx[] = { 1u, 2u };
+ * set_uint8_tensor_nd_index(mat, idx, 42u);
  *
- *     return_uint8_matrix(m);
+ * // Read it back
+ * uint8_t val;
+ * get_uint8_tensor_nd_index(mat, idx, &val);   // val == 42
+ *
+ * return_uint8_tensor(mat);
  * @endcode
  */
-uint8_matrix_expect_t init_uint8_coo_matrix(size_t             rows,
-                                            size_t             cols,
-                                            size_t             capacity,
-                                            bool               growth,
-                                            allocator_vtable_t alloc_v);
+uint8_tensor_expect_t init_uint8_tensor(uint8_t            ndim,
+                                        const size_t*      shape,
+                                        allocator_vtable_t alloc_v);
 
 // -------------------------------------------------------------------------------- 
 
-/**
- * @brief Release all storage owned by a uint8 matrix.
+/*
+ * Allocator convention for uint8_tensor_t functions:
  *
- * Frees internal buffers and the matrix object itself. Passing NULL is safe.
+ * init_uint8_array        — takes allocator_vtable_t by value. An allocator
+ *                           is mandatory since there is no existing tensor to
+ *                           inherit one from.
  *
- * @param mat  Matrix to destroy, or NULL.
+ * copy_uint8_tensor       — takes allocator_vtable_t* (pointer). Pass NULL to
+ * slice_uint8_tensor_array  inherit the allocator from the source tensor, or
+ *                           a non-NULL pointer to use a different allocator.
  */
-void return_uint8_matrix(uint8_matrix_t* mat);
-
-// ================================================================================
-// Element access
-// ================================================================================
-
+ 
 /**
- * @brief Read a uint8 element at the given row and column.
+ * @brief Initialise a dynamic 1-D array of uint8_t elements.
  *
- * For sparse formats, missing entries are returned as 0.0f.
+ * Allocates the underlying tensor_t via init_tensor_array and then
+ * allocates a thin uint8_tensor_t wrapper struct through the same
+ * allocator. Both allocations must be returned by calling
+ * return_uint8_tensor when the array is no longer needed.
  *
- * @param mat  Matrix to read from.
- * @param row  Zero-based row index.
- * @param col  Zero-based column index.
- * @param out  Receives the uint8 value. Must not be NULL.
+ * @param capacity  Number of elements to allocate. Must be > 0.
+ * @param growth    If true, push operations may reallocate the buffer
+ *                  when capacity is reached.
+ * @param alloc_v   Allocator vtable for all memory operations.
+ *                  alloc_v.allocate must not be NULL.
  *
- * @return NO_ERROR on success, or NULL_POINTER / INVALID_ARG / OUT_OF_BOUNDS.
- *
- * @code
- *     uint8_t v = 0u;
- *     get_uint8_matrix(m, 1, 2, &v);
- * @endcode
- */
-error_code_t get_uint8_matrix(const uint8_matrix_t* mat,
-                              size_t                row,
-                              size_t                col,
-                              uint8_t*              out);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Write a uint8 element at the given row and column.
- *
- * Dense and COO matrices are supported. CSR/CSC return ILLEGAL_STATE.
- *
- * @param mat    Matrix to modify.
- * @param row    Zero-based row index.
- * @param col    Zero-based column index.
- * @param value  The uint8 value to store.
- *
- * @return NO_ERROR on success, or an appropriate error_code_t.
- *
- * @code
- *     set_uint8_matrix(m, 0, 0, 42u);
- * @endcode
- */
-error_code_t set_uint8_matrix(uint8_matrix_t* mat,
-                              size_t          row,
-                              size_t          col,
-                              uint8_t         value);
-
-// ================================================================================
-// COO assembly helpers
-// ================================================================================
-
-/**
- * @brief Reserve additional entry capacity for a uint8 COO matrix.
- *
- * @param mat       COO matrix to grow.
- * @param capacity  Requested minimum entry capacity.
- *
- * @return NO_ERROR on success, or an appropriate error_code_t.
- */
-error_code_t reserve_uint8_coo_matrix(uint8_matrix_t* mat,
-                                      size_t          capacity);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Append or overwrite a uint8 entry in a COO matrix.
- *
- * If (row, col) already exists its value is overwritten; otherwise a new
- * entry is appended. The matrix is marked unsorted after insertion.
- *
- * @param mat    COO matrix to append to.
- * @param row    Zero-based row index.
- * @param col    Zero-based column index.
- * @param value  The uint8 value to insert.
- *
- * @return NO_ERROR on success, or an appropriate error_code_t.
- *
- * @code
- *     push_back_uint8_coo_matrix(m, 0, 5, 3u);
- * @endcode
- */
-error_code_t push_back_uint8_coo_matrix(uint8_matrix_t* mat,
-                                        size_t          row,
-                                        size_t          col,
-                                        uint8_t         value);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Sort COO entries by (row, col).
- *
- * @param mat  COO matrix to sort.
- *
- * @return NO_ERROR on success, or an appropriate error_code_t.
- */
-error_code_t sort_uint8_coo_matrix(uint8_matrix_t* mat);
-
-// ================================================================================
-// Lifecycle / structural operations
-// ================================================================================
-
-/**
- * @brief Clear a uint8 matrix, preserving its allocated storage.
- *
- * Dense matrices are zeroed. COO matrices reset to zero logical entries.
- *
- * @param mat  Matrix to clear.
- *
- * @return NO_ERROR on success, or an appropriate error_code_t.
- */
-error_code_t clear_uint8_matrix(uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Deep-copy a uint8 matrix.
- *
- * @param src      Matrix to copy.
- * @param alloc_v  Allocator for the destination matrix.
- *
- * @return uint8_matrix_expect_t with has_value true on success.
- */
-uint8_matrix_expect_t copy_uint8_matrix(const uint8_matrix_t* src,
-                                        allocator_vtable_t    alloc_v);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Convert a uint8 matrix to a different storage format.
- *
- * Produces a new matrix with the same logical values in the target format.
- *
- * @param src      Matrix to convert.
- * @param target   Desired destination storage format. Can be any value in 
- * ``matrix_format_t`` enum, (i.e. ``DENSE_MATRIX``, ``COO_MATRIX``, 
- * ``CSR_MATRIX``, ``CSC__MATRIX``)
- * @param alloc_v  Allocator for the destination matrix.
- *
- * @return uint8_matrix_expect_t with has_value true on success.
- *
- * @code
- *     uint8_matrix_expect_t csr =
- *         convert_uint8_matrix(dense_m, CSR_MATRIX, a);
- * @endcode
- */
-uint8_matrix_expect_t convert_uint8_matrix(const uint8_matrix_t* src,
-                                           matrix_format_t       target,
-                                           allocator_vtable_t    alloc_v);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Compute the transpose of a uint8 matrix.
- *
- * Dense stays dense, COO stays COO, CSR transposes to CSR, CSC to CSC.
- *
- * @param src      Matrix to transpose.
- * @param alloc_v  Allocator for the destination matrix.
- *
- * @return uint8_matrix_expect_t with has_value true on success.
- */
-uint8_matrix_expect_t transpose_uint8_matrix(const uint8_matrix_t* src,
-                                             allocator_vtable_t    alloc_v);
-
-// ================================================================================
-// Fill and zero
-// ================================================================================
-
-/**
- * @brief Fill a uint8 matrix with a single repeated value.
- *
- * Nonzero fill is supported only for dense matrices. Supplying 0.0f resets
- * the matrix through clear_uint8_matrix.
- *
- * @param mat    Matrix to fill.
- * @param value  The uint8 fill value.
- *
- * @return NO_ERROR on success, or an appropriate error_code_t.
- *
- * @code
- *     fill_uint8_matrix(m, 1u);   // every element becomes 1.0
- *     fill_uint8_matrix(m, 0u);   // equivalent to clear
- * @endcode
- */
-error_code_t fill_uint8_matrix(uint8_matrix_t* mat,
-                               uint8_t         value);
-// ================================================================================
-// Shape and compatibility queries
-// ================================================================================
-
-/**
- * @brief Test whether two uint8 matrices have identical shape.
- */
-bool uint8_matrix_has_same_shape(const uint8_matrix_t* a,
-                                 const uint8_matrix_t* b);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Test whether a uint8 matrix is square.
- */
-bool uint8_matrix_is_square(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Test whether a uint8 matrix uses a sparse representation.
- */
-bool uint8_matrix_is_sparse(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Test whether a uint8 matrix is logically all zeros.
- */
-bool uint8_matrix_is_zero(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Compare two uint8 matrices for numerical equality.
- *
- * This function determines whether two matrices are logically equal based on
- * their numerical values, independent of their internal storage format.
- *
- * Equality is defined using standard uint8ing-point comparison semantics:
- *
- * Matrices must:
- * - be non-NULL
- * - have the same dimensions (rows and columns)
- * - have dtype == uint8_TYPE
- *
- * The comparison is **format-agnostic**, meaning matrices with different
- * storage formats (e.g., dense vs COO vs CSR vs CSC) are considered equal
- * if they represent the same logical values.
- *
- * Performance optimizations:
- * - Dense × Dense comparisons use SIMD-accelerated numerical comparison.
- * - COO × COO comparisons use a fast path when both matrices are sorted,
- *   comparing index arrays and values directly.
- * - All other cases fall back to element-wise comparison using logical
- *   matrix access.
- *
- * @param a First matrix (may be NULL).
- * @param b Second matrix (may be NULL).
- *
- * @return true if the matrices are numerically equal, false otherwise.
- *
- * @note This function performs numerical comparison only. For custom
- *       comparison rules (e.g., tolerance-based equality or sign-sensitive
- *       comparisons), use :c:func:`uint8_matrix_equal_cmp`.
+ * @return uint8_tensor_expect_t with has_value true on success.
+ *         On failure has_value is false and u.error is set.
  *
  * @code{.c}
- * allocator_vtable_t alloc = heap_allocator();
- *
- * uint8_matrix_expect_t r1 = init_uint8_dense_matrix(2, 2, alloc);
- * uint8_matrix_expect_t r2 = init_uint8_dense_matrix(2, 2, alloc);
- *
- * uint8_matrix_t* a = r1.u.value;
- * uint8_matrix_t* b = r2.u.value;
- *
- * set_uint8_matrix(a, 0, 0, 4u);
- * set_uint8_matrix(b, 0, 0,  0u);
- *
- * assert_true(uint8_matrix_equal(a, b)); // false
- *
- * return_uint8_matrix(a);
- * return_uint8_matrix(b);
+ * uint8_tensor_expect_t r = init_uint8_array(16, true, heap_allocator());
+ * if (!r.has_value) { fprintf(stderr, "%s\n", error_to_string(r.u.error)); }
+ * uint8_tensor_t* arr = r.u.value;
+ * push_back_uint8_tensor(arr, 42u);
+ * return_uint8_tensor(arr);
  * @endcode
+ */
+uint8_tensor_expect_t init_uint8_array(size_t capacity,
+                                       bool growth,
+                                       allocator_vtable_t alloc_v);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a uint8_tensor_t and its underlying tensor to the allocator.
+ *
+ * Returns the data buffer and tensor_t struct via return_tensor, then
+ * returns the wrapper struct itself. The allocator is read from the tensor
+ * before return_tensor is called so it remains valid for the wrapper
+ * deallocation. Silently ignored if t is NULL.
+ *
+ * @param t  Pointer to the wrapper to return. May be NULL.
  *
  * @code{.c}
- * // Equality across different storage formats
- *
- * uint8_matrix_expect_t dense_r = init_uint8_dense_matrix(2, 2, alloc);
- * uint8_matrix_t* dense = dense_r.u.value;
- *
- * set_uint8_matrix(dense, 0, 1, 3u);
- *
- * uint8_matrix_expect_t csr_r =
- *     convert_uint8_matrix(dense, CSR_MATRIX, alloc);
- *
- * uint8_matrix_t* csr = csr_r.u.value;
- *
- * // Same logical values → equal
- * assert_true(uint8_matrix_equal(dense, csr)); // true
- *
- * return_uint8_matrix(csr);
- * return_uint8_matrix(dense);
+ * uint8_tensor_expect_t r = init_uint8_array(8, false, heap_allocator());
+ * uint8_tensor_t* arr = r.u.value;
+ * // ... use arr ...
+ * return_uint8_tensor(arr);
+ * arr = NULL;   // guard against accidental reuse
  * @endcode
  */
-bool uint8_matrix_equal(const uint8_matrix_t* a,
-                        const uint8_matrix_t* b);
+void return_uint8_tensor(uint8_tensor_t* t);
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Test whether two uint8 matrices are compatible for addition.
+ * @brief Create a deep copy of a uint8_tensor_t.
  *
- * Requires equal shape and equal dtype.
- */
-bool uint8_matrix_is_add_compatible(const uint8_matrix_t* a,
-                                    const uint8_matrix_t* b);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Test whether two uint8 matrices are compatible for multiplication.
+ * Copies the underlying tensor via copy_tensor then allocates a new
+ * uint8_tensor_t wrapper struct. Both allocations are returned by calling
+ * return_uint8_tensor on the returned pointer. On partial failure the
+ * copied tensor_t is returned before propagating the error so no memory
+ * is leaked. The copy is independent of src — mutations to one do not
+ * affect the other.
  *
- * Requires a->cols == b->rows and equal dtype.
- */
-bool uint8_matrix_is_multiply_compatible(const uint8_matrix_t* a,
-                                         const uint8_matrix_t* b);
-
-// ================================================================================
-// Row / column swaps
-// ================================================================================
-
-/**
- * @brief Swap two rows of a uint8 matrix in place.
+ * @param src     Pointer to the source uint8_tensor_t. Must not be NULL.
+ * @param alloc_v Pointer to the allocator vtable for the new memory.
+ *                Pass NULL to inherit the allocator from src.
  *
- * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
- *
- * @param mat  Matrix to modify.
- * @param r1   First zero-based row index.
- * @param r2   Second zero-based row index.
- *
- * @return NO_ERROR on success, or an appropriate error_code_t.
- */
-error_code_t swap_uint8_matrix_rows(uint8_matrix_t* mat,
-                                    size_t          r1,
-                                    size_t          r2);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Swap two columns of a uint8 matrix in place.
- *
- * Dense and COO matrices are supported. CSR/CSC return OPERATION_UNAVAILABLE.
- *
- * @param mat  Matrix to modify.
- * @param c1   First zero-based column index.
- * @param c2   Second zero-based column index.
- *
- * @return NO_ERROR on success, or an appropriate error_code_t.
- */
-error_code_t swap_uint8_matrix_cols(uint8_matrix_t* mat,
-                                    size_t          c1,
-                                    size_t          c2);
-
-// ================================================================================
-// Special matrix constructors
-// ================================================================================
-
-/**
- * @brief Initialize a dense uint8 identity matrix.
- *
- * Creates an @p n by @p n dense matrix with 1.0f on the diagonal and 0.0f
- * elsewhere.
- *
- * @param n        Matrix order (rows == cols).
- * @param alloc_v  Allocator for the matrix.
- *
- * @return uint8_matrix_expect_t with has_value true on success.
- *
- * @code
- *     uint8_matrix_expect_t r = init_uint8_identity_matrix(3, a);
- *     // 3x3 identity matrix.
- * @endcode
- */
-uint8_matrix_expect_t init_uint8_identity_matrix(size_t             n,
-                                                 allocator_vtable_t alloc_v);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Initialize a dense uint8 row vector (1 x length).
- *
- * @param length   Vector length (number of columns).
- * @param alloc_v  Allocator for the matrix.
- *
- * @return uint8_matrix_expect_t with has_value true on success.
- */
-uint8_matrix_expect_t init_uint8_row_vector(size_t             length,
-                                            allocator_vtable_t alloc_v);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Initialize a dense uint8 column vector (length x 1).
- *
- * @param length   Vector length (number of rows).
- * @param alloc_v  Allocator for the matrix.
- *
- * @return uint8_matrix_expect_t with has_value true on success.
- */
-uint8_matrix_expect_t init_uint8_col_vector(size_t             length,
-                                            allocator_vtable_t alloc_v);
-
-// ================================================================================
-// Vector shape queries
-// ================================================================================
-
-/**
- * @brief Test whether a uint8 matrix has row-vector shape (1 x N).
- */
-bool uint8_matrix_is_row_vector(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Test whether a uint8 matrix has column-vector shape (N x 1).
- */
-bool uint8_matrix_is_col_vector(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Test whether a uint8 matrix has vector shape (row or column).
- */
-bool uint8_matrix_is_vector(const uint8_matrix_t* mat);
-
-// -------------------------------------------------------------------------------- 
-
-/**
- * @brief Return the logical length of a vector-shaped uint8 matrix.
- *
- * For row vectors returns cols; for column vectors returns rows.
- * Non-vector matrices return 0.
- */
-size_t uint8_matrix_vector_length(const uint8_matrix_t* mat);
-
-// ================================================================================
-// Conversion with semantic zero callback
-// ================================================================================
-
-/**
- * @brief Convert a uint8 matrix to a different storage format using an
- *        optional semantic zero-test.
- *
- * This function performs the same structural conversion as
- * :c:func:`convert_uint8_matrix`, but allows the caller to define what
- * uint8 values should be treated as zero during dense-to-sparse conversion.
- *
- * The @p is_zero callback is used only when:
- *   - @p src is a dense matrix, and
- *   - @p target is COO_MATRIX, CSR_MATRIX, or CSC_MATRIX.
- *
- * In all other cases, this function behaves exactly like
- * :c:func:`convert_uint8_matrix`.
- *
- * If @p is_zero is NULL, the default zero rule is:
+ * @return uint8_tensor_expect_t with has_value true on success.
+ *         On failure has_value is false and u.error is set.
  *
  * @code{.c}
- * value == 0.0f
+ * // Copy using src's own allocator
+ * uint8_tensor_expect_t c = copy_uint8_tensor(arr, NULL);
+ * if (!c.has_value) { fprintf(stderr, "%s\n", error_to_string(c.u.error)); }
+ * uint8_tensor_t* copy = c.u.value;
+ * // ...
+ * return_uint8_tensor(copy);
+ *
+ * // Copy using a different allocator
+ * allocator_vtable_t arena = arena_allocator(&my_arena);
+ * uint8_tensor_expect_t c2 = copy_uint8_tensor(arr, &arena);
  * @endcode
+ */
+uint8_tensor_expect_t copy_uint8_tensor(const uint8_tensor_t* src,
+                                        allocator_vtable_t* alloc_v);
+// ================================================================================ 
+// ================================================================================ 
+// INTROSPECTION 
+
+/**
+ * @brief Return the number of populated elements in the array.
  *
- * @param src      Matrix to convert. Must not be NULL.
- * @param target   Desired destination storage format.
- * @param alloc_v  Allocator for the destination matrix.
- * @param is_zero  Optional semantic zero predicate used only for
- *                 dense-to-sparse conversion.
- *
- * @return uint8_matrix_expect_t with has_value true on success, or
- *         u.error describing the failure.
- *
- * Possible failure codes include:
- *   - NULL_POINTER
- *   - ILLEGAL_STATE
- *   - LENGTH_OVERFLOW
- *   - BAD_ALLOC
- *   - OUT_OF_MEMORY
+ * For ARRAY_STRUCT tensors this is the number of elements pushed so far.
+ * For TENSOR_STRUCT tensors this equals alloc (all slots are always live).
+ * Returns 0 if t is NULL.
  *
  * @code{.c}
- * static bool zero_or_neg_one(uint8 v) {
- *     return (v == 0u) || (v == 3u);
- * }
- *
- * uint8_matrix_expect_t r =
- *     convert_uint8_matrix_zero(dense_m, CSR_MATRIX, alloc, zero_or_neg_one);
+ * size_t n = uint8_tensor_size(arr);   // e.g. 3 after three push_back calls
  * @endcode
- *
- * @note This function is primarily intended for domain-specific sparse
- *       conversion rules where exact zero is not sufficient.
  */
-uint8_matrix_expect_t convert_uint8_matrix_zero(const uint8_matrix_t* src,
-                                                matrix_format_t       target,
-                                                allocator_vtable_t    alloc_v,
-                                                uint8_zero_fn         is_zero);
-// -------------------------------------------------------------------------------- 
+static inline size_t uint8_tensor_size(const uint8_tensor_t* t) {
+    if (t == NULL) return 0u;
+    return tensor_size(t->base);
+}
+
+// --------------------------------------------------------------------------------
 
 /**
- * @brief Print a uint8 matrix in a human-readable format.
+ * @brief Return the allocated capacity of the array in elements.
  *
- * The printed representation depends on the active matrix storage format:
- *
- * Dense matrices are printed row-by-row as nested bracketed arrays:
- *
- *     [ [ 1, 2, 3 ],
- *       [ 4, 5, 6 ] ]
- *
- * Sparse matrices (COO, CSR, CSC) are printed as a flat list of explicitly
- * stored logical nonzero entries:
- *
- *     [ (0, 0): 1, (0, 1): 2, (1, 2): 6 ]
- *
- * Dense printing does not wrap by column count; each matrix row is written
- * on its own output line after the first row.
- *
- * Sparse printing wraps at 70 columns. If appending the next `(row, col): value`
- * entry would exceed column 70, output continues on the next line with a
- * two-space indentation.
- *
- * Sparse output is printed in row-major logical order, independent of the
- * underlying sparse storage format.
- *
- * @param mat
- * Pointer to the source @ref uint8_matrix_t to print. Must not be NULL.
- *
- * @param stream
- * Output stream to write to, such as `stdout`, `stderr`, or an open file.
- * Must not be NULL.
- *
- * @return NO_ERROR on success, or:
- *         - NULL_POINTER if @p mat or @p stream is NULL
- *         - ILLEGAL_STATE if the matrix format is unrecognized
- *         - any error returned by get_uint8_matrix during sparse traversal
- *
- * @note
- * - Dense matrices print all elements, including zeros.
- * - Sparse matrices print only logical nonzero values.
- * - No trailing newline is appended automatically.
+ * Returns 0 if t is NULL.
  *
  * @code{.c}
- * allocator_vtable_t alloc = heap_allocator();
- *
- * uint8_matrix_expect_t r = init_uint8_dense_matrix(2u, 3u, alloc);
- * if (r.has_value) {
- *     uint8_matrix_t* mat = r.u.value;
- *
- *     set_uint8_matrix(mat, 0u, 0u, 1u);
- *     set_uint8_matrix(mat, 0u, 1u, 2u);
- *     set_uint8_matrix(mat, 0u, 2u, 3u);
- *     set_uint8_matrix(mat, 1u, 0u, 4u);
- *     set_uint8_matrix(mat, 1u, 1u, 5u);
- *     set_uint8_matrix(mat, 1u, 2u, 6u);
- *
- *     print_uint8_matrix(mat, stdout);
- *
- *     return_uint8_matrix(mat);
- * }
+ * size_t cap = uint8_tensor_alloc(arr);   // e.g. 16 after init_uint8_array(16,...)
  * @endcode
  */
-error_code_t print_uint8_matrix(const uint8_matrix_t* mat, FILE* stream);
+static inline size_t uint8_tensor_alloc(const uint8_tensor_t* t) {
+    if (t == NULL) return 0u;
+    return tensor_alloc(t->base);
+}
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Retrieve the minimum value from a uint8 matrix.
+ * @brief Return the size of one element in bytes.
  *
- * This function determines the minimum element in a matrix of type
- * `uint8_matrix_t`. It delegates the index computation to the generic
- * `matrix_min()` function and then retrieves the corresponding value
- * based on the matrix storage format.
+ * Always returns sizeof(uint8_t) == 1 for a correctly initialised
+ * uint8_tensor_t. Returns 0 if t is NULL.
  *
- * The comparison is performed using unsigned 8-bit integer ordering.
- *
- * @param mat Pointer to the uint8 matrix.
- *
- * @return uint8_expect_t
- * @retval has_value = true   The minimum value was found and is stored in u.value.
- * @retval has_value = false  An error occurred, and the error code is stored in u.error.
- *
- * @errors
- * - NULL_POINTER   if @p mat is NULL.
- * - TYPE_MISMATCH  if the matrix dtype is not UINT8_TYPE.
- * - EMPTY          if the matrix contains no elements:
- *                  - dense: rows * cols == 0
- *                  - sparse: nnz == 0
- * - INVALID_ARG    if the matrix format is not recognized.
- * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
- *
- * @note
- * This function relies on the generic `matrix_min()` function to determine the
- * index of the minimum element. The returned index is interpreted according to
- * the matrix format:
- *
- * - DENSE_MATRIX: index is a row-major offset.
- * - COO_MATRIX:   index refers to entries in row_idx[], col_idx[], and values[].
- * - CSR_MATRIX:   index refers to entries in col_idx[] and values[].
- * - CSC_MATRIX:   index refers to entries in row_idx[] and values[].
- *
- * @warning
- * For sparse matrices, only stored values (nnz) are considered. Implicit zero
- * elements are not included in the comparison.
- *
- * @see matrix_min
+ * @code{.c}
+ * size_t esz = uint8_tensor_data_size(arr);   // 1
+ * @endcode
  */
-uint8_expect_t uint8_matrix_min(const uint8_matrix_t* mat);
+static inline size_t uint8_tensor_data_size(const uint8_tensor_t* t) {
+    if (t == NULL) return 0u;
+    return tensor_data_size(t->base);
+}
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Retrieve the maximum value from a uint8 matrix.
+ * @brief Return the dtype identifier of the array.
  *
- * This function determines the maximum element in a matrix of type
- * `uint8_matrix_t`. It delegates the index computation to the generic
- * `matrix_max()` function and then retrieves the corresponding value
- * based on the matrix storage format.
+ * Always returns UINT8_TYPE for a correctly initialised uint8_tensor_t.
+ * Returns UNKNOWN_TYPE if t is NULL.
  *
- * The comparison is performed using unsigned 8-bit integer ordering.
- *
- * @param mat Pointer to the uint8 matrix.
- *
- * @return uint8_expect_t
- * @retval has_value = true   The maximum value was found and is stored in u.value.
- * @retval has_value = false  An error occurred, and the error code is stored in u.error.
- *
- * @errors
- * - NULL_POINTER   if @p mat is NULL.
- * - TYPE_MISMATCH  if the matrix dtype is not UINT8_TYPE.
- * - EMPTY          if the matrix contains no elements:
- *                  - dense: rows * cols == 0
- *                  - sparse: nnz == 0
- * - INVALID_ARG    if the matrix format is not recognized.
- * - LENGTH_OVERFLOW if an internal size computation overflows (dense matrices only).
- *
- * @note
- * This function relies on the generic `matrix_max()` function to determine the
- * index of the maximum element. The returned index is interpreted according to
- * the matrix format:
- *
- * - DENSE_MATRIX: index is a row-major offset.
- * - COO_MATRIX:   index refers to entries in row_idx[], col_idx[], and values[].
- * - CSR_MATRIX:   index refers to entries in col_idx[] and values[].
- * - CSC_MATRIX:   index refers to entries in row_idx[] and values[].
- *
- * @warning
- * For sparse matrices, only stored values (nnz) are considered. Implicit zero
- * elements are not included in the comparison.
- *
- * @see matrix_max
+ * @code{.c}
+ * dtype_id_t id = uint8_tensor_dtype(arr);   // UINT8_TYPE
+ * @endcode
  */
-uint8_expect_t uint8_matrix_max(const uint8_matrix_t* mat);
+static inline dtype_id_t uint8_tensor_dtype(const uint8_tensor_t* t) {
+    if (t == NULL) return UNKNOWN_TYPE;
+    return tensor_dtype(t->base);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return true if the array contains no populated elements.
+ *
+ * Returns true if t is NULL.
+ *
+ * @code{.c}
+ * uint8_tensor_expect_t r = init_uint8_array(8, false, heap_allocator());
+ * uint8_tensor_t* arr = r.u.value;
+ * bool empty = is_uint8_tensor_empty(arr);   // true before any push
+ * push_back_uint8_tensor(arr, 1u);
+ * empty = is_uint8_tensor_empty(arr);         // false after push
+ * return_uint8_tensor(arr);
+ * @endcode
+ */
+static inline bool is_uint8_tensor_empty(const uint8_tensor_t* t) {
+    if (t == NULL) return true;
+    return is_tensor_empty(t->base);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return true if the array is at full capacity.
+ *
+ * Returns true if t is NULL.
+ *
+ * @code{.c}
+ * uint8_tensor_expect_t r = init_uint8_array(2, false, heap_allocator());
+ * uint8_tensor_t* arr = r.u.value;
+ * push_back_uint8_tensor(arr, 1u);
+ * push_back_uint8_tensor(arr, 2u);
+ * bool full = is_uint8_tensor_full(arr);   // true — len == alloc == 2
+ * return_uint8_tensor(arr);
+ * @endcode
+ */
+static inline bool is_uint8_tensor_full(const uint8_tensor_t* t) {
+    if (t == NULL) return true;
+    return is_tensor_full(t->base);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return true if ptr points to a valid element-aligned address
+ *        within the live region of the array's data buffer.
+ *
+ * The pointer must be >= data, < data + len * data_size, and aligned to
+ * an element boundary. Returns false if either argument is NULL.
+ *
+ * @code{.c}
+ * uint8_tensor_expect_t r = init_uint8_array(4, false, heap_allocator());
+ * uint8_tensor_t* arr = r.u.value;
+ * push_back_uint8_tensor(arr, 10u);
+ * const uint8_t* p = arr->base->data;
+ * bool valid = is_uint8_tensor_ptr(arr, p);   // true — points to element 0
+ * return_uint8_tensor(arr);
+ * @endcode
+ */
+static inline bool is_uint8_tensor_ptr(const uint8_tensor_t* t, const uint8_t* ptr) {
+    if (t == NULL || ptr == NULL) return false;
+    return is_tensor_ptr(t->base, ptr);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the number of dimensions of the underlying tensor.
+ *
+ * Always returns 1 for a tensor initialised via init_uint8_array.
+ * Returns 0 if t is NULL.
+ *
+ * @code{.c}
+ * uint8_t ndim = uint8_tensor_ndim(arr);   // 1
+ * @endcode
+ */
+static inline uint8_t uint8_tensor_ndim(const uint8_tensor_t* t) {
+    if (t == NULL) return 0u;
+    return tensor_ndim(t->base);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return the size of a single dimension.
+ *
+ * For a 1-D array, dim must be 0. Returns 0 if t is NULL or dim is out
+ * of range.
+ *
+ * @code{.c}
+ * uint8_tensor_expect_t r = init_uint8_array(8, false, heap_allocator());
+ * uint8_tensor_t* arr = r.u.value;
+ * size_t d0 = uint8_tensor_shape_dim(arr, 0u);   // 8
+ * return_uint8_tensor(arr);
+ * @endcode
+ */
+static inline size_t uint8_tensor_shape_dim(const uint8_tensor_t* t, uint8_t dim) {
+    if (t == NULL) return 0u;
+    return tensor_shape_dim(t->base, dim);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Copy the shape of the tensor into a caller-provided buffer.
+ *
+ * Copies min(ndim, count) dimension sizes into out. Returns INVALID_ARG
+ * if count < ndim (output truncated). Returns NULL_POINTER if t or out
+ * is NULL.
+ *
+ * @code{.c}
+ * size_t shape[1];
+ * error_code_t err = uint8_tensor_shape(arr, shape, 1u);
+ * // shape[0] now holds the single dimension size
+ * @endcode
+ */
+static inline error_code_t uint8_tensor_shape(const uint8_tensor_t* t, size_t* out, uint8_t count) {
+    if (t == NULL || out == NULL) return NULL_POINTER;
+    return tensor_shape(t->base, out, count);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a read-only pointer to the internal shape array.
+ *
+ * The pointer is valid for the lifetime of the tensor and must not be
+ * modified or freed. Returns NULL if t is NULL.
+ *
+ * @code{.c}
+ * const size_t* sp = uint8_tensor_shape_ptr(arr);
+ * if (sp) printf("dim0 = %zu\n", sp[0]);
+ * @endcode
+ */
+static inline const size_t* uint8_tensor_shape_ptr(const uint8_tensor_t* t) {
+    if (t == NULL) return NULL;
+    return tensor_shape_ptr(t->base);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a read-only pointer to the internal strides array.
+ *
+ * Strides are in bytes. For a contiguous 1-D uint8_t array,
+ * strides[0] == 1. The pointer is valid for the lifetime of the tensor
+ * and must not be modified or freed. Returns NULL if t is NULL.
+ *
+ * @code{.c}
+ * const size_t* strides = uint8_tensor_strides_ptr(arr);
+ * if (strides) printf("stride0 = %zu\n", strides[0]);   // 1
+ * @endcode
+ */
+static inline const size_t* uint8_tensor_strides_ptr(const uint8_tensor_t* t) {
+    if (t == NULL) return NULL;
+    return tensor_strides_ptr(t->base);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Write a human-readable shape string into a caller-provided buffer.
+ *
+ * Formats the shape as "(d0)" for a 1-D array. Intended for debugging
+ * and logging only. Returns CAPACITY_OVERFLOW if the buffer is too small.
+ * Returns NULL_POINTER if t or buf is NULL.
+ *
+ * @code{.c}
+ * char buf[32];
+ * error_code_t err = uint8_tensor_shape_str(arr, buf, sizeof(buf));
+ * if (err == NO_ERROR) printf("shape = %s\n", buf);   // e.g. "(8)"
+ * @endcode
+ */
+static inline error_code_t uint8_tensor_shape_str(const uint8_tensor_t* t, 
+                                                  char* buf, 
+                                                  size_t buf_len) {
+    if (t == NULL || buf == NULL) return NULL_POINTER;
+    return tensor_shape_str(t->base, buf, buf_len);
+}
+// ================================================================================ 
+// ================================================================================ 
+// UTILITY OPERATIONS 
+
+/**
+ * @brief Reset the array to empty without releasing its allocated buffer.
+ *
+ * Zeroes all bytes in the data buffer and sets len to 0 if the tensor is an
+ * array. The allocated
+ * capacity, shape, strides, and mode are preserved. Returns NULL_POINTER
+ * if t is NULL.
+ *
+ * @code{.c}
+ * push_back_uint8_tensor(arr, 1u);
+ * push_back_uint8_tensor(arr, 2u);
+ * clear_uint8_tensor(arr);
+ * size_t n = uint8_tensor_size(arr);   // 0
+ * @endcode
+ */
+static inline error_code_t clear_uint8_tensor(uint8_tensor_t* t) {
+    if (t == NULL) return NULL_POINTER;
+    return clear_tensor(t->base);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Append all elements of src to the back of dst.
+ *
+ * Copies src->len elements from src's data buffer into the next available
+ * slots in dst's data buffer and increments dst->len accordingly. Both
+ * tensors must be in ARRAY_STRUCT mode. If dst is full and growth is true
+ * the buffer is reallocated once to cover all of src rather than
+ * element-by-element. Returns NULL_POINTER if dst or src is NULL.
+ *
+ * @code{.c}
+ * uint8_tensor_expect_t r1 = init_uint8_array(8, false, heap_allocator());
+ * uint8_tensor_expect_t r2 = init_uint8_array(4, false, heap_allocator());
+ * uint8_tensor_t* dst = r1.u.value;
+ * uint8_tensor_t* src = r2.u.value;
+ * push_back_uint8_tensor(dst, 1u);
+ * push_back_uint8_tensor(src, 2u);
+ * push_back_uint8_tensor(src, 3u);
+ * concat_uint8_tensor_array(dst, src);   // dst = [1, 2, 3]
+ * return_uint8_tensor(dst);
+ * return_uint8_tensor(src);
+ * @endcode
+ */
+static inline error_code_t concat_uint8_tensor_array(uint8_tensor_t* dst,
+                                                     const uint8_tensor_t* src) {
+    if (dst == NULL || src == NULL) return NULL_POINTER;
+    return concat_tensor_array(dst->base, src->base, UINT8_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Return a new array containing a copy of the elements in src at
+ *        positions [start, end).
+ *
+ * The range is half-open: start is inclusive, end is exclusive. Both must
+ * be <= src->len and start must be strictly less than end. The returned
+ * array is independent of src — mutations to one do not affect the other.
+ * The caller is responsible for calling return_uint8_tensor on the result.
+ *
+ * Pass NULL for alloc_v to inherit the allocator from src.
+ *
+ * @param src     Pointer to the source array. Must not be NULL.
+ * @param start   Zero-based index of the first element to include.
+ * @param end     Zero-based index one past the last element to include.
+ * @param alloc_v Pointer to the allocator vtable. NULL inherits from src.
+ *
+ * @return uint8_tensor_expect_t with has_value true on success.
+ *
+ * @code{.c}
+ * // arr = [10, 20, 30, 40, 50]
+ * uint8_tensor_expect_t s = slice_uint8_tensor_array(arr, 1u, 4u, NULL);
+ * if (!s.has_value) { fprintf(stderr, "%s\n", error_to_string(s.u.error)); }
+ * uint8_tensor_t* sl = s.u.value;   // sl = [20, 30, 40]
+ * return_uint8_tensor(sl);
+ * @endcode
+ */
+uint8_tensor_expect_t slice_uint8_tensor_array(const uint8_tensor_t* src,
+                                               size_t start,
+                                               size_t end,
+                                               allocator_vtable_t* alloc_v);
+// ================================================================================ 
+// ================================================================================ 
+// ADD AND REMOVE DATA 
+
+/**
+ * @brief Overwrite the element at a flat index without changing len.
+ *
+ * For ARRAY_STRUCT mode the index must be < len. For TENSOR_STRUCT mode
+ * the index must be < alloc. Returns NULL_POINTER if t is NULL,
+ * OUT_OF_BOUNDS if the index is out of range.
+ *
+ * @code{.c}
+ * push_back_uint8_tensor(arr, 0u);   // arr = [0]
+ * set_uint8_tensor_index(arr, 0u, 99u);   // arr = [99]
+ * @endcode
+ */
+static inline error_code_t set_uint8_tensor_index(uint8_tensor_t* t,
+                                                  size_t index,
+                                                  const uint8_t data) {
+    if (t == NULL) return NULL_POINTER;
+    return set_tensor_index(t->base, index, &data, UINT8_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Overwrite the element at an N-dimensional index without changing len.
+ *
+ * Only valid for TENSOR_STRUCT mode. Returns ILLEGAL_STATE if called on
+ * an ARRAY_STRUCT tensor. idx must point to an array of ndim indices.
+ * Returns NULL_POINTER if t or idx is NULL, OUT_OF_BOUNDS if any index
+ * exceeds its dimension bound.
+ *
+ * @code{.c}
+ * // For a 3x3 uint8 matrix initialised via init_tensor
+ * size_t idx[] = { 1u, 2u };
+ * set_uint8_tensor_nd_index(mat, idx, 42u);   // mat[1][2] = 42
+ * @endcode
+ */
+static inline error_code_t set_uint8_tensor_nd_index(uint8_tensor_t* t,
+                                                     const size_t* idx,
+                                                     uint8_t data) {
+    if (t == NULL) return NULL_POINTER;
+    return set_tensor_nd_index(t->base, idx, &data, UINT8_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Append one element to the back of a dynamic 1-D array.
+ *
+ * Increments len by one after copying the value. If the array is full
+ * and growth is true the buffer is reallocated automatically. Returns
+ * CAPACITY_OVERFLOW if the array is full and growth is false, or if the
+ * allocator does not support reallocation. Returns NULL_POINTER if t is
+ * NULL, PRECONDITION_FAIL if mode != ARRAY_STRUCT.
+ *
+ * @code{.c}
+ * push_back_uint8_tensor(arr, 10u);
+ * push_back_uint8_tensor(arr, 20u);
+ * // arr = [10, 20], len == 2
+ * @endcode
+ */
+static inline error_code_t push_back_uint8_array(uint8_tensor_t* t,
+                                                 uint8_t data) {
+    if (t == NULL) return NULL_POINTER;
+    return push_back_tensor(t->base, &data, UINT8_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Prepend one element to the front of a dynamic 1-D array.
+ *
+ * Shifts all existing elements one slot toward the back then copies the
+ * new value into slot 0. O(n) due to the shift. Returns NULL_POINTER if
+ * t is NULL, PRECONDITION_FAIL if mode != ARRAY_STRUCT.
+ *
+ * @code{.c}
+ * push_back_uint8_tensor(arr, 10u);
+ * push_front_uint8_tensor(arr, 99u);
+ * // arr = [99, 10]
+ * @endcode
+ */
+static inline error_code_t push_front_uint8_array(uint8_tensor_t* t,
+                                                  uint8_t data) {
+    if (t == NULL) return NULL_POINTER;
+    return push_front_tensor(t->base, &data, UINT8_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Insert one element at an arbitrary index in a dynamic 1-D array.
+ *
+ * Shifts elements at positions [index, len) one slot toward the back then
+ * copies the new value into the vacated slot. Valid index range is
+ * [0, len]. index == 0 is equivalent to push_front, index == len is
+ * equivalent to push_back. O(n) due to the shift. Returns NULL_POINTER if
+ * t is NULL, OUT_OF_BOUNDS if index > len, PRECONDITION_FAIL if mode !=
+ * ARRAY_STRUCT.
+ *
+ * @code{.c}
+ * // arr = [10, 20, 30]
+ * push_at_uint8_tensor(arr, 99u, 1u);
+ * // arr = [10, 99, 20, 30]
+ * @endcode
+ */
+static inline error_code_t push_at_uint8_array(uint8_tensor_t* t,
+                                               uint8_t data,
+                                               size_t index) {
+    if (t == NULL) return NULL_POINTER;
+    return push_at_tensor(t->base, &data, index, UINT8_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Remove and optionally retrieve the last element of a dynamic
+ *        1-D array.
+ *
+ * Decrements len by one. If out is non-NULL, copies the removed value
+ * into the caller-provided buffer. Pass NULL for out to discard the
+ * value. Returns NULL_POINTER if t is NULL, EMPTY if len == 0,
+ * PRECONDITION_FAIL if mode != ARRAY_STRUCT.
+ *
+ * @code{.c}
+ * // arr = [10, 20, 30]
+ * uint8_t val;
+ * pop_back_uint8_tensor(arr, &val);   // val == 30, arr = [10, 20]
+ * pop_back_uint8_tensor(arr, NULL);   // discard, arr = [10]
+ * @endcode
+ */
+static inline error_code_t pop_back_uint8_array(uint8_tensor_t* t,
+                                                uint8_t* out) {
+    if (t == NULL) return NULL_POINTER;
+    return pop_back_tensor(t->base, out, UINT8_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Remove and optionally retrieve the first element of a dynamic
+ *        1-D array.
+ *
+ * Copies the first element into out (if non-NULL), then shifts all
+ * remaining elements one slot toward the front and decrements len. O(n)
+ * due to the shift. Returns NULL_POINTER if t is NULL, EMPTY if len == 0,
+ * PRECONDITION_FAIL if mode != ARRAY_STRUCT.
+ *
+ * @code{.c}
+ * // arr = [10, 20, 30]
+ * uint8_t val;
+ * pop_front_uint8_tensor(arr, &val);   // val == 10, arr = [20, 30]
+ * @endcode
+ */
+static inline error_code_t pop_front_uint8_array(uint8_tensor_t* t,
+                                                 uint8_t* out) {
+    if (t == NULL) return NULL_POINTER;
+    return pop_front_tensor(t->base, out, UINT8_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Remove and optionally retrieve the element at an arbitrary index
+ *        in a dynamic 1-D array.
+ *
+ * Copies the element at index into out (if non-NULL), shifts all elements
+ * after index one slot toward the front, and decrements len. index == 0
+ * delegates to pop_front, index == len - 1 delegates to pop_back. O(n)
+ * due to the shift. Returns NULL_POINTER if t is NULL, EMPTY if len == 0,
+ * OUT_OF_BOUNDS if index >= len, PRECONDITION_FAIL if mode != ARRAY_STRUCT.
+ *
+ * @code{.c}
+ * // arr = [10, 20, 30, 40]
+ * uint8_t val;
+ * pop_at_uint8_tensor(arr, &val, 2u);   // val == 30, arr = [10, 20, 40]
+ * @endcode
+ */
+static inline error_code_t pop_at_uint8_array(uint8_tensor_t* t,
+                                              uint8_t* out,
+                                              size_t index) {
+    if (t == NULL) return NULL_POINTER;
+    return pop_at_tensor(t->base, out, index, UINT8_TYPE);
+}
+// ================================================================================ 
+// ================================================================================ 
+// RETRIEVE DATA
+
+/**
+ * @brief Copy one element out of the array by flat index.
+ *
+ * For ARRAY_STRUCT mode the index must be < len. For TENSOR_STRUCT mode
+ * the index must be < alloc. Returns NULL_POINTER if t or out is NULL,
+ * OUT_OF_BOUNDS if the index is out of range.
+ *
+ * @code{.c}
+ * // arr = [10, 20, 30]
+ * uint8_t val;
+ * get_uint8_tensor_index(arr, 1u, &val);   // val == 20
+ * @endcode
+ */
+static inline error_code_t get_uint8_tensor_index(const uint8_tensor_t* t,
+                                                  size_t index,
+                                                  uint8_t* out) {
+    if (t == NULL || out == NULL) return NULL_POINTER;
+    return get_tensor_index(t->base, index, out, UINT8_TYPE);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Copy one element out of the tensor by N-dimensional index.
+ *
+ * Only valid for TENSOR_STRUCT mode. Returns ILLEGAL_STATE if called on
+ * an ARRAY_STRUCT tensor. idx must point to an array of ndim indices.
+ * Returns NULL_POINTER if t, idx, or out is NULL, OUT_OF_BOUNDS if any
+ * index exceeds its dimension bound.
+ *
+ * @code{.c}
+ * // For a 3x3 uint8 matrix
+ * size_t idx[] = { 1u, 2u };
+ * uint8_t val;
+ * get_uint8_tensor_nd_index(mat, idx, &val);   // val = mat[1][2]
+ * @endcode
+ */
+static inline error_code_t get_uint8_tensor_nd_index(const uint8_tensor_t* t,
+                                                     const size_t* idx,
+                                                     uint8_t* out) {
+    if (t == NULL || idx == NULL || out == NULL) return NULL_POINTER;
+    return get_tensor_nd_index(t->base, idx, out, UINT8_TYPE);
+}
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus
