@@ -531,6 +531,84 @@ uint8_tensor_expect_t slice_uint8_tensor_array(const uint8_tensor_t* src,
                                                size_t start,
                                                size_t end,
                                                allocator_vtable_t* alloc_v);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Reverse the populated elements of a uint8_t tensor in place.
+ *
+ * Reverses the order of all elements in the live region of the tensor's
+ * data buffer using a SIMD-accelerated byte-swap routine. The operation
+ * is mode-agnostic — for ARRAY_STRUCT tensors it reverses the len
+ * populated elements, and for TENSOR_STRUCT tensors it reverses all alloc
+ * elements in flat row-major order.
+ *
+ * The tensor is modified in place. No allocation is performed and the
+ * allocator is not consulted.
+ *
+ * Returns EMPTY rather than NO_ERROR when len < 2 because a zero or
+ * single-element sequence has no meaningful reversal. The tensor is
+ * left untouched in this case.
+ *
+ * @param t  Pointer to the target tensor. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if t is NULL
+ *         - EMPTY        if t->base->len < 2
+ *
+ * @code
+ * // arr = [1, 2, 3, 4, 5]
+ * error_code_t err = reverse_uint8_tensor(arr);
+ * // arr = [5, 4, 3, 2, 1]
+ * @endcode
+ */
+static inline error_code_t reverse_uint8_tensor(uint8_tensor_t* t) {
+    if (t == NULL) return NULL_POINTER;
+    return reverse_tensor(t->base);
+}
+// -------------------------------------------------------------------------------- 
+
+static int uint8_cmp(const void* a, const void* b) {
+    uint8_t ua = *(const uint8_t*)a;
+    uint8_t ub = *(const uint8_t*)b;
+    return (ua > ub) - (ua < ub);
+}
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Sort the populated elements of a uint8_t tensor in place.
+ *
+ * Sorts the len elements in the tensor's data buffer using an iterative
+ * quicksort with median-of-three pivot selection and an insertion sort
+ * fallback for partitions of fewer than 10 elements. The uint8_t
+ * comparator is supplied internally so the caller only needs to specify
+ * the sort direction.
+ *
+ * The sort operates on the flat element sequence in memory — for an
+ * ARRAY_STRUCT tensor this covers only the len populated elements, and
+ * for a TENSOR_STRUCT tensor this covers all alloc elements in flat
+ * row-major order.
+ *
+ * @param t    Pointer to the target tensor. Must not be NULL.
+ * @param dir  FORWARD for ascending order, REVERSE for descending order.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if t is NULL
+ *         - EMPTY        if t->base->len < 2
+ *
+ * @code
+ * // arr = [3, 1, 4, 1, 5, 9, 2, 6]
+ * error_code_t err = sort_uint8_tensor(arr, FORWARD);
+ * // arr = [1, 1, 2, 3, 4, 5, 6, 9]
+ *
+ * err = sort_uint8_tensor(arr, REVERSE);
+ * // arr = [9, 6, 5, 4, 3, 2, 1, 1]
+ * @endcode
+ */
+static inline error_code_t sort_uint8_tensor(uint8_tensor_t* t,
+                                             direction_t dir) {
+    if (t == NULL) return NULL_POINTER;
+    return sort_tensor(t->base, uint8_cmp, dir);
+}
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

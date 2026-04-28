@@ -90,6 +90,10 @@ Utility Operations
 
 .. doxygenfunction:: slice_uint8_tensor_array
 
+.. doxygenfunction:: reverse_uint8_tensor
+
+.. doxygenfunction:: sort_uint8_tensor
+
 Introspection
 -------------
 
