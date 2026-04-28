@@ -54,7 +54,7 @@ int main(void) {
         {"Uint32 Tensor", test_uint32_tensor, test_uint32_tensor_count},
         {"Int32 Tensor", test_int32_tensor, test_int32_tensor_count},
         {"Uint64 Tensor", test_uint64_tensor, test_uint64_tensor_count},
-        // {"Int64 Array", test_int64_array, test_int64_array_count},
+        {"Int64 Tensor", test_int64_tensor, test_int64_tensor_count},
         // {"Float Array", test_float_array, test_float_array_count},
         // {"Double Array", test_double_array, test_double_array_count},
         // {"Long Double Array", test_ldouble_array, test_ldouble_array_count},
