@@ -60,6 +60,7 @@ set(CSALT_SOURCES
   c_int16.c
   c_uint32.c
   c_int32.c
+  c_uint64.c
   # c_array.c
   # c_dict.c
   # c_uint8.c
