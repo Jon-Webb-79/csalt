@@ -242,6 +242,7 @@ The following are areas for future improvement in the code base
     c_int32 <Int32>
     c_uint64 <Uint64>
     c_int64 <Int64>
+    c_float <Float>
     c_dict <Dict>
     c_list <List>
     c_tree <Tree>

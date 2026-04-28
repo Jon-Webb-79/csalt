@@ -20,9 +20,9 @@
 // ================================================================================ 
 // ================================================================================ 
 
-uint16_tensor_expect_t init_uint16_tensor(uint16_t            ndim,
-                                        const size_t*      shape,
-                                        allocator_vtable_t alloc_v) {
+uint16_tensor_expect_t init_uint16_tensor(uint8_t            ndim,
+                                          const size_t*      shape,
+                                          allocator_vtable_t alloc_v) {
     /* Allocate the underlying tensor */
     tensor_expect_t r = init_tensor(ndim, shape, UINT16_TYPE, alloc_v);
     if (!r.has_value)

@@ -627,7 +627,7 @@ static inline error_code_t sort_uint8_tensor(uint8_tensor_t* t,
  */
 static inline error_code_t set_uint8_tensor_index(uint8_tensor_t* t,
                                                   size_t index,
-                                                  const uint8_t data) {
+                                                  uint8_t data) {
     if (t == NULL) return NULL_POINTER;
     return set_tensor_index(t->base, index, &data, UINT8_TYPE);
 }

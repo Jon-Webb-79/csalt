@@ -30,6 +30,7 @@
 #include "c_int32.h"
 #include "c_uint64.h"
 #include "c_int64.h"
+#include "c_float.h"
 
 // ================================================================================
 // ================================================================================
@@ -10891,6 +10892,773 @@ const struct CMUnitTest test_int64_tensor[] = {
 
 const size_t test_int64_tensor_count = sizeof(test_int64_tensor) /
                                        sizeof(test_int64_tensor[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+/** Construct a populated float array with values 1..n. */
+static float_tensor_t* _make_float_array(size_t capacity, bool growth) {
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(capacity, growth, alloc);
+    if (!r.has_value) return NULL;
+    return r.u.value;
+}
+
+static float_tensor_t* _make_float_array_filled(size_t n, float_t base) {
+    /* Allocate n+1 so the result always has at least one free slot,
+     * making it safe to use as a push destination in tests. */
+    float_tensor_t* arr = _make_float_array(n + 1u, false);
+    if (arr == NULL) return NULL;
+    for (size_t i = 0u; i < n; i++) {
+        float_t val = (float_t)(base + i);
+        push_back_float_array(arr, val);
+    }
+    return arr;
+}
+
+// ================================================================================
+// ================================================================================
+// INITIALISATION AND TEARDOWN
+
+// ---- init_float_array ----------------------------------------------------------
+
+/** NULL allocator must propagate an error through the expect type. */
+static void test_init_float_array_null_allocator(void** state) {
+    (void)state;
+    allocator_vtable_t bad = heap_allocator();
+    bad.allocate = NULL;
+    float_tensor_expect_t r = init_float_array(8u, false, bad);
+    assert_false(r.has_value);
+}
+
+/** Successful construction produces a non-NULL wrapper with correct mode. */
+static void test_init_float_array_success(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(8u, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  ARRAY_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, FLOAT_TYPE);
+    assert_int_equal(r.u.value->base->len,   0u);
+    assert_int_equal(r.u.value->base->alloc, 8u);
+    return_float_tensor(r.u.value);
+}
+
+// ---- init_float_tensor ---------------------------------------------------------
+
+/** Successful construction of a fixed-shape tensor. */
+static void test_init_float_tensor_success(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  TENSOR_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, FLOAT_TYPE);
+    assert_int_equal(r.u.value->base->len,   12u);
+    return_float_tensor(r.u.value);
+}
+
+/** NULL shape propagates an error. */
+static void test_init_float_tensor_null_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_tensor(2u, NULL, alloc);
+    assert_false(r.has_value);
+}
+
+// ---- return_float_tensor -------------------------------------------------------
+
+/** return_float_tensor(NULL) must not crash. */
+static void test_return_float_tensor_null(void** state) {
+    (void)state;
+    return_float_tensor(NULL);
+}
+
+/** Normal construction followed by return must not crash or leak. */
+static void test_return_float_tensor_normal(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    return_float_tensor(arr);
+}
+
+// ---- copy_float_tensor ---------------------------------------------------------
+
+/** NULL src must return NULL_POINTER. */
+static void test_copy_float_tensor_null_src(void** state) {
+    (void)state;
+    float_tensor_expect_t r = copy_float_tensor(NULL, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+/** Copy is independent of source — mutation of copy does not affect src. */
+static void test_copy_float_tensor_independence(void** state) {
+    (void)state;
+    float_tensor_t* src = _make_float_array_filled(3u, 10u);
+    assert_non_null(src);
+
+    float_tensor_expect_t r = copy_float_tensor(src, NULL);
+    assert_true(r.has_value);
+    float_tensor_t* dst = r.u.value;
+
+    /* Overwrite slot 0 of the copy */
+    assert_int_equal(set_float_tensor_index(dst, 0u, 99.0f), NO_ERROR);
+
+    /* Source slot 0 must be unchanged */
+    float src_val = 0u;
+    assert_int_equal(get_float_tensor_index(src, 0u, &src_val), NO_ERROR);
+    assert_float_equal(src_val, 10.0f, 1.0e-3);
+
+    return_float_tensor(src);
+    return_float_tensor(dst);
+}
+
+// ================================================================================
+// ================================================================================
+// INTROSPECTION
+
+static void test_float_tensor_size_null(void** state) {
+    (void)state;
+    assert_int_equal(float_tensor_size(NULL), 0u);
+}
+
+static void test_float_tensor_size_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_int_equal(float_tensor_size(arr), 3u);
+    return_float_tensor(arr);
+}
+
+static void test_float_tensor_alloc_null(void** state) {
+    (void)state;
+    assert_int_equal(float_tensor_alloc(NULL), 0u);
+}
+
+static void test_float_tensor_alloc_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+    assert_int_equal(float_tensor_alloc(arr), 8u);
+    return_float_tensor(arr);
+}
+
+static void test_float_tensor_data_size_null(void** state) {
+    (void)state;
+    assert_int_equal(float_tensor_data_size(NULL), 0u);
+}
+
+static void test_float_tensor_data_size_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(float_tensor_data_size(arr), sizeof(float_t));
+    return_float_tensor(arr);
+}
+
+static void test_float_tensor_dtype_null(void** state) {
+    (void)state;
+    assert_int_equal(float_tensor_dtype(NULL), UNKNOWN_TYPE);
+}
+
+static void test_float_tensor_dtype_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(float_tensor_dtype(arr), FLOAT_TYPE);
+    return_float_tensor(arr);
+}
+
+static void test_is_float_tensor_empty_null(void** state) {
+    (void)state;
+    assert_true(is_float_tensor_empty(NULL));
+}
+
+static void test_is_float_tensor_empty_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    assert_true(is_float_tensor_empty(arr));
+    push_back_float_array(arr, 1u);
+    assert_false(is_float_tensor_empty(arr));
+    return_float_tensor(arr);
+}
+
+static void test_is_float_tensor_full_null(void** state) {
+    (void)state;
+    assert_true(is_float_tensor_full(NULL));
+}
+
+static void test_is_float_tensor_full_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(2u, false);
+    assert_non_null(arr);
+    assert_false(is_float_tensor_full(arr));
+    push_back_float_array(arr, 1.0f);
+    push_back_float_array(arr, 2.0f);
+    assert_true(is_float_tensor_full(arr));
+    return_float_tensor(arr);
+}
+
+static void test_is_float_tensor_ptr_null_wrapper(void** state) {
+    (void)state;
+    float_t dummy = 0u;
+    assert_false(is_float_tensor_ptr(NULL, &dummy));
+}
+
+static void test_is_float_tensor_ptr_valid(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(4u, 10.0f);
+    assert_non_null(arr);
+    /* Pointer to first element must be valid */
+    const float_t* p = (const float_t*)arr->base->data;
+    assert_true(is_float_tensor_ptr(arr, p));
+    return_float_tensor(arr);
+}
+
+static void test_float_tensor_ndim_null(void** state) {
+    (void)state;
+    assert_int_equal(float_tensor_ndim(NULL), 0u);
+}
+
+static void test_float_tensor_ndim_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(float_tensor_ndim(arr), 1u);
+    return_float_tensor(arr);
+}
+
+static void test_float_tensor_shape_dim_null(void** state) {
+    (void)state;
+    assert_int_equal(float_tensor_shape_dim(NULL, 0u), 0u);
+}
+
+static void test_float_tensor_shape_dim_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_int_equal(float_tensor_shape_dim(r.u.value, 0u), 3u);
+    assert_int_equal(float_tensor_shape_dim(r.u.value, 1u), 4u);
+    return_float_tensor(r.u.value);
+}
+
+static void test_float_tensor_shape_null(void** state) {
+    (void)state;
+    size_t buf[2];
+    assert_int_equal(float_tensor_shape(NULL, buf, 2u), NULL_POINTER);
+}
+
+static void test_float_tensor_shape_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    size_t buf[2] = { 0u, 0u };
+    assert_int_equal(float_tensor_shape(r.u.value, buf, 2u), NO_ERROR);
+    assert_int_equal(buf[0], 3u);
+    assert_int_equal(buf[1], 4u);
+    return_float_tensor(r.u.value);
+}
+
+static void test_float_tensor_shape_ptr_null(void** state) {
+    (void)state;
+    assert_null(float_tensor_shape_ptr(NULL));
+}
+
+static void test_float_tensor_shape_ptr_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    assert_non_null(float_tensor_shape_ptr(arr));
+    return_float_tensor(arr);
+}
+
+static void test_float_tensor_strides_ptr_null(void** state) {
+    (void)state;
+    assert_null(float_tensor_strides_ptr(NULL));
+}
+
+static void test_float_tensor_strides_ptr_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    const size_t* strides = float_tensor_strides_ptr(arr);
+    assert_non_null(strides);
+    assert_int_equal(strides[0], sizeof(float_t));
+    return_float_tensor(arr);
+}
+
+static void test_float_tensor_shape_str_null(void** state) {
+    (void)state;
+    char buf[32];
+    assert_int_equal(float_tensor_shape_str(NULL, buf, sizeof(buf)), NULL_POINTER);
+}
+
+static void test_float_tensor_shape_str_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+    char buf[32];
+    assert_int_equal(float_tensor_shape_str(arr, buf, sizeof(buf)), NO_ERROR);
+    assert_string_equal(buf, "(8)");
+    return_float_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// UTILITY OPERATIONS
+
+// ---- clear_float_tensor --------------------------------------------------------
+
+static void test_clear_float_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(clear_float_tensor(NULL), NULL_POINTER);
+}
+
+static void test_clear_float_tensor_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(3u, 10.0f);
+    assert_non_null(arr);
+    assert_int_equal(clear_float_tensor(arr), NO_ERROR);
+    assert_int_equal(float_tensor_size(arr), 0u);
+    return_float_tensor(arr);
+}
+
+// ---- concat_float_tensor_array -------------------------------------------------
+
+static void test_concat_float_tensor_null(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(concat_float_tensor_array(NULL, arr), NULL_POINTER);
+    assert_int_equal(concat_float_tensor_array(arr, NULL), NULL_POINTER);
+    return_float_tensor(arr);
+}
+
+static void test_concat_float_tensor_value(void** state) {
+    (void)state;
+
+    /* dst needs capacity for 5 elements total — allocate with room to grow */
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(8u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* dst = r.u.value;
+
+    /* Populate dst with [1, 2, 3] */
+    push_back_float_array(dst, 1.0f);
+    push_back_float_array(dst, 2.0f);
+    push_back_float_array(dst, 3.0f);
+
+    /* src = [4, 5] */
+    float_tensor_t* src = _make_float_array_filled(2u, 4.0f);
+    assert_non_null(src);
+
+    assert_int_equal(concat_float_tensor_array(dst, src), NO_ERROR);
+    assert_int_equal(float_tensor_size(dst), 5u);
+
+    float expected[] = { 1u, 2u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        float_t out = 0u;
+        assert_int_equal(get_float_tensor_index(dst, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_float_tensor(dst);
+    return_float_tensor(src);
+}
+
+// ---- slice_float_tensor_array --------------------------------------------------
+
+static void test_slice_float_tensor_null(void** state) {
+    (void)state;
+    float_tensor_expect_t r = slice_float_tensor_array(NULL, 0u, 1u, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+static void test_slice_float_tensor_value(void** state) {
+    (void)state;
+    float_tensor_t* src = _make_float_array_filled(5u, 10.0f); /* [10,11,12,13,14] */
+    assert_non_null(src);
+
+    float_tensor_expect_t r = slice_float_tensor_array(src, 1u, 4u, NULL);
+    assert_true(r.has_value);
+    float_tensor_t* sl = r.u.value;
+
+    assert_int_equal(float_tensor_size(sl), 3u);
+    float expected[] = { 11., 12., 13. };
+    for (size_t i = 0u; i < 3u; i++) {
+        float out = 0.;
+        assert_int_equal(get_float_tensor_index(sl, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_float_tensor(src);
+    return_float_tensor(sl);
+}
+
+// ---- reverse_float_tensor ------------------------------------------------------
+
+static void test_reverse_float_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(reverse_float_tensor(NULL), NULL_POINTER);
+}
+
+static void test_reverse_float_tensor_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(4u, 1.); /* [1,2,3,4] */
+    assert_non_null(arr);
+
+    assert_int_equal(reverse_float_tensor(arr), NO_ERROR);
+
+    float expected[] = { 4., 3., 2., 1. };
+    for (size_t i = 0u; i < 4u; i++) {
+        float out = 0.;
+        assert_int_equal(get_float_tensor_index(arr, i, &out), NO_ERROR);
+        assert_float_equal(out, expected[i], 1.0e-3);
+    }
+
+    return_float_tensor(arr);
+}
+
+// ---- sort_float_tensor ---------------------------------------------------------
+
+static void test_sort_float_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(sort_float_tensor(NULL, FORWARD), NULL_POINTER);
+}
+
+static void test_sort_float_tensor_forward(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(5u, false);
+    assert_non_null(arr);
+
+    float vals[] = { 3., 1., 4., 1., 5. };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_float_array(arr, vals[i]);
+
+    assert_int_equal(sort_float_tensor(arr, FORWARD), NO_ERROR);
+
+    float expected[] = { 1., 1., 3., 4., 5. };
+    for (size_t i = 0u; i < 5u; i++) {
+        float out = 0.;
+        assert_int_equal(get_float_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_float_tensor(arr);
+}
+
+static void test_sort_float_tensor_reverse(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(5u, false);
+    assert_non_null(arr);
+
+    float vals[] = { 3., 1., 4., 1., 5. };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_float_array(arr, vals[i]);
+
+    assert_int_equal(sort_float_tensor(arr, REVERSE), NO_ERROR);
+
+    float expected[] = { 5., 4., 3., 1., 1. };
+    for (size_t i = 0u; i < 5u; i++) {
+        float out = 0.;
+        assert_int_equal(get_float_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_float_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// SET AND GET DATA
+
+// ---- set_float_tensor_index / get_float_tensor_index --------------------------
+
+static void test_set_get_float_tensor_index_null(void** state) {
+    (void)state;
+    float dummy = 0.;
+    assert_int_equal(set_float_tensor_index(NULL, 0u, 1.),    NULL_POINTER);
+    assert_int_equal(get_float_tensor_index(NULL, 0u, &dummy), NULL_POINTER);
+}
+
+static void test_set_get_float_tensor_index_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(3u, 10.);
+    assert_non_null(arr);
+
+    assert_int_equal(set_float_tensor_index(arr, 1u, 99.), NO_ERROR);
+
+    float out = 0.;
+    assert_int_equal(get_float_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_float_equal(out, 99.0, 1.0e-3);
+
+    return_float_tensor(arr);
+}
+
+// ---- set_float_tensor_nd_index / get_float_tensor_nd_index --------------------
+
+static void test_set_get_float_tensor_nd_index_null(void** state) {
+    (void)state;
+    size_t  idx[] = { 0u, 0u };
+    float_t out   = 0u;
+    assert_int_equal(set_float_tensor_nd_index(NULL, idx, 1.),   NULL_POINTER);
+    assert_int_equal(get_float_tensor_nd_index(NULL, idx, &out), NULL_POINTER);
+}
+
+static void test_set_get_float_tensor_nd_index_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* mat = r.u.value;
+
+    size_t idx[] = { 1u, 2u };
+    assert_int_equal(set_float_tensor_nd_index(mat, idx, 42.), NO_ERROR);
+
+    float out = 0.;
+    assert_int_equal(get_float_tensor_nd_index(mat, idx, &out), NO_ERROR);
+    assert_float_equal(out, 42., 1.0e-3);
+
+    return_float_tensor(mat);
+}
+
+// ---- push and pop wrappers ----------------------------------------------------
+
+static void test_push_back_float_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_back_float_array(NULL, 1.0), NULL_POINTER);
+}
+
+static void test_push_back_float_array_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+
+    assert_int_equal(push_back_float_array(arr, 10.0), NO_ERROR);
+    assert_int_equal(push_back_float_array(arr, 20.0), NO_ERROR);
+    assert_int_equal(float_tensor_size(arr), 2u);
+
+    float out = 0.0;
+    assert_int_equal(get_float_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_float_equal(out, 20.0, 1.0e-3);
+
+    return_float_tensor(arr);
+}
+
+static void test_push_front_float_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_front_float_array(NULL, 1.), NULL_POINTER);
+}
+
+static void test_push_front_float_array_value(void** state) {
+    (void)state;
+    /* Capacity 3 so there is room for the push_front */
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(3u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+
+    push_back_float_array(arr, 10.0);
+    push_back_float_array(arr, 11.0);
+    /* arr = [10, 11], len == 2, alloc == 3 — one slot free */
+
+    assert_int_equal(push_front_float_array(arr, 99.0), NO_ERROR);
+
+    float out = 0.0;
+    assert_int_equal(get_float_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 99.0);
+    assert_int_equal(get_float_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 10.0);
+    assert_int_equal(get_float_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11.0);
+
+    return_float_tensor(arr);
+}
+
+static void test_push_at_float_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_at_float_array(NULL, 1u, 0.0), NULL_POINTER);
+}
+
+static void test_push_at_float_array_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(3u, 10.0); /* [10, 11, 12] */
+    assert_non_null(arr);
+
+    assert_int_equal(push_at_float_array(arr, 99.0, 1u), NO_ERROR);
+    /* arr = [10, 99, 11, 12] */
+
+    float out = 0.0;
+    assert_int_equal(get_float_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_float_equal(out, 10.0, 1.0e-3);
+    assert_int_equal(get_float_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_float_equal(out, 99.0, 1.0e-3);
+    assert_int_equal(get_float_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_float_equal(out, 11.0, 1.0e-3);
+    assert_int_equal(get_float_tensor_index(arr, 3u, &out), NO_ERROR);
+    assert_float_equal(out, 12.0, 1.0e-3);
+
+    return_float_tensor(arr);
+}
+
+static void test_pop_back_float_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_float_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_back_float_array_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(3u, 10.0); /* [10,11,12] */
+    assert_non_null(arr);
+
+    float out = 0.0;
+    assert_int_equal(pop_back_float_array(arr, &out), NO_ERROR);
+    assert_float_equal(out, 12.0, 1.0e-3);
+    assert_int_equal(float_tensor_size(arr), 2u);
+
+    return_float_tensor(arr);
+}
+
+static void test_pop_front_float_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_float_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_front_float_array_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(3u, 10.0); /* [10,11,12] */
+    assert_non_null(arr);
+
+    float out = 0.0;
+    assert_int_equal(pop_front_float_array(arr, &out), NO_ERROR);
+    assert_float_equal(out, 10.0, 1.0e-3);
+    assert_int_equal(float_tensor_size(arr), 2u);
+
+    return_float_tensor(arr);
+}
+
+static void test_pop_at_float_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_at_float_array(NULL, NULL, 0u), NULL_POINTER);
+}
+
+static void test_pop_at_float_array_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(4u, 10.0); /* [10,11,12,13] */
+    assert_non_null(arr);
+
+    float out = 0.0;
+    assert_int_equal(pop_at_float_array(arr, &out, 2u), NO_ERROR);
+    assert_float_equal(out, 12.0, 1.0e-3);
+    assert_int_equal(float_tensor_size(arr), 3u);
+
+    assert_int_equal(get_float_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_float_equal(out, 13.0, 1.0e-3);
+
+    return_float_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// TEST SUITE REGISTRY
+
+const struct CMUnitTest test_float_tensor[] = {
+    /* init_float_array */
+    cmocka_unit_test(test_init_float_array_null_allocator),
+    cmocka_unit_test(test_init_float_array_success),
+
+    /* init_float_tensor */
+    cmocka_unit_test(test_init_float_tensor_success),
+    cmocka_unit_test(test_init_float_tensor_null_shape),
+
+    /* return_float_tensor */
+    cmocka_unit_test(test_return_float_tensor_null),
+    cmocka_unit_test(test_return_float_tensor_normal),
+
+    /* copy_float_tensor */
+    cmocka_unit_test(test_copy_float_tensor_null_src),
+    cmocka_unit_test(test_copy_float_tensor_independence),
+
+    /* introspection — null guards */
+    cmocka_unit_test(test_float_tensor_size_null),
+    cmocka_unit_test(test_float_tensor_alloc_null),
+    cmocka_unit_test(test_float_tensor_data_size_null),
+    cmocka_unit_test(test_float_tensor_dtype_null),
+    cmocka_unit_test(test_is_float_tensor_empty_null),
+    cmocka_unit_test(test_is_float_tensor_full_null),
+    cmocka_unit_test(test_is_float_tensor_ptr_null_wrapper),
+    cmocka_unit_test(test_float_tensor_ndim_null),
+    cmocka_unit_test(test_float_tensor_shape_dim_null),
+    cmocka_unit_test(test_float_tensor_shape_null),
+    cmocka_unit_test(test_float_tensor_shape_ptr_null),
+    cmocka_unit_test(test_float_tensor_strides_ptr_null),
+    cmocka_unit_test(test_float_tensor_shape_str_null),
+
+    /* introspection — values */
+    cmocka_unit_test(test_float_tensor_size_value),
+    cmocka_unit_test(test_float_tensor_alloc_value),
+    cmocka_unit_test(test_float_tensor_data_size_value),
+    cmocka_unit_test(test_float_tensor_dtype_value),
+    cmocka_unit_test(test_is_float_tensor_empty_value),
+    cmocka_unit_test(test_is_float_tensor_full_value),
+    cmocka_unit_test(test_is_float_tensor_ptr_valid),
+    cmocka_unit_test(test_float_tensor_ndim_value),
+    cmocka_unit_test(test_float_tensor_shape_dim_value),
+    cmocka_unit_test(test_float_tensor_shape_value),
+    cmocka_unit_test(test_float_tensor_shape_ptr_value),
+    cmocka_unit_test(test_float_tensor_strides_ptr_value),
+    cmocka_unit_test(test_float_tensor_shape_str_value),
+
+    /* utility — null guards */
+    cmocka_unit_test(test_clear_float_tensor_null),
+    cmocka_unit_test(test_concat_float_tensor_null),
+    cmocka_unit_test(test_slice_float_tensor_null),
+    cmocka_unit_test(test_reverse_float_tensor_null),
+    cmocka_unit_test(test_sort_float_tensor_null),
+
+    /* utility — values */
+    cmocka_unit_test(test_clear_float_tensor_value),
+    cmocka_unit_test(test_concat_float_tensor_value),
+    cmocka_unit_test(test_slice_float_tensor_value),
+    cmocka_unit_test(test_reverse_float_tensor_value),
+    cmocka_unit_test(test_sort_float_tensor_forward),
+    cmocka_unit_test(test_sort_float_tensor_reverse),
+
+    /* set/get — null guards */
+    cmocka_unit_test(test_set_get_float_tensor_index_null),
+    cmocka_unit_test(test_set_get_float_tensor_nd_index_null),
+    cmocka_unit_test(test_push_back_float_array_null),
+    cmocka_unit_test(test_push_front_float_array_null),
+    cmocka_unit_test(test_push_at_float_array_null),
+    cmocka_unit_test(test_pop_back_float_array_null),
+    cmocka_unit_test(test_pop_front_float_array_null),
+    cmocka_unit_test(test_pop_at_float_array_null),
+
+    /* set/get — values */
+    cmocka_unit_test(test_set_get_float_tensor_index_value),
+    cmocka_unit_test(test_set_get_float_tensor_nd_index_value),
+    cmocka_unit_test(test_push_back_float_array_value),
+    cmocka_unit_test(test_push_front_float_array_value),
+    cmocka_unit_test(test_push_at_float_array_value),
+    cmocka_unit_test(test_pop_back_float_array_value),
+    cmocka_unit_test(test_pop_front_float_array_value),
+    cmocka_unit_test(test_pop_at_float_array_value),
+};
+
+const size_t test_float_tensor_count = sizeof(test_float_tensor) /
+                                       sizeof(test_float_tensor[0]);
 // ================================================================================
 // ================================================================================
 // eof

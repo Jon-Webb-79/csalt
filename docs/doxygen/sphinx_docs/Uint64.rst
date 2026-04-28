@@ -5,7 +5,7 @@ uint64_t Overview
 *****************
 
 The ``uint64_t`` family of data structures in csalt provides type-safe,
-allocator-agnostic containers for 8-bit unsigned integer data. Every
+allocator-agnostic containers for 64-bit unsigned integer data. Every
 structure wraps the generic ``tensor_t`` engine from ``c_tensor.h`` with
 the element type fixed to ``UINT64_TYPE`` at initialisation, eliminating
 the need for the caller to pass a ``dtype_id_t`` argument to any operation.

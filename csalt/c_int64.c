@@ -19,7 +19,7 @@
 // ================================================================================ 
 // ================================================================================ 
 
-int64_tensor_expect_t init_int64_tensor(int64_t            ndim,
+int64_tensor_expect_t init_int64_tensor(uint8_t            ndim,
                                         const size_t*      shape,
                                         allocator_vtable_t alloc_v) {
     /* Allocate the underlying tensor */

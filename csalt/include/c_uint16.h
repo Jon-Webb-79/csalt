@@ -107,9 +107,9 @@ typedef struct {
  * return_uint16_tensor(mat);
  * @endcode
  */
-uint16_tensor_expect_t init_uint16_tensor(uint16_t            ndim,
-                                        const size_t*      shape,
-                                        allocator_vtable_t alloc_v);
+uint16_tensor_expect_t init_uint16_tensor(uint8_t            ndim,
+                                          const size_t*      shape,
+                                          allocator_vtable_t alloc_v);
 
 // -------------------------------------------------------------------------------- 
 
@@ -346,10 +346,10 @@ static inline bool is_uint16_tensor_ptr(const uint16_tensor_t* t, const uint16_t
  * Returns 0 if t is NULL.
  *
  * @code{.c}
- * uint16_t ndim = uint16_tensor_ndim(arr);   // 1
+ * uint8_t ndim = uint16_tensor_ndim(arr);   // 1
  * @endcode
  */
-static inline uint16_t uint16_tensor_ndim(const uint16_tensor_t* t) {
+static inline uint8_t uint16_tensor_ndim(const uint16_tensor_t* t) {
     if (t == NULL) return 0u;
     return tensor_ndim(t->base);
 }
@@ -627,7 +627,7 @@ static inline error_code_t sort_uint16_tensor(uint16_tensor_t* t,
  */
 static inline error_code_t set_uint16_tensor_index(uint16_tensor_t* t,
                                                   size_t index,
-                                                  const uint16_t data) {
+                                                  uint16_t data) {
     if (t == NULL) return NULL_POINTER;
     return set_tensor_index(t->base, index, &data, UINT16_TYPE);
 }

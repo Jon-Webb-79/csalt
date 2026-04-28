@@ -20,9 +20,9 @@
 // ================================================================================ 
 // ================================================================================ 
 
-int8_tensor_expect_t init_int8_tensor(int8_t            ndim,
-                                        const size_t*      shape,
-                                        allocator_vtable_t alloc_v) {
+int8_tensor_expect_t init_int8_tensor(uint8_t            ndim,
+                                      const size_t*      shape,
+                                      allocator_vtable_t alloc_v) {
     /* Allocate the underlying tensor */
     tensor_expect_t r = init_tensor(ndim, shape, INT8_TYPE, alloc_v);
     if (!r.has_value)

@@ -19,9 +19,9 @@
 // ================================================================================ 
 // ================================================================================ 
 
-uint64_tensor_expect_t init_uint64_tensor(uint64_t            ndim,
-                                        const size_t*      shape,
-                                        allocator_vtable_t alloc_v) {
+uint64_tensor_expect_t init_uint64_tensor(uint8_t            ndim,
+                                          const size_t*      shape,
+                                          allocator_vtable_t alloc_v) {
     /* Allocate the underlying tensor */
     tensor_expect_t r = init_tensor(ndim, shape, UINT64_TYPE, alloc_v);
     if (!r.has_value)

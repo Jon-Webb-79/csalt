@@ -105,7 +105,7 @@ typedef struct {
  * return_int64_tensor(mat);
  * @endcode
  */
-int64_tensor_expect_t init_int64_tensor(int64_t            ndim,
+int64_tensor_expect_t init_int64_tensor(uint8_t            ndim,
                                         const size_t*      shape,
                                         allocator_vtable_t alloc_v);
 
@@ -344,7 +344,7 @@ static inline bool is_int64_tensor_ptr(const int64_tensor_t* t, const int64_t* p
  * Returns 0 if t is NULL.
  *
  * @code{.c}
- * int64_t ndim = int64_tensor_ndim(arr);   // 1
+ * uint8_t ndim = int64_tensor_ndim(arr);   // 1
  * @endcode
  */
 static inline int64_t int64_tensor_ndim(const int64_tensor_t* t) {
@@ -625,7 +625,7 @@ static inline error_code_t sort_int64_tensor(int64_tensor_t* t,
  */
 static inline error_code_t set_int64_tensor_index(int64_tensor_t* t,
                                                   size_t index,
-                                                  const int64_t data) {
+                                                  int64_t data) {
     if (t == NULL) return NULL_POINTER;
     return set_tensor_index(t->base, index, &data, INT64_TYPE);
 }
