@@ -20,7 +20,7 @@ any fixed-size data — and use them with any data structure in the library with
 modifying library source code.
 
 Any project that uses this library should include ``dtypes.h`` directly when working
-with the type registry. All other library headers (``array.h``, ``matrix.h``, etc.)
+with the type registry. All other library headers (``c_tensor.h``, etc.)
 include ``dtypes.h`` transitively, so explicit inclusion is only necessary when
 interacting with the registry outside the context of a specific data structure.
 
@@ -127,18 +127,22 @@ They cover all common C primitive types and should not be reused for user-define
    * - ``SIZE_T_TYPE``
      - 15
      - ``size_t``
+   * - ``STRING_TYPE``
+     - 16
+     - ``string_t``
 
-IDs 16 through 999 are reserved for future built-in type expansion. Do not assign
+IDs 17 through 50 are reserved for future built-in type expansion. Do not assign
 user-defined types to values in this range.
 
 
 Registering User-Defined Types
 -------------------------------
 
-User-defined type IDs must be greater than or equal to ``USER_BASE_TYPE`` (1000).
+User-defined type IDs must be greater than or equal to ``USER_BASE_TYPE`` (50).
 Each ID must be unique within the registry. The recommended convention is to define
 named constants relative to ``USER_BASE_TYPE`` so that any future change to its value
-does not require updates throughout user code.
+does not require updates throughout user code.  In total the library can handle 255
+data types, leaving 150 data types that can be defined by the user.
 
 .. code-block:: c
 
@@ -175,9 +179,9 @@ than a no-op.
 Checking Registry Capacity
 ---------------------------
 
-The registry holds a maximum of ``MAX_DTYPES`` (128) entries in total, including
+The registry holds a maximum of ``MAX_DTYPES`` (255) entries in total, including
 built-in types. The 16 built-in types registered at startup consume the first 16 slots,
-leaving 112 slots for user-defined types under default configuration. Use
+leaving 150 slots for user-defined types under default configuration. Use
 :c:func:`available_dtype_slots` to check remaining capacity before registering types
 in applications that define many custom types.
 

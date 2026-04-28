@@ -83,7 +83,7 @@ typedef uint32_t dtype_id_t;
  * #define MY_QUAT_TYPE  (USER_BASE_TYPE + 2u)
  * @endcode
  */
-#define USER_BASE_TYPE  1000u
+#define USER_BASE_TYPE  50u
 
 /**
  * @brief Maximum total number of types that can be registered.
@@ -94,7 +94,7 @@ typedef uint32_t dtype_id_t;
  * is exceeded. Check available_dtype_slots() before registering if capacity
  * is a concern.
  */
-#define MAX_DTYPES      128u
+#define MAX_DTYPES      255u
 /** @} */
 // ================================================================================ 
 // ================================================================================ 

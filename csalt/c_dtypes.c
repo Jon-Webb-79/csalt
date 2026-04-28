@@ -57,15 +57,23 @@ bool init_dtype_registry(void) {
 // --------------------------------------------------------------------------------
 
 bool register_dtype(const dtype_t* desc) {
-    if (desc == NULL)                    return false;
-    if (desc->id == UNKNOWN_TYPE)        return false;   // add this
-    if (desc->data_size == 0u)           return false;
-    if (registry_count >= MAX_DTYPES)    return false;
-    if (lookup_dtype(desc->id) != NULL)  return false;
+    if (desc == NULL)                 return false;
+    if (desc->id == UNKNOWN_TYPE)     return false;
+    if (desc->data_size == 0u)        return false;
+    if (registry_count >= MAX_DTYPES) return false;
+
+    const dtype_t* existing = lookup_dtype(desc->id);
+    if (existing != NULL) {
+        /* ID already registered — reject regardless of whether the
+         * descriptor matches, to prevent silent aliasing. */
+        return false;
+    }
+
     registry[registry_count] = *desc;
     registry_count++;
     return true;
 }
+
 // --------------------------------------------------------------------------------
 
 const dtype_t* lookup_dtype(dtype_id_t id) {
