@@ -14,6 +14,28 @@
 // Include modules here
 
 #include "c_tensor.h"
+
+#if defined(__AVX512BW__)
+#  include "simd_avx512_uint8.inl"
+#elif defined(__AVX2__)
+#  include "simd_avx2_uint8.inl"
+#elif defined(__AVX__)
+#  include "simd_avx_uint8.inl"
+#elif defined(__SSE4_1__)
+#  include "simd_sse41_uint8.inl"
+#elif defined(__SSSE3__)
+#  include "simd_sse3_uint8.inl"
+#elif defined(__SSE2__)
+#  include "simd_sse2_uint8.inl"
+#elif defined(__ARM_FEATURE_SVE2)
+#  include "simd_sve2_uint8.inl"
+#elif defined(__ARM_FEATURE_SVE)
+#  include "simd_sve_uint8.inl"
+#elif defined(__ARM_NEON)
+#  include "simd_neon_uint8.inl"
+#else
+#  include "simd_scalar_uint8.inl"
+#endif
 // ================================================================================ 
 // ================================================================================ 
 
@@ -457,6 +479,201 @@ tensor_expect_t slice_tensor_array(const tensor_t*     src,
     t->alloc_v   = av;
 
     return (tensor_expect_t){ .has_value = true, .u.value = t };
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t reverse_tensor(tensor_t* t) {
+    if (t == NULL)   return NULL_POINTER;
+    if (t->len < 2u) return EMPTY;
+
+    simd_reverse_uint8(t->data, t->len, t->data_size);
+    return NO_ERROR;
+}
+// -------------------------------------------------------------------------------- 
+
+/* Swap two elements of data_size bytes using a stack buffer. */
+static inline void _swap_elements(uint8_t* a, uint8_t* b, size_t data_size) {
+    uint8_t tmp[256];
+
+    if (data_size <= sizeof(tmp)) {
+        memcpy(tmp, a,   data_size);
+        memcpy(a,   b,   data_size);
+        memcpy(b,   tmp, data_size);
+    } else {
+        /* data_size > 256: byte-by-byte swap to avoid VLA */
+        for (size_t i = 0u; i < data_size; i++) {
+            uint8_t byte = a[i];
+            a[i] = b[i];
+            b[i] = byte;
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------
+
+/* Apply direction to a raw comparator result. */
+static inline int _apply_dir(int cmp_result, direction_t dir) {
+    return (dir == FORWARD) ? cmp_result : -cmp_result;
+}
+
+// --------------------------------------------------------------------------------
+
+/* Median-of-three pivot selection. Returns pointer to the chosen element. */
+static uint8_t* _median_of_three(uint8_t*     a,
+                                  uint8_t*     b,
+                                  uint8_t*     c,
+                                  int        (*cmp)(const void*, const void*),
+                                  direction_t  dir) {
+    int ab = _apply_dir(cmp(a, b), dir);
+    int bc = _apply_dir(cmp(b, c), dir);
+    int ac = _apply_dir(cmp(a, c), dir);
+
+    if (ab <= 0) {
+        /* a <= b */
+        if (bc <= 0) return b;   /* a <= b <= c -> b is median */
+        if (ac <= 0) return c;   /* a <= c < b  -> c is median */
+        return a;                /* c < a <= b  -> a is median */
+    }
+    /* a > b */
+    if (ac <= 0) return a;       /* b < a <= c  -> a is median */
+    if (bc <= 0) return c;       /* b <= c < a  -> c is median */
+    return b;                    /* c < b < a   -> b is median */
+}
+
+// --------------------------------------------------------------------------------
+
+/* Insertion sort for small partitions. Operates on element indices [lo, hi]. */
+static void _insertion_sort(uint8_t* data,
+                             size_t   lo,
+                             size_t   hi,
+                             size_t   data_size,
+                             int    (*cmp)(const void*, const void*),
+                             direction_t dir) {
+    uint8_t tmp[256];
+
+    for (size_t i = lo + 1u; i <= hi; i++) {
+        uint8_t* key_ptr = data + i * data_size;
+
+        /* Copy key element into tmp buffer */
+        if (data_size <= sizeof(tmp)) {
+            memcpy(tmp, key_ptr, data_size);
+        } else {
+            /* For oversized elements fall back to swap-based insertion */
+            size_t j = i;
+            while (j > lo &&
+                   _apply_dir(cmp(data + (j - 1u) * data_size,
+                                  data + j * data_size), dir) > 0) {
+                _swap_elements(data + (j - 1u) * data_size,
+                               data + j * data_size,
+                               data_size);
+                j--;
+            }
+            continue;
+        }
+
+        size_t j = i;
+        while (j > lo &&
+               _apply_dir(cmp(data + (j - 1u) * data_size, tmp), dir) > 0) {
+            /* Shift element at j-1 forward to position j */
+            memcpy(data + j * data_size,
+                   data + (j - 1u) * data_size,
+                   data_size);
+            j--;
+        }
+        memcpy(data + j * data_size, tmp, data_size);
+    }
+}
+
+// --------------------------------------------------------------------------------
+
+/*
+ * Partition the sub-array data[lo..hi] (inclusive indices) around a pivot
+ * chosen by median-of-three. Pivot is moved to data[hi] before partitioning.
+ * Returns the final index of the pivot.
+ */
+static size_t _partition(uint8_t* data,
+                          size_t   lo,
+                          size_t   hi,
+                          size_t   data_size,
+                          int    (*cmp)(const void*, const void*),
+                          direction_t dir) {
+    size_t   mid      = lo + (hi - lo) / 2u;
+    uint8_t* pivot_ptr = _median_of_three(data + lo  * data_size,
+                                           data + mid * data_size,
+                                           data + hi  * data_size,
+                                           cmp, dir);
+
+    /* Move pivot to end so it is out of the way during partitioning */
+    if (pivot_ptr != data + hi * data_size)
+        _swap_elements(pivot_ptr, data + hi * data_size, data_size);
+
+    uint8_t* pivot = data + hi * data_size;
+    size_t   i     = lo;   /* index of last element known to be < pivot */
+
+    for (size_t j = lo; j < hi; j++) {
+        if (_apply_dir(cmp(data + j * data_size, pivot), dir) < 0) {
+            _swap_elements(data + i * data_size,
+                           data + j * data_size,
+                           data_size);
+            i++;
+        }
+    }
+
+    /* Place pivot in its final position */
+    _swap_elements(data + i * data_size, data + hi * data_size, data_size);
+    return i;
+}
+
+// --------------------------------------------------------------------------------
+
+/*
+ * Iterative quicksort with median-of-three pivot, insertion sort fallback
+ * for small partitions, and tail-call optimisation to keep stack depth O(log n).
+ */
+static void _quicksort(uint8_t* data,
+                        size_t   lo,
+                        size_t   hi,
+                        size_t   data_size,
+                        int    (*cmp)(const void*, const void*),
+                        direction_t dir) {
+#define INSERTION_THRESHOLD 10u
+
+    while (lo < hi) {
+        if (hi - lo < INSERTION_THRESHOLD) {
+            _insertion_sort(data, lo, hi, data_size, cmp, dir);
+            break;
+        }
+
+        size_t pi = _partition(data, lo, hi, data_size, cmp, dir);
+
+        /*
+         * Recurse into the smaller partition, iterate into the larger.
+         * This keeps worst-case stack depth at O(log n).
+         */
+        if (pi > lo && pi - lo <= hi - pi) {
+            _quicksort(data, lo, pi - 1u, data_size, cmp, dir);
+            lo = pi + 1u;
+        } else {
+            if (pi + 1u < hi)
+                _quicksort(data, pi + 1u, hi, data_size, cmp, dir);
+            if (pi == 0u) break;
+            hi = pi - 1u;
+        }
+    }
+
+#undef INSERTION_THRESHOLD
+}
+
+// --------------------------------------------------------------------------------
+
+error_code_t sort_tensor(tensor_t* array,
+                         int    (*cmp)(const void*, const void*),
+                         direction_t dir) {
+    if (array == NULL || cmp == NULL) return NULL_POINTER;
+    if (array->len < 2u)              return EMPTY;
+
+    _quicksort(array->data, 0u, array->len - 1u, array->data_size, cmp, dir);
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

@@ -56,6 +56,15 @@ typedef struct {
 } tensor_t;
 // -------------------------------------------------------------------------------- 
 
+#ifndef ITER_DIR_H
+#define ITER_DIR_H
+    typedef enum {
+        FORWARD = 0,
+        REVERSE = 1
+    }direction_t;
+#endif /* ITER_DIR_H*/
+// -------------------------------------------------------------------------------- 
+
 // In c_tensor.h
 typedef struct {
     bool has_value;
@@ -539,6 +548,38 @@ tensor_expect_t slice_tensor_array(const tensor_t*    src,
                                    size_t             start,
                                    size_t             end,
                                    allocator_vtable_t* alloc_v);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Reverse the populated elements of a tensor in place.
+ *
+ * Reverses the order of all elements in the live region of the tensor's
+ * data buffer using a SIMD-accelerated byte-swap routine. The operation
+ * acts on the flat element sequence regardless of the tensor's shape or
+ * strides — for a TENSOR_STRUCT tensor this reverses all alloc elements
+ * in row-major order, and for an ARRAY_STRUCT tensor this reverses the
+ * len populated elements.
+ *
+ * The tensor is modified in place; no allocation is performed and the
+ * allocator is not consulted.
+ *
+ * Returns EMPTY rather than NO_ERROR when len < 2 because a zero or
+ * single-element sequence has no meaningful reversal. The tensor is
+ * left untouched in this case.
+ *
+ * @param t  Pointer to the tensor to reverse. Must not be NULL.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if t is NULL
+ *         - EMPTY        if t->len < 2
+ *
+ * @code
+ * // arr = [10, 20, 30, 40, 50]
+ * error_code_t err = reverse_tensor(arr->base);
+ * // arr = [50, 40, 30, 20, 10]
+ * @endcode
+ */
+error_code_t reverse_tensor(tensor_t* t);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA
@@ -896,6 +937,63 @@ error_code_t get_tensor_nd_index(const tensor_t* t,
                                  const size_t*   idx,
                                  void*           out,
                                  dtype_id_t      dtype);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Sort the populated elements of a tensor in place.
+ *
+ * Sorts the len elements in the tensor's data buffer using an iterative
+ * quicksort with median-of-three pivot selection and an insertion sort
+ * fallback for partitions of fewer than 10 elements.  Tail-call
+ * optimisation keeps worst-case stack depth at O(log n) regardless of
+ * input distribution.
+ *
+ * The sort operates on the flat element sequence in memory — for a
+ * TENSOR_STRUCT tensor this is row-major order across all alloc elements,
+ * and for an ARRAY_STRUCT tensor this covers only the len populated
+ * elements.  Shape and stride metadata are not modified, so the logical
+ * N-dimensional structure of a TENSOR_STRUCT tensor is reinterpreted
+ * after the sort rather than preserved.  If preserving N-dimensional
+ * structure is required, copy the tensor first via copy_tensor.
+ *
+ * The comparator follows the qsort(3) convention:
+ *   - returns a negative value if *a should precede *b
+ *   - returns zero if *a and *b are equivalent
+ *   - returns a positive value if *a should follow *b
+ *
+ * The direction argument inverts the comparator result when set to
+ * REVERSE, producing a descending sort without requiring a separate
+ * comparator function.
+ *
+ * @param t    Pointer to the tensor to sort. Must not be NULL.
+ * @param cmp  Comparator function following the qsort(3) convention.
+ *             Both pointer arguments point to complete elements of
+ *             t->data_size bytes. Must not be NULL.
+ * @param dir  FORWARD for ascending order, REVERSE for descending order.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if t or cmp is NULL
+ *         - EMPTY        if t->len < 2 (zero or one element — no sort
+ *                        performed, tensor is left untouched)
+ *
+ * @code
+ * // Comparator for int32_t elements
+ * static int cmp_int32(const void* a, const void* b) {
+ *     int32_t ia = *(const int32_t*)a;
+ *     int32_t ib = *(const int32_t*)b;
+ *     return (ia > ib) - (ia < ib);
+ * }
+ *
+ * // Sort an int32 array in ascending order
+ * error_code_t err = sort_tensor(t, cmp_int32, FORWARD);
+ *
+ * // Sort in descending order using the same comparator
+ * err = sort_tensor(t, cmp_int32, REVERSE);
+ * @endcode
+ */
+error_code_t sort_tensor(tensor_t* array,
+                         int    (*cmp)(const void*, const void*),
+                         direction_t dir);
 // ================================================================================ 
 // ================================================================================ 
 #ifdef __cplusplus

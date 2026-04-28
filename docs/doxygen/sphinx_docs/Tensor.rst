@@ -194,6 +194,10 @@ Utility Operations
 
 .. doxygenfunction:: slice_tensor_array
 
+.. doxygenfunction:: reverse_tensor 
+
+.. doxygenfunction:: sort_tensor
+
 Type Query
 ----------
 

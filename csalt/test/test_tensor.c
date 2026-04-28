@@ -3726,6 +3726,704 @@ static void test_slice_src_unmodified(void** state) {
     return_tensor(src);
     return_tensor(s.u.value);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// REVERSE TENSOR (reverse_tensor)
+// ================================================================================
+ 
+/** NULL tensor must return NULL_POINTER. */
+static void test_reverse_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(reverse_tensor(NULL), NULL_POINTER);
+}
+ 
+/** Empty array (len == 0) must return EMPTY without modifying the tensor. */
+static void test_reverse_tensor_empty(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    assert_int_equal(t->len, 0u);
+    assert_int_equal(reverse_tensor(t), EMPTY);
+    assert_int_equal(t->len, 0u);
+ 
+    return_tensor(t);
+}
+ 
+/** Single-element array (len == 1) must return EMPTY without modifying the
+ *  tensor — there is nothing to swap. */
+static void test_reverse_tensor_single_element(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t val = 42;
+    assert_int_equal(push_back_tensor(t, &val, INT32_TYPE), NO_ERROR);
+    assert_int_equal(t->len, 1u);
+ 
+    assert_int_equal(reverse_tensor(t), EMPTY);
+ 
+    /* Element must be unchanged */
+    int32_t out = 0;
+    assert_int_equal(get_tensor_index(t, 0u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 42);
+ 
+    return_tensor(t);
+}
+ 
+/** Even-length sequence must be reversed correctly. */
+static void test_reverse_tensor_even_length(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(6u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    /* Build [10, 20, 30, 40, 50, 60] */
+    int32_t vals[] = { 10, 20, 30, 40, 50, 60 };
+    for (size_t i = 0u; i < 6u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(reverse_tensor(t), NO_ERROR);
+ 
+    int32_t expected[] = { 60, 50, 40, 30, 20, 10 };
+    for (size_t i = 0u; i < 6u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+/** Odd-length sequence must be reversed correctly with the middle element
+ *  remaining in place. */
+static void test_reverse_tensor_odd_length(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    /* Build [1, 2, 3, 4, 5] */
+    int32_t vals[] = { 1, 2, 3, 4, 5 };
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(reverse_tensor(t), NO_ERROR);
+ 
+    int32_t expected[] = { 5, 4, 3, 2, 1 };
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    /* Middle element must be unchanged */
+    int32_t mid = -1;
+    assert_int_equal(get_tensor_index(t, 2u, &mid, INT32_TYPE), NO_ERROR);
+    assert_int_equal(mid, 3);
+ 
+    return_tensor(t);
+}
+ 
+/** Two-element sequence is the minimal non-trivial case — the two elements
+ *  must be swapped. */
+static void test_reverse_tensor_two_elements(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(2u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 7, b = 99;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(reverse_tensor(t), NO_ERROR);
+ 
+    int32_t v0 = -1, v1 = -1;
+    assert_int_equal(get_tensor_index(t, 0u, &v0, INT32_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 1u, &v1, INT32_TYPE), NO_ERROR);
+    assert_int_equal(v0, 99);
+    assert_int_equal(v1, 7);
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * Double reverse must restore the original order exactly — this is the
+ * strongest single correctness check since any byte-level error in the
+ * swap would produce a different sequence on the first pass and then
+ * fail to restore it on the second.
+ */
+static void test_reverse_tensor_double_reverse(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t vals[] = { 10, 20, 30, 40, 50 };
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(reverse_tensor(t), NO_ERROR);
+    assert_int_equal(reverse_tensor(t), NO_ERROR);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, vals[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * Reverse a TENSOR_FIXED_SHAPE tensor (2-D) via flat index access to
+ * confirm reverse_tensor operates on the raw buffer regardless of mode.
+ */
+static void test_reverse_tensor_fixed_shape(void** state) {
+    (void)state;
+    const size_t shape[] = { 2u, 3u };
+    tensor_expect_t r = _make_tensor(2u, shape, INT32_TYPE);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    /* Populate via flat index: [1, 2, 3, 4, 5, 6] */
+    for (size_t i = 0u; i < 6u; i++) {
+        int32_t val = (int32_t)(i + 1u);
+        assert_int_equal(set_tensor_index(t, i, &val, INT32_TYPE), NO_ERROR);
+    }
+ 
+    assert_int_equal(reverse_tensor(t), NO_ERROR);
+ 
+    int32_t expected[] = { 6, 5, 4, 3, 2, 1 };
+    for (size_t i = 0u; i < 6u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+/**
+ * Reverse a tensor of double elements to confirm the SIMD routine handles
+ * element sizes larger than one byte correctly.
+ */
+static void test_reverse_tensor_double_dtype(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, DOUBLE_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    double vals[] = { 1.1, 2.2, 3.3, 4.4 };
+    for (size_t i = 0u; i < 4u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], DOUBLE_TYPE), NO_ERROR);
+ 
+    assert_int_equal(reverse_tensor(t), NO_ERROR);
+ 
+    double expected[] = { 4.4, 3.3, 2.2, 1.1 };
+    for (size_t i = 0u; i < 4u; i++) {
+        double out = 0.0;
+        assert_int_equal(get_tensor_index(t, i, &out, DOUBLE_TYPE), NO_ERROR);
+        assert_double_equal(out, expected[i], 1e-9);
+    }
+
+    return_tensor(t);
+}
+ 
+/**
+ * Reverse a tensor of user-defined vec3_t elements to confirm the SIMD
+ * routine handles large struct element sizes correctly.
+ */
+static void test_reverse_tensor_user_dtype(void** state) {
+    (void)state;
+    assert_true(ensure_dtype_registered(&vec3_desc));
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    const size_t shape[] = { 3u };
+    tensor_expect_t r = init_tensor(1u, shape, VEC3_TYPE, alloc);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+    t->mode = ARRAY_STRUCT;
+    t->len  = 3u;
+ 
+    vec3_t a = { 1.0f, 2.0f, 3.0f };
+    vec3_t b = { 4.0f, 5.0f, 6.0f };
+    vec3_t c = { 7.0f, 8.0f, 9.0f };
+    assert_int_equal(set_tensor_index(t, 0u, &a, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(set_tensor_index(t, 1u, &b, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(set_tensor_index(t, 2u, &c, VEC3_TYPE), NO_ERROR);
+ 
+    assert_int_equal(reverse_tensor(t), NO_ERROR);
+ 
+    vec3_t out0 = { 0 }, out1 = { 0 }, out2 = { 0 };
+    assert_int_equal(get_tensor_index(t, 0u, &out0, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 1u, &out1, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 2u, &out2, VEC3_TYPE), NO_ERROR);
+ 
+    assert_float_equal(out0.x, c.x, 1e-6f);
+    assert_float_equal(out0.y, c.y, 1e-6f);
+    assert_float_equal(out0.z, c.z, 1e-6f);
+    assert_float_equal(out1.x, b.x, 1e-6f);
+    assert_float_equal(out1.y, b.y, 1e-6f);
+    assert_float_equal(out1.z, b.z, 1e-6f);
+    assert_float_equal(out2.x, a.x, 1e-6f);
+    assert_float_equal(out2.y, a.y, 1e-6f);
+    assert_float_equal(out2.z, a.z, 1e-6f);
+ 
+    return_tensor(t);
+}
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// SORT TENSOR (sort_tensor)
+// ================================================================================
+ 
+// ---- Comparator functions used across tests ----------------------------------
+ 
+static int _cmp_int32(const void* a, const void* b) {
+    int32_t ia = *(const int32_t*)a;
+    int32_t ib = *(const int32_t*)b;
+    return (ia > ib) - (ia < ib);
+}
+ 
+static int _cmp_float(const void* a, const void* b) {
+    float fa = *(const float*)a;
+    float fb = *(const float*)b;
+    return (fa > fb) - (fa < fb);
+}
+ 
+static int _cmp_double(const void* a, const void* b) {
+    double da = *(const double*)a;
+    double db = *(const double*)b;
+    return (da > db) - (da < db);
+}
+ 
+static int _cmp_vec3_by_x(const void* a, const void* b) {
+    float fa = ((const vec3_t*)a)->x;
+    float fb = ((const vec3_t*)b)->x;
+    return (fa > fb) - (fa < fb);
+}
+ 
+// ---- NULL / guard tests -----------------------------------------------------
+ 
+/** NULL tensor must return NULL_POINTER. */
+static void test_sort_tensor_null_tensor(void** state) {
+    (void)state;
+    assert_int_equal(sort_tensor(NULL, _cmp_int32, FORWARD), NULL_POINTER);
+}
+ 
+/** NULL comparator must return NULL_POINTER. */
+static void test_sort_tensor_null_cmp(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+    t->len = 4u;
+ 
+    assert_int_equal(sort_tensor(t, NULL, FORWARD), NULL_POINTER);
+    return_tensor(t);
+}
+ 
+/** len == 0 must return EMPTY. */
+static void test_sort_tensor_empty(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    assert_int_equal(t->len, 0u);
+    assert_int_equal(sort_tensor(t, _cmp_int32, FORWARD), EMPTY);
+    return_tensor(t);
+}
+ 
+/** len == 1 must return EMPTY — nothing to sort. */
+static void test_sort_tensor_single_element(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(4u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t val = 42;
+    assert_int_equal(push_back_tensor(t, &val, INT32_TYPE), NO_ERROR);
+    assert_int_equal(sort_tensor(t, _cmp_int32, FORWARD), EMPTY);
+ 
+    int32_t out = 0;
+    assert_int_equal(get_tensor_index(t, 0u, &out, INT32_TYPE), NO_ERROR);
+    assert_int_equal(out, 42);
+ 
+    return_tensor(t);
+}
+ 
+// ---- Two-element edge cases --------------------------------------------------
+ 
+/** Two elements in wrong order must be swapped by FORWARD sort. */
+static void test_sort_tensor_two_elements_forward(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(2u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 20, b = 10;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_int32, FORWARD), NO_ERROR);
+ 
+    int32_t v0 = -1, v1 = -1;
+    assert_int_equal(get_tensor_index(t, 0u, &v0, INT32_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 1u, &v1, INT32_TYPE), NO_ERROR);
+    assert_int_equal(v0, 10);
+    assert_int_equal(v1, 20);
+ 
+    return_tensor(t);
+}
+ 
+/** Two elements in wrong order must be swapped by REVERSE sort. */
+static void test_sort_tensor_two_elements_reverse(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(2u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t a = 10, b = 20;
+    assert_int_equal(push_back_tensor(t, &a, INT32_TYPE), NO_ERROR);
+    assert_int_equal(push_back_tensor(t, &b, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_int32, REVERSE), NO_ERROR);
+ 
+    int32_t v0 = -1, v1 = -1;
+    assert_int_equal(get_tensor_index(t, 0u, &v0, INT32_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 1u, &v1, INT32_TYPE), NO_ERROR);
+    assert_int_equal(v0, 20);
+    assert_int_equal(v1, 10);
+ 
+    return_tensor(t);
+}
+ 
+// ---- ARRAY_STRUCT forward sort ----------------------------------------------
+ 
+/** Forward sort of an unsorted int32 array produces ascending order. */
+static void test_sort_tensor_array_forward_int32(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(8u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t vals[] = { 5, 2, 8, 1, 9, 3, 7, 4 };
+    for (size_t i = 0u; i < 8u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_int32, FORWARD), NO_ERROR);
+ 
+    int32_t expected[] = { 1, 2, 3, 4, 5, 7, 8, 9 };
+    for (size_t i = 0u; i < 8u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+/** Forward sort of an unsorted float array produces ascending order. */
+static void test_sort_tensor_array_forward_float(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(6u, FLOAT_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    float vals[] = { 3.3f, 1.1f, 4.4f, 2.2f, 6.6f, 5.5f };
+    for (size_t i = 0u; i < 6u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], FLOAT_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_float, FORWARD), NO_ERROR);
+ 
+    float expected[] = { 1.1f, 2.2f, 3.3f, 4.4f, 5.5f, 6.6f };
+    for (size_t i = 0u; i < 6u; i++) {
+        float out = 0.0f;
+        assert_int_equal(get_tensor_index(t, i, &out, FLOAT_TYPE), NO_ERROR);
+        assert_float_equal(out, expected[i], 1e-5f);
+    }
+ 
+    return_tensor(t);
+}
+ 
+// ---- ARRAY_STRUCT reverse sort ----------------------------------------------
+ 
+/** Reverse sort of an unsorted int32 array produces descending order. */
+static void test_sort_tensor_array_reverse_int32(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(6u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t vals[] = { 3, 1, 4, 1, 5, 9 };
+    for (size_t i = 0u; i < 6u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_int32, REVERSE), NO_ERROR);
+ 
+    int32_t expected[] = { 9, 5, 4, 3, 1, 1 };
+    for (size_t i = 0u; i < 6u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+// ---- Already sorted and reverse sorted inputs -------------------------------
+ 
+/** An already sorted array must be unchanged by a FORWARD sort. */
+static void test_sort_tensor_already_sorted(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t vals[] = { 1, 2, 3, 4, 5 };
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_int32, FORWARD), NO_ERROR);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, vals[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+/** A reverse-sorted array must produce ascending order after FORWARD sort. */
+static void test_sort_tensor_reverse_sorted_input(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t vals[] = { 5, 4, 3, 2, 1 };
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_int32, FORWARD), NO_ERROR);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, (int32_t)(i + 1u));
+    }
+ 
+    return_tensor(t);
+}
+ 
+/** All-equal elements must survive a sort without corruption. */
+static void test_sort_tensor_all_equal(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t val = 7;
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &val, INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_int32, FORWARD), NO_ERROR);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, 7);
+    }
+ 
+    return_tensor(t);
+}
+ 
+// ---- Large array to exercise quicksort path ---------------------------------
+ 
+/**
+ * Sort a larger array that exceeds the insertion sort threshold (10 elements)
+ * to exercise the quicksort and median-of-three paths.
+ */
+static void test_sort_tensor_large_array(void** state) {
+    (void)state;
+    const size_t n = 32u;
+    tensor_expect_t r = _make_array(n, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    /* Pseudo-random but deterministic sequence */
+    int32_t vals[32] = {
+        17, 3, 29, 11, 25, 7, 21, 15, 31, 1,
+        27, 5, 23, 9,  19, 13, 30, 2, 28, 10,
+        24, 6, 22, 14, 32, 4,  20, 16, 26, 8,
+        18, 12
+    };
+    for (size_t i = 0u; i < n; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_int32, FORWARD), NO_ERROR);
+ 
+    /* Verify strictly ascending order */
+    for (size_t i = 1u; i < n; i++) {
+        int32_t prev = -1, curr = -1;
+        assert_int_equal(get_tensor_index(t, i - 1u, &prev, INT32_TYPE), NO_ERROR);
+        assert_int_equal(get_tensor_index(t, i,      &curr, INT32_TYPE), NO_ERROR);
+        assert_true(prev <= curr);
+    }
+ 
+    return_tensor(t);
+}
+ 
+// ---- TENSOR_STRUCT mode -----------------------------------------------------
+ 
+/**
+ * sort_tensor on a TENSOR_STRUCT (fixed-shape) tensor must sort all len
+ * elements in flat row-major order.
+ */
+static void test_sort_tensor_fixed_shape(void** state) {
+    (void)state;
+    const size_t shape[] = { 2u, 3u };
+    tensor_expect_t r = _make_tensor(2u, shape, INT32_TYPE);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    /* Populate via flat index: [5, 2, 4, 1, 6, 3] */
+    int32_t vals[] = { 5, 2, 4, 1, 6, 3 };
+    for (size_t i = 0u; i < 6u; i++)
+        assert_int_equal(set_tensor_index(t, i, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_int32, FORWARD), NO_ERROR);
+ 
+    int32_t expected[] = { 1, 2, 3, 4, 5, 6 };
+    for (size_t i = 0u; i < 6u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(t);
+}
+ 
+// ---- Double dtype -----------------------------------------------------------
+ 
+/** Forward sort of a double array produces ascending order. */
+static void test_sort_tensor_double_dtype(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(5u, DOUBLE_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    double vals[] = { 3.3, 1.1, 5.5, 2.2, 4.4 };
+    for (size_t i = 0u; i < 5u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], DOUBLE_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_double, FORWARD), NO_ERROR);
+ 
+    double expected[] = { 1.1, 2.2, 3.3, 4.4, 5.5 };
+    for (size_t i = 0u; i < 5u; i++) {
+        double out = 0.0;
+        assert_int_equal(get_tensor_index(t, i, &out, DOUBLE_TYPE), NO_ERROR);
+        assert_float_equal(out, expected[i], 1e-9);
+    }
+ 
+    return_tensor(t);
+}
+ 
+// ---- User-defined dtype -----------------------------------------------------
+ 
+/**
+ * Sort a tensor of vec3_t elements by the x field, confirming that the
+ * comparator receives correctly aligned pointers to each full element and
+ * that the full struct is swapped atomically — not just the x field.
+ */
+static void test_sort_tensor_user_dtype_vec3(void** state) {
+    (void)state;
+    assert_true(ensure_dtype_registered(&vec3_desc));
+ 
+    allocator_vtable_t alloc = heap_allocator();
+    const size_t shape[] = { 4u };
+    tensor_expect_t r = init_tensor(1u, shape, VEC3_TYPE, alloc);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+    t->mode = ARRAY_STRUCT;
+    t->len  = 4u;
+ 
+    vec3_t a = { 3.0f, 30.0f, 300.0f };
+    vec3_t b = { 1.0f, 10.0f, 100.0f };
+    vec3_t c = { 4.0f, 40.0f, 400.0f };
+    vec3_t d = { 2.0f, 20.0f, 200.0f };
+ 
+    assert_int_equal(set_tensor_index(t, 0u, &a, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(set_tensor_index(t, 1u, &b, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(set_tensor_index(t, 2u, &c, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(set_tensor_index(t, 3u, &d, VEC3_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t, _cmp_vec3_by_x, FORWARD), NO_ERROR);
+ 
+    /* Expected order by x: b(1), d(2), a(3), c(4) */
+    vec3_t out0 = {0}, out1 = {0}, out2 = {0}, out3 = {0};
+    assert_int_equal(get_tensor_index(t, 0u, &out0, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 1u, &out1, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 2u, &out2, VEC3_TYPE), NO_ERROR);
+    assert_int_equal(get_tensor_index(t, 3u, &out3, VEC3_TYPE), NO_ERROR);
+ 
+    /* Verify x field (sort key) */
+    assert_float_equal(out0.x, 1.0f, 1e-6f);
+    assert_float_equal(out1.x, 2.0f, 1e-6f);
+    assert_float_equal(out2.x, 3.0f, 1e-6f);
+    assert_float_equal(out3.x, 4.0f, 1e-6f);
+ 
+    /* Verify y and z fields moved with their element — confirms full
+     * struct swap not just the sort key */
+    assert_float_equal(out0.y, 10.0f,  1e-6f);
+    assert_float_equal(out0.z, 100.0f, 1e-6f);
+    assert_float_equal(out1.y, 20.0f,  1e-6f);
+    assert_float_equal(out1.z, 200.0f, 1e-6f);
+    assert_float_equal(out2.y, 30.0f,  1e-6f);
+    assert_float_equal(out2.z, 300.0f, 1e-6f);
+    assert_float_equal(out3.y, 40.0f,  1e-6f);
+    assert_float_equal(out3.z, 400.0f, 1e-6f);
+ 
+    return_tensor(t);
+}
+ 
+// ---- Sort then reverse round-trip -------------------------------------------
+ 
+/**
+ * Sort ascending then reverse — result must equal a descending sort.
+ * Exercises the interaction between sort_tensor and reverse_tensor.
+ */
+static void test_sort_then_reverse_round_trip(void** state) {
+    (void)state;
+    tensor_expect_t r = _make_array(6u, INT32_TYPE, false);
+    assert_true(r.has_value);
+    tensor_t* t = r.u.value;
+ 
+    int32_t vals[] = { 4, 2, 6, 1, 5, 3 };
+    for (size_t i = 0u; i < 6u; i++)
+        assert_int_equal(push_back_tensor(t, &vals[i], INT32_TYPE), NO_ERROR);
+ 
+    assert_int_equal(sort_tensor(t,    _cmp_int32, FORWARD), NO_ERROR);
+    assert_int_equal(reverse_tensor(t),                      NO_ERROR);
+ 
+    int32_t expected[] = { 6, 5, 4, 3, 2, 1 };
+    for (size_t i = 0u; i < 6u; i++) {
+        int32_t out = -1;
+        assert_int_equal(get_tensor_index(t, i, &out, INT32_TYPE), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+ 
+    return_tensor(t);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -3992,6 +4690,57 @@ const struct CMUnitTest test_tensor[] = {
     /* slice_tensor_array — deep copy independence */
     cmocka_unit_test(test_slice_deep_copy_independence),
     cmocka_unit_test(test_slice_src_unmodified),
+
+    /* reverse_tensor — guards */
+    cmocka_unit_test(test_reverse_tensor_null),
+    cmocka_unit_test(test_reverse_tensor_empty),
+    cmocka_unit_test(test_reverse_tensor_single_element),
+
+    /* reverse_tensor — correctness */
+    cmocka_unit_test(test_reverse_tensor_two_elements),
+    cmocka_unit_test(test_reverse_tensor_even_length),
+    cmocka_unit_test(test_reverse_tensor_odd_length),
+    cmocka_unit_test(test_reverse_tensor_double_reverse),
+
+    /* reverse_tensor — mode and dtype coverage */
+    cmocka_unit_test(test_reverse_tensor_fixed_shape),
+    cmocka_unit_test(test_reverse_tensor_double_dtype),
+    cmocka_unit_test(test_reverse_tensor_user_dtype),
+
+    /* sort_tensor — null/guard */
+    cmocka_unit_test(test_sort_tensor_null_tensor),
+    cmocka_unit_test(test_sort_tensor_null_cmp),
+    cmocka_unit_test(test_sort_tensor_empty),
+    cmocka_unit_test(test_sort_tensor_single_element),
+ 
+    /* sort_tensor — two-element edge cases */
+    cmocka_unit_test(test_sort_tensor_two_elements_forward),
+    cmocka_unit_test(test_sort_tensor_two_elements_reverse),
+ 
+    /* sort_tensor — ARRAY_STRUCT forward sort */
+    cmocka_unit_test(test_sort_tensor_array_forward_int32),
+    cmocka_unit_test(test_sort_tensor_array_forward_float),
+ 
+    /* sort_tensor — ARRAY_STRUCT reverse sort */
+    cmocka_unit_test(test_sort_tensor_array_reverse_int32),
+ 
+    /* sort_tensor — degenerate inputs */
+    cmocka_unit_test(test_sort_tensor_already_sorted),
+    cmocka_unit_test(test_sort_tensor_reverse_sorted_input),
+    cmocka_unit_test(test_sort_tensor_all_equal),
+ 
+    /* sort_tensor — large array exercises quicksort path */
+    cmocka_unit_test(test_sort_tensor_large_array),
+ 
+    /* sort_tensor — TENSOR_STRUCT mode */
+    cmocka_unit_test(test_sort_tensor_fixed_shape),
+ 
+    /* sort_tensor — dtype coverage */
+    cmocka_unit_test(test_sort_tensor_double_dtype),
+    cmocka_unit_test(test_sort_tensor_user_dtype_vec3),
+ 
+    /* sort_tensor — interaction with reverse_tensor */
+    cmocka_unit_test(test_sort_then_reverse_round_trip),
 };
 
 const size_t test_tensor_count = sizeof(test_tensor) / sizeof(test_tensor[0]);
