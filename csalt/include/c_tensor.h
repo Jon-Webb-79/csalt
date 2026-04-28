@@ -32,10 +32,10 @@ extern "C" {
 // STRUCTS AND DERIVED DATA TYPES 
 
 typedef enum {
-    TENSOR_STRUCT,   /* N-D fixed capacity; all slots zero-initialised;
+    TENSOR_STRUCT = 0,   /* N-D fixed capacity; all slots zero-initialised;
                       len == alloc == product of shape at all times     */
 
-    ARRAY_STRUCT     /* 1-D only; len tracks populated count;
+    ARRAY_STRUCT = 1     /* 1-D only; len tracks populated count;
                       growth flag controls automatic reallocation       */
 } tensor_mode_t;
 

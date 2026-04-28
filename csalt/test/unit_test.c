@@ -46,8 +46,8 @@ int main(void) {
         {"Slab Allocator",  test_slab_allocator, test_slab_allocator_count},
         {"String Implementation", test_string, test_string_count},
         {"Types Implementation", test_dtypes, test_dtypes_count},
-        {"Generic Tensor", test_tensor, test_tensor_count}
-        // {"Uint8 Array", test_uint8_array, test_uint8_array_count},
+        {"Generic Tensor", test_tensor, test_tensor_count},
+        {"Uint8 Tensor", test_uint8_tensor, test_uint8_tensor_count},
         // {"Int8 Array", test_int8_array, test_int8_array_count},
         // {"Uint16 Array", test_uint16_array, test_uint16_array_count},
         // {"Int16 Array", test_int16_array, test_int16_array_count},

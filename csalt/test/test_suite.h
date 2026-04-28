@@ -116,8 +116,8 @@ extern const size_t test_tensor_count;
 // ================================================================================
 // ================================================================================
 
-// extern const struct CMUnitTest test_uint8_array[];
-// extern const size_t test_uint8_array_count;
+extern const struct CMUnitTest test_uint8_tensor[];
+extern const size_t test_uint8_tensor_count;
 // // ================================================================================ 
 // // ================================================================================ 
 //
