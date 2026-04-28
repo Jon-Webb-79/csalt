@@ -55,6 +55,11 @@ set(CSALT_SOURCES
   c_error.c
   c_tensor.c
   c_uint8.c
+  c_int8.c
+  c_uint16.c
+  c_int16.c
+  c_uint32.c
+  c_int32.c
   # c_array.c
   # c_dict.c
   # c_uint8.c

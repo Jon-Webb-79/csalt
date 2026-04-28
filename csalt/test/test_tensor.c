@@ -23,6 +23,11 @@
 #include "c_dtypes.h"
 #include "c_error.h"
 #include "c_uint8.h"
+#include "c_int8.h"
+#include "c_uint16.h"
+#include "c_int16.h"
+#include "c_uint32.h"
+#include "c_int32.h"
 
 // ================================================================================
 // ================================================================================
@@ -1341,11 +1346,11 @@ static void test_set_get_fixed_shape_after_clear(void** state) {
     printf("%s\n", error_to_string(err));
     assert_int_equal(set_tensor_index(t, 0u, &val, FLOAT_TYPE), NO_ERROR);
 
-    // float out = 0.0f;
-    // assert_int_equal(get_tensor_index(t, 0u, &out, FLOAT_TYPE), NO_ERROR);
-    // assert_float_equal(out, 2.5f, 0.0f);
-    //
-    // return_tensor(t);
+    float out = 0.0f;
+    assert_int_equal(get_tensor_index(t, 0u, &out, FLOAT_TYPE), NO_ERROR);
+    assert_float_equal(out, 2.5f, 0.0f);
+
+    return_tensor(t);
 }
 
 /**
@@ -4747,9 +4752,6 @@ const struct CMUnitTest test_tensor[] = {
 const size_t test_tensor_count = sizeof(test_tensor) / sizeof(test_tensor[0]);
 // ================================================================================ 
 // ================================================================================ 
-
-// ================================================================================
-// ================================================================================
 // HELPERS
 
 /** Construct a populated uint8 array with values 1..n. */
@@ -5516,6 +5518,3843 @@ const struct CMUnitTest test_uint8_tensor[] = {
 
 const size_t test_uint8_tensor_count = sizeof(test_uint8_tensor) /
                                        sizeof(test_uint8_tensor[0]);
+// ================================================================================ 
+// ================================================================================ 
+// HELPERS
+
+/** Construct a populated int8 array with values 1..n. */
+static int8_tensor_t* _make_int8_array(size_t capacity, bool growth) {
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r  = init_int8_array(capacity, growth, alloc);
+    if (!r.has_value) return NULL;
+    return r.u.value;
+}
+
+static int8_tensor_t* _make_int8_array_filled(size_t n, int8_t base) {
+    /* Allocate n+1 so the result always has at least one free slot,
+     * making it safe to use as a push destination in tests. */
+    int8_tensor_t* arr = _make_int8_array(n + 1u, false);
+    if (arr == NULL) return NULL;
+    for (size_t i = 0u; i < n; i++) {
+        int8_t val = (int8_t)(base + i);
+        push_back_int8_array(arr, val);
+    }
+    return arr;
+}
+
+// ================================================================================
+// ================================================================================
+// INITIALISATION AND TEARDOWN
+
+// ---- init_int8_array ----------------------------------------------------------
+
+/** NULL allocator must propagate an error through the expect type. */
+static void test_init_int8_array_null_allocator(void** state) {
+    (void)state;
+    allocator_vtable_t bad = heap_allocator();
+    bad.allocate = NULL;
+    int8_tensor_expect_t r = init_int8_array(8u, false, bad);
+    assert_false(r.has_value);
+}
+
+/** Successful construction produces a non-NULL wrapper with correct mode. */
+static void test_init_int8_array_success(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r  = init_int8_array(8u, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  ARRAY_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, INT8_TYPE);
+    assert_int_equal(r.u.value->base->len,   0u);
+    assert_int_equal(r.u.value->base->alloc, 8u);
+    return_int8_tensor(r.u.value);
+}
+
+// ---- init_int8_tensor ---------------------------------------------------------
+
+/** Successful construction of a fixed-shape tensor. */
+static void test_init_int8_tensor_success(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r  = init_int8_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  TENSOR_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, INT8_TYPE);
+    assert_int_equal(r.u.value->base->len,   12u);
+    return_int8_tensor(r.u.value);
+}
+
+/** NULL shape propagates an error. */
+static void test_init_int8_tensor_null_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r  = init_int8_tensor(2u, NULL, alloc);
+    assert_false(r.has_value);
+}
+
+// ---- return_int8_tensor -------------------------------------------------------
+
+/** return_int8_tensor(NULL) must not crash. */
+static void test_return_int8_tensor_null(void** state) {
+    (void)state;
+    return_int8_tensor(NULL);
+}
+
+/** Normal construction followed by return must not crash or leak. */
+static void test_return_int8_tensor_normal(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+    return_int8_tensor(arr);
+}
+
+// ---- copy_int8_tensor ---------------------------------------------------------
+
+/** NULL src must return NULL_POINTER. */
+static void test_copy_int8_tensor_null_src(void** state) {
+    (void)state;
+    int8_tensor_expect_t r = copy_int8_tensor(NULL, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+/** Copy is independent of source — mutation of copy does not affect src. */
+static void test_copy_int8_tensor_independence(void** state) {
+    (void)state;
+    int8_tensor_t* src = _make_int8_array_filled(3u, 10u);
+    assert_non_null(src);
+
+    int8_tensor_expect_t r = copy_int8_tensor(src, NULL);
+    assert_true(r.has_value);
+    int8_tensor_t* dst = r.u.value;
+
+    /* Overwrite slot 0 of the copy */
+    assert_int_equal(set_int8_tensor_index(dst, 0u, 99u), NO_ERROR);
+
+    /* Source slot 0 must be unchanged */
+    int8_t src_val = 0u;
+    assert_int_equal(get_int8_tensor_index(src, 0u, &src_val), NO_ERROR);
+    assert_int_equal(src_val, 10u);
+
+    return_int8_tensor(src);
+    return_int8_tensor(dst);
+}
+
+// ================================================================================
+// ================================================================================
+// INTROSPECTION
+
+static void test_int8_tensor_size_null(void** state) {
+    (void)state;
+    assert_int_equal(int8_tensor_size(NULL), 0u);
+}
+
+static void test_int8_tensor_size_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_int_equal(int8_tensor_size(arr), 3u);
+    return_int8_tensor(arr);
+}
+
+static void test_int8_tensor_alloc_null(void** state) {
+    (void)state;
+    assert_int_equal(int8_tensor_alloc(NULL), 0u);
+}
+
+static void test_int8_tensor_alloc_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+    assert_int_equal(int8_tensor_alloc(arr), 8u);
+    return_int8_tensor(arr);
+}
+
+static void test_int8_tensor_data_size_null(void** state) {
+    (void)state;
+    assert_int_equal(int8_tensor_data_size(NULL), 0u);
+}
+
+static void test_int8_tensor_data_size_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(int8_tensor_data_size(arr), sizeof(int8_t));
+    return_int8_tensor(arr);
+}
+
+static void test_int8_tensor_dtype_null(void** state) {
+    (void)state;
+    assert_int_equal(int8_tensor_dtype(NULL), UNKNOWN_TYPE);
+}
+
+static void test_int8_tensor_dtype_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(int8_tensor_dtype(arr), INT8_TYPE);
+    return_int8_tensor(arr);
+}
+
+static void test_is_int8_tensor_empty_null(void** state) {
+    (void)state;
+    assert_true(is_int8_tensor_empty(NULL));
+}
+
+static void test_is_int8_tensor_empty_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+    assert_true(is_int8_tensor_empty(arr));
+    push_back_int8_array(arr, 1u);
+    assert_false(is_int8_tensor_empty(arr));
+    return_int8_tensor(arr);
+}
+
+static void test_is_int8_tensor_full_null(void** state) {
+    (void)state;
+    assert_true(is_int8_tensor_full(NULL));
+}
+
+static void test_is_int8_tensor_full_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(2u, false);
+    assert_non_null(arr);
+    assert_false(is_int8_tensor_full(arr));
+    push_back_int8_array(arr, 1u);
+    push_back_int8_array(arr, 2u);
+    assert_true(is_int8_tensor_full(arr));
+    return_int8_tensor(arr);
+}
+
+static void test_is_int8_tensor_ptr_null_wrapper(void** state) {
+    (void)state;
+    int8_t dummy = 0u;
+    assert_false(is_int8_tensor_ptr(NULL, &dummy));
+}
+
+static void test_is_int8_tensor_ptr_valid(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(4u, 10u);
+    assert_non_null(arr);
+    /* Pointer to first element must be valid */
+    const int8_t* p = (const int8_t*)arr->base->data;
+    assert_true(is_int8_tensor_ptr(arr, p));
+    return_int8_tensor(arr);
+}
+
+static void test_int8_tensor_ndim_null(void** state) {
+    (void)state;
+    assert_int_equal(int8_tensor_ndim(NULL), 0u);
+}
+
+static void test_int8_tensor_ndim_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(int8_tensor_ndim(arr), 1u);
+    return_int8_tensor(arr);
+}
+
+static void test_int8_tensor_shape_dim_null(void** state) {
+    (void)state;
+    assert_int_equal(int8_tensor_shape_dim(NULL, 0u), 0u);
+}
+
+static void test_int8_tensor_shape_dim_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r  = init_int8_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_int_equal(int8_tensor_shape_dim(r.u.value, 0u), 3u);
+    assert_int_equal(int8_tensor_shape_dim(r.u.value, 1u), 4u);
+    return_int8_tensor(r.u.value);
+}
+
+static void test_int8_tensor_shape_null(void** state) {
+    (void)state;
+    size_t buf[2];
+    assert_int_equal(int8_tensor_shape(NULL, buf, 2u), NULL_POINTER);
+}
+
+static void test_int8_tensor_shape_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r  = init_int8_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    size_t buf[2] = { 0u, 0u };
+    assert_int_equal(int8_tensor_shape(r.u.value, buf, 2u), NO_ERROR);
+    assert_int_equal(buf[0], 3u);
+    assert_int_equal(buf[1], 4u);
+    return_int8_tensor(r.u.value);
+}
+
+static void test_int8_tensor_shape_ptr_null(void** state) {
+    (void)state;
+    assert_null(int8_tensor_shape_ptr(NULL));
+}
+
+static void test_int8_tensor_shape_ptr_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+    assert_non_null(int8_tensor_shape_ptr(arr));
+    return_int8_tensor(arr);
+}
+
+static void test_int8_tensor_strides_ptr_null(void** state) {
+    (void)state;
+    assert_null(int8_tensor_strides_ptr(NULL));
+}
+
+static void test_int8_tensor_strides_ptr_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+    const size_t* strides = int8_tensor_strides_ptr(arr);
+    assert_non_null(strides);
+    assert_int_equal(strides[0], sizeof(int8_t));
+    return_int8_tensor(arr);
+}
+
+static void test_int8_tensor_shape_str_null(void** state) {
+    (void)state;
+    char buf[32];
+    assert_int_equal(int8_tensor_shape_str(NULL, buf, sizeof(buf)), NULL_POINTER);
+}
+
+static void test_int8_tensor_shape_str_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+    char buf[32];
+    assert_int_equal(int8_tensor_shape_str(arr, buf, sizeof(buf)), NO_ERROR);
+    assert_string_equal(buf, "(8)");
+    return_int8_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// UTILITY OPERATIONS
+
+// ---- clear_int8_tensor --------------------------------------------------------
+
+static void test_clear_int8_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(clear_int8_tensor(NULL), NULL_POINTER);
+}
+
+static void test_clear_int8_tensor_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(3u, 10u);
+    assert_non_null(arr);
+    assert_int_equal(clear_int8_tensor(arr), NO_ERROR);
+    assert_int_equal(int8_tensor_size(arr), 0u);
+    return_int8_tensor(arr);
+}
+
+// ---- concat_int8_tensor_array -------------------------------------------------
+
+static void test_concat_int8_tensor_null(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(concat_int8_tensor_array(NULL, arr), NULL_POINTER);
+    assert_int_equal(concat_int8_tensor_array(arr, NULL), NULL_POINTER);
+    return_int8_tensor(arr);
+}
+
+static void test_concat_int8_tensor_value(void** state) {
+    (void)state;
+
+    /* dst needs capacity for 5 elements total — allocate with room to grow */
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r  = init_int8_array(8u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* dst = r.u.value;
+
+    /* Populate dst with [1, 2, 3] */
+    push_back_int8_array(dst, 1u);
+    push_back_int8_array(dst, 2u);
+    push_back_int8_array(dst, 3u);
+
+    /* src = [4, 5] */
+    int8_tensor_t* src = _make_int8_array_filled(2u, 4u);
+    assert_non_null(src);
+
+    assert_int_equal(concat_int8_tensor_array(dst, src), NO_ERROR);
+    assert_int_equal(int8_tensor_size(dst), 5u);
+
+    int8_t expected[] = { 1u, 2u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        int8_t out = 0u;
+        assert_int_equal(get_int8_tensor_index(dst, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int8_tensor(dst);
+    return_int8_tensor(src);
+}
+
+// ---- slice_int8_tensor_array --------------------------------------------------
+
+static void test_slice_int8_tensor_null(void** state) {
+    (void)state;
+    int8_tensor_expect_t r = slice_int8_tensor_array(NULL, 0u, 1u, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+static void test_slice_int8_tensor_value(void** state) {
+    (void)state;
+    int8_tensor_t* src = _make_int8_array_filled(5u, 10u); /* [10,11,12,13,14] */
+    assert_non_null(src);
+
+    int8_tensor_expect_t r = slice_int8_tensor_array(src, 1u, 4u, NULL);
+    assert_true(r.has_value);
+    int8_tensor_t* sl = r.u.value;
+
+    assert_int_equal(int8_tensor_size(sl), 3u);
+    int8_t expected[] = { 11u, 12u, 13u };
+    for (size_t i = 0u; i < 3u; i++) {
+        int8_t out = 0u;
+        assert_int_equal(get_int8_tensor_index(sl, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int8_tensor(src);
+    return_int8_tensor(sl);
+}
+
+// ---- reverse_int8_tensor ------------------------------------------------------
+
+static void test_reverse_int8_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(reverse_int8_tensor(NULL), NULL_POINTER);
+}
+
+static void test_reverse_int8_tensor_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(4u, 1u); /* [1,2,3,4] */
+    assert_non_null(arr);
+
+    assert_int_equal(reverse_int8_tensor(arr), NO_ERROR);
+
+    int8_t expected[] = { 4u, 3u, 2u, 1u };
+    for (size_t i = 0u; i < 4u; i++) {
+        int8_t out = 0u;
+        assert_int_equal(get_int8_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int8_tensor(arr);
+}
+
+// ---- sort_int8_tensor ---------------------------------------------------------
+
+static void test_sort_int8_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(sort_int8_tensor(NULL, FORWARD), NULL_POINTER);
+}
+
+static void test_sort_int8_tensor_forward(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(5u, false);
+    assert_non_null(arr);
+
+    int8_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int8_array(arr, vals[i]);
+
+    assert_int_equal(sort_int8_tensor(arr, FORWARD), NO_ERROR);
+
+    int8_t expected[] = { 1u, 1u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        int8_t out = 0u;
+        assert_int_equal(get_int8_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int8_tensor(arr);
+}
+
+static void test_sort_int8_tensor_reverse(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(5u, false);
+    assert_non_null(arr);
+
+    int8_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int8_array(arr, vals[i]);
+
+    assert_int_equal(sort_int8_tensor(arr, REVERSE), NO_ERROR);
+
+    int8_t expected[] = { 5u, 4u, 3u, 1u, 1u };
+    for (size_t i = 0u; i < 5u; i++) {
+        int8_t out = 0u;
+        assert_int_equal(get_int8_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int8_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// SET AND GET DATA
+
+// ---- set_int8_tensor_index / get_int8_tensor_index --------------------------
+
+static void test_set_get_int8_tensor_index_null(void** state) {
+    (void)state;
+    int8_t dummy = 0u;
+    assert_int_equal(set_int8_tensor_index(NULL, 0u, 1u),    NULL_POINTER);
+    assert_int_equal(get_int8_tensor_index(NULL, 0u, &dummy), NULL_POINTER);
+}
+
+static void test_set_get_int8_tensor_index_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(3u, 10u);
+    assert_non_null(arr);
+
+    assert_int_equal(set_int8_tensor_index(arr, 1u, 99u), NO_ERROR);
+
+    int8_t out = 0u;
+    assert_int_equal(get_int8_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+
+    return_int8_tensor(arr);
+}
+
+// ---- set_int8_tensor_nd_index / get_int8_tensor_nd_index --------------------
+
+static void test_set_get_int8_tensor_nd_index_null(void** state) {
+    (void)state;
+    size_t  idx[] = { 0u, 0u };
+    int8_t out   = 0u;
+    assert_int_equal(set_int8_tensor_nd_index(NULL, idx, 1u),   NULL_POINTER);
+    assert_int_equal(get_int8_tensor_nd_index(NULL, idx, &out), NULL_POINTER);
+}
+
+static void test_set_get_int8_tensor_nd_index_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r  = init_int8_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* mat = r.u.value;
+
+    size_t idx[] = { 1u, 2u };
+    assert_int_equal(set_int8_tensor_nd_index(mat, idx, 42u), NO_ERROR);
+
+    int8_t out = 0u;
+    assert_int_equal(get_int8_tensor_nd_index(mat, idx, &out), NO_ERROR);
+    assert_int_equal(out, 42u);
+
+    return_int8_tensor(mat);
+}
+
+// ---- push and pop wrappers ----------------------------------------------------
+
+static void test_push_back_int8_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_back_int8_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_back_int8_array_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+
+    assert_int_equal(push_back_int8_array(arr, 10u), NO_ERROR);
+    assert_int_equal(push_back_int8_array(arr, 20u), NO_ERROR);
+    assert_int_equal(int8_tensor_size(arr), 2u);
+
+    int8_t out = 0u;
+    assert_int_equal(get_int8_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 20u);
+
+    return_int8_tensor(arr);
+}
+
+static void test_push_front_int8_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_front_int8_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_front_int8_array_value(void** state) {
+    (void)state;
+    /* Capacity 3 so there is room for the push_front */
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r  = init_int8_array(3u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+
+    push_back_int8_array(arr, 10u);
+    push_back_int8_array(arr, 11u);
+    /* arr = [10, 11], len == 2, alloc == 3 — one slot free */
+
+    assert_int_equal(push_front_int8_array(arr, 99u), NO_ERROR);
+
+    int8_t out = 0u;
+    assert_int_equal(get_int8_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_int8_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_int8_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+
+    return_int8_tensor(arr);
+}
+
+static void test_push_at_int8_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_at_int8_array(NULL, 1u, 0u), NULL_POINTER);
+}
+
+static void test_push_at_int8_array_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(3u, 10u); /* [10, 11, 12] */
+    assert_non_null(arr);
+
+    assert_int_equal(push_at_int8_array(arr, 99u, 1u), NO_ERROR);
+    /* arr = [10, 99, 11, 12] */
+
+    int8_t out = 0u;
+    assert_int_equal(get_int8_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_int8_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_int8_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+    assert_int_equal(get_int8_tensor_index(arr, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+
+    return_int8_tensor(arr);
+}
+
+static void test_pop_back_int8_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_int8_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_back_int8_array_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    int8_t out = 0u;
+    assert_int_equal(pop_back_int8_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(int8_tensor_size(arr), 2u);
+
+    return_int8_tensor(arr);
+}
+
+static void test_pop_front_int8_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_int8_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_front_int8_array_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    int8_t out = 0u;
+    assert_int_equal(pop_front_int8_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(int8_tensor_size(arr), 2u);
+
+    return_int8_tensor(arr);
+}
+
+static void test_pop_at_int8_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_at_int8_array(NULL, NULL, 0u), NULL_POINTER);
+}
+
+static void test_pop_at_int8_array_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(4u, 10u); /* [10,11,12,13] */
+    assert_non_null(arr);
+
+    int8_t out = 0u;
+    assert_int_equal(pop_at_int8_array(arr, &out, 2u), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(int8_tensor_size(arr), 3u);
+
+    assert_int_equal(get_int8_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 13u);
+
+    return_int8_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// TEST SUITE REGISTRY
+
+const struct CMUnitTest test_int8_tensor[] = {
+    /* init_int8_array */
+    cmocka_unit_test(test_init_int8_array_null_allocator),
+    cmocka_unit_test(test_init_int8_array_success),
+
+    /* init_int8_tensor */
+    cmocka_unit_test(test_init_int8_tensor_success),
+    cmocka_unit_test(test_init_int8_tensor_null_shape),
+
+    /* return_int8_tensor */
+    cmocka_unit_test(test_return_int8_tensor_null),
+    cmocka_unit_test(test_return_int8_tensor_normal),
+
+    /* copy_int8_tensor */
+    cmocka_unit_test(test_copy_int8_tensor_null_src),
+    cmocka_unit_test(test_copy_int8_tensor_independence),
+
+    /* introspection — null guards */
+    cmocka_unit_test(test_int8_tensor_size_null),
+    cmocka_unit_test(test_int8_tensor_alloc_null),
+    cmocka_unit_test(test_int8_tensor_data_size_null),
+    cmocka_unit_test(test_int8_tensor_dtype_null),
+    cmocka_unit_test(test_is_int8_tensor_empty_null),
+    cmocka_unit_test(test_is_int8_tensor_full_null),
+    cmocka_unit_test(test_is_int8_tensor_ptr_null_wrapper),
+    cmocka_unit_test(test_int8_tensor_ndim_null),
+    cmocka_unit_test(test_int8_tensor_shape_dim_null),
+    cmocka_unit_test(test_int8_tensor_shape_null),
+    cmocka_unit_test(test_int8_tensor_shape_ptr_null),
+    cmocka_unit_test(test_int8_tensor_strides_ptr_null),
+    cmocka_unit_test(test_int8_tensor_shape_str_null),
+
+    /* introspection — values */
+    cmocka_unit_test(test_int8_tensor_size_value),
+    cmocka_unit_test(test_int8_tensor_alloc_value),
+    cmocka_unit_test(test_int8_tensor_data_size_value),
+    cmocka_unit_test(test_int8_tensor_dtype_value),
+    cmocka_unit_test(test_is_int8_tensor_empty_value),
+    cmocka_unit_test(test_is_int8_tensor_full_value),
+    cmocka_unit_test(test_is_int8_tensor_ptr_valid),
+    cmocka_unit_test(test_int8_tensor_ndim_value),
+    cmocka_unit_test(test_int8_tensor_shape_dim_value),
+    cmocka_unit_test(test_int8_tensor_shape_value),
+    cmocka_unit_test(test_int8_tensor_shape_ptr_value),
+    cmocka_unit_test(test_int8_tensor_strides_ptr_value),
+    cmocka_unit_test(test_int8_tensor_shape_str_value),
+
+    /* utility — null guards */
+    cmocka_unit_test(test_clear_int8_tensor_null),
+    cmocka_unit_test(test_concat_int8_tensor_null),
+    cmocka_unit_test(test_slice_int8_tensor_null),
+    cmocka_unit_test(test_reverse_int8_tensor_null),
+    cmocka_unit_test(test_sort_int8_tensor_null),
+
+    /* utility — values */
+    cmocka_unit_test(test_clear_int8_tensor_value),
+    cmocka_unit_test(test_concat_int8_tensor_value),
+    cmocka_unit_test(test_slice_int8_tensor_value),
+    cmocka_unit_test(test_reverse_int8_tensor_value),
+    cmocka_unit_test(test_sort_int8_tensor_forward),
+    cmocka_unit_test(test_sort_int8_tensor_reverse),
+
+    /* set/get — null guards */
+    cmocka_unit_test(test_set_get_int8_tensor_index_null),
+    cmocka_unit_test(test_set_get_int8_tensor_nd_index_null),
+    cmocka_unit_test(test_push_back_int8_array_null),
+    cmocka_unit_test(test_push_front_int8_array_null),
+    cmocka_unit_test(test_push_at_int8_array_null),
+    cmocka_unit_test(test_pop_back_int8_array_null),
+    cmocka_unit_test(test_pop_front_int8_array_null),
+    cmocka_unit_test(test_pop_at_int8_array_null),
+
+    /* set/get — values */
+    cmocka_unit_test(test_set_get_int8_tensor_index_value),
+    cmocka_unit_test(test_set_get_int8_tensor_nd_index_value),
+    cmocka_unit_test(test_push_back_int8_array_value),
+    cmocka_unit_test(test_push_front_int8_array_value),
+    cmocka_unit_test(test_push_at_int8_array_value),
+    cmocka_unit_test(test_pop_back_int8_array_value),
+    cmocka_unit_test(test_pop_front_int8_array_value),
+    cmocka_unit_test(test_pop_at_int8_array_value),
+};
+
+const size_t test_int8_tensor_count = sizeof(test_int8_tensor) /
+                                       sizeof(test_int8_tensor[0]);
+// ================================================================================ 
+// ================================================================================ 
+// HELPERS
+
+/** Construct a populated uint8 array with values 1..n. */
+static uint16_tensor_t* _make_uint16_array(size_t capacity, bool growth) {
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r  = init_uint16_array(capacity, growth, alloc);
+    if (!r.has_value) return NULL;
+    return r.u.value;
+}
+
+static uint16_tensor_t* _make_uint16_array_filled(size_t n, uint16_t base) {
+    /* Allocate n+1 so the result always has at least one free slot,
+     * making it safe to use as a push destination in tests. */
+    uint16_tensor_t* arr = _make_uint16_array(n + 1u, false);
+    if (arr == NULL) return NULL;
+    for (size_t i = 0u; i < n; i++) {
+        uint16_t val = (uint16_t)(base + i);
+        push_back_uint16_array(arr, val);
+    }
+    return arr;
+}
+
+// ================================================================================
+// ================================================================================
+// INITIALISATION AND TEARDOWN
+
+// ---- init_uint16_array ----------------------------------------------------------
+
+/** NULL allocator must propagate an error through the expect type. */
+static void test_init_uint16_array_null_allocator(void** state) {
+    (void)state;
+    allocator_vtable_t bad = heap_allocator();
+    bad.allocate = NULL;
+    uint16_tensor_expect_t r = init_uint16_array(8u, false, bad);
+    assert_false(r.has_value);
+}
+
+/** Successful construction produces a non-NULL wrapper with correct mode. */
+static void test_init_uint16_array_success(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r  = init_uint16_array(8u, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  ARRAY_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, UINT16_TYPE);
+    assert_int_equal(r.u.value->base->len,   0u);
+    assert_int_equal(r.u.value->base->alloc, 8u);
+    return_uint16_tensor(r.u.value);
+}
+
+// ---- init_uint16_tensor ---------------------------------------------------------
+
+/** Successful construction of a fixed-shape tensor. */
+static void test_init_uint16_tensor_success(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r  = init_uint16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  TENSOR_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, UINT16_TYPE);
+    assert_int_equal(r.u.value->base->len,   12u);
+    return_uint16_tensor(r.u.value);
+}
+
+/** NULL shape propagates an error. */
+static void test_init_uint16_tensor_null_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r  = init_uint16_tensor(2u, NULL, alloc);
+    assert_false(r.has_value);
+}
+
+// ---- return_uint16_tensor -------------------------------------------------------
+
+/** return_uint16_tensor(NULL) must not crash. */
+static void test_return_uint16_tensor_null(void** state) {
+    (void)state;
+    return_uint16_tensor(NULL);
+}
+
+/** Normal construction followed by return must not crash or leak. */
+static void test_return_uint16_tensor_normal(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+    return_uint16_tensor(arr);
+}
+
+// ---- copy_uint16_tensor ---------------------------------------------------------
+
+/** NULL src must return NULL_POINTER. */
+static void test_copy_uint16_tensor_null_src(void** state) {
+    (void)state;
+    uint16_tensor_expect_t r = copy_uint16_tensor(NULL, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+/** Copy is independent of source — mutation of copy does not affect src. */
+static void test_copy_uint16_tensor_independence(void** state) {
+    (void)state;
+    uint16_tensor_t* src = _make_uint16_array_filled(3u, 10u);
+    assert_non_null(src);
+
+    uint16_tensor_expect_t r = copy_uint16_tensor(src, NULL);
+    assert_true(r.has_value);
+    uint16_tensor_t* dst = r.u.value;
+
+    /* Overwrite slot 0 of the copy */
+    assert_int_equal(set_uint16_tensor_index(dst, 0u, 99u), NO_ERROR);
+
+    /* Source slot 0 must be unchanged */
+    uint16_t src_val = 0u;
+    assert_int_equal(get_uint16_tensor_index(src, 0u, &src_val), NO_ERROR);
+    assert_int_equal(src_val, 10u);
+
+    return_uint16_tensor(src);
+    return_uint16_tensor(dst);
+}
+
+// ================================================================================
+// ================================================================================
+// INTROSPECTION
+
+static void test_uint16_tensor_size_null(void** state) {
+    (void)state;
+    assert_int_equal(uint16_tensor_size(NULL), 0u);
+}
+
+static void test_uint16_tensor_size_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_int_equal(uint16_tensor_size(arr), 3u);
+    return_uint16_tensor(arr);
+}
+
+static void test_uint16_tensor_alloc_null(void** state) {
+    (void)state;
+    assert_int_equal(uint16_tensor_alloc(NULL), 0u);
+}
+
+static void test_uint16_tensor_alloc_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+    assert_int_equal(uint16_tensor_alloc(arr), 8u);
+    return_uint16_tensor(arr);
+}
+
+static void test_uint16_tensor_data_size_null(void** state) {
+    (void)state;
+    assert_int_equal(uint16_tensor_data_size(NULL), 0u);
+}
+
+static void test_uint16_tensor_data_size_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(uint16_tensor_data_size(arr), sizeof(uint16_t));
+    return_uint16_tensor(arr);
+}
+
+static void test_uint16_tensor_dtype_null(void** state) {
+    (void)state;
+    assert_int_equal(uint16_tensor_dtype(NULL), UNKNOWN_TYPE);
+}
+
+static void test_uint16_tensor_dtype_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(uint16_tensor_dtype(arr), UINT16_TYPE);
+    return_uint16_tensor(arr);
+}
+
+static void test_is_uint16_tensor_empty_null(void** state) {
+    (void)state;
+    assert_true(is_uint16_tensor_empty(NULL));
+}
+
+static void test_is_uint16_tensor_empty_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+    assert_true(is_uint16_tensor_empty(arr));
+    push_back_uint16_array(arr, 1u);
+    assert_false(is_uint16_tensor_empty(arr));
+    return_uint16_tensor(arr);
+}
+
+static void test_is_uint16_tensor_full_null(void** state) {
+    (void)state;
+    assert_true(is_uint16_tensor_full(NULL));
+}
+
+static void test_is_uint16_tensor_full_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(2u, false);
+    assert_non_null(arr);
+    assert_false(is_uint16_tensor_full(arr));
+    push_back_uint16_array(arr, 1u);
+    push_back_uint16_array(arr, 2u);
+    assert_true(is_uint16_tensor_full(arr));
+    return_uint16_tensor(arr);
+}
+
+static void test_is_uint16_tensor_ptr_null_wrapper(void** state) {
+    (void)state;
+    uint16_t dummy = 0u;
+    assert_false(is_uint16_tensor_ptr(NULL, &dummy));
+}
+
+static void test_is_uint16_tensor_ptr_valid(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(4u, 10u);
+    assert_non_null(arr);
+    /* Pointer to first element must be valid */
+    const uint16_t* p = (const uint16_t*)arr->base->data;
+    assert_true(is_uint16_tensor_ptr(arr, p));
+    return_uint16_tensor(arr);
+}
+
+static void test_uint16_tensor_ndim_null(void** state) {
+    (void)state;
+    assert_int_equal(uint16_tensor_ndim(NULL), 0u);
+}
+
+static void test_uint16_tensor_ndim_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(uint16_tensor_ndim(arr), 1u);
+    return_uint16_tensor(arr);
+}
+
+static void test_uint16_tensor_shape_dim_null(void** state) {
+    (void)state;
+    assert_int_equal(uint16_tensor_shape_dim(NULL, 0u), 0u);
+}
+
+static void test_uint16_tensor_shape_dim_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r  = init_uint16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_int_equal(uint16_tensor_shape_dim(r.u.value, 0u), 3u);
+    assert_int_equal(uint16_tensor_shape_dim(r.u.value, 1u), 4u);
+    return_uint16_tensor(r.u.value);
+}
+
+static void test_uint16_tensor_shape_null(void** state) {
+    (void)state;
+    size_t buf[2];
+    assert_int_equal(uint16_tensor_shape(NULL, buf, 2u), NULL_POINTER);
+}
+
+static void test_uint16_tensor_shape_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r  = init_uint16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    size_t buf[2] = { 0u, 0u };
+    assert_int_equal(uint16_tensor_shape(r.u.value, buf, 2u), NO_ERROR);
+    assert_int_equal(buf[0], 3u);
+    assert_int_equal(buf[1], 4u);
+    return_uint16_tensor(r.u.value);
+}
+
+static void test_uint16_tensor_shape_ptr_null(void** state) {
+    (void)state;
+    assert_null(uint16_tensor_shape_ptr(NULL));
+}
+
+static void test_uint16_tensor_shape_ptr_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+    assert_non_null(uint16_tensor_shape_ptr(arr));
+    return_uint16_tensor(arr);
+}
+
+static void test_uint16_tensor_strides_ptr_null(void** state) {
+    (void)state;
+    assert_null(uint16_tensor_strides_ptr(NULL));
+}
+
+static void test_uint16_tensor_strides_ptr_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+    const size_t* strides = uint16_tensor_strides_ptr(arr);
+    assert_non_null(strides);
+    assert_int_equal(strides[0], sizeof(uint16_t));
+    return_uint16_tensor(arr);
+}
+
+static void test_uint16_tensor_shape_str_null(void** state) {
+    (void)state;
+    char buf[32];
+    assert_int_equal(uint16_tensor_shape_str(NULL, buf, sizeof(buf)), NULL_POINTER);
+}
+
+static void test_uint16_tensor_shape_str_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+    char buf[32];
+    assert_int_equal(uint16_tensor_shape_str(arr, buf, sizeof(buf)), NO_ERROR);
+    assert_string_equal(buf, "(8)");
+    return_uint16_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// UTILITY OPERATIONS
+
+// ---- clear_uint16_tensor --------------------------------------------------------
+
+static void test_clear_uint16_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(clear_uint16_tensor(NULL), NULL_POINTER);
+}
+
+static void test_clear_uint16_tensor_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(3u, 10u);
+    assert_non_null(arr);
+    assert_int_equal(clear_uint16_tensor(arr), NO_ERROR);
+    assert_int_equal(uint16_tensor_size(arr), 0u);
+    return_uint16_tensor(arr);
+}
+
+// ---- concat_uint16_tensor_array -------------------------------------------------
+
+static void test_concat_uint16_tensor_null(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(concat_uint16_tensor_array(NULL, arr), NULL_POINTER);
+    assert_int_equal(concat_uint16_tensor_array(arr, NULL), NULL_POINTER);
+    return_uint16_tensor(arr);
+}
+
+static void test_concat_uint16_tensor_value(void** state) {
+    (void)state;
+
+    /* dst needs capacity for 5 elements total — allocate with room to grow */
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r  = init_uint16_array(8u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* dst = r.u.value;
+
+    /* Populate dst with [1, 2, 3] */
+    push_back_uint16_array(dst, 1u);
+    push_back_uint16_array(dst, 2u);
+    push_back_uint16_array(dst, 3u);
+
+    /* src = [4, 5] */
+    uint16_tensor_t* src = _make_uint16_array_filled(2u, 4u);
+    assert_non_null(src);
+
+    assert_int_equal(concat_uint16_tensor_array(dst, src), NO_ERROR);
+    assert_int_equal(uint16_tensor_size(dst), 5u);
+
+    uint16_t expected[] = { 1u, 2u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        uint16_t out = 0u;
+        assert_int_equal(get_uint16_tensor_index(dst, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint16_tensor(dst);
+    return_uint16_tensor(src);
+}
+
+// ---- slice_uint16_tensor_array --------------------------------------------------
+
+static void test_slice_uint16_tensor_null(void** state) {
+    (void)state;
+    uint16_tensor_expect_t r = slice_uint16_tensor_array(NULL, 0u, 1u, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+static void test_slice_uint16_tensor_value(void** state) {
+    (void)state;
+    uint16_tensor_t* src = _make_uint16_array_filled(5u, 10u); /* [10,11,12,13,14] */
+    assert_non_null(src);
+
+    uint16_tensor_expect_t r = slice_uint16_tensor_array(src, 1u, 4u, NULL);
+    assert_true(r.has_value);
+    uint16_tensor_t* sl = r.u.value;
+
+    assert_int_equal(uint16_tensor_size(sl), 3u);
+    uint16_t expected[] = { 11u, 12u, 13u };
+    for (size_t i = 0u; i < 3u; i++) {
+        uint16_t out = 0u;
+        assert_int_equal(get_uint16_tensor_index(sl, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint16_tensor(src);
+    return_uint16_tensor(sl);
+}
+
+// ---- reverse_uint16_tensor ------------------------------------------------------
+
+static void test_reverse_uint16_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(reverse_uint16_tensor(NULL), NULL_POINTER);
+}
+
+static void test_reverse_uint16_tensor_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(4u, 1u); /* [1,2,3,4] */
+    assert_non_null(arr);
+
+    assert_int_equal(reverse_uint16_tensor(arr), NO_ERROR);
+
+    uint16_t expected[] = { 4u, 3u, 2u, 1u };
+    for (size_t i = 0u; i < 4u; i++) {
+        uint16_t out = 0u;
+        assert_int_equal(get_uint16_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint16_tensor(arr);
+}
+
+// ---- sort_uint16_tensor ---------------------------------------------------------
+
+static void test_sort_uint16_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(sort_uint16_tensor(NULL, FORWARD), NULL_POINTER);
+}
+
+static void test_sort_uint16_tensor_forward(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(5u, false);
+    assert_non_null(arr);
+
+    uint16_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_uint16_array(arr, vals[i]);
+
+    assert_int_equal(sort_uint16_tensor(arr, FORWARD), NO_ERROR);
+
+    uint16_t expected[] = { 1u, 1u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        uint16_t out = 0u;
+        assert_int_equal(get_uint16_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint16_tensor(arr);
+}
+
+static void test_sort_uint16_tensor_reverse(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(5u, false);
+    assert_non_null(arr);
+
+    uint16_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_uint16_array(arr, vals[i]);
+
+    assert_int_equal(sort_uint16_tensor(arr, REVERSE), NO_ERROR);
+
+    uint16_t expected[] = { 5u, 4u, 3u, 1u, 1u };
+    for (size_t i = 0u; i < 5u; i++) {
+        uint16_t out = 0u;
+        assert_int_equal(get_uint16_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint16_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// SET AND GET DATA
+
+// ---- set_uint16_tensor_index / get_uint16_tensor_index --------------------------
+
+static void test_set_get_uint16_tensor_index_null(void** state) {
+    (void)state;
+    uint16_t dummy = 0u;
+    assert_int_equal(set_uint16_tensor_index(NULL, 0u, 1u),    NULL_POINTER);
+    assert_int_equal(get_uint16_tensor_index(NULL, 0u, &dummy), NULL_POINTER);
+}
+
+static void test_set_get_uint16_tensor_index_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(3u, 10u);
+    assert_non_null(arr);
+
+    assert_int_equal(set_uint16_tensor_index(arr, 1u, 99u), NO_ERROR);
+
+    uint16_t out = 0u;
+    assert_int_equal(get_uint16_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+
+    return_uint16_tensor(arr);
+}
+
+// ---- set_uint16_tensor_nd_index / get_uint16_tensor_nd_index --------------------
+
+static void test_set_get_uint16_tensor_nd_index_null(void** state) {
+    (void)state;
+    size_t  idx[] = { 0u, 0u };
+    uint16_t out   = 0u;
+    assert_int_equal(set_uint16_tensor_nd_index(NULL, idx, 1u),   NULL_POINTER);
+    assert_int_equal(get_uint16_tensor_nd_index(NULL, idx, &out), NULL_POINTER);
+}
+
+static void test_set_get_uint16_tensor_nd_index_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r  = init_uint16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* mat = r.u.value;
+
+    size_t idx[] = { 1u, 2u };
+    assert_int_equal(set_uint16_tensor_nd_index(mat, idx, 42u), NO_ERROR);
+
+    uint16_t out = 0u;
+    assert_int_equal(get_uint16_tensor_nd_index(mat, idx, &out), NO_ERROR);
+    assert_int_equal(out, 42u);
+
+    return_uint16_tensor(mat);
+}
+
+// ---- push and pop wrappers ----------------------------------------------------
+
+static void test_push_back_uint16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_back_uint16_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_back_uint16_array_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+
+    assert_int_equal(push_back_uint16_array(arr, 10u), NO_ERROR);
+    assert_int_equal(push_back_uint16_array(arr, 20u), NO_ERROR);
+    assert_int_equal(uint16_tensor_size(arr), 2u);
+
+    uint16_t out = 0u;
+    assert_int_equal(get_uint16_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 20u);
+
+    return_uint16_tensor(arr);
+}
+
+static void test_push_front_uint16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_front_uint16_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_front_uint16_array_value(void** state) {
+    (void)state;
+    /* Capacity 3 so there is room for the push_front */
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r  = init_uint16_array(3u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+
+    push_back_uint16_array(arr, 10u);
+    push_back_uint16_array(arr, 11u);
+    /* arr = [10, 11], len == 2, alloc == 3 — one slot free */
+
+    assert_int_equal(push_front_uint16_array(arr, 99u), NO_ERROR);
+
+    uint16_t out = 0u;
+    assert_int_equal(get_uint16_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_uint16_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_uint16_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+
+    return_uint16_tensor(arr);
+}
+
+static void test_push_at_uint16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_at_uint16_array(NULL, 1u, 0u), NULL_POINTER);
+}
+
+static void test_push_at_uint16_array_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(3u, 10u); /* [10, 11, 12] */
+    assert_non_null(arr);
+
+    assert_int_equal(push_at_uint16_array(arr, 99u, 1u), NO_ERROR);
+    /* arr = [10, 99, 11, 12] */
+
+    uint16_t out = 0u;
+    assert_int_equal(get_uint16_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_uint16_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_uint16_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+    assert_int_equal(get_uint16_tensor_index(arr, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+
+    return_uint16_tensor(arr);
+}
+
+static void test_pop_back_uint16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_uint16_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_back_uint16_array_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    uint16_t out = 0u;
+    assert_int_equal(pop_back_uint16_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(uint16_tensor_size(arr), 2u);
+
+    return_uint16_tensor(arr);
+}
+
+static void test_pop_front_uint16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_uint16_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_front_uint16_array_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    uint16_t out = 0u;
+    assert_int_equal(pop_front_uint16_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(uint16_tensor_size(arr), 2u);
+
+    return_uint16_tensor(arr);
+}
+
+static void test_pop_at_uint16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_at_uint16_array(NULL, NULL, 0u), NULL_POINTER);
+}
+
+static void test_pop_at_uint16_array_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(4u, 10u); /* [10,11,12,13] */
+    assert_non_null(arr);
+
+    uint16_t out = 0u;
+    assert_int_equal(pop_at_uint16_array(arr, &out, 2u), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(uint16_tensor_size(arr), 3u);
+
+    assert_int_equal(get_uint16_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 13u);
+
+    return_uint16_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// TEST SUITE REGISTRY
+
+const struct CMUnitTest test_uint16_tensor[] = {
+    /* init_uint16_array */
+    cmocka_unit_test(test_init_uint16_array_null_allocator),
+    cmocka_unit_test(test_init_uint16_array_success),
+
+    /* init_uint16_tensor */
+    cmocka_unit_test(test_init_uint16_tensor_success),
+    cmocka_unit_test(test_init_uint16_tensor_null_shape),
+
+    /* return_uint16_tensor */
+    cmocka_unit_test(test_return_uint16_tensor_null),
+    cmocka_unit_test(test_return_uint16_tensor_normal),
+
+    /* copy_uint16_tensor */
+    cmocka_unit_test(test_copy_uint16_tensor_null_src),
+    cmocka_unit_test(test_copy_uint16_tensor_independence),
+
+    /* introspection — null guards */
+    cmocka_unit_test(test_uint16_tensor_size_null),
+    cmocka_unit_test(test_uint16_tensor_alloc_null),
+    cmocka_unit_test(test_uint16_tensor_data_size_null),
+    cmocka_unit_test(test_uint16_tensor_dtype_null),
+    cmocka_unit_test(test_is_uint16_tensor_empty_null),
+    cmocka_unit_test(test_is_uint16_tensor_full_null),
+    cmocka_unit_test(test_is_uint16_tensor_ptr_null_wrapper),
+    cmocka_unit_test(test_uint16_tensor_ndim_null),
+    cmocka_unit_test(test_uint16_tensor_shape_dim_null),
+    cmocka_unit_test(test_uint16_tensor_shape_null),
+    cmocka_unit_test(test_uint16_tensor_shape_ptr_null),
+    cmocka_unit_test(test_uint16_tensor_strides_ptr_null),
+    cmocka_unit_test(test_uint16_tensor_shape_str_null),
+
+    /* introspection — values */
+    cmocka_unit_test(test_uint16_tensor_size_value),
+    cmocka_unit_test(test_uint16_tensor_alloc_value),
+    cmocka_unit_test(test_uint16_tensor_data_size_value),
+    cmocka_unit_test(test_uint16_tensor_dtype_value),
+    cmocka_unit_test(test_is_uint16_tensor_empty_value),
+    cmocka_unit_test(test_is_uint16_tensor_full_value),
+    cmocka_unit_test(test_is_uint16_tensor_ptr_valid),
+    cmocka_unit_test(test_uint16_tensor_ndim_value),
+    cmocka_unit_test(test_uint16_tensor_shape_dim_value),
+    cmocka_unit_test(test_uint16_tensor_shape_value),
+    cmocka_unit_test(test_uint16_tensor_shape_ptr_value),
+    cmocka_unit_test(test_uint16_tensor_strides_ptr_value),
+    cmocka_unit_test(test_uint16_tensor_shape_str_value),
+
+    /* utility — null guards */
+    cmocka_unit_test(test_clear_uint16_tensor_null),
+    cmocka_unit_test(test_concat_uint16_tensor_null),
+    cmocka_unit_test(test_slice_uint16_tensor_null),
+    cmocka_unit_test(test_reverse_uint16_tensor_null),
+    cmocka_unit_test(test_sort_uint16_tensor_null),
+
+    /* utility — values */
+    cmocka_unit_test(test_clear_uint16_tensor_value),
+    cmocka_unit_test(test_concat_uint16_tensor_value),
+    cmocka_unit_test(test_slice_uint16_tensor_value),
+    cmocka_unit_test(test_reverse_uint16_tensor_value),
+    cmocka_unit_test(test_sort_uint16_tensor_forward),
+    cmocka_unit_test(test_sort_uint16_tensor_reverse),
+
+    /* set/get — null guards */
+    cmocka_unit_test(test_set_get_uint16_tensor_index_null),
+    cmocka_unit_test(test_set_get_uint16_tensor_nd_index_null),
+    cmocka_unit_test(test_push_back_uint16_array_null),
+    cmocka_unit_test(test_push_front_uint16_array_null),
+    cmocka_unit_test(test_push_at_uint16_array_null),
+    cmocka_unit_test(test_pop_back_uint16_array_null),
+    cmocka_unit_test(test_pop_front_uint16_array_null),
+    cmocka_unit_test(test_pop_at_uint16_array_null),
+
+    /* set/get — values */
+    cmocka_unit_test(test_set_get_uint16_tensor_index_value),
+    cmocka_unit_test(test_set_get_uint16_tensor_nd_index_value),
+    cmocka_unit_test(test_push_back_uint16_array_value),
+    cmocka_unit_test(test_push_front_uint16_array_value),
+    cmocka_unit_test(test_push_at_uint16_array_value),
+    cmocka_unit_test(test_pop_back_uint16_array_value),
+    cmocka_unit_test(test_pop_front_uint16_array_value),
+    cmocka_unit_test(test_pop_at_uint16_array_value),
+};
+
+const size_t test_uint16_tensor_count = sizeof(test_uint16_tensor) /
+                                       sizeof(test_uint16_tensor[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+/** Construct a populated int16 array with values 1..n. */
+static int16_tensor_t* _make_int16_array(size_t capacity, bool growth) {
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(capacity, growth, alloc);
+    if (!r.has_value) return NULL;
+    return r.u.value;
+}
+
+static int16_tensor_t* _make_int16_array_filled(size_t n, int16_t base) {
+    /* Allocate n+1 so the result always has at least one free slot,
+     * making it safe to use as a push destination in tests. */
+    int16_tensor_t* arr = _make_int16_array(n + 1u, false);
+    if (arr == NULL) return NULL;
+    for (size_t i = 0u; i < n; i++) {
+        int16_t val = (int16_t)(base + i);
+        push_back_int16_array(arr, val);
+    }
+    return arr;
+}
+
+// ================================================================================
+// ================================================================================
+// INITIALISATION AND TEARDOWN
+
+// ---- init_int16_array ----------------------------------------------------------
+
+/** NULL allocator must propagate an error through the expect type. */
+static void test_init_int16_array_null_allocator(void** state) {
+    (void)state;
+    allocator_vtable_t bad = heap_allocator();
+    bad.allocate = NULL;
+    int16_tensor_expect_t r = init_int16_array(8u, false, bad);
+    assert_false(r.has_value);
+}
+
+/** Successful construction produces a non-NULL wrapper with correct mode. */
+static void test_init_int16_array_success(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(8u, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  ARRAY_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, INT16_TYPE);
+    assert_int_equal(r.u.value->base->len,   0u);
+    assert_int_equal(r.u.value->base->alloc, 8u);
+    return_int16_tensor(r.u.value);
+}
+
+// ---- init_int16_tensor ---------------------------------------------------------
+
+/** Successful construction of a fixed-shape tensor. */
+static void test_init_int16_tensor_success(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  TENSOR_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, INT16_TYPE);
+    assert_int_equal(r.u.value->base->len,   12u);
+    return_int16_tensor(r.u.value);
+}
+
+/** NULL shape propagates an error. */
+static void test_init_int16_tensor_null_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_tensor(2u, NULL, alloc);
+    assert_false(r.has_value);
+}
+
+// ---- return_int16_tensor -------------------------------------------------------
+
+/** return_int16_tensor(NULL) must not crash. */
+static void test_return_int16_tensor_null(void** state) {
+    (void)state;
+    return_int16_tensor(NULL);
+}
+
+/** Normal construction followed by return must not crash or leak. */
+static void test_return_int16_tensor_normal(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+    return_int16_tensor(arr);
+}
+
+// ---- copy_int16_tensor ---------------------------------------------------------
+
+/** NULL src must return NULL_POINTER. */
+static void test_copy_int16_tensor_null_src(void** state) {
+    (void)state;
+    int16_tensor_expect_t r = copy_int16_tensor(NULL, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+/** Copy is independent of source — mutation of copy does not affect src. */
+static void test_copy_int16_tensor_independence(void** state) {
+    (void)state;
+    int16_tensor_t* src = _make_int16_array_filled(3u, 10u);
+    assert_non_null(src);
+
+    int16_tensor_expect_t r = copy_int16_tensor(src, NULL);
+    assert_true(r.has_value);
+    int16_tensor_t* dst = r.u.value;
+
+    /* Overwrite slot 0 of the copy */
+    assert_int_equal(set_int16_tensor_index(dst, 0u, 99u), NO_ERROR);
+
+    /* Source slot 0 must be unchanged */
+    int16_t src_val = 0u;
+    assert_int_equal(get_int16_tensor_index(src, 0u, &src_val), NO_ERROR);
+    assert_int_equal(src_val, 10u);
+
+    return_int16_tensor(src);
+    return_int16_tensor(dst);
+}
+
+// ================================================================================
+// ================================================================================
+// INTROSPECTION
+
+static void test_int16_tensor_size_null(void** state) {
+    (void)state;
+    assert_int_equal(int16_tensor_size(NULL), 0u);
+}
+
+static void test_int16_tensor_size_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_int_equal(int16_tensor_size(arr), 3u);
+    return_int16_tensor(arr);
+}
+
+static void test_int16_tensor_alloc_null(void** state) {
+    (void)state;
+    assert_int_equal(int16_tensor_alloc(NULL), 0u);
+}
+
+static void test_int16_tensor_alloc_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+    assert_int_equal(int16_tensor_alloc(arr), 8u);
+    return_int16_tensor(arr);
+}
+
+static void test_int16_tensor_data_size_null(void** state) {
+    (void)state;
+    assert_int_equal(int16_tensor_data_size(NULL), 0u);
+}
+
+static void test_int16_tensor_data_size_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(int16_tensor_data_size(arr), sizeof(int16_t));
+    return_int16_tensor(arr);
+}
+
+static void test_int16_tensor_dtype_null(void** state) {
+    (void)state;
+    assert_int_equal(int16_tensor_dtype(NULL), UNKNOWN_TYPE);
+}
+
+static void test_int16_tensor_dtype_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(int16_tensor_dtype(arr), INT16_TYPE);
+    return_int16_tensor(arr);
+}
+
+static void test_is_int16_tensor_empty_null(void** state) {
+    (void)state;
+    assert_true(is_int16_tensor_empty(NULL));
+}
+
+static void test_is_int16_tensor_empty_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+    assert_true(is_int16_tensor_empty(arr));
+    push_back_int16_array(arr, 1u);
+    assert_false(is_int16_tensor_empty(arr));
+    return_int16_tensor(arr);
+}
+
+static void test_is_int16_tensor_full_null(void** state) {
+    (void)state;
+    assert_true(is_int16_tensor_full(NULL));
+}
+
+static void test_is_int16_tensor_full_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(2u, false);
+    assert_non_null(arr);
+    assert_false(is_int16_tensor_full(arr));
+    push_back_int16_array(arr, 1u);
+    push_back_int16_array(arr, 2u);
+    assert_true(is_int16_tensor_full(arr));
+    return_int16_tensor(arr);
+}
+
+static void test_is_int16_tensor_ptr_null_wrapper(void** state) {
+    (void)state;
+    int16_t dummy = 0u;
+    assert_false(is_int16_tensor_ptr(NULL, &dummy));
+}
+
+static void test_is_int16_tensor_ptr_valid(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(4u, 10u);
+    assert_non_null(arr);
+    /* Pointer to first element must be valid */
+    const int16_t* p = (const int16_t*)arr->base->data;
+    assert_true(is_int16_tensor_ptr(arr, p));
+    return_int16_tensor(arr);
+}
+
+static void test_int16_tensor_ndim_null(void** state) {
+    (void)state;
+    assert_int_equal(int16_tensor_ndim(NULL), 0u);
+}
+
+static void test_int16_tensor_ndim_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(int16_tensor_ndim(arr), 1u);
+    return_int16_tensor(arr);
+}
+
+static void test_int16_tensor_shape_dim_null(void** state) {
+    (void)state;
+    assert_int_equal(int16_tensor_shape_dim(NULL, 0u), 0u);
+}
+
+static void test_int16_tensor_shape_dim_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_int_equal(int16_tensor_shape_dim(r.u.value, 0u), 3u);
+    assert_int_equal(int16_tensor_shape_dim(r.u.value, 1u), 4u);
+    return_int16_tensor(r.u.value);
+}
+
+static void test_int16_tensor_shape_null(void** state) {
+    (void)state;
+    size_t buf[2];
+    assert_int_equal(int16_tensor_shape(NULL, buf, 2u), NULL_POINTER);
+}
+
+static void test_int16_tensor_shape_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    size_t buf[2] = { 0u, 0u };
+    assert_int_equal(int16_tensor_shape(r.u.value, buf, 2u), NO_ERROR);
+    assert_int_equal(buf[0], 3u);
+    assert_int_equal(buf[1], 4u);
+    return_int16_tensor(r.u.value);
+}
+
+static void test_int16_tensor_shape_ptr_null(void** state) {
+    (void)state;
+    assert_null(int16_tensor_shape_ptr(NULL));
+}
+
+static void test_int16_tensor_shape_ptr_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+    assert_non_null(int16_tensor_shape_ptr(arr));
+    return_int16_tensor(arr);
+}
+
+static void test_int16_tensor_strides_ptr_null(void** state) {
+    (void)state;
+    assert_null(int16_tensor_strides_ptr(NULL));
+}
+
+static void test_int16_tensor_strides_ptr_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+    const size_t* strides = int16_tensor_strides_ptr(arr);
+    assert_non_null(strides);
+    assert_int_equal(strides[0], sizeof(int16_t));
+    return_int16_tensor(arr);
+}
+
+static void test_int16_tensor_shape_str_null(void** state) {
+    (void)state;
+    char buf[32];
+    assert_int_equal(int16_tensor_shape_str(NULL, buf, sizeof(buf)), NULL_POINTER);
+}
+
+static void test_int16_tensor_shape_str_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+    char buf[32];
+    assert_int_equal(int16_tensor_shape_str(arr, buf, sizeof(buf)), NO_ERROR);
+    assert_string_equal(buf, "(8)");
+    return_int16_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// UTILITY OPERATIONS
+
+// ---- clear_int16_tensor --------------------------------------------------------
+
+static void test_clear_int16_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(clear_int16_tensor(NULL), NULL_POINTER);
+}
+
+static void test_clear_int16_tensor_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(3u, 10u);
+    assert_non_null(arr);
+    assert_int_equal(clear_int16_tensor(arr), NO_ERROR);
+    assert_int_equal(int16_tensor_size(arr), 0u);
+    return_int16_tensor(arr);
+}
+
+// ---- concat_int16_tensor_array -------------------------------------------------
+
+static void test_concat_int16_tensor_null(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(concat_int16_tensor_array(NULL, arr), NULL_POINTER);
+    assert_int_equal(concat_int16_tensor_array(arr, NULL), NULL_POINTER);
+    return_int16_tensor(arr);
+}
+
+static void test_concat_int16_tensor_value(void** state) {
+    (void)state;
+
+    /* dst needs capacity for 5 elements total — allocate with room to grow */
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(8u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* dst = r.u.value;
+
+    /* Populate dst with [1, 2, 3] */
+    push_back_int16_array(dst, 1u);
+    push_back_int16_array(dst, 2u);
+    push_back_int16_array(dst, 3u);
+
+    /* src = [4, 5] */
+    int16_tensor_t* src = _make_int16_array_filled(2u, 4u);
+    assert_non_null(src);
+
+    assert_int_equal(concat_int16_tensor_array(dst, src), NO_ERROR);
+    assert_int_equal(int16_tensor_size(dst), 5u);
+
+    int16_t expected[] = { 1u, 2u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        int16_t out = 0u;
+        assert_int_equal(get_int16_tensor_index(dst, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int16_tensor(dst);
+    return_int16_tensor(src);
+}
+
+// ---- slice_int16_tensor_array --------------------------------------------------
+
+static void test_slice_int16_tensor_null(void** state) {
+    (void)state;
+    int16_tensor_expect_t r = slice_int16_tensor_array(NULL, 0u, 1u, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+static void test_slice_int16_tensor_value(void** state) {
+    (void)state;
+    int16_tensor_t* src = _make_int16_array_filled(5u, 10u); /* [10,11,12,13,14] */
+    assert_non_null(src);
+
+    int16_tensor_expect_t r = slice_int16_tensor_array(src, 1u, 4u, NULL);
+    assert_true(r.has_value);
+    int16_tensor_t* sl = r.u.value;
+
+    assert_int_equal(int16_tensor_size(sl), 3u);
+    int16_t expected[] = { 11u, 12u, 13u };
+    for (size_t i = 0u; i < 3u; i++) {
+        int16_t out = 0u;
+        assert_int_equal(get_int16_tensor_index(sl, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int16_tensor(src);
+    return_int16_tensor(sl);
+}
+
+// ---- reverse_int16_tensor ------------------------------------------------------
+
+static void test_reverse_int16_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(reverse_int16_tensor(NULL), NULL_POINTER);
+}
+
+static void test_reverse_int16_tensor_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(4u, 1u); /* [1,2,3,4] */
+    assert_non_null(arr);
+
+    assert_int_equal(reverse_int16_tensor(arr), NO_ERROR);
+
+    int16_t expected[] = { 4u, 3u, 2u, 1u };
+    for (size_t i = 0u; i < 4u; i++) {
+        int16_t out = 0u;
+        assert_int_equal(get_int16_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int16_tensor(arr);
+}
+
+// ---- sort_int16_tensor ---------------------------------------------------------
+
+static void test_sort_int16_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(sort_int16_tensor(NULL, FORWARD), NULL_POINTER);
+}
+
+static void test_sort_int16_tensor_forward(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(5u, false);
+    assert_non_null(arr);
+
+    int16_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int16_array(arr, vals[i]);
+
+    assert_int_equal(sort_int16_tensor(arr, FORWARD), NO_ERROR);
+
+    int16_t expected[] = { 1u, 1u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        int16_t out = 0u;
+        assert_int_equal(get_int16_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int16_tensor(arr);
+}
+
+static void test_sort_int16_tensor_reverse(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(5u, false);
+    assert_non_null(arr);
+
+    int16_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int16_array(arr, vals[i]);
+
+    assert_int_equal(sort_int16_tensor(arr, REVERSE), NO_ERROR);
+
+    int16_t expected[] = { 5u, 4u, 3u, 1u, 1u };
+    for (size_t i = 0u; i < 5u; i++) {
+        int16_t out = 0u;
+        assert_int_equal(get_int16_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int16_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// SET AND GET DATA
+
+// ---- set_int16_tensor_index / get_int16_tensor_index --------------------------
+
+static void test_set_get_int16_tensor_index_null(void** state) {
+    (void)state;
+    int16_t dummy = 0u;
+    assert_int_equal(set_int16_tensor_index(NULL, 0u, 1u),    NULL_POINTER);
+    assert_int_equal(get_int16_tensor_index(NULL, 0u, &dummy), NULL_POINTER);
+}
+
+static void test_set_get_int16_tensor_index_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(3u, 10u);
+    assert_non_null(arr);
+
+    assert_int_equal(set_int16_tensor_index(arr, 1u, 99u), NO_ERROR);
+
+    int16_t out = 0u;
+    assert_int_equal(get_int16_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+
+    return_int16_tensor(arr);
+}
+
+// ---- set_int16_tensor_nd_index / get_int16_tensor_nd_index --------------------
+
+static void test_set_get_int16_tensor_nd_index_null(void** state) {
+    (void)state;
+    size_t  idx[] = { 0u, 0u };
+    int16_t out   = 0u;
+    assert_int_equal(set_int16_tensor_nd_index(NULL, idx, 1u),   NULL_POINTER);
+    assert_int_equal(get_int16_tensor_nd_index(NULL, idx, &out), NULL_POINTER);
+}
+
+static void test_set_get_int16_tensor_nd_index_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* mat = r.u.value;
+
+    size_t idx[] = { 1u, 2u };
+    assert_int_equal(set_int16_tensor_nd_index(mat, idx, 42u), NO_ERROR);
+
+    int16_t out = 0u;
+    assert_int_equal(get_int16_tensor_nd_index(mat, idx, &out), NO_ERROR);
+    assert_int_equal(out, 42u);
+
+    return_int16_tensor(mat);
+}
+
+// ---- push and pop wrappers ----------------------------------------------------
+
+static void test_push_back_int16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_back_int16_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_back_int16_array_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+
+    assert_int_equal(push_back_int16_array(arr, 10u), NO_ERROR);
+    assert_int_equal(push_back_int16_array(arr, 20u), NO_ERROR);
+    assert_int_equal(int16_tensor_size(arr), 2u);
+
+    int16_t out = 0u;
+    assert_int_equal(get_int16_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 20u);
+
+    return_int16_tensor(arr);
+}
+
+static void test_push_front_int16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_front_int16_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_front_int16_array_value(void** state) {
+    (void)state;
+    /* Capacity 3 so there is room for the push_front */
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(3u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+
+    push_back_int16_array(arr, 10u);
+    push_back_int16_array(arr, 11u);
+    /* arr = [10, 11], len == 2, alloc == 3 — one slot free */
+
+    assert_int_equal(push_front_int16_array(arr, 99u), NO_ERROR);
+
+    int16_t out = 0u;
+    assert_int_equal(get_int16_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_int16_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_int16_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+
+    return_int16_tensor(arr);
+}
+
+static void test_push_at_int16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_at_int16_array(NULL, 1u, 0u), NULL_POINTER);
+}
+
+static void test_push_at_int16_array_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(3u, 10u); /* [10, 11, 12] */
+    assert_non_null(arr);
+
+    assert_int_equal(push_at_int16_array(arr, 99u, 1u), NO_ERROR);
+    /* arr = [10, 99, 11, 12] */
+
+    int16_t out = 0u;
+    assert_int_equal(get_int16_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_int16_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_int16_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+    assert_int_equal(get_int16_tensor_index(arr, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+
+    return_int16_tensor(arr);
+}
+
+static void test_pop_back_int16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_int16_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_back_int16_array_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    int16_t out = 0u;
+    assert_int_equal(pop_back_int16_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(int16_tensor_size(arr), 2u);
+
+    return_int16_tensor(arr);
+}
+
+static void test_pop_front_int16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_int16_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_front_int16_array_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    int16_t out = 0u;
+    assert_int_equal(pop_front_int16_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(int16_tensor_size(arr), 2u);
+
+    return_int16_tensor(arr);
+}
+
+static void test_pop_at_int16_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_at_int16_array(NULL, NULL, 0u), NULL_POINTER);
+}
+
+static void test_pop_at_int16_array_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(4u, 10u); /* [10,11,12,13] */
+    assert_non_null(arr);
+
+    int16_t out = 0u;
+    assert_int_equal(pop_at_int16_array(arr, &out, 2u), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(int16_tensor_size(arr), 3u);
+
+    assert_int_equal(get_int16_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 13u);
+
+    return_int16_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// TEST SUITE REGISTRY
+
+const struct CMUnitTest test_int16_tensor[] = {
+    /* init_int16_array */
+    cmocka_unit_test(test_init_int16_array_null_allocator),
+    cmocka_unit_test(test_init_int16_array_success),
+
+    /* init_int16_tensor */
+    cmocka_unit_test(test_init_int16_tensor_success),
+    cmocka_unit_test(test_init_int16_tensor_null_shape),
+
+    /* return_int16_tensor */
+    cmocka_unit_test(test_return_int16_tensor_null),
+    cmocka_unit_test(test_return_int16_tensor_normal),
+
+    /* copy_int16_tensor */
+    cmocka_unit_test(test_copy_int16_tensor_null_src),
+    cmocka_unit_test(test_copy_int16_tensor_independence),
+
+    /* introspection — null guards */
+    cmocka_unit_test(test_int16_tensor_size_null),
+    cmocka_unit_test(test_int16_tensor_alloc_null),
+    cmocka_unit_test(test_int16_tensor_data_size_null),
+    cmocka_unit_test(test_int16_tensor_dtype_null),
+    cmocka_unit_test(test_is_int16_tensor_empty_null),
+    cmocka_unit_test(test_is_int16_tensor_full_null),
+    cmocka_unit_test(test_is_int16_tensor_ptr_null_wrapper),
+    cmocka_unit_test(test_int16_tensor_ndim_null),
+    cmocka_unit_test(test_int16_tensor_shape_dim_null),
+    cmocka_unit_test(test_int16_tensor_shape_null),
+    cmocka_unit_test(test_int16_tensor_shape_ptr_null),
+    cmocka_unit_test(test_int16_tensor_strides_ptr_null),
+    cmocka_unit_test(test_int16_tensor_shape_str_null),
+
+    /* introspection — values */
+    cmocka_unit_test(test_int16_tensor_size_value),
+    cmocka_unit_test(test_int16_tensor_alloc_value),
+    cmocka_unit_test(test_int16_tensor_data_size_value),
+    cmocka_unit_test(test_int16_tensor_dtype_value),
+    cmocka_unit_test(test_is_int16_tensor_empty_value),
+    cmocka_unit_test(test_is_int16_tensor_full_value),
+    cmocka_unit_test(test_is_int16_tensor_ptr_valid),
+    cmocka_unit_test(test_int16_tensor_ndim_value),
+    cmocka_unit_test(test_int16_tensor_shape_dim_value),
+    cmocka_unit_test(test_int16_tensor_shape_value),
+    cmocka_unit_test(test_int16_tensor_shape_ptr_value),
+    cmocka_unit_test(test_int16_tensor_strides_ptr_value),
+    cmocka_unit_test(test_int16_tensor_shape_str_value),
+
+    /* utility — null guards */
+    cmocka_unit_test(test_clear_int16_tensor_null),
+    cmocka_unit_test(test_concat_int16_tensor_null),
+    cmocka_unit_test(test_slice_int16_tensor_null),
+    cmocka_unit_test(test_reverse_int16_tensor_null),
+    cmocka_unit_test(test_sort_int16_tensor_null),
+
+    /* utility — values */
+    cmocka_unit_test(test_clear_int16_tensor_value),
+    cmocka_unit_test(test_concat_int16_tensor_value),
+    cmocka_unit_test(test_slice_int16_tensor_value),
+    cmocka_unit_test(test_reverse_int16_tensor_value),
+    cmocka_unit_test(test_sort_int16_tensor_forward),
+    cmocka_unit_test(test_sort_int16_tensor_reverse),
+
+    /* set/get — null guards */
+    cmocka_unit_test(test_set_get_int16_tensor_index_null),
+    cmocka_unit_test(test_set_get_int16_tensor_nd_index_null),
+    cmocka_unit_test(test_push_back_int16_array_null),
+    cmocka_unit_test(test_push_front_int16_array_null),
+    cmocka_unit_test(test_push_at_int16_array_null),
+    cmocka_unit_test(test_pop_back_int16_array_null),
+    cmocka_unit_test(test_pop_front_int16_array_null),
+    cmocka_unit_test(test_pop_at_int16_array_null),
+
+    /* set/get — values */
+    cmocka_unit_test(test_set_get_int16_tensor_index_value),
+    cmocka_unit_test(test_set_get_int16_tensor_nd_index_value),
+    cmocka_unit_test(test_push_back_int16_array_value),
+    cmocka_unit_test(test_push_front_int16_array_value),
+    cmocka_unit_test(test_push_at_int16_array_value),
+    cmocka_unit_test(test_pop_back_int16_array_value),
+    cmocka_unit_test(test_pop_front_int16_array_value),
+    cmocka_unit_test(test_pop_at_int16_array_value),
+};
+
+const size_t test_int16_tensor_count = sizeof(test_int16_tensor) /
+                                       sizeof(test_int16_tensor[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+/** Construct a populated uint32 array with values 1..n. */
+static uint32_tensor_t* _make_uint32_array(size_t capacity, bool growth) {
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r  = init_uint32_array(capacity, growth, alloc);
+    if (!r.has_value) return NULL;
+    return r.u.value;
+}
+
+static uint32_tensor_t* _make_uint32_array_filled(size_t n, uint32_t base) {
+    /* Allocate n+1 so the result always has at least one free slot,
+     * making it safe to use as a push destination in tests. */
+    uint32_tensor_t* arr = _make_uint32_array(n + 1u, false);
+    if (arr == NULL) return NULL;
+    for (size_t i = 0u; i < n; i++) {
+        uint32_t val = (uint32_t)(base + i);
+        push_back_uint32_array(arr, val);
+    }
+    return arr;
+}
+
+// ================================================================================
+// ================================================================================
+// INITIALISATION AND TEARDOWN
+
+// ---- init_uint32_array ----------------------------------------------------------
+
+/** NULL allocator must propagate an error through the expect type. */
+static void test_init_uint32_array_null_allocator(void** state) {
+    (void)state;
+    allocator_vtable_t bad = heap_allocator();
+    bad.allocate = NULL;
+    uint32_tensor_expect_t r = init_uint32_array(8u, false, bad);
+    assert_false(r.has_value);
+}
+
+/** Successful construction produces a non-NULL wrapper with correct mode. */
+static void test_init_uint32_array_success(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r  = init_uint32_array(8u, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  ARRAY_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, UINT32_TYPE);
+    assert_int_equal(r.u.value->base->len,   0u);
+    assert_int_equal(r.u.value->base->alloc, 8u);
+    return_uint32_tensor(r.u.value);
+}
+
+// ---- init_uint32_tensor ---------------------------------------------------------
+
+/** Successful construction of a fixed-shape tensor. */
+static void test_init_uint32_tensor_success(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r  = init_uint32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  TENSOR_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, UINT32_TYPE);
+    assert_int_equal(r.u.value->base->len,   12u);
+    return_uint32_tensor(r.u.value);
+}
+
+/** NULL shape propagates an error. */
+static void test_init_uint32_tensor_null_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r  = init_uint32_tensor(2u, NULL, alloc);
+    assert_false(r.has_value);
+}
+
+// ---- return_uint32_tensor -------------------------------------------------------
+
+/** return_uint32_tensor(NULL) must not crash. */
+static void test_return_uint32_tensor_null(void** state) {
+    (void)state;
+    return_uint32_tensor(NULL);
+}
+
+/** Normal construction followed by return must not crash or leak. */
+static void test_return_uint32_tensor_normal(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    return_uint32_tensor(arr);
+}
+
+// ---- copy_uint32_tensor ---------------------------------------------------------
+
+/** NULL src must return NULL_POINTER. */
+static void test_copy_uint32_tensor_null_src(void** state) {
+    (void)state;
+    uint32_tensor_expect_t r = copy_uint32_tensor(NULL, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+/** Copy is independent of source — mutation of copy does not affect src. */
+static void test_copy_uint32_tensor_independence(void** state) {
+    (void)state;
+    uint32_tensor_t* src = _make_uint32_array_filled(3u, 10u);
+    assert_non_null(src);
+
+    uint32_tensor_expect_t r = copy_uint32_tensor(src, NULL);
+    assert_true(r.has_value);
+    uint32_tensor_t* dst = r.u.value;
+
+    /* Overwrite slot 0 of the copy */
+    assert_int_equal(set_uint32_tensor_index(dst, 0u, 99u), NO_ERROR);
+
+    /* Source slot 0 must be unchanged */
+    uint32_t src_val = 0u;
+    assert_int_equal(get_uint32_tensor_index(src, 0u, &src_val), NO_ERROR);
+    assert_int_equal(src_val, 10u);
+
+    return_uint32_tensor(src);
+    return_uint32_tensor(dst);
+}
+
+// ================================================================================
+// ================================================================================
+// INTROSPECTION
+
+static void test_uint32_tensor_size_null(void** state) {
+    (void)state;
+    assert_int_equal(uint32_tensor_size(NULL), 0u);
+}
+
+static void test_uint32_tensor_size_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_int_equal(uint32_tensor_size(arr), 3u);
+    return_uint32_tensor(arr);
+}
+
+static void test_uint32_tensor_alloc_null(void** state) {
+    (void)state;
+    assert_int_equal(uint32_tensor_alloc(NULL), 0u);
+}
+
+static void test_uint32_tensor_alloc_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+    assert_int_equal(uint32_tensor_alloc(arr), 8u);
+    return_uint32_tensor(arr);
+}
+
+static void test_uint32_tensor_data_size_null(void** state) {
+    (void)state;
+    assert_int_equal(uint32_tensor_data_size(NULL), 0u);
+}
+
+static void test_uint32_tensor_data_size_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(uint32_tensor_data_size(arr), sizeof(uint32_t));
+    return_uint32_tensor(arr);
+}
+
+static void test_uint32_tensor_dtype_null(void** state) {
+    (void)state;
+    assert_int_equal(uint32_tensor_dtype(NULL), UNKNOWN_TYPE);
+}
+
+static void test_uint32_tensor_dtype_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(uint32_tensor_dtype(arr), UINT32_TYPE);
+    return_uint32_tensor(arr);
+}
+
+static void test_is_uint32_tensor_empty_null(void** state) {
+    (void)state;
+    assert_true(is_uint32_tensor_empty(NULL));
+}
+
+static void test_is_uint32_tensor_empty_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    assert_true(is_uint32_tensor_empty(arr));
+    push_back_uint32_array(arr, 1u);
+    assert_false(is_uint32_tensor_empty(arr));
+    return_uint32_tensor(arr);
+}
+
+static void test_is_uint32_tensor_full_null(void** state) {
+    (void)state;
+    assert_true(is_uint32_tensor_full(NULL));
+}
+
+static void test_is_uint32_tensor_full_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(2u, false);
+    assert_non_null(arr);
+    assert_false(is_uint32_tensor_full(arr));
+    push_back_uint32_array(arr, 1u);
+    push_back_uint32_array(arr, 2u);
+    assert_true(is_uint32_tensor_full(arr));
+    return_uint32_tensor(arr);
+}
+
+static void test_is_uint32_tensor_ptr_null_wrapper(void** state) {
+    (void)state;
+    uint32_t dummy = 0u;
+    assert_false(is_uint32_tensor_ptr(NULL, &dummy));
+}
+
+static void test_is_uint32_tensor_ptr_valid(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(4u, 10u);
+    assert_non_null(arr);
+    /* Pointer to first element must be valid */
+    const uint32_t* p = (const uint32_t*)arr->base->data;
+    assert_true(is_uint32_tensor_ptr(arr, p));
+    return_uint32_tensor(arr);
+}
+
+static void test_uint32_tensor_ndim_null(void** state) {
+    (void)state;
+    assert_int_equal(uint32_tensor_ndim(NULL), 0u);
+}
+
+static void test_uint32_tensor_ndim_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(uint32_tensor_ndim(arr), 1u);
+    return_uint32_tensor(arr);
+}
+
+static void test_uint32_tensor_shape_dim_null(void** state) {
+    (void)state;
+    assert_int_equal(uint32_tensor_shape_dim(NULL, 0u), 0u);
+}
+
+static void test_uint32_tensor_shape_dim_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r  = init_uint32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_int_equal(uint32_tensor_shape_dim(r.u.value, 0u), 3u);
+    assert_int_equal(uint32_tensor_shape_dim(r.u.value, 1u), 4u);
+    return_uint32_tensor(r.u.value);
+}
+
+static void test_uint32_tensor_shape_null(void** state) {
+    (void)state;
+    size_t buf[2];
+    assert_int_equal(uint32_tensor_shape(NULL, buf, 2u), NULL_POINTER);
+}
+
+static void test_uint32_tensor_shape_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r  = init_uint32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    size_t buf[2] = { 0u, 0u };
+    assert_int_equal(uint32_tensor_shape(r.u.value, buf, 2u), NO_ERROR);
+    assert_int_equal(buf[0], 3u);
+    assert_int_equal(buf[1], 4u);
+    return_uint32_tensor(r.u.value);
+}
+
+static void test_uint32_tensor_shape_ptr_null(void** state) {
+    (void)state;
+    assert_null(uint32_tensor_shape_ptr(NULL));
+}
+
+static void test_uint32_tensor_shape_ptr_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    assert_non_null(uint32_tensor_shape_ptr(arr));
+    return_uint32_tensor(arr);
+}
+
+static void test_uint32_tensor_strides_ptr_null(void** state) {
+    (void)state;
+    assert_null(uint32_tensor_strides_ptr(NULL));
+}
+
+static void test_uint32_tensor_strides_ptr_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    const size_t* strides = uint32_tensor_strides_ptr(arr);
+    assert_non_null(strides);
+    assert_int_equal(strides[0], sizeof(uint32_t));
+    return_uint32_tensor(arr);
+}
+
+static void test_uint32_tensor_shape_str_null(void** state) {
+    (void)state;
+    char buf[32];
+    assert_int_equal(uint32_tensor_shape_str(NULL, buf, sizeof(buf)), NULL_POINTER);
+}
+
+static void test_uint32_tensor_shape_str_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+    char buf[32];
+    assert_int_equal(uint32_tensor_shape_str(arr, buf, sizeof(buf)), NO_ERROR);
+    assert_string_equal(buf, "(8)");
+    return_uint32_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// UTILITY OPERATIONS
+
+// ---- clear_uint32_tensor --------------------------------------------------------
+
+static void test_clear_uint32_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(clear_uint32_tensor(NULL), NULL_POINTER);
+}
+
+static void test_clear_uint32_tensor_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(3u, 10u);
+    assert_non_null(arr);
+    assert_int_equal(clear_uint32_tensor(arr), NO_ERROR);
+    assert_int_equal(uint32_tensor_size(arr), 0u);
+    return_uint32_tensor(arr);
+}
+
+// ---- concat_uint32_tensor_array -------------------------------------------------
+
+static void test_concat_uint32_tensor_null(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(concat_uint32_tensor_array(NULL, arr), NULL_POINTER);
+    assert_int_equal(concat_uint32_tensor_array(arr, NULL), NULL_POINTER);
+    return_uint32_tensor(arr);
+}
+
+static void test_concat_uint32_tensor_value(void** state) {
+    (void)state;
+
+    /* dst needs capacity for 5 elements total — allocate with room to grow */
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r  = init_uint32_array(8u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* dst = r.u.value;
+
+    /* Populate dst with [1, 2, 3] */
+    push_back_uint32_array(dst, 1u);
+    push_back_uint32_array(dst, 2u);
+    push_back_uint32_array(dst, 3u);
+
+    /* src = [4, 5] */
+    uint32_tensor_t* src = _make_uint32_array_filled(2u, 4u);
+    assert_non_null(src);
+
+    assert_int_equal(concat_uint32_tensor_array(dst, src), NO_ERROR);
+    assert_int_equal(uint32_tensor_size(dst), 5u);
+
+    uint32_t expected[] = { 1u, 2u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        uint32_t out = 0u;
+        assert_int_equal(get_uint32_tensor_index(dst, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint32_tensor(dst);
+    return_uint32_tensor(src);
+}
+
+// ---- slice_uint32_tensor_array --------------------------------------------------
+
+static void test_slice_uint32_tensor_null(void** state) {
+    (void)state;
+    uint32_tensor_expect_t r = slice_uint32_tensor_array(NULL, 0u, 1u, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+static void test_slice_uint32_tensor_value(void** state) {
+    (void)state;
+    uint32_tensor_t* src = _make_uint32_array_filled(5u, 10u); /* [10,11,12,13,14] */
+    assert_non_null(src);
+
+    uint32_tensor_expect_t r = slice_uint32_tensor_array(src, 1u, 4u, NULL);
+    assert_true(r.has_value);
+    uint32_tensor_t* sl = r.u.value;
+
+    assert_int_equal(uint32_tensor_size(sl), 3u);
+    uint32_t expected[] = { 11u, 12u, 13u };
+    for (size_t i = 0u; i < 3u; i++) {
+        uint32_t out = 0u;
+        assert_int_equal(get_uint32_tensor_index(sl, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint32_tensor(src);
+    return_uint32_tensor(sl);
+}
+
+// ---- reverse_uint32_tensor ------------------------------------------------------
+
+static void test_reverse_uint32_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(reverse_uint32_tensor(NULL), NULL_POINTER);
+}
+
+static void test_reverse_uint32_tensor_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(4u, 1u); /* [1,2,3,4] */
+    assert_non_null(arr);
+
+    assert_int_equal(reverse_uint32_tensor(arr), NO_ERROR);
+
+    uint32_t expected[] = { 4u, 3u, 2u, 1u };
+    for (size_t i = 0u; i < 4u; i++) {
+        uint32_t out = 0u;
+        assert_int_equal(get_uint32_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint32_tensor(arr);
+}
+
+// ---- sort_uint32_tensor ---------------------------------------------------------
+
+static void test_sort_uint32_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(sort_uint32_tensor(NULL, FORWARD), NULL_POINTER);
+}
+
+static void test_sort_uint32_tensor_forward(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(5u, false);
+    assert_non_null(arr);
+
+    uint32_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_uint32_array(arr, vals[i]);
+
+    assert_int_equal(sort_uint32_tensor(arr, FORWARD), NO_ERROR);
+
+    uint32_t expected[] = { 1u, 1u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        uint32_t out = 0u;
+        assert_int_equal(get_uint32_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint32_tensor(arr);
+}
+
+static void test_sort_uint32_tensor_reverse(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(5u, false);
+    assert_non_null(arr);
+
+    uint32_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_uint32_array(arr, vals[i]);
+
+    assert_int_equal(sort_uint32_tensor(arr, REVERSE), NO_ERROR);
+
+    uint32_t expected[] = { 5u, 4u, 3u, 1u, 1u };
+    for (size_t i = 0u; i < 5u; i++) {
+        uint32_t out = 0u;
+        assert_int_equal(get_uint32_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_uint32_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// SET AND GET DATA
+
+// ---- set_uint32_tensor_index / get_uint32_tensor_index --------------------------
+
+static void test_set_get_uint32_tensor_index_null(void** state) {
+    (void)state;
+    uint32_t dummy = 0u;
+    assert_int_equal(set_uint32_tensor_index(NULL, 0u, 1u),    NULL_POINTER);
+    assert_int_equal(get_uint32_tensor_index(NULL, 0u, &dummy), NULL_POINTER);
+}
+
+static void test_set_get_uint32_tensor_index_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(3u, 10u);
+    assert_non_null(arr);
+
+    assert_int_equal(set_uint32_tensor_index(arr, 1u, 99u), NO_ERROR);
+
+    uint32_t out = 0u;
+    assert_int_equal(get_uint32_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+
+    return_uint32_tensor(arr);
+}
+
+// ---- set_uint32_tensor_nd_index / get_uint32_tensor_nd_index --------------------
+
+static void test_set_get_uint32_tensor_nd_index_null(void** state) {
+    (void)state;
+    size_t  idx[] = { 0u, 0u };
+    uint32_t out   = 0u;
+    assert_int_equal(set_uint32_tensor_nd_index(NULL, idx, 1u),   NULL_POINTER);
+    assert_int_equal(get_uint32_tensor_nd_index(NULL, idx, &out), NULL_POINTER);
+}
+
+static void test_set_get_uint32_tensor_nd_index_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r  = init_uint32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* mat = r.u.value;
+
+    size_t idx[] = { 1u, 2u };
+    assert_int_equal(set_uint32_tensor_nd_index(mat, idx, 42u), NO_ERROR);
+
+    uint32_t out = 0u;
+    assert_int_equal(get_uint32_tensor_nd_index(mat, idx, &out), NO_ERROR);
+    assert_int_equal(out, 42u);
+
+    return_uint32_tensor(mat);
+}
+
+// ---- push and pop wrappers ----------------------------------------------------
+
+static void test_push_back_uint32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_back_uint32_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_back_uint32_array_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+
+    assert_int_equal(push_back_uint32_array(arr, 10u), NO_ERROR);
+    assert_int_equal(push_back_uint32_array(arr, 20u), NO_ERROR);
+    assert_int_equal(uint32_tensor_size(arr), 2u);
+
+    uint32_t out = 0u;
+    assert_int_equal(get_uint32_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 20u);
+
+    return_uint32_tensor(arr);
+}
+
+static void test_push_front_uint32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_front_uint32_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_front_uint32_array_value(void** state) {
+    (void)state;
+    /* Capacity 3 so there is room for the push_front */
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r  = init_uint32_array(3u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+
+    push_back_uint32_array(arr, 10u);
+    push_back_uint32_array(arr, 11u);
+    /* arr = [10, 11], len == 2, alloc == 3 — one slot free */
+
+    assert_int_equal(push_front_uint32_array(arr, 99u), NO_ERROR);
+
+    uint32_t out = 0u;
+    assert_int_equal(get_uint32_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_uint32_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_uint32_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+
+    return_uint32_tensor(arr);
+}
+
+static void test_push_at_uint32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_at_uint32_array(NULL, 1u, 0u), NULL_POINTER);
+}
+
+static void test_push_at_uint32_array_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(3u, 10u); /* [10, 11, 12] */
+    assert_non_null(arr);
+
+    assert_int_equal(push_at_uint32_array(arr, 99u, 1u), NO_ERROR);
+    /* arr = [10, 99, 11, 12] */
+
+    uint32_t out = 0u;
+    assert_int_equal(get_uint32_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_uint32_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_uint32_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+    assert_int_equal(get_uint32_tensor_index(arr, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+
+    return_uint32_tensor(arr);
+}
+
+static void test_pop_back_uint32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_uint32_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_back_uint32_array_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    uint32_t out = 0u;
+    assert_int_equal(pop_back_uint32_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(uint32_tensor_size(arr), 2u);
+
+    return_uint32_tensor(arr);
+}
+
+static void test_pop_front_uint32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_uint32_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_front_uint32_array_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    uint32_t out = 0u;
+    assert_int_equal(pop_front_uint32_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(uint32_tensor_size(arr), 2u);
+
+    return_uint32_tensor(arr);
+}
+
+static void test_pop_at_uint32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_at_uint32_array(NULL, NULL, 0u), NULL_POINTER);
+}
+
+static void test_pop_at_uint32_array_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(4u, 10u); /* [10,11,12,13] */
+    assert_non_null(arr);
+
+    uint32_t out = 0u;
+    assert_int_equal(pop_at_uint32_array(arr, &out, 2u), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(uint32_tensor_size(arr), 3u);
+
+    assert_int_equal(get_uint32_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 13u);
+
+    return_uint32_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// TEST SUITE REGISTRY
+
+const struct CMUnitTest test_uint32_tensor[] = {
+    /* init_uint32_array */
+    cmocka_unit_test(test_init_uint32_array_null_allocator),
+    cmocka_unit_test(test_init_uint32_array_success),
+
+    /* init_uint32_tensor */
+    cmocka_unit_test(test_init_uint32_tensor_success),
+    cmocka_unit_test(test_init_uint32_tensor_null_shape),
+
+    /* return_uint32_tensor */
+    cmocka_unit_test(test_return_uint32_tensor_null),
+    cmocka_unit_test(test_return_uint32_tensor_normal),
+
+    /* copy_uint32_tensor */
+    cmocka_unit_test(test_copy_uint32_tensor_null_src),
+    cmocka_unit_test(test_copy_uint32_tensor_independence),
+
+    /* introspection — null guards */
+    cmocka_unit_test(test_uint32_tensor_size_null),
+    cmocka_unit_test(test_uint32_tensor_alloc_null),
+    cmocka_unit_test(test_uint32_tensor_data_size_null),
+    cmocka_unit_test(test_uint32_tensor_dtype_null),
+    cmocka_unit_test(test_is_uint32_tensor_empty_null),
+    cmocka_unit_test(test_is_uint32_tensor_full_null),
+    cmocka_unit_test(test_is_uint32_tensor_ptr_null_wrapper),
+    cmocka_unit_test(test_uint32_tensor_ndim_null),
+    cmocka_unit_test(test_uint32_tensor_shape_dim_null),
+    cmocka_unit_test(test_uint32_tensor_shape_null),
+    cmocka_unit_test(test_uint32_tensor_shape_ptr_null),
+    cmocka_unit_test(test_uint32_tensor_strides_ptr_null),
+    cmocka_unit_test(test_uint32_tensor_shape_str_null),
+
+    /* introspection — values */
+    cmocka_unit_test(test_uint32_tensor_size_value),
+    cmocka_unit_test(test_uint32_tensor_alloc_value),
+    cmocka_unit_test(test_uint32_tensor_data_size_value),
+    cmocka_unit_test(test_uint32_tensor_dtype_value),
+    cmocka_unit_test(test_is_uint32_tensor_empty_value),
+    cmocka_unit_test(test_is_uint32_tensor_full_value),
+    cmocka_unit_test(test_is_uint32_tensor_ptr_valid),
+    cmocka_unit_test(test_uint32_tensor_ndim_value),
+    cmocka_unit_test(test_uint32_tensor_shape_dim_value),
+    cmocka_unit_test(test_uint32_tensor_shape_value),
+    cmocka_unit_test(test_uint32_tensor_shape_ptr_value),
+    cmocka_unit_test(test_uint32_tensor_strides_ptr_value),
+    cmocka_unit_test(test_uint32_tensor_shape_str_value),
+
+    /* utility — null guards */
+    cmocka_unit_test(test_clear_uint32_tensor_null),
+    cmocka_unit_test(test_concat_uint32_tensor_null),
+    cmocka_unit_test(test_slice_uint32_tensor_null),
+    cmocka_unit_test(test_reverse_uint32_tensor_null),
+    cmocka_unit_test(test_sort_uint32_tensor_null),
+
+    /* utility — values */
+    cmocka_unit_test(test_clear_uint32_tensor_value),
+    cmocka_unit_test(test_concat_uint32_tensor_value),
+    cmocka_unit_test(test_slice_uint32_tensor_value),
+    cmocka_unit_test(test_reverse_uint32_tensor_value),
+    cmocka_unit_test(test_sort_uint32_tensor_forward),
+    cmocka_unit_test(test_sort_uint32_tensor_reverse),
+
+    /* set/get — null guards */
+    cmocka_unit_test(test_set_get_uint32_tensor_index_null),
+    cmocka_unit_test(test_set_get_uint32_tensor_nd_index_null),
+    cmocka_unit_test(test_push_back_uint32_array_null),
+    cmocka_unit_test(test_push_front_uint32_array_null),
+    cmocka_unit_test(test_push_at_uint32_array_null),
+    cmocka_unit_test(test_pop_back_uint32_array_null),
+    cmocka_unit_test(test_pop_front_uint32_array_null),
+    cmocka_unit_test(test_pop_at_uint32_array_null),
+
+    /* set/get — values */
+    cmocka_unit_test(test_set_get_uint32_tensor_index_value),
+    cmocka_unit_test(test_set_get_uint32_tensor_nd_index_value),
+    cmocka_unit_test(test_push_back_uint32_array_value),
+    cmocka_unit_test(test_push_front_uint32_array_value),
+    cmocka_unit_test(test_push_at_uint32_array_value),
+    cmocka_unit_test(test_pop_back_uint32_array_value),
+    cmocka_unit_test(test_pop_front_uint32_array_value),
+    cmocka_unit_test(test_pop_at_uint32_array_value),
+};
+
+const size_t test_uint32_tensor_count = sizeof(test_uint32_tensor) /
+                                       sizeof(test_uint32_tensor[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+/** Construct a populated int32 array with values 1..n. */
+static int32_tensor_t* _make_int32_array(size_t capacity, bool growth) {
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(capacity, growth, alloc);
+    if (!r.has_value) return NULL;
+    return r.u.value;
+}
+
+static int32_tensor_t* _make_int32_array_filled(size_t n, int32_t base) {
+    /* Allocate n+1 so the result always has at least one free slot,
+     * making it safe to use as a push destination in tests. */
+    int32_tensor_t* arr = _make_int32_array(n + 1u, false);
+    if (arr == NULL) return NULL;
+    for (size_t i = 0u; i < n; i++) {
+        int32_t val = (int32_t)(base + i);
+        push_back_int32_array(arr, val);
+    }
+    return arr;
+}
+
+// ================================================================================
+// ================================================================================
+// INITIALISATION AND TEARDOWN
+
+// ---- init_int32_array ----------------------------------------------------------
+
+/** NULL allocator must propagate an error through the expect type. */
+static void test_init_int32_array_null_allocator(void** state) {
+    (void)state;
+    allocator_vtable_t bad = heap_allocator();
+    bad.allocate = NULL;
+    int32_tensor_expect_t r = init_int32_array(8u, false, bad);
+    assert_false(r.has_value);
+}
+
+/** Successful construction produces a non-NULL wrapper with correct mode. */
+static void test_init_int32_array_success(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(8u, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  ARRAY_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, INT32_TYPE);
+    assert_int_equal(r.u.value->base->len,   0u);
+    assert_int_equal(r.u.value->base->alloc, 8u);
+    return_int32_tensor(r.u.value);
+}
+
+// ---- init_int32_tensor ---------------------------------------------------------
+
+/** Successful construction of a fixed-shape tensor. */
+static void test_init_int32_tensor_success(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  TENSOR_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, INT32_TYPE);
+    assert_int_equal(r.u.value->base->len,   12u);
+    return_int32_tensor(r.u.value);
+}
+
+/** NULL shape propagates an error. */
+static void test_init_int32_tensor_null_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_tensor(2u, NULL, alloc);
+    assert_false(r.has_value);
+}
+
+// ---- return_int32_tensor -------------------------------------------------------
+
+/** return_int32_tensor(NULL) must not crash. */
+static void test_return_int32_tensor_null(void** state) {
+    (void)state;
+    return_int32_tensor(NULL);
+}
+
+/** Normal construction followed by return must not crash or leak. */
+static void test_return_int32_tensor_normal(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+    return_int32_tensor(arr);
+}
+
+// ---- copy_int32_tensor ---------------------------------------------------------
+
+/** NULL src must return NULL_POINTER. */
+static void test_copy_int32_tensor_null_src(void** state) {
+    (void)state;
+    int32_tensor_expect_t r = copy_int32_tensor(NULL, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+/** Copy is independent of source — mutation of copy does not affect src. */
+static void test_copy_int32_tensor_independence(void** state) {
+    (void)state;
+    int32_tensor_t* src = _make_int32_array_filled(3u, 10u);
+    assert_non_null(src);
+
+    int32_tensor_expect_t r = copy_int32_tensor(src, NULL);
+    assert_true(r.has_value);
+    int32_tensor_t* dst = r.u.value;
+
+    /* Overwrite slot 0 of the copy */
+    assert_int_equal(set_int32_tensor_index(dst, 0u, 99u), NO_ERROR);
+
+    /* Source slot 0 must be unchanged */
+    int32_t src_val = 0u;
+    assert_int_equal(get_int32_tensor_index(src, 0u, &src_val), NO_ERROR);
+    assert_int_equal(src_val, 10u);
+
+    return_int32_tensor(src);
+    return_int32_tensor(dst);
+}
+
+// ================================================================================
+// ================================================================================
+// INTROSPECTION
+
+static void test_int32_tensor_size_null(void** state) {
+    (void)state;
+    assert_int_equal(int32_tensor_size(NULL), 0u);
+}
+
+static void test_int32_tensor_size_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_int_equal(int32_tensor_size(arr), 3u);
+    return_int32_tensor(arr);
+}
+
+static void test_int32_tensor_alloc_null(void** state) {
+    (void)state;
+    assert_int_equal(int32_tensor_alloc(NULL), 0u);
+}
+
+static void test_int32_tensor_alloc_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+    assert_int_equal(int32_tensor_alloc(arr), 8u);
+    return_int32_tensor(arr);
+}
+
+static void test_int32_tensor_data_size_null(void** state) {
+    (void)state;
+    assert_int_equal(int32_tensor_data_size(NULL), 0u);
+}
+
+static void test_int32_tensor_data_size_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(int32_tensor_data_size(arr), sizeof(int32_t));
+    return_int32_tensor(arr);
+}
+
+static void test_int32_tensor_dtype_null(void** state) {
+    (void)state;
+    assert_int_equal(int32_tensor_dtype(NULL), UNKNOWN_TYPE);
+}
+
+static void test_int32_tensor_dtype_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(int32_tensor_dtype(arr), INT32_TYPE);
+    return_int32_tensor(arr);
+}
+
+static void test_is_int32_tensor_empty_null(void** state) {
+    (void)state;
+    assert_true(is_int32_tensor_empty(NULL));
+}
+
+static void test_is_int32_tensor_empty_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+    assert_true(is_int32_tensor_empty(arr));
+    push_back_int32_array(arr, 1u);
+    assert_false(is_int32_tensor_empty(arr));
+    return_int32_tensor(arr);
+}
+
+static void test_is_int32_tensor_full_null(void** state) {
+    (void)state;
+    assert_true(is_int32_tensor_full(NULL));
+}
+
+static void test_is_int32_tensor_full_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(2u, false);
+    assert_non_null(arr);
+    assert_false(is_int32_tensor_full(arr));
+    push_back_int32_array(arr, 1u);
+    push_back_int32_array(arr, 2u);
+    assert_true(is_int32_tensor_full(arr));
+    return_int32_tensor(arr);
+}
+
+static void test_is_int32_tensor_ptr_null_wrapper(void** state) {
+    (void)state;
+    int32_t dummy = 0u;
+    assert_false(is_int32_tensor_ptr(NULL, &dummy));
+}
+
+static void test_is_int32_tensor_ptr_valid(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(4u, 10u);
+    assert_non_null(arr);
+    /* Pointer to first element must be valid */
+    const int32_t* p = (const int32_t*)arr->base->data;
+    assert_true(is_int32_tensor_ptr(arr, p));
+    return_int32_tensor(arr);
+}
+
+static void test_int32_tensor_ndim_null(void** state) {
+    (void)state;
+    assert_int_equal(int32_tensor_ndim(NULL), 0u);
+}
+
+static void test_int32_tensor_ndim_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(int32_tensor_ndim(arr), 1u);
+    return_int32_tensor(arr);
+}
+
+static void test_int32_tensor_shape_dim_null(void** state) {
+    (void)state;
+    assert_int_equal(int32_tensor_shape_dim(NULL, 0u), 0u);
+}
+
+static void test_int32_tensor_shape_dim_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_int_equal(int32_tensor_shape_dim(r.u.value, 0u), 3u);
+    assert_int_equal(int32_tensor_shape_dim(r.u.value, 1u), 4u);
+    return_int32_tensor(r.u.value);
+}
+
+static void test_int32_tensor_shape_null(void** state) {
+    (void)state;
+    size_t buf[2];
+    assert_int_equal(int32_tensor_shape(NULL, buf, 2u), NULL_POINTER);
+}
+
+static void test_int32_tensor_shape_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    size_t buf[2] = { 0u, 0u };
+    assert_int_equal(int32_tensor_shape(r.u.value, buf, 2u), NO_ERROR);
+    assert_int_equal(buf[0], 3u);
+    assert_int_equal(buf[1], 4u);
+    return_int32_tensor(r.u.value);
+}
+
+static void test_int32_tensor_shape_ptr_null(void** state) {
+    (void)state;
+    assert_null(int32_tensor_shape_ptr(NULL));
+}
+
+static void test_int32_tensor_shape_ptr_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+    assert_non_null(int32_tensor_shape_ptr(arr));
+    return_int32_tensor(arr);
+}
+
+static void test_int32_tensor_strides_ptr_null(void** state) {
+    (void)state;
+    assert_null(int32_tensor_strides_ptr(NULL));
+}
+
+static void test_int32_tensor_strides_ptr_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+    const size_t* strides = int32_tensor_strides_ptr(arr);
+    assert_non_null(strides);
+    assert_int_equal(strides[0], sizeof(int32_t));
+    return_int32_tensor(arr);
+}
+
+static void test_int32_tensor_shape_str_null(void** state) {
+    (void)state;
+    char buf[32];
+    assert_int_equal(int32_tensor_shape_str(NULL, buf, sizeof(buf)), NULL_POINTER);
+}
+
+static void test_int32_tensor_shape_str_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+    char buf[32];
+    assert_int_equal(int32_tensor_shape_str(arr, buf, sizeof(buf)), NO_ERROR);
+    assert_string_equal(buf, "(8)");
+    return_int32_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// UTILITY OPERATIONS
+
+// ---- clear_int32_tensor --------------------------------------------------------
+
+static void test_clear_int32_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(clear_int32_tensor(NULL), NULL_POINTER);
+}
+
+static void test_clear_int32_tensor_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(3u, 10u);
+    assert_non_null(arr);
+    assert_int_equal(clear_int32_tensor(arr), NO_ERROR);
+    assert_int_equal(int32_tensor_size(arr), 0u);
+    return_int32_tensor(arr);
+}
+
+// ---- concat_int32_tensor_array -------------------------------------------------
+
+static void test_concat_int32_tensor_null(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(concat_int32_tensor_array(NULL, arr), NULL_POINTER);
+    assert_int_equal(concat_int32_tensor_array(arr, NULL), NULL_POINTER);
+    return_int32_tensor(arr);
+}
+
+static void test_concat_int32_tensor_value(void** state) {
+    (void)state;
+
+    /* dst needs capacity for 5 elements total — allocate with room to grow */
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(8u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* dst = r.u.value;
+
+    /* Populate dst with [1, 2, 3] */
+    push_back_int32_array(dst, 1u);
+    push_back_int32_array(dst, 2u);
+    push_back_int32_array(dst, 3u);
+
+    /* src = [4, 5] */
+    int32_tensor_t* src = _make_int32_array_filled(2u, 4u);
+    assert_non_null(src);
+
+    assert_int_equal(concat_int32_tensor_array(dst, src), NO_ERROR);
+    assert_int_equal(int32_tensor_size(dst), 5u);
+
+    int32_t expected[] = { 1u, 2u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = 0u;
+        assert_int_equal(get_int32_tensor_index(dst, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int32_tensor(dst);
+    return_int32_tensor(src);
+}
+
+// ---- slice_int32_tensor_array --------------------------------------------------
+
+static void test_slice_int32_tensor_null(void** state) {
+    (void)state;
+    int32_tensor_expect_t r = slice_int32_tensor_array(NULL, 0u, 1u, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+static void test_slice_int32_tensor_value(void** state) {
+    (void)state;
+    int32_tensor_t* src = _make_int32_array_filled(5u, 10u); /* [10,11,12,13,14] */
+    assert_non_null(src);
+
+    int32_tensor_expect_t r = slice_int32_tensor_array(src, 1u, 4u, NULL);
+    assert_true(r.has_value);
+    int32_tensor_t* sl = r.u.value;
+
+    assert_int_equal(int32_tensor_size(sl), 3u);
+    int32_t expected[] = { 11u, 12u, 13u };
+    for (size_t i = 0u; i < 3u; i++) {
+        int32_t out = 0u;
+        assert_int_equal(get_int32_tensor_index(sl, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int32_tensor(src);
+    return_int32_tensor(sl);
+}
+
+// ---- reverse_int32_tensor ------------------------------------------------------
+
+static void test_reverse_int32_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(reverse_int32_tensor(NULL), NULL_POINTER);
+}
+
+static void test_reverse_int32_tensor_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(4u, 1u); /* [1,2,3,4] */
+    assert_non_null(arr);
+
+    assert_int_equal(reverse_int32_tensor(arr), NO_ERROR);
+
+    int32_t expected[] = { 4u, 3u, 2u, 1u };
+    for (size_t i = 0u; i < 4u; i++) {
+        int32_t out = 0u;
+        assert_int_equal(get_int32_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int32_tensor(arr);
+}
+
+// ---- sort_int32_tensor ---------------------------------------------------------
+
+static void test_sort_int32_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(sort_int32_tensor(NULL, FORWARD), NULL_POINTER);
+}
+
+static void test_sort_int32_tensor_forward(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(5u, false);
+    assert_non_null(arr);
+
+    int32_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int32_array(arr, vals[i]);
+
+    assert_int_equal(sort_int32_tensor(arr, FORWARD), NO_ERROR);
+
+    int32_t expected[] = { 1u, 1u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = 0u;
+        assert_int_equal(get_int32_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int32_tensor(arr);
+}
+
+static void test_sort_int32_tensor_reverse(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(5u, false);
+    assert_non_null(arr);
+
+    int32_t vals[] = { 3u, 1u, 4u, 1u, 5u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int32_array(arr, vals[i]);
+
+    assert_int_equal(sort_int32_tensor(arr, REVERSE), NO_ERROR);
+
+    int32_t expected[] = { 5u, 4u, 3u, 1u, 1u };
+    for (size_t i = 0u; i < 5u; i++) {
+        int32_t out = 0u;
+        assert_int_equal(get_int32_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_int32_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// SET AND GET DATA
+
+// ---- set_int32_tensor_index / get_int32_tensor_index --------------------------
+
+static void test_set_get_int32_tensor_index_null(void** state) {
+    (void)state;
+    int32_t dummy = 0u;
+    assert_int_equal(set_int32_tensor_index(NULL, 0u, 1u),    NULL_POINTER);
+    assert_int_equal(get_int32_tensor_index(NULL, 0u, &dummy), NULL_POINTER);
+}
+
+static void test_set_get_int32_tensor_index_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(3u, 10u);
+    assert_non_null(arr);
+
+    assert_int_equal(set_int32_tensor_index(arr, 1u, 99u), NO_ERROR);
+
+    int32_t out = 0u;
+    assert_int_equal(get_int32_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+
+    return_int32_tensor(arr);
+}
+
+// ---- set_int32_tensor_nd_index / get_int32_tensor_nd_index --------------------
+
+static void test_set_get_int32_tensor_nd_index_null(void** state) {
+    (void)state;
+    size_t  idx[] = { 0u, 0u };
+    int32_t out   = 0u;
+    assert_int_equal(set_int32_tensor_nd_index(NULL, idx, 1u),   NULL_POINTER);
+    assert_int_equal(get_int32_tensor_nd_index(NULL, idx, &out), NULL_POINTER);
+}
+
+static void test_set_get_int32_tensor_nd_index_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* mat = r.u.value;
+
+    size_t idx[] = { 1u, 2u };
+    assert_int_equal(set_int32_tensor_nd_index(mat, idx, 42u), NO_ERROR);
+
+    int32_t out = 0u;
+    assert_int_equal(get_int32_tensor_nd_index(mat, idx, &out), NO_ERROR);
+    assert_int_equal(out, 42u);
+
+    return_int32_tensor(mat);
+}
+
+// ---- push and pop wrappers ----------------------------------------------------
+
+static void test_push_back_int32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_back_int32_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_back_int32_array_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+
+    assert_int_equal(push_back_int32_array(arr, 10u), NO_ERROR);
+    assert_int_equal(push_back_int32_array(arr, 20u), NO_ERROR);
+    assert_int_equal(int32_tensor_size(arr), 2u);
+
+    int32_t out = 0u;
+    assert_int_equal(get_int32_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 20u);
+
+    return_int32_tensor(arr);
+}
+
+static void test_push_front_int32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_front_int32_array(NULL, 1u), NULL_POINTER);
+}
+
+static void test_push_front_int32_array_value(void** state) {
+    (void)state;
+    /* Capacity 3 so there is room for the push_front */
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(3u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+
+    push_back_int32_array(arr, 10u);
+    push_back_int32_array(arr, 11u);
+    /* arr = [10, 11], len == 2, alloc == 3 — one slot free */
+
+    assert_int_equal(push_front_int32_array(arr, 99u), NO_ERROR);
+
+    int32_t out = 0u;
+    assert_int_equal(get_int32_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_int32_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_int32_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+
+    return_int32_tensor(arr);
+}
+
+static void test_push_at_int32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_at_int32_array(NULL, 1u, 0u), NULL_POINTER);
+}
+
+static void test_push_at_int32_array_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(3u, 10u); /* [10, 11, 12] */
+    assert_non_null(arr);
+
+    assert_int_equal(push_at_int32_array(arr, 99u, 1u), NO_ERROR);
+    /* arr = [10, 99, 11, 12] */
+
+    int32_t out = 0u;
+    assert_int_equal(get_int32_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(get_int32_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 99u);
+    assert_int_equal(get_int32_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11u);
+    assert_int_equal(get_int32_tensor_index(arr, 3u, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+
+    return_int32_tensor(arr);
+}
+
+static void test_pop_back_int32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_int32_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_back_int32_array_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    int32_t out = 0u;
+    assert_int_equal(pop_back_int32_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(int32_tensor_size(arr), 2u);
+
+    return_int32_tensor(arr);
+}
+
+static void test_pop_front_int32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_int32_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_front_int32_array_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(3u, 10u); /* [10,11,12] */
+    assert_non_null(arr);
+
+    int32_t out = 0u;
+    assert_int_equal(pop_front_int32_array(arr, &out), NO_ERROR);
+    assert_int_equal(out, 10u);
+    assert_int_equal(int32_tensor_size(arr), 2u);
+
+    return_int32_tensor(arr);
+}
+
+static void test_pop_at_int32_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_at_int32_array(NULL, NULL, 0u), NULL_POINTER);
+}
+
+static void test_pop_at_int32_array_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(4u, 10u); /* [10,11,12,13] */
+    assert_non_null(arr);
+
+    int32_t out = 0u;
+    assert_int_equal(pop_at_int32_array(arr, &out, 2u), NO_ERROR);
+    assert_int_equal(out, 12u);
+    assert_int_equal(int32_tensor_size(arr), 3u);
+
+    assert_int_equal(get_int32_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 13u);
+
+    return_int32_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// TEST SUITE REGISTRY
+
+const struct CMUnitTest test_int32_tensor[] = {
+    /* init_int32_array */
+    cmocka_unit_test(test_init_int32_array_null_allocator),
+    cmocka_unit_test(test_init_int32_array_success),
+
+    /* init_int32_tensor */
+    cmocka_unit_test(test_init_int32_tensor_success),
+    cmocka_unit_test(test_init_int32_tensor_null_shape),
+
+    /* return_int32_tensor */
+    cmocka_unit_test(test_return_int32_tensor_null),
+    cmocka_unit_test(test_return_int32_tensor_normal),
+
+    /* copy_int32_tensor */
+    cmocka_unit_test(test_copy_int32_tensor_null_src),
+    cmocka_unit_test(test_copy_int32_tensor_independence),
+
+    /* introspection — null guards */
+    cmocka_unit_test(test_int32_tensor_size_null),
+    cmocka_unit_test(test_int32_tensor_alloc_null),
+    cmocka_unit_test(test_int32_tensor_data_size_null),
+    cmocka_unit_test(test_int32_tensor_dtype_null),
+    cmocka_unit_test(test_is_int32_tensor_empty_null),
+    cmocka_unit_test(test_is_int32_tensor_full_null),
+    cmocka_unit_test(test_is_int32_tensor_ptr_null_wrapper),
+    cmocka_unit_test(test_int32_tensor_ndim_null),
+    cmocka_unit_test(test_int32_tensor_shape_dim_null),
+    cmocka_unit_test(test_int32_tensor_shape_null),
+    cmocka_unit_test(test_int32_tensor_shape_ptr_null),
+    cmocka_unit_test(test_int32_tensor_strides_ptr_null),
+    cmocka_unit_test(test_int32_tensor_shape_str_null),
+
+    /* introspection — values */
+    cmocka_unit_test(test_int32_tensor_size_value),
+    cmocka_unit_test(test_int32_tensor_alloc_value),
+    cmocka_unit_test(test_int32_tensor_data_size_value),
+    cmocka_unit_test(test_int32_tensor_dtype_value),
+    cmocka_unit_test(test_is_int32_tensor_empty_value),
+    cmocka_unit_test(test_is_int32_tensor_full_value),
+    cmocka_unit_test(test_is_int32_tensor_ptr_valid),
+    cmocka_unit_test(test_int32_tensor_ndim_value),
+    cmocka_unit_test(test_int32_tensor_shape_dim_value),
+    cmocka_unit_test(test_int32_tensor_shape_value),
+    cmocka_unit_test(test_int32_tensor_shape_ptr_value),
+    cmocka_unit_test(test_int32_tensor_strides_ptr_value),
+    cmocka_unit_test(test_int32_tensor_shape_str_value),
+
+    /* utility — null guards */
+    cmocka_unit_test(test_clear_int32_tensor_null),
+    cmocka_unit_test(test_concat_int32_tensor_null),
+    cmocka_unit_test(test_slice_int32_tensor_null),
+    cmocka_unit_test(test_reverse_int32_tensor_null),
+    cmocka_unit_test(test_sort_int32_tensor_null),
+
+    /* utility — values */
+    cmocka_unit_test(test_clear_int32_tensor_value),
+    cmocka_unit_test(test_concat_int32_tensor_value),
+    cmocka_unit_test(test_slice_int32_tensor_value),
+    cmocka_unit_test(test_reverse_int32_tensor_value),
+    cmocka_unit_test(test_sort_int32_tensor_forward),
+    cmocka_unit_test(test_sort_int32_tensor_reverse),
+
+    /* set/get — null guards */
+    cmocka_unit_test(test_set_get_int32_tensor_index_null),
+    cmocka_unit_test(test_set_get_int32_tensor_nd_index_null),
+    cmocka_unit_test(test_push_back_int32_array_null),
+    cmocka_unit_test(test_push_front_int32_array_null),
+    cmocka_unit_test(test_push_at_int32_array_null),
+    cmocka_unit_test(test_pop_back_int32_array_null),
+    cmocka_unit_test(test_pop_front_int32_array_null),
+    cmocka_unit_test(test_pop_at_int32_array_null),
+
+    /* set/get — values */
+    cmocka_unit_test(test_set_get_int32_tensor_index_value),
+    cmocka_unit_test(test_set_get_int32_tensor_nd_index_value),
+    cmocka_unit_test(test_push_back_int32_array_value),
+    cmocka_unit_test(test_push_front_int32_array_value),
+    cmocka_unit_test(test_push_at_int32_array_value),
+    cmocka_unit_test(test_pop_back_int32_array_value),
+    cmocka_unit_test(test_pop_front_int32_array_value),
+    cmocka_unit_test(test_pop_at_int32_array_value),
+};
+
+const size_t test_int32_tensor_count = sizeof(test_int32_tensor) /
+                                       sizeof(test_int32_tensor[0]);
 // ================================================================================
 // ================================================================================
 // eof
