@@ -4,7 +4,7 @@
 double_t Overview
 *****************
 
-The ``double_t`` family of data structures in csalt provides type-safe,
+The ``double`` family of data structures in csalt provides type-safe,
 allocator-agnostic containers for double typed data. Every
 structure wraps the generic ``tensor_t`` engine from ``c_tensor.h`` with
 the element type fixed to ``DOUBLE_TYPE`` at initialisation, eliminating

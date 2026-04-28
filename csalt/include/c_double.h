@@ -532,7 +532,7 @@ double_tensor_expect_t slice_double_tensor_array(const double_tensor_t* src,
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Reverse the populated elements of a double_t tensor in place.
+ * @brief Reverse the populated elements of a double tensor in place.
  *
  * Reverses the order of all elements in the live region of the tensor's
  * data buffer using a SIMD-accelerated byte-swap routine. The operation

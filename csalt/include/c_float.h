@@ -531,7 +531,7 @@ float_tensor_expect_t slice_float_tensor_array(const float_tensor_t* src,
 // -------------------------------------------------------------------------------- 
 
 /**
- * @brief Reverse the populated elements of a float_t tensor in place.
+ * @brief Reverse the populated elements of a float tensor in place.
  *
  * Reverses the order of all elements in the live region of the tensor's
  * data buffer using a SIMD-accelerated byte-swap routine. The operation
