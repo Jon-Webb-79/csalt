@@ -31,6 +31,7 @@
 #include "c_uint64.h"
 #include "c_int64.h"
 #include "c_float.h"
+#include "c_double.h"
 
 // ================================================================================
 // ================================================================================
@@ -11659,6 +11660,773 @@ const struct CMUnitTest test_float_tensor[] = {
 
 const size_t test_float_tensor_count = sizeof(test_float_tensor) /
                                        sizeof(test_float_tensor[0]);
+// ================================================================================ 
+// ================================================================================ 
+
+/** Construct a populated double array with values 1..n. */
+static double_tensor_t* _make_double_array(size_t capacity, bool growth) {
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r  = init_double_array(capacity, growth, alloc);
+    if (!r.has_value) return NULL;
+    return r.u.value;
+}
+
+static double_tensor_t* _make_double_array_filled(size_t n, double_t base) {
+    /* Allocate n+1 so the result always has at least one free slot,
+     * making it safe to use as a push destination in tests. */
+    double_tensor_t* arr = _make_double_array(n + 1u, false);
+    if (arr == NULL) return NULL;
+    for (size_t i = 0u; i < n; i++) {
+        double_t val = (double_t)(base + i);
+        push_back_double_array(arr, val);
+    }
+    return arr;
+}
+
+// ================================================================================
+// ================================================================================
+// INITIALISATION AND TEARDOWN
+
+// ---- init_double_array ----------------------------------------------------------
+
+/** NULL allocator must propagate an error through the expect type. */
+static void test_init_double_array_null_allocator(void** state) {
+    (void)state;
+    allocator_vtable_t bad = heap_allocator();
+    bad.allocate = NULL;
+    double_tensor_expect_t r = init_double_array(8u, false, bad);
+    assert_false(r.has_value);
+}
+
+/** Successful construction produces a non-NULL wrapper with correct mode. */
+static void test_init_double_array_success(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r  = init_double_array(8u, false, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  ARRAY_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, DOUBLE_TYPE);
+    assert_int_equal(r.u.value->base->len,   0u);
+    assert_int_equal(r.u.value->base->alloc, 8u);
+    return_double_tensor(r.u.value);
+}
+
+// ---- init_double_tensor ---------------------------------------------------------
+
+/** Successful construction of a fixed-shape tensor. */
+static void test_init_double_tensor_success(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r  = init_double_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_non_null(r.u.value);
+    assert_non_null(r.u.value->base);
+    assert_int_equal(r.u.value->base->mode,  TENSOR_STRUCT);
+    assert_int_equal(r.u.value->base->dtype, DOUBLE_TYPE);
+    assert_int_equal(r.u.value->base->len,   12u);
+    return_double_tensor(r.u.value);
+}
+
+/** NULL shape propagates an error. */
+static void test_init_double_tensor_null_shape(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r  = init_double_tensor(2u, NULL, alloc);
+    assert_false(r.has_value);
+}
+
+// ---- return_double_tensor -------------------------------------------------------
+
+/** return_double_tensor(NULL) must not crash. */
+static void test_return_double_tensor_null(void** state) {
+    (void)state;
+    return_double_tensor(NULL);
+}
+
+/** Normal construction followed by return must not crash or leak. */
+static void test_return_double_tensor_normal(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    return_double_tensor(arr);
+}
+
+// ---- copy_double_tensor ---------------------------------------------------------
+
+/** NULL src must return NULL_POINTER. */
+static void test_copy_double_tensor_null_src(void** state) {
+    (void)state;
+    double_tensor_expect_t r = copy_double_tensor(NULL, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+/** Copy is independent of source — mutation of copy does not affect src. */
+static void test_copy_double_tensor_independence(void** state) {
+    (void)state;
+    double_tensor_t* src = _make_double_array_filled(3u, 10u);
+    assert_non_null(src);
+
+    double_tensor_expect_t r = copy_double_tensor(src, NULL);
+    assert_true(r.has_value);
+    double_tensor_t* dst = r.u.value;
+
+    /* Overwrite slot 0 of the copy */
+    assert_int_equal(set_double_tensor_index(dst, 0u, 99.0f), NO_ERROR);
+
+    /* Source slot 0 must be unchanged */
+    double src_val = 0u;
+    assert_int_equal(get_double_tensor_index(src, 0u, &src_val), NO_ERROR);
+    assert_double_equal(src_val, 10.0f, 1.0e-3);
+
+    return_double_tensor(src);
+    return_double_tensor(dst);
+}
+
+// ================================================================================
+// ================================================================================
+// INTROSPECTION
+
+static void test_double_tensor_size_null(void** state) {
+    (void)state;
+    assert_int_equal(double_tensor_size(NULL), 0u);
+}
+
+static void test_double_tensor_size_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_int_equal(double_tensor_size(arr), 3u);
+    return_double_tensor(arr);
+}
+
+static void test_double_tensor_alloc_null(void** state) {
+    (void)state;
+    assert_int_equal(double_tensor_alloc(NULL), 0u);
+}
+
+static void test_double_tensor_alloc_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+    assert_int_equal(double_tensor_alloc(arr), 8u);
+    return_double_tensor(arr);
+}
+
+static void test_double_tensor_data_size_null(void** state) {
+    (void)state;
+    assert_int_equal(double_tensor_data_size(NULL), 0u);
+}
+
+static void test_double_tensor_data_size_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(double_tensor_data_size(arr), sizeof(double_t));
+    return_double_tensor(arr);
+}
+
+static void test_double_tensor_dtype_null(void** state) {
+    (void)state;
+    assert_int_equal(double_tensor_dtype(NULL), UNKNOWN_TYPE);
+}
+
+static void test_double_tensor_dtype_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(double_tensor_dtype(arr), DOUBLE_TYPE);
+    return_double_tensor(arr);
+}
+
+static void test_is_double_tensor_empty_null(void** state) {
+    (void)state;
+    assert_true(is_double_tensor_empty(NULL));
+}
+
+static void test_is_double_tensor_empty_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    assert_true(is_double_tensor_empty(arr));
+    push_back_double_array(arr, 1u);
+    assert_false(is_double_tensor_empty(arr));
+    return_double_tensor(arr);
+}
+
+static void test_is_double_tensor_full_null(void** state) {
+    (void)state;
+    assert_true(is_double_tensor_full(NULL));
+}
+
+static void test_is_double_tensor_full_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    assert_false(is_double_tensor_full(arr));
+    push_back_double_array(arr, 1.0f);
+    push_back_double_array(arr, 2.0f);
+    assert_true(is_double_tensor_full(arr));
+    return_double_tensor(arr);
+}
+
+static void test_is_double_tensor_ptr_null_wrapper(void** state) {
+    (void)state;
+    double_t dummy = 0u;
+    assert_false(is_double_tensor_ptr(NULL, &dummy));
+}
+
+static void test_is_double_tensor_ptr_valid(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(4u, 10.0f);
+    assert_non_null(arr);
+    /* Pointer to first element must be valid */
+    const double_t* p = (const double_t*)arr->base->data;
+    assert_true(is_double_tensor_ptr(arr, p));
+    return_double_tensor(arr);
+}
+
+static void test_double_tensor_ndim_null(void** state) {
+    (void)state;
+    assert_int_equal(double_tensor_ndim(NULL), 0u);
+}
+
+static void test_double_tensor_ndim_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(double_tensor_ndim(arr), 1u);
+    return_double_tensor(arr);
+}
+
+static void test_double_tensor_shape_dim_null(void** state) {
+    (void)state;
+    assert_int_equal(double_tensor_shape_dim(NULL, 0u), 0u);
+}
+
+static void test_double_tensor_shape_dim_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r  = init_double_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    assert_int_equal(double_tensor_shape_dim(r.u.value, 0u), 3u);
+    assert_int_equal(double_tensor_shape_dim(r.u.value, 1u), 4u);
+    return_double_tensor(r.u.value);
+}
+
+static void test_double_tensor_shape_null(void** state) {
+    (void)state;
+    size_t buf[2];
+    assert_int_equal(double_tensor_shape(NULL, buf, 2u), NULL_POINTER);
+}
+
+static void test_double_tensor_shape_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 4u };
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r  = init_double_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    size_t buf[2] = { 0u, 0u };
+    assert_int_equal(double_tensor_shape(r.u.value, buf, 2u), NO_ERROR);
+    assert_int_equal(buf[0], 3u);
+    assert_int_equal(buf[1], 4u);
+    return_double_tensor(r.u.value);
+}
+
+static void test_double_tensor_shape_ptr_null(void** state) {
+    (void)state;
+    assert_null(double_tensor_shape_ptr(NULL));
+}
+
+static void test_double_tensor_shape_ptr_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    assert_non_null(double_tensor_shape_ptr(arr));
+    return_double_tensor(arr);
+}
+
+static void test_double_tensor_strides_ptr_null(void** state) {
+    (void)state;
+    assert_null(double_tensor_strides_ptr(NULL));
+}
+
+static void test_double_tensor_strides_ptr_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    const size_t* strides = double_tensor_strides_ptr(arr);
+    assert_non_null(strides);
+    assert_int_equal(strides[0], sizeof(double_t));
+    return_double_tensor(arr);
+}
+
+static void test_double_tensor_shape_str_null(void** state) {
+    (void)state;
+    char buf[32];
+    assert_int_equal(double_tensor_shape_str(NULL, buf, sizeof(buf)), NULL_POINTER);
+}
+
+static void test_double_tensor_shape_str_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+    char buf[32];
+    assert_int_equal(double_tensor_shape_str(arr, buf, sizeof(buf)), NO_ERROR);
+    assert_string_equal(buf, "(8)");
+    return_double_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// UTILITY OPERATIONS
+
+// ---- clear_double_tensor --------------------------------------------------------
+
+static void test_clear_double_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(clear_double_tensor(NULL), NULL_POINTER);
+}
+
+static void test_clear_double_tensor_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(3u, 10.0f);
+    assert_non_null(arr);
+    assert_int_equal(clear_double_tensor(arr), NO_ERROR);
+    assert_int_equal(double_tensor_size(arr), 0u);
+    return_double_tensor(arr);
+}
+
+// ---- concat_double_tensor_array -------------------------------------------------
+
+static void test_concat_double_tensor_null(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    assert_int_equal(concat_double_tensor_array(NULL, arr), NULL_POINTER);
+    assert_int_equal(concat_double_tensor_array(arr, NULL), NULL_POINTER);
+    return_double_tensor(arr);
+}
+
+static void test_concat_double_tensor_value(void** state) {
+    (void)state;
+
+    /* dst needs capacity for 5 elements total — allocate with room to grow */
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r  = init_double_array(8u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* dst = r.u.value;
+
+    /* Populate dst with [1, 2, 3] */
+    push_back_double_array(dst, 1.0f);
+    push_back_double_array(dst, 2.0f);
+    push_back_double_array(dst, 3.0f);
+
+    /* src = [4, 5] */
+    double_tensor_t* src = _make_double_array_filled(2u, 4.0f);
+    assert_non_null(src);
+
+    assert_int_equal(concat_double_tensor_array(dst, src), NO_ERROR);
+    assert_int_equal(double_tensor_size(dst), 5u);
+
+    double expected[] = { 1u, 2u, 3u, 4u, 5u };
+    for (size_t i = 0u; i < 5u; i++) {
+        double_t out = 0u;
+        assert_int_equal(get_double_tensor_index(dst, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_double_tensor(dst);
+    return_double_tensor(src);
+}
+
+// ---- slice_double_tensor_array --------------------------------------------------
+
+static void test_slice_double_tensor_null(void** state) {
+    (void)state;
+    double_tensor_expect_t r = slice_double_tensor_array(NULL, 0u, 1u, NULL);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+static void test_slice_double_tensor_value(void** state) {
+    (void)state;
+    double_tensor_t* src = _make_double_array_filled(5u, 10.0f); /* [10,11,12,13,14] */
+    assert_non_null(src);
+
+    double_tensor_expect_t r = slice_double_tensor_array(src, 1u, 4u, NULL);
+    assert_true(r.has_value);
+    double_tensor_t* sl = r.u.value;
+
+    assert_int_equal(double_tensor_size(sl), 3u);
+    double expected[] = { 11., 12., 13. };
+    for (size_t i = 0u; i < 3u; i++) {
+        double out = 0.;
+        assert_int_equal(get_double_tensor_index(sl, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_double_tensor(src);
+    return_double_tensor(sl);
+}
+
+// ---- reverse_double_tensor ------------------------------------------------------
+
+static void test_reverse_double_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(reverse_double_tensor(NULL), NULL_POINTER);
+}
+
+static void test_reverse_double_tensor_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(4u, 1.); /* [1,2,3,4] */
+    assert_non_null(arr);
+
+    assert_int_equal(reverse_double_tensor(arr), NO_ERROR);
+
+    double expected[] = { 4., 3., 2., 1. };
+    for (size_t i = 0u; i < 4u; i++) {
+        double out = 0.;
+        assert_int_equal(get_double_tensor_index(arr, i, &out), NO_ERROR);
+        assert_double_equal(out, expected[i], 1.0e-3);
+    }
+
+    return_double_tensor(arr);
+}
+
+// ---- sort_double_tensor ---------------------------------------------------------
+
+static void test_sort_double_tensor_null(void** state) {
+    (void)state;
+    assert_int_equal(sort_double_tensor(NULL, FORWARD), NULL_POINTER);
+}
+
+static void test_sort_double_tensor_forward(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(5u, false);
+    assert_non_null(arr);
+
+    double vals[] = { 3., 1., 4., 1., 5. };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_double_array(arr, vals[i]);
+
+    assert_int_equal(sort_double_tensor(arr, FORWARD), NO_ERROR);
+
+    double expected[] = { 1., 1., 3., 4., 5. };
+    for (size_t i = 0u; i < 5u; i++) {
+        double out = 0.;
+        assert_int_equal(get_double_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_double_tensor(arr);
+}
+
+static void test_sort_double_tensor_reverse(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(5u, false);
+    assert_non_null(arr);
+
+    double vals[] = { 3., 1., 4., 1., 5. };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_double_array(arr, vals[i]);
+
+    assert_int_equal(sort_double_tensor(arr, REVERSE), NO_ERROR);
+
+    double expected[] = { 5., 4., 3., 1., 1. };
+    for (size_t i = 0u; i < 5u; i++) {
+        double out = 0.;
+        assert_int_equal(get_double_tensor_index(arr, i, &out), NO_ERROR);
+        assert_int_equal(out, expected[i]);
+    }
+
+    return_double_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// SET AND GET DATA
+
+// ---- set_double_tensor_index / get_double_tensor_index --------------------------
+
+static void test_set_get_double_tensor_index_null(void** state) {
+    (void)state;
+    double dummy = 0.;
+    assert_int_equal(set_double_tensor_index(NULL, 0u, 1.),    NULL_POINTER);
+    assert_int_equal(get_double_tensor_index(NULL, 0u, &dummy), NULL_POINTER);
+}
+
+static void test_set_get_double_tensor_index_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(3u, 10.);
+    assert_non_null(arr);
+
+    assert_int_equal(set_double_tensor_index(arr, 1u, 99.), NO_ERROR);
+
+    double out = 0.;
+    assert_int_equal(get_double_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_double_equal(out, 99.0, 1.0e-3);
+
+    return_double_tensor(arr);
+}
+
+// ---- set_double_tensor_nd_index / get_double_tensor_nd_index --------------------
+
+static void test_set_get_double_tensor_nd_index_null(void** state) {
+    (void)state;
+    size_t  idx[] = { 0u, 0u };
+    double_t out   = 0u;
+    assert_int_equal(set_double_tensor_nd_index(NULL, idx, 1.),   NULL_POINTER);
+    assert_int_equal(get_double_tensor_nd_index(NULL, idx, &out), NULL_POINTER);
+}
+
+static void test_set_get_double_tensor_nd_index_value(void** state) {
+    (void)state;
+    size_t shape[] = { 3u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r  = init_double_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* mat = r.u.value;
+
+    size_t idx[] = { 1u, 2u };
+    assert_int_equal(set_double_tensor_nd_index(mat, idx, 42.), NO_ERROR);
+
+    double out = 0.;
+    assert_int_equal(get_double_tensor_nd_index(mat, idx, &out), NO_ERROR);
+    assert_double_equal(out, 42., 1.0e-3);
+
+    return_double_tensor(mat);
+}
+
+// ---- push and pop wrappers ----------------------------------------------------
+
+static void test_push_back_double_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_back_double_array(NULL, 1.0), NULL_POINTER);
+}
+
+static void test_push_back_double_array_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+
+    assert_int_equal(push_back_double_array(arr, 10.0), NO_ERROR);
+    assert_int_equal(push_back_double_array(arr, 20.0), NO_ERROR);
+    assert_int_equal(double_tensor_size(arr), 2u);
+
+    double out = 0.0;
+    assert_int_equal(get_double_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_double_equal(out, 20.0, 1.0e-3);
+
+    return_double_tensor(arr);
+}
+
+static void test_push_front_double_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_front_double_array(NULL, 1.), NULL_POINTER);
+}
+
+static void test_push_front_double_array_value(void** state) {
+    (void)state;
+    /* Capacity 3 so there is room for the push_front */
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r  = init_double_array(3u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+
+    push_back_double_array(arr, 10.0);
+    push_back_double_array(arr, 11.0);
+    /* arr = [10, 11], len == 2, alloc == 3 — one slot free */
+
+    assert_int_equal(push_front_double_array(arr, 99.0), NO_ERROR);
+
+    double out = 0.0;
+    assert_int_equal(get_double_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_int_equal(out, 99.0);
+    assert_int_equal(get_double_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_int_equal(out, 10.0);
+    assert_int_equal(get_double_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_int_equal(out, 11.0);
+
+    return_double_tensor(arr);
+}
+
+static void test_push_at_double_array_null(void** state) {
+    (void)state;
+    assert_int_equal(push_at_double_array(NULL, 1u, 0.0), NULL_POINTER);
+}
+
+static void test_push_at_double_array_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(3u, 10.0); /* [10, 11, 12] */
+    assert_non_null(arr);
+
+    assert_int_equal(push_at_double_array(arr, 99.0, 1u), NO_ERROR);
+    /* arr = [10, 99, 11, 12] */
+
+    double out = 0.0;
+    assert_int_equal(get_double_tensor_index(arr, 0u, &out), NO_ERROR);
+    assert_double_equal(out, 10.0, 1.0e-3);
+    assert_int_equal(get_double_tensor_index(arr, 1u, &out), NO_ERROR);
+    assert_double_equal(out, 99.0, 1.0e-3);
+    assert_int_equal(get_double_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_double_equal(out, 11.0, 1.0e-3);
+    assert_int_equal(get_double_tensor_index(arr, 3u, &out), NO_ERROR);
+    assert_double_equal(out, 12.0, 1.0e-3);
+
+    return_double_tensor(arr);
+}
+
+static void test_pop_back_double_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_back_double_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_back_double_array_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(3u, 10.0); /* [10,11,12] */
+    assert_non_null(arr);
+
+    double out = 0.0;
+    assert_int_equal(pop_back_double_array(arr, &out), NO_ERROR);
+    assert_double_equal(out, 12.0, 1.0e-3);
+    assert_int_equal(double_tensor_size(arr), 2u);
+
+    return_double_tensor(arr);
+}
+
+static void test_pop_front_double_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_front_double_array(NULL, NULL), NULL_POINTER);
+}
+
+static void test_pop_front_double_array_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(3u, 10.0); /* [10,11,12] */
+    assert_non_null(arr);
+
+    double out = 0.0;
+    assert_int_equal(pop_front_double_array(arr, &out), NO_ERROR);
+    assert_double_equal(out, 10.0, 1.0e-3);
+    assert_int_equal(double_tensor_size(arr), 2u);
+
+    return_double_tensor(arr);
+}
+
+static void test_pop_at_double_array_null(void** state) {
+    (void)state;
+    assert_int_equal(pop_at_double_array(NULL, NULL, 0u), NULL_POINTER);
+}
+
+static void test_pop_at_double_array_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(4u, 10.0); /* [10,11,12,13] */
+    assert_non_null(arr);
+
+    double out = 0.0;
+    assert_int_equal(pop_at_double_array(arr, &out, 2u), NO_ERROR);
+    assert_double_equal(out, 12.0, 1.0e-3);
+    assert_int_equal(double_tensor_size(arr), 3u);
+
+    assert_int_equal(get_double_tensor_index(arr, 2u, &out), NO_ERROR);
+    assert_double_equal(out, 13.0, 1.0e-3);
+
+    return_double_tensor(arr);
+}
+
+// ================================================================================
+// ================================================================================
+// TEST SUITE REGISTRY
+
+const struct CMUnitTest test_double_tensor[] = {
+    /* init_double_array */
+    cmocka_unit_test(test_init_double_array_null_allocator),
+    cmocka_unit_test(test_init_double_array_success),
+
+    /* init_double_tensor */
+    cmocka_unit_test(test_init_double_tensor_success),
+    cmocka_unit_test(test_init_double_tensor_null_shape),
+
+    /* return_double_tensor */
+    cmocka_unit_test(test_return_double_tensor_null),
+    cmocka_unit_test(test_return_double_tensor_normal),
+
+    /* copy_double_tensor */
+    cmocka_unit_test(test_copy_double_tensor_null_src),
+    cmocka_unit_test(test_copy_double_tensor_independence),
+
+    /* introspection — null guards */
+    cmocka_unit_test(test_double_tensor_size_null),
+    cmocka_unit_test(test_double_tensor_alloc_null),
+    cmocka_unit_test(test_double_tensor_data_size_null),
+    cmocka_unit_test(test_double_tensor_dtype_null),
+    cmocka_unit_test(test_is_double_tensor_empty_null),
+    cmocka_unit_test(test_is_double_tensor_full_null),
+    cmocka_unit_test(test_is_double_tensor_ptr_null_wrapper),
+    cmocka_unit_test(test_double_tensor_ndim_null),
+    cmocka_unit_test(test_double_tensor_shape_dim_null),
+    cmocka_unit_test(test_double_tensor_shape_null),
+    cmocka_unit_test(test_double_tensor_shape_ptr_null),
+    cmocka_unit_test(test_double_tensor_strides_ptr_null),
+    cmocka_unit_test(test_double_tensor_shape_str_null),
+
+    /* introspection — values */
+    cmocka_unit_test(test_double_tensor_size_value),
+    cmocka_unit_test(test_double_tensor_alloc_value),
+    cmocka_unit_test(test_double_tensor_data_size_value),
+    cmocka_unit_test(test_double_tensor_dtype_value),
+    cmocka_unit_test(test_is_double_tensor_empty_value),
+    cmocka_unit_test(test_is_double_tensor_full_value),
+    cmocka_unit_test(test_is_double_tensor_ptr_valid),
+    cmocka_unit_test(test_double_tensor_ndim_value),
+    cmocka_unit_test(test_double_tensor_shape_dim_value),
+    cmocka_unit_test(test_double_tensor_shape_value),
+    cmocka_unit_test(test_double_tensor_shape_ptr_value),
+    cmocka_unit_test(test_double_tensor_strides_ptr_value),
+    cmocka_unit_test(test_double_tensor_shape_str_value),
+
+    /* utility — null guards */
+    cmocka_unit_test(test_clear_double_tensor_null),
+    cmocka_unit_test(test_concat_double_tensor_null),
+    cmocka_unit_test(test_slice_double_tensor_null),
+    cmocka_unit_test(test_reverse_double_tensor_null),
+    cmocka_unit_test(test_sort_double_tensor_null),
+
+    /* utility — values */
+    cmocka_unit_test(test_clear_double_tensor_value),
+    cmocka_unit_test(test_concat_double_tensor_value),
+    cmocka_unit_test(test_slice_double_tensor_value),
+    cmocka_unit_test(test_reverse_double_tensor_value),
+    cmocka_unit_test(test_sort_double_tensor_forward),
+    cmocka_unit_test(test_sort_double_tensor_reverse),
+
+    /* set/get — null guards */
+    cmocka_unit_test(test_set_get_double_tensor_index_null),
+    cmocka_unit_test(test_set_get_double_tensor_nd_index_null),
+    cmocka_unit_test(test_push_back_double_array_null),
+    cmocka_unit_test(test_push_front_double_array_null),
+    cmocka_unit_test(test_push_at_double_array_null),
+    cmocka_unit_test(test_pop_back_double_array_null),
+    cmocka_unit_test(test_pop_front_double_array_null),
+    cmocka_unit_test(test_pop_at_double_array_null),
+
+    /* set/get — values */
+    cmocka_unit_test(test_set_get_double_tensor_index_value),
+    cmocka_unit_test(test_set_get_double_tensor_nd_index_value),
+    cmocka_unit_test(test_push_back_double_array_value),
+    cmocka_unit_test(test_push_front_double_array_value),
+    cmocka_unit_test(test_push_at_double_array_value),
+    cmocka_unit_test(test_pop_back_double_array_value),
+    cmocka_unit_test(test_pop_front_double_array_value),
+    cmocka_unit_test(test_pop_at_double_array_value),
+};
+
+const size_t test_double_tensor_count = sizeof(test_double_tensor) /
+                                       sizeof(test_double_tensor[0]);
 // ================================================================================
 // ================================================================================
 // eof
