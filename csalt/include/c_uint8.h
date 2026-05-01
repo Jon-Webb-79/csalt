@@ -657,9 +657,9 @@ static inline error_code_t sort_uint8_tensor(uint8_tensor_t* t,
  * return_uint8_tensor(arr);
  * @endcode
  */
-error_code_t find_uint8_tensor_value(const uint8_tensor_t* t,
-                                     size_t*               index,
-                                     uint8_t               value);
+error_code_t uint8_tensor_lsearch(const uint8_tensor_t* t,
+                                  size_t*               index,
+                                  uint8_t               value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

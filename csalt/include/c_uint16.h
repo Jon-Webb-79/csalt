@@ -664,9 +664,9 @@ static inline error_code_t sort_uint16_tensor(uint16_tensor_t* t,
  * return_uint16_tensor(arr);
  * @endcode
  */
-error_code_t find_uint16_tensor_value(const uint16_tensor_t* t,
-                                      size_t*                index,
-                                      uint16_t               value);
+error_code_t uint16_tensor_lsearch(const uint16_tensor_t* t,
+                                   size_t*                index,
+                                   uint16_t               value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

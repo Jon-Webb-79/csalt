@@ -94,7 +94,7 @@ Utility Operations
 
 .. doxygenfunction:: sort_uint8_tensor
 
-.. doxygenfunction:: find_uint8_tensor_value
+.. doxygenfunction:: uint8_tensor_lsearch
 
 Introspection
 -------------

@@ -149,9 +149,9 @@ int8_tensor_expect_t slice_int8_tensor_array(const int8_tensor_t* src,
 }
 // -------------------------------------------------------------------------------- 
 
-error_code_t find_int8_tensor_value(const int8_tensor_t* t,
-                                     size_t*               index,
-                                     int8_t               value) {
+error_code_t int8_tensor_lsearch(const int8_tensor_t* t,
+                                 size_t*               index,
+                                 int8_t               value) {
     if (t == NULL || index == NULL) return NULL_POINTER;
     if (t->base->len == 0u)         return EMPTY;
 

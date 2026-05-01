@@ -24,8 +24,8 @@
 // - Copyright: Copyright 2026, Jon Webb Inc.
 // ================================================================================
 // ================================================================================
-#ifndef CSALT_SIMD_NEON_UINT16_INL
-#define CSALT_SIMD_NEON_UINT16_INL
+#ifndef CSALT_SIMD_NEON_UINT32_INL
+#define CSALT_SIMD_NEON_UINT32_INL
 
 #include <arm_neon.h>
 #include <stdint.h>
@@ -33,18 +33,20 @@
 // ================================================================================ 
 // ================================================================================ 
 
+// ================================================================================
+// Static helpers
+// ================================================================================
+ 
 /**
- * Convert a uint16x8_t comparison mask (lanes are 0x0000 or 0xFFFF) into
- * a scalar bitmask with one bit per lane.  Bit N is set if lane N matched.
- * Uses vshrn_n_u16 to narrow each 16-bit lane to 8 bits (keeping the high
- * byte of 0xFFFF = 0xFF, or 0x00), then vget_lane_u64 to extract all 8
- * bytes as a 64-bit integer where each byte represents one lane.
+ * Convert a uint32x4_t comparison mask (lanes are 0x00000000 or 0xFFFFFFFF)
+ * into a scalar bitmask with one bit per lane.
+ * vshrn_n_u32 narrows each 32-bit lane to 8 bits (0xFF or 0x00),
+ * then vget_lane_u64 extracts all 4 bytes as a 64-bit integer where
+ * each byte represents one lane.
  */
-static inline uint64_t _neon_mask_u16(uint16x8_t cmp) {
-    /* Shift each 16-bit lane right by 4 to get 0x0FFF or 0x0000,
-     * then narrow to 8-bit lanes: 0xFF or 0x00. */
-    uint8x8_t  narrow = vshrn_n_u16(cmp, 4);
-    uint64_t   mask64;
+static inline uint64_t _neon_mask_u32(uint32x4_t cmp) {
+    uint8x8_t narrow = vshrn_n_u32(cmp, 4);
+    uint64_t  mask64;
     vst1_u8((uint8_t*)&mask64, narrow);
     return mask64;
 }
@@ -53,27 +55,27 @@ static inline uint64_t _neon_mask_u16(uint16x8_t cmp) {
 // Public interface
 // ================================================================================
  
-static size_t simd_lsearch_uint16(const uint16_t* data,
+static size_t simd_lsearch_uint32(const uint32_t* data,
                                   size_t          len,
-                                  uint16_t        value) {
+                                  uint32_t        value) {
     if (data == NULL || len == 0u) return SIZE_MAX;
  
-    const size_t elems_per_reg = 8u;
+    const size_t elems_per_reg = 4u;
  
     if (len >= elems_per_reg) {
-        uint16x8_t target = vdupq_n_u16(value);
+        uint32x4_t target = vdupq_n_u32(value);
  
         size_t i = 0u;
         for (; i + elems_per_reg <= len; i += elems_per_reg) {
-            uint16x8_t chunk = vld1q_u16(data + i);
-            uint16x8_t cmp   = vceqq_u16(chunk, target);
+            uint32x4_t chunk = vld1q_u32(data + i);
+            uint32x4_t cmp   = vceqq_u32(chunk, target);
  
-            /* Fast path: vmaxvq_u16 returns 0xFFFF if any lane matched */
-            if (vmaxvq_u16(cmp) != 0u) {
-                uint64_t mask = _neon_mask_u16(cmp);
+            /* vmaxvq_u32 returns 0xFFFFFFFF if any lane matched */
+            if (vmaxvq_u32(cmp) != 0u) {
+                uint64_t mask = _neon_mask_u32(cmp);
                 /* Each matching lane contributes 0xFF to one byte of mask64.
                  * __builtin_ctzll finds the first set bit; divide by 8 to
-                 * get the lane index. */
+                 * get the lane index within the register. */
                 return i + (size_t)(__builtin_ctzll(mask) / 8u);
             }
         }
@@ -92,5 +94,5 @@ static size_t simd_lsearch_uint16(const uint16_t* data,
 }
 // ================================================================================ 
 // ================================================================================ 
-#endif /* CSALT_SIMD_NEON_UINT16_INL */
+#endif /* CSALT_SIMD_NEON_UINT32_INL */
 

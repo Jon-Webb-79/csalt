@@ -94,7 +94,7 @@ Utility Operations
 
 .. doxygenfunction:: sort_uint16_tensor
 
-.. doxygenfunction:: find_uint16_tensor_value
+.. doxygenfunction:: uint16_tensor_lsearch
 
 Introspection
 -------------

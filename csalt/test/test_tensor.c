@@ -5437,14 +5437,14 @@ static void test_pop_at_uint8_array_value(void** state) {
 
 // ================================================================================
 // ================================================================================
-// FIND UINT8 TENSOR VALUE (find_uint8_tensor_value)
+// FIND UINT8 TENSOR VALUE (uint8_tensor_lsearch)
 // ================================================================================
  
 /** NULL tensor must return NULL_POINTER. */
 static void test_find_uint8_tensor_null_tensor(void** state) {
     (void)state;
     size_t idx = 0u;
-    assert_int_equal(find_uint8_tensor_value(NULL, &idx, 10u), NULL_POINTER);
+    assert_int_equal(uint8_tensor_lsearch(NULL, &idx, 10u), NULL_POINTER);
 }
  
 /** NULL index pointer must return NULL_POINTER. */
@@ -5452,7 +5452,7 @@ static void test_find_uint8_tensor_null_index(void** state) {
     (void)state;
     uint8_tensor_t* arr = _make_uint8_array_filled(3u, 10u);
     assert_non_null(arr);
-    assert_int_equal(find_uint8_tensor_value(arr, NULL, 10u), NULL_POINTER);
+    assert_int_equal(uint8_tensor_lsearch(arr, NULL, 10u), NULL_POINTER);
     return_uint8_tensor(arr);
 }
  
@@ -5462,7 +5462,7 @@ static void test_find_uint8_tensor_empty(void** state) {
     uint8_tensor_t* arr = _make_uint8_array(4u, false);
     assert_non_null(arr);
     size_t idx = 0u;
-    assert_int_equal(find_uint8_tensor_value(arr, &idx, 10u), EMPTY);
+    assert_int_equal(uint8_tensor_lsearch(arr, &idx, 10u), EMPTY);
     return_uint8_tensor(arr);
 }
  
@@ -5472,7 +5472,7 @@ static void test_find_uint8_tensor_not_found(void** state) {
     uint8_tensor_t* arr = _make_uint8_array_filled(4u, 1u); /* [1,2,3,4] */
     assert_non_null(arr);
     size_t idx = 99u;   /* sentinel — must not be modified */
-    assert_int_equal(find_uint8_tensor_value(arr, &idx, 99u), NOT_FOUND);
+    assert_int_equal(uint8_tensor_lsearch(arr, &idx, 99u), NOT_FOUND);
     /* index must be unchanged on NOT_FOUND */
     assert_int_equal(idx, 99u);
     return_uint8_tensor(arr);
@@ -5484,7 +5484,7 @@ static void test_find_uint8_tensor_first_element(void** state) {
     uint8_tensor_t* arr = _make_uint8_array_filled(5u, 10u); /* [10,11,12,13,14] */
     assert_non_null(arr);
     size_t idx = 99u;
-    assert_int_equal(find_uint8_tensor_value(arr, &idx, 10u), NO_ERROR);
+    assert_int_equal(uint8_tensor_lsearch(arr, &idx, 10u), NO_ERROR);
     assert_int_equal(idx, 0u);
     return_uint8_tensor(arr);
 }
@@ -5495,7 +5495,7 @@ static void test_find_uint8_tensor_last_element(void** state) {
     uint8_tensor_t* arr = _make_uint8_array_filled(5u, 10u); /* [10,11,12,13,14] */
     assert_non_null(arr);
     size_t idx = 99u;
-    assert_int_equal(find_uint8_tensor_value(arr, &idx, 14u), NO_ERROR);
+    assert_int_equal(uint8_tensor_lsearch(arr, &idx, 14u), NO_ERROR);
     assert_int_equal(idx, 4u);
     return_uint8_tensor(arr);
 }
@@ -5506,7 +5506,7 @@ static void test_find_uint8_tensor_middle_element(void** state) {
     uint8_tensor_t* arr = _make_uint8_array_filled(5u, 10u); /* [10,11,12,13,14] */
     assert_non_null(arr);
     size_t idx = 99u;
-    assert_int_equal(find_uint8_tensor_value(arr, &idx, 12u), NO_ERROR);
+    assert_int_equal(uint8_tensor_lsearch(arr, &idx, 12u), NO_ERROR);
     assert_int_equal(idx, 2u);
     return_uint8_tensor(arr);
 }
@@ -5528,7 +5528,7 @@ static void test_find_uint8_tensor_first_of_duplicates(void** state) {
     push_back_uint8_array(arr, 3u);
  
     size_t idx = 99u;
-    assert_int_equal(find_uint8_tensor_value(arr, &idx, 9u), NO_ERROR);
+    assert_int_equal(uint8_tensor_lsearch(arr, &idx, 9u), NO_ERROR);
     assert_int_equal(idx, 1u);   /* first occurrence at index 1 */
  
     return_uint8_tensor(arr);
@@ -5544,7 +5544,7 @@ static void test_find_uint8_tensor_single_element_match(void** state) {
     push_back_uint8_array(arr, 42u);
  
     size_t idx = 99u;
-    assert_int_equal(find_uint8_tensor_value(arr, &idx, 42u), NO_ERROR);
+    assert_int_equal(uint8_tensor_lsearch(arr, &idx, 42u), NO_ERROR);
     assert_int_equal(idx, 0u);
  
     return_uint8_tensor(arr);
@@ -5561,7 +5561,7 @@ static void test_find_uint8_tensor_single_element_no_match(void** state) {
     push_back_uint8_array(arr, 42u);
  
     size_t idx = 99u;
-    assert_int_equal(find_uint8_tensor_value(arr, &idx, 7u), NOT_FOUND);
+    assert_int_equal(uint8_tensor_lsearch(arr, &idx, 7u), NOT_FOUND);
     assert_int_equal(idx, 99u);   /* unchanged */
  
     return_uint8_tensor(arr);
@@ -5652,15 +5652,15 @@ const struct CMUnitTest test_uint8_tensor[] = {
     cmocka_unit_test(test_pop_front_uint8_array_value),
     cmocka_unit_test(test_pop_at_uint8_array_value),
 
-    /* find_uint8_tensor_value — null/guard */
+    /* uint8_tensor_lsearch — null/guard */
     cmocka_unit_test(test_find_uint8_tensor_null_tensor),
     cmocka_unit_test(test_find_uint8_tensor_null_index),
     cmocka_unit_test(test_find_uint8_tensor_empty),
  
-    /* find_uint8_tensor_value — not found */
+    /* uint8_tensor_lsearch — not found */
     cmocka_unit_test(test_find_uint8_tensor_not_found),
  
-    /* find_uint8_tensor_value — found at various positions */
+    /* uint8_tensor_lsearch — found at various positions */
     cmocka_unit_test(test_find_uint8_tensor_first_element),
     cmocka_unit_test(test_find_uint8_tensor_last_element),
     cmocka_unit_test(test_find_uint8_tensor_middle_element),
@@ -6353,14 +6353,14 @@ static void test_pop_at_int8_array_value(void** state) {
 
 // ================================================================================
 // ================================================================================
-// FIND UINT8 TENSOR VALUE (find_uint8_tensor_value)
+// FIND UINT8 TENSOR VALUE (int8_tensor_lsearch)
 // ================================================================================
  
 /** NULL tensor must return NULL_POINTER. */
 static void test_find_int8_tensor_null_tensor(void** state) {
     (void)state;
     size_t idx = 0u;
-    assert_int_equal(find_int8_tensor_value(NULL, &idx, 10u), NULL_POINTER);
+    assert_int_equal(int8_tensor_lsearch(NULL, &idx, 10u), NULL_POINTER);
 }
  
 /** NULL index pointer must return NULL_POINTER. */
@@ -6368,7 +6368,7 @@ static void test_find_int8_tensor_null_index(void** state) {
     (void)state;
     int8_tensor_t* arr = _make_int8_array_filled(3u, 10u);
     assert_non_null(arr);
-    assert_int_equal(find_int8_tensor_value(arr, NULL, 10u), NULL_POINTER);
+    assert_int_equal(int8_tensor_lsearch(arr, NULL, 10u), NULL_POINTER);
     return_int8_tensor(arr);
 }
  
@@ -6378,7 +6378,7 @@ static void test_find_int8_tensor_empty(void** state) {
     int8_tensor_t* arr = _make_int8_array(4u, false);
     assert_non_null(arr);
     size_t idx = 0u;
-    assert_int_equal(find_int8_tensor_value(arr, &idx, 10u), EMPTY);
+    assert_int_equal(int8_tensor_lsearch(arr, &idx, 10u), EMPTY);
     return_int8_tensor(arr);
 }
  
@@ -6388,7 +6388,7 @@ static void test_find_int8_tensor_not_found(void** state) {
     int8_tensor_t* arr = _make_int8_array_filled(4u, 1u); /* [1,2,3,4] */
     assert_non_null(arr);
     size_t idx = 99u;   /* sentinel — must not be modified */
-    assert_int_equal(find_int8_tensor_value(arr, &idx, 99u), NOT_FOUND);
+    assert_int_equal(int8_tensor_lsearch(arr, &idx, 99u), NOT_FOUND);
     /* index must be unchanged on NOT_FOUND */
     assert_int_equal(idx, 99u);
     return_int8_tensor(arr);
@@ -6400,7 +6400,7 @@ static void test_find_int8_tensor_first_element(void** state) {
     int8_tensor_t* arr = _make_int8_array_filled(5u, 10u); /* [10,11,12,13,14] */
     assert_non_null(arr);
     size_t idx = 99u;
-    assert_int_equal(find_int8_tensor_value(arr, &idx, 10u), NO_ERROR);
+    assert_int_equal(int8_tensor_lsearch(arr, &idx, 10u), NO_ERROR);
     assert_int_equal(idx, 0u);
     return_int8_tensor(arr);
 }
@@ -6411,7 +6411,7 @@ static void test_find_int8_tensor_last_element(void** state) {
     int8_tensor_t* arr = _make_int8_array_filled(5u, 10u); /* [10,11,12,13,14] */
     assert_non_null(arr);
     size_t idx = 99u;
-    assert_int_equal(find_int8_tensor_value(arr, &idx, 14u), NO_ERROR);
+    assert_int_equal(int8_tensor_lsearch(arr, &idx, 14u), NO_ERROR);
     assert_int_equal(idx, 4u);
     return_int8_tensor(arr);
 }
@@ -6422,7 +6422,7 @@ static void test_find_int8_tensor_middle_element(void** state) {
     int8_tensor_t* arr = _make_int8_array_filled(5u, 10u); /* [10,11,12,13,14] */
     assert_non_null(arr);
     size_t idx = 99u;
-    assert_int_equal(find_int8_tensor_value(arr, &idx, 12u), NO_ERROR);
+    assert_int_equal(int8_tensor_lsearch(arr, &idx, 12u), NO_ERROR);
     assert_int_equal(idx, 2u);
     return_int8_tensor(arr);
 }
@@ -6444,7 +6444,7 @@ static void test_find_int8_tensor_first_of_duplicates(void** state) {
     push_back_int8_array(arr, 3u);
  
     size_t idx = 99u;
-    assert_int_equal(find_int8_tensor_value(arr, &idx, 9u), NO_ERROR);
+    assert_int_equal(int8_tensor_lsearch(arr, &idx, 9u), NO_ERROR);
     assert_int_equal(idx, 1u);   /* first occurrence at index 1 */
  
     return_int8_tensor(arr);
@@ -6460,7 +6460,7 @@ static void test_find_int8_tensor_single_element_match(void** state) {
     push_back_int8_array(arr, 42u);
  
     size_t idx = 99u;
-    assert_int_equal(find_int8_tensor_value(arr, &idx, 42u), NO_ERROR);
+    assert_int_equal(int8_tensor_lsearch(arr, &idx, 42u), NO_ERROR);
     assert_int_equal(idx, 0u);
  
     return_int8_tensor(arr);
@@ -6477,7 +6477,7 @@ static void test_find_int8_tensor_single_element_no_match(void** state) {
     push_back_int8_array(arr, 42u);
  
     size_t idx = 99u;
-    assert_int_equal(find_int8_tensor_value(arr, &idx, 7u), NOT_FOUND);
+    assert_int_equal(int8_tensor_lsearch(arr, &idx, 7u), NOT_FOUND);
     assert_int_equal(idx, 99u);   /* unchanged */
  
     return_int8_tensor(arr);
@@ -6568,15 +6568,15 @@ const struct CMUnitTest test_int8_tensor[] = {
     cmocka_unit_test(test_pop_front_int8_array_value),
     cmocka_unit_test(test_pop_at_int8_array_value),
 
-    /* find_int8_tensor_value — null/guard */
+    /* int8_tensor_lsearch — null/guard */
     cmocka_unit_test(test_find_int8_tensor_null_tensor),
     cmocka_unit_test(test_find_int8_tensor_null_index),
     cmocka_unit_test(test_find_int8_tensor_empty),
  
-    /* find_int8_tensor_value — not found */
+    /* int8_tensor_lsearch — not found */
     cmocka_unit_test(test_find_int8_tensor_not_found),
  
-    /* find_int8_tensor_value — found at various positions */
+    /* int8_tensor_lsearch — found at various positions */
     cmocka_unit_test(test_find_int8_tensor_first_element),
     cmocka_unit_test(test_find_int8_tensor_last_element),
     cmocka_unit_test(test_find_int8_tensor_middle_element),
@@ -7269,14 +7269,14 @@ static void test_pop_at_uint16_array_value(void** state) {
 
 // ================================================================================
 // ================================================================================
-// FIND uint16 TENSOR VALUE (find_uint16_tensor_value)
+// FIND uint16 TENSOR VALUE (uint16_tensor_lsearch)
 // ================================================================================
  
 /** NULL tensor must return NULL_POINTER. */
 static void test_find_uint16_tensor_null_tensor(void** state) {
     (void)state;
     size_t idx = 0u;
-    assert_int_equal(find_uint16_tensor_value(NULL, &idx, 10u), NULL_POINTER);
+    assert_int_equal(uint16_tensor_lsearch(NULL, &idx, 10u), NULL_POINTER);
 }
  
 /** NULL index pointer must return NULL_POINTER. */
@@ -7284,7 +7284,7 @@ static void test_find_uint16_tensor_null_index(void** state) {
     (void)state;
     uint16_tensor_t* arr = _make_uint16_array_filled(3u, 10u);
     assert_non_null(arr);
-    assert_int_equal(find_uint16_tensor_value(arr, NULL, 10u), NULL_POINTER);
+    assert_int_equal(uint16_tensor_lsearch(arr, NULL, 10u), NULL_POINTER);
     return_uint16_tensor(arr);
 }
  
@@ -7294,7 +7294,7 @@ static void test_find_uint16_tensor_empty(void** state) {
     uint16_tensor_t* arr = _make_uint16_array(4u, false);
     assert_non_null(arr);
     size_t idx = 0u;
-    assert_int_equal(find_uint16_tensor_value(arr, &idx, 10u), EMPTY);
+    assert_int_equal(uint16_tensor_lsearch(arr, &idx, 10u), EMPTY);
     return_uint16_tensor(arr);
 }
  
@@ -7304,7 +7304,7 @@ static void test_find_uint16_tensor_not_found(void** state) {
     uint16_tensor_t* arr = _make_uint16_array_filled(4u, 1u); /* [1,2,3,4] */
     assert_non_null(arr);
     size_t idx = 99u;   /* sentinel — must not be modified */
-    assert_int_equal(find_uint16_tensor_value(arr, &idx, 99u), NOT_FOUND);
+    assert_int_equal(uint16_tensor_lsearch(arr, &idx, 99u), NOT_FOUND);
     /* index must be unchanged on NOT_FOUND */
     assert_int_equal(idx, 99u);
     return_uint16_tensor(arr);
@@ -7316,7 +7316,7 @@ static void test_find_uint16_tensor_first_element(void** state) {
     uint16_tensor_t* arr = _make_uint16_array_filled(5u, 10u); /* [10,11,12,13,14] */
     assert_non_null(arr);
     size_t idx = 99u;
-    assert_int_equal(find_uint16_tensor_value(arr, &idx, 10u), NO_ERROR);
+    assert_int_equal(uint16_tensor_lsearch(arr, &idx, 10u), NO_ERROR);
     assert_int_equal(idx, 0u);
     return_uint16_tensor(arr);
 }
@@ -7327,7 +7327,7 @@ static void test_find_uint16_tensor_last_element(void** state) {
     uint16_tensor_t* arr = _make_uint16_array_filled(5u, 10u); /* [10,11,12,13,14] */
     assert_non_null(arr);
     size_t idx = 99u;
-    assert_int_equal(find_uint16_tensor_value(arr, &idx, 14u), NO_ERROR);
+    assert_int_equal(uint16_tensor_lsearch(arr, &idx, 14u), NO_ERROR);
     assert_int_equal(idx, 4u);
     return_uint16_tensor(arr);
 }
@@ -7338,7 +7338,7 @@ static void test_find_uint16_tensor_middle_element(void** state) {
     uint16_tensor_t* arr = _make_uint16_array_filled(5u, 10u); /* [10,11,12,13,14] */
     assert_non_null(arr);
     size_t idx = 99u;
-    assert_int_equal(find_uint16_tensor_value(arr, &idx, 12u), NO_ERROR);
+    assert_int_equal(uint16_tensor_lsearch(arr, &idx, 12u), NO_ERROR);
     assert_int_equal(idx, 2u);
     return_uint16_tensor(arr);
 }
@@ -7360,7 +7360,7 @@ static void test_find_uint16_tensor_first_of_duplicates(void** state) {
     push_back_uint16_array(arr, 3u);
  
     size_t idx = 99u;
-    assert_int_equal(find_uint16_tensor_value(arr, &idx, 9u), NO_ERROR);
+    assert_int_equal(uint16_tensor_lsearch(arr, &idx, 9u), NO_ERROR);
     assert_int_equal(idx, 1u);   /* first occurrence at index 1 */
  
     return_uint16_tensor(arr);
@@ -7376,7 +7376,7 @@ static void test_find_uint16_tensor_single_element_match(void** state) {
     push_back_uint16_array(arr, 42u);
  
     size_t idx = 99u;
-    assert_int_equal(find_uint16_tensor_value(arr, &idx, 42u), NO_ERROR);
+    assert_int_equal(uint16_tensor_lsearch(arr, &idx, 42u), NO_ERROR);
     assert_int_equal(idx, 0u);
  
     return_uint16_tensor(arr);
@@ -7393,7 +7393,7 @@ static void test_find_uint16_tensor_single_element_no_match(void** state) {
     push_back_uint16_array(arr, 42u);
  
     size_t idx = 99u;
-    assert_int_equal(find_uint16_tensor_value(arr, &idx, 7u), NOT_FOUND);
+    assert_int_equal(uint16_tensor_lsearch(arr, &idx, 7u), NOT_FOUND);
     assert_int_equal(idx, 99u);   /* unchanged */
  
     return_uint16_tensor(arr);
@@ -7484,15 +7484,15 @@ const struct CMUnitTest test_uint16_tensor[] = {
     cmocka_unit_test(test_pop_front_uint16_array_value),
     cmocka_unit_test(test_pop_at_uint16_array_value),
 
-    /* find_uint16_tensor_value — null/guard */
+    /* uint16_tensor_lsearch — null/guard */
     cmocka_unit_test(test_find_uint16_tensor_null_tensor),
     cmocka_unit_test(test_find_uint16_tensor_null_index),
     cmocka_unit_test(test_find_uint16_tensor_empty),
  
-    /* find_uint16_tensor_value — not found */
+    /* uint16_tensor_lsearch — not found */
     cmocka_unit_test(test_find_uint16_tensor_not_found),
  
-    /* find_uint16_tensor_value — found at various positions */
+    /* uint16_tensor_lsearch — found at various positions */
     cmocka_unit_test(test_find_uint16_tensor_first_element),
     cmocka_unit_test(test_find_uint16_tensor_last_element),
     cmocka_unit_test(test_find_uint16_tensor_middle_element),
@@ -8180,7 +8180,135 @@ static void test_pop_at_int16_array_value(void** state) {
 
     return_int16_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+// ================================================================================
+// ================================================================================
+// INT16 LSEARCH — NEGATIVE VALUE CORRECTNESS
+// ================================================================================
+
+/** Search for a negative value that is present must return NO_ERROR and
+ *  the correct index. Exercises the (uint16_t) cast path on a value
+ *  whose sign bit is set. */
+static void test_int16_tensor_lsearch_negative_found(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(6u, false);
+    assert_non_null(arr);
+
+    /* Mix of positive, negative, and zero */
+    push_back_int16_array(arr,  10);
+    push_back_int16_array(arr, -5);
+    push_back_int16_array(arr,  30);
+    push_back_int16_array(arr, -5);   /* duplicate — must find first */
+    push_back_int16_array(arr,  0);
+    push_back_int16_array(arr, -128);
+
+    size_t idx = 99u;
+    assert_int_equal(int16_tensor_lsearch(arr, &idx, -5), NO_ERROR);
+    assert_int_equal(idx, 1u);   /* first occurrence of -5 is at index 1 */
+
+    return_int16_tensor(arr);
+}
+
+/** Search for -128 (0xFF80) at the last position exercises a negative value
+ *  whose bit pattern differs maximally from zero. */
+static void test_int16_tensor_lsearch_negative_last(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(5u, false);
+    assert_non_null(arr);
+
+    push_back_int16_array(arr,  1);
+    push_back_int16_array(arr,  2);
+    push_back_int16_array(arr,  3);
+    push_back_int16_array(arr,  4);
+    push_back_int16_array(arr, -128);
+
+    size_t idx = 99u;
+    assert_int_equal(int16_tensor_lsearch(arr, &idx, -128), NO_ERROR);
+    assert_int_equal(idx, 4u);
+
+    return_int16_tensor(arr);
+}
+
+/** Search for -1 (0xFFFF) — the value whose bit pattern equals UINT16_MAX.
+ *  This is the most important case: confirms the cast does not confuse
+ *  -1 with the SIZE_MAX sentinel or with 65535 as a positive value. */
+static void test_int16_tensor_lsearch_minus_one(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+
+    push_back_int16_array(arr,  100);
+    push_back_int16_array(arr,   -1);
+    push_back_int16_array(arr,  200);
+    push_back_int16_array(arr,  300);
+
+    size_t idx = 99u;
+    assert_int_equal(int16_tensor_lsearch(arr, &idx, -1), NO_ERROR);
+    assert_int_equal(idx, 1u);
+
+    return_int16_tensor(arr);
+}
+
+/** Search for INT16_MIN (-32768, 0x8000) — the value with only the sign
+ *  bit set, which is the most extreme negative value in range. */
+static void test_int16_tensor_lsearch_int16_min(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+
+    push_back_int16_array(arr,      0);
+    push_back_int16_array(arr,      1);
+    push_back_int16_array(arr, INT16_MIN);
+    push_back_int16_array(arr,    100);
+
+    size_t idx = 99u;
+    assert_int_equal(int16_tensor_lsearch(arr, &idx, INT16_MIN), NO_ERROR);
+    assert_int_equal(idx, 2u);
+
+    return_int16_tensor(arr);
+}
+
+/** A negative value that is not present must return NOT_FOUND and must
+ *  not modify index. */
+static void test_int16_tensor_lsearch_negative_not_found(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+
+    push_back_int16_array(arr,  10);
+    push_back_int16_array(arr,  20);
+    push_back_int16_array(arr, -30);
+    push_back_int16_array(arr,  40);
+
+    size_t idx = 99u;
+    assert_int_equal(int16_tensor_lsearch(arr, &idx, -99), NOT_FOUND);
+    assert_int_equal(idx, 99u);   /* unchanged */
+
+    return_int16_tensor(arr);
+}
+
+/** Array containing only negative values — confirms the SIMD path handles
+ *  a buffer where every element has its sign bit set. */
+static void test_int16_tensor_lsearch_all_negative(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(5u, false);
+    assert_non_null(arr);
+
+    push_back_int16_array(arr, -1);
+    push_back_int16_array(arr, -2);
+    push_back_int16_array(arr, -3);
+    push_back_int16_array(arr, -4);
+    push_back_int16_array(arr, -5);
+
+    size_t idx = 99u;
+    assert_int_equal(int16_tensor_lsearch(arr, &idx, -3), NO_ERROR);
+    assert_int_equal(idx, 2u);
+
+    assert_int_equal(int16_tensor_lsearch(arr, &idx, -6), NOT_FOUND);
+
+    return_int16_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -8266,6 +8394,14 @@ const struct CMUnitTest test_int16_tensor[] = {
     cmocka_unit_test(test_pop_back_int16_array_value),
     cmocka_unit_test(test_pop_front_int16_array_value),
     cmocka_unit_test(test_pop_at_int16_array_value),
+
+    /* int16 lsearch — negative value correctness */
+    cmocka_unit_test(test_int16_tensor_lsearch_negative_found),
+    cmocka_unit_test(test_int16_tensor_lsearch_negative_last),
+    cmocka_unit_test(test_int16_tensor_lsearch_minus_one),
+    cmocka_unit_test(test_int16_tensor_lsearch_int16_min),
+    cmocka_unit_test(test_int16_tensor_lsearch_negative_not_found),
+    cmocka_unit_test(test_int16_tensor_lsearch_all_negative), 
 };
 
 const size_t test_int16_tensor_count = sizeof(test_int16_tensor) /
@@ -8947,7 +9083,139 @@ static void test_pop_at_uint32_array_value(void** state) {
 
     return_uint32_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+// ================================================================================
+// ================================================================================
+// FIND uint32 TENSOR VALUE (uint32_tensor_lsearch)
+// ================================================================================
+ 
+/** NULL tensor must return NULL_POINTER. */
+static void test_find_uint32_tensor_null_tensor(void** state) {
+    (void)state;
+    size_t idx = 0u;
+    assert_int_equal(uint32_tensor_lsearch(NULL, &idx, 10u), NULL_POINTER);
+}
+ 
+/** NULL index pointer must return NULL_POINTER. */
+static void test_find_uint32_tensor_null_index(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(3u, 10u);
+    assert_non_null(arr);
+    assert_int_equal(uint32_tensor_lsearch(arr, NULL, 10u), NULL_POINTER);
+    return_uint32_tensor(arr);
+}
+ 
+/** Empty array must return EMPTY. */
+static void test_find_uint32_tensor_empty(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    size_t idx = 0u;
+    assert_int_equal(uint32_tensor_lsearch(arr, &idx, 10u), EMPTY);
+    return_uint32_tensor(arr);
+}
+ 
+/** Value not present must return NOT_FOUND. */
+static void test_find_uint32_tensor_not_found(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(4u, 1u); /* [1,2,3,4] */
+    assert_non_null(arr);
+    size_t idx = 99u;   /* sentinel — must not be modified */
+    assert_int_equal(uint32_tensor_lsearch(arr, &idx, 99u), NOT_FOUND);
+    /* index must be unchanged on NOT_FOUND */
+    assert_int_equal(idx, 99u);
+    return_uint32_tensor(arr);
+}
+ 
+/** Value at the first position must be found at index 0. */
+static void test_find_uint32_tensor_first_element(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(5u, 10u); /* [10,11,12,13,14] */
+    assert_non_null(arr);
+    size_t idx = 99u;
+    assert_int_equal(uint32_tensor_lsearch(arr, &idx, 10u), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_uint32_tensor(arr);
+}
+ 
+/** Value at the last position must be found at index len-1. */
+static void test_find_uint32_tensor_last_element(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(5u, 10u); /* [10,11,12,13,14] */
+    assert_non_null(arr);
+    size_t idx = 99u;
+    assert_int_equal(uint32_tensor_lsearch(arr, &idx, 14u), NO_ERROR);
+    assert_int_equal(idx, 4u);
+    return_uint32_tensor(arr);
+}
+ 
+/** Value in the middle must be found at the correct index. */
+static void test_find_uint32_tensor_middle_element(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(5u, 10u); /* [10,11,12,13,14] */
+    assert_non_null(arr);
+    size_t idx = 99u;
+    assert_int_equal(uint32_tensor_lsearch(arr, &idx, 12u), NO_ERROR);
+    assert_int_equal(idx, 2u);
+    return_uint32_tensor(arr);
+}
+ 
+/**
+ * When duplicates are present, the first occurrence must be returned.
+ */
+static void test_find_uint32_tensor_first_of_duplicates(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(6u, false);
+    assert_non_null(arr);
+ 
+    /* [5, 9, 9, 9, 7, 3] */
+    push_back_uint32_array(arr, 5u);
+    push_back_uint32_array(arr, 9u);
+    push_back_uint32_array(arr, 9u);
+    push_back_uint32_array(arr, 9u);
+    push_back_uint32_array(arr, 7u);
+    push_back_uint32_array(arr, 3u);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint32_tensor_lsearch(arr, &idx, 9u), NO_ERROR);
+    assert_int_equal(idx, 1u);   /* first occurrence at index 1 */
+ 
+    return_uint32_tensor(arr);
+}
+ 
+/**
+ * Single-element array containing the target value must succeed.
+ */
+static void test_find_uint32_tensor_single_element_match(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(1u, false);
+    assert_non_null(arr);
+    push_back_uint32_array(arr, 42u);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint32_tensor_lsearch(arr, &idx, 42u), NO_ERROR);
+    assert_int_equal(idx, 0u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+/**
+ * Single-element array not containing the target must return NOT_FOUND
+ * without modifying index.
+ */
+static void test_find_uint32_tensor_single_element_no_match(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(1u, false);
+    assert_non_null(arr);
+    push_back_uint32_array(arr, 42u);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint32_tensor_lsearch(arr, &idx, 7u), NOT_FOUND);
+    assert_int_equal(idx, 99u);   /* unchanged */
+ 
+    return_uint32_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -9033,6 +9301,22 @@ const struct CMUnitTest test_uint32_tensor[] = {
     cmocka_unit_test(test_pop_back_uint32_array_value),
     cmocka_unit_test(test_pop_front_uint32_array_value),
     cmocka_unit_test(test_pop_at_uint32_array_value),
+
+    /* uint32_tensor_lsearch — null/guard */
+    cmocka_unit_test(test_find_uint32_tensor_null_tensor),
+    cmocka_unit_test(test_find_uint32_tensor_null_index),
+    cmocka_unit_test(test_find_uint32_tensor_empty),
+ 
+    /* uint32_tensor_lsearch — not found */
+    cmocka_unit_test(test_find_uint32_tensor_not_found),
+ 
+    /* uint32_tensor_lsearch — found at various positions */
+    cmocka_unit_test(test_find_uint32_tensor_first_element),
+    cmocka_unit_test(test_find_uint32_tensor_last_element),
+    cmocka_unit_test(test_find_uint32_tensor_middle_element),
+    cmocka_unit_test(test_find_uint32_tensor_first_of_duplicates),
+    cmocka_unit_test(test_find_uint32_tensor_single_element_match),
+    cmocka_unit_test(test_find_uint32_tensor_single_element_no_match),
 };
 
 const size_t test_uint32_tensor_count = sizeof(test_uint32_tensor) /
@@ -9714,7 +9998,135 @@ static void test_pop_at_int32_array_value(void** state) {
 
     return_int32_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+// ================================================================================
+// ================================================================================
+// int32 LSEARCH — NEGATIVE VALUE CORRECTNESS
+// ================================================================================
+
+/** Search for a negative value that is present must return NO_ERROR and
+ *  the correct index. Exercises the (uint32_t) cast path on a value
+ *  whose sign bit is set. */
+static void test_int32_tensor_lsearch_negative_found(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(6u, false);
+    assert_non_null(arr);
+
+    /* Mix of positive, negative, and zero */
+    push_back_int32_array(arr,  10);
+    push_back_int32_array(arr, -5);
+    push_back_int32_array(arr,  30);
+    push_back_int32_array(arr, -5);   /* duplicate — must find first */
+    push_back_int32_array(arr,  0);
+    push_back_int32_array(arr, -128);
+
+    size_t idx = 99u;
+    assert_int_equal(int32_tensor_lsearch(arr, &idx, -5), NO_ERROR);
+    assert_int_equal(idx, 1u);   /* first occurrence of -5 is at index 1 */
+
+    return_int32_tensor(arr);
+}
+
+/** Search for -128 (0xFF80) at the last position exercises a negative value
+ *  whose bit pattern differs maximally from zero. */
+static void test_int32_tensor_lsearch_negative_last(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(5u, false);
+    assert_non_null(arr);
+
+    push_back_int32_array(arr,  1);
+    push_back_int32_array(arr,  2);
+    push_back_int32_array(arr,  3);
+    push_back_int32_array(arr,  4);
+    push_back_int32_array(arr, -128);
+
+    size_t idx = 99u;
+    assert_int_equal(int32_tensor_lsearch(arr, &idx, -128), NO_ERROR);
+    assert_int_equal(idx, 4u);
+
+    return_int32_tensor(arr);
+}
+
+/** Search for -1 (0xFFFF) — the value whose bit pattern equals Uint32_MAX.
+ *  This is the most important case: confirms the cast does not confuse
+ *  -1 with the SIZE_MAX sentinel or with 65535 as a positive value. */
+static void test_int32_tensor_lsearch_minus_one(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+
+    push_back_int32_array(arr,  100);
+    push_back_int32_array(arr,   -1);
+    push_back_int32_array(arr,  200);
+    push_back_int32_array(arr,  300);
+
+    size_t idx = 99u;
+    assert_int_equal(int32_tensor_lsearch(arr, &idx, -1), NO_ERROR);
+    assert_int_equal(idx, 1u);
+
+    return_int32_tensor(arr);
+}
+
+/** Search for int32_MIN (-32768, 0x8000) — the value with only the sign
+ *  bit set, which is the most extreme negative value in range. */
+static void test_int32_tensor_lsearch_int32_min(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+
+    push_back_int32_array(arr,      0);
+    push_back_int32_array(arr,      1);
+    push_back_int32_array(arr, INT32_MIN);
+    push_back_int32_array(arr,    100);
+
+    size_t idx = 99u;
+    assert_int_equal(int32_tensor_lsearch(arr, &idx, INT32_MIN), NO_ERROR);
+    assert_int_equal(idx, 2u);
+
+    return_int32_tensor(arr);
+}
+
+/** A negative value that is not present must return NOT_FOUND and must
+ *  not modify index. */
+static void test_int32_tensor_lsearch_negative_not_found(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+
+    push_back_int32_array(arr,  10);
+    push_back_int32_array(arr,  20);
+    push_back_int32_array(arr, -30);
+    push_back_int32_array(arr,  40);
+
+    size_t idx = 99u;
+    assert_int_equal(int32_tensor_lsearch(arr, &idx, -99), NOT_FOUND);
+    assert_int_equal(idx, 99u);   /* unchanged */
+
+    return_int32_tensor(arr);
+}
+
+/** Array containing only negative values — confirms the SIMD path handles
+ *  a buffer where every element has its sign bit set. */
+static void test_int32_tensor_lsearch_all_negative(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(5u, false);
+    assert_non_null(arr);
+
+    push_back_int32_array(arr, -1);
+    push_back_int32_array(arr, -2);
+    push_back_int32_array(arr, -3);
+    push_back_int32_array(arr, -4);
+    push_back_int32_array(arr, -5);
+
+    size_t idx = 99u;
+    assert_int_equal(int32_tensor_lsearch(arr, &idx, -3), NO_ERROR);
+    assert_int_equal(idx, 2u);
+
+    assert_int_equal(int32_tensor_lsearch(arr, &idx, -6), NOT_FOUND);
+
+    return_int32_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -9800,6 +10212,14 @@ const struct CMUnitTest test_int32_tensor[] = {
     cmocka_unit_test(test_pop_back_int32_array_value),
     cmocka_unit_test(test_pop_front_int32_array_value),
     cmocka_unit_test(test_pop_at_int32_array_value),
+
+    /* int16 lsearch — negative value correctness */
+    cmocka_unit_test(test_int32_tensor_lsearch_negative_found),
+    cmocka_unit_test(test_int32_tensor_lsearch_negative_last),
+    cmocka_unit_test(test_int32_tensor_lsearch_minus_one),
+    cmocka_unit_test(test_int32_tensor_lsearch_int32_min),
+    cmocka_unit_test(test_int32_tensor_lsearch_negative_not_found),
+    cmocka_unit_test(test_int32_tensor_lsearch_all_negative),
 };
 
 const size_t test_int32_tensor_count = sizeof(test_int32_tensor) /

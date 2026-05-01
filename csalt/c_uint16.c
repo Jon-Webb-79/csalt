@@ -171,9 +171,9 @@ uint16_tensor_expect_t slice_uint16_tensor_array(const uint16_tensor_t* src,
 }
 // -------------------------------------------------------------------------------- 
 
-error_code_t find_uint16_tensor_value(const uint16_tensor_t* t,
-                                      size_t*                index,
-                                      uint16_t               value) {
+error_code_t uint16_tensor_lsearch(const uint16_tensor_t* t,
+                                   size_t*                index,
+                                   uint16_t               value) {
     if (t == NULL || index == NULL) return NULL_POINTER;
     if (t->base->len == 0u)         return EMPTY;
 

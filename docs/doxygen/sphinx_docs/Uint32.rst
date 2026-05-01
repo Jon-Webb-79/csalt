@@ -94,6 +94,8 @@ Utility Operations
 
 .. doxygenfunction:: sort_uint32_tensor
 
+.. doxygenfunction:: uint32_tensor_lsearch
+
 Introspection
 -------------
 
