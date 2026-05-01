@@ -607,6 +607,57 @@ static inline error_code_t sort_int64_tensor(int64_tensor_t* t,
     if (t == NULL) return NULL_POINTER;
     return sort_tensor(t->base, int64_cmp, dir);
 }
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Search a int64_t tensor for the first occurrence of a value.
+ *
+ * Performs a linear scan of the populated elements in the tensor's data
+ * buffer from index 0 to len - 1. On the first match, writes the
+ * zero-based index of the matching element into *index and returns
+ * NO_ERROR. If no match is found the function returns NOT_FOUND and
+ * *index is left unchanged.
+ *
+ * The search covers only the populated region [0, len) — for
+ * ARRAY_STRUCT tensors this is the number of elements pushed so far,
+ * and for TENSOR_STRUCT tensors this is alloc (all slots are always
+ * live). When duplicates are present the index of the first occurrence
+ * is returned.
+ *
+ * @param t      Pointer to the source tensor. Must not be NULL.
+ * @param index  Pointer to a size_t that receives the index of the
+ *               first matching element on success. Must not be NULL.
+ *               Unchanged if the value is not found.
+ * @param value  The int64_t value to search for.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if t or index is NULL
+ *         - EMPTY        if t->base->len == 0
+ *         - NOT_FOUND    if value is not present in the tensor
+ *
+ * @code{.c}
+ * int64_tensor_expect_t r = init_int64_array(8, false, heap_allocator());
+ * int64_tensor_t* arr = r.u.value;
+ *
+ * push_back_int64_array(arr, 10);
+ * push_back_int64_array(arr, 20);
+ * push_back_int64_array(arr, 30);
+ * push_back_int64_array(arr, 20);
+ * // arr = [10, 20, 30, 20]
+ *
+ * size_t idx = 0u;
+ * error_code_t err = find_int64_tensor_value(arr, &idx, 20u);
+ * // err == NO_ERROR, idx == 1  (first occurrence)
+ *
+ * err = find_int64_tensor_value(arr, &idx, 99u);
+ * // err == NOT_FOUND, idx unchanged
+ *
+ * return_int64_tensor(arr);
+ * @endcode
+ */
+error_code_t int64_tensor_lsearch(const int64_tensor_t* t,
+                                 size_t*               index,
+                                 int64_t               value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 
