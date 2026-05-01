@@ -609,6 +609,57 @@ static inline error_code_t sort_int8_tensor(int8_tensor_t* t,
     if (t == NULL) return NULL_POINTER;
     return sort_tensor(t->base, int8_cmp, dir);
 }
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Search a int8_t tensor for the first occurrence of a value.
+ *
+ * Performs a linear scan of the populated elements in the tensor's data
+ * buffer from index 0 to len - 1. On the first match, writes the
+ * zero-based index of the matching element into *index and returns
+ * NO_ERROR. If no match is found the function returns NOT_FOUND and
+ * *index is left unchanged.
+ *
+ * The search covers only the populated region [0, len) — for
+ * ARRAY_STRUCT tensors this is the number of elements pushed so far,
+ * and for TENSOR_STRUCT tensors this is alloc (all slots are always
+ * live). When duplicates are present the index of the first occurrence
+ * is returned.
+ *
+ * @param t      Pointer to the source tensor. Must not be NULL.
+ * @param index  Pointer to a size_t that receives the index of the
+ *               first matching element on success. Must not be NULL.
+ *               Unchanged if the value is not found.
+ * @param value  The int8_t value to search for.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if t or index is NULL
+ *         - EMPTY        if t->base->len == 0
+ *         - NOT_FOUND    if value is not present in the tensor
+ *
+ * @code{.c}
+ * int8_tensor_expect_t r = init_int8_array(8, false, heap_allocator());
+ * int8_tensor_t* arr = r.u.value;
+ *
+ * push_back_int8_array(arr, 10);
+ * push_back_int8_array(arr, 20);
+ * push_back_int8_array(arr, 30);
+ * push_back_int8_array(arr, 20);
+ * // arr = [10, 20, 30, 20]
+ *
+ * size_t idx = 0u;
+ * error_code_t err = find_int8_tensor_value(arr, &idx, 20u);
+ * // err == NO_ERROR, idx == 1  (first occurrence)
+ *
+ * err = find_int8_tensor_value(arr, &idx, 99u);
+ * // err == NOT_FOUND, idx unchanged
+ *
+ * return_int8_tensor(arr);
+ * @endcode
+ */
+error_code_t find_int8_tensor_value(const int8_tensor_t* t,
+                                    size_t*               index,
+                                    int8_t               value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

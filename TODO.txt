@@ -1,0 +1,8 @@
+1. find
+2. bsearch
+3. bracket_bsearch
+4. min
+5. max
+6. sum
+7. cumulative_sum
+8. avg

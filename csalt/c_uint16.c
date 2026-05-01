@@ -17,6 +17,28 @@
 #include "c_dtypes.h"
 
 #include <inttypes.h>
+
+#if defined(__AVX512BW__)
+#  include "simd_avx512_uint16.inl"
+#elif defined(__AVX2__)
+#  include "simd_avx2_uint16.inl"
+#elif defined(__AVX__)
+#  include "simd_avx_uint16.inl"
+#elif defined(__SSE4_1__)
+#  include "simd_sse41_uint16.inl"
+#elif defined(__SSSE3__)
+#  include "simd_sse3_uint16.inl"
+#elif defined(__SSE2__)
+#  include "simd_sse2_uint16.inl"
+#elif defined(__ARM_FEATURE_SVE2)
+#  include "simd_sve2_uint16.inl"
+#elif defined(__ARM_FEATURE_SVE)
+#  include "simd_sve_uint16.inl"
+#elif defined(__ARM_NEON)
+#  include "simd_neon_uint16.inl"
+#else
+#  include "simd_scalar_uint16.inl"
+#endif
 // ================================================================================ 
 // ================================================================================ 
 
@@ -146,6 +168,32 @@ uint16_tensor_expect_t slice_uint16_tensor_array(const uint16_tensor_t* src,
     a->base = r.u.value;
 
     return (uint16_tensor_expect_t){ .has_value = true, .u.value = a };
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t find_uint16_tensor_value(const uint16_tensor_t* t,
+                                      size_t*                index,
+                                      uint16_t               value) {
+    if (t == NULL || index == NULL) return NULL_POINTER;
+    if (t->base->len == 0u)         return EMPTY;
+
+    size_t result = simd_lsearch_uint16(
+        (const uint16_t*)t->base->data,
+        t->base->len,
+        value
+    );
+
+    /* Verify the candidate index rather than trusting the SIZE_MAX
+     * sentinel alone — this guards against any platform-specific
+     * edge case and makes correctness explicit. */
+    if (result == SIZE_MAX) return NOT_FOUND;
+
+    uint16_t found_val = 0u;
+    get_uint16_tensor_index(t, result, &found_val);
+    if (found_val != value) return NOT_FOUND;
+
+    *index = result;
+    return NO_ERROR;
 }
 // ================================================================================
 // ================================================================================

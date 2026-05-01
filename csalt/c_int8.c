@@ -147,6 +147,25 @@ int8_tensor_expect_t slice_int8_tensor_array(const int8_tensor_t* src,
 
     return (int8_tensor_expect_t){ .has_value = true, .u.value = a };
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t find_int8_tensor_value(const int8_tensor_t* t,
+                                     size_t*               index,
+                                     int8_t               value) {
+    if (t == NULL || index == NULL) return NULL_POINTER;
+    if (t->base->len == 0u)         return EMPTY;
+
+    int8_t out = 0u;
+    for (size_t i = 0u; i < t->base->len; i++) {
+        get_int8_tensor_index(t, i, &out);
+        if (out == value) {
+            *index = i;
+            return NO_ERROR;
+        }
+    }
+
+    return NOT_FOUND;
+}
 // ================================================================================
 // ================================================================================
 // eof

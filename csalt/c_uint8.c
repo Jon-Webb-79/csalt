@@ -147,7 +147,25 @@ uint8_tensor_expect_t slice_uint8_tensor_array(const uint8_tensor_t* src,
 
     return (uint8_tensor_expect_t){ .has_value = true, .u.value = a };
 }
+// -------------------------------------------------------------------------------- 
 
+error_code_t find_uint8_tensor_value(const uint8_tensor_t* t,
+                                     size_t*               index,
+                                     uint8_t               value) {
+    if (t == NULL || index == NULL) return NULL_POINTER;
+    if (t->base->len == 0u)         return EMPTY;
+
+    uint8_t out = 0u;
+    for (size_t i = 0u; i < t->base->len; i++) {
+        get_uint8_tensor_index(t, i, &out);
+        if (out == value) {
+            *index = i;
+            return NO_ERROR;
+        }
+    }
+
+    return NOT_FOUND;
+}
 // ================================================================================
 // ================================================================================
 // eof
