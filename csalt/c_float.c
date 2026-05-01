@@ -15,6 +15,27 @@
 #include "c_float.h"
 #include "c_dtypes.h"
 
+#if defined(__AVX512BW__)
+#  include "simd_avx512_float.inl"
+#elif defined(__AVX2__)
+#  include "simd_avx2_float.inl"
+#elif defined(__AVX__)
+#  include "simd_avx_float.inl"
+#elif defined(__SSE4_1__)
+#  include "simd_sse41_float.inl"
+#elif defined(__SSSE3__)
+#  include "simd_sse3_float.inl"
+#elif defined(__SSE2__)
+#  include "simd_sse2_float.inl"
+#elif defined(__ARM_FEATURE_SVE2)
+#  include "simd_sve2_float.inl"
+#elif defined(__ARM_FEATURE_SVE)
+#  include "simd_sve_float.inl"
+#elif defined(__ARM_NEON)
+#  include "simd_neon_float.inl"
+#else
+#  include "simd_scalar_float.inl"
+#endif
 // ================================================================================ 
 // ================================================================================ 
 
@@ -144,6 +165,35 @@ float_tensor_expect_t slice_float_tensor_array(const float_tensor_t* src,
     a->base = r.u.value;
 
     return (float_tensor_expect_t){ .has_value = true, .u.value = a };
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t float_tensor_lsearch(const float_tensor_t* t,
+                                  size_t*               index,
+                                  float                 value,
+                                  float                 tolerance) {
+    if (t == NULL || index == NULL) return NULL_POINTER;
+    if (t->base->len == 0u)         return EMPTY;
+
+    size_t result = simd_lsearch_float(
+        (const float*)t->base->data,
+        t->base->len,
+        value,
+        tolerance
+    );
+
+    if (result == SIZE_MAX) return NOT_FOUND;
+
+    /* Verify the candidate satisfies the tolerance condition — confirms
+     * correctness independently of the SIMD helper's sentinel convention. */
+    float found_val = 0.0f;
+    get_float_tensor_index(t, result, &found_val);
+    float diff = found_val - value;
+    if (diff < 0.0f) diff = -diff;
+    if (diff > tolerance) return NOT_FOUND;
+
+    *index = result;
+    return NO_ERROR;
 }
 // ================================================================================
 // ================================================================================

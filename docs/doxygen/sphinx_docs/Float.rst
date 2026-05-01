@@ -94,6 +94,8 @@ Utility Operations
 
 .. doxygenfunction:: sort_float_tensor
 
+.. doxygenfunction:: float_tensor_lsearch
+
 Introspection
 -------------
 
