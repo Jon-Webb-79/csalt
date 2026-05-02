@@ -94,6 +94,8 @@ Utility Operations
 
 .. doxygenfunction:: sort_ldouble_tensor
 
+.. doxygenfunction:: ldouble_tensor_lsearch
+
 Introspection
 -------------
 

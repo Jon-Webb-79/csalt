@@ -14,6 +14,7 @@
 
 #include "c_ldouble.h"
 #include "c_dtypes.h"
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -143,6 +144,27 @@ ldouble_tensor_expect_t slice_ldouble_tensor_array(const ldouble_tensor_t* src,
     a->base = r.u.value;
 
     return (ldouble_tensor_expect_t){ .has_value = true, .u.value = a };
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t ldouble_tensor_lsearch(const ldouble_tensor_t* t,
+                                    size_t*                 index,
+                                    long double             value,
+                                    long double             tolerance) {
+    if (t == NULL || index == NULL) return NULL_POINTER;
+    if (t->base->len == 0u)         return EMPTY;
+
+    const long double* data = (const long double*)t->base->data;
+    size_t             len  = t->base->len;
+
+    for (size_t i = 0u; i < len; i++) {
+        if (fabsl(data[i] - value) <= tolerance) {
+            *index = i;
+            return NO_ERROR;
+        }
+    }
+
+    return NOT_FOUND;
 }
 // ================================================================================
 // ================================================================================

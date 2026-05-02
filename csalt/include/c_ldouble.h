@@ -607,6 +607,80 @@ static inline error_code_t sort_ldouble_tensor(ldouble_tensor_t* t,
     if (t == NULL) return NULL_POINTER;
     return sort_tensor(t->base, ldouble_cmp, dir);
 }
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Search a long double tensor for the first element within
+ *        tolerance of a target value.
+ *
+ * Performs a scalar linear scan of the populated elements in the
+ * tensor's data buffer from index 0 to len - 1.  An element matches
+ * when fabsl(data[i] - value) <= tolerance.  On the first match,
+ * writes the zero-based index of the matching element into *index and
+ * returns NO_ERROR.  If no match is found the function returns
+ * NOT_FOUND and *index is left unchanged.
+ *
+ * No SIMD acceleration is available for long double — the size of
+ * long double is platform-dependent (80-bit extended precision on
+ * x86, 128-bit on AArch64, or 64-bit on MSVC) and no mainstream
+ * SIMD ISA provides a corresponding lane type.  The scalar
+ * implementation is the reference and the only path for this type.
+ *
+ * NaN behaviour: fabsl(NaN - value) is NaN, and NaN <= tolerance is
+ * false for any finite tolerance, so NaN elements are never matched.
+ * Passing tolerance < 0.0L produces no matches since no absolute
+ * difference can be less than or equal to a negative number.
+ *
+ * The search covers only the populated region [0, len) — for
+ * ARRAY_STRUCT tensors this is the number of elements pushed so far,
+ * and for TENSOR_STRUCT tensors this is alloc (all slots are always
+ * live).  When multiple elements are within tolerance the index of
+ * the first occurrence is returned.
+ *
+ * @param t          Pointer to the source tensor. Must not be NULL.
+ * @param index      Pointer to a size_t that receives the index of the
+ *                   first matching element on success. Must not be NULL.
+ *                   Unchanged if no element is within tolerance.
+ * @param value      The long double value to search for.
+ * @param tolerance  Maximum allowed absolute difference for a match.
+ *                   Pass 0.0L for exact equality on non-NaN values.
+ *                   Must be >= 0.0L for meaningful results.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if t or index is NULL
+ *         - EMPTY        if t->base->len == 0
+ *         - NOT_FOUND    if no element satisfies
+ *                        fabsl(data[i] - value) <= tolerance
+ *
+ * @code{.c}
+ * ldouble_tensor_expect_t r = init_ldouble_array(8, false, heap_allocator());
+ * ldouble_tensor_t* arr = r.u.value;
+ *
+ * push_back_ldouble_array(arr, 1.0L);
+ * push_back_ldouble_array(arr, 2.0L);
+ * push_back_ldouble_array(arr, 3.0L);
+ *
+ * size_t idx = 0u;
+ *
+ * // Exact match
+ * error_code_t err = ldouble_tensor_lsearch(arr, &idx, 2.0L, 0.0L);
+ * // err == NO_ERROR, idx == 1
+ *
+ * // Tolerance match
+ * err = ldouble_tensor_lsearch(arr, &idx, 1.95L, 0.1L);
+ * // err == NO_ERROR, idx == 1  (|2.0 - 1.95| == 0.05 <= 0.1)
+ *
+ * // No match
+ * err = ldouble_tensor_lsearch(arr, &idx, 9.9L, 0.01L);
+ * // err == NOT_FOUND, idx unchanged
+ *
+ * return_ldouble_tensor(arr);
+ * @endcode
+ */
+error_code_t ldouble_tensor_lsearch(const ldouble_tensor_t* t,
+                                    size_t*                 index,
+                                    long double             value,
+                                    long double             tolerance);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 
