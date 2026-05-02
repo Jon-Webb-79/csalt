@@ -113,7 +113,7 @@ static size_t simd_lsearch_float(const float* data,
         if (diff <= tolerance) return i;
     }
     return SIZE_MAX;
-
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_AVX512_FLOAT_INL */

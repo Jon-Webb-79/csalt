@@ -13831,7 +13831,321 @@ static void test_pop_at_double_array_value(void** state) {
 
     return_double_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+// ================================================================================
+// ================================================================================
+// LSEARCH TESTS
+
+/** Build a double array from a literal array of values. */
+static double_tensor_t* _make_double_array_from(const double* vals, size_t n) {
+    double_tensor_t* arr = _make_double_array(n + 1u, false);
+    if (arr == NULL) return NULL;
+    for (size_t i = 0u; i < n; i++)
+        push_back_double_array(arr, vals[i]);
+    return arr;
+}
+
+/** NULL tensor must return NULL_POINTER. */
+static void test_double_lsearch_null_tensor(void** state) {
+    (void)state;
+    size_t idx = 0u;
+    assert_int_equal(double_tensor_lsearch(NULL, &idx, 1.0f, 0.0f),
+                     NULL_POINTER);
+}
+ 
+/** NULL index pointer must return NULL_POINTER. */
+static void test_double_lsearch_null_index(void** state) {
+    (void)state;
+    double  vals[] = { 1.0f, 2.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 2u);
+    assert_non_null(arr);
+ 
+    assert_int_equal(double_tensor_lsearch(arr, NULL, 1.0f, 0.0f),
+                     NULL_POINTER);
+    return_double_tensor(arr);
+}
+ 
+/** Empty array must return EMPTY without touching index. */
+static void test_double_lsearch_empty(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(double_tensor_lsearch(arr, &idx, 1.0f, 0.0f), EMPTY);
+    assert_int_equal(idx, 99u);
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// EXACT MATCH (tolerance == 0.0f)
+ 
+/** Exact match at index 0 with zero tolerance. */
+static void test_double_lsearch_exact_first(void** state) {
+    (void)state;
+    double vals[] = { 1.0f, 2.0f, 3.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(double_tensor_lsearch(arr, &idx, 1.0f, 0.0f), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_double_tensor(arr);
+}
+ 
+/** Exact match at the last index with zero tolerance. */
+static void test_double_lsearch_exact_last(void** state) {
+    (void)state;
+    double vals[] = { 1.0f, 2.0f, 3.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(double_tensor_lsearch(arr, &idx, 3.0f, 0.0f), NO_ERROR);
+    assert_int_equal(idx, 2u);
+    return_double_tensor(arr);
+}
+ 
+/** Exact match in the middle with zero tolerance. */
+static void test_double_lsearch_exact_middle(void** state) {
+    (void)state;
+    double vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(double_tensor_lsearch(arr, &idx, 3.0f, 0.0f), NO_ERROR);
+    assert_int_equal(idx, 2u);
+    return_double_tensor(arr);
+}
+ 
+/** Value not present returns NOT_FOUND and index is unchanged. */
+static void test_double_lsearch_exact_not_found(void** state) {
+    (void)state;
+    double vals[] = { 1.0f, 2.0f, 3.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(double_tensor_lsearch(arr, &idx, 9.9f, 0.0f), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// TOLERANCE MATCHING
+ 
+/**
+ * Element exactly at the tolerance boundary must match.
+ * |2.05 - 2.0| == 0.05 == tolerance → match.
+ */
+static void test_double_lsearch_tolerance_exact_boundary(void** state) {
+    (void)state;
+    double vals[] = { 1.0f, 2.05f, 3.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, 2.0f, 0.05f), NO_ERROR);
+    assert_int_equal(idx, 1u);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * Element just beyond tolerance must not match.
+ * |2.06 - 2.0| == 0.06 > 0.05 → no match.
+ */
+static void test_double_lsearch_tolerance_just_outside(void** state) {
+    (void)state;
+    double vals[] = { 1.0f, 2.06f, 3.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, 2.0f, 0.05f), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * Negative value within tolerance must match — confirms the absolute
+ * difference is taken correctly for values below zero.
+ */
+static void test_double_lsearch_tolerance_negative_value(void** state) {
+    (void)state;
+    double vals[] = { -3.0f, -1.95f, 0.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* |-1.95 - (-2.0)| == 0.05 <= 0.1 → match at index 1 */
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, -2.0f, 0.1f), NO_ERROR);
+    assert_int_equal(idx, 1u);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * When multiple elements are within tolerance, the first occurrence
+ * must be returned.
+ */
+static void test_double_lsearch_tolerance_first_of_multiple(void** state) {
+    (void)state;
+    double vals[] = { 1.0f, 2.03f, 2.01f, 2.04f, 5.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* All of 2.03, 2.01, 2.04 are within 0.05 of 2.0 — first is index 1 */
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, 2.0f, 0.05f), NO_ERROR);
+    assert_int_equal(idx, 1u);
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// NaN AND SPECIAL VALUES
+ 
+/**
+ * NaN elements must never match — IEEE 754 ordered comparison of any
+ * value against NaN is false.
+ */
+static void test_double_lsearch_nan_element_not_matched(void** state) {
+    (void)state;
+    double nan_val = (double)NAN;
+    double vals[]  = { 1.0f, nan_val, 3.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* Searching for NaN with any tolerance must return NOT_FOUND */
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, nan_val, 1e10f), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * Positive infinity must match positive infinity exactly with zero
+ * tolerance, since inf - inf == NaN, NOT zero.  Passing a large
+ * tolerance does not help either since inf - inf is NaN which compares
+ * false.  This test documents the expected NOT_FOUND behaviour for inf.
+ */
+static void test_double_lsearch_infinity_behaviour(void** state) {
+    (void)state;
+    double inf_val = (double)(1.0 / 0.0);   /* +inf */
+    double vals[]  = { 1.0f, inf_val, 3.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* inf - inf == NaN, ordered comparison false → NOT_FOUND */
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, inf_val, 0.0f), NOT_FOUND);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * Negative tolerance produces no matches since no absolute difference
+ * can be less than or equal to a negative number.
+ */
+static void test_double_lsearch_negative_tolerance(void** state) {
+    (void)state;
+    double vals[] = { 1.0f, 2.0f, 3.0f };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, 2.0f, -0.01f), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// SINGLE ELEMENT
+ 
+/** Single-element array containing a match must succeed. */
+static void test_double_lsearch_single_match(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    push_back_double_array(arr, 42.0f);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, 42.0f, 0.0f), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_double_tensor(arr);
+}
+ 
+/** Single-element array not containing a match must return NOT_FOUND. */
+static void test_double_lsearch_single_no_match(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    push_back_double_array(arr, 42.0f);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, 7.0f, 0.0f), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// LARGE ARRAY (exercises SIMD bulk path)
+ 
+/**
+ * A large array that exceeds the SIMD register width exercises the
+ * bulk SIMD path and the scalar remainder.  The target is placed near
+ * the end to ensure the SIMD loop runs multiple full iterations before
+ * finding the match.
+ */
+static void test_double_lsearch_large_array_match_near_end(void** state) {
+    (void)state;
+    const size_t n = 64u;
+    double_tensor_t* arr = _make_double_array(n + 1u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < n - 1u; i++)
+        push_back_double_array(arr, (double)i * 0.1f);
+    push_back_double_array(arr, 999.0f);   /* target at last position */
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, 999.0f, 0.0f), NO_ERROR);
+    assert_int_equal(idx, n - 1u);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * A large array where the target is not present must return NOT_FOUND
+ * after exhausting all SIMD chunks and the scalar remainder.
+ */
+static void test_double_lsearch_large_array_not_found(void** state) {
+    (void)state;
+    const size_t n = 64u;
+    double_tensor_t* arr = _make_double_array(n + 1u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < n; i++)
+        push_back_double_array(arr, (double)i);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        double_tensor_lsearch(arr, &idx, -1.0f, 0.0f), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_double_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -13917,6 +14231,36 @@ const struct CMUnitTest test_double_tensor[] = {
     cmocka_unit_test(test_pop_back_double_array_value),
     cmocka_unit_test(test_pop_front_double_array_value),
     cmocka_unit_test(test_pop_at_double_array_value),
+
+    /* lsearch null/guard */
+    cmocka_unit_test(test_double_lsearch_null_tensor),
+    cmocka_unit_test(test_double_lsearch_null_index),
+    cmocka_unit_test(test_double_lsearch_empty),
+ 
+    /* lsearch exact match — zero tolerance */
+    cmocka_unit_test(test_double_lsearch_exact_first),
+    cmocka_unit_test(test_double_lsearch_exact_last),
+    cmocka_unit_test(test_double_lsearch_exact_middle),
+    cmocka_unit_test(test_double_lsearch_exact_not_found),
+ 
+    /* lsearch tolerance matching */
+    cmocka_unit_test(test_double_lsearch_tolerance_exact_boundary),
+    cmocka_unit_test(test_double_lsearch_tolerance_just_outside),
+    cmocka_unit_test(test_double_lsearch_tolerance_negative_value),
+    cmocka_unit_test(test_double_lsearch_tolerance_first_of_multiple),
+ 
+    /* lsearch NaN and special values */
+    cmocka_unit_test(test_double_lsearch_nan_element_not_matched),
+    cmocka_unit_test(test_double_lsearch_infinity_behaviour),
+    cmocka_unit_test(test_double_lsearch_negative_tolerance),
+ 
+    /* lsearch single element */
+    cmocka_unit_test(test_double_lsearch_single_match),
+    cmocka_unit_test(test_double_lsearch_single_no_match),
+ 
+    /* lsearch large array — exercises SIMD bulk path */
+    cmocka_unit_test(test_double_lsearch_large_array_match_near_end),
+    cmocka_unit_test(test_double_lsearch_large_array_not_found),
 };
 
 const size_t test_double_tensor_count = sizeof(test_double_tensor) /

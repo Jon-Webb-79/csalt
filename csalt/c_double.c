@@ -14,6 +14,29 @@
 
 #include "c_double.h"
 #include "c_dtypes.h"
+
+#if defined(__AVX512BW__)
+#  include "simd_avx512_double.inl"
+#elif defined(__AVX2__)
+#  include "simd_avx2_double.inl"
+#elif defined(__AVX__)
+#  include "simd_avx_double.inl"
+#elif defined(__SSE4_1__)
+#  include "simd_sse41_double.inl"
+#elif defined(__SSSE3__)
+#  include "simd_sse3_double.inl"
+#elif defined(__SSE2__)
+#  include "simd_sse2_double.inl"
+#elif defined(__ARM_FEATURE_SVE2)
+#  include "simd_sve2_double.inl"
+#elif defined(__ARM_FEATURE_SVE)
+#  include "simd_sve_double.inl"
+#elif defined(__ARM_NEON)
+#  include "simd_neon_double.inl"
+#else
+#  include "simd_scalar_double.inl"
+#endif
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -143,6 +166,35 @@ double_tensor_expect_t slice_double_tensor_array(const double_tensor_t* src,
     a->base = r.u.value;
 
     return (double_tensor_expect_t){ .has_value = true, .u.value = a };
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t double_tensor_lsearch(const double_tensor_t* t,
+                                  size_t*               index,
+                                  double                 value,
+                                  double                 tolerance) {
+    if (t == NULL || index == NULL) return NULL_POINTER;
+    if (t->base->len == 0u)         return EMPTY;
+
+    size_t result = simd_lsearch_double(
+        (const double*)t->base->data,
+        t->base->len,
+        value,
+        tolerance
+    );
+
+    if (result == SIZE_MAX) return NOT_FOUND;
+
+    /* Verify the candidate satisfies the tolerance condition — confirms
+     * correctness independently of the SIMD helper's sentinel convention. */
+    double found_val = 0.0f;
+    get_double_tensor_index(t, result, &found_val);
+    double diff = found_val - value;
+    if (diff < 0.0f) diff = -diff;
+    if (diff > tolerance) return NOT_FOUND;
+
+    *index = result;
+    return NO_ERROR;
 }
 // ================================================================================
 // ================================================================================

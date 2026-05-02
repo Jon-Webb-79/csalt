@@ -607,6 +607,83 @@ static inline error_code_t sort_double_tensor(double_tensor_t* t,
     if (t == NULL) return NULL_POINTER;
     return sort_tensor(t->base, double_cmp, dir);
 }
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Search a double tensor for the first element within tolerance
+ *        of a target value.
+ *
+ * Performs a SIMD-accelerated linear scan of the populated elements in
+ * the tensor's data buffer from index 0 to len - 1.  An element matches
+ * when |data[i] - value| <= tolerance.  On the first match, writes the
+ * zero-based index of the matching element into *index and returns
+ * NO_ERROR.  If no match is found the function returns NOT_FOUND and
+ * *index is left unchanged.
+ *
+ * The internal SIMD helper uses SIZE_MAX as a sentinel for not-found.
+ * After the search returns a candidate index the function verifies the
+ * element at that index satisfies the tolerance condition before
+ * reporting success, guarding against any edge case in the helper and
+ * ensuring *index is only written when a confirmed match exists.
+ *
+ * NaN behaviour: if value or any element is NaN the comparison is
+ * unordered and that element is never matched, consistent with IEEE 754
+ * quiet comparison semantics.  Passing tolerance < 0.0f produces no
+ * matches since no absolute difference can be less than a negative
+ * number.
+ *
+ * The search covers only the populated region [0, len) — for
+ * ARRAY_STRUCT tensors this is the number of elements pushed so far,
+ * and for TENSOR_STRUCT tensors this is alloc (all slots are always
+ * live).  When multiple elements are within tolerance the index of the
+ * first occurrence is returned.
+ *
+ * @param t          Pointer to the source tensor. Must not be NULL.
+ * @param index      Pointer to a size_t that receives the index of the
+ *                   first matching element on success. Must not be NULL.
+ *                   Unchanged if no element is within tolerance.
+ * @param value      The double value to search for.
+ * @param tolerance  Maximum allowed absolute difference for a match.
+ *                   Pass 0.0f for exact bit-pattern equality on
+ *                   non-NaN values.  Must be >= 0.0f for meaningful
+ *                   results.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if t or index is NULL
+ *         - EMPTY        if t->base->len == 0
+ *         - NOT_FOUND    if no element satisfies |data[i] - value| <= tolerance
+ *
+ * @code{.c}
+ * double_tensor_expect_t r = init_double_array(8, false, heap_allocator());
+ * double_tensor_t* arr = r.u.value;
+ *
+ * push_back_double_array(arr, 1.0f);
+ * push_back_double_array(arr, 2.0f);
+ * push_back_double_array(arr, 3.0f);
+ * push_back_double_array(arr, 2.01f);
+ * // arr = [1.0, 2.0, 3.0, 2.01]
+ *
+ * size_t idx = 0u;
+ *
+ * // Exact match
+ * error_code_t err = double_tensor_lsearch(arr, &idx, 3.0f, 0.0f);
+ * // err == NO_ERROR, idx == 2
+ *
+ * // Tolerance match — finds first element within 0.05 of 2.0
+ * err = double_tensor_lsearch(arr, &idx, 2.0f, 0.05f);
+ * // err == NO_ERROR, idx == 1  (2.0 is closer than 2.01 and comes first)
+ *
+ * // No match
+ * err = double_tensor_lsearch(arr, &idx, 9.9f, 0.01f);
+ * // err == NOT_FOUND, idx unchanged
+ *
+ * return_double_tensor(arr);
+ * @endcode
+ */
+error_code_t double_tensor_lsearch(const double_tensor_t* t,
+                                  size_t*               index,
+                                  double                 value,
+                                  double                 tolerance);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 
