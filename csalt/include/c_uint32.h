@@ -666,6 +666,65 @@ static inline error_code_t sort_uint32_tensor(uint32_tensor_t* t,
 error_code_t uint32_tensor_lsearch(const uint32_tensor_t* t,
                                    size_t*                index,
                                    uint32_t               value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Binary search a sorted uint32_t tensor for a target value.
+ *
+ * Performs an iterative binary search over the populated elements of
+ * the tensor's data buffer.  The tensor must be sorted in ascending
+ * order before calling this function — the result is undefined if the
+ * data is unsorted.  Use sort_uint32_tensor before calling if the
+ * sort order is not guaranteed.
+ *
+ * When duplicates are present binary search does not guarantee which
+ * occurrence is returned — only that the returned index satisfies
+ * data[*index] == value.  Use uint32_tensor_lsearch if the first
+ * occurrence is required.
+ *
+ * An underflow guard prevents size_t wraparound when the target is
+ * smaller than every element: if the midpoint reaches index 0 and the
+ * element there does not match, the loop exits cleanly rather than
+ * decrementing high below zero.
+ *
+ * @param t      Pointer to the source tensor. Must not be NULL.
+ *               The tensor must be sorted in ascending order.
+ * @param index  Pointer to a size_t that receives the zero-based index
+ *               of the matching element on success. Must not be NULL.
+ *               Unchanged if the value is not found.
+ * @param value  The uint32_t value to search for.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER if t or index is NULL
+ *         - EMPTY        if t->base->len == 0
+ *         - NOT_FOUND    if value is not present in the tensor
+ *
+ * @code{.c}
+ * uint32_tensor_expect_t r = init_uint32_array(8, false, heap_allocator());
+ * uint32_tensor_t* arr = r.u.value;
+ *
+ * push_back_uint32_array(arr, 10u);
+ * push_back_uint32_array(arr, 40u);
+ * push_back_uint32_array(arr, 20u);
+ * push_back_uint32_array(arr, 30u);
+ *
+ * // Sort before searching
+ * sort_uint32_tensor(arr, FORWARD);
+ * // arr = [10, 20, 30, 40]
+ *
+ * size_t idx = 0u;
+ * error_code_t err = uint32_tensor_bsearch(arr, &idx, 30u);
+ * // err == NO_ERROR, idx == 2
+ *
+ * err = uint32_tensor_bsearch(arr, &idx, 25u);
+ * // err == NOT_FOUND, idx unchanged
+ *
+ * return_uint32_tensor(arr);
+ * @endcode
+ */
+error_code_t uint32_tensor_bsearch(const uint32_tensor_t* t,
+                                   size_t* index,
+                                   uint32_t value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 
