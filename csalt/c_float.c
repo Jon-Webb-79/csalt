@@ -195,6 +195,58 @@ error_code_t float_tensor_lsearch(const float_tensor_t* t,
     *index = result;
     return NO_ERROR;
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t float_tensor_bsearch(const float_tensor_t* t,
+                                  size_t*               index,
+                                  float                 value,
+                                  float                 tolerance) {
+    if (t == NULL || index == NULL) return NULL_POINTER;
+    if (t->base->len == 0u)         return EMPTY;
+
+    size_t len = t->base->len;
+
+    /* Binary search for the leftmost position where an element could
+     * be within tolerance — i.e. the insertion point of
+     * (value - tolerance).  After the loop, low is the index of the
+     * first element >= (value - tolerance). */
+    float  lower_bound = value - tolerance;
+    size_t low  = 0u;
+    size_t high = len;   /* half-open upper bound */
+
+    while (low < high) {
+        size_t mid = low + (high - low) / 2u;
+        float  elem = 0.0f;
+        get_float_tensor_index(t, mid, &elem);
+
+        if (elem < lower_bound) {
+            low = mid + 1u;
+        } else {
+            high = mid;
+        }
+    }
+
+    /* Linear scan forward from low: any element here could be within
+     * tolerance.  Stop as soon as an element exceeds (value + tolerance)
+     * since the array is sorted and no further elements can match. */
+    float upper_bound = value + tolerance;
+
+    for (size_t i = low; i < len; i++) {
+        float elem = 0.0f;
+        get_float_tensor_index(t, i, &elem);
+
+        if (elem > upper_bound) break;
+
+        float diff = elem - value;
+        if (diff < 0.0f) diff = -diff;
+        if (diff <= tolerance) {
+            *index = i;
+            return NO_ERROR;
+        }
+    }
+
+    return NOT_FOUND;
+}
 // ================================================================================
 // ================================================================================
 // eof
