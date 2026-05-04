@@ -96,6 +96,8 @@ Utility Operations
 
 .. doxygenfunction:: int32_tensor_lsearch
 
+.. doxygenfunction:: int32_tensor_bsearch
+
 Introspection
 -------------
 
