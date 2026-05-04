@@ -48,7 +48,7 @@ int main(void) {
         {"Types Implementation", test_dtypes, test_dtypes_count},
         {"Generic Tensor", test_tensor, test_tensor_count},
         {"Uint8 Tensor", test_uint8_tensor, test_uint8_tensor_count},
-        // {"Int8 Tensor", test_int8_tensor, test_int8_tensor_count},
+        {"Int8 Tensor", test_int8_tensor, test_int8_tensor_count},
         // {"Uint16 Tensor", test_uint16_tensor, test_uint16_tensor_count},
         // {"Int16 Tensor", test_int16_tensor, test_int16_tensor_count},
         // {"Uint32 Tensor", test_uint32_tensor, test_uint32_tensor_count},

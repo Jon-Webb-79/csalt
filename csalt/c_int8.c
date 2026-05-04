@@ -166,6 +166,35 @@ error_code_t int8_tensor_lsearch(const int8_tensor_t* t,
 
     return NOT_FOUND;
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t int8_tensor_bsearch(const int8_tensor_t* t,
+                                  size_t*               index,
+                                  int8_t               value) {
+    if (t == NULL || index == NULL) return NULL_POINTER;
+    if (t->base->len == 0u)         return EMPTY;
+
+    size_t  low  = 0u;
+    size_t  high = t->base->len - 1u;
+    int8_t test = 0u;
+
+    while (low <= high) {
+        size_t mid = low + (high - low) / 2u;
+        get_int8_tensor_index(t, mid, &test);
+
+        if (test == value) {
+            *index = mid;
+            return NO_ERROR;
+        } else if (test < value) {
+            low = mid + 1u;
+        } else {
+            if (mid == 0u) break;   /* guard: high = mid-1 would underflow */
+            high = mid - 1u;
+        }
+    }
+
+    return NOT_FOUND;
+}
 // ================================================================================
 // ================================================================================
 // eof
