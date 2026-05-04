@@ -18496,6 +18496,369 @@ static void test_ldouble_lsearch_large_not_found(void** state) {
     assert_int_equal(idx, 99u);
     return_ldouble_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// BINARY SEARCH (ldouble_tensor_bsearch)
+//
+// Note: the tensor must be sorted in ascending order before calling
+//       bsearch.  Tests push values in sorted order or use
+//       sort_ldouble_tensor to establish the precondition.
+// ================================================================================
+ 
+/** NULL tensor must return NULL_POINTER. */
+static void test_ldouble_bsearch_null_tensor(void** state) {
+    (void)state;
+    size_t idx = 0u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(NULL, &idx, 1.0L, 0.0L), NULL_POINTER);
+}
+ 
+/** NULL index pointer must return NULL_POINTER. */
+static void test_ldouble_bsearch_null_index(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 2u);
+    assert_non_null(arr);
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, NULL, 1.0L, 0.0L), NULL_POINTER);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Empty array must return EMPTY without touching index. */
+static void test_ldouble_bsearch_empty(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(4u, false);
+    assert_non_null(arr);
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 1.0L, 0.0L), EMPTY);
+    assert_int_equal(idx, 99u);
+    return_ldouble_tensor(arr);
+}
+ 
+// ---- Single element ----------------------------------------------------------
+ 
+/** Single-element array containing the exact target must succeed. */
+static void test_ldouble_bsearch_single_exact_match(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, 3.14L);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 3.14L, 0.0L), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Single-element within tolerance must succeed. */
+static void test_ldouble_bsearch_single_tolerance_match(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, 3.14L);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 3.1L, 0.05L), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Single-element not within tolerance must return NOT_FOUND. */
+static void test_ldouble_bsearch_single_no_match(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, 3.14L);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 9.9L, 0.01L), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_ldouble_tensor(arr);
+}
+ 
+// ---- Exact match (zero tolerance) -------------------------------------------
+ 
+/** Exact match at the first position. */
+static void test_ldouble_bsearch_exact_first(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 1.0L, 0.0L), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Exact match at the last position. */
+static void test_ldouble_bsearch_exact_last(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 5.0L, 0.0L), NO_ERROR);
+    assert_int_equal(idx, 4u);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Exact match at the midpoint. */
+static void test_ldouble_bsearch_exact_middle(void** state) {
+    (void)state;
+    long double vals[] = { 10.0L, 20.0L, 30.0L, 40.0L, 50.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 30.0L, 0.0L), NO_ERROR);
+    assert_int_equal(idx, 2u);
+    return_ldouble_tensor(arr);
+}
+ 
+// ---- Not found cases --------------------------------------------------------
+ 
+/** Value below all elements must return NOT_FOUND. */
+static void test_ldouble_bsearch_below_all(void** state) {
+    (void)state;
+    long double vals[] = { 10.0L, 20.0L, 30.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 5.0L, 0.0L), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Value above all elements must return NOT_FOUND. */
+static void test_ldouble_bsearch_above_all(void** state) {
+    (void)state;
+    long double vals[] = { 10.0L, 20.0L, 30.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 99.0L, 0.0L), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Value in a gap between two elements must return NOT_FOUND. */
+static void test_ldouble_bsearch_in_gap(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 4u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 3.0L, 0.0L), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_ldouble_tensor(arr);
+}
+ 
+// ---- Tolerance boundary semantics -------------------------------------------
+ 
+/**
+ * Element at exactly the tolerance boundary must match —
+ * condition is fabsl(diff) <= tolerance, not <.
+ */
+static void test_ldouble_bsearch_tolerance_exact_boundary(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 4u);
+    assert_non_null(arr);
+ 
+    /* |2.0 - 1.95| == 0.05 == tolerance */
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 1.95L, 0.05L), NO_ERROR);
+    assert_int_equal(idx, 1u);
+    return_ldouble_tensor(arr);
+}
+ 
+/**
+ * Element just outside tolerance must not match.
+ * |2.0 - 1.94| == 0.06 > 0.05.
+ */
+static void test_ldouble_bsearch_tolerance_just_outside(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 1.94L, 0.05L), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_ldouble_tensor(arr);
+}
+ 
+/**
+ * Tolerance window spanning multiple elements — the first element
+ * within the window must be returned.
+ */
+static void test_ldouble_bsearch_tolerance_window_multiple(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 1.8L, 2.1L, 2.9L, 4.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* window [1.5, 2.5] around 2.0 covers 1.8 (idx 1) and 2.1 (idx 2) */
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 2.0L, 0.5L), NO_ERROR);
+    assert_int_equal(idx, 1u);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Tolerance window covering all elements — first element returned. */
+static void test_ldouble_bsearch_tolerance_covers_all(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 2.0L, 10.0L), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_ldouble_tensor(arr);
+}
+ 
+/**
+ * Extended precision: search using a value computed at long double
+ * precision that would differ from a double approximation.
+ * Confirms the binary search comparisons use full long double width.
+ */
+static void test_ldouble_bsearch_extended_precision(void** state) {
+    (void)state;
+    long double exact = 1.0L / 3.0L;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, exact);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, exact, 0.0L), NO_ERROR);
+    assert_int_equal(idx, 0u);
+ 
+    /* The double-precision approximation differs from the stored value
+     * on platforms where sizeof(long double) > sizeof(double). */
+    if (sizeof(long double) > sizeof(double)) {
+        long double approx = (long double)(1.0 / 3.0);
+        assert_int_equal(
+            ldouble_tensor_bsearch(arr, &idx, approx, 0.0L), NOT_FOUND);
+    }
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// ---- Special values ---------------------------------------------------------
+ 
+/** NaN target must never match any element. */
+static void test_ldouble_bsearch_nan_target(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, (long double)NAN, 1e10L),
+        NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Negative tolerance must produce no matches. */
+static void test_ldouble_bsearch_negative_tolerance(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 2.0L, -0.01L), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_ldouble_tensor(arr);
+}
+ 
+/** Negative values within tolerance must be found correctly. */
+static void test_ldouble_bsearch_negative_values(void** state) {
+    (void)state;
+    long double vals[] = { -5.0L, -3.0L, -1.0L, 0.0L, 2.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, -3.0L, 0.0L), NO_ERROR);
+    assert_int_equal(idx, 1u);
+ 
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, -2.9L, 0.2L), NO_ERROR);
+    assert_int_equal(idx, 1u);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// ---- Integration with sort --------------------------------------------------
+ 
+/**
+ * Push in unsorted order, sort, then bsearch — the primary real-world
+ * usage pattern.  Exercises three positions and a not-found case.
+ */
+static void test_ldouble_bsearch_after_sort(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(9u, false);
+    assert_non_null(arr);
+ 
+    long double vals[] = { 3.3L, 1.1L, 5.5L, 2.2L, 4.4L,
+                           7.7L, 6.6L, 9.9L, 8.8L };
+    for (size_t i = 0u; i < 9u; i++)
+        push_back_ldouble_array(arr, vals[i]);
+ 
+    assert_int_equal(sort_ldouble_tensor(arr, FORWARD), NO_ERROR);
+    /* Sorted: [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9] */
+ 
+    size_t idx = 99u;
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 1.1L, 0.0L), NO_ERROR);
+    assert_int_equal(idx, 0u);
+ 
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 5.5L, 0.0L), NO_ERROR);
+    assert_int_equal(idx, 4u);
+ 
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 9.9L, 0.0L), NO_ERROR);
+    assert_int_equal(idx, 8u);
+ 
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 3.8L, 0.0L), NOT_FOUND);
+ 
+    /* Tolerance search: 3.8 is within 0.6 of 3.3 (idx 2) */
+    assert_int_equal(
+        ldouble_tensor_bsearch(arr, &idx, 3.8L, 0.6L), NO_ERROR);
+    assert_int_equal(idx, 2u);
+ 
+    return_ldouble_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -18611,6 +18974,41 @@ const struct CMUnitTest test_ldouble_tensor[] = {
     /* large array — exercises full scalar loop */
     cmocka_unit_test(test_ldouble_lsearch_large_match_near_end),
     cmocka_unit_test(test_ldouble_lsearch_large_not_found),
+
+    /* ldouble_tensor_bsearch — null/guard */
+    cmocka_unit_test(test_ldouble_bsearch_null_tensor),
+    cmocka_unit_test(test_ldouble_bsearch_null_index),
+    cmocka_unit_test(test_ldouble_bsearch_empty),
+ 
+    /* ldouble_tensor_bsearch — single element */
+    cmocka_unit_test(test_ldouble_bsearch_single_exact_match),
+    cmocka_unit_test(test_ldouble_bsearch_single_tolerance_match),
+    cmocka_unit_test(test_ldouble_bsearch_single_no_match),
+ 
+    /* ldouble_tensor_bsearch — exact match at various positions */
+    cmocka_unit_test(test_ldouble_bsearch_exact_first),
+    cmocka_unit_test(test_ldouble_bsearch_exact_last),
+    cmocka_unit_test(test_ldouble_bsearch_exact_middle),
+ 
+    /* ldouble_tensor_bsearch — not found */
+    cmocka_unit_test(test_ldouble_bsearch_below_all),
+    cmocka_unit_test(test_ldouble_bsearch_above_all),
+    cmocka_unit_test(test_ldouble_bsearch_in_gap),
+ 
+    /* ldouble_tensor_bsearch — tolerance boundary semantics */
+    cmocka_unit_test(test_ldouble_bsearch_tolerance_exact_boundary),
+    cmocka_unit_test(test_ldouble_bsearch_tolerance_just_outside),
+    cmocka_unit_test(test_ldouble_bsearch_tolerance_window_multiple),
+    cmocka_unit_test(test_ldouble_bsearch_tolerance_covers_all),
+    cmocka_unit_test(test_ldouble_bsearch_extended_precision),
+ 
+    /* ldouble_tensor_bsearch — special values */
+    cmocka_unit_test(test_ldouble_bsearch_nan_target),
+    cmocka_unit_test(test_ldouble_bsearch_negative_tolerance),
+    cmocka_unit_test(test_ldouble_bsearch_negative_values),
+ 
+    /* ldouble_tensor_bsearch — integration with sort */
+    cmocka_unit_test(test_ldouble_bsearch_after_sort),
 };
 
 const size_t test_ldouble_tensor_count = sizeof(test_ldouble_tensor) /

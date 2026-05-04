@@ -699,7 +699,7 @@ error_code_t double_tensor_lsearch(const double_tensor_t* t,
  * function — the result is undefined if the data is unsorted.  Use
  * sort_double_tensor before calling if the sort order is not guaranteed.
  *
- * An element matches when fabsf(data[i] - value) <= tolerance.  The
+ * An element matches when abslute valuee (data[i] - value) <= tolerance.  The
  * binary search locates the insertion point of (value - tolerance) in
  * O(log n) and then scans forward from that point until an element
  * within tolerance is found or elements exceed (value + tolerance).
@@ -734,10 +734,10 @@ error_code_t double_tensor_lsearch(const double_tensor_t* t,
  * double_tensor_expect_t r = init_double_array(8, false, heap_allocator());
  * double_tensor_t* arr = r.u.value;
  *
- * push_back_double_array(arr, 1.0f);
- * push_back_double_array(arr, 2.0f);
- * push_back_double_array(arr, 3.0f);
- * push_back_double_array(arr, 4.0f);
+ * push_back_double_array(arr, 1.0);
+ * push_back_double_array(arr, 2.0);
+ * push_back_double_array(arr, 3.0);
+ * push_back_double_array(arr, 4.0);
  *
  * sort_double_tensor(arr, FORWARD);
  * // arr = [1.0, 2.0, 3.0, 4.0]
@@ -745,15 +745,15 @@ error_code_t double_tensor_lsearch(const double_tensor_t* t,
  * size_t idx = 0u;
  *
  * // Exact match
- * error_code_t err = double_tensor_bsearch(arr, &idx, 3.0f, 0.0f);
+ * error_code_t err = double_tensor_bsearch(arr, &idx, 3.0, 0.0);
  * // err == NO_ERROR, idx == 2
  *
  * // Tolerance match
- * err = double_tensor_bsearch(arr, &idx, 2.05f, 0.1f);
+ * err = double_tensor_bsearch(arr, &idx, 2.05, 0.1);
  * // err == NO_ERROR, idx == 1  (|2.0 - 2.05| == 0.05 <= 0.1)
  *
  * // No match
- * err = double_tensor_bsearch(arr, &idx, 2.5f, 0.1f);
+ * err = double_tensor_bsearch(arr, &idx, 2.5, 0.1);
  * // err == NOT_FOUND, idx unchanged
  *
  * return_double_tensor(arr);

@@ -15,6 +15,8 @@
 #include "c_ldouble.h"
 #include "c_dtypes.h"
 
+#include <math.h>
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -166,6 +168,49 @@ error_code_t ldouble_tensor_lsearch(const ldouble_tensor_t* t,
 
     return NOT_FOUND;
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t ldouble_tensor_bsearch(const ldouble_tensor_t* t,
+                                    size_t*                 index,
+                                    long double             value,
+                                    long double             tolerance) {
+    if (t == NULL || index == NULL) return NULL_POINTER;
+    if (t->base->len == 0u)         return EMPTY;
+
+    size_t len = t->base->len;
+
+    long double lower_bound = value - tolerance;
+    size_t      low         = 0u;
+    size_t      high        = len;
+
+    while (low < high) {
+        size_t      mid  = low + (high - low) / 2u;
+        long double elem = 0.0L;
+        get_ldouble_tensor_index(t, mid, &elem);
+        if (elem < lower_bound) {
+            low = mid + 1u;
+        } else {
+            high = mid;
+        }
+    }
+
+    long double upper_bound = value + tolerance;
+
+    for (size_t i = low; i < len; i++) {
+        long double elem = 0.0L;
+        get_ldouble_tensor_index(t, i, &elem);
+        if (elem > upper_bound) break;
+        long double diff = elem - value;
+        if (diff < 0.0L) diff = -diff;
+        if (diff <= tolerance) {
+            *index = i;
+            return NO_ERROR;
+        }
+    }
+
+    return NOT_FOUND;
+}
+
 // ================================================================================
 // ================================================================================
 // eof

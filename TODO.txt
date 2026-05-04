@@ -1,8 +1,7 @@
-1. bsearch
-2. bracket_bsearch
-3. array_equal
-4. min
-5. max
-6. sum
-7. cumulative_sum
-8. avg
+1. bracket_bsearch
+2. array_equal
+3. min
+4. max
+5. sum
+6. cumulative_sum
+7. avg

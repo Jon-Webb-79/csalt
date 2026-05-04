@@ -57,7 +57,7 @@ int main(void) {
         {"Int64 Tensor", test_int64_tensor, test_int64_tensor_count},
         {"Float Tensor", test_float_tensor, test_float_tensor_count},
         {"Double Tensor", test_double_tensor, test_double_tensor_count},
-        // {"Long Double Tensor", test_ldouble_tensor, test_ldouble_tensor_count},
+        {"Long Double Tensor", test_ldouble_tensor, test_ldouble_tensor_count},
         // {"String Array", test_string_array, test_string_array_count},
         // {"Uint8 Dict", test_uint8_dict, test_uint8_dict_count},
         // {"Int8 Dict", test_int8_dict, test_int8_dict_count},
