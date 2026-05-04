@@ -53,7 +53,7 @@ int main(void) {
         {"Int16 Tensor", test_int16_tensor, test_int16_tensor_count},
         {"Uint32 Tensor", test_uint32_tensor, test_uint32_tensor_count},
         {"Int32 Tensor", test_int32_tensor, test_int32_tensor_count},
-        // {"Uint64 Tensor", test_uint64_tensor, test_uint64_tensor_count},
+        {"Uint64 Tensor", test_uint64_tensor, test_uint64_tensor_count},
         // {"Int64 Tensor", test_int64_tensor, test_int64_tensor_count},
         // {"Float Tensor", test_float_tensor, test_float_tensor_count},
         // {"Double Tensor", test_double_tensor, test_double_tensor_count},

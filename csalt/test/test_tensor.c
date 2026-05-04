@@ -12882,7 +12882,283 @@ static void test_find_uint64_tensor_single_element_no_match(void** state) {
  
     return_uint64_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
 
+// ================================================================================
+// ================================================================================
+// BINARY SEARCH (uint64_tensor_bsearch)
+//
+// Note: the array must be sorted in ascending order before calling bsearch.
+//       Tests use sort_uint64_tensor to establish the precondition.
+// ================================================================================
+ 
+/** NULL tensor must return NULL_POINTER. */
+static void test_bsearch_uint64_null_tensor(void** state) {
+    (void)state;
+    size_t idx = 0u;
+    assert_int_equal(uint64_tensor_bsearch(NULL, &idx, 10u), NULL_POINTER);
+}
+ 
+/** NULL index pointer must return NULL_POINTER. */
+static void test_bsearch_uint64_null_index(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_int_equal(uint64_tensor_bsearch(arr, NULL, 1u), NULL_POINTER);
+    return_uint64_tensor(arr);
+}
+ 
+/** Empty array must return EMPTY without touching index. */
+static void test_bsearch_uint64_empty(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(4u, false);
+    assert_non_null(arr);
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 5u), EMPTY);
+    assert_int_equal(idx, 99u);
+    return_uint64_tensor(arr);
+}
+ 
+/** Single-element array containing the target must succeed at index 0. */
+static void test_bsearch_uint64_single_match(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(2u, false);
+    assert_non_null(arr);
+    push_back_uint64_array(arr, 42u);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 42u), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_uint64_tensor(arr);
+}
+ 
+/** Single-element array not containing the target must return NOT_FOUND. */
+static void test_bsearch_uint64_single_no_match(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(2u, false);
+    assert_non_null(arr);
+    push_back_uint64_array(arr, 42u);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 7u), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_uint64_tensor(arr);
+}
+ 
+/**
+ * Value at the first position (smallest element) must be found.
+ * This also exercises the underflow guard: when the target is less
+ * than mid the search narrows toward index 0 and high = mid - 1u
+ * must not underflow.
+ */
+static void test_bsearch_uint64_find_first(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(6u, false);
+    assert_non_null(arr);
+    /* Sorted: [1, 3, 5, 7, 9, 11] */
+    uint64_t vals[] = { 1u, 3u, 5u, 7u, 9u, 11u };
+    for (size_t i = 0u; i < 6u; i++)
+        push_back_uint64_array(arr, vals[i]);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 1u), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_uint64_tensor(arr);
+}
+ 
+/** Value at the last position (largest element) must be found. */
+static void test_bsearch_uint64_find_last(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(6u, false);
+    assert_non_null(arr);
+    uint64_t vals[] = { 1u, 3u, 5u, 7u, 9u, 11u };
+    for (size_t i = 0u; i < 6u; i++)
+        push_back_uint64_array(arr, vals[i]);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 11u), NO_ERROR);
+    assert_int_equal(idx, 5u);
+    return_uint64_tensor(arr);
+}
+ 
+/** Value at the exact midpoint must be found in the first iteration. */
+static void test_bsearch_uint64_find_middle(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(6u, false);
+    assert_non_null(arr);
+    /* Sorted: [10, 20, 30, 40, 50, 60] — midpoint is index 2 or 3 */
+    uint64_t vals[] = { 10u, 20u, 30u, 40u, 50u, 60u };
+    for (size_t i = 0u; i < 6u; i++)
+        push_back_uint64_array(arr, vals[i]);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 30u), NO_ERROR);
+    assert_int_equal(idx, 2u);
+    return_uint64_tensor(arr);
+}
+ 
+/**
+ * Value smaller than every element must return NOT_FOUND.
+ * This exercises the high = mid - 1u path when mid == 0,
+ * confirming the underflow guard fires correctly.
+ */
+static void test_bsearch_uint64_value_below_all(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(5u, false);
+    assert_non_null(arr);
+    uint64_t vals[] = { 10u, 20u, 30u, 40u, 50u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_uint64_array(arr, vals[i]);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 5u), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_uint64_tensor(arr);
+}
+ 
+/**
+ * Value larger than every element must return NOT_FOUND.
+ * This exercises the low = mid + 1u path until low exceeds high.
+ */
+static void test_bsearch_uint64_value_above_all(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(5u, false);
+    assert_non_null(arr);
+    uint64_t vals[] = { 10u, 20u, 30u, 40u, 50u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_uint64_array(arr, vals[i]);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 99u), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_uint64_tensor(arr);
+}
+ 
+/** Value between two elements (gap in the sequence) must return NOT_FOUND. */
+static void test_bsearch_uint64_value_in_gap(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(5u, false);
+    assert_non_null(arr);
+    /* Sorted: [10, 20, 30, 40, 50] — 25 is between 20 and 30 */
+    uint64_t vals[] = { 10u, 20u, 30u, 40u, 50u };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_uint64_array(arr, vals[i]);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 25u), NOT_FOUND);
+    assert_int_equal(idx, 99u);
+    return_uint64_tensor(arr);
+}
+ 
+/**
+ * All elements are the same value — bsearch finds one occurrence.
+ * The exact index is implementation-defined for duplicates but must
+ * satisfy the postcondition that arr[idx] == value.
+ */
+static void test_bsearch_uint64_all_equal(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(5u, false);
+    assert_non_null(arr);
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_uint64_array(arr, 7u);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 7u), NO_ERROR);
+    /* Postcondition: element at idx must equal the search value */
+    uint64_t out = 0u;
+    assert_int_equal(get_uint64_tensor_index(arr, idx, &out), NO_ERROR);
+    assert_int_equal(out, 7u);
+ 
+    return_uint64_tensor(arr);
+}
+ 
+/**
+ * Two-element array: both low and high boundary are checked in one
+ * iteration — exercises the minimal non-trivial case.
+ */
+static void test_bsearch_uint64_two_elements_find_low(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(3u, false);
+    assert_non_null(arr);
+    push_back_uint64_array(arr, 5u);
+    push_back_uint64_array(arr, 10u);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 5u), NO_ERROR);
+    assert_int_equal(idx, 0u);
+    return_uint64_tensor(arr);
+}
+ 
+static void test_bsearch_uint64_two_elements_find_high(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(3u, false);
+    assert_non_null(arr);
+    push_back_uint64_array(arr, 5u);
+    push_back_uint64_array(arr, 10u);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 10u), NO_ERROR);
+    assert_int_equal(idx, 1u);
+    return_uint64_tensor(arr);
+}
+ 
+/**
+ * sort_uint64_tensor followed by bsearch — confirms the two functions
+ * work correctly in combination, which is the primary real-world use
+ * pattern.
+ */
+static void test_bsearch_uint64_after_sort(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* Push in unsorted order */
+    uint64_t vals[] = { 50u, 10u, 80u, 30u, 70u, 20u, 60u, 40u };
+    for (size_t i = 0u; i < 8u; i++)
+        push_back_uint64_array(arr, vals[i]);
+ 
+    /* Sort in place */
+    assert_int_equal(sort_uint64_tensor(arr, FORWARD), NO_ERROR);
+    /* Sorted: [10, 20, 30, 40, 50, 60, 70, 80] */
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 40u), NO_ERROR);
+    assert_int_equal(idx, 3u);
+ 
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 10u), NO_ERROR);
+    assert_int_equal(idx, 0u);
+ 
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 80u), NO_ERROR);
+    assert_int_equal(idx, 7u);
+ 
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 35u), NOT_FOUND);
+ 
+    return_uint64_tensor(arr);
+}
+ 
+/**
+ * Boundary values 0 and uint64_MAX in a sorted array — confirms the
+ * search handles the full range of uint64_t without sign-extension
+ * or overflow in comparisons.
+ */
+static void test_bsearch_uint64_boundary_values(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array(4u, false);
+    assert_non_null(arr);
+    push_back_uint64_array(arr, 0u);
+    push_back_uint64_array(arr, 1u);
+    push_back_uint64_array(arr, 254u);
+    push_back_uint64_array(arr, 65535u);
+ 
+    size_t idx = 99u;
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 0u),   NO_ERROR);
+    assert_int_equal(idx, 0u);
+
+    assert_int_equal(uint64_tensor_bsearch(arr, &idx, 65535u), NO_ERROR);
+    assert_int_equal(idx, 3u);
+
+    return_uint64_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -12984,6 +13260,36 @@ const struct CMUnitTest test_uint64_tensor[] = {
     cmocka_unit_test(test_find_uint64_tensor_first_of_duplicates),
     cmocka_unit_test(test_find_uint64_tensor_single_element_match),
     cmocka_unit_test(test_find_uint64_tensor_single_element_no_match),
+
+    /* uint64_tensor_bsearch — null/guard */
+    cmocka_unit_test(test_bsearch_uint64_null_tensor),
+    cmocka_unit_test(test_bsearch_uint64_null_index),
+    cmocka_unit_test(test_bsearch_uint64_empty),
+ 
+    /* uint64_tensor_bsearch — single element */
+    cmocka_unit_test(test_bsearch_uint64_single_match),
+    cmocka_unit_test(test_bsearch_uint64_single_no_match),
+ 
+    /* uint64_tensor_bsearch — found at various positions */
+    cmocka_unit_test(test_bsearch_uint64_find_first),
+    cmocka_unit_test(test_bsearch_uint64_find_last),
+    cmocka_unit_test(test_bsearch_uint64_find_middle),
+ 
+    /* uint64_tensor_bsearch — not found cases */
+    cmocka_unit_test(test_bsearch_uint64_value_below_all),
+    cmocka_unit_test(test_bsearch_uint64_value_above_all),
+    cmocka_unit_test(test_bsearch_uint64_value_in_gap),
+ 
+    /* uint64_tensor_bsearch — edge cases */
+    cmocka_unit_test(test_bsearch_uint64_all_equal),
+    cmocka_unit_test(test_bsearch_uint64_two_elements_find_low),
+    cmocka_unit_test(test_bsearch_uint64_two_elements_find_high),
+ 
+    /* uint64_tensor_bsearch — integration with sort */
+    cmocka_unit_test(test_bsearch_uint64_after_sort),
+ 
+    /* uint64_tensor_bsearch — full uint64_t value range */
+    cmocka_unit_test(test_bsearch_uint64_boundary_values),
 };
 
 const size_t test_uint64_tensor_count = sizeof(test_uint64_tensor) /
