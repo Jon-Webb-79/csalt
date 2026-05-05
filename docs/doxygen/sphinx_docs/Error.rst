@@ -105,7 +105,7 @@ Authoritative comments live in ``c_error.h``; this overview is for quick referen
 
 .. list-table::
    :header-rows: 1
-   :widths: 22 10 16 52
+   :widths: 22 10 16 54
    :align: left
 
    * - Name
@@ -203,6 +203,14 @@ Authoritative comments live in ``c_error.h``; this overview is for quick referen
      - ``-305``
      - state
      - Container modified during iteration (fail-fast).
+   * - ``BELOW_RANGE``
+     - ``-306``
+     - state 
+     - Value below range.
+   * - ``ABOVE_RANGE``
+     - ``-307``
+     - state
+     - Value above range.
 
    * - ``DIV_BY_ZERO``
      - ``-401``

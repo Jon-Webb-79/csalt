@@ -48,6 +48,8 @@ const char* error_to_string(error_code_t code)
         case NOT_FOUND:              return "Item not found";
         case EMPTY:                  return "Container is empty";
         case CONCURRENT_MODIFICATION:return "Concurrent modification detected";
+        case BELOW_RANGE:            return "Value below range";
+        case ABOVE_RANGE:            return "Value above range";
 
         /* -4xx: Math / Domain */
         case DIV_BY_ZERO:            return "Division by zero";

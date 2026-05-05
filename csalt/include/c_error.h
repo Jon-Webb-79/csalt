@@ -105,6 +105,8 @@ typedef enum error_code_t {
     NOT_FOUND           = -303, /**< Requested item/key not found */
     EMPTY               = -304, /**< Container empty when element required */
     CONCURRENT_MODIFICATION = -305, /**< Modified during iteration (fail-fast) */
+    BELOW_RANGE         = -306, /**< Query value below the minimum of the range */
+    ABOVE_RANGE         = -307, /**< Query value above the maximum of the range */
 
     /* -4xx: Math / Domain */
     DIV_BY_ZERO         = -401, /**< Division by zero */
