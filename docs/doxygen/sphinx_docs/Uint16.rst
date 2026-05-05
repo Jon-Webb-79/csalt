@@ -98,6 +98,8 @@ Utility Operations
 
 .. doxygenfunction:: uint16_tensor_bsearch
 
+.. doxygenfunction:: uint16_tensor_bbsearch
+
 Introspection
 -------------
 

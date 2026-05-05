@@ -224,6 +224,53 @@ error_code_t uint16_tensor_bsearch(const uint16_tensor_t* t,
 
     return NOT_FOUND;
 }
+// -------------------------------------------------------------------------------- 
+
+bracket_expect_t uint16_tensor_bbsearch(const uint16_tensor_t* t,
+                                       uint16_t               value) {
+    if (t == NULL)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = NULL_POINTER };
+    if (t->base->len == 0u)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = EMPTY };
+
+    size_t  len   = t->base->len;
+    uint16_t first = 0u, last = 0u;
+    get_uint16_tensor_index(t, 0u,       &first);
+    get_uint16_tensor_index(t, len - 1u, &last);
+
+    if (value < first)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = BELOW_RANGE };
+    if (value > last)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = ABOVE_RANGE };
+
+    size_t  low  = 0u;
+    size_t  high = len - 1u;
+    uint16_t test = 0u;
+
+    while (low <= high) {
+        size_t mid = low + (high - low) / 2u;
+        get_uint16_tensor_index(t, mid, &test);
+
+        if (test == value) {
+            return (bracket_expect_t){ .has_value     = true,
+                                       .u.value.lower = mid,
+                                       .u.value.upper = mid };
+        } else if (test < value) {
+            low = mid + 1u;
+        } else {
+            if (mid == 0u) break;
+            high = mid - 1u;
+        }
+    }
+
+    return (bracket_expect_t){ .has_value     = true,
+                               .u.value.lower = low - 1u,
+                               .u.value.upper = low };
+}
 // ================================================================================
 // ================================================================================
 // eof
