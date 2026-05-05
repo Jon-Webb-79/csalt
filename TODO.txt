@@ -1,4 +1,4 @@
-1. bracket_bsearch
+1. bracket_bsearch (uint64, int64, float, double, long double)
 2. array_equal
 3. min
 4. max

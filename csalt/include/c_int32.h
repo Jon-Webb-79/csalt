@@ -718,6 +718,73 @@ error_code_t int32_tensor_lsearch(const int32_tensor_t* t,
 error_code_t int32_tensor_bsearch(const int32_tensor_t* t,
                                   size_t* index,
                                   int32_t value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Bracketed binary search of a sorted int32_t tensor.
+ *
+ * Locates the pair of adjacent indices that bracket value in a sorted
+ * ascending tensor.  Unlike int32_tensor_bsearch which returns NOT_FOUND
+ * when an exact match is absent, this function always returns the nearest
+ * enclosing indices, making it suitable for interpolation, range queries,
+ * and nearest-neighbour lookups where the value is unlikely to exist
+ * exactly in the array.
+ *
+ * The tensor must be sorted in ascending order before calling this
+ * function — the result is undefined if the data is unsorted.
+ *
+ * Return cases:
+ *
+ *   Exact match:
+ *     has_value == true, lower == upper == index of matching element.
+ *
+ *   Value bracketed:
+ *     has_value == true, lower is the index of the largest element
+ *     <= value, upper is the index of the smallest element >= value.
+ *
+ *   Value below all elements (value < data[0]):
+ *     has_value == false, u.error == BELOW_RANGE.
+ *
+ *   Value above all elements (value > data[len-1]):
+ *     has_value == false, u.error == ABOVE_RANGE.
+ *
+ * @param t      Pointer to the source tensor. Must not be NULL.
+ *               Must be sorted in ascending order.
+ * @param value  The int32_t value to bracket.
+ *
+ * @return bracket_expect_t:
+ *         - has_value true  → exact match or bracket found, u.value
+ *                             holds lower and upper indices.
+ *         - has_value false → u.error is one of:
+ *             NULL_POINTER  if t is NULL
+ *             EMPTY         if t->base->len == 0
+ *             BELOW_RANGE   if value < data[0]
+ *             ABOVE_RANGE   if value > data[len-1]
+ *
+ * @code{.c}
+ * // arr = [-30, -10, 0, 10, 30]
+ * bracket_expect_t r;
+ *
+ * // Exact match
+ * r = int32_tensor_bbsearch(arr, 0);
+ * // r.has_value == true, r.u.value.lower == 2, r.u.value.upper == 2
+ *
+ * // Bracketed
+ * r = int32_tensor_bbsearch(arr, -5);
+ * // r.has_value == true, r.u.value.lower == 1, r.u.value.upper == 2
+ * // data[1]==-10 <= -5 <= data[2]==0
+ *
+ * // Below range
+ * r = int32_tensor_bbsearch(arr, -50);
+ * // r.has_value == false, r.u.error == BELOW_RANGE
+ *
+ * // Above range
+ * r = int32_tensor_bbsearch(arr, 100);
+ * // r.has_value == false, r.u.error == ABOVE_RANGE
+ * @endcode
+ */
+bracket_expect_t int32_tensor_bbsearch(const int32_tensor_t* t,
+                                      int32_t               value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 
