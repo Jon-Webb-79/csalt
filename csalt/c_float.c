@@ -247,6 +247,80 @@ error_code_t float_tensor_bsearch(const float_tensor_t* t,
 
     return NOT_FOUND;
 }
+// -------------------------------------------------------------------------------- 
+
+bracket_expect_t float_tensor_bbsearch(const float_tensor_t* t,
+                                       float                 value,
+                                       float                 tolerance) {
+    if (t == NULL)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = NULL_POINTER };
+    if (t->base->len == 0u)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = EMPTY };
+
+    /* NaN cannot be bracketed or matched — reject before any comparison
+     * since NaN comparisons always return false under IEEE 754 and would
+     * produce undefined bracket indices if allowed through. */
+    if (value != value)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = DOMAIN_ERROR };
+
+    size_t len   = t->base->len;
+    float  first = 0.0f, last = 0.0f;
+    get_float_tensor_index(t, 0u,       &first);
+    get_float_tensor_index(t, len - 1u, &last);
+
+    if (value < first - tolerance)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = BELOW_RANGE };
+    if (value > last + tolerance)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = ABOVE_RANGE };
+
+    size_t low  = 0u;
+    size_t high = len - 1u;
+    float  test = 0.0f;
+
+    while (low <= high) {
+        size_t mid  = low + (high - low) / 2u;
+        get_float_tensor_index(t, mid, &test);
+
+        float diff = test - value;
+        if (diff < 0.0f) diff = -diff;
+
+        if (diff <= tolerance) {
+            /* Exact match within tolerance — scan left to find the
+             * first element within tolerance so lower == upper points
+             * to the earliest match in sorted order. */
+            while (mid > 0u) {
+                float prev = 0.0f;
+                get_float_tensor_index(t, mid - 1u, &prev);
+                float prev_diff = prev - value;
+                if (prev_diff < 0.0f) prev_diff = -prev_diff;
+                if (prev_diff > tolerance) break;
+                mid--;
+            }
+            return (bracket_expect_t){ .has_value     = true,
+                                       .u.value.lower = mid,
+                                       .u.value.upper = mid };
+        } else if (test < value) {
+            low = mid + 1u;
+        } else {
+            if (mid == 0u) break;
+            high = mid - 1u;
+        }
+    }
+
+    /* No exact match — low is the insertion point.  Guard against
+     * low == 0 (value below first element but within range via tolerance)
+     * by clamping lower to 0. */
+    size_t lower = (low > 0u) ? low - 1u : 0u;
+    size_t upper = (low < len) ? low : len - 1u;
+    return (bracket_expect_t){ .has_value     = true,
+                               .u.value.lower = lower,
+                               .u.value.upper = upper };
+}
 // ================================================================================
 // ================================================================================
 // eof

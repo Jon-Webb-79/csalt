@@ -19116,6 +19116,450 @@ static void test_float_bsearch_after_sort(void** state) {
  
     return_float_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// BRACKETED BINARY SEARCH WITH TOLERANCE (float_tensor_bbsearch)
+// ================================================================================
+ 
+/** NULL tensor must return has_value false with NULL_POINTER. */
+static void test_float_bbsearch_null_tensor(void** state) {
+    (void)state;
+    bracket_expect_t r = float_tensor_bbsearch(NULL, 1.0f, 0.0f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+/** Empty array must return has_value false with EMPTY. */
+static void test_float_bbsearch_empty(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    bracket_expect_t r = float_tensor_bbsearch(arr, 1.0f, 0.0f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+    return_float_tensor(arr);
+}
+ 
+// ---- Exact match (zero tolerance) -------------------------------------------
+ 
+/** Exact match at index 0 with zero tolerance. */
+static void test_float_bbsearch_exact_first(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 1.0f, 0.0f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_float_tensor(arr);
+}
+ 
+/** Exact match at the last index with zero tolerance. */
+static void test_float_bbsearch_exact_last(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 5.0f, 0.0f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 4u);
+    assert_int_equal(r.u.value.upper, 4u);
+    return_float_tensor(arr);
+}
+ 
+/** Exact match at the midpoint with zero tolerance. */
+static void test_float_bbsearch_exact_middle(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 3.0f, 0.0f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+    return_float_tensor(arr);
+}
+ 
+// ---- Exact match with tolerance ---------------------------------------------
+ 
+/**
+ * Element within tolerance of value — lower == upper must point to
+ * the matching element, confirming the tolerance comparison fires.
+ */
+static void test_float_bbsearch_tolerance_match(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* |2.0 - 2.04| == 0.04 <= 0.05 → exact match at index 1 */
+    bracket_expect_t r = float_tensor_bbsearch(arr, 2.04f, 0.05f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_float_tensor(arr);
+}
+ 
+/**
+ * When multiple elements are within tolerance the left-scan must return
+ * the first (lowest index) matching element.
+ */
+static void test_float_bbsearch_tolerance_first_of_multiple(void** state) {
+    (void)state;
+    /* [1.0, 1.8, 2.0, 2.2, 3.0] — 1.8 and 2.0 and 2.2 are all within
+     * 0.3 of 2.0; first occurrence is index 1. */
+    float vals[] = { 1.0f, 1.8f, 2.0f, 2.2f, 3.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 2.0f, 0.3f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_float_tensor(arr);
+}
+ 
+/**
+ * Element at exactly the tolerance boundary must match — condition is
+ * fabsf(diff) <= tolerance, not <.
+ */
+static void test_float_bbsearch_tolerance_exact_boundary(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* |2.0 - 1.95| == 0.05 == tolerance */
+    bracket_expect_t r = float_tensor_bbsearch(arr, 1.95f, 0.05f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_float_tensor(arr);
+}
+ 
+// ---- Bracketed value --------------------------------------------------------
+ 
+/**
+ * Value between two elements with no element within tolerance —
+ * lower and upper must be adjacent and bracket the value.
+ */
+static void test_float_bbsearch_bracketed_basic(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* 2.5 lies between index 1 (2.0) and index 2 (3.0) */
+    bracket_expect_t r = float_tensor_bbsearch(arr, 2.5f, 0.01f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 2u);
+ 
+    /* Verify invariant: data[lower] <= value <= data[upper] */
+    float lo_val = 0.0f, hi_val = 0.0f;
+    get_float_tensor_index(arr, r.u.value.lower, &lo_val);
+    get_float_tensor_index(arr, r.u.value.upper, &hi_val);
+    assert_true(lo_val <= 2.5f);
+    assert_true(hi_val >= 2.5f);
+ 
+    return_float_tensor(arr);
+}
+ 
+/** Value bracketed near the first pair of elements. */
+static void test_float_bbsearch_bracketed_near_start(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* 1.4 lies between index 0 (1.0) and index 1 (2.0) */
+    bracket_expect_t r = float_tensor_bbsearch(arr, 1.4f, 0.01f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_float_tensor(arr);
+}
+ 
+/** Value bracketed near the last pair of elements. */
+static void test_float_bbsearch_bracketed_near_end(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* 4.6 lies between index 3 (4.0) and index 4 (5.0) */
+    bracket_expect_t r = float_tensor_bbsearch(arr, 4.6f, 0.01f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 3u);
+    assert_int_equal(r.u.value.upper, 4u);
+    return_float_tensor(arr);
+}
+ 
+/**
+ * Bracket invariant across all gaps — data[lower] <= value <= data[upper]
+ * for every gap in the sorted array.
+ */
+static void test_float_bbsearch_bracket_invariant_all_gaps(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 6u);
+    assert_non_null(arr);
+ 
+    float  gap_vals[]   = { 1.5f, 2.5f, 3.5f, 4.5f, 5.5f };
+    size_t expected_lo[] = { 0u,   1u,   2u,   3u,   4u   };
+    size_t expected_hi[] = { 1u,   2u,   3u,   4u,   5u   };
+ 
+    for (size_t g = 0u; g < 5u; g++) {
+        bracket_expect_t r = float_tensor_bbsearch(arr, gap_vals[g], 0.01f);
+        assert_true(r.has_value);
+        assert_int_equal(r.u.value.lower, expected_lo[g]);
+        assert_int_equal(r.u.value.upper, expected_hi[g]);
+ 
+        float lo_val = 0.0f, hi_val = 0.0f;
+        get_float_tensor_index(arr, r.u.value.lower, &lo_val);
+        get_float_tensor_index(arr, r.u.value.upper, &hi_val);
+        assert_true(lo_val <= gap_vals[g]);
+        assert_true(hi_val >= gap_vals[g]);
+    }
+ 
+    return_float_tensor(arr);
+}
+ 
+// ---- Out-of-range -----------------------------------------------------------
+ 
+/** Value strictly below range must return BELOW_RANGE. */
+static void test_float_bbsearch_below_range(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 4u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 0.0f, 0.05f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    return_float_tensor(arr);
+}
+ 
+/** Value strictly above range must return ABOVE_RANGE. */
+static void test_float_bbsearch_above_range(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 4u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 5.0f, 0.05f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_float_tensor(arr);
+}
+ 
+/**
+ * Value just outside the lower boundary but within tolerance of data[0]
+ * must produce a bracket rather than BELOW_RANGE — the tolerance widens
+ * the accepted range to [data[0] - tolerance, data[len-1] + tolerance].
+ */
+static void test_float_bbsearch_below_within_tolerance(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* 0.96 is below 1.0 but |1.0 - 0.96| == 0.04 <= 0.05 tolerance
+     * → exact match at index 0 rather than BELOW_RANGE */
+    bracket_expect_t r = float_tensor_bbsearch(arr, 0.96f, 0.05f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_float_tensor(arr);
+}
+ 
+/**
+ * Value just outside the upper boundary but within tolerance of data[len-1]
+ * must produce a bracket rather than ABOVE_RANGE.
+ */
+static void test_float_bbsearch_above_within_tolerance(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* 3.04 is above 3.0 but |3.0 - 3.04| == 0.04 <= 0.05 tolerance
+     * → exact match at index 2 rather than ABOVE_RANGE */
+    bracket_expect_t r = float_tensor_bbsearch(arr, 3.04f, 0.05f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+    return_float_tensor(arr);
+}
+ 
+// ---- Special values ---------------------------------------------------------
+ 
+/** NaN target must never match — must return BELOW_RANGE or ABOVE_RANGE. */
+static void test_float_bbsearch_nan_target(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, (float)NAN, 0.1f);
+
+    assert_false(r.has_value);
+    /* NaN comparisons are unordered — expect BELOW_RANGE or ABOVE_RANGE */
+    assert_true(r.u.error == DOMAIN_ERROR);
+    return_float_tensor(arr);
+}
+ 
+/** Negative tolerance produces no exact matches — bracket is returned. */
+static void test_float_bbsearch_negative_tolerance(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* With negative tolerance no element can match exactly —
+     * 2.0 exactly present but fabsf(0) <= -0.1 is false */
+    bracket_expect_t r = float_tensor_bbsearch(arr, 2.0f, -0.1f);
+    assert_true(r.has_value);
+    /* Must be a bracket not an exact match — lower != upper */
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_float_tensor(arr);
+}
+ 
+/** Negative values in a sorted array are bracketed correctly. */
+static void test_float_bbsearch_negative_values(void** state) {
+    (void)state;
+    float vals[] = { -5.0f, -3.0f, -1.0f, 1.0f, 3.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* -2.0 lies between index 1 (-3.0) and index 2 (-1.0) */
+    bracket_expect_t r = float_tensor_bbsearch(arr, -2.0f, 0.01f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 2u);
+ 
+    /* Exact match with tolerance on a negative value */
+    r = float_tensor_bbsearch(arr, -2.95f, 0.1f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+ 
+    return_float_tensor(arr);
+}
+ 
+// ---- Single element ---------------------------------------------------------
+ 
+/** Single-element exact match. */
+static void test_float_bbsearch_single_exact(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(2u, false);
+    assert_non_null(arr);
+    push_back_float_array(arr, 3.14f);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 3.14f, 0.0f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_float_tensor(arr);
+}
+ 
+/** Single-element match within tolerance. */
+static void test_float_bbsearch_single_tolerance_match(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(2u, false);
+    assert_non_null(arr);
+    push_back_float_array(arr, 3.14f);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 3.1f, 0.05f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_float_tensor(arr);
+}
+ 
+/** Single-element below range. */
+static void test_float_bbsearch_single_below(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(2u, false);
+    assert_non_null(arr);
+    push_back_float_array(arr, 3.14f);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 1.0f, 0.05f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    return_float_tensor(arr);
+}
+ 
+/** Single-element above range. */
+static void test_float_bbsearch_single_above(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(2u, false);
+    assert_non_null(arr);
+    push_back_float_array(arr, 3.14f);
+ 
+    bracket_expect_t r = float_tensor_bbsearch(arr, 9.0f, 0.05f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_float_tensor(arr);
+}
+ 
+// ---- Integration with sort --------------------------------------------------
+ 
+/**
+ * Sort then bbsearch — covers exact match, tolerance match, bracket,
+ * below, and above in a single sorted array.
+ */
+static void test_float_bbsearch_after_sort(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(9u, false);
+    assert_non_null(arr);
+ 
+    float vals[] = { 3.3f, 1.1f, 5.5f, 2.2f, 4.4f,
+                     7.7f, 6.6f, 9.9f, 8.8f };
+    for (size_t i = 0u; i < 9u; i++)
+        push_back_float_array(arr, vals[i]);
+ 
+    assert_int_equal(sort_float_tensor(arr, FORWARD), NO_ERROR);
+    /* Sorted: [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9] */
+ 
+    bracket_expect_t r;
+ 
+    /* Exact match */
+    r = float_tensor_bbsearch(arr, 5.5f, 0.0f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 4u);
+    assert_int_equal(r.u.value.upper, 4u);
+ 
+    /* Tolerance match */
+    r = float_tensor_bbsearch(arr, 3.32f, 0.05f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+ 
+    /* Bracketed — 3.8 lies between 3.3 (idx 2) and 4.4 (idx 3) */
+    r = float_tensor_bbsearch(arr, 3.8f, 0.01f);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 3u);
+ 
+    /* Below range */
+    r = float_tensor_bbsearch(arr, 0.5f, 0.05f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+ 
+    /* Above range */
+    r = float_tensor_bbsearch(arr, 11.0f, 0.05f);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+ 
+    return_float_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -19265,6 +19709,46 @@ const struct CMUnitTest test_float_tensor[] = {
  
     /* float_tensor_bsearch — integration with sort */
     cmocka_unit_test(test_float_bsearch_after_sort),
+
+   /* float_tensor_bbsearch — null/guard */
+    cmocka_unit_test(test_float_bbsearch_null_tensor),
+    cmocka_unit_test(test_float_bbsearch_empty),
+ 
+    /* float_tensor_bbsearch — exact match zero tolerance */
+    cmocka_unit_test(test_float_bbsearch_exact_first),
+    cmocka_unit_test(test_float_bbsearch_exact_last),
+    cmocka_unit_test(test_float_bbsearch_exact_middle),
+ 
+    /* float_tensor_bbsearch — exact match with tolerance */
+    cmocka_unit_test(test_float_bbsearch_tolerance_match),
+    cmocka_unit_test(test_float_bbsearch_tolerance_first_of_multiple),
+    cmocka_unit_test(test_float_bbsearch_tolerance_exact_boundary),
+ 
+    /* float_tensor_bbsearch — bracketed value */
+    cmocka_unit_test(test_float_bbsearch_bracketed_basic),
+    cmocka_unit_test(test_float_bbsearch_bracketed_near_start),
+    cmocka_unit_test(test_float_bbsearch_bracketed_near_end),
+    cmocka_unit_test(test_float_bbsearch_bracket_invariant_all_gaps),
+ 
+    /* float_tensor_bbsearch — out of range */
+    cmocka_unit_test(test_float_bbsearch_below_range),
+    cmocka_unit_test(test_float_bbsearch_above_range),
+    cmocka_unit_test(test_float_bbsearch_below_within_tolerance),
+    cmocka_unit_test(test_float_bbsearch_above_within_tolerance),
+ 
+    /* float_tensor_bbsearch — special values */
+    cmocka_unit_test(test_float_bbsearch_nan_target),
+    cmocka_unit_test(test_float_bbsearch_negative_tolerance),
+    cmocka_unit_test(test_float_bbsearch_negative_values),
+ 
+    /* float_tensor_bbsearch — single element */
+    cmocka_unit_test(test_float_bbsearch_single_exact),
+    cmocka_unit_test(test_float_bbsearch_single_tolerance_match),
+    cmocka_unit_test(test_float_bbsearch_single_below),
+    cmocka_unit_test(test_float_bbsearch_single_above),
+ 
+    /* float_tensor_bbsearch — integration with sort */
+    cmocka_unit_test(test_float_bbsearch_after_sort),
 };
 
 const size_t test_float_tensor_count = sizeof(test_float_tensor) /

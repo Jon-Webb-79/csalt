@@ -762,6 +762,75 @@ error_code_t float_tensor_bsearch(const float_tensor_t* t,
                                   size_t*               index,
                                   float                 value,
                                   float                 tolerance); 
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Bracketed binary search of a sorted float tensor with tolerance.
+ *
+ * Locates the pair of adjacent indices that bracket value in a sorted
+ * ascending tensor.  An element is considered an exact match when
+ * fabsf(data[i] - value) <= tolerance.  When an exact match is found
+ * lower == upper == index of the matching element.  When no exact match
+ * exists but value lies within the range of the array, lower and upper
+ * are the indices of the largest element below value and the smallest
+ * element above value respectively.
+ *
+ * The tensor must be sorted in ascending order before calling this
+ * function — the result is undefined if the data is unsorted.
+ *
+ * The tolerance also widens the out-of-range checks: value is considered
+ * below range only when value < data[0] - tolerance, and above range
+ * only when value > data[len-1] + tolerance.  This means a value just
+ * outside the array boundary can still produce a bracket rather than
+ * an out-of-range error if it is within tolerance of the nearest element.
+ *
+ * NaN behaviour: if value or any element is NaN the comparisons are
+ * unordered and that element is never matched.  Passing tolerance < 0.0f
+ * produces no exact matches since no absolute difference satisfies
+ * fabsf(diff) <= negative_number.
+ *
+ * @param t          Pointer to the source tensor. Must not be NULL.
+ *                   Must be sorted in ascending order.
+ * @param value      The float value to bracket.
+ * @param tolerance  Maximum absolute difference for an exact match.
+ *                   Pass 0.0f for exact bit-pattern equality on
+ *                   non-NaN values.
+ *
+ * @return bracket_expect_t:
+ *         - has_value true  → exact match or bracket found, u.value
+ *                             holds lower and upper indices.
+ *                             lower == upper on an exact match.
+ *         - has_value false → u.error is one of:
+ *             NULL_POINTER  if t is NULL
+ *             EMPTY         if t->base->len == 0
+ *             BELOW_RANGE   if value < data[0] - tolerance
+ *             ABOVE_RANGE   if value > data[len-1] + tolerance
+ *
+ * @code{.c}
+ * // arr = [-3.0, -1.0, 0.0, 1.0, 3.0]
+ * bracket_expect_t r;
+ *
+ * // Exact match within tolerance
+ * r = float_tensor_bbsearch(arr, 0.05f, 0.1f);
+ * // r.has_value == true, r.u.value.lower == 2, r.u.value.upper == 2
+ *
+ * // Bracketed
+ * r = float_tensor_bbsearch(arr, 0.5f, 0.1f);
+ * // r.has_value == true, r.u.value.lower == 2, r.u.value.upper == 3
+ * // data[2]==0.0 <= 0.5 <= data[3]==1.0
+ *
+ * // Below range
+ * r = float_tensor_bbsearch(arr, -4.0f, 0.1f);
+ * // r.has_value == false, r.u.error == BELOW_RANGE
+ *
+ * // Above range
+ * r = float_tensor_bbsearch(arr, 4.0f, 0.1f);
+ * // r.has_value == false, r.u.error == ABOVE_RANGE
+ * @endcode
+ */
+bracket_expect_t float_tensor_bbsearch(const float_tensor_t* t,
+                                       float                 value,
+                                       float                 tolerance);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 
