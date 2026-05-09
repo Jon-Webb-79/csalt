@@ -17253,6 +17253,376 @@ static void test_bsearch_int64_boundary_values(void** state) {
  
     return_int64_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// BRACKETED BINARY SEARCH (int64_tensor_bbsearch)
+// ================================================================================
+
+/** NULL tensor must return has_value false with NULL_POINTER. */
+static void test_bbsearch_int64_null_tensor(void** state) {
+    (void)state;
+    bracket_expect_t r = int64_tensor_bbsearch(NULL, 0);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+
+/** Empty array must return has_value false with EMPTY. */
+static void test_bbsearch_int64_empty(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(4u, false);
+    assert_non_null(arr);
+    bracket_expect_t r = int64_tensor_bbsearch(arr, 0);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+    return_int64_tensor(arr);
+}
+
+// ---- Exact match ------------------------------------------------------------
+
+/** Exact match at index 0 — lower and upper must both be 0. */
+static void test_bbsearch_int64_exact_first(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(5u, false);
+    assert_non_null(arr);
+    int64_t vals[] = { -40, -20, 0, 20, 40 };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, -40);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_int64_tensor(arr);
+}
+
+/** Exact match at the last index. */
+static void test_bbsearch_int64_exact_last(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(5u, false);
+    assert_non_null(arr);
+    int64_t vals[] = { -40, -20, 0, 20, 40 };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, 40);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 4u);
+    assert_int_equal(r.u.value.upper, 4u);
+    return_int64_tensor(arr);
+}
+
+/** Exact match at the midpoint. */
+static void test_bbsearch_int64_exact_middle(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(5u, false);
+    assert_non_null(arr);
+    int64_t vals[] = { -40, -20, 0, 20, 40 };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, 0);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+    return_int64_tensor(arr);
+}
+
+// ---- Bracketed value --------------------------------------------------------
+
+/** Value bracketed between two elements. */
+static void test_bbsearch_int64_bracketed_basic(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(5u, false);
+    assert_non_null(arr);
+    /* [-40, -20, 0, 20, 40] — -5 lies between index 1 (-20) and index 2 (0) */
+    int64_t vals[] = { -40, -20, 0, 20, 40 };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, -5);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 2u);
+
+    /* Verify invariant: data[lower] <= value <= data[upper] */
+    int64_t lo_val = 0, hi_val = 0;
+    get_int64_tensor_index(arr, r.u.value.lower, &lo_val);
+    get_int64_tensor_index(arr, r.u.value.upper, &hi_val);
+    assert_true(lo_val <= -5);
+    assert_true(hi_val >= -5);
+
+    return_int64_tensor(arr);
+}
+
+/** Value bracketed near the first pair — exercises low boundary. */
+static void test_bbsearch_int64_bracketed_near_start(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(5u, false);
+    assert_non_null(arr);
+    int64_t vals[] = { -40, -20, 0, 20, 40 };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    /* -30 lies between index 0 (-40) and index 1 (-20) */
+    bracket_expect_t r = int64_tensor_bbsearch(arr, -30);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_int64_tensor(arr);
+}
+
+/** Value bracketed near the last pair — exercises high boundary. */
+static void test_bbsearch_int64_bracketed_near_end(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(5u, false);
+    assert_non_null(arr);
+    int64_t vals[] = { -40, -20, 0, 20, 40 };
+    for (size_t i = 0u; i < 5u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    /* 30 lies between index 3 (20) and index 4 (40) */
+    bracket_expect_t r = int64_tensor_bbsearch(arr, 30);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 3u);
+    assert_int_equal(r.u.value.upper, 4u);
+    return_int64_tensor(arr);
+}
+
+/**
+ * Bracket invariant across all gaps — confirms data[lower] <= value
+ * <= data[upper] for every gap in the sorted array.
+ */
+static void test_bbsearch_int64_bracket_invariant_all_gaps(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(6u, false);
+    assert_non_null(arr);
+    int64_t vals[] = { -50, -30, -10, 10, 30, 50 };
+    for (size_t i = 0u; i < 6u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    int64_t gap_vals[]   = { -40, -20, 0, 20, 40 };
+    size_t expected_lo[] = {  0u,  1u, 2u, 3u, 4u };
+    size_t expected_hi[] = {  1u,  2u, 3u, 4u, 5u };
+
+    for (size_t g = 0u; g < 5u; g++) {
+        bracket_expect_t r = int64_tensor_bbsearch(arr, gap_vals[g]);
+        assert_true(r.has_value);
+        assert_int_equal(r.u.value.lower, expected_lo[g]);
+        assert_int_equal(r.u.value.upper, expected_hi[g]);
+
+        int64_t lo_val = 0, hi_val = 0;
+        get_int64_tensor_index(arr, r.u.value.lower, &lo_val);
+        get_int64_tensor_index(arr, r.u.value.upper, &hi_val);
+        assert_true(lo_val <= gap_vals[g]);
+        assert_true(hi_val >= gap_vals[g]);
+    }
+
+    return_int64_tensor(arr);
+}
+
+// ---- Out-of-range -----------------------------------------------------------
+
+/** Value below all elements must return BELOW_RANGE. */
+static void test_bbsearch_int64_below_range(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(4u, false);
+    assert_non_null(arr);
+    int64_t vals[] = { -30, -10, 10, 30 };
+    for (size_t i = 0u; i < 4u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, -50);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    return_int64_tensor(arr);
+}
+
+/** Value above all elements must return ABOVE_RANGE. */
+static void test_bbsearch_int64_above_range(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(4u, false);
+    assert_non_null(arr);
+    int64_t vals[] = { -30, -10, 10, 30 };
+    for (size_t i = 0u; i < 4u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, 50);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_int64_tensor(arr);
+}
+
+/**
+ * int64_MIN (-128) on an array starting above it must return BELOW_RANGE —
+ * confirms no signed underflow in the boundary comparison.
+ */
+static void test_bbsearch_int64_below_range_min_value(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(3u, false);
+    assert_non_null(arr);
+    push_back_int64_array(arr, -50);
+    push_back_int64_array(arr,   0);
+    push_back_int64_array(arr,  50);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, INT64_MIN);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    return_int64_tensor(arr);
+}
+
+/**
+ * int64_MAX (127) on an array ending below it must return ABOVE_RANGE —
+ * confirms no signed overflow in the boundary comparison.
+ */
+static void test_bbsearch_int64_above_range_max_value(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(3u, false);
+    assert_non_null(arr);
+    push_back_int64_array(arr, -50);
+    push_back_int64_array(arr,   0);
+    push_back_int64_array(arr,  50);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, INT64_MAX);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_int64_tensor(arr);
+}
+
+// ---- Single element ---------------------------------------------------------
+
+/** Single-element array — exact match. */
+static void test_bbsearch_int64_single_exact(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(2u, false);
+    assert_non_null(arr);
+    push_back_int64_array(arr, -7);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, -7);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_int64_tensor(arr);
+}
+
+/** Single-element array — value below must return BELOW_RANGE. */
+static void test_bbsearch_int64_single_below(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(2u, false);
+    assert_non_null(arr);
+    push_back_int64_array(arr, -7);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, -50);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    return_int64_tensor(arr);
+}
+
+/** Single-element array — value above must return ABOVE_RANGE. */
+static void test_bbsearch_int64_single_above(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(2u, false);
+    assert_non_null(arr);
+    push_back_int64_array(arr, -7);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, 50);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_int64_tensor(arr);
+}
+
+// ---- Two-element arrays -----------------------------------------------------
+
+/** Two-element array — value bracketed between them. */
+static void test_bbsearch_int64_two_elements_bracketed(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(3u, false);
+    assert_non_null(arr);
+    push_back_int64_array(arr, -10);
+    push_back_int64_array(arr,  10);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, 0);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_int64_tensor(arr);
+}
+
+/** Two-element array — exact match on lower element. */
+static void test_bbsearch_int64_two_elements_exact_low(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(3u, false);
+    assert_non_null(arr);
+    push_back_int64_array(arr, -10);
+    push_back_int64_array(arr,  10);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, -10);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_int64_tensor(arr);
+}
+
+/** Two-element array — exact match on upper element. */
+static void test_bbsearch_int64_two_elements_exact_high(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(3u, false);
+    assert_non_null(arr);
+    push_back_int64_array(arr, -10);
+    push_back_int64_array(arr,  10);
+
+    bracket_expect_t r = int64_tensor_bbsearch(arr, 10);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_int64_tensor(arr);
+}
+
+// ---- Integration with sort --------------------------------------------------
+
+/**
+ * Sort then bbsearch — covers exact match, bracket, below, and above
+ * against a sorted array of mixed positive and negative values.
+ */
+static void test_bbsearch_int64_after_sort(void** state) {
+    (void)state;
+    int64_tensor_t* arr = _make_int64_array(6u, false);
+    assert_non_null(arr);
+
+    int64_t vals[] = { 30, -50, 10, -10, 50, -30 };
+    for (size_t i = 0u; i < 6u; i++)
+        push_back_int64_array(arr, vals[i]);
+
+    assert_int_equal(sort_int64_tensor(arr, FORWARD), NO_ERROR);
+    /* Sorted: [-50, -30, -10, 10, 30, 50] */
+
+    bracket_expect_t r;
+
+    /* Exact match */
+    r = int64_tensor_bbsearch(arr, -10);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+
+    /* Bracketed — 0 lies between -10 (idx 2) and 10 (idx 3) */
+    r = int64_tensor_bbsearch(arr, 0);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 3u);
+
+    /* Below range */
+    r = int64_tensor_bbsearch(arr, -100);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+
+    /* Above range */
+    r = int64_tensor_bbsearch(arr, 100);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+
+    return_int64_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -17376,6 +17746,40 @@ const struct CMUnitTest test_int64_tensor[] = {
  
     /* int64_tensor_bsearch — full int64_t value range */
     cmocka_unit_test(test_bsearch_int64_boundary_values),
+
+    /* int64_tensor_bbsearch — null/guard */
+    cmocka_unit_test(test_bbsearch_int64_null_tensor),
+    cmocka_unit_test(test_bbsearch_int64_empty),
+ 
+    /* int64_tensor_bbsearch — exact match */
+    cmocka_unit_test(test_bbsearch_int64_exact_first),
+    cmocka_unit_test(test_bbsearch_int64_exact_last),
+    cmocka_unit_test(test_bbsearch_int64_exact_middle),
+ 
+    /* int64_tensor_bbsearch — bracketed value */
+    cmocka_unit_test(test_bbsearch_int64_bracketed_basic),
+    cmocka_unit_test(test_bbsearch_int64_bracketed_near_start),
+    cmocka_unit_test(test_bbsearch_int64_bracketed_near_end),
+    cmocka_unit_test(test_bbsearch_int64_bracket_invariant_all_gaps),
+ 
+    /* int64_tensor_bbsearch — out-of-range */
+    cmocka_unit_test(test_bbsearch_int64_below_range),
+    cmocka_unit_test(test_bbsearch_int64_above_range),
+    cmocka_unit_test(test_bbsearch_int64_below_range_min_value),
+    cmocka_unit_test(test_bbsearch_int64_above_range_max_value),
+ 
+    /* int64_tensor_bbsearch — single element */
+    cmocka_unit_test(test_bbsearch_int64_single_exact),
+    cmocka_unit_test(test_bbsearch_int64_single_below),
+    cmocka_unit_test(test_bbsearch_int64_single_above),
+ 
+    /* int64_tensor_bbsearch — two elements */
+    cmocka_unit_test(test_bbsearch_int64_two_elements_bracketed),
+    cmocka_unit_test(test_bbsearch_int64_two_elements_exact_low),
+    cmocka_unit_test(test_bbsearch_int64_two_elements_exact_high),
+ 
+    /* int64_tensor_bbsearch — integration with sort */
+    cmocka_unit_test(test_bbsearch_int64_after_sort),
 };
 
 const size_t test_int64_tensor_count = sizeof(test_int64_tensor) /
