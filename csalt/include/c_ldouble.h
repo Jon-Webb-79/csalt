@@ -760,6 +760,88 @@ error_code_t ldouble_tensor_bsearch(const ldouble_tensor_t* t,
                                     size_t*               index,
                                     long double           value,
                                     long double           tolerance);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Bracketed binary search of a sorted long double tensor with tolerance.
+ *
+ * Locates the pair of adjacent indices that bracket value in a sorted
+ * ascending tensor.  An element is considered an exact match when
+ * fabsl(data[i] - value) <= tolerance.  When an exact match is found
+ * lower == upper == index of the first matching element in sorted order.
+ * When no exact match exists but value lies within the range of the
+ * array, lower and upper are the indices of the largest element below
+ * value and the smallest element above value respectively.
+ *
+ * The tensor must be sorted in ascending order before calling this
+ * function — the result is undefined if the data is unsorted.
+ *
+ * Since no SIMD acceleration is available for long double the search
+ * is performed entirely in scalar code.  The tolerance widens the
+ * out-of-range checks in the same way as the float and double versions:
+ * value is considered below range only when value < data[0] - tolerance,
+ * and above range only when value > data[len-1] + tolerance.
+ *
+ * When multiple elements are within tolerance the left-scan ensures
+ * lower == upper always points to the first (lowest index) match in
+ * the sorted sequence.
+ *
+ * On x86 platforms long double is 80-bit extended precision, giving
+ * approximately 18-19 significant decimal digits.  The tolerance
+ * comparison is performed at full long double precision throughout —
+ * no narrowing to double occurs at any point.
+ *
+ * NaN behaviour: a NaN value is rejected immediately with DOMAIN_ERROR
+ * before any comparison is performed, since NaN comparisons are
+ * unordered under IEEE 754 and would produce undefined bracket indices
+ * if allowed through.
+ *
+ * @param t          Pointer to the source tensor. Must not be NULL.
+ *                   Must be sorted in ascending order.
+ * @param value      The long double value to bracket.
+ * @param tolerance  Maximum absolute difference for an exact match.
+ *                   Pass 0.0L for exact bit-pattern equality on non-NaN
+ *                   values.  Negative tolerance produces no exact matches
+ *                   and falls through to the bracket path.
+ *
+ * @return bracket_expect_t:
+ *         - has_value true  → exact match or bracket found, u.value
+ *                             holds lower and upper indices.
+ *                             lower == upper on an exact match.
+ *         - has_value false → u.error is one of:
+ *             NULL_POINTER  if t is NULL
+ *             EMPTY         if t->base->len == 0
+ *             DOMAIN_ERROR  if value is NaN
+ *             BELOW_RANGE   if value < data[0] - tolerance
+ *             ABOVE_RANGE   if value > data[len-1] + tolerance
+ *
+ * @code{.c}
+ * // arr = [-3.0L, -1.0L, 0.0L, 1.0L, 3.0L]
+ * bracket_expect_t r;
+ *
+ * // Exact match within tolerance
+ * r = ldouble_tensor_bbsearch(arr, 0.05L, 0.1L);
+ * // r.has_value == true, r.u.value.lower == 2, r.u.value.upper == 2
+ *
+ * // Bracketed
+ * r = ldouble_tensor_bbsearch(arr, 0.5L, 0.1L);
+ * // r.has_value == true, r.u.value.lower == 2, r.u.value.upper == 3
+ * // data[2]==0.0L <= 0.5L <= data[3]==1.0L
+ *
+ * // Above range
+ * r = ldouble_tensor_bbsearch(arr, 4.0L, 0.1L);
+ * // r.has_value == false, r.u.error == ABOVE_RANGE
+ *
+ * // NaN rejected
+ * r = ldouble_tensor_bbsearch(arr, (long double)NAN, 0.1L);
+ * // r.has_value == false, r.u.error == DOMAIN_ERROR
+ *
+ * return_ldouble_tensor(arr);
+ * @endcode
+ */
+bracket_expect_t ldouble_tensor_bbsearch(const ldouble_tensor_t* t,
+                                         long double             value,
+                                         long double             tolerance);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

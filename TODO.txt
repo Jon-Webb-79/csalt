@@ -1,7 +1,6 @@
-1. bracket_bsearch (uint64, int64, float, double, long double)
-2. array_equal
-3. min
-4. max
-5. sum
-6. cumulative_sum
-7. avg
+1. array_equal
+2. min
+3. max
+4. sum
+5. cumulative_sum
+6. avg

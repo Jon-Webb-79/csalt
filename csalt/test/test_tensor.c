@@ -21087,6 +21087,438 @@ static void test_double_bsearch_after_sort(void** state) {
 }
 // ================================================================================
 // ================================================================================
+// BRACKETED BINARY SEARCH WITH TOLERANCE (double_tensor_bbsearch)
+ 
+/** NULL tensor must return has_value false with NULL_POINTER. */
+static void test_double_bbsearch_null_tensor(void** state) {
+    (void)state;
+    bracket_expect_t r = double_tensor_bbsearch(NULL, 1.0, 0.0);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+/** Empty array must return has_value false with EMPTY. */
+static void test_double_bbsearch_empty(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    bracket_expect_t r = double_tensor_bbsearch(arr, 1.0, 0.0);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+    return_double_tensor(arr);
+}
+ 
+// ---- Exact match (zero tolerance) -------------------------------------------
+ 
+/** Exact match at index 0 with zero tolerance. */
+static void test_double_bbsearch_exact_first(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 1.0, 0.0);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_double_tensor(arr);
+}
+ 
+/** Exact match at the last index with zero tolerance. */
+static void test_double_bbsearch_exact_last(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 5.0, 0.0);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 4u);
+    assert_int_equal(r.u.value.upper, 4u);
+    return_double_tensor(arr);
+}
+ 
+/** Exact match at the midpoint with zero tolerance. */
+static void test_double_bbsearch_exact_middle(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 3.0, 0.0);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+    return_double_tensor(arr);
+}
+ 
+// ---- Exact match with tolerance ---------------------------------------------
+ 
+/** Element within tolerance of value — lower == upper at matching index. */
+static void test_double_bbsearch_tolerance_match(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* |2.0 - 2.04| == 0.04 <= 0.05 → exact match at index 1 */
+    bracket_expect_t r = double_tensor_bbsearch(arr, 2.04, 0.05);
+    assert_true(r.has_value);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * When multiple elements are within tolerance the left-scan must return
+ * the first (lowest index) matching element.
+ */
+static void test_double_bbsearch_tolerance_first_of_multiple(void** state) {
+    (void)state;
+    /* [1.0, 1.8, 2.0, 2.2, 3.0] — 1.8, 2.0, 2.2 all within 0.3 of 2.0 */
+    double vals[] = { 1.0, 1.8, 2.0, 2.2, 3.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 2.0, 0.3);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * Element at exactly the tolerance boundary must match —
+ * condition is fabs(diff) <= tolerance, not <.
+ */
+static void test_double_bbsearch_tolerance_exact_boundary(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+
+    /* |2.0 - 1.95| == 0.05 == tolerance */
+    bracket_expect_t r = double_tensor_bbsearch(arr, 1.95, 0.05);
+    assert_true(r.has_value);
+    printf("lower: %zu\n", r.u.value.lower);
+    printf("upper: %zu\n", r.u.value.upper);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_double_tensor(arr);
+}
+ 
+// ---- Bracketed value --------------------------------------------------------
+ 
+/**
+ * Value between two elements with no element within tolerance —
+ * lower and upper must be adjacent and bracket the value.
+ */
+static void test_double_bbsearch_bracketed_basic(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* 2.5 lies between index 1 (2.0) and index 2 (3.0) */
+    bracket_expect_t r = double_tensor_bbsearch(arr, 2.5, 0.01);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 2u);
+ 
+    /* Verify invariant: data[lower] <= value <= data[upper] */
+    double lo_val = 0.0, hi_val = 0.0;
+    get_double_tensor_index(arr, r.u.value.lower, &lo_val);
+    get_double_tensor_index(arr, r.u.value.upper, &hi_val);
+    assert_true(lo_val <= 2.5);
+    assert_true(hi_val >= 2.5);
+ 
+    return_double_tensor(arr);
+}
+ 
+/** Value bracketed near the first pair of elements. */
+static void test_double_bbsearch_bracketed_near_start(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* 1.4 lies between index 0 (1.0) and index 1 (2.0) */
+    bracket_expect_t r = double_tensor_bbsearch(arr, 1.4, 0.01);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_double_tensor(arr);
+}
+ 
+/** Value bracketed near the last pair of elements. */
+static void test_double_bbsearch_bracketed_near_end(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* 4.6 lies between index 3 (4.0) and index 4 (5.0) */
+    bracket_expect_t r = double_tensor_bbsearch(arr, 4.6, 0.01);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 3u);
+    assert_int_equal(r.u.value.upper, 4u);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * Bracket invariant across all gaps — data[lower] <= value <= data[upper]
+ * for every gap in the sorted array.
+ */
+static void test_double_bbsearch_bracket_invariant_all_gaps(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 6u);
+    assert_non_null(arr);
+ 
+    double gap_vals[]    = { 1.5, 2.5, 3.5, 4.5, 5.5 };
+    size_t expected_lo[] = { 0u,  1u,  2u,  3u,  4u  };
+    size_t expected_hi[] = { 1u,  2u,  3u,  4u,  5u  };
+ 
+    for (size_t g = 0u; g < 5u; g++) {
+        bracket_expect_t r = double_tensor_bbsearch(arr, gap_vals[g], 0.01);
+        assert_true(r.has_value);
+        assert_int_equal(r.u.value.lower, expected_lo[g]);
+        assert_int_equal(r.u.value.upper, expected_hi[g]);
+ 
+        double lo_val = 0.0, hi_val = 0.0;
+        get_double_tensor_index(arr, r.u.value.lower, &lo_val);
+        get_double_tensor_index(arr, r.u.value.upper, &hi_val);
+        assert_true(lo_val <= gap_vals[g]);
+        assert_true(hi_val >= gap_vals[g]);
+    }
+ 
+    return_double_tensor(arr);
+}
+ 
+// ---- Out-of-range -----------------------------------------------------------
+ 
+/** Value strictly below range must return BELOW_RANGE. */
+static void test_double_bbsearch_below_range(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 4u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 0.0, 0.05);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    return_double_tensor(arr);
+}
+ 
+/** Value strictly above range must return ABOVE_RANGE. */
+static void test_double_bbsearch_above_range(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0, 4.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 4u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 5.0, 0.05);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * Value just below data[0] but within tolerance of it must produce
+ * an exact match at index 0 rather than BELOW_RANGE.
+ */
+static void test_double_bbsearch_below_within_tolerance(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* |1.0 - 0.96| == 0.04 <= 0.05 → match at index 0 */
+    bracket_expect_t r = double_tensor_bbsearch(arr, 0.96, 0.05);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_double_tensor(arr);
+}
+ 
+/**
+ * Value just above data[len-1] but within tolerance of it must produce
+ * an exact match at index len-1 rather than ABOVE_RANGE.
+ */
+static void test_double_bbsearch_above_within_tolerance(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* |3.0 - 3.04| == 0.04 <= 0.05 → match at index 2 */
+    bracket_expect_t r = double_tensor_bbsearch(arr, 3.04, 0.05);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+    return_double_tensor(arr);
+}
+ 
+// ---- Special values ---------------------------------------------------------
+ 
+/** NaN target must be rejected with DOMAIN_ERROR. */
+static void test_double_bbsearch_nan_target(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, (double)NAN, 0.1);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, DOMAIN_ERROR);
+    return_double_tensor(arr);
+}
+ 
+/** Negative tolerance produces no exact matches — bracket is returned. */
+static void test_double_bbsearch_negative_tolerance(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+ 
+    /* 2.0 is present exactly but fabs(0) <= -0.1 is false —
+     * falls through to bracket path */
+    bracket_expect_t r = double_tensor_bbsearch(arr, 2.0, -0.1);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_double_tensor(arr);
+}
+ 
+/** Negative values in a sorted array are bracketed correctly. */
+static void test_double_bbsearch_negative_values(void** state) {
+    (void)state;
+    double vals[] = { -5.0, -3.0, -1.0, 1.0, 3.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 5u);
+    assert_non_null(arr);
+ 
+    /* -2.0 lies between index 1 (-3.0) and index 2 (-1.0) */
+    bracket_expect_t r = double_tensor_bbsearch(arr, -2.0, 0.01);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 2u);
+ 
+    /* Tolerance match on a negative value */
+    r = double_tensor_bbsearch(arr, -2.95, 0.1);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+ 
+    return_double_tensor(arr);
+}
+ 
+// ---- Single element ---------------------------------------------------------
+ 
+/** Single-element exact match. */
+static void test_double_bbsearch_single_exact(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    push_back_double_array(arr, 3.14);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 3.14, 0.0);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_double_tensor(arr);
+}
+ 
+/** Single-element match within tolerance. */
+static void test_double_bbsearch_single_tolerance_match(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    push_back_double_array(arr, 3.14);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 3.1, 0.05);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_double_tensor(arr);
+}
+ 
+/** Single-element below range. */
+static void test_double_bbsearch_single_below(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    push_back_double_array(arr, 3.14);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 1.0, 0.05);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    return_double_tensor(arr);
+}
+ 
+/** Single-element above range. */
+static void test_double_bbsearch_single_above(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    push_back_double_array(arr, 3.14);
+ 
+    bracket_expect_t r = double_tensor_bbsearch(arr, 9.0, 0.05);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_double_tensor(arr);
+}
+ 
+// ---- Integration with sort --------------------------------------------------
+ 
+/**
+ * Sort then bbsearch — covers exact match, tolerance match, bracket,
+ * below, and above in a single sorted array.
+ */
+static void test_double_bbsearch_after_sort(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(9u, false);
+    assert_non_null(arr);
+ 
+    double vals[] = { 3.3, 1.1, 5.5, 2.2, 4.4,
+                      7.7, 6.6, 9.9, 8.8 };
+    for (size_t i = 0u; i < 9u; i++)
+        push_back_double_array(arr, vals[i]);
+ 
+    assert_int_equal(sort_double_tensor(arr, FORWARD), NO_ERROR);
+    /* Sorted: [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9] */
+ 
+    bracket_expect_t r;
+ 
+    /* Exact match */
+    r = double_tensor_bbsearch(arr, 5.5, 0.0);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 4u);
+    assert_int_equal(r.u.value.upper, 4u);
+ 
+    /* Tolerance match */
+    r = double_tensor_bbsearch(arr, 3.32, 0.05);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+ 
+    /* Bracketed — 3.8 lies between 3.3 (idx 2) and 4.4 (idx 3) */
+    r = double_tensor_bbsearch(arr, 3.8, 0.01);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 3u);
+ 
+    /* Below range */
+    r = double_tensor_bbsearch(arr, 0.5, 0.05);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+ 
+    /* Above range */
+    r = double_tensor_bbsearch(arr, 11.0, 0.05);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+ 
+    return_double_tensor(arr);
+}
+// ================================================================================
+// ================================================================================
 // TEST SUITE REGISTRY
 
 const struct CMUnitTest test_double_tensor[] = {
@@ -21234,6 +21666,45 @@ const struct CMUnitTest test_double_tensor[] = {
  
     /* double_tensor_bsearch — integration with sort */
     cmocka_unit_test(test_double_bsearch_after_sort),
+    
+    cmocka_unit_test(test_double_bbsearch_null_tensor),
+    cmocka_unit_test(test_double_bbsearch_empty),
+ 
+    /* exact match — zero tolerance */
+    cmocka_unit_test(test_double_bbsearch_exact_first),
+    cmocka_unit_test(test_double_bbsearch_exact_last),
+    cmocka_unit_test(test_double_bbsearch_exact_middle),
+ 
+    /* exact match with tolerance */
+    cmocka_unit_test(test_double_bbsearch_tolerance_match),
+    cmocka_unit_test(test_double_bbsearch_tolerance_first_of_multiple),
+    cmocka_unit_test(test_double_bbsearch_tolerance_exact_boundary),
+ 
+    /* bracketed value */
+    cmocka_unit_test(test_double_bbsearch_bracketed_basic),
+    cmocka_unit_test(test_double_bbsearch_bracketed_near_start),
+    cmocka_unit_test(test_double_bbsearch_bracketed_near_end),
+    cmocka_unit_test(test_double_bbsearch_bracket_invariant_all_gaps),
+
+    /* out of range */
+    cmocka_unit_test(test_double_bbsearch_below_range),
+    cmocka_unit_test(test_double_bbsearch_above_range),
+    cmocka_unit_test(test_double_bbsearch_below_within_tolerance),
+    cmocka_unit_test(test_double_bbsearch_above_within_tolerance),
+
+    /* special values */
+    cmocka_unit_test(test_double_bbsearch_nan_target),
+    cmocka_unit_test(test_double_bbsearch_negative_tolerance),
+    cmocka_unit_test(test_double_bbsearch_negative_values),
+
+    /* single element */
+    cmocka_unit_test(test_double_bbsearch_single_exact),
+    cmocka_unit_test(test_double_bbsearch_single_tolerance_match),
+    cmocka_unit_test(test_double_bbsearch_single_below),
+    cmocka_unit_test(test_double_bbsearch_single_above),
+
+    /* integration with sort */
+    cmocka_unit_test(test_double_bbsearch_after_sort),
 };
 
 const size_t test_double_tensor_count = sizeof(test_double_tensor) /
@@ -22622,6 +23093,359 @@ static void test_ldouble_bsearch_after_sort(void** state) {
  
     return_ldouble_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// BRACKETED BINARY SEARCH WITH TOLERANCE (ldouble_tensor_bbsearch)
+// ================================================================================
+ 
+/** NULL tensor must return has_value false with NULL_POINTER. */
+static void test_ldouble_bbsearch_null_tensor(void** state) {
+    (void)state;
+    bracket_expect_t r = ldouble_tensor_bbsearch(NULL, 1.0L, 0.0L);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, NULL_POINTER);
+}
+ 
+/** Empty array must return has_value false with EMPTY. */
+static void test_ldouble_bbsearch_empty(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(4u, false);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 1.0L, 0.0L);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, EMPTY);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_exact_first(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 1.0L, 0.0L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_exact_last(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 5.0L, 0.0L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 4u);
+    assert_int_equal(r.u.value.upper, 4u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_exact_middle(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 3.0L, 0.0L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_tolerance_match(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 2.04L, 0.05L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_tolerance_first_of_multiple(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 1.8L, 2.0L, 2.2L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 2.0L, 0.3L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_tolerance_exact_boundary(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+    /* |2.0 - 1.95| == 0.05 == tolerance */
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 1.95L, 0.05L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_ldouble_tensor(arr);
+}
+ 
+/**
+ * Extended precision: value computed at long double precision must match
+ * the stored element with zero tolerance on platforms where
+ * sizeof(long double) > sizeof(double).
+ */
+static void test_ldouble_bbsearch_extended_precision(void** state) {
+    (void)state;
+    long double exact = 1.0L / 3.0L;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, exact);
+ 
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, exact, 0.0L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+ 
+    if (sizeof(long double) > sizeof(double)) {
+        long double approx = (long double)(1.0 / 3.0);
+        bracket_expect_t r2 = ldouble_tensor_bbsearch(arr, approx, 0.0L);
+        if (r2.has_value)
+            assert_true(r2.u.value.lower != r2.u.value.upper);
+    }
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_bracketed_basic(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 2.5L, 0.01L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 2u);
+    long double lo_val = 0.0L, hi_val = 0.0L;
+    get_ldouble_tensor_index(arr, r.u.value.lower, &lo_val);
+    get_ldouble_tensor_index(arr, r.u.value.upper, &hi_val);
+    assert_true(lo_val <= 2.5L);
+    assert_true(hi_val >= 2.5L);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_bracketed_near_start(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 1.4L, 0.01L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_bracketed_near_end(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 4.6L, 0.01L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 3u);
+    assert_int_equal(r.u.value.upper, 4u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_bracket_invariant_all_gaps(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L, 5.0L, 6.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 6u);
+    assert_non_null(arr);
+    long double gap_vals[]   = { 1.5L, 2.5L, 3.5L, 4.5L, 5.5L };
+    size_t      expected_lo[] = { 0u,   1u,   2u,   3u,   4u   };
+    size_t      expected_hi[] = { 1u,   2u,   3u,   4u,   5u   };
+    for (size_t g = 0u; g < 5u; g++) {
+        bracket_expect_t r = ldouble_tensor_bbsearch(arr, gap_vals[g], 0.01L);
+        assert_true(r.has_value);
+        assert_int_equal(r.u.value.lower, expected_lo[g]);
+        assert_int_equal(r.u.value.upper, expected_hi[g]);
+        long double lo_val = 0.0L, hi_val = 0.0L;
+        get_ldouble_tensor_index(arr, r.u.value.lower, &lo_val);
+        get_ldouble_tensor_index(arr, r.u.value.upper, &hi_val);
+        assert_true(lo_val <= gap_vals[g]);
+        assert_true(hi_val >= gap_vals[g]);
+    }
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_below_range(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 4u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 0.0L, 0.05L);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_above_range(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L, 4.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 4u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 5.0L, 0.05L);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_below_within_tolerance(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+    /* |1.0 - 0.96| == 0.04 <= 0.05 → match at index 0 */
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 0.96L, 0.05L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_above_within_tolerance(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+    /* |3.0 - 3.04| == 0.04 <= 0.05 → match at index 2 */
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 3.04L, 0.05L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_nan_target(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, (long double)NAN, 0.1L);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, DOMAIN_ERROR);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_negative_tolerance(void** state) {
+    (void)state;
+    long double vals[] = { 1.0L, 2.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 3u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 2.0L, -0.1L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_negative_values(void** state) {
+    (void)state;
+    long double vals[] = { -5.0L, -3.0L, -1.0L, 1.0L, 3.0L };
+    ldouble_tensor_t* arr = _make_ldouble_array_from(vals, 5u);
+    assert_non_null(arr);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, -2.0L, 0.01L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 2u);
+    r = ldouble_tensor_bbsearch(arr, -2.95L, 0.1L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 1u);
+    assert_int_equal(r.u.value.upper, 1u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_single_exact(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, 3.14L);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 3.14L, 0.0L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_single_tolerance_match(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, 3.14L);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 3.1L, 0.05L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 0u);
+    assert_int_equal(r.u.value.upper, 0u);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_single_below(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, 3.14L);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 1.0L, 0.05L);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_single_above(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, 3.14L);
+    bracket_expect_t r = ldouble_tensor_bbsearch(arr, 9.0L, 0.05L);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_ldouble_tensor(arr);
+}
+ 
+static void test_ldouble_bbsearch_after_sort(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(9u, false);
+    assert_non_null(arr);
+    long double vals[] = { 3.3L, 1.1L, 5.5L, 2.2L, 4.4L,
+                           7.7L, 6.6L, 9.9L, 8.8L };
+    for (size_t i = 0u; i < 9u; i++)
+        push_back_ldouble_array(arr, vals[i]);
+    assert_int_equal(sort_ldouble_tensor(arr, FORWARD), NO_ERROR);
+    /* Sorted: [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9] */
+    bracket_expect_t r;
+    r = ldouble_tensor_bbsearch(arr, 5.5L, 0.0L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 4u);
+    assert_int_equal(r.u.value.upper, 4u);
+    r = ldouble_tensor_bbsearch(arr, 3.32L, 0.05L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 2u);
+    r = ldouble_tensor_bbsearch(arr, 3.8L, 0.01L);
+    assert_true(r.has_value);
+    assert_int_equal(r.u.value.lower, 2u);
+    assert_int_equal(r.u.value.upper, 3u);
+    r = ldouble_tensor_bbsearch(arr, 0.5L, 0.05L);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, BELOW_RANGE);
+    r = ldouble_tensor_bbsearch(arr, 11.0L, 0.05L);
+    assert_false(r.has_value);
+    assert_int_equal(r.u.error, ABOVE_RANGE);
+    return_ldouble_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -22772,6 +23596,47 @@ const struct CMUnitTest test_ldouble_tensor[] = {
  
     /* ldouble_tensor_bsearch — integration with sort */
     cmocka_unit_test(test_ldouble_bsearch_after_sort),
+
+    /* bbsearch — null/guard */
+    cmocka_unit_test(test_ldouble_bbsearch_null_tensor),
+    cmocka_unit_test(test_ldouble_bbsearch_empty),
+ 
+    /* bbsearch — exact match zero tolerance */
+    cmocka_unit_test(test_ldouble_bbsearch_exact_first),
+    cmocka_unit_test(test_ldouble_bbsearch_exact_last),
+    cmocka_unit_test(test_ldouble_bbsearch_exact_middle),
+ 
+    /* bbsearch — exact match with tolerance */
+    cmocka_unit_test(test_ldouble_bbsearch_tolerance_match),
+    cmocka_unit_test(test_ldouble_bbsearch_tolerance_first_of_multiple),
+    cmocka_unit_test(test_ldouble_bbsearch_tolerance_exact_boundary),
+    cmocka_unit_test(test_ldouble_bbsearch_extended_precision),
+ 
+    /* bbsearch — bracketed value */
+    cmocka_unit_test(test_ldouble_bbsearch_bracketed_basic),
+    cmocka_unit_test(test_ldouble_bbsearch_bracketed_near_start),
+    cmocka_unit_test(test_ldouble_bbsearch_bracketed_near_end),
+    cmocka_unit_test(test_ldouble_bbsearch_bracket_invariant_all_gaps),
+ 
+    /* bbsearch — out of range */
+    cmocka_unit_test(test_ldouble_bbsearch_below_range),
+    cmocka_unit_test(test_ldouble_bbsearch_above_range),
+    cmocka_unit_test(test_ldouble_bbsearch_below_within_tolerance),
+    cmocka_unit_test(test_ldouble_bbsearch_above_within_tolerance),
+ 
+    /* bbsearch — special values */
+    cmocka_unit_test(test_ldouble_bbsearch_nan_target),
+    cmocka_unit_test(test_ldouble_bbsearch_negative_tolerance),
+    cmocka_unit_test(test_ldouble_bbsearch_negative_values),
+ 
+    /* bbsearch — single element */
+    cmocka_unit_test(test_ldouble_bbsearch_single_exact),
+    cmocka_unit_test(test_ldouble_bbsearch_single_tolerance_match),
+    cmocka_unit_test(test_ldouble_bbsearch_single_below),
+    cmocka_unit_test(test_ldouble_bbsearch_single_above),
+ 
+    /* bbsearch — integration with sort */
+    cmocka_unit_test(test_ldouble_bbsearch_after_sort),
 };
 
 const size_t test_ldouble_tensor_count = sizeof(test_ldouble_tensor) /

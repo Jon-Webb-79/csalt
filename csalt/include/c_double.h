@@ -763,6 +763,84 @@ error_code_t double_tensor_bsearch(const double_tensor_t* t,
                                    size_t*               index,
                                    double                 value,
                                    double                 tolerance);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Bracketed binary search of a sorted double tensor with tolerance.
+ *
+ * Locates the pair of adjacent indices that bracket value in a sorted
+ * ascending tensor.  An element is considered an exact match when
+ * fabs(data[i] - value) <= tolerance.  When an exact match is found
+ * lower == upper == index of the first matching element in sorted order.
+ * When no exact match exists but value lies within the range of the
+ * array, lower and upper are the indices of the largest element below
+ * value and the smallest element above value respectively.
+ *
+ * The tensor must be sorted in ascending order before calling this
+ * function — the result is undefined if the data is unsorted.
+ *
+ * The tolerance also widens the out-of-range checks: value is considered
+ * below range only when value < data[0] - tolerance, and above range
+ * only when value > data[len-1] + tolerance.  This means a value just
+ * outside the array boundary can still produce a bracket or exact match
+ * rather than an out-of-range error if it is within tolerance of the
+ * nearest element.
+ *
+ * When multiple elements are within tolerance the left-scan ensures
+ * lower == upper always points to the first (lowest index) match in
+ * the sorted sequence.
+ *
+ * NaN behaviour: a NaN value is rejected immediately with DOMAIN_ERROR
+ * before any comparison is performed, since NaN comparisons are
+ * unordered under IEEE 754 and would produce undefined bracket indices
+ * if allowed through.
+ *
+ * @param t          Pointer to the source tensor. Must not be NULL.
+ *                   Must be sorted in ascending order.
+ * @param value      The double value to bracket.
+ * @param tolerance  Maximum absolute difference for an exact match.
+ *                   Pass 0.0 for exact bit-pattern equality on non-NaN
+ *                   values.  Negative tolerance produces no exact matches
+ *                   and falls through to the bracket path.
+ *
+ * @return bracket_expect_t:
+ *         - has_value true  → exact match or bracket found, u.value
+ *                             holds lower and upper indices.
+ *                             lower == upper on an exact match.
+ *         - has_value false → u.error is one of:
+ *             NULL_POINTER  if t is NULL
+ *             EMPTY         if t->base->len == 0
+ *             DOMAIN_ERROR  if value is NaN
+ *             BELOW_RANGE   if value < data[0] - tolerance
+ *             ABOVE_RANGE   if value > data[len-1] + tolerance
+ *
+ * @code{.c}
+ * // arr = [-3.0, -1.0, 0.0, 1.0, 3.0]
+ * bracket_expect_t r;
+ *
+ * // Exact match within tolerance
+ * r = double_tensor_bbsearch(arr, 0.05, 0.1);
+ * // r.has_value == true, r.u.value.lower == 2, r.u.value.upper == 2
+ *
+ * // Bracketed
+ * r = double_tensor_bbsearch(arr, 0.5, 0.1);
+ * // r.has_value == true, r.u.value.lower == 2, r.u.value.upper == 3
+ * // data[2]==0.0 <= 0.5 <= data[3]==1.0
+ *
+ * // Below range
+ * r = double_tensor_bbsearch(arr, -4.0, 0.1);
+ * // r.has_value == false, r.u.error == BELOW_RANGE
+ *
+ * // NaN rejected
+ * r = double_tensor_bbsearch(arr, (double)NAN, 0.1);
+ * // r.has_value == false, r.u.error == DOMAIN_ERROR
+ *
+ * return_double_tensor(arr);
+ * @endcode
+ */
+bracket_expect_t double_tensor_bbsearch(const double_tensor_t* t,
+                                        double                 value,
+                                        double                 tolerance);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

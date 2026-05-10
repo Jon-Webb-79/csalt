@@ -98,6 +98,8 @@ Utility Operations
 
 .. doxygenfunction:: ldouble_tensor_bsearch
 
+.. doxygenfunction:: ldouble_tensor_bbsearch
+
 Introspection
 -------------
 

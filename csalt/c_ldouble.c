@@ -210,7 +210,71 @@ error_code_t ldouble_tensor_bsearch(const ldouble_tensor_t* t,
 
     return NOT_FOUND;
 }
+// -------------------------------------------------------------------------------- 
 
+bracket_expect_t ldouble_tensor_bbsearch(const ldouble_tensor_t* t,
+                                         long double             value,
+                                         long double             tolerance) {
+    if (t == NULL)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = NULL_POINTER };
+    if (t->base->len == 0u)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = EMPTY };
+
+    if (value != value)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = DOMAIN_ERROR };
+
+    size_t      len   = t->base->len;
+    long double first = 0.0L, last = 0.0L;
+    get_ldouble_tensor_index(t, 0u,       &first);
+    get_ldouble_tensor_index(t, len - 1u, &last);
+
+    if (value < first - tolerance)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = BELOW_RANGE };
+    if (value > last + tolerance)
+        return (bracket_expect_t){ .has_value = false,
+                                   .u.error   = ABOVE_RANGE };
+
+    size_t      low  = 0u;
+    size_t      high = len - 1u;
+    long double test = 0.0L;
+
+    while (low <= high) {
+        size_t      mid  = low + (high - low) / 2u;
+        get_ldouble_tensor_index(t, mid, &test);
+
+        long double diff = test - value;
+        if (diff < 0.0L) diff = -diff;
+
+        if (diff <= tolerance) {
+            while (mid > 0u) {
+                long double prev = 0.0L;
+                get_ldouble_tensor_index(t, mid - 1u, &prev);
+                long double prev_diff = prev - value;
+                if (prev_diff < 0.0L) prev_diff = -prev_diff;
+                if (prev_diff > tolerance) break;
+                mid--;
+            }
+            return (bracket_expect_t){ .has_value     = true,
+                                       .u.value.lower = mid,
+                                       .u.value.upper = mid };
+        } else if (test < value) {
+            low = mid + 1u;
+        } else {
+            if (mid == 0u) break;
+            high = mid - 1u;
+        }
+    }
+
+    size_t lower = (low > 0u)  ? low - 1u : 0u;
+    size_t upper = (low < len) ? low : len - 1u;
+    return (bracket_expect_t){ .has_value     = true,
+                               .u.value.lower = lower,
+                               .u.value.upper = upper };
+}
 // ================================================================================
 // ================================================================================
 // eof
