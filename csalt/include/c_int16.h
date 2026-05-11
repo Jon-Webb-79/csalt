@@ -786,6 +786,76 @@ error_code_t int16_tensor_bsearch(const int16_tensor_t* t,
  */
 bracket_expect_t int16_tensor_bbsearch(const int16_tensor_t* t,
                                       int16_t               value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two int16_t tensors for equality.
+ *
+ * Compares the populated data buffers of two int16_t tensors using
+ * memcmp.  The comparison is always performed on the live region
+ * [0, len) — for ARRAY_STRUCT tensors this is the number of populated
+ * elements and for TENSOR_STRUCT tensors this is alloc (all slots are
+ * always live).
+ *
+ * The meta flag controls whether structural metadata is included in
+ * the comparison:
+ *
+ *   meta == false:
+ *     Only ndim and the data buffer contents are compared.  Two tensors
+ *     are considered equal if they have the same number of dimensions
+ *     and identical byte content in the populated region, regardless of
+ *     capacity, shape, mode, or growth policy.  This is the appropriate
+ *     comparison for value equality — "do these two tensors contain the
+ *     same data?"
+ *
+ *   meta == true:
+ *     In addition to the checks above, shape, alloc, mode, and growth
+ *     must all match.  This is the appropriate comparison for structural
+ *     equality — "are these two tensors the same object in every respect
+ *     except their allocator and memory address?"
+ *
+ * The allocator vtable is never compared.  Two tensors can be
+ * structurally identical and logically equal even if they were allocated
+ * by different allocators.
+ *
+ * Signed and unsigned byte representations are compared directly via
+ * memcmp — the sign bit is part of the bit pattern and is treated like
+ * any other bit.  -1 (0xFF) and 127 (0x7F) are not equal.
+ *
+ * @param one   Pointer to the first tensor.  Must not be NULL.
+ * @param two   Pointer to the second tensor.  Must not be NULL.
+ * @param meta  If true, include shape, alloc, mode, and growth in the
+ *              comparison in addition to ndim and data contents.
+ *              If false, compare only ndim and data contents.
+ *
+ * @return true  if the tensors are equal under the selected comparison,
+ *               or if one and two are the same pointer.
+ * @return false if either pointer is NULL, either base data pointer is
+ *               NULL, or any compared field differs.
+ *
+ * @code{.c}
+ * int16_tensor_t* a = init_int16_array(4, false, heap_allocator()).u.value;
+ * int16_tensor_t* b = init_int16_array(4, false, heap_allocator()).u.value;
+ *
+ * push_back_int16_array(a, -1);
+ * push_back_int16_array(a,  2);
+ * push_back_int16_array(b, -1);
+ * push_back_int16_array(b,  2);
+ *
+ * // Value equality — signed content matches
+ * bool eq = int16_tensors_equal(a, b, false);   // true
+ *
+ * // -1 and 127 have different bit patterns — not equal
+ * set_int16_tensor_index(b, 0, 127);
+ * eq = int16_tensors_equal(a, b, false);         // false
+ *
+ * return_int16_tensor(a);
+ * return_int16_tensor(b);
+ * @endcode
+ */
+bool int16_tensors_equal(const int16_tensor_t* one,
+                        const int16_tensor_t* two,
+                        bool                 meta);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

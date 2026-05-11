@@ -10265,6 +10265,329 @@ static void test_bbsearch_uint16_after_sort(void** state) {
 
     return_uint16_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// uint16 TENSORS EQUAL (uint16_tensors_equal)
+// ================================================================================
+ 
+/** NULL first argument must return false. */
+static void test_uint16_tensors_equal_null_one(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_false(uint16_tensors_equal(NULL, arr, false));
+    return_uint16_tensor(arr);
+}
+ 
+/** NULL second argument must return false. */
+static void test_uint16_tensors_equal_null_two(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_false(uint16_tensors_equal(arr, NULL, false));
+    return_uint16_tensor(arr);
+}
+ 
+/** Both NULL must return false. */
+static void test_uint16_tensors_equal_both_null(void** state) {
+    (void)state;
+    assert_false(uint16_tensors_equal(NULL, NULL, false));
+}
+ 
+/** Same pointer passed for both arguments must return true — the same
+ *  object is trivially equal to itself. */
+static void test_uint16_tensors_equal_same_pointer(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(4u, 10u);
+    assert_non_null(arr);
+    assert_true(uint16_tensors_equal(arr, arr, false));
+    assert_true(uint16_tensors_equal(arr, arr, true));
+    return_uint16_tensor(arr);
+}
+ 
+/** Two empty arrays with the same shape must be equal. */
+static void test_uint16_tensors_equal_both_empty(void** state) {
+    (void)state;
+    uint16_tensor_t* a = _make_uint16_array(4u, false);
+    uint16_tensor_t* b = _make_uint16_array(4u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(uint16_tensors_equal(a, b, false));
+    return_uint16_tensor(a);
+    return_uint16_tensor(b);
+}
+ 
+/** Arrays with different lengths must not be equal. */
+static void test_uint16_tensors_equal_length_mismatch(void** state) {
+    (void)state;
+    uint16_tensor_t* a = _make_uint16_array_filled(3u, 1u);  /* [1,2,3] */
+    uint16_tensor_t* b = _make_uint16_array_filled(4u, 1u);  /* [1,2,3,4] */
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(uint16_tensors_equal(a, b, false));
+    return_uint16_tensor(a);
+    return_uint16_tensor(b);
+}
+ 
+/** Identical content and shape must return true. */
+static void test_uint16_tensors_equal_identical(void** state) {
+    (void)state;
+    uint16_tensor_t* a = _make_uint16_array_filled(4u, 10u);  /* [10,11,12,13] */
+    uint16_tensor_t* b = _make_uint16_array_filled(4u, 10u);  /* [10,11,12,13] */
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(uint16_tensors_equal(a, b, false));
+    return_uint16_tensor(a);
+    return_uint16_tensor(b);
+}
+ 
+/** Arrays with same length but differing content must not be equal. */
+static void test_uint16_tensors_equal_content_mismatch(void** state) {
+    (void)state;
+    uint16_tensor_t* a = _make_uint16_array_filled(4u, 10u);  /* [10,11,12,13] */
+    uint16_tensor_t* b = _make_uint16_array_filled(4u, 20u);  /* [20,21,22,23] */
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(uint16_tensors_equal(a, b, false));
+    return_uint16_tensor(a);
+    return_uint16_tensor(b);
+}
+ 
+/** Mismatch in a single element at the start must return false. */
+static void test_uint16_tensors_equal_first_element_differs(void** state) {
+    (void)state;
+    uint16_tensor_t* a = _make_uint16_array_filled(4u, 1u);  /* [1,2,3,4] */
+    uint16_tensor_t* b = _make_uint16_array_filled(4u, 1u);  /* [1,2,3,4] */
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    set_uint16_tensor_index(b, 0u, 99u);  /* b = [99,2,3,4] */
+    assert_false(uint16_tensors_equal(a, b, false));
+    return_uint16_tensor(a);
+    return_uint16_tensor(b);
+}
+ 
+/** Mismatch in the last element only must return false. */
+static void test_uint16_tensors_equal_last_element_differs(void** state) {
+    (void)state;
+    uint16_tensor_t* a = _make_uint16_array_filled(4u, 1u);  /* [1,2,3,4] */
+    uint16_tensor_t* b = _make_uint16_array_filled(4u, 1u);  /* [1,2,3,4] */
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    set_uint16_tensor_index(b, 3u, 99u);  /* b = [1,2,3,99] */
+    assert_false(uint16_tensors_equal(a, b, false));
+    return_uint16_tensor(a);
+    return_uint16_tensor(b);
+}
+ 
+/** Two tensors equal with meta=false but differing alloc must still
+ *  return true when meta is false — meta differences are ignored. */
+static void test_uint16_tensors_equal_meta_false_ignores_alloc(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t ra = init_uint16_array(4u, false, alloc);
+    uint16_tensor_expect_t rb = init_uint16_array(8u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_uint16_array(ra.u.value, 1u);
+    push_back_uint16_array(ra.u.value, 2u);
+    push_back_uint16_array(rb.u.value, 1u);
+    push_back_uint16_array(rb.u.value, 2u);
+ 
+    /* Different alloc (4 vs 8) but meta=false — must be equal */
+    assert_true(uint16_tensors_equal(ra.u.value, rb.u.value, false));
+ 
+    return_uint16_tensor(ra.u.value);
+    return_uint16_tensor(rb.u.value);
+}
+ 
+/** Two tensors with same content but different alloc must return false
+ *  when meta=true. */
+static void test_uint16_tensors_equal_meta_true_alloc_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t ra = init_uint16_array(4u, false, alloc);
+    uint16_tensor_expect_t rb = init_uint16_array(8u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_uint16_array(ra.u.value, 1u);
+    push_back_uint16_array(ra.u.value, 2u);
+    push_back_uint16_array(rb.u.value, 1u);
+    push_back_uint16_array(rb.u.value, 2u);
+ 
+    assert_false(uint16_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint16_tensor(ra.u.value);
+    return_uint16_tensor(rb.u.value);
+}
+ 
+/** Two tensors with same content but different mode must return false
+ *  when meta=true. */
+static void test_uint16_tensors_equal_meta_true_mode_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+ 
+    /* ARRAY_STRUCT tensor */
+    uint16_tensor_expect_t ra = init_uint16_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    push_back_uint16_array(ra.u.value, 1u);
+    push_back_uint16_array(ra.u.value, 2u);
+ 
+    /* TENSOR_STRUCT tensor — same data but different mode */
+    size_t shape[] = { 2u };
+    uint16_tensor_expect_t rb = init_uint16_tensor(1u, shape, alloc);
+    assert_true(rb.has_value);
+    set_uint16_tensor_index(rb.u.value, 0u, 1u);
+    set_uint16_tensor_index(rb.u.value, 1u, 2u);
+ 
+    assert_false(uint16_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint16_tensor(ra.u.value);
+    return_uint16_tensor(rb.u.value);
+}
+ 
+/** Two tensors with same content but different growth flag must return
+ *  false when meta=true. */
+static void test_uint16_tensors_equal_meta_true_growth_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t ra = init_uint16_array(4u, false, alloc);
+    uint16_tensor_expect_t rb = init_uint16_array(4u, true,  alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_uint16_array(ra.u.value, 5u);
+    push_back_uint16_array(ra.u.value, 6u);
+    push_back_uint16_array(rb.u.value, 5u);
+    push_back_uint16_array(rb.u.value, 6u);
+ 
+    assert_false(uint16_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint16_tensor(ra.u.value);
+    return_uint16_tensor(rb.u.value);
+}
+ 
+/** Two tensors identical in content and all metadata must return true
+ *  when meta=true. */
+static void test_uint16_tensors_equal_meta_true_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t ra = init_uint16_array(4u, false, alloc);
+    uint16_tensor_expect_t rb = init_uint16_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_uint16_array(ra.u.value, 10u);
+    push_back_uint16_array(ra.u.value, 20u);
+    push_back_uint16_array(rb.u.value, 10u);
+    push_back_uint16_array(rb.u.value, 20u);
+ 
+    assert_true(uint16_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint16_tensor(ra.u.value);
+    return_uint16_tensor(rb.u.value);
+}
+ 
+/** Two N-dimensional fixed-shape tensors with matching shape and content
+ *  must return true. */
+static void test_uint16_tensors_equal_nd_match(void** state) {
+    (void)state;
+    size_t shape[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t ra = init_uint16_tensor(2u, shape, alloc);
+    uint16_tensor_expect_t rb = init_uint16_tensor(2u, shape, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_uint16_tensor_index(ra.u.value, i, (uint16_t)(i + 1u));
+        set_uint16_tensor_index(rb.u.value, i, (uint16_t)(i + 1u));
+    }
+ 
+    assert_true(uint16_tensors_equal(ra.u.value, rb.u.value, false));
+ 
+    return_uint16_tensor(ra.u.value);
+    return_uint16_tensor(rb.u.value);
+}
+ 
+/** Two tensors with different ndim must return false even if the flat
+ *  buffer content is identical. */
+static void test_uint16_tensors_equal_ndim_mismatch(void** state) {
+    (void)state;
+    size_t shape_1d[] = { 6u };
+    size_t shape_2d[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t ra = init_uint16_tensor(1u, shape_1d, alloc);
+    uint16_tensor_expect_t rb = init_uint16_tensor(2u, shape_2d, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_uint16_tensor_index(ra.u.value, i, (uint16_t)(i + 1u));
+        set_uint16_tensor_index(rb.u.value, i, (uint16_t)(i + 1u));
+    }
+ 
+    assert_false(uint16_tensors_equal(ra.u.value, rb.u.value, false));
+ 
+    return_uint16_tensor(ra.u.value);
+    return_uint16_tensor(rb.u.value);
+}
+ 
+/** Two tensors with the same ndim but different shape dimensions must
+ *  return false even if the flat buffer lengths happen to match. */
+static void test_uint16_tensors_equal_shape_mismatch(void** state) {
+    (void)state;
+    size_t shape_a[] = { 2u, 3u };
+    size_t shape_b[] = { 3u, 2u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t ra = init_uint16_tensor(2u, shape_a, alloc);
+    uint16_tensor_expect_t rb = init_uint16_tensor(2u, shape_b, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_uint16_tensor_index(ra.u.value, i, (uint16_t)(i + 1u));
+        set_uint16_tensor_index(rb.u.value, i, (uint16_t)(i + 1u));
+    }
+ 
+    assert_false(uint16_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint16_tensor(ra.u.value);
+    return_uint16_tensor(rb.u.value);
+}
+ 
+/** Single-element arrays that are equal must return true. */
+static void test_uint16_tensors_equal_single_element_equal(void** state) {
+    (void)state;
+    uint16_tensor_t* a = _make_uint16_array(2u, false);
+    uint16_tensor_t* b = _make_uint16_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_uint16_array(a, 42u);
+    push_back_uint16_array(b, 42u);
+    assert_true(uint16_tensors_equal(a, b, false));
+    return_uint16_tensor(a);
+    return_uint16_tensor(b);
+}
+ 
+/** Single-element arrays that differ must return false. */
+static void test_uint16_tensors_equal_single_element_differs(void** state) {
+    (void)state;
+    uint16_tensor_t* a = _make_uint16_array(2u, false);
+    uint16_tensor_t* b = _make_uint16_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_uint16_array(a, 42u);
+    push_back_uint16_array(b, 43u);
+    assert_false(uint16_tensors_equal(a, b, false));
+    return_uint16_tensor(a);
+    return_uint16_tensor(b);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -10430,6 +10753,38 @@ const struct CMUnitTest test_uint16_tensor[] = {
 
     /* uint16_tensor_bbsearch — integration with sort */
     cmocka_unit_test(test_bbsearch_uint16_after_sort),
+
+   /* uint16_tensors_equal — null/guard */
+    cmocka_unit_test(test_uint16_tensors_equal_null_one),
+    cmocka_unit_test(test_uint16_tensors_equal_null_two),
+    cmocka_unit_test(test_uint16_tensors_equal_both_null),
+    cmocka_unit_test(test_uint16_tensors_equal_same_pointer),
+ 
+    /* uint16_tensors_equal — empty arrays */
+    cmocka_unit_test(test_uint16_tensors_equal_both_empty),
+ 
+    /* uint16_tensors_equal — length and content */
+    cmocka_unit_test(test_uint16_tensors_equal_length_mismatch),
+    cmocka_unit_test(test_uint16_tensors_equal_identical),
+    cmocka_unit_test(test_uint16_tensors_equal_content_mismatch),
+    cmocka_unit_test(test_uint16_tensors_equal_first_element_differs),
+    cmocka_unit_test(test_uint16_tensors_equal_last_element_differs),
+ 
+    /* uint16_tensors_equal — meta flag */
+    cmocka_unit_test(test_uint16_tensors_equal_meta_false_ignores_alloc),
+    cmocka_unit_test(test_uint16_tensors_equal_meta_true_alloc_differs),
+    cmocka_unit_test(test_uint16_tensors_equal_meta_true_mode_differs),
+    cmocka_unit_test(test_uint16_tensors_equal_meta_true_growth_differs),
+    cmocka_unit_test(test_uint16_tensors_equal_meta_true_identical),
+ 
+    /* uint16_tensors_equal — shape and ndim */
+    cmocka_unit_test(test_uint16_tensors_equal_nd_match),
+    cmocka_unit_test(test_uint16_tensors_equal_ndim_mismatch),
+    cmocka_unit_test(test_uint16_tensors_equal_shape_mismatch),
+ 
+    /* uint16_tensors_equal — single element */
+    cmocka_unit_test(test_uint16_tensors_equal_single_element_equal),
+    cmocka_unit_test(test_uint16_tensors_equal_single_element_differs),
 };
 
 const size_t test_uint16_tensor_count = sizeof(test_uint16_tensor) /
@@ -11888,6 +12243,385 @@ static void test_bbsearch_int16_after_sort(void** state) {
 
     return_int16_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// int16 TENSORS EQUAL (int16_tensors_equal)
+// ================================================================================
+ 
+/** NULL first argument must return false. */
+static void test_int16_tensors_equal_null_one(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(3u, 1);
+    assert_non_null(arr);
+    assert_false(int16_tensors_equal(NULL, arr, false));
+    return_int16_tensor(arr);
+}
+ 
+/** NULL second argument must return false. */
+static void test_int16_tensors_equal_null_two(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(3u, 1);
+    assert_non_null(arr);
+    assert_false(int16_tensors_equal(arr, NULL, false));
+    return_int16_tensor(arr);
+}
+ 
+/** Both NULL must return false. */
+static void test_int16_tensors_equal_both_null(void** state) {
+    (void)state;
+    assert_false(int16_tensors_equal(NULL, NULL, false));
+}
+ 
+/** Same pointer passed for both arguments must return true. */
+static void test_int16_tensors_equal_same_pointer(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(4u, -10);
+    assert_non_null(arr);
+    assert_true(int16_tensors_equal(arr, arr, false));
+    assert_true(int16_tensors_equal(arr, arr, true));
+    return_int16_tensor(arr);
+}
+ 
+/** Two empty arrays must be equal. */
+static void test_int16_tensors_equal_both_empty(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array(4u, false);
+    int16_tensor_t* b = _make_int16_array(4u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+// ---- Length and content -----------------------------------------------------
+ 
+/** Arrays with different lengths must not be equal. */
+static void test_int16_tensors_equal_length_mismatch(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array_filled(3u, 1);
+    int16_tensor_t* b = _make_int16_array_filled(4u, 1);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+/** Identical content must return true. */
+static void test_int16_tensors_equal_identical(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array_filled(4u, -20);
+    int16_tensor_t* b = _make_int16_array_filled(4u, -20);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+/** Same length but differing content must return false. */
+static void test_int16_tensors_equal_content_mismatch(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array_filled(4u, -10);
+    int16_tensor_t* b = _make_int16_array_filled(4u,  10);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+/** Mismatch at the first element must return false. */
+static void test_int16_tensors_equal_first_element_differs(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array_filled(4u, 1);
+    int16_tensor_t* b = _make_int16_array_filled(4u, 1);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    set_int16_tensor_index(b, 0u, -99);
+    assert_false(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+/** Mismatch at the last element only must return false. */
+static void test_int16_tensors_equal_last_element_differs(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array_filled(4u, 1);
+    int16_tensor_t* b = _make_int16_array_filled(4u, 1);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    set_int16_tensor_index(b, 3u, -99);
+    assert_false(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+// ---- Negative value correctness ---------------------------------------------
+ 
+/**
+ * Arrays containing only negative values that are identical must return
+ * true — confirms sign bits are compared correctly via memcmp.
+ */
+static void test_int16_tensors_equal_negative_values_equal(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array(5u, false);
+    int16_tensor_t* b = _make_int16_array(5u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    int16_t vals[] = { -1, -50, -100, -128, -3 };
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_int16_array(a, vals[i]);
+        push_back_int16_array(b, vals[i]);
+    }
+    assert_true(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+/**
+ * -1 (0xFF) and 127 (0x7F) must not be equal — confirms the sign bit
+ * is treated as part of the bit pattern and not ignored.
+ */
+static void test_int16_tensors_equal_minus_one_vs_max(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array(2u, false);
+    int16_tensor_t* b = _make_int16_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    push_back_int16_array(a,  -1);
+    push_back_int16_array(b, 127);
+ 
+    assert_false(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+/**
+ * int16_MIN (-128, 0x80) and 0 must not be equal — the most negative
+ * signed value has a distinct bit pattern from zero.
+ */
+static void test_int16_tensors_equal_int16_min_vs_zero(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array(2u, false);
+    int16_tensor_t* b = _make_int16_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    push_back_int16_array(a, INT16_MIN);
+    push_back_int16_array(b, 0);
+ 
+    assert_false(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+// ---- Meta flag --------------------------------------------------------------
+ 
+/**
+ * Tensors with different alloc but same content must be equal when
+ * meta=false — alloc is not compared without meta.
+ */
+static void test_int16_tensors_equal_meta_false_ignores_alloc(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t ra  = init_int16_array(4u, false, alloc);
+    int16_tensor_expect_t rb  = init_int16_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_int16_array(ra.u.value, -5);
+    push_back_int16_array(ra.u.value,  5);
+    push_back_int16_array(rb.u.value, -5);
+    push_back_int16_array(rb.u.value,  5);
+ 
+    assert_true(int16_tensors_equal(ra.u.value, rb.u.value, false));
+    return_int16_tensor(ra.u.value);
+    return_int16_tensor(rb.u.value);
+}
+ 
+/** Different alloc with same content must return false when meta=true. */
+static void test_int16_tensors_equal_meta_true_alloc_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t ra  = init_int16_array(4u, false, alloc);
+    int16_tensor_expect_t rb  = init_int16_array(8u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_int16_array(ra.u.value, -5);
+    push_back_int16_array(ra.u.value,  5);
+    push_back_int16_array(rb.u.value, -5);
+    push_back_int16_array(rb.u.value,  5);
+ 
+    assert_false(int16_tensors_equal(ra.u.value, rb.u.value, true));
+    return_int16_tensor(ra.u.value);
+    return_int16_tensor(rb.u.value);
+}
+ 
+/** Different mode with same content must return false when meta=true. */
+static void test_int16_tensors_equal_meta_true_mode_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+ 
+    int16_tensor_expect_t ra = init_int16_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    push_back_int16_array(ra.u.value, -1);
+    push_back_int16_array(ra.u.value,  2);
+ 
+    size_t shape[] = { 2u };
+    int16_tensor_expect_t rb = init_int16_tensor(1u, shape, alloc);
+    assert_true(rb.has_value);
+    set_int16_tensor_index(rb.u.value, 0u, -1);
+    set_int16_tensor_index(rb.u.value, 1u,  2);
+ 
+    assert_false(int16_tensors_equal(ra.u.value, rb.u.value, true));
+    return_int16_tensor(ra.u.value);
+    return_int16_tensor(rb.u.value);
+}
+ 
+/** Different growth flag with same content must return false when meta=true. */
+static void test_int16_tensors_equal_meta_true_growth_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t ra  = init_int16_array(4u, false, alloc);
+    int16_tensor_expect_t rb  = init_int16_array(4u, true,  alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_int16_array(ra.u.value, -5);
+    push_back_int16_array(ra.u.value,  5);
+    push_back_int16_array(rb.u.value, -5);
+    push_back_int16_array(rb.u.value,  5);
+ 
+    assert_false(int16_tensors_equal(ra.u.value, rb.u.value, true));
+    return_int16_tensor(ra.u.value);
+    return_int16_tensor(rb.u.value);
+}
+ 
+/** Identical content and metadata must return true when meta=true. */
+static void test_int16_tensors_equal_meta_true_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t ra  = init_int16_array(4u, false, alloc);
+    int16_tensor_expect_t rb  = init_int16_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_int16_array(ra.u.value, -10);
+    push_back_int16_array(ra.u.value,  20);
+    push_back_int16_array(rb.u.value, -10);
+    push_back_int16_array(rb.u.value,  20);
+ 
+    assert_true(int16_tensors_equal(ra.u.value, rb.u.value, true));
+    return_int16_tensor(ra.u.value);
+    return_int16_tensor(rb.u.value);
+}
+ 
+// ---- Shape and ndim ---------------------------------------------------------
+ 
+/** Two 2-D tensors with matching shape and content must return true. */
+static void test_int16_tensors_equal_nd_match(void** state) {
+    (void)state;
+    size_t shape[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t ra  = init_int16_tensor(2u, shape, alloc);
+    int16_tensor_expect_t rb  = init_int16_tensor(2u, shape, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    int16_t vals[] = { -3, -2, -1, 0, 1, 2 };
+    for (size_t i = 0u; i < 6u; i++) {
+        set_int16_tensor_index(ra.u.value, i, vals[i]);
+        set_int16_tensor_index(rb.u.value, i, vals[i]);
+    }
+ 
+    assert_true(int16_tensors_equal(ra.u.value, rb.u.value, false));
+    return_int16_tensor(ra.u.value);
+    return_int16_tensor(rb.u.value);
+}
+ 
+/** Different ndim with same flat content must return false. */
+static void test_int16_tensors_equal_ndim_mismatch(void** state) {
+    (void)state;
+    size_t shape_1d[] = { 6u };
+    size_t shape_2d[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t ra  = init_int16_tensor(1u, shape_1d, alloc);
+    int16_tensor_expect_t rb  = init_int16_tensor(2u, shape_2d, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    int16_t vals[] = { -3, -2, -1, 0, 1, 2 };
+    for (size_t i = 0u; i < 6u; i++) {
+        set_int16_tensor_index(ra.u.value, i, vals[i]);
+        set_int16_tensor_index(rb.u.value, i, vals[i]);
+    }
+ 
+    assert_false(int16_tensors_equal(ra.u.value, rb.u.value, false));
+    return_int16_tensor(ra.u.value);
+    return_int16_tensor(rb.u.value);
+}
+ 
+/** Same ndim and flat length but different shape must return false when
+ *  meta=true. */
+static void test_int16_tensors_equal_shape_mismatch(void** state) {
+    (void)state;
+    size_t shape_a[] = { 2u, 3u };
+    size_t shape_b[] = { 3u, 2u };
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t ra  = init_int16_tensor(2u, shape_a, alloc);
+    int16_tensor_expect_t rb  = init_int16_tensor(2u, shape_b, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    int16_t vals[] = { -3, -2, -1, 0, 1, 2 };
+    for (size_t i = 0u; i < 6u; i++) {
+        set_int16_tensor_index(ra.u.value, i, vals[i]);
+        set_int16_tensor_index(rb.u.value, i, vals[i]);
+    }
+ 
+    assert_false(int16_tensors_equal(ra.u.value, rb.u.value, true));
+    return_int16_tensor(ra.u.value);
+    return_int16_tensor(rb.u.value);
+}
+ 
+// ---- Single element ---------------------------------------------------------
+ 
+/** Single-element arrays that are equal must return true. */
+static void test_int16_tensors_equal_single_element_equal(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array(2u, false);
+    int16_tensor_t* b = _make_int16_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_int16_array(a, -42);
+    push_back_int16_array(b, -42);
+    assert_true(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
+ 
+/** Single-element arrays that differ must return false. */
+static void test_int16_tensors_equal_single_element_differs(void** state) {
+    (void)state;
+    int16_tensor_t* a = _make_int16_array(2u, false);
+    int16_tensor_t* b = _make_int16_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_int16_array(a, -42);
+    push_back_int16_array(b,  42);
+    assert_false(int16_tensors_equal(a, b, false));
+    return_int16_tensor(a);
+    return_int16_tensor(b);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -12045,6 +12779,43 @@ const struct CMUnitTest test_int16_tensor[] = {
  
     /* int16_tensor_bbsearch — integration with sort */
     cmocka_unit_test(test_bbsearch_int16_after_sort),
+
+    /* null/guard */
+    cmocka_unit_test(test_int16_tensors_equal_null_one),
+    cmocka_unit_test(test_int16_tensors_equal_null_two),
+    cmocka_unit_test(test_int16_tensors_equal_both_null),
+    cmocka_unit_test(test_int16_tensors_equal_same_pointer),
+ 
+    /* empty */
+    cmocka_unit_test(test_int16_tensors_equal_both_empty),
+ 
+    /* length and content */
+    cmocka_unit_test(test_int16_tensors_equal_length_mismatch),
+    cmocka_unit_test(test_int16_tensors_equal_identical),
+    cmocka_unit_test(test_int16_tensors_equal_content_mismatch),
+    cmocka_unit_test(test_int16_tensors_equal_first_element_differs),
+    cmocka_unit_test(test_int16_tensors_equal_last_element_differs),
+ 
+    /* negative value correctness */
+    cmocka_unit_test(test_int16_tensors_equal_negative_values_equal),
+    cmocka_unit_test(test_int16_tensors_equal_minus_one_vs_max),
+    cmocka_unit_test(test_int16_tensors_equal_int16_min_vs_zero),
+ 
+    /* meta flag */
+    cmocka_unit_test(test_int16_tensors_equal_meta_false_ignores_alloc),
+    cmocka_unit_test(test_int16_tensors_equal_meta_true_alloc_differs),
+    cmocka_unit_test(test_int16_tensors_equal_meta_true_mode_differs),
+    cmocka_unit_test(test_int16_tensors_equal_meta_true_growth_differs),
+    cmocka_unit_test(test_int16_tensors_equal_meta_true_identical),
+ 
+    /* shape and ndim */
+    cmocka_unit_test(test_int16_tensors_equal_nd_match),
+    cmocka_unit_test(test_int16_tensors_equal_ndim_mismatch),
+    cmocka_unit_test(test_int16_tensors_equal_shape_mismatch),
+ 
+    /* single element */
+    cmocka_unit_test(test_int16_tensors_equal_single_element_equal),
+    cmocka_unit_test(test_int16_tensors_equal_single_element_differs),
 };
 
 const size_t test_int16_tensor_count = sizeof(test_int16_tensor) /
