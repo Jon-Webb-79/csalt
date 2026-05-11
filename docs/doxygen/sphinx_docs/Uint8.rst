@@ -100,6 +100,8 @@ Utility Operations
 
 .. doxygenfunction:: uint8_tensor_bbsearch
 
+.. doxygenfunction:: uint8_tensors_equal
+
 Introspection
 -------------
 

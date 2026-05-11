@@ -792,6 +792,71 @@ error_code_t uint8_tensor_bsearch(const uint8_tensor_t* t,
  */
 bracket_expect_t uint8_tensor_bbsearch(const uint8_tensor_t* t,
                                        uint8_t               value);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two uint8_t tensors for equality.
+ *
+ * Compares the populated data buffers of two uint8_t tensors using
+ * memcmp.  The comparison is always performed on the live region
+ * [0, len) — for ARRAY_STRUCT tensors this is the number of populated
+ * elements and for TENSOR_STRUCT tensors this is alloc (all slots are
+ * always live).
+ *
+ * The meta flag controls whether structural metadata is included in
+ * the comparison:
+ *
+ *   meta == false:
+ *     Only ndim and the data buffer contents are compared.  Two tensors
+ *     are considered equal if they have the same number of dimensions
+ *     and identical byte content in the populated region, regardless of
+ *     capacity, shape, mode, or growth policy.  This is the appropriate
+ *     comparison for value equality — "do these two tensors contain the
+ *     same data?"
+ *
+ *   meta == true:
+ *     In addition to the checks above, shape, alloc, mode, and growth
+ *     must all match.  This is the appropriate comparison for structural
+ *     equality — "are these two tensors the same object in every respect
+ *     except their allocator and memory address?"
+ *
+ * The allocator vtable is never compared.  Two tensors can be
+ * structurally identical and logically equal even if they were allocated
+ * by different allocators.
+ *
+ * @param one   Pointer to the first tensor.  Must not be NULL.
+ * @param two   Pointer to the second tensor.  Must not be NULL.
+ * @param meta  If true, include shape, alloc, mode, and growth in the
+ *              comparison in addition to ndim and data contents.
+ *              If false, compare only ndim and data contents.
+ *
+ * @return true  if the tensors are equal under the selected comparison,
+ *               or if one and two are the same pointer.
+ * @return false if either pointer is NULL, either base data pointer is
+ *               NULL, or any compared field differs.
+ *
+ * @code{.c}
+ * uint8_tensor_t* a = init_uint8_array(8, false, heap_allocator()).u.value;
+ * uint8_tensor_t* b = init_uint8_array(4, false, heap_allocator()).u.value;
+ *
+ * push_back_uint8_array(a, 1u);
+ * push_back_uint8_array(a, 2u);
+ * push_back_uint8_array(b, 1u);
+ * push_back_uint8_array(b, 2u);
+ *
+ * // Value equality — content matches, capacity difference ignored
+ * bool eq = uint8_tensors_equal(a, b, false);   // true
+ *
+ * // Structural equality — capacity differs (8 vs 4)
+ * eq = uint8_tensors_equal(a, b, true);          // false
+ *
+ * return_uint8_tensor(a);
+ * return_uint8_tensor(b);
+ * @endcode
+ */
+bool uint8_tensors_equal(const uint8_tensor_t* one,
+                         const uint8_tensor_t* two,
+                         bool                  meta);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 
