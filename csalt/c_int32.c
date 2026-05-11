@@ -270,6 +270,29 @@ bracket_expect_t int32_tensor_bbsearch(const int32_tensor_t* t,
                                .u.value.lower = low - 1u,
                                .u.value.upper = low };
 }
+// -------------------------------------------------------------------------------- 
+
+bool int32_tensors_equal(const int32_tensor_t* one,
+                        const int32_tensor_t* two,
+                        bool                 meta) {
+    if (!one || !two)                         return false;
+    if (!one->base->data || !two->base->data) return false;
+    if (one->base->len  != two->base->len)    return false;
+    if (one->base->ndim != two->base->ndim)   return false;
+
+    if (meta) {
+        for (int32_t d = 0u; d < one->base->ndim; d++) {
+            if (one->base->shape[d] != two->base->shape[d]) return false;
+        }
+        if (one->base->alloc  != two->base->alloc)  return false;
+        if (one->base->mode   != two->base->mode)   return false;
+        if (one->base->growth != two->base->growth) return false;
+    }
+
+    return memcmp(one->base->data,
+                  two->base->data,
+                  sizeof(int32_t) * one->base->len) == 0;
+}
 // ================================================================================
 // ================================================================================
 // eof
