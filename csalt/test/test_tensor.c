@@ -18313,6 +18313,329 @@ static void test_bbsearch_uint64_after_sort(void** state) {
 
     return_uint64_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// uint64 TENSORS EQUAL (uint64_tensors_equal)
+// ================================================================================
+ 
+/** NULL first argument must return false. */
+static void test_uint64_tensors_equal_null_one(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_false(uint64_tensors_equal(NULL, arr, false));
+    return_uint64_tensor(arr);
+}
+ 
+/** NULL second argument must return false. */
+static void test_uint64_tensors_equal_null_two(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array_filled(3u, 1u);
+    assert_non_null(arr);
+    assert_false(uint64_tensors_equal(arr, NULL, false));
+    return_uint64_tensor(arr);
+}
+ 
+/** Both NULL must return false. */
+static void test_uint64_tensors_equal_both_null(void** state) {
+    (void)state;
+    assert_false(uint64_tensors_equal(NULL, NULL, false));
+}
+ 
+/** Same pointer passed for both arguments must return true — the same
+ *  object is trivially equal to itself. */
+static void test_uint64_tensors_equal_same_pointer(void** state) {
+    (void)state;
+    uint64_tensor_t* arr = _make_uint64_array_filled(4u, 10u);
+    assert_non_null(arr);
+    assert_true(uint64_tensors_equal(arr, arr, false));
+    assert_true(uint64_tensors_equal(arr, arr, true));
+    return_uint64_tensor(arr);
+}
+ 
+/** Two empty arrays with the same shape must be equal. */
+static void test_uint64_tensors_equal_both_empty(void** state) {
+    (void)state;
+    uint64_tensor_t* a = _make_uint64_array(4u, false);
+    uint64_tensor_t* b = _make_uint64_array(4u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(uint64_tensors_equal(a, b, false));
+    return_uint64_tensor(a);
+    return_uint64_tensor(b);
+}
+ 
+/** Arrays with different lengths must not be equal. */
+static void test_uint64_tensors_equal_length_mismatch(void** state) {
+    (void)state;
+    uint64_tensor_t* a = _make_uint64_array_filled(3u, 1u);  /* [1,2,3] */
+    uint64_tensor_t* b = _make_uint64_array_filled(4u, 1u);  /* [1,2,3,4] */
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(uint64_tensors_equal(a, b, false));
+    return_uint64_tensor(a);
+    return_uint64_tensor(b);
+}
+ 
+/** Identical content and shape must return true. */
+static void test_uint64_tensors_equal_identical(void** state) {
+    (void)state;
+    uint64_tensor_t* a = _make_uint64_array_filled(4u, 10u);  /* [10,11,12,13] */
+    uint64_tensor_t* b = _make_uint64_array_filled(4u, 10u);  /* [10,11,12,13] */
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(uint64_tensors_equal(a, b, false));
+    return_uint64_tensor(a);
+    return_uint64_tensor(b);
+}
+ 
+/** Arrays with same length but differing content must not be equal. */
+static void test_uint64_tensors_equal_content_mismatch(void** state) {
+    (void)state;
+    uint64_tensor_t* a = _make_uint64_array_filled(4u, 10u);  /* [10,11,12,13] */
+    uint64_tensor_t* b = _make_uint64_array_filled(4u, 20u);  /* [20,21,22,23] */
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(uint64_tensors_equal(a, b, false));
+    return_uint64_tensor(a);
+    return_uint64_tensor(b);
+}
+ 
+/** Mismatch in a single element at the start must return false. */
+static void test_uint64_tensors_equal_first_element_differs(void** state) {
+    (void)state;
+    uint64_tensor_t* a = _make_uint64_array_filled(4u, 1u);  /* [1,2,3,4] */
+    uint64_tensor_t* b = _make_uint64_array_filled(4u, 1u);  /* [1,2,3,4] */
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    set_uint64_tensor_index(b, 0u, 99u);  /* b = [99,2,3,4] */
+    assert_false(uint64_tensors_equal(a, b, false));
+    return_uint64_tensor(a);
+    return_uint64_tensor(b);
+}
+ 
+/** Mismatch in the last element only must return false. */
+static void test_uint64_tensors_equal_last_element_differs(void** state) {
+    (void)state;
+    uint64_tensor_t* a = _make_uint64_array_filled(4u, 1u);  /* [1,2,3,4] */
+    uint64_tensor_t* b = _make_uint64_array_filled(4u, 1u);  /* [1,2,3,4] */
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    set_uint64_tensor_index(b, 3u, 99u);  /* b = [1,2,3,99] */
+    assert_false(uint64_tensors_equal(a, b, false));
+    return_uint64_tensor(a);
+    return_uint64_tensor(b);
+}
+ 
+/** Two tensors equal with meta=false but differing alloc must still
+ *  return true when meta is false — meta differences are ignored. */
+static void test_uint64_tensors_equal_meta_false_ignores_alloc(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint64_tensor_expect_t ra = init_uint64_array(4u, false, alloc);
+    uint64_tensor_expect_t rb = init_uint64_array(8u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_uint64_array(ra.u.value, 1u);
+    push_back_uint64_array(ra.u.value, 2u);
+    push_back_uint64_array(rb.u.value, 1u);
+    push_back_uint64_array(rb.u.value, 2u);
+ 
+    /* Different alloc (4 vs 8) but meta=false — must be equal */
+    assert_true(uint64_tensors_equal(ra.u.value, rb.u.value, false));
+ 
+    return_uint64_tensor(ra.u.value);
+    return_uint64_tensor(rb.u.value);
+}
+ 
+/** Two tensors with same content but different alloc must return false
+ *  when meta=true. */
+static void test_uint64_tensors_equal_meta_true_alloc_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint64_tensor_expect_t ra = init_uint64_array(4u, false, alloc);
+    uint64_tensor_expect_t rb = init_uint64_array(8u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_uint64_array(ra.u.value, 1u);
+    push_back_uint64_array(ra.u.value, 2u);
+    push_back_uint64_array(rb.u.value, 1u);
+    push_back_uint64_array(rb.u.value, 2u);
+ 
+    assert_false(uint64_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint64_tensor(ra.u.value);
+    return_uint64_tensor(rb.u.value);
+}
+ 
+/** Two tensors with same content but different mode must return false
+ *  when meta=true. */
+static void test_uint64_tensors_equal_meta_true_mode_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+ 
+    /* ARRAY_STRUCT tensor */
+    uint64_tensor_expect_t ra = init_uint64_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    push_back_uint64_array(ra.u.value, 1u);
+    push_back_uint64_array(ra.u.value, 2u);
+ 
+    /* TENSOR_STRUCT tensor — same data but different mode */
+    size_t shape[] = { 2u };
+    uint64_tensor_expect_t rb = init_uint64_tensor(1u, shape, alloc);
+    assert_true(rb.has_value);
+    set_uint64_tensor_index(rb.u.value, 0u, 1u);
+    set_uint64_tensor_index(rb.u.value, 1u, 2u);
+ 
+    assert_false(uint64_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint64_tensor(ra.u.value);
+    return_uint64_tensor(rb.u.value);
+}
+ 
+/** Two tensors with same content but different growth flag must return
+ *  false when meta=true. */
+static void test_uint64_tensors_equal_meta_true_growth_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint64_tensor_expect_t ra = init_uint64_array(4u, false, alloc);
+    uint64_tensor_expect_t rb = init_uint64_array(4u, true,  alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_uint64_array(ra.u.value, 5u);
+    push_back_uint64_array(ra.u.value, 6u);
+    push_back_uint64_array(rb.u.value, 5u);
+    push_back_uint64_array(rb.u.value, 6u);
+ 
+    assert_false(uint64_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint64_tensor(ra.u.value);
+    return_uint64_tensor(rb.u.value);
+}
+ 
+/** Two tensors identical in content and all metadata must return true
+ *  when meta=true. */
+static void test_uint64_tensors_equal_meta_true_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint64_tensor_expect_t ra = init_uint64_array(4u, false, alloc);
+    uint64_tensor_expect_t rb = init_uint64_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_uint64_array(ra.u.value, 10u);
+    push_back_uint64_array(ra.u.value, 20u);
+    push_back_uint64_array(rb.u.value, 10u);
+    push_back_uint64_array(rb.u.value, 20u);
+ 
+    assert_true(uint64_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint64_tensor(ra.u.value);
+    return_uint64_tensor(rb.u.value);
+}
+ 
+/** Two N-dimensional fixed-shape tensors with matching shape and content
+ *  must return true. */
+static void test_uint64_tensors_equal_nd_match(void** state) {
+    (void)state;
+    size_t shape[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint64_tensor_expect_t ra = init_uint64_tensor(2u, shape, alloc);
+    uint64_tensor_expect_t rb = init_uint64_tensor(2u, shape, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_uint64_tensor_index(ra.u.value, i, (uint64_t)(i + 1u));
+        set_uint64_tensor_index(rb.u.value, i, (uint64_t)(i + 1u));
+    }
+ 
+    assert_true(uint64_tensors_equal(ra.u.value, rb.u.value, false));
+ 
+    return_uint64_tensor(ra.u.value);
+    return_uint64_tensor(rb.u.value);
+}
+ 
+/** Two tensors with different ndim must return false even if the flat
+ *  buffer content is identical. */
+static void test_uint64_tensors_equal_ndim_mismatch(void** state) {
+    (void)state;
+    size_t shape_1d[] = { 6u };
+    size_t shape_2d[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint64_tensor_expect_t ra = init_uint64_tensor(1u, shape_1d, alloc);
+    uint64_tensor_expect_t rb = init_uint64_tensor(2u, shape_2d, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_uint64_tensor_index(ra.u.value, i, (uint64_t)(i + 1u));
+        set_uint64_tensor_index(rb.u.value, i, (uint64_t)(i + 1u));
+    }
+ 
+    assert_false(uint64_tensors_equal(ra.u.value, rb.u.value, false));
+ 
+    return_uint64_tensor(ra.u.value);
+    return_uint64_tensor(rb.u.value);
+}
+ 
+/** Two tensors with the same ndim but different shape dimensions must
+ *  return false even if the flat buffer lengths happen to match. */
+static void test_uint64_tensors_equal_shape_mismatch(void** state) {
+    (void)state;
+    size_t shape_a[] = { 2u, 3u };
+    size_t shape_b[] = { 3u, 2u };
+    allocator_vtable_t alloc = heap_allocator();
+    uint64_tensor_expect_t ra = init_uint64_tensor(2u, shape_a, alloc);
+    uint64_tensor_expect_t rb = init_uint64_tensor(2u, shape_b, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_uint64_tensor_index(ra.u.value, i, (uint64_t)(i + 1u));
+        set_uint64_tensor_index(rb.u.value, i, (uint64_t)(i + 1u));
+    }
+ 
+    assert_false(uint64_tensors_equal(ra.u.value, rb.u.value, true));
+ 
+    return_uint64_tensor(ra.u.value);
+    return_uint64_tensor(rb.u.value);
+}
+ 
+/** Single-element arrays that are equal must return true. */
+static void test_uint64_tensors_equal_single_element_equal(void** state) {
+    (void)state;
+    uint64_tensor_t* a = _make_uint64_array(2u, false);
+    uint64_tensor_t* b = _make_uint64_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_uint64_array(a, 42u);
+    push_back_uint64_array(b, 42u);
+    assert_true(uint64_tensors_equal(a, b, false));
+    return_uint64_tensor(a);
+    return_uint64_tensor(b);
+}
+ 
+/** Single-element arrays that differ must return false. */
+static void test_uint64_tensors_equal_single_element_differs(void** state) {
+    (void)state;
+    uint64_tensor_t* a = _make_uint64_array(2u, false);
+    uint64_tensor_t* b = _make_uint64_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_uint64_array(a, 42u);
+    push_back_uint64_array(b, 43u);
+    assert_false(uint64_tensors_equal(a, b, false));
+    return_uint64_tensor(a);
+    return_uint64_tensor(b);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -18478,6 +18801,38 @@ const struct CMUnitTest test_uint64_tensor[] = {
 
     /* uint64_tensor_bbsearch — integration with sort */
     cmocka_unit_test(test_bbsearch_uint64_after_sort),
+
+   /* uint64_tensors_equal — null/guard */
+    cmocka_unit_test(test_uint64_tensors_equal_null_one),
+    cmocka_unit_test(test_uint64_tensors_equal_null_two),
+    cmocka_unit_test(test_uint64_tensors_equal_both_null),
+    cmocka_unit_test(test_uint64_tensors_equal_same_pointer),
+ 
+    /* uint64_tensors_equal — empty arrays */
+    cmocka_unit_test(test_uint64_tensors_equal_both_empty),
+ 
+    /* uint64_tensors_equal — length and content */
+    cmocka_unit_test(test_uint64_tensors_equal_length_mismatch),
+    cmocka_unit_test(test_uint64_tensors_equal_identical),
+    cmocka_unit_test(test_uint64_tensors_equal_content_mismatch),
+    cmocka_unit_test(test_uint64_tensors_equal_first_element_differs),
+    cmocka_unit_test(test_uint64_tensors_equal_last_element_differs),
+ 
+    /* uint64_tensors_equal — meta flag */
+    cmocka_unit_test(test_uint64_tensors_equal_meta_false_ignores_alloc),
+    cmocka_unit_test(test_uint64_tensors_equal_meta_true_alloc_differs),
+    cmocka_unit_test(test_uint64_tensors_equal_meta_true_mode_differs),
+    cmocka_unit_test(test_uint64_tensors_equal_meta_true_growth_differs),
+    cmocka_unit_test(test_uint64_tensors_equal_meta_true_identical),
+ 
+    /* uint64_tensors_equal — shape and ndim */
+    cmocka_unit_test(test_uint64_tensors_equal_nd_match),
+    cmocka_unit_test(test_uint64_tensors_equal_ndim_mismatch),
+    cmocka_unit_test(test_uint64_tensors_equal_shape_mismatch),
+ 
+    /* uint64_tensors_equal — single element */
+    cmocka_unit_test(test_uint64_tensors_equal_single_element_equal),
+    cmocka_unit_test(test_uint64_tensors_equal_single_element_differs),
 };
 
 const size_t test_uint64_tensor_count = sizeof(test_uint64_tensor) /
