@@ -1,4 +1,4 @@
-1. array_equal (64 bit integers, float, double, long double)
+1. array_equal (float, double, long double)
 2. min
 3. max
 4. sum
