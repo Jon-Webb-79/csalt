@@ -831,6 +831,79 @@ error_code_t float_tensor_bsearch(const float_tensor_t* t,
 bracket_expect_t float_tensor_bbsearch(const float_tensor_t* t,
                                        float                 value,
                                        float                 tolerance);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two float tensors for equality within a tolerance.
+ *
+ * Compares the populated data buffers of two float tensors element by
+ * element using a SIMD-accelerated absolute-difference check.  Element
+ * i is considered equal when fabsf(one[i] - two[i]) <= tolerance.  All
+ * elements must satisfy this condition for the function to return true.
+ *
+ * The comparison is always performed on the live region [0, len) — for
+ * ARRAY_STRUCT tensors this is the number of populated elements and for
+ * TENSOR_STRUCT tensors this is alloc (all slots are always live).
+ *
+ * The meta flag controls whether structural metadata is included in
+ * the comparison in addition to the element-wise tolerance check:
+ *
+ *   meta == false:
+ *     Only ndim and the data buffer contents are compared within
+ *     tolerance.  Two tensors are considered equal if they have the
+ *     same number of dimensions and every element satisfies the
+ *     tolerance condition.
+ *
+ *   meta == true:
+ *     In addition to the checks above, shape, alloc, mode, and growth
+ *     must all match exactly.
+ *
+ * The allocator vtable is never compared.
+ *
+ * NaN behaviour: if any element in either tensor is NaN the comparison
+ * for that element is unordered and returns false, causing the function
+ * to return false regardless of tolerance.  Passing tolerance < 0.0f
+ * produces no matches since no absolute difference satisfies
+ * fabsf(diff) <= negative_number.
+ *
+ * @param one        Pointer to the first tensor.  Must not be NULL.
+ * @param two        Pointer to the second tensor.  Must not be NULL.
+ * @param tolerance  Maximum allowed absolute difference per element.
+ *                   Pass 0.0f for exact bit-pattern equality on non-NaN
+ *                   values.
+ * @param meta       If true, include shape, alloc, mode, and growth in
+ *                   the comparison.  If false, compare only ndim and
+ *                   element values within tolerance.
+ *
+ * @return true  if all elements are within tolerance and all checked
+ *               metadata matches, or if one and two are the same pointer.
+ * @return false if either pointer is NULL, either base data pointer is
+ *               NULL, lengths differ, ndim differs, any element exceeds
+ *               tolerance, or any checked metadata field differs.
+ *
+ * @code{.c}
+ * float_tensor_t* a = init_float_array(4, false, heap_allocator()).u.value;
+ * float_tensor_t* b = init_float_array(4, false, heap_allocator()).u.value;
+ *
+ * push_back_float_array(a, 1.0f);
+ * push_back_float_array(a, 2.0f);
+ * push_back_float_array(b, 1.01f);
+ * push_back_float_array(b, 2.01f);
+ *
+ * // Within tolerance
+ * bool eq = float_tensors_equal(a, b, 0.05f, false);   // true
+ *
+ * // Outside tolerance
+ * eq = float_tensors_equal(a, b, 0.001f, false);        // false
+ *
+ * return_float_tensor(a);
+ * return_float_tensor(b);
+ * @endcode
+ */
+bool float_tensors_equal(const float_tensor_t* one,
+                         const float_tensor_t* two,
+                         float                 tolerance,
+                         bool                  meta);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

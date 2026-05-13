@@ -321,6 +321,33 @@ bracket_expect_t float_tensor_bbsearch(const float_tensor_t* t,
                                .u.value.lower = lower,
                                .u.value.upper = upper };
 }
+// -------------------------------------------------------------------------------- 
+
+bool float_tensors_equal(const float_tensor_t* one,
+                         const float_tensor_t* two,
+                         float                 tolerance,
+                         bool                  meta) {
+    if (!one || !two)                         return false;
+    if (!one->base->data || !two->base->data) return false;
+    if (one->base->len  != two->base->len)    return false;
+    if (one->base->ndim != two->base->ndim)   return false;
+
+    if (meta) {
+        for (uint8_t d = 0u; d < one->base->ndim; d++) {
+            if (one->base->shape[d] != two->base->shape[d]) return false;
+        }
+        if (one->base->alloc  != two->base->alloc)  return false;
+        if (one->base->mode   != two->base->mode)   return false;
+        if (one->base->growth != two->base->growth) return false;
+    }
+
+    return simd_floats_equal(
+        (const float*)one->base->data,
+        (const float*)two->base->data,
+        one->base->len,
+        tolerance
+    );
+}
 // ================================================================================
 // ================================================================================
 // eof

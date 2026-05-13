@@ -30,6 +30,7 @@
 #include <immintrin.h>   /* AVX-512 */
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -114,6 +115,72 @@ static size_t simd_lsearch_float(const float* data,
     }
     return SIZE_MAX;
 }
+// -------------------------------------------------------------------------------- 
+
+static bool simd_floats_equal(const float* a,
+                               const float* b,
+                               size_t       len,
+                               float        tolerance) {
+    if (a == NULL || b == NULL) return false;
+    if (len == 0u)              return true;
+    if (a == b)                 return true;
+ 
+#if defined(__AVX512F__)
+    __m512  tol512    = _mm512_set1_ps(tolerance);
+    __m512i sign512   = _mm512_set1_epi32(0x7FFFFFFF);
+    __m256  tol256    = _mm256_set1_ps(tolerance);
+    __m256  abs256    = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFFFFFF));
+    __m128  tol128    = _mm_set1_ps(tolerance);
+    __m128  abs128    = _mm_castsi128_ps(_mm_set1_epi32(0x7FFFFFFF));
+ 
+    size_t i = 0u;
+    for (; i + 16u <= len; i += 16u) {
+        __m512    va      = _mm512_loadu_ps(a + i);
+        __m512    vb      = _mm512_loadu_ps(b + i);
+        __m512    diff    = _mm512_sub_ps(va, vb);
+        __m512    absdiff = _mm512_castsi512_ps(
+                                _mm512_and_epi32(
+                                    _mm512_castps_si512(diff), sign512));
+        __mmask16 mask    = _mm512_cmp_ps_mask(absdiff, tol512, _CMP_LE_OQ);
+        if (mask != (uint16_t)0xFFFF) return false;
+    }
+ 
+    for (; i + 8u <= len; i += 8u) {
+        __m256 va      = _mm256_loadu_ps(a + i);
+        __m256 vb      = _mm256_loadu_ps(b + i);
+        __m256 diff    = _mm256_sub_ps(va, vb);
+        __m256 absdiff = _mm256_and_ps(diff, abs256);
+        __m256 cmp     = _mm256_cmp_ps(absdiff, tol256, _CMP_LE_OQ);
+        if (_mm256_movemask_ps(cmp) != 0xFF) return false;
+    }
+ 
+    for (; i + 4u <= len; i += 4u) {
+        __m128 va      = _mm_loadu_ps(a + i);
+        __m128 vb      = _mm_loadu_ps(b + i);
+        __m128 diff    = _mm_sub_ps(va, vb);
+        __m128 absdiff = _mm_and_ps(diff, abs128);
+        __m128 cmp     = _mm_cmple_ps(absdiff, tol128);
+        if (_mm_movemask_ps(cmp) != 0xF) return false;
+    }
+ 
+    for (; i < len; i++) {
+        float diff = a[i] - b[i];
+        if (diff != diff)     return false;
+        if (diff < 0.0f)      diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
+#endif
+ 
+    for (size_t i = 0u; i < len; i++) {
+        float diff = a[i] - b[i];
+        if (diff != diff)     return false;
+        if (diff < 0.0f)      diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
+}
+
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_AVX512_FLOAT_INL */

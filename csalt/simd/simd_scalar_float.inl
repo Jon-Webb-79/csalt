@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -40,6 +41,24 @@ static size_t simd_lsearch_float(const float* data,
         if (diff <= tolerance) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static bool simd_floats_equal(const float* a,
+                               const float* b,
+                               size_t       len,
+                               float        tolerance) {
+    if (a == NULL || b == NULL) return false;
+    if (len == 0u)              return true;
+    if (a == b)                 return true;
+ 
+    for (size_t i = 0u; i < len; i++) {
+        float diff = a[i] - b[i];
+        if (diff != diff)     return false;   /* NaN check */
+        if (diff < 0.0f)      diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
 }
 // ================================================================================ 
 // ================================================================================ 

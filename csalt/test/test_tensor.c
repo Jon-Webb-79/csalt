@@ -22644,6 +22644,494 @@ static void test_float_bbsearch_after_sort(void** state) {
  
     return_float_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// FLOAT TENSORS EQUAL (float_tensors_equal)
+// ================================================================================
+ 
+/** NULL first argument must return false. */
+static void test_float_tensors_equal_null_one(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 2u);
+    assert_non_null(arr);
+    assert_false(float_tensors_equal(NULL, arr, 0.0f, false));
+    return_float_tensor(arr);
+}
+ 
+/** NULL second argument must return false. */
+static void test_float_tensors_equal_null_two(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 2u);
+    assert_non_null(arr);
+    assert_false(float_tensors_equal(arr, NULL, 0.0f, false));
+    return_float_tensor(arr);
+}
+ 
+/** Both NULL must return false. */
+static void test_float_tensors_equal_both_null(void** state) {
+    (void)state;
+    assert_false(float_tensors_equal(NULL, NULL, 0.0f, false));
+}
+ 
+/** Same pointer for both arguments must return true. */
+static void test_float_tensors_equal_same_pointer(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* arr = _make_float_array_from(vals, 3u);
+    assert_non_null(arr);
+    assert_true(float_tensors_equal(arr, arr, 0.0f, false));
+    assert_true(float_tensors_equal(arr, arr, 0.0f, true));
+    return_float_tensor(arr);
+}
+ 
+/** Two empty arrays must be equal. */
+static void test_float_tensors_equal_both_empty(void** state) {
+    (void)state;
+    float_tensor_t* a = _make_float_array(4u, false);
+    float_tensor_t* b = _make_float_array(4u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(float_tensors_equal(a, b, 0.0f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+// ---- Length and exact content ------------------------------------------------
+ 
+/** Arrays with different lengths must not be equal. */
+static void test_float_tensors_equal_length_mismatch(void** state) {
+    (void)state;
+    float vals_a[] = { 1.0f, 2.0f, 3.0f };
+    float vals_b[] = { 1.0f, 2.0f };
+    float_tensor_t* a = _make_float_array_from(vals_a, 3u);
+    float_tensor_t* b = _make_float_array_from(vals_b, 2u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(float_tensors_equal(a, b, 0.0f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/** Identical content with zero tolerance must return true. */
+static void test_float_tensors_equal_identical_exact(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* a = _make_float_array_from(vals, 3u);
+    float_tensor_t* b = _make_float_array_from(vals, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(float_tensors_equal(a, b, 0.0f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/** Content differing beyond zero tolerance must return false. */
+static void test_float_tensors_equal_content_mismatch(void** state) {
+    (void)state;
+    float vals_a[] = { 1.0f, 2.0f, 3.0f };
+    float vals_b[] = { 1.0f, 2.0f, 9.9f };
+    float_tensor_t* a = _make_float_array_from(vals_a, 3u);
+    float_tensor_t* b = _make_float_array_from(vals_b, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(float_tensors_equal(a, b, 0.0f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/** Mismatch only in the first element must return false. */
+static void test_float_tensors_equal_first_element_differs(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* a = _make_float_array_from(vals, 3u);
+    float_tensor_t* b = _make_float_array_from(vals, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    set_float_tensor_index(b, 0u, 99.0f);
+    assert_false(float_tensors_equal(a, b, 0.0f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/** Mismatch only in the last element must return false. */
+static void test_float_tensors_equal_last_element_differs(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* a = _make_float_array_from(vals, 3u);
+    float_tensor_t* b = _make_float_array_from(vals, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    set_float_tensor_index(b, 2u, 99.0f);
+    assert_false(float_tensors_equal(a, b, 0.0f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+// ---- Tolerance semantics ----------------------------------------------------
+ 
+/**
+ * Elements differing by exactly tolerance must return true —
+ * the condition is fabsf(diff) <= tolerance, not <.
+ */
+static void test_float_tensors_equal_tolerance_exact_boundary(void** state) {
+    (void)state;
+    float vals_a[] = { 1.0f, 2.0f, 3.0f };
+    float vals_b[] = { 1.0f, 2.25f, 3.0f };  /* |2.25 - 2.0| == 0.25 */
+    float_tensor_t* a = _make_float_array_from(vals_a, 3u);
+    float_tensor_t* b = _make_float_array_from(vals_b, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(float_tensors_equal(a, b, 0.25f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/**
+ * Elements differing by more than tolerance must return false.
+ */
+static void test_float_tensors_equal_tolerance_exceeded(void** state) {
+    (void)state;
+    float vals_a[] = { 1.0f, 2.0f, 3.0f };
+    float vals_b[] = { 1.0f, 2.26f, 3.0f };  /* |2.26 - 2.0| == 0.26 > 0.25 */
+    float_tensor_t* a = _make_float_array_from(vals_a, 3u);
+    float_tensor_t* b = _make_float_array_from(vals_b, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(float_tensors_equal(a, b, 0.25f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/**
+ * All elements within tolerance must return true — confirms the SIMD
+ * path checks every element, not just the first or last.
+ */
+static void test_float_tensors_equal_all_within_tolerance(void** state) {
+    (void)state;
+    float vals_a[] = { 1.0f, 2.0f, 3.0f, 4.0f };
+    float vals_b[] = { 1.1f, 2.1f, 3.1f, 4.1f };
+    float_tensor_t* a = _make_float_array_from(vals_a, 4u);
+    float_tensor_t* b = _make_float_array_from(vals_b, 4u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(float_tensors_equal(a, b, 0.2f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/**
+ * One element outside tolerance in the middle must return false even
+ * when all other elements are within tolerance.
+ */
+static void test_float_tensors_equal_one_element_exceeds(void** state) {
+    (void)state;
+    float vals_a[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+    float vals_b[] = { 1.0f, 2.0f, 9.0f, 4.0f, 5.0f }; /* index 2 fails */
+    float_tensor_t* a = _make_float_array_from(vals_a, 5u);
+    float_tensor_t* b = _make_float_array_from(vals_b, 5u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(float_tensors_equal(a, b, 0.1f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/** Negative tolerance must cause all comparisons to fail. */
+static void test_float_tensors_equal_negative_tolerance(void** state) {
+    (void)state;
+    float vals[] = { 1.0f, 2.0f, 3.0f };
+    float_tensor_t* a = _make_float_array_from(vals, 3u);
+    float_tensor_t* b = _make_float_array_from(vals, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    /* Even identical tensors fail when tolerance is negative */
+    assert_false(float_tensors_equal(a, b, -0.01f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+// ---- NaN behaviour ----------------------------------------------------------
+ 
+/**
+ * A NaN element in the first tensor must cause the function to return
+ * false regardless of tolerance — NaN comparisons are always false
+ * under IEEE 754 ordered comparison.
+ */
+static void test_float_tensors_equal_nan_in_first(void** state) {
+    (void)state;
+    float_tensor_t* a = _make_float_array(4u, false);
+    float_tensor_t* b = _make_float_array(4u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    push_back_float_array(a, 1.0f);
+    push_back_float_array(a, (float)NAN);
+    push_back_float_array(a, 3.0f);
+    push_back_float_array(b, 1.0f);
+    push_back_float_array(b, 2.0f);
+    push_back_float_array(b, 3.0f);
+ 
+    assert_false(float_tensors_equal(a, b, 1e10f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/**
+ * A NaN element in the second tensor must cause the function to return
+ * false regardless of tolerance.
+ */
+static void test_float_tensors_equal_nan_in_second(void** state) {
+    (void)state;
+    float_tensor_t* a = _make_float_array(3u, false);
+    float_tensor_t* b = _make_float_array(3u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    push_back_float_array(a, 1.0f);
+    push_back_float_array(a, 2.0f);
+    push_back_float_array(a, 3.0f);
+    push_back_float_array(b, 1.0f);
+    push_back_float_array(b, (float)NAN);
+    push_back_float_array(b, 3.0f);
+ 
+    assert_false(float_tensors_equal(a, b, 1e10f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+// ---- Meta flag --------------------------------------------------------------
+ 
+/**
+ * Tensors with same content but different alloc must return true when
+ * meta=false and false when meta=true.
+ */
+static void test_float_tensors_equal_meta_flag_alloc(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t ra = init_float_array(4u, false, alloc);
+    float_tensor_expect_t rb = init_float_array(8u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_float_array(ra.u.value, 1.0f);
+    push_back_float_array(ra.u.value, 2.0f);
+    push_back_float_array(rb.u.value, 1.0f);
+    push_back_float_array(rb.u.value, 2.0f);
+ 
+    assert_true(float_tensors_equal(ra.u.value, rb.u.value,  0.0f, false));
+    assert_false(float_tensors_equal(ra.u.value, rb.u.value, 0.0f, true));
+ 
+    return_float_tensor(ra.u.value);
+    return_float_tensor(rb.u.value);
+}
+ 
+/** Different mode must return false when meta=true. */
+static void test_float_tensors_equal_meta_true_mode_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+ 
+    float_tensor_expect_t ra = init_float_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    push_back_float_array(ra.u.value, 1.0f);
+    push_back_float_array(ra.u.value, 2.0f);
+ 
+    size_t shape[] = { 2u };
+    float_tensor_expect_t rb = init_float_tensor(1u, shape, alloc);
+    assert_true(rb.has_value);
+    set_float_tensor_index(rb.u.value, 0u, 1.0f);
+    set_float_tensor_index(rb.u.value, 1u, 2.0f);
+ 
+    assert_false(float_tensors_equal(ra.u.value, rb.u.value, 0.0f, true));
+    return_float_tensor(ra.u.value);
+    return_float_tensor(rb.u.value);
+}
+ 
+/** Different growth flag must return false when meta=true. */
+static void test_float_tensors_equal_meta_true_growth_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t ra = init_float_array(4u, false, alloc);
+    float_tensor_expect_t rb = init_float_array(4u, true,  alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_float_array(ra.u.value, 1.0f);
+    push_back_float_array(ra.u.value, 2.0f);
+    push_back_float_array(rb.u.value, 1.0f);
+    push_back_float_array(rb.u.value, 2.0f);
+ 
+    assert_false(float_tensors_equal(ra.u.value, rb.u.value, 0.0f, true));
+    return_float_tensor(ra.u.value);
+    return_float_tensor(rb.u.value);
+}
+ 
+/** Identical content and metadata must return true when meta=true. */
+static void test_float_tensors_equal_meta_true_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t ra = init_float_array(4u, false, alloc);
+    float_tensor_expect_t rb = init_float_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_float_array(ra.u.value, 1.0f);
+    push_back_float_array(ra.u.value, 2.0f);
+    push_back_float_array(rb.u.value, 1.0f);
+    push_back_float_array(rb.u.value, 2.0f);
+ 
+    assert_true(float_tensors_equal(ra.u.value, rb.u.value, 0.0f, true));
+    return_float_tensor(ra.u.value);
+    return_float_tensor(rb.u.value);
+}
+ 
+// ---- Shape and ndim ---------------------------------------------------------
+ 
+/** Two 2-D tensors with matching shape and content within tolerance
+ *  must return true. */
+static void test_float_tensors_equal_nd_match(void** state) {
+    (void)state;
+    size_t shape[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t ra = init_float_tensor(2u, shape, alloc);
+    float_tensor_expect_t rb = init_float_tensor(2u, shape, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    float vals[] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f };
+    for (size_t i = 0u; i < 6u; i++) {
+        set_float_tensor_index(ra.u.value, i, vals[i]);
+        set_float_tensor_index(rb.u.value, i, vals[i] + 0.05f);
+    }
+ 
+    assert_true(float_tensors_equal(ra.u.value, rb.u.value, 0.1f, false));
+    return_float_tensor(ra.u.value);
+    return_float_tensor(rb.u.value);
+}
+ 
+/** Different ndim must return false. */
+static void test_float_tensors_equal_ndim_mismatch(void** state) {
+    (void)state;
+    size_t shape_1d[] = { 6u };
+    size_t shape_2d[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t ra = init_float_tensor(1u, shape_1d, alloc);
+    float_tensor_expect_t rb = init_float_tensor(2u, shape_2d, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_float_tensor_index(ra.u.value, i, (float)(i + 1u));
+        set_float_tensor_index(rb.u.value, i, (float)(i + 1u));
+    }
+ 
+    assert_false(float_tensors_equal(ra.u.value, rb.u.value, 0.0f, false));
+    return_float_tensor(ra.u.value);
+    return_float_tensor(rb.u.value);
+}
+ 
+/** Same ndim and flat length but different shape must return false when
+ *  meta=true. */
+static void test_float_tensors_equal_shape_mismatch(void** state) {
+    (void)state;
+    size_t shape_a[] = { 2u, 3u };
+    size_t shape_b[] = { 3u, 2u };
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t ra = init_float_tensor(2u, shape_a, alloc);
+    float_tensor_expect_t rb = init_float_tensor(2u, shape_b, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_float_tensor_index(ra.u.value, i, (float)(i + 1u));
+        set_float_tensor_index(rb.u.value, i, (float)(i + 1u));
+    }
+ 
+    assert_false(float_tensors_equal(ra.u.value, rb.u.value, 0.0f, true));
+    return_float_tensor(ra.u.value);
+    return_float_tensor(rb.u.value);
+}
+ 
+// ---- Single element ---------------------------------------------------------
+ 
+/** Single-element arrays within tolerance must return true. */
+static void test_float_tensors_equal_single_within_tolerance(void** state) {
+    (void)state;
+    float_tensor_t* a = _make_float_array(2u, false);
+    float_tensor_t* b = _make_float_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_float_array(a, 1.0f);
+    push_back_float_array(b, 1.05f);
+    assert_true(float_tensors_equal(a, b, 0.1f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/** Single-element arrays outside tolerance must return false. */
+static void test_float_tensors_equal_single_outside_tolerance(void** state) {
+    (void)state;
+    float_tensor_t* a = _make_float_array(2u, false);
+    float_tensor_t* b = _make_float_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_float_array(a, 1.0f);
+    push_back_float_array(b, 1.2f);
+    assert_false(float_tensors_equal(a, b, 0.1f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+// ---- Large array — exercises SIMD bulk path ---------------------------------
+ 
+/**
+ * Large array where all elements are within tolerance must return true —
+ * exercises multiple full SIMD register iterations.
+ */
+static void test_float_tensors_equal_large_within_tolerance(void** state) {
+    (void)state;
+    const size_t n = 64u;
+    float_tensor_t* a = _make_float_array(n + 1u, false);
+    float_tensor_t* b = _make_float_array(n + 1u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    for (size_t i = 0u; i < n; i++) {
+        push_back_float_array(a, (float)i);
+        push_back_float_array(b, (float)i + 0.05f);
+    }
+ 
+    assert_true(float_tensors_equal(a, b, 0.1f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
+ 
+/**
+ * Large array where the last element exceeds tolerance must return false —
+ * confirms the SIMD loop does not short-circuit before the final chunk.
+ */
+static void test_float_tensors_equal_large_last_exceeds(void** state) {
+    (void)state;
+    const size_t n = 64u;
+    float_tensor_t* a = _make_float_array(n + 1u, false);
+    float_tensor_t* b = _make_float_array(n + 1u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    for (size_t i = 0u; i < n - 1u; i++) {
+        push_back_float_array(a, (float)i);
+        push_back_float_array(b, (float)i);
+    }
+    push_back_float_array(a, 99.0f);
+    push_back_float_array(b, 0.0f);   /* last element differs by 99.0 */
+ 
+    assert_false(float_tensors_equal(a, b, 0.1f, false));
+    return_float_tensor(a);
+    return_float_tensor(b);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -22833,6 +23321,50 @@ const struct CMUnitTest test_float_tensor[] = {
  
     /* float_tensor_bbsearch — integration with sort */
     cmocka_unit_test(test_float_bbsearch_after_sort),
+
+   /* float_tensors_equal — null/guard */
+    cmocka_unit_test(test_float_tensors_equal_null_one),
+    cmocka_unit_test(test_float_tensors_equal_null_two),
+    cmocka_unit_test(test_float_tensors_equal_both_null),
+    cmocka_unit_test(test_float_tensors_equal_same_pointer),
+    cmocka_unit_test(test_float_tensors_equal_both_empty),
+ 
+    /* float_tensors_equal — length and exact content */
+    cmocka_unit_test(test_float_tensors_equal_length_mismatch),
+    cmocka_unit_test(test_float_tensors_equal_identical_exact),
+    cmocka_unit_test(test_float_tensors_equal_content_mismatch),
+    cmocka_unit_test(test_float_tensors_equal_first_element_differs),
+    cmocka_unit_test(test_float_tensors_equal_last_element_differs),
+ 
+    /* float_tensors_equal — tolerance semantics */
+    cmocka_unit_test(test_float_tensors_equal_tolerance_exact_boundary),
+    cmocka_unit_test(test_float_tensors_equal_tolerance_exceeded),
+    cmocka_unit_test(test_float_tensors_equal_all_within_tolerance),
+    cmocka_unit_test(test_float_tensors_equal_one_element_exceeds),
+    cmocka_unit_test(test_float_tensors_equal_negative_tolerance),
+ 
+    /* float_tensors_equal — NaN behaviour */
+    cmocka_unit_test(test_float_tensors_equal_nan_in_first),
+    cmocka_unit_test(test_float_tensors_equal_nan_in_second),
+ 
+    /* float_tensors_equal — meta flag */
+    cmocka_unit_test(test_float_tensors_equal_meta_flag_alloc),
+    cmocka_unit_test(test_float_tensors_equal_meta_true_mode_differs),
+    cmocka_unit_test(test_float_tensors_equal_meta_true_growth_differs),
+    cmocka_unit_test(test_float_tensors_equal_meta_true_identical),
+ 
+    /* float_tensors_equal — shape and ndim */
+    cmocka_unit_test(test_float_tensors_equal_nd_match),
+    cmocka_unit_test(test_float_tensors_equal_ndim_mismatch),
+    cmocka_unit_test(test_float_tensors_equal_shape_mismatch),
+ 
+    /* float_tensors_equal — single element */
+    cmocka_unit_test(test_float_tensors_equal_single_within_tolerance),
+    cmocka_unit_test(test_float_tensors_equal_single_outside_tolerance),
+ 
+    /* float_tensors_equal — large array SIMD path */
+    cmocka_unit_test(test_float_tensors_equal_large_within_tolerance),
+    cmocka_unit_test(test_float_tensors_equal_large_last_exceeds),
 };
 
 const size_t test_float_tensor_count = sizeof(test_float_tensor) /

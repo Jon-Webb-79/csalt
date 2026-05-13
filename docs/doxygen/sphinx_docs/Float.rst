@@ -100,6 +100,8 @@ Utility Operations
 
 .. doxygenfunction:: float_tensor_bbsearch
 
+.. doxygenfunction:: float_tensors_equal
+
 Introspection
 -------------
 

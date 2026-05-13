@@ -30,6 +30,7 @@
 #include <immintrin.h>   /* AVX2 (includes AVX) */
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -95,6 +96,66 @@ static size_t simd_lsearch_float(const float* data,
         if (diff <= tolerance) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static bool simd_floats_equal(const float* a,
+                               const float* b,
+                               size_t       len,
+                               float        tolerance) {
+    if (a == NULL || b == NULL) return false;
+    if (len == 0u)              return true;
+    if (a == b)                 return true;
+ 
+#if defined(__AVX2__)
+    __m256 tol256 = _mm256_set1_ps(tolerance);
+    __m256 abs256 = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFFFFFF));
+    __m128 tol128 = _mm_set1_ps(tolerance);
+    __m128 abs128 = _mm_castsi128_ps(_mm_set1_epi32(0x7FFFFFFF));
+ 
+    size_t i = 0u;
+    for (; i + 8u <= len; i += 8u) {
+        __m256 va      = _mm256_loadu_ps(a + i);
+        __m256 vb      = _mm256_loadu_ps(b + i);
+        __m256 diff    = _mm256_sub_ps(va, vb);
+        __m256 absdiff = _mm256_and_ps(diff, abs256);
+        __m256 cmp     = _mm256_cmp_ps(absdiff, tol256, _CMP_LE_OQ);
+        if (_mm256_movemask_ps(cmp) != 0xFF) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    for (; i + 4u <= len; i += 4u) {
+        __m128 va      = _mm_loadu_ps(a + i);
+        __m128 vb      = _mm_loadu_ps(b + i);
+        __m128 diff    = _mm_sub_ps(va, vb);
+        __m128 absdiff = _mm_and_ps(diff, abs128);
+        __m128 cmp     = _mm_cmple_ps(absdiff, tol128);
+        if (_mm_movemask_ps(cmp) != 0xF) {
+            _mm256_zeroupper();
+            return false;
+        }
+    }
+ 
+    _mm256_zeroupper();
+ 
+    for (; i < len; i++) {
+        float diff = a[i] - b[i];
+        if (diff != diff)     return false;
+        if (diff < 0.0f)      diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
+#endif
+ 
+    for (size_t i = 0u; i < len; i++) {
+        float diff = a[i] - b[i];
+        if (diff != diff)     return false;
+        if (diff < 0.0f)      diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
 }
 // ================================================================================ 
 // ================================================================================ 

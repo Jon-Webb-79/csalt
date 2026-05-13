@@ -30,6 +30,7 @@
 #include <arm_neon.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -90,6 +91,36 @@ static size_t simd_lsearch_float(const float* data,
         if (diff <= tolerance) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static bool simd_floats_equal(const float* a,
+                               const float* b,
+                               size_t       len,
+                               float        tolerance) {
+    if (a == NULL || b == NULL) return false;
+    if (len == 0u)              return true;
+    if (a == b)                 return true;
+ 
+    float32x4_t tol = vdupq_n_f32(tolerance);
+ 
+    size_t i = 0u;
+    for (; i + 4u <= len; i += 4u) {
+        float32x4_t va      = vld1q_f32(a + i);
+        float32x4_t vb      = vld1q_f32(b + i);
+        float32x4_t diff    = vsubq_f32(va, vb);
+        float32x4_t absdiff = vabsq_f32(diff);
+        uint32x4_t  cmp     = vcleq_f32(absdiff, tol);
+        if (vminvq_u32(cmp) == 0u) return false;
+    }
+ 
+    for (; i < len; i++) {
+        float diff = a[i] - b[i];
+        if (diff != diff)     return false;
+        if (diff < 0.0f)      diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
 }
 // ================================================================================ 
 // ================================================================================ 
