@@ -30,6 +30,7 @@
 #include <arm_neon.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -73,6 +74,39 @@ static size_t simd_lsearch_double(const double* data,
         if (diff <= tolerance) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static bool simd_doubles_equal(const double* a,
+                                const double* b,
+                                size_t        len,
+                                double        tolerance) {
+    if (a == NULL || b == NULL) return false;
+    if (len == 0u)              return true;
+    if (a == b)                 return true;
+ 
+    float64x2_t tol = vdupq_n_f64(tolerance);
+ 
+    size_t i = 0u;
+    for (; i + 2u <= len; i += 2u) {
+        float64x2_t va      = vld1q_f64(a + i);
+        float64x2_t vb      = vld1q_f64(b + i);
+        float64x2_t diff    = vsubq_f64(va, vb);
+        float64x2_t absdiff = vabsq_f64(diff);
+        uint64x2_t  cmp     = vcleq_f64(absdiff, tol);
+ 
+        /* Check each lane directly — only 2 lanes so no reduction needed */
+        if (vgetq_lane_u64(cmp, 0) == 0u) return false;
+        if (vgetq_lane_u64(cmp, 1) == 0u) return false;
+    }
+ 
+    for (; i < len; i++) {
+        double diff = a[i] - b[i];
+        if (diff != diff)     return false;
+        if (diff < 0.0)       diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
 }
 // ================================================================================ 
 // ================================================================================ 

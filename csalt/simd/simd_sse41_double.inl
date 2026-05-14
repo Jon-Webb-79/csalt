@@ -29,6 +29,7 @@
 #include <smmintrin.h>   /* SSE4.1 (includes SSSE3, SSE3, SSE2) */
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -75,6 +76,49 @@ static size_t simd_lsearch_double(const double* data,
         if (diff <= tolerance) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static bool simd_doubles_equal(const double* a,
+                                const double* b,
+                                size_t        len,
+                                double        tolerance) {
+    if (a == NULL || b == NULL) return false;
+    if (len == 0u)              return true;
+    if (a == b)                 return true;
+ 
+#if defined(__SSE4_1__)
+    __m128d tol      = _mm_set1_pd(tolerance);
+    __m128d abs_mask = _mm_castsi128_pd(
+                           _mm_set_epi32(0x7FFFFFFF, 0xFFFFFFFF,
+                                         0x7FFFFFFF, 0xFFFFFFFF));
+ 
+    size_t i = 0u;
+    for (; i + 2u <= len; i += 2u) {
+        __m128d va      = _mm_loadu_pd(a + i);
+        __m128d vb      = _mm_loadu_pd(b + i);
+        __m128d diff    = _mm_sub_pd(va, vb);
+        __m128d absdiff = _mm_and_pd(diff, abs_mask);
+        __m128d cmp     = _mm_cmple_pd(absdiff, tol);
+        if (_mm_movemask_pd(cmp) != 0x3) return false;
+    }
+ 
+    for (; i < len; i++) {
+        double diff = a[i] - b[i];
+        if (diff != diff)     return false;
+        if (diff < 0.0)       diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
+#endif
+ 
+    for (size_t i = 0u; i < len; i++) {
+        double diff = a[i] - b[i];
+        if (diff != diff)     return false;
+        if (diff < 0.0)       diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
 }
 // ================================================================================ 
 // ================================================================================ 

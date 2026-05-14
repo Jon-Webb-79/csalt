@@ -29,6 +29,7 @@
 #include <arm_sve.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -74,6 +75,38 @@ static size_t simd_lsearch_double(const double* data,
         if (diff <= tolerance) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static bool simd_doubles_equal(const double* a,
+                                const double* b,
+                                size_t        len,
+                                double        tolerance) {
+    if (a == NULL || b == NULL) return false;
+    if (len == 0u)              return true;
+    if (a == b)                 return true;
+ 
+    size_t      vl  = svcntd();
+    svfloat64_t tol = svdup_n_f64(tolerance);
+ 
+    size_t i = 0u;
+    for (; i + vl <= len; i += vl) {
+        svbool_t    pg      = svwhilelt_b64((uint64_t)i, (uint64_t)len);
+        svfloat64_t va      = svld1_f64(pg, a + i);
+        svfloat64_t vb      = svld1_f64(pg, b + i);
+        svfloat64_t diff    = svsub_f64_z(pg, va, vb);
+        svfloat64_t absdiff = svabs_f64_z(pg, diff);
+        svbool_t    pass    = svcmple_f64(pg, absdiff, tol);
+        if (svptest_any(pg, svnot_b_z(pg, pass))) return false;
+    }
+ 
+    for (; i < len; i++) {
+        double diff = a[i] - b[i];
+        if (diff != diff)     return false;
+        if (diff < 0.0)       diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
 }
 // ================================================================================ 
 // ================================================================================ 

@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -40,7 +41,25 @@ static size_t simd_lsearch_double(const double* data,
         if (diff <= tolerance) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
 
+static bool simd_doubles_equal(const double* a,
+                                const double* b,
+                                size_t        len,
+                                double        tolerance) {
+    if (a == NULL || b == NULL) return false;
+    if (len == 0u)              return true;
+    if (a == b)                 return true;
+ 
+    for (size_t i = 0u; i < len; i++) {
+        double diff = a[i] - b[i];
+        if (diff != diff)     return false;   /* NaN check */
+        if (diff < 0.0)       diff = -diff;
+        if (diff > tolerance) return false;
+    }
+    return true;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_SCALAR_DOUBLE_INL */

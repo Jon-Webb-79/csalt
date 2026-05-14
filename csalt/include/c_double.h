@@ -841,6 +841,80 @@ error_code_t double_tensor_bsearch(const double_tensor_t* t,
 bracket_expect_t double_tensor_bbsearch(const double_tensor_t* t,
                                         double                 value,
                                         double                 tolerance);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two double tensors for equality within a tolerance.
+ *
+ * Compares the populated data buffers of two double tensors element by
+ * element using a SIMD-accelerated absolute-difference check.  Element
+ * i is considered equal when fabs(one[i] - two[i]) <= tolerance.  All
+ * elements must satisfy this condition for the function to return true.
+ *
+ * The comparison is always performed on the live region [0, len) — for
+ * ARRAY_STRUCT tensors this is the number of populated elements and for
+ * TENSOR_STRUCT tensors this is alloc (all slots are always live).
+ *
+ * The meta flag controls whether structural metadata is included in
+ * the comparison in addition to the element-wise tolerance check:
+ *
+ *   meta == false:
+ *     Only ndim and the data buffer contents are compared within
+ *     tolerance.  Two tensors are considered equal if they have the
+ *     same number of dimensions and every element satisfies the
+ *     tolerance condition.
+ *
+ *   meta == true:
+ *     In addition to the checks above, shape, alloc, mode, and growth
+ *     must all match exactly.
+ *
+ * The allocator vtable is never compared.
+ *
+ * NaN behaviour: if any element in either tensor is NaN the comparison
+ * for that element returns false under IEEE 754 ordered comparison,
+ * causing the function to return false regardless of tolerance.  This
+ * is handled correctly in both the SIMD and scalar paths.  Passing
+ * tolerance < 0.0 produces no matches since no absolute difference
+ * satisfies fabs(diff) <= negative_number.
+ *
+ * @param one        Pointer to the first tensor.  Must not be NULL.
+ * @param two        Pointer to the second tensor.  Must not be NULL.
+ * @param tolerance  Maximum allowed absolute difference per element.
+ *                   Pass 0.0 for exact bit-pattern equality on non-NaN
+ *                   values.
+ * @param meta       If true, include shape, alloc, mode, and growth in
+ *                   the comparison.  If false, compare only ndim and
+ *                   element values within tolerance.
+ *
+ * @return true  if all elements are within tolerance and all checked
+ *               metadata matches, or if one and two are the same pointer.
+ * @return false if either pointer is NULL, either base data pointer is
+ *               NULL, lengths differ, ndim differs, any element exceeds
+ *               tolerance, or any checked metadata field differs.
+ *
+ * @code{.c}
+ * double_tensor_t* a = init_double_array(4, false, heap_allocator()).u.value;
+ * double_tensor_t* b = init_double_array(4, false, heap_allocator()).u.value;
+ *
+ * push_back_double_array(a, 1.0);
+ * push_back_double_array(a, 2.0);
+ * push_back_double_array(b, 1.001);
+ * push_back_double_array(b, 2.001);
+ *
+ * // Within tolerance
+ * bool eq = double_tensors_equal(a, b, 0.01, false);   // true
+ *
+ * // Outside tolerance
+ * eq = double_tensors_equal(a, b, 0.0001, false);       // false
+ *
+ * return_double_tensor(a);
+ * return_double_tensor(b);
+ * @endcode
+ */
+bool double_tensors_equal(const double_tensor_t* one,
+                          const double_tensor_t* two,
+                          double                 tolerance,
+                          bool                   meta);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

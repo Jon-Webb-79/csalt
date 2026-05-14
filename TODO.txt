@@ -1,4 +1,4 @@
-1. array_equal (double, long double)
+1. array_equal (long double)
 2. min
 3. max
 4. sum

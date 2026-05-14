@@ -25133,6 +25133,482 @@ static void test_double_bbsearch_after_sort(void** state) {
  
     return_double_tensor(arr);
 }
+// -------------------------------------------------------------------------------- 
+
+// ================================================================================
+// ================================================================================
+// DOUBLE TENSORS EQUAL (double_tensors_equal)
+// ================================================================================
+ 
+/** NULL first argument must return false. */
+static void test_double_tensors_equal_null_one(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 2u);
+    assert_non_null(arr);
+    assert_false(double_tensors_equal(NULL, arr, 0.0, false));
+    return_double_tensor(arr);
+}
+ 
+/** NULL second argument must return false. */
+static void test_double_tensors_equal_null_two(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 2u);
+    assert_non_null(arr);
+    assert_false(double_tensors_equal(arr, NULL, 0.0, false));
+    return_double_tensor(arr);
+}
+ 
+/** Both NULL must return false. */
+static void test_double_tensors_equal_both_null(void** state) {
+    (void)state;
+    assert_false(double_tensors_equal(NULL, NULL, 0.0, false));
+}
+ 
+/** Same pointer for both arguments must return true. */
+static void test_double_tensors_equal_same_pointer(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* arr = _make_double_array_from(vals, 3u);
+    assert_non_null(arr);
+    assert_true(double_tensors_equal(arr, arr, 0.0, false));
+    assert_true(double_tensors_equal(arr, arr, 0.0, true));
+    return_double_tensor(arr);
+}
+ 
+/** Two empty arrays must be equal. */
+static void test_double_tensors_equal_both_empty(void** state) {
+    (void)state;
+    double_tensor_t* a = _make_double_array(4u, false);
+    double_tensor_t* b = _make_double_array(4u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(double_tensors_equal(a, b, 0.0, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+// ---- Length and exact content ------------------------------------------------
+ 
+/** Arrays with different lengths must not be equal. */
+static void test_double_tensors_equal_length_mismatch(void** state) {
+    (void)state;
+    double vals_a[] = { 1.0, 2.0, 3.0 };
+    double vals_b[] = { 1.0, 2.0 };
+    double_tensor_t* a = _make_double_array_from(vals_a, 3u);
+    double_tensor_t* b = _make_double_array_from(vals_b, 2u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(double_tensors_equal(a, b, 0.0, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/** Identical content with zero tolerance must return true. */
+static void test_double_tensors_equal_identical_exact(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* a = _make_double_array_from(vals, 3u);
+    double_tensor_t* b = _make_double_array_from(vals, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(double_tensors_equal(a, b, 0.0, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/** Content differing beyond zero tolerance must return false. */
+static void test_double_tensors_equal_content_mismatch(void** state) {
+    (void)state;
+    double vals_a[] = { 1.0, 2.0, 3.0 };
+    double vals_b[] = { 1.0, 2.0, 9.9 };
+    double_tensor_t* a = _make_double_array_from(vals_a, 3u);
+    double_tensor_t* b = _make_double_array_from(vals_b, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(double_tensors_equal(a, b, 0.0, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/** Mismatch only in the first element must return false. */
+static void test_double_tensors_equal_first_element_differs(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* a = _make_double_array_from(vals, 3u);
+    double_tensor_t* b = _make_double_array_from(vals, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    set_double_tensor_index(b, 0u, 99.0);
+    assert_false(double_tensors_equal(a, b, 0.0, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/** Mismatch only in the last element must return false. */
+static void test_double_tensors_equal_last_element_differs(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* a = _make_double_array_from(vals, 3u);
+    double_tensor_t* b = _make_double_array_from(vals, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    set_double_tensor_index(b, 2u, 99.0);
+    assert_false(double_tensors_equal(a, b, 0.0, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+// ---- Tolerance semantics ----------------------------------------------------
+ 
+/**
+ * Elements differing by exactly tolerance must return true —
+ * condition is fabs(diff) <= tolerance, not <.
+ * Uses 0.25 which is exactly representable as a binary fraction.
+ */
+static void test_double_tensors_equal_tolerance_exact_boundary(void** state) {
+    (void)state;
+    double vals_a[] = { 1.0, 2.0,  3.0 };
+    double vals_b[] = { 1.0, 2.25, 3.0 };   /* |2.25 - 2.0| == 0.25 exactly */
+    double_tensor_t* a = _make_double_array_from(vals_a, 3u);
+    double_tensor_t* b = _make_double_array_from(vals_b, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(double_tensors_equal(a, b, 0.25, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/** Elements differing by more than tolerance must return false. */
+static void test_double_tensors_equal_tolerance_exceeded(void** state) {
+    (void)state;
+    double vals_a[] = { 1.0, 2.0,   3.0 };
+    double vals_b[] = { 1.0, 2.375, 3.0 };  /* |2.375 - 2.0| == 0.375 > 0.25 */
+    double_tensor_t* a = _make_double_array_from(vals_a, 3u);
+    double_tensor_t* b = _make_double_array_from(vals_b, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(double_tensors_equal(a, b, 0.25, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/** All elements within tolerance must return true. */
+static void test_double_tensors_equal_all_within_tolerance(void** state) {
+    (void)state;
+    double vals_a[] = { 1.0, 2.0, 3.0, 4.0 };
+    double vals_b[] = { 1.1, 2.1, 3.1, 4.1 };
+    double_tensor_t* a = _make_double_array_from(vals_a, 4u);
+    double_tensor_t* b = _make_double_array_from(vals_b, 4u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_true(double_tensors_equal(a, b, 0.2, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/**
+ * One element outside tolerance in the middle must return false even
+ * when all other elements are within tolerance.
+ */
+static void test_double_tensors_equal_one_element_exceeds(void** state) {
+    (void)state;
+    double vals_a[] = { 1.0, 2.0, 3.0,  4.0, 5.0 };
+    double vals_b[] = { 1.0, 2.0, 99.0, 4.0, 5.0 };   /* index 2 fails */
+    double_tensor_t* a = _make_double_array_from(vals_a, 5u);
+    double_tensor_t* b = _make_double_array_from(vals_b, 5u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(double_tensors_equal(a, b, 0.1, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/** Negative tolerance must cause all comparisons to fail. */
+static void test_double_tensors_equal_negative_tolerance(void** state) {
+    (void)state;
+    double vals[] = { 1.0, 2.0, 3.0 };
+    double_tensor_t* a = _make_double_array_from(vals, 3u);
+    double_tensor_t* b = _make_double_array_from(vals, 3u);
+    assert_non_null(a);
+    assert_non_null(b);
+    assert_false(double_tensors_equal(a, b, -0.01, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+// ---- NaN behaviour ----------------------------------------------------------
+ 
+/** NaN in the first tensor must cause the function to return false. */
+static void test_double_tensors_equal_nan_in_first(void** state) {
+    (void)state;
+    double_tensor_t* a = _make_double_array(4u, false);
+    double_tensor_t* b = _make_double_array(4u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    push_back_double_array(a, 1.0);
+    push_back_double_array(a, (double)NAN);
+    push_back_double_array(a, 3.0);
+    push_back_double_array(b, 1.0);
+    push_back_double_array(b, 2.0);
+    push_back_double_array(b, 3.0);
+ 
+    assert_false(double_tensors_equal(a, b, 1e10, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/** NaN in the second tensor must cause the function to return false. */
+static void test_double_tensors_equal_nan_in_second(void** state) {
+    (void)state;
+    double_tensor_t* a = _make_double_array(4u, false);
+    double_tensor_t* b = _make_double_array(4u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    push_back_double_array(a, 1.0);
+    push_back_double_array(a, 2.0);
+    push_back_double_array(a, 3.0);
+    push_back_double_array(b, 1.0);
+    push_back_double_array(b, (double)NAN);
+    push_back_double_array(b, 3.0);
+ 
+    assert_false(double_tensors_equal(a, b, 1e10, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+// ---- Meta flag --------------------------------------------------------------
+ 
+/**
+ * Same content but different alloc — meta=false returns true,
+ * meta=true returns false.
+ */
+static void test_double_tensors_equal_meta_flag_alloc(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t ra = init_double_array(4u, false, alloc);
+    double_tensor_expect_t rb = init_double_array(8u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_double_array(ra.u.value, 1.0);
+    push_back_double_array(ra.u.value, 2.0);
+    push_back_double_array(rb.u.value, 1.0);
+    push_back_double_array(rb.u.value, 2.0);
+ 
+    assert_true(double_tensors_equal(ra.u.value,  rb.u.value, 0.0, false));
+    assert_false(double_tensors_equal(ra.u.value, rb.u.value, 0.0, true));
+ 
+    return_double_tensor(ra.u.value);
+    return_double_tensor(rb.u.value);
+}
+ 
+/** Different mode must return false when meta=true. */
+static void test_double_tensors_equal_meta_true_mode_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+ 
+    double_tensor_expect_t ra = init_double_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    push_back_double_array(ra.u.value, 1.0);
+    push_back_double_array(ra.u.value, 2.0);
+ 
+    size_t shape[] = { 2u };
+    double_tensor_expect_t rb = init_double_tensor(1u, shape, alloc);
+    assert_true(rb.has_value);
+    set_double_tensor_index(rb.u.value, 0u, 1.0);
+    set_double_tensor_index(rb.u.value, 1u, 2.0);
+ 
+    assert_false(double_tensors_equal(ra.u.value, rb.u.value, 0.0, true));
+    return_double_tensor(ra.u.value);
+    return_double_tensor(rb.u.value);
+}
+ 
+/** Different growth flag must return false when meta=true. */
+static void test_double_tensors_equal_meta_true_growth_differs(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t ra = init_double_array(4u, false, alloc);
+    double_tensor_expect_t rb = init_double_array(4u, true,  alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_double_array(ra.u.value, 1.0);
+    push_back_double_array(ra.u.value, 2.0);
+    push_back_double_array(rb.u.value, 1.0);
+    push_back_double_array(rb.u.value, 2.0);
+ 
+    assert_false(double_tensors_equal(ra.u.value, rb.u.value, 0.0, true));
+    return_double_tensor(ra.u.value);
+    return_double_tensor(rb.u.value);
+}
+ 
+/** Identical content and all metadata must return true when meta=true. */
+static void test_double_tensors_equal_meta_true_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t ra = init_double_array(4u, false, alloc);
+    double_tensor_expect_t rb = init_double_array(4u, false, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    push_back_double_array(ra.u.value, 1.0);
+    push_back_double_array(ra.u.value, 2.0);
+    push_back_double_array(rb.u.value, 1.0);
+    push_back_double_array(rb.u.value, 2.0);
+ 
+    assert_true(double_tensors_equal(ra.u.value, rb.u.value, 0.0, true));
+    return_double_tensor(ra.u.value);
+    return_double_tensor(rb.u.value);
+}
+ 
+// ---- Shape and ndim ---------------------------------------------------------
+ 
+/** Two 2-D tensors with matching shape and content within tolerance
+ *  must return true. */
+static void test_double_tensors_equal_nd_match(void** state) {
+    (void)state;
+    size_t shape[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t ra = init_double_tensor(2u, shape, alloc);
+    double_tensor_expect_t rb = init_double_tensor(2u, shape, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    double vals[] = { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 };
+    for (size_t i = 0u; i < 6u; i++) {
+        set_double_tensor_index(ra.u.value, i, vals[i]);
+        set_double_tensor_index(rb.u.value, i, vals[i] + 0.05);
+    }
+ 
+    assert_true(double_tensors_equal(ra.u.value, rb.u.value, 0.1, false));
+    return_double_tensor(ra.u.value);
+    return_double_tensor(rb.u.value);
+}
+ 
+/** Different ndim must return false. */
+static void test_double_tensors_equal_ndim_mismatch(void** state) {
+    (void)state;
+    size_t shape_1d[] = { 6u };
+    size_t shape_2d[] = { 2u, 3u };
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t ra = init_double_tensor(1u, shape_1d, alloc);
+    double_tensor_expect_t rb = init_double_tensor(2u, shape_2d, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_double_tensor_index(ra.u.value, i, (double)(i + 1u));
+        set_double_tensor_index(rb.u.value, i, (double)(i + 1u));
+    }
+ 
+    assert_false(double_tensors_equal(ra.u.value, rb.u.value, 0.0, false));
+    return_double_tensor(ra.u.value);
+    return_double_tensor(rb.u.value);
+}
+ 
+/** Same ndim and flat length but different shape must return false when
+ *  meta=true. */
+static void test_double_tensors_equal_shape_mismatch(void** state) {
+    (void)state;
+    size_t shape_a[] = { 2u, 3u };
+    size_t shape_b[] = { 3u, 2u };
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t ra = init_double_tensor(2u, shape_a, alloc);
+    double_tensor_expect_t rb = init_double_tensor(2u, shape_b, alloc);
+    assert_true(ra.has_value);
+    assert_true(rb.has_value);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        set_double_tensor_index(ra.u.value, i, (double)(i + 1u));
+        set_double_tensor_index(rb.u.value, i, (double)(i + 1u));
+    }
+ 
+    assert_false(double_tensors_equal(ra.u.value, rb.u.value, 0.0, true));
+    return_double_tensor(ra.u.value);
+    return_double_tensor(rb.u.value);
+}
+ 
+// ---- Single element ---------------------------------------------------------
+ 
+/** Single-element arrays within tolerance must return true. */
+static void test_double_tensors_equal_single_within_tolerance(void** state) {
+    (void)state;
+    double_tensor_t* a = _make_double_array(2u, false);
+    double_tensor_t* b = _make_double_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_double_array(a, 1.0);
+    push_back_double_array(b, 1.0625);   /* 1 + 1/16 — exactly representable */
+    assert_true(double_tensors_equal(a, b, 0.125, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/** Single-element arrays outside tolerance must return false. */
+static void test_double_tensors_equal_single_outside_tolerance(void** state) {
+    (void)state;
+    double_tensor_t* a = _make_double_array(2u, false);
+    double_tensor_t* b = _make_double_array(2u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+    push_back_double_array(a, 1.0);
+    push_back_double_array(b, 1.5);
+    assert_false(double_tensors_equal(a, b, 0.25, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+// ---- Large array — exercises SIMD bulk path ---------------------------------
+ 
+/**
+ * Large array where all elements are within tolerance must return true —
+ * exercises multiple full SIMD register iterations.
+ */
+static void test_double_tensors_equal_large_within_tolerance(void** state) {
+    (void)state;
+    const size_t n = 64u;
+    double_tensor_t* a = _make_double_array(n + 1u, false);
+    double_tensor_t* b = _make_double_array(n + 1u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    for (size_t i = 0u; i < n; i++) {
+        push_back_double_array(a, (double)i);
+        push_back_double_array(b, (double)i + 0.0625);
+    }
+ 
+    assert_true(double_tensors_equal(a, b, 0.125, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
+ 
+/**
+ * Large array where the last element exceeds tolerance must return false —
+ * confirms the SIMD loop processes the final chunk.
+ */
+static void test_double_tensors_equal_large_last_exceeds(void** state) {
+    (void)state;
+    const size_t n = 64u;
+    double_tensor_t* a = _make_double_array(n + 1u, false);
+    double_tensor_t* b = _make_double_array(n + 1u, false);
+    assert_non_null(a);
+    assert_non_null(b);
+ 
+    for (size_t i = 0u; i < n - 1u; i++) {
+        push_back_double_array(a, (double)i);
+        push_back_double_array(b, (double)i);
+    }
+    push_back_double_array(a, 99.0);
+    push_back_double_array(b,  0.0);
+ 
+    assert_false(double_tensors_equal(a, b, 0.1, false));
+    return_double_tensor(a);
+    return_double_tensor(b);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -25321,6 +25797,50 @@ const struct CMUnitTest test_double_tensor[] = {
 
     /* integration with sort */
     cmocka_unit_test(test_double_bbsearch_after_sort),
+
+    /* double_tensors_equal — null/guard */
+    cmocka_unit_test(test_double_tensors_equal_null_one),
+    cmocka_unit_test(test_double_tensors_equal_null_two),
+    cmocka_unit_test(test_double_tensors_equal_both_null),
+    cmocka_unit_test(test_double_tensors_equal_same_pointer),
+    cmocka_unit_test(test_double_tensors_equal_both_empty),
+ 
+    /* double_tensors_equal — length and exact content */
+    cmocka_unit_test(test_double_tensors_equal_length_mismatch),
+    cmocka_unit_test(test_double_tensors_equal_identical_exact),
+    cmocka_unit_test(test_double_tensors_equal_content_mismatch),
+    cmocka_unit_test(test_double_tensors_equal_first_element_differs),
+    cmocka_unit_test(test_double_tensors_equal_last_element_differs),
+ 
+    /* double_tensors_equal — tolerance semantics */
+    cmocka_unit_test(test_double_tensors_equal_tolerance_exact_boundary),
+    cmocka_unit_test(test_double_tensors_equal_tolerance_exceeded),
+    cmocka_unit_test(test_double_tensors_equal_all_within_tolerance),
+    cmocka_unit_test(test_double_tensors_equal_one_element_exceeds),
+    cmocka_unit_test(test_double_tensors_equal_negative_tolerance),
+ 
+    /* double_tensors_equal — NaN behaviour */
+    cmocka_unit_test(test_double_tensors_equal_nan_in_first),
+    cmocka_unit_test(test_double_tensors_equal_nan_in_second),
+ 
+    /* double_tensors_equal — meta flag */
+    cmocka_unit_test(test_double_tensors_equal_meta_flag_alloc),
+    cmocka_unit_test(test_double_tensors_equal_meta_true_mode_differs),
+    cmocka_unit_test(test_double_tensors_equal_meta_true_growth_differs),
+    cmocka_unit_test(test_double_tensors_equal_meta_true_identical),
+ 
+    /* double_tensors_equal — shape and ndim */
+    cmocka_unit_test(test_double_tensors_equal_nd_match),
+    cmocka_unit_test(test_double_tensors_equal_ndim_mismatch),
+    cmocka_unit_test(test_double_tensors_equal_shape_mismatch),
+ 
+    /* double_tensors_equal — single element */
+    cmocka_unit_test(test_double_tensors_equal_single_within_tolerance),
+    cmocka_unit_test(test_double_tensors_equal_single_outside_tolerance),
+ 
+    /* double_tensors_equal — large array SIMD path */
+    cmocka_unit_test(test_double_tensors_equal_large_within_tolerance),
+    cmocka_unit_test(test_double_tensors_equal_large_last_exceeds),
 };
 
 const size_t test_double_tensor_count = sizeof(test_double_tensor) /

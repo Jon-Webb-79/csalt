@@ -313,6 +313,33 @@ bracket_expect_t double_tensor_bbsearch(const double_tensor_t* t,
                                .u.value.lower = lower,
                                .u.value.upper = upper };
 }
+// -------------------------------------------------------------------------------- 
+
+bool double_tensors_equal(const double_tensor_t* one,
+                          const double_tensor_t* two,
+                          double                 tolerance,
+                          bool                   meta) {
+    if (!one || !two)                         return false;
+    if (!one->base->data || !two->base->data) return false;
+    if (one->base->len  != two->base->len)    return false;
+    if (one->base->ndim != two->base->ndim)   return false;
+
+    if (meta) {
+        for (uint8_t d = 0u; d < one->base->ndim; d++) {
+            if (one->base->shape[d] != two->base->shape[d]) return false;
+        }
+        if (one->base->alloc  != two->base->alloc)  return false;
+        if (one->base->mode   != two->base->mode)   return false;
+        if (one->base->growth != two->base->growth) return false;
+    }
+
+    return simd_doubles_equal(
+        (const double*)one->base->data,
+        (const double*)two->base->data,
+        one->base->len,
+        tolerance
+    );
+}
 // ================================================================================
 // ================================================================================
 // eof
