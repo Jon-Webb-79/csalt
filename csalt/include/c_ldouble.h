@@ -842,6 +842,86 @@ error_code_t ldouble_tensor_bsearch(const ldouble_tensor_t* t,
 bracket_expect_t ldouble_tensor_bbsearch(const ldouble_tensor_t* t,
                                          long double             value,
                                          long double             tolerance);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Compare two long double tensors for equality within a tolerance.
+ *
+ * Compares the populated data buffers of two long double tensors element
+ * by element using a scalar absolute-difference check.  Element i is
+ * considered equal when fabsl(one[i] - two[i]) <= tolerance.  All
+ * elements must satisfy this condition for the function to return true.
+ *
+ * The comparison is always performed on the live region [0, len) — for
+ * ARRAY_STRUCT tensors this is the number of populated elements and for
+ * TENSOR_STRUCT tensors this is alloc (all slots are always live).
+ *
+ * No SIMD acceleration is available for long double — the size of long
+ * double is platform-dependent (80-bit extended precision on x86,
+ * 128-bit on AArch64, or 64-bit on MSVC) and no mainstream SIMD ISA
+ * provides a corresponding lane type.  The comparison is performed
+ * entirely in scalar code at full long double precision throughout —
+ * no narrowing to double occurs at any point.
+ *
+ * The meta flag controls whether structural metadata is included in
+ * the comparison in addition to the element-wise tolerance check:
+ *
+ *   meta == false:
+ *     Only ndim and the data buffer contents are compared within
+ *     tolerance.  Two tensors are considered equal if they have the
+ *     same number of dimensions and every element satisfies the
+ *     tolerance condition.
+ *
+ *   meta == true:
+ *     In addition to the checks above, shape, alloc, mode, and growth
+ *     must all match exactly.
+ *
+ * The allocator vtable is never compared.
+ *
+ * NaN behaviour: if any element in either tensor is NaN then
+ * one[i] - two[i] is NaN, and the portable NaN test diff != diff
+ * fires, returning false immediately regardless of tolerance.  Passing
+ * tolerance < 0.0L produces no matches since no absolute difference
+ * satisfies fabsl(diff) <= negative_number.
+ *
+ * @param one        Pointer to the first tensor.  Must not be NULL.
+ * @param two        Pointer to the second tensor.  Must not be NULL.
+ * @param tolerance  Maximum allowed absolute difference per element.
+ *                   Pass 0.0L for exact bit-pattern equality on non-NaN
+ *                   values.
+ * @param meta       If true, include shape, alloc, mode, and growth in
+ *                   the comparison.  If false, compare only ndim and
+ *                   element values within tolerance.
+ *
+ * @return true  if all elements are within tolerance and all checked
+ *               metadata matches, or if one and two are the same pointer.
+ * @return false if either pointer is NULL, either base data pointer is
+ *               NULL, lengths differ, ndim differs, any element exceeds
+ *               tolerance, or any checked metadata field differs.
+ *
+ * @code{.c}
+ * ldouble_tensor_t* a = init_ldouble_array(4, false, heap_allocator()).u.value;
+ * ldouble_tensor_t* b = init_ldouble_array(4, false, heap_allocator()).u.value;
+ *
+ * push_back_ldouble_array(a, 1.0L);
+ * push_back_ldouble_array(a, 2.0L);
+ * push_back_ldouble_array(b, 1.001L);
+ * push_back_ldouble_array(b, 2.001L);
+ *
+ * // Within tolerance
+ * bool eq = ldouble_tensors_equal(a, b, 0.01L, false);   // true
+ *
+ * // Outside tolerance
+ * eq = ldouble_tensors_equal(a, b, 0.0001L, false);       // false
+ *
+ * return_ldouble_tensor(a);
+ * return_ldouble_tensor(b);
+ * @endcode
+ */
+bool ldouble_tensors_equal(const ldouble_tensor_t* one,
+                           const ldouble_tensor_t* two,
+                           long double             tolerance,
+                           bool                    meta);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

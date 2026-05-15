@@ -275,6 +275,41 @@ bracket_expect_t ldouble_tensor_bbsearch(const ldouble_tensor_t* t,
                                .u.value.lower = lower,
                                .u.value.upper = upper };
 }
+// -------------------------------------------------------------------------------- 
+
+bool ldouble_tensors_equal(const ldouble_tensor_t* one,
+                           const ldouble_tensor_t* two,
+                           long double             tolerance,
+                           bool                    meta) {
+    if (!one || !two)                         return false;
+    if (!one->base->data || !two->base->data) return false;
+    if (one->base->len  != two->base->len)    return false;
+    if (one->base->ndim != two->base->ndim)   return false;
+
+    if (meta) {
+        for (uint8_t d = 0u; d < one->base->ndim; d++) {
+            if (one->base->shape[d] != two->base->shape[d]) return false;
+        }
+        if (one->base->alloc  != two->base->alloc)  return false;
+        if (one->base->mode   != two->base->mode)   return false;
+        if (one->base->growth != two->base->growth) return false;
+    }
+
+    const long double* a   = (const long double*)one->base->data;
+    const long double* b   = (const long double*)two->base->data;
+    size_t             len = one->base->len;
+
+    /* Same pointer — trivially equal */
+    if (a == b) return true;
+
+    for (size_t i = 0u; i < len; i++) {
+        long double diff = a[i] - b[i];
+        if (diff != diff)      return false;   /* NaN check */
+        if (diff < 0.0L)       diff = -diff;
+        if (diff > tolerance)  return false;
+    }
+    return true;
+}
 // ================================================================================
 // ================================================================================
 // eof

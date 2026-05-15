@@ -1,6 +1,5 @@
-1. array_equal (long double)
-2. min
-3. max
-4. sum
-5. cumulative_sum
-6. avg
+1. min
+2. max
+3. sum
+4. cumulative_sum
+5. avg
