@@ -531,6 +531,43 @@ static inline void simd_add_scalar_uint8(uint8_t*      data,
             return;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint8(const uint8_t* data,
+                                          size_t         len,
+                                          uint8_t*       out) {
+    uint8_t  cur_min = *out;
+    size_t   i       = 0u;
+    uint64_t vl      = svcntb();         /* bytes per SVE register */
+ 
+    if (len >= vl) {
+        svuint8_t vmin = svdup_n_u8(0xFF);
+        svbool_t  ptrue = svptrue_b8();
+ 
+        for (; i + vl <= len; i += vl) {
+            svuint8_t v = svld1_u8(ptrue, data + i);
+            vmin = svmin_u8_x(ptrue, vmin, v);
+        }
+ 
+        uint8_t lane_min = svminv_u8(ptrue, vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Predicated tail — handles remaining elements in one vector op */
+    if (i < len) {
+        svbool_t  pred = svwhilelt_b8((uint64_t)i, (uint64_t)len);
+        svuint8_t v    = svld1_u8(pred, data + i);
+        svuint8_t vmin = svdup_n_u8(cur_min);
+        vmin = svmin_u8_x(pred, vmin, v);
+ 
+        uint8_t lane_min = svminv_u8(pred, vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_SVE_UINT8_INL */

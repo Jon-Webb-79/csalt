@@ -2,6 +2,8 @@
 #ifndef CSALT_SIMD_SSE41_UINT8_INL
 #define CSALT_SIMD_SSE41_UINT8_INL
 
+#include "c_error.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -118,6 +120,47 @@ static void simd_reverse_uint8(uint8_t* data, size_t len, size_t data_size) {
             lo++; hi--;
         }
     }
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint8(const uint8_t* data,
+                                          size_t         len,
+                                          uint8_t*       out) {
+    uint8_t cur_min = *out;
+    size_t  i       = 0u;
+ 
+    if (len >= 16u) {
+        __m128i vmin = _mm_set1_epi8((char)0xFF);
+ 
+        for (; i + 16u <= len; i += 16u) {
+            __m128i v = _mm_loadu_si128((const __m128i*)(data + i));
+            vmin = _mm_min_epu8(vmin, v);
+        }
+ 
+        /* Fold 16 × uint8 → 8 × uint16 by taking pairwise min of adjacent
+         * bytes, then use PHMINPOSUW to find the minimum uint16 lane.
+         * The minimum byte value is preserved because min(a, b) <= a and
+         * min(a, b) <= b, so the smallest byte survives both stages. */
+        __m128i lo = vmin;
+        __m128i hi = _mm_srli_epi16(vmin, 8);
+        __m128i folded = _mm_min_epu8(lo, hi);         /* 8 relevant bytes in low byte of each u16 lane */
+        __m128i masked = _mm_and_si128(folded, _mm_set1_epi16(0x00FF));
+        __m128i minpos = _mm_minpos_epu16(masked);     /* result in bits [15:0] */
+ 
+        uint8_t lane_min = (uint8_t)(_mm_extract_epi16(minpos, 0) & 0xFFu);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

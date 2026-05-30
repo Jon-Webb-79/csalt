@@ -494,6 +494,48 @@ static inline void simd_add_scalar_uint8(uint8_t*      data,
             return;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint8(const uint8_t* data,
+                                          size_t         len,
+                                          uint8_t*       out) {
+    uint8_t cur_min = *out;              /* caller seeds with UINT8_MAX */
+    size_t  i       = 0u;
+ 
+    if (len >= 16u) {
+        __m128i vmin = _mm_set1_epi8((char)0xFF);
+ 
+        for (; i + 16u <= len; i += 16u) {
+            __m128i v = _mm_loadu_si128((const __m128i*)(data + i));
+            vmin = _mm_min_epu8(vmin, v);
+        }
+ 
+        /* Horizontal reduction: 16 → 8 → 4 → 2 → 1 */
+        __m128i shifted = _mm_srli_si128(vmin, 8);
+        vmin = _mm_min_epu8(vmin, shifted);
+        shifted = _mm_srli_si128(vmin, 4);
+        vmin = _mm_min_epu8(vmin, shifted);
+        shifted = _mm_srli_si128(vmin, 2);
+        vmin = _mm_min_epu8(vmin, shifted);
+        shifted = _mm_srli_si128(vmin, 1);
+        vmin = _mm_min_epu8(vmin, shifted);
+ 
+        uint8_t lane_min = (uint8_t)_mm_extract_epi16(vmin, 0) & 0xFFu;
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail */
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_SSE2_UINT8_INL */

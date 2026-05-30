@@ -2,6 +2,8 @@
 #ifndef CSALT_SIMD_SVE2_UINT8_INL
 #define CSALT_SIMD_SVE2_UINT8_INL
 
+#include "c_error.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -134,6 +136,43 @@ static void simd_reverse_uint8(uint8_t* data, size_t len, size_t data_size) {
             lo++; hi--;
         }
     }
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint8(const uint8_t* data,
+                                          size_t         len,
+                                          uint8_t*       out) {
+    uint8_t  cur_min = *out;
+    size_t   i       = 0u;
+    uint64_t vl      = svcntb();
+ 
+    if (len >= vl) {
+        svuint8_t vmin = svdup_n_u8(0xFF);
+        svbool_t  ptrue = svptrue_b8();
+ 
+        for (; i + vl <= len; i += vl) {
+            svuint8_t v = svld1_u8(ptrue, data + i);
+            vmin = svmin_u8_x(ptrue, vmin, v);
+        }
+ 
+        uint8_t lane_min = svminv_u8(ptrue, vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Predicated tail */
+    if (i < len) {
+        svbool_t  pred = svwhilelt_b8((uint64_t)i, (uint64_t)len);
+        svuint8_t v    = svld1_u8(pred, data + i);
+        svuint8_t vmin = svdup_n_u8(cur_min);
+        vmin = svmin_u8_x(pred, vmin, v);
+ 
+        uint8_t lane_min = svminv_u8(pred, vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

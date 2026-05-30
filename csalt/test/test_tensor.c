@@ -6550,6 +6550,597 @@ static void test_uint8_tensors_equal_single_element_differs(void** state) {
     return_uint8_tensor(a);
     return_uint8_tensor(b);
 }
+// -------------------------------------------------------------------------------- 
+
+/** NULL tensor pointer must return NULL_POINTER. */
+static void test_min_uint8_tensor_null_tensor(void** state) {
+    (void)state;
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(NULL, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NULL value pointer must return NULL_POINTER. */
+static void test_min_uint8_tensor_null_value(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array_filled(3u, 10u);
+    assert_non_null(arr);
+    assert_int_equal(min_uint8_tensor(arr, NULL), NULL_POINTER);
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Empty array (len == 0) must return EMPTY. */
+static void test_min_uint8_tensor_empty(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(4u, false);
+    assert_non_null(arr);
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), EMPTY);
+    return_uint8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint8_tensor — single element
+// ================================================================================
+// ================================================================================
+ 
+/** Single-element array must return that element. */
+static void test_min_uint8_tensor_single_element(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(2u, false);
+    assert_non_null(arr);
+    push_back_uint8_array(arr, 42u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 42u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single-element array containing 0 must return 0 (early-exit path). */
+static void test_min_uint8_tensor_single_zero(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(2u, false);
+    assert_non_null(arr);
+    push_back_uint8_array(arr, 0u);
+ 
+    uint8_t val = 99u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint8_tensor — minimum at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Minimum at the front of the array. */
+static void test_min_uint8_tensor_min_at_front(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [3, 10, 20, 30, 40] */
+    push_back_uint8_array(arr, 3u);
+    push_back_uint8_array(arr, 10u);
+    push_back_uint8_array(arr, 20u);
+    push_back_uint8_array(arr, 30u);
+    push_back_uint8_array(arr, 40u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 3u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum at the back of the array. */
+static void test_min_uint8_tensor_min_at_back(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [40, 30, 20, 10, 2] */
+    push_back_uint8_array(arr, 40u);
+    push_back_uint8_array(arr, 30u);
+    push_back_uint8_array(arr, 20u);
+    push_back_uint8_array(arr, 10u);
+    push_back_uint8_array(arr, 2u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 2u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum in the middle of the array. */
+static void test_min_uint8_tensor_min_at_middle(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [50, 40, 5, 30, 20] */
+    push_back_uint8_array(arr, 50u);
+    push_back_uint8_array(arr, 40u);
+    push_back_uint8_array(arr, 5u);
+    push_back_uint8_array(arr, 30u);
+    push_back_uint8_array(arr, 20u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 5u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint8_tensor — all identical
+// ================================================================================
+// ================================================================================
+ 
+/** All elements identical must return that value. */
+static void test_min_uint8_tensor_all_identical(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_uint8_array(arr, 77u);
+    }
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 77u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint8_tensor — boundary values
+// ================================================================================
+// ================================================================================
+ 
+/** All 0xFF must return 255. */
+static void test_min_uint8_tensor_all_max(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_uint8_array(arr, 255u);
+    }
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 255u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All 0x00 must return 0 (early-exit on first element). */
+static void test_min_uint8_tensor_all_zero(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_uint8_array(arr, 0u);
+    }
+ 
+    uint8_t val = 99u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint8_tensor — early-exit (0) at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Zero at the front triggers immediate early-exit. */
+static void test_min_uint8_tensor_zero_at_front(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [0, 50, 100, 200] */
+    push_back_uint8_array(arr, 0u);
+    push_back_uint8_array(arr, 50u);
+    push_back_uint8_array(arr, 100u);
+    push_back_uint8_array(arr, 200u);
+ 
+    uint8_t val = 99u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Zero in the middle triggers early-exit. */
+static void test_min_uint8_tensor_zero_at_middle(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [200, 100, 0, 50, 25] */
+    push_back_uint8_array(arr, 200u);
+    push_back_uint8_array(arr, 100u);
+    push_back_uint8_array(arr, 0u);
+    push_back_uint8_array(arr, 50u);
+    push_back_uint8_array(arr, 25u);
+ 
+    uint8_t val = 99u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Zero at the back triggers early-exit on last element. */
+static void test_min_uint8_tensor_zero_at_back(void** state) {
+    (void)state;
+    uint8_tensor_t* arr = _make_uint8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [200, 100, 50, 25, 0] */
+    push_back_uint8_array(arr, 200u);
+    push_back_uint8_array(arr, 100u);
+    push_back_uint8_array(arr, 50u);
+    push_back_uint8_array(arr, 25u);
+    push_back_uint8_array(arr, 0u);
+ 
+    uint8_t val = 99u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint8_tensor — large buffers (SIMD main-loop + tail)
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 1024 elements: exercises the full SIMD main-loop.
+ * Minimum (value 1) placed near the end so the loop must run completely.
+ */
+static void test_min_uint8_tensor_large_min_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_uint8_array(arr, 200u);
+    }
+    /* Overwrite element near end with minimum */
+    set_uint8_tensor_index(arr, 1020u, 1u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 1u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements all identical: verifies SIMD horizontal reduction
+ * produces the correct value when no element differs.
+ */
+static void test_min_uint8_tensor_large_all_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_uint8_array(arr, 128u);
+    }
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 128u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements with 0 at front: early-exit must work even in the
+ * very first SIMD vector.
+ */
+static void test_min_uint8_tensor_large_zero_at_front(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_uint8_array(arr, 200u);
+    }
+    set_uint8_tensor_index(arr, 0u, 0u);
+ 
+    uint8_t val = 99u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint8_tensor — SIMD-width boundary lengths
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Exactly 16 elements — one full SSE2/NEON vector, no scalar tail.
+ */
+static void test_min_uint8_tensor_len_16(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(20u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        push_back_uint8_array(arr, (uint8_t)(100u + i));
+    }
+    /* min is 100 at index 0 — but put 7 at the last lane to test reduction */
+    set_uint8_tensor_index(arr, 15u, 7u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 7u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 17 elements — one full SSE2/NEON vector + 1 scalar-tail element.
+ * Minimum placed in the tail.
+ */
+static void test_min_uint8_tensor_len_17_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(20u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 17u; i++) {
+        push_back_uint8_array(arr, 80u);
+    }
+    set_uint8_tensor_index(arr, 16u, 3u);   /* tail element is the min */
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 3u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * Exactly 32 elements — one full AVX2 vector, no tail.
+ */
+static void test_min_uint8_tensor_len_32(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(40u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 32u; i++) {
+        push_back_uint8_array(arr, 150u);
+    }
+    set_uint8_tensor_index(arr, 20u, 11u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 11u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 33 elements — one AVX2 vector + 1 tail. Min in the tail.
+ */
+static void test_min_uint8_tensor_len_33_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(40u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 33u; i++) {
+        push_back_uint8_array(arr, 150u);
+    }
+    set_uint8_tensor_index(arr, 32u, 4u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 4u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * Exactly 64 elements — one full AVX-512 vector, no tail.
+ */
+static void test_min_uint8_tensor_len_64(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(70u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 64u; i++) {
+        push_back_uint8_array(arr, 200u);
+    }
+    set_uint8_tensor_index(arr, 48u, 9u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 9u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 65 elements — one AVX-512 vector + 1 tail. Min in the tail.
+ */
+static void test_min_uint8_tensor_len_65_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(70u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 65u; i++) {
+        push_back_uint8_array(arr, 200u);
+    }
+    set_uint8_tensor_index(arr, 64u, 6u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 6u);
+ 
+    return_uint8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint8_tensor — TENSOR_STRUCT (N-D) mode
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 4×4 matrix (TENSOR_STRUCT mode).  min must scan all 16 elements
+ * even though they are logically in rows/columns.
+ */
+static void test_min_uint8_tensor_nd_4x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    uint8_tensor_expect_t r = init_uint8_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* mat = r.u.value;
+ 
+    /* Fill with descending values [255 .. 240] */
+    for (size_t i = 0u; i < 16u; i++) {
+        set_uint8_tensor_index(mat, i, (uint8_t)(255u - i));
+    }
+    /* Place the minimum at (2, 3) = flat index 11 */
+    size_t idx[] = { 2u, 3u };
+    set_uint8_tensor_nd_index(mat, idx, 7u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(mat, &val), NO_ERROR);
+    assert_int_equal(val, 7u);
+ 
+    return_uint8_tensor(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 3-D tensor (2×3×4 = 24 elements, TENSOR_STRUCT mode).
+ * Minimum placed deep inside the third dimension.
+ */
+static void test_min_uint8_tensor_nd_2x3x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 2u, 3u, 4u };
+    uint8_tensor_expect_t r = init_uint8_tensor(3u, shape, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* t = r.u.value;
+ 
+    /* Fill with 100 everywhere */
+    for (size_t i = 0u; i < 24u; i++) {
+        set_uint8_tensor_index(t, i, 100u);
+    }
+    /* Place min at (1, 2, 1) = flat index 1*12 + 2*4 + 1 = 21 */
+    size_t idx[] = { 1u, 2u, 1u };
+    set_uint8_tensor_nd_index(t, idx, 13u);
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(t, &val), NO_ERROR);
+    assert_int_equal(val, 13u);
+ 
+    return_uint8_tensor(t);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint8_tensor — descending ramp (monotonically decreasing)
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Descending ramp: minimum is always the last element.
+ * Verifies the full scan runs to completion.
+ */
+static void test_min_uint8_tensor_descending_ramp(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint8_tensor_expect_t r  = init_uint8_array(260u, false, alloc);
+    assert_true(r.has_value);
+    uint8_tensor_t* arr = r.u.value;
+ 
+    /* 250, 249, 248, ... , 1 — 250 elements, min is 1 at index 249 */
+    for (size_t i = 0u; i < 250u; i++) {
+        push_back_uint8_array(arr, (uint8_t)(250u - i));
+    }
+ 
+    uint8_t val = 0u;
+    assert_int_equal(min_uint8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 1u);
+ 
+    return_uint8_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -6747,6 +7338,49 @@ const struct CMUnitTest test_uint8_tensor[] = {
     /* uint8_tensors_equal — single element */
     cmocka_unit_test(test_uint8_tensors_equal_single_element_equal),
     cmocka_unit_test(test_uint8_tensors_equal_single_element_differs),
+
+    /* min_uint8_tensor — null/guard */
+    cmocka_unit_test(test_min_uint8_tensor_null_tensor),
+    cmocka_unit_test(test_min_uint8_tensor_null_value),
+    cmocka_unit_test(test_min_uint8_tensor_empty),
+
+    /* min_uint8_tensor — single element */
+    cmocka_unit_test(test_min_uint8_tensor_single_element),
+    cmocka_unit_test(test_min_uint8_tensor_single_zero),
+
+    /* min_uint8_tensor — min at various positions */
+    cmocka_unit_test(test_min_uint8_tensor_min_at_front),
+    cmocka_unit_test(test_min_uint8_tensor_min_at_back),
+    cmocka_unit_test(test_min_uint8_tensor_min_at_middle),
+
+    /* min_uint8_tensor — all identical */
+    cmocka_unit_test(test_min_uint8_tensor_all_identical),
+
+    /* min_uint8_tensor — boundary values */
+    cmocka_unit_test(test_min_uint8_tensor_all_max),
+    cmocka_unit_test(test_min_uint8_tensor_all_zero),
+
+    /* min_uint8_tensor — early-exit (0) at various positions */
+    cmocka_unit_test(test_min_uint8_tensor_zero_at_front),
+    cmocka_unit_test(test_min_uint8_tensor_zero_at_middle),
+    cmocka_unit_test(test_min_uint8_tensor_zero_at_back),
+
+    /* min_uint8_tensor — large buffers (SIMD main-loop + tail) */
+    cmocka_unit_test(test_min_uint8_tensor_large_min_near_end),
+    cmocka_unit_test(test_min_uint8_tensor_large_all_identical),
+    cmocka_unit_test(test_min_uint8_tensor_large_zero_at_front),
+
+    /* min_uint8_tensor — SIMD-width boundary lengths */
+    cmocka_unit_test(test_min_uint8_tensor_len_16),
+    cmocka_unit_test(test_min_uint8_tensor_len_17_min_in_tail),
+    cmocka_unit_test(test_min_uint8_tensor_len_32),
+    cmocka_unit_test(test_min_uint8_tensor_len_33_min_in_tail),
+    cmocka_unit_test(test_min_uint8_tensor_len_64),
+    cmocka_unit_test(test_min_uint8_tensor_len_65_min_in_tail),
+
+    /* min_uint8_tensor — TENSOR_STRUCT (N-D) mode */
+    cmocka_unit_test(test_min_uint8_tensor_nd_4x4),
+    cmocka_unit_test(test_min_uint8_tensor_nd_2x3x4),
 };
 
 const size_t test_uint8_tensor_count = sizeof(test_uint8_tensor) /
@@ -8589,6 +9223,658 @@ static void test_int8_tensors_equal_single_element_differs(void** state) {
     return_int8_tensor(a);
     return_int8_tensor(b);
 }
+// -------------------------------------------------------------------------------- 
+
+//** NULL tensor pointer must return NULL_POINTER. */
+static void test_min_int8_tensor_null_tensor(void** state) {
+    (void)state;
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(NULL, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NULL value pointer must return NULL_POINTER. */
+static void test_min_int8_tensor_null_value(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array_filled(3u, 10);
+    assert_non_null(arr);
+    assert_int_equal(min_int8_tensor(arr, NULL), NULL_POINTER);
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Empty array (len == 0) must return EMPTY. */
+static void test_min_int8_tensor_empty(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(4u, false);
+    assert_non_null(arr);
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), EMPTY);
+    return_int8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — single element
+// ================================================================================
+// ================================================================================
+ 
+/** Single-element array must return that element. */
+static void test_min_int8_tensor_single_element(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(2u, false);
+    assert_non_null(arr);
+    push_back_int8_array(arr, 42);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 42);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single negative element. */
+static void test_min_int8_tensor_single_negative(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(2u, false);
+    assert_non_null(arr);
+    push_back_int8_array(arr, -50);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -50);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single element equal to INT8_MIN triggers early-exit. */
+static void test_min_int8_tensor_single_int8_min(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(2u, false);
+    assert_non_null(arr);
+    push_back_int8_array(arr, INT8_MIN);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT8_MIN);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — minimum at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Minimum at the front of the array. */
+static void test_min_int8_tensor_min_at_front(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [-100, 10, 20, 30, 40] */
+    push_back_int8_array(arr, -100);
+    push_back_int8_array(arr, 10);
+    push_back_int8_array(arr, 20);
+    push_back_int8_array(arr, 30);
+    push_back_int8_array(arr, 40);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -100);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum at the back of the array. */
+static void test_min_int8_tensor_min_at_back(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [40, 30, 20, 10, -99] */
+    push_back_int8_array(arr, 40);
+    push_back_int8_array(arr, 30);
+    push_back_int8_array(arr, 20);
+    push_back_int8_array(arr, 10);
+    push_back_int8_array(arr, -99);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -99);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum in the middle of the array. */
+static void test_min_int8_tensor_min_at_middle(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [50, 40, -77, 30, 20] */
+    push_back_int8_array(arr, 50);
+    push_back_int8_array(arr, 40);
+    push_back_int8_array(arr, -77);
+    push_back_int8_array(arr, 30);
+    push_back_int8_array(arr, 20);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -77);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — all identical
+// ================================================================================
+// ================================================================================
+ 
+/** All elements identical (positive). */
+static void test_min_int8_tensor_all_identical_positive(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_int8_array(arr, 77);
+    }
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 77);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All elements identical (negative). */
+static void test_min_int8_tensor_all_identical_negative(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_int8_array(arr, -33);
+    }
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -33);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — boundary values
+// ================================================================================
+// ================================================================================
+ 
+/** All INT8_MAX must return 127. */
+static void test_min_int8_tensor_all_max(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_int8_array(arr, INT8_MAX);
+    }
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT8_MAX);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All INT8_MIN must return -128 (early-exit on first element). */
+static void test_min_int8_tensor_all_min(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_int8_array(arr, INT8_MIN);
+    }
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT8_MIN);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — early-exit (INT8_MIN) at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** INT8_MIN at the front triggers immediate early-exit. */
+static void test_min_int8_tensor_int8_min_at_front(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int8_array(arr, INT8_MIN);
+    push_back_int8_array(arr, 50);
+    push_back_int8_array(arr, 100);
+    push_back_int8_array(arr, -10);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT8_MIN);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** INT8_MIN in the middle. */
+static void test_min_int8_tensor_int8_min_at_middle(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int8_array(arr, 100);
+    push_back_int8_array(arr, 50);
+    push_back_int8_array(arr, INT8_MIN);
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr, 25);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT8_MIN);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** INT8_MIN at the back. */
+static void test_min_int8_tensor_int8_min_at_back(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int8_array(arr, 100);
+    push_back_int8_array(arr, 50);
+    push_back_int8_array(arr, -10);
+    push_back_int8_array(arr, 25);
+    push_back_int8_array(arr, INT8_MIN);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT8_MIN);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — mixed positive and negative
+// ================================================================================
+// ================================================================================
+ 
+/** Mix of positive and negative values — negative minimum. */
+static void test_min_int8_tensor_mixed_signs(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [50, -20, 100, -120, 30, 0, -1] */
+    push_back_int8_array(arr, 50);
+    push_back_int8_array(arr, -20);
+    push_back_int8_array(arr, 100);
+    push_back_int8_array(arr, -120);
+    push_back_int8_array(arr, 30);
+    push_back_int8_array(arr, 0);
+    push_back_int8_array(arr, -1);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -120);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * All positive values — verifies the signed comparison doesn't treat
+ * high-bit values (e.g. 127) as negative.
+ */
+static void test_min_int8_tensor_all_positive(void** state) {
+    (void)state;
+    int8_tensor_t* arr = _make_int8_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int8_array(arr, 100);
+    push_back_int8_array(arr, 50);
+    push_back_int8_array(arr, 3);
+    push_back_int8_array(arr, 127);
+    push_back_int8_array(arr, 80);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 3);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — large buffers (SIMD main-loop + tail)
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 1024 elements: min (-100) placed near the end.
+ * Exercises the full SIMD main-loop.
+ */
+static void test_min_int8_tensor_large_min_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_int8_array(arr, 50);
+    }
+    set_int8_tensor_index(arr, 1020u, -100);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -100);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements all identical: verifies SIMD horizontal reduction
+ * produces the correct value when no element differs.
+ */
+static void test_min_int8_tensor_large_all_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_int8_array(arr, -33);
+    }
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -33);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements with INT8_MIN at front: early-exit in the first
+ * SIMD vector.
+ */
+static void test_min_int8_tensor_large_int8_min_at_front(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_int8_array(arr, 50);
+    }
+    set_int8_tensor_index(arr, 0u, INT8_MIN);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT8_MIN);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — SIMD-width boundary lengths
+// ================================================================================
+// ================================================================================
+ 
+/** Exactly 16 elements — one full SSE2/NEON vector, no scalar tail. */
+static void test_min_int8_tensor_len_16(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(20u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        push_back_int8_array(arr, 50);
+    }
+    set_int8_tensor_index(arr, 15u, -7);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -7);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 17 elements — one vector + 1 tail. Min in the tail. */
+static void test_min_int8_tensor_len_17_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(20u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 17u; i++) {
+        push_back_int8_array(arr, 80);
+    }
+    set_int8_tensor_index(arr, 16u, -3);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -3);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 32 elements — one full AVX2 vector, no tail. */
+static void test_min_int8_tensor_len_32(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(40u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 32u; i++) {
+        push_back_int8_array(arr, 60);
+    }
+    set_int8_tensor_index(arr, 20u, -11);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -11);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 33 elements — one AVX2 vector + 1 tail. Min in the tail. */
+static void test_min_int8_tensor_len_33_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(40u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 33u; i++) {
+        push_back_int8_array(arr, 60);
+    }
+    set_int8_tensor_index(arr, 32u, -4);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -4);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 64 elements — one full AVX-512 vector, no tail. */
+static void test_min_int8_tensor_len_64(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(70u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 64u; i++) {
+        push_back_int8_array(arr, 70);
+    }
+    set_int8_tensor_index(arr, 48u, -9);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -9);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 65 elements — one AVX-512 vector + 1 tail. Min in the tail. */
+static void test_min_int8_tensor_len_65_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(70u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 65u; i++) {
+        push_back_int8_array(arr, 70);
+    }
+    set_int8_tensor_index(arr, 64u, -6);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -6);
+ 
+    return_int8_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — TENSOR_STRUCT (N-D) mode
+// ================================================================================
+// ================================================================================
+ 
+/** 4×4 matrix — min must scan across all 16 elements. */
+static void test_min_int8_tensor_nd_4x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    int8_tensor_expect_t r = init_int8_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_int8_tensor_index(mat, i, (int8_t)(100 - (int8_t)i));
+    }
+    /* Place the minimum at (2, 3) = flat index 11 */
+    size_t idx[] = { 2u, 3u };
+    set_int8_tensor_nd_index(mat, idx, -55);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(mat, &val), NO_ERROR);
+    assert_int_equal(val, -55);
+ 
+    return_int8_tensor(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 3-D tensor (2×3×4 = 24 elements). Min placed deep inside. */
+static void test_min_int8_tensor_nd_2x3x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 2u, 3u, 4u };
+    int8_tensor_expect_t r = init_int8_tensor(3u, shape, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* t = r.u.value;
+ 
+    for (size_t i = 0u; i < 24u; i++) {
+        set_int8_tensor_index(t, i, 50);
+    }
+    /* Place min at (1, 2, 1) = flat index 21 */
+    size_t idx[] = { 1u, 2u, 1u };
+    set_int8_tensor_nd_index(t, idx, -88);
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(t, &val), NO_ERROR);
+    assert_int_equal(val, -88);
+ 
+    return_int8_tensor(t);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int8_tensor — descending ramp
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Descending ramp from 100 down to -99: minimum is always the last
+ * element.  Verifies the full scan runs to completion.
+ */
+static void test_min_int8_tensor_descending_ramp(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int8_tensor_expect_t r   = init_int8_array(260u, false, alloc);
+    assert_true(r.has_value);
+    int8_tensor_t* arr = r.u.value;
+ 
+    /* 100, 99, 98, ... , -99  — 200 elements, min is -99 at index 199 */
+    for (int i = 0; i < 200; i++) {
+        push_back_int8_array(arr, (int8_t)(100 - i));
+    }
+ 
+    int8_t val = 0;
+    assert_int_equal(min_int8_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -99);
+ 
+    return_int8_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -8791,6 +10077,55 @@ const struct CMUnitTest test_int8_tensor[] = {
     /* single element */
     cmocka_unit_test(test_int8_tensors_equal_single_element_equal),
     cmocka_unit_test(test_int8_tensors_equal_single_element_differs),
+
+    /* min_int8_tensor — null/guard */
+    cmocka_unit_test(test_min_int8_tensor_null_tensor),
+    cmocka_unit_test(test_min_int8_tensor_null_value),
+    cmocka_unit_test(test_min_int8_tensor_empty),
+
+    /* min_int8_tensor — single element */
+    cmocka_unit_test(test_min_int8_tensor_single_element),
+    cmocka_unit_test(test_min_int8_tensor_single_negative),
+    cmocka_unit_test(test_min_int8_tensor_single_int8_min),
+
+    /* min_int8_tensor — min at various positions */
+    cmocka_unit_test(test_min_int8_tensor_min_at_front),
+    cmocka_unit_test(test_min_int8_tensor_min_at_back),
+    cmocka_unit_test(test_min_int8_tensor_min_at_middle),
+
+    /* min_int8_tensor — all identical */
+    cmocka_unit_test(test_min_int8_tensor_all_identical_positive),
+    cmocka_unit_test(test_min_int8_tensor_all_identical_negative),
+
+    /* min_int8_tensor — boundary values */
+    cmocka_unit_test(test_min_int8_tensor_all_max),
+    cmocka_unit_test(test_min_int8_tensor_all_min),
+
+    /* min_int8_tensor — early-exit (INT8_MIN) at various positions */
+    cmocka_unit_test(test_min_int8_tensor_int8_min_at_front),
+    cmocka_unit_test(test_min_int8_tensor_int8_min_at_middle),
+    cmocka_unit_test(test_min_int8_tensor_int8_min_at_back),
+
+    /* min_int8_tensor — mixed positive and negative */
+    cmocka_unit_test(test_min_int8_tensor_mixed_signs),
+    cmocka_unit_test(test_min_int8_tensor_all_positive),
+
+    /* min_int8_tensor — large buffers (SIMD main-loop + tail) */
+    cmocka_unit_test(test_min_int8_tensor_large_min_near_end),
+    cmocka_unit_test(test_min_int8_tensor_large_all_identical),
+    cmocka_unit_test(test_min_int8_tensor_large_int8_min_at_front),
+
+    /* min_int8_tensor — SIMD-width boundary lengths */
+    cmocka_unit_test(test_min_int8_tensor_len_16),
+    cmocka_unit_test(test_min_int8_tensor_len_17_min_in_tail),
+    cmocka_unit_test(test_min_int8_tensor_len_32),
+    cmocka_unit_test(test_min_int8_tensor_len_33_min_in_tail),
+    cmocka_unit_test(test_min_int8_tensor_len_64),
+    cmocka_unit_test(test_min_int8_tensor_len_65_min_in_tail),
+
+    /* min_int8_tensor — TENSOR_STRUCT (N-D) mode */
+    cmocka_unit_test(test_min_int8_tensor_nd_4x4),
+    cmocka_unit_test(test_min_int8_tensor_nd_2x3x4),
 };
 
 const size_t test_int8_tensor_count = sizeof(test_int8_tensor) /

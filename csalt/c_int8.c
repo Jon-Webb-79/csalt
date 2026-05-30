@@ -17,6 +17,28 @@
 #include "c_dtypes.h"
 
 #include <inttypes.h>
+
+   #if defined(__AVX512BW__)
+   #  include "simd_avx512_int8.inl"
+   #elif defined(__AVX2__)
+   #  include "simd_avx2_int8.inl"
+   #elif defined(__AVX__)
+   #  include "simd_avx_int8.inl"
+   #elif defined(__SSE4_1__)
+   #  include "simd_sse41_int8.inl"
+   #elif defined(__SSSE3__)
+   #  include "simd_ssse3_int8.inl"
+   #elif defined(__SSE2__)
+   #  include "simd_sse2_int8.inl"
+   #elif defined(__ARM_FEATURE_SVE2)
+   #  include "simd_sve2_int8.inl"
+   #elif defined(__ARM_FEATURE_SVE)
+   #  include "simd_sve_int8.inl"
+   #elif defined(__ARM_NEON)
+   #  include "simd_neon_int8.inl"
+   #else
+   #  include "simd_scalar_int8.inl"
+   #endif
 // ================================================================================ 
 // ================================================================================ 
 
@@ -264,6 +286,17 @@ bool int8_tensors_equal(const int8_tensor_t* one,
     return memcmp(one->base->data,
                   two->base->data,
                   sizeof(int8_t) * one->base->len) == 0;
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t min_int8_tensor(const int8_tensor_t* t, int8_t* value) {
+    if (t == NULL || value == NULL)  return NULL_POINTER;
+    if (t->base == NULL)            return NULL_POINTER;
+    if (t->base->data == NULL)      return EMPTY;
+    if (t->base->len == 0u)         return EMPTY;
+ 
+    *value = INT8_MAX;
+    return simd_min_int8((const int8_t*)t->base->data, t->base->len, value);
 }
 // ================================================================================
 // ================================================================================

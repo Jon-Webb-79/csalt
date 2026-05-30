@@ -102,6 +102,8 @@ Utility Operations
 
 .. doxygenfunction:: uint8_tensors_equal
 
+.. doxygenfunction:: min_uint8_tensor
+
 Introspection
 -------------
 

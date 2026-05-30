@@ -541,6 +541,39 @@ static inline void simd_add_scalar_uint8(uint8_t*      data,
             return;
     }
 }
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint8(const uint8_t* data,
+                                          size_t         len,
+                                          uint8_t*       out) {
+    uint8_t cur_min = *out;
+    size_t  i       = 0u;
+ 
+    if (len >= 16u) {
+        uint8x16_t vmin = vdupq_n_u8(0xFF);
+ 
+        for (; i + 16u <= len; i += 16u) {
+            uint8x16_t v = vld1q_u8(data + i);
+            vmin = vminq_u8(vmin, v);
+        }
+ 
+        /* Horizontal reduction using NEON pairwise min */
+        uint8_t lane_min = vminvq_u8(vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail */
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_NEON_UINT8_INL */

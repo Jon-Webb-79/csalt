@@ -2,6 +2,8 @@
 #ifndef CSALT_SIMD_SCALAR_UINT8_INL
 #define CSALT_SIMD_SCALAR_UINT8_INL
 
+#include "c_error.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -39,6 +41,26 @@ static void simd_reverse_uint8(uint8_t* data, size_t len, size_t data_size) {
             hi--;
         }
     }
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint8(const uint8_t* data,
+                                          size_t         len,
+                                          uint8_t*       out) {
+    uint8_t cur_min = *out;              /* caller seeds with UINT8_MAX */
+ 
+    for (size_t i = 0u; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) {         /* global minimum — stop early */
+                *out = 0u;
+                return NO_ERROR;
+            }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 
