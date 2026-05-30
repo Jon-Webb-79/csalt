@@ -68,6 +68,43 @@ static size_t simd_lsearch_uint16(const uint16_t* data,
     }
     return SIZE_MAX;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint16(const uint16_t* data,
+                                           size_t          len,
+                                           uint16_t*       out) {
+    uint16_t cur_min = *out;
+    size_t   i       = 0u;
+    uint64_t vl      = svcnth();
+ 
+    if (len >= vl) {
+        svuint16_t vmin  = svdup_n_u16(0xFFFF);
+        svbool_t   ptrue = svptrue_b16();
+ 
+        for (; i + vl <= len; i += vl) {
+            svuint16_t v = svld1_u16(ptrue, data + i);
+            vmin = svmin_u16_x(ptrue, vmin, v);
+        }
+ 
+        uint16_t lane_min = svminv_u16(ptrue, vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Predicated tail */
+    if (i < len) {
+        svbool_t   pred = svwhilelt_b16((uint64_t)i, (uint64_t)len);
+        svuint16_t v    = svld1_u16(pred, data + i);
+        svuint16_t vmin = svdup_n_u16(cur_min);
+        vmin = svmin_u16_x(pred, vmin, v);
+ 
+        uint16_t lane_min = svminv_u16(pred, vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_SVE2_UINT16_INL */

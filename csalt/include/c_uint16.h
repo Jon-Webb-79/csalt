@@ -864,6 +864,46 @@ bracket_expect_t uint16_tensor_bbsearch(const uint16_tensor_t* t,
 bool uint16_tensors_equal(const uint16_tensor_t* one,
                          const uint16_tensor_t* two,
                          bool                  meta);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the minimum element in a uint16 tensor.
+ *
+ * Scans all len populated elements and writes the smallest value into
+ * the caller-provided output.  Uses a SIMD fast path when available
+ * (SSE2/SSSE3/SSE4.1/AVX/AVX2/AVX-512BW on x86-64,
+ * NEON/SVE/SVE2 on AArch64) and falls back to scalar iteration
+ * otherwise.  The search short-circuits as soon as the global minimum
+ * for the type (0) is encountered.
+ *
+ * Note: SSE2 and SSSE3 lack an unsigned 16-bit min intrinsic, so those
+ * paths use an XOR-bias technique (XOR each lane with 0x8000 to map
+ * unsigned ordering onto signed ordering, reduce with _mm_min_epi16,
+ * then XOR the result back).  SSE4.1 and later use native
+ * _mm_min_epu16 and _mm_minpos_epu16 (PHMINPOSUW) for efficient
+ * horizontal reduction.
+ *
+ * Works on both TENSOR_STRUCT and ARRAY_STRUCT modes — the scan always
+ * covers exactly t->base->len elements.
+ *
+ * @param t      Pointer to the source uint16 tensor. Must not be NULL.
+ * @param value  Pointer to a uint16_t to receive the minimum value.
+ *               Must not be NULL.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER  if t, t->base, or value is NULL
+ *         - EMPTY         if t->base->data is NULL or t->base->len == 0
+ *
+ * @code{.c}
+ * uint16_t min_val;
+ * error_code_t err = min_uint16_tensor(arr, &min_val);
+ * if (err != NO_ERROR) {
+ *     fprintf(stderr, "%s\n", error_to_string(err));
+ * }
+ * printf("Minimum: %" PRIu16 "\n", min_val);
+ * @endcode
+ */
+error_code_t min_uint16_tensor(const uint16_tensor_t* t, uint16_t* value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

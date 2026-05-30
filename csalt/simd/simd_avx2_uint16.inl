@@ -83,6 +83,58 @@ static size_t simd_lsearch_uint16(const uint16_t* data,
     }
     return SIZE_MAX;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint16(const uint16_t* data,
+                                           size_t          len,
+                                           uint16_t*       out) {
+    uint16_t cur_min = *out;
+    size_t   i       = 0u;
+ 
+    if (len >= 16u) {
+        __m256i vmin = _mm256_set1_epi16((short)0xFFFF);
+ 
+        for (; i + 16u <= len; i += 16u) {
+            __m256i v = _mm256_loadu_si256((const __m256i*)(data + i));
+            vmin = _mm256_min_epu16(vmin, v);
+        }
+ 
+        /* Fold 256 → 128 */
+        __m128i lo  = _mm256_castsi256_si128(vmin);
+        __m128i hi  = _mm256_extracti128_si256(vmin, 1);
+        __m128i v16 = _mm_min_epu16(lo, hi);
+ 
+        /* PHMINPOSUW: horizontal min across 8 × uint16 */
+        __m128i minpos    = _mm_minpos_epu16(v16);
+        uint16_t lane_min = (uint16_t)_mm_extract_epi16(minpos, 0);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Handle 8-element chunk if remaining tail >= 8 */
+    if (i + 8u <= len) {
+        __m128i vmin = _mm_set1_epi16((short)cur_min);
+        __m128i v    = _mm_loadu_si128((const __m128i*)(data + i));
+        vmin = _mm_min_epu16(vmin, v);
+        i += 8u;
+ 
+        __m128i minpos    = _mm_minpos_epu16(vmin);
+        uint16_t lane_min = (uint16_t)_mm_extract_epi16(minpos, 0);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail */
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_AVX2_UINT16_INL */

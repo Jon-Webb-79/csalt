@@ -294,6 +294,17 @@ bool uint16_tensors_equal(const uint16_tensor_t* one,
                   two->base->data,
                   sizeof(uint16_t) * one->base->len) == 0;
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t min_uint16_tensor(const uint16_tensor_t* t, uint16_t* value) {
+    if (t == NULL || value == NULL)  return NULL_POINTER;
+    if (t->base == NULL)            return NULL_POINTER;
+    if (t->base->data == NULL)      return EMPTY;
+    if (t->base->len == 0u)         return EMPTY;
+ 
+    *value = UINT16_MAX;
+    return simd_min_uint16((const uint16_t*)t->base->data, t->base->len, value);
+}
 // ================================================================================
 // ================================================================================
 // eof

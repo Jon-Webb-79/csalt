@@ -102,6 +102,8 @@ Utility Operations
 
 .. doxygenfunction:: uint16_tensors_equal
 
+.. doxygenfunction:: min_uint16_tensor
+
 Introspection
 -------------
 

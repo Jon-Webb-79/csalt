@@ -72,6 +72,52 @@ static size_t simd_lsearch_uint16(const uint16_t* data,
     }
     return SIZE_MAX;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint16(const uint16_t* data,
+                                           size_t          len,
+                                           uint16_t*       out) {
+    uint16_t cur_min = *out;             /* caller seeds with UINT16_MAX */
+    size_t   i       = 0u;
+ 
+    if (len >= 8u) {
+        /* Bias: XOR with 0x8000 maps unsigned [0,65535] → signed [-32768,32767] */
+        __m128i bias = _mm_set1_epi16((short)0x8000);
+ 
+        /* Seed: UINT16_MAX ^ 0x8000 = 0x7FFF (signed max) */
+        __m128i vmin = _mm_set1_epi16((short)0x7FFF);
+ 
+        for (; i + 8u <= len; i += 8u) {
+            __m128i v = _mm_loadu_si128((const __m128i*)(data + i));
+            v = _mm_xor_si128(v, bias);
+            vmin = _mm_min_epi16(vmin, v);
+        }
+ 
+        /* Horizontal reduction: 8 → 4 → 2 → 1 */
+        __m128i shifted = _mm_srli_si128(vmin, 8);
+        vmin = _mm_min_epi16(vmin, shifted);
+        shifted = _mm_srli_si128(vmin, 4);
+        vmin = _mm_min_epi16(vmin, shifted);
+        shifted = _mm_srli_si128(vmin, 2);
+        vmin = _mm_min_epi16(vmin, shifted);
+ 
+        /* Convert back to unsigned */
+        uint16_t lane_min = (uint16_t)(_mm_extract_epi16(vmin, 0) ^ 0x8000);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail */
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_SSE2_UINT16_INL */

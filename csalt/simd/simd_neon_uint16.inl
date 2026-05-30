@@ -90,6 +90,38 @@ static size_t simd_lsearch_uint16(const uint16_t* data,
     }
     return SIZE_MAX;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint16(const uint16_t* data,
+                                           size_t          len,
+                                           uint16_t*       out) {
+    uint16_t cur_min = *out;
+    size_t   i       = 0u;
+ 
+    if (len >= 8u) {
+        uint16x8_t vmin = vdupq_n_u16(0xFFFF);
+ 
+        for (; i + 8u <= len; i += 8u) {
+            uint16x8_t v = vld1q_u16(data + i);
+            vmin = vminq_u16(vmin, v);
+        }
+ 
+        uint16_t lane_min = vminvq_u16(vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail */
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_NEON_UINT16_INL */

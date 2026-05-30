@@ -19,24 +19,34 @@
 
 #if defined(__AVX512BW__)
 #  include "simd_avx512_uint16.inl"
+#  include "simd_avx512_int16.inl"
 #elif defined(__AVX2__)
 #  include "simd_avx2_uint16.inl"
+#  include "simd_avx2_int16.inl"
 #elif defined(__AVX__)
 #  include "simd_avx_uint16.inl"
+#  include "simd_avx_int16.inl"
 #elif defined(__SSE4_1__)
 #  include "simd_sse41_uint16.inl"
+#  include "simd_sse41_int16.inl"
 #elif defined(__SSSE3__)
 #  include "simd_sse3_uint16.inl"
+#  include "simd_sse3_int16.inl"
 #elif defined(__SSE2__)
 #  include "simd_sse2_uint16.inl"
+#  include "simd_sse2_int16.inl"
 #elif defined(__ARM_FEATURE_SVE2)
 #  include "simd_sve2_uint16.inl"
+#  include "simd_sve2_int16.inl"
 #elif defined(__ARM_FEATURE_SVE)
 #  include "simd_sve_uint16.inl"
+#  include "simd_sve_int16.inl"
 #elif defined(__ARM_NEON)
 #  include "simd_neon_uint16.inl"
+#  include "simd_neon_int16.inl"
 #else
 #  include "simd_scalar_uint16.inl"
+#  include "simd_scalar_int16.inl"
 #endif
 // ================================================================================ 
 // ================================================================================ 
@@ -292,6 +302,17 @@ bool int16_tensors_equal(const int16_tensor_t* one,
     return memcmp(one->base->data,
                   two->base->data,
                   sizeof(int16_t) * one->base->len) == 0;
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t min_int16_tensor(const int16_tensor_t* t, int16_t* value) {
+    if (t == NULL || value == NULL)  return NULL_POINTER;
+    if (t->base == NULL)            return NULL_POINTER;
+    if (t->base->data == NULL)      return EMPTY;
+    if (t->base->len == 0u)         return EMPTY;
+ 
+    *value = INT16_MAX;
+    return simd_min_int16((const int16_t*)t->base->data, t->base->len, value);
 }
 // ================================================================================
 // ================================================================================

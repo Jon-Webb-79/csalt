@@ -38,6 +38,26 @@ static size_t simd_lsearch_uint16(const uint16_t* data,
     }
     return SIZE_MAX;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint16(const uint16_t* data,
+                                           size_t          len,
+                                           uint16_t*       out) {
+    uint16_t cur_min = *out;             /* caller seeds with UINT16_MAX */
+ 
+    for (size_t i = 0u; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) {         /* global minimum — stop early */
+                *out = 0u;
+                return NO_ERROR;
+            }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_SCALAR_UINT16_INL */

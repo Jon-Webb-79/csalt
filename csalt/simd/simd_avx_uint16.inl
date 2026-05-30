@@ -93,6 +93,38 @@ static size_t simd_lsearch_uint16(const uint16_t* data,
     }
     return SIZE_MAX;
 }
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint16(const uint16_t* data,
+                                           size_t          len,
+                                           uint16_t*       out) {
+    uint16_t cur_min = *out;
+    size_t   i       = 0u;
+ 
+    if (len >= 8u) {
+        __m128i vmin = _mm_set1_epi16((short)0xFFFF);
+ 
+        for (; i + 8u <= len; i += 8u) {
+            __m128i v = _mm_loadu_si128((const __m128i*)(data + i));
+            vmin = _mm_min_epu16(vmin, v);
+        }
+ 
+        __m128i minpos    = _mm_minpos_epu16(vmin);
+        uint16_t lane_min = (uint16_t)_mm_extract_epi16(minpos, 0);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_AVX_UINT16_INL */

@@ -856,6 +856,44 @@ bracket_expect_t int16_tensor_bbsearch(const int16_tensor_t* t,
 bool int16_tensors_equal(const int16_tensor_t* one,
                         const int16_tensor_t* two,
                         bool                 meta);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the minimum element in an int16 tensor.
+ *
+ * Scans all len populated elements and writes the smallest value into
+ * the caller-provided output.  Uses a SIMD fast path when available
+ * (SSE2/SSSE3/SSE4.1/AVX/AVX2/AVX-512BW on x86-64,
+ * NEON/SVE/SVE2 on AArch64) and falls back to scalar iteration
+ * otherwise.  The search short-circuits as soon as the global minimum
+ * for the type (INT16_MIN, -32768) is encountered.
+ *
+ * Note: SSE2 natively provides _mm_min_epi16 (signed 16-bit min),
+ * so no bias trick is needed for the vertical pass on any ISA.
+ * SSE4.1 and later use _mm_minpos_epu16 (PHMINPOSUW) for horizontal
+ * reduction, XOR-biasing the final 8 signed lanes to unsigned and back.
+ *
+ * Works on both TENSOR_STRUCT and ARRAY_STRUCT modes — the scan always
+ * covers exactly t->base->len elements.
+ *
+ * @param t      Pointer to the source int16 tensor. Must not be NULL.
+ * @param value  Pointer to an int16_t to receive the minimum value.
+ *               Must not be NULL.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER  if t, t->base, or value is NULL
+ *         - EMPTY         if t->base->data is NULL or t->base->len == 0
+ *
+ * @code{.c}
+ * int16_t min_val;
+ * error_code_t err = min_int16_tensor(arr, &min_val);
+ * if (err != NO_ERROR) {
+ *     fprintf(stderr, "%s\n", error_to_string(err));
+ * }
+ * printf("Minimum: %" PRId16 "\n", min_val);
+ * @endcode
+ */
+error_code_t min_int16_tensor(const int16_tensor_t* t, int16_t* value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

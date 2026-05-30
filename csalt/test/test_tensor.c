@@ -11923,6 +11923,592 @@ static void test_uint16_tensors_equal_single_element_differs(void** state) {
     return_uint16_tensor(a);
     return_uint16_tensor(b);
 }
+// -------------------------------------------------------------------------------- 
+
+/** NULL tensor pointer must return NULL_POINTER. */
+static void test_min_uint16_tensor_null_tensor(void** state) {
+    (void)state;
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(NULL, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NULL value pointer must return NULL_POINTER. */
+static void test_min_uint16_tensor_null_value(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array_filled(3u, 10u);
+    assert_non_null(arr);
+    assert_int_equal(min_uint16_tensor(arr, NULL), NULL_POINTER);
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Empty array (len == 0) must return EMPTY. */
+static void test_min_uint16_tensor_empty(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(4u, false);
+    assert_non_null(arr);
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), EMPTY);
+    return_uint16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint16_tensor — single element
+// ================================================================================
+// ================================================================================
+ 
+/** Single-element array must return that element. */
+static void test_min_uint16_tensor_single_element(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(2u, false);
+    assert_non_null(arr);
+    push_back_uint16_array(arr, 4200u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 4200u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single-element array containing 0 must return 0 (early-exit path). */
+static void test_min_uint16_tensor_single_zero(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(2u, false);
+    assert_non_null(arr);
+    push_back_uint16_array(arr, 0u);
+ 
+    uint16_t val = 9999u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint16_tensor — minimum at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Minimum at the front of the array. */
+static void test_min_uint16_tensor_min_at_front(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [3, 1000, 2000, 3000, 4000] */
+    push_back_uint16_array(arr, 3u);
+    push_back_uint16_array(arr, 1000u);
+    push_back_uint16_array(arr, 2000u);
+    push_back_uint16_array(arr, 3000u);
+    push_back_uint16_array(arr, 4000u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 3u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum at the back of the array. */
+static void test_min_uint16_tensor_min_at_back(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [4000, 3000, 2000, 1000, 2] */
+    push_back_uint16_array(arr, 4000u);
+    push_back_uint16_array(arr, 3000u);
+    push_back_uint16_array(arr, 2000u);
+    push_back_uint16_array(arr, 1000u);
+    push_back_uint16_array(arr, 2u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 2u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum in the middle of the array. */
+static void test_min_uint16_tensor_min_at_middle(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+ 
+    /* [5000, 4000, 5, 3000, 2000] */
+    push_back_uint16_array(arr, 5000u);
+    push_back_uint16_array(arr, 4000u);
+    push_back_uint16_array(arr, 5u);
+    push_back_uint16_array(arr, 3000u);
+    push_back_uint16_array(arr, 2000u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 5u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint16_tensor — all identical
+// ================================================================================
+// ================================================================================
+ 
+/** All elements identical must return that value. */
+static void test_min_uint16_tensor_all_identical(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_uint16_array(arr, 7700u);
+    }
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 7700u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint16_tensor — boundary values
+// ================================================================================
+// ================================================================================
+ 
+/** All UINT16_MAX must return 65535. */
+static void test_min_uint16_tensor_all_max(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_uint16_array(arr, UINT16_MAX);
+    }
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, UINT16_MAX);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All 0 must return 0 (early-exit on first element). */
+static void test_min_uint16_tensor_all_zero(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_uint16_array(arr, 0u);
+    }
+ 
+    uint16_t val = 9999u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint16_tensor — early-exit (0) at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Zero at the front triggers immediate early-exit. */
+static void test_min_uint16_tensor_zero_at_front(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint16_array(arr, 0u);
+    push_back_uint16_array(arr, 5000u);
+    push_back_uint16_array(arr, 10000u);
+    push_back_uint16_array(arr, 20000u);
+ 
+    uint16_t val = 9999u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Zero in the middle triggers early-exit. */
+static void test_min_uint16_tensor_zero_at_middle(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint16_array(arr, 20000u);
+    push_back_uint16_array(arr, 10000u);
+    push_back_uint16_array(arr, 0u);
+    push_back_uint16_array(arr, 5000u);
+    push_back_uint16_array(arr, 2500u);
+ 
+    uint16_t val = 9999u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Zero at the back triggers early-exit on last element. */
+static void test_min_uint16_tensor_zero_at_back(void** state) {
+    (void)state;
+    uint16_tensor_t* arr = _make_uint16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint16_array(arr, 20000u);
+    push_back_uint16_array(arr, 10000u);
+    push_back_uint16_array(arr, 5000u);
+    push_back_uint16_array(arr, 2500u);
+    push_back_uint16_array(arr, 0u);
+ 
+    uint16_t val = 9999u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint16_tensor — large buffers (SIMD main-loop + tail)
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 1024 elements: exercises the full SIMD main-loop.
+ * Minimum (value 1) placed near the end so the loop must run completely.
+ */
+static void test_min_uint16_tensor_large_min_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_uint16_array(arr, 50000u);
+    }
+    set_uint16_tensor_index(arr, 1020u, 1u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 1u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements all identical: verifies SIMD horizontal reduction
+ * produces the correct value when no element differs.
+ */
+static void test_min_uint16_tensor_large_all_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_uint16_array(arr, 12800u);
+    }
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 12800u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements with 0 at front: early-exit must work even in the
+ * very first SIMD vector.
+ */
+static void test_min_uint16_tensor_large_zero_at_front(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_uint16_array(arr, 50000u);
+    }
+    set_uint16_tensor_index(arr, 0u, 0u);
+ 
+    uint16_t val = 9999u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 0u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint16_tensor — SIMD-width boundary lengths
+//
+// uint16 vector widths: SSE = 8 elements, AVX2 = 16, AVX-512 = 32
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Exactly 8 elements — one full SSE2/NEON vector, no scalar tail.
+ */
+static void test_min_uint16_tensor_len_8(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(12u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 8u; i++) {
+        push_back_uint16_array(arr, (uint16_t)(10000u + i));
+    }
+    set_uint16_tensor_index(arr, 7u, 7u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 7u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 9 elements — one full SSE2/NEON vector + 1 scalar-tail element.
+ * Minimum placed in the tail.
+ */
+static void test_min_uint16_tensor_len_9_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(12u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 9u; i++) {
+        push_back_uint16_array(arr, 8000u);
+    }
+    set_uint16_tensor_index(arr, 8u, 3u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 3u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * Exactly 16 elements — one full AVX2 vector, no tail.
+ */
+static void test_min_uint16_tensor_len_16(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(20u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        push_back_uint16_array(arr, 15000u);
+    }
+    set_uint16_tensor_index(arr, 10u, 11u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 11u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 17 elements — one AVX2 vector + 1 tail. Min in the tail.
+ */
+static void test_min_uint16_tensor_len_17_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(20u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 17u; i++) {
+        push_back_uint16_array(arr, 15000u);
+    }
+    set_uint16_tensor_index(arr, 16u, 4u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 4u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * Exactly 32 elements — one full AVX-512 vector, no tail.
+ */
+static void test_min_uint16_tensor_len_32(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(40u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 32u; i++) {
+        push_back_uint16_array(arr, 20000u);
+    }
+    set_uint16_tensor_index(arr, 24u, 9u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 9u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 33 elements — one AVX-512 vector + 1 tail. Min in the tail.
+ */
+static void test_min_uint16_tensor_len_33_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(40u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 33u; i++) {
+        push_back_uint16_array(arr, 20000u);
+    }
+    set_uint16_tensor_index(arr, 32u, 6u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 6u);
+ 
+    return_uint16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint16_tensor — TENSOR_STRUCT (N-D) mode
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 4×4 matrix (TENSOR_STRUCT mode).  min must scan all 16 elements
+ * even though they are logically in rows/columns.
+ */
+static void test_min_uint16_tensor_nd_4x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    uint16_tensor_expect_t r = init_uint16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_uint16_tensor_index(mat, i, (uint16_t)(60000u - i * 100u));
+    }
+    /* Place the minimum at (2, 3) = flat index 11 */
+    size_t idx[] = { 2u, 3u };
+    set_uint16_tensor_nd_index(mat, idx, 7u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(mat, &val), NO_ERROR);
+    assert_int_equal(val, 7u);
+ 
+    return_uint16_tensor(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 3-D tensor (2×3×4 = 24 elements, TENSOR_STRUCT mode).
+ * Minimum placed deep inside the third dimension.
+ */
+static void test_min_uint16_tensor_nd_2x3x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 2u, 3u, 4u };
+    uint16_tensor_expect_t r = init_uint16_tensor(3u, shape, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* t = r.u.value;
+ 
+    for (size_t i = 0u; i < 24u; i++) {
+        set_uint16_tensor_index(t, i, 10000u);
+    }
+    /* Place min at (1, 2, 1) = flat index 21 */
+    size_t idx[] = { 1u, 2u, 1u };
+    set_uint16_tensor_nd_index(t, idx, 13u);
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(t, &val), NO_ERROR);
+    assert_int_equal(val, 13u);
+ 
+    return_uint16_tensor(t);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint16_tensor — descending ramp
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Descending ramp: minimum is always the last element.
+ * Verifies the full scan runs to completion.
+ */
+static void test_min_uint16_tensor_descending_ramp(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint16_tensor_expect_t r = init_uint16_array(260u, false, alloc);
+    assert_true(r.has_value);
+    uint16_tensor_t* arr = r.u.value;
+ 
+    /* 250, 249, 248, ... , 1 — 250 elements, min is 1 at index 249 */
+    for (size_t i = 0u; i < 250u; i++) {
+        push_back_uint16_array(arr, (uint16_t)(250u - i));
+    }
+ 
+    uint16_t val = 0u;
+    assert_int_equal(min_uint16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 1u);
+ 
+    return_uint16_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -12120,6 +12706,49 @@ const struct CMUnitTest test_uint16_tensor[] = {
     /* uint16_tensors_equal — single element */
     cmocka_unit_test(test_uint16_tensors_equal_single_element_equal),
     cmocka_unit_test(test_uint16_tensors_equal_single_element_differs),
+
+    /* min_uint16_tensor — null/guard */
+    cmocka_unit_test(test_min_uint16_tensor_null_tensor),
+    cmocka_unit_test(test_min_uint16_tensor_null_value),
+    cmocka_unit_test(test_min_uint16_tensor_empty),
+
+    /* min_uint16_tensor — single element */
+    cmocka_unit_test(test_min_uint16_tensor_single_element),
+    cmocka_unit_test(test_min_uint16_tensor_single_zero),
+
+    /* min_uint16_tensor — min at various positions */
+    cmocka_unit_test(test_min_uint16_tensor_min_at_front),
+    cmocka_unit_test(test_min_uint16_tensor_min_at_back),
+    cmocka_unit_test(test_min_uint16_tensor_min_at_middle),
+
+    /* min_uint16_tensor — all identical */
+    cmocka_unit_test(test_min_uint16_tensor_all_identical),
+
+    /* min_uint16_tensor — boundary values */
+    cmocka_unit_test(test_min_uint16_tensor_all_max),
+    cmocka_unit_test(test_min_uint16_tensor_all_zero),
+
+    /* min_uint16_tensor — early-exit (0) at various positions */
+    cmocka_unit_test(test_min_uint16_tensor_zero_at_front),
+    cmocka_unit_test(test_min_uint16_tensor_zero_at_middle),
+    cmocka_unit_test(test_min_uint16_tensor_zero_at_back),
+
+    /* min_uint16_tensor — large buffers (SIMD main-loop + tail) */
+    cmocka_unit_test(test_min_uint16_tensor_large_min_near_end),
+    cmocka_unit_test(test_min_uint16_tensor_large_all_identical),
+    cmocka_unit_test(test_min_uint16_tensor_large_zero_at_front),
+
+    /* min_uint16_tensor — SIMD-width boundary lengths */
+    cmocka_unit_test(test_min_uint16_tensor_len_8),
+    cmocka_unit_test(test_min_uint16_tensor_len_9_min_in_tail),
+    cmocka_unit_test(test_min_uint16_tensor_len_16),
+    cmocka_unit_test(test_min_uint16_tensor_len_17_min_in_tail),
+    cmocka_unit_test(test_min_uint16_tensor_len_32),
+    cmocka_unit_test(test_min_uint16_tensor_len_33_min_in_tail),
+
+    /* min_uint16_tensor — TENSOR_STRUCT (N-D) mode */
+    cmocka_unit_test(test_min_uint16_tensor_nd_4x4),
+    cmocka_unit_test(test_min_uint16_tensor_nd_2x3x4),
 };
 
 const size_t test_uint16_tensor_count = sizeof(test_uint16_tensor) /
@@ -13957,6 +14586,650 @@ static void test_int16_tensors_equal_single_element_differs(void** state) {
     return_int16_tensor(a);
     return_int16_tensor(b);
 }
+// -------------------------------------------------------------------------------- 
+
+/** NULL tensor pointer must return NULL_POINTER. */
+static void test_min_int16_tensor_null_tensor(void** state) {
+    (void)state;
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(NULL, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NULL value pointer must return NULL_POINTER. */
+static void test_min_int16_tensor_null_value(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array_filled(3u, 10);
+    assert_non_null(arr);
+    assert_int_equal(min_int16_tensor(arr, NULL), NULL_POINTER);
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Empty array (len == 0) must return EMPTY. */
+static void test_min_int16_tensor_empty(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(4u, false);
+    assert_non_null(arr);
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), EMPTY);
+    return_int16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — single element
+// ================================================================================
+// ================================================================================
+ 
+/** Single-element array must return that element. */
+static void test_min_int16_tensor_single_element(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(2u, false);
+    assert_non_null(arr);
+    push_back_int16_array(arr, 4200);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 4200);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single negative element. */
+static void test_min_int16_tensor_single_negative(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(2u, false);
+    assert_non_null(arr);
+    push_back_int16_array(arr, -5000);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -5000);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single element equal to INT16_MIN triggers early-exit. */
+static void test_min_int16_tensor_single_int16_min(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(2u, false);
+    assert_non_null(arr);
+    push_back_int16_array(arr, INT16_MIN);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT16_MIN);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — minimum at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Minimum at the front of the array. */
+static void test_min_int16_tensor_min_at_front(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int16_array(arr, -10000);
+    push_back_int16_array(arr, 1000);
+    push_back_int16_array(arr, 2000);
+    push_back_int16_array(arr, 3000);
+    push_back_int16_array(arr, 4000);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -10000);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum at the back of the array. */
+static void test_min_int16_tensor_min_at_back(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int16_array(arr, 4000);
+    push_back_int16_array(arr, 3000);
+    push_back_int16_array(arr, 2000);
+    push_back_int16_array(arr, 1000);
+    push_back_int16_array(arr, -9999);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -9999);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum in the middle of the array. */
+static void test_min_int16_tensor_min_at_middle(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int16_array(arr, 5000);
+    push_back_int16_array(arr, 4000);
+    push_back_int16_array(arr, -7700);
+    push_back_int16_array(arr, 3000);
+    push_back_int16_array(arr, 2000);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -7700);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — all identical
+// ================================================================================
+// ================================================================================
+ 
+/** All elements identical (positive). */
+static void test_min_int16_tensor_all_identical_positive(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_int16_array(arr, 7700);
+    }
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 7700);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All elements identical (negative). */
+static void test_min_int16_tensor_all_identical_negative(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_int16_array(arr, -3300);
+    }
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -3300);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — boundary values
+// ================================================================================
+// ================================================================================
+ 
+/** All INT16_MAX must return 32767. */
+static void test_min_int16_tensor_all_max(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_int16_array(arr, INT16_MAX);
+    }
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT16_MAX);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All INT16_MIN must return -32768 (early-exit on first element). */
+static void test_min_int16_tensor_all_min(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_int16_array(arr, INT16_MIN);
+    }
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT16_MIN);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — early-exit (INT16_MIN) at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** INT16_MIN at the front triggers immediate early-exit. */
+static void test_min_int16_tensor_int16_min_at_front(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int16_array(arr, INT16_MIN);
+    push_back_int16_array(arr, 5000);
+    push_back_int16_array(arr, 10000);
+    push_back_int16_array(arr, -100);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT16_MIN);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** INT16_MIN in the middle. */
+static void test_min_int16_tensor_int16_min_at_middle(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int16_array(arr, 10000);
+    push_back_int16_array(arr, 5000);
+    push_back_int16_array(arr, INT16_MIN);
+    push_back_int16_array(arr, -100);
+    push_back_int16_array(arr, 2500);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT16_MIN);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** INT16_MIN at the back. */
+static void test_min_int16_tensor_int16_min_at_back(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int16_array(arr, 10000);
+    push_back_int16_array(arr, 5000);
+    push_back_int16_array(arr, -100);
+    push_back_int16_array(arr, 2500);
+    push_back_int16_array(arr, INT16_MIN);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT16_MIN);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — mixed positive and negative
+// ================================================================================
+// ================================================================================
+ 
+/** Mix of positive and negative values — negative minimum. */
+static void test_min_int16_tensor_mixed_signs(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(10u, false);
+    assert_non_null(arr);
+ 
+    push_back_int16_array(arr, 5000);
+    push_back_int16_array(arr, -2000);
+    push_back_int16_array(arr, 10000);
+    push_back_int16_array(arr, -12000);
+    push_back_int16_array(arr, 3000);
+    push_back_int16_array(arr, 0);
+    push_back_int16_array(arr, -1);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -12000);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All positive values. */
+static void test_min_int16_tensor_all_positive(void** state) {
+    (void)state;
+    int16_tensor_t* arr = _make_int16_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int16_array(arr, 10000);
+    push_back_int16_array(arr, 5000);
+    push_back_int16_array(arr, 33);
+    push_back_int16_array(arr, 32767);
+    push_back_int16_array(arr, 8000);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 33);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — large buffers (SIMD main-loop + tail)
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 1024 elements: min (-10000) placed near the end.
+ * Exercises the full SIMD main-loop.
+ */
+static void test_min_int16_tensor_large_min_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_int16_array(arr, 5000);
+    }
+    set_int16_tensor_index(arr, 1020u, -10000);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -10000);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements all identical: verifies SIMD horizontal reduction
+ * produces the correct value when no element differs.
+ */
+static void test_min_int16_tensor_large_all_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_int16_array(arr, -3300);
+    }
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -3300);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements with INT16_MIN at front: early-exit in the first
+ * SIMD vector.
+ */
+static void test_min_int16_tensor_large_int16_min_at_front(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_int16_array(arr, 5000);
+    }
+    set_int16_tensor_index(arr, 0u, INT16_MIN);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT16_MIN);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — SIMD-width boundary lengths
+//
+// int16 vector widths: SSE = 8 elements, AVX2 = 16, AVX-512 = 32
+// ================================================================================
+// ================================================================================
+ 
+/** Exactly 8 elements — one full SSE2/NEON vector, no scalar tail. */
+static void test_min_int16_tensor_len_8(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(12u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 8u; i++) {
+        push_back_int16_array(arr, 5000);
+    }
+    set_int16_tensor_index(arr, 7u, -7);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -7);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 9 elements — one vector + 1 tail. Min in the tail. */
+static void test_min_int16_tensor_len_9_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(12u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 9u; i++) {
+        push_back_int16_array(arr, 8000);
+    }
+    set_int16_tensor_index(arr, 8u, -3);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -3);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 16 elements — one full AVX2 vector, no tail. */
+static void test_min_int16_tensor_len_16(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(20u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        push_back_int16_array(arr, 6000);
+    }
+    set_int16_tensor_index(arr, 10u, -11);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -11);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 17 elements — one AVX2 vector + 1 tail. Min in the tail. */
+static void test_min_int16_tensor_len_17_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(20u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 17u; i++) {
+        push_back_int16_array(arr, 6000);
+    }
+    set_int16_tensor_index(arr, 16u, -4);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -4);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 32 elements — one full AVX-512 vector, no tail. */
+static void test_min_int16_tensor_len_32(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(40u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 32u; i++) {
+        push_back_int16_array(arr, 7000);
+    }
+    set_int16_tensor_index(arr, 24u, -9);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -9);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 33 elements — one AVX-512 vector + 1 tail. Min in the tail. */
+static void test_min_int16_tensor_len_33_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(40u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 33u; i++) {
+        push_back_int16_array(arr, 7000);
+    }
+    set_int16_tensor_index(arr, 32u, -6);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -6);
+ 
+    return_int16_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — TENSOR_STRUCT (N-D) mode
+// ================================================================================
+// ================================================================================
+ 
+/** 4×4 matrix — min must scan across all 16 elements. */
+static void test_min_int16_tensor_nd_4x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    int16_tensor_expect_t r = init_int16_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_int16_tensor_index(mat, i, (int16_t)(10000 - (int16_t)(i * 100)));
+    }
+    size_t idx[] = { 2u, 3u };
+    set_int16_tensor_nd_index(mat, idx, -5500);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(mat, &val), NO_ERROR);
+    assert_int_equal(val, -5500);
+ 
+    return_int16_tensor(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 3-D tensor (2×3×4 = 24 elements). Min placed deep inside. */
+static void test_min_int16_tensor_nd_2x3x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 2u, 3u, 4u };
+    int16_tensor_expect_t r = init_int16_tensor(3u, shape, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* t = r.u.value;
+ 
+    for (size_t i = 0u; i < 24u; i++) {
+        set_int16_tensor_index(t, i, 5000);
+    }
+    size_t idx[] = { 1u, 2u, 1u };
+    set_int16_tensor_nd_index(t, idx, -8800);
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(t, &val), NO_ERROR);
+    assert_int_equal(val, -8800);
+ 
+    return_int16_tensor(t);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int16_tensor — descending ramp
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Descending ramp from 10000 down to -9999: minimum is the last element.
+ */
+static void test_min_int16_tensor_descending_ramp(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int16_tensor_expect_t r  = init_int16_array(260u, false, alloc);
+    assert_true(r.has_value);
+    int16_tensor_t* arr = r.u.value;
+ 
+    /* 100, 99, 98, ... , -99  — 200 elements, min is -99 at index 199 */
+    for (int i = 0; i < 200; i++) {
+        push_back_int16_array(arr, (int16_t)(100 - i));
+    }
+ 
+    int16_t val = 0;
+    assert_int_equal(min_int16_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -99);
+ 
+    return_int16_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -14151,6 +15424,55 @@ const struct CMUnitTest test_int16_tensor[] = {
     /* single element */
     cmocka_unit_test(test_int16_tensors_equal_single_element_equal),
     cmocka_unit_test(test_int16_tensors_equal_single_element_differs),
+
+    /* min_int16_tensor — null/guard */
+    cmocka_unit_test(test_min_int16_tensor_null_tensor),
+    cmocka_unit_test(test_min_int16_tensor_null_value),
+    cmocka_unit_test(test_min_int16_tensor_empty),
+
+    /* min_int16_tensor — single element */
+    cmocka_unit_test(test_min_int16_tensor_single_element),
+    cmocka_unit_test(test_min_int16_tensor_single_negative),
+    cmocka_unit_test(test_min_int16_tensor_single_int16_min),
+
+    /* min_int16_tensor — min at various positions */
+    cmocka_unit_test(test_min_int16_tensor_min_at_front),
+    cmocka_unit_test(test_min_int16_tensor_min_at_back),
+    cmocka_unit_test(test_min_int16_tensor_min_at_middle),
+
+    /* min_int16_tensor — all identical */
+    cmocka_unit_test(test_min_int16_tensor_all_identical_positive),
+    cmocka_unit_test(test_min_int16_tensor_all_identical_negative),
+
+    /* min_int16_tensor — boundary values */
+    cmocka_unit_test(test_min_int16_tensor_all_max),
+    cmocka_unit_test(test_min_int16_tensor_all_min),
+
+    /* min_int16_tensor — early-exit (INT16_MIN) at various positions */
+    cmocka_unit_test(test_min_int16_tensor_int16_min_at_front),
+    cmocka_unit_test(test_min_int16_tensor_int16_min_at_middle),
+    cmocka_unit_test(test_min_int16_tensor_int16_min_at_back),
+
+    /* min_int16_tensor — mixed positive and negative */
+    cmocka_unit_test(test_min_int16_tensor_mixed_signs),
+    cmocka_unit_test(test_min_int16_tensor_all_positive),
+
+    /* min_int16_tensor — large buffers (SIMD main-loop + tail) */
+    cmocka_unit_test(test_min_int16_tensor_large_min_near_end),
+    cmocka_unit_test(test_min_int16_tensor_large_all_identical),
+    cmocka_unit_test(test_min_int16_tensor_large_int16_min_at_front),
+
+    /* min_int16_tensor — SIMD-width boundary lengths */
+    cmocka_unit_test(test_min_int16_tensor_len_8),
+    cmocka_unit_test(test_min_int16_tensor_len_9_min_in_tail),
+    cmocka_unit_test(test_min_int16_tensor_len_16),
+    cmocka_unit_test(test_min_int16_tensor_len_17_min_in_tail),
+    cmocka_unit_test(test_min_int16_tensor_len_32),
+    cmocka_unit_test(test_min_int16_tensor_len_33_min_in_tail),
+
+    /* min_int16_tensor — TENSOR_STRUCT (N-D) mode */
+    cmocka_unit_test(test_min_int16_tensor_nd_4x4),
+    cmocka_unit_test(test_min_int16_tensor_nd_2x3x4),
 };
 
 const size_t test_int16_tensor_count = sizeof(test_int16_tensor) /
