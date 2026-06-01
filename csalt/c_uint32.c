@@ -293,6 +293,18 @@ bool uint32_tensors_equal(const uint32_tensor_t* one,
                   two->base->data,
                   sizeof(uint32_t) * one->base->len) == 0;
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t min_uint32_tensor(const uint32_tensor_t* t, uint32_t* value) {
+    if (t == NULL || value == NULL)  return NULL_POINTER;
+    if (t->base == NULL)            return NULL_POINTER;
+    if (t->base->data == NULL)      return EMPTY;
+    if (t->base->len == 0u)         return EMPTY;
+ 
+    *value = UINT32_MAX;
+    return simd_min_uint32((const uint32_t*)t->base->data, t->base->len, value);
+}
+
 // ================================================================================
 // ================================================================================
 // eof

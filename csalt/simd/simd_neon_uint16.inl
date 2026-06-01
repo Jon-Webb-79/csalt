@@ -27,6 +27,8 @@
 #ifndef CSALT_SIMD_NEON_UINT16_INL
 #define CSALT_SIMD_NEON_UINT16_INL
 
+#include "c_error.h"
+
 #include <arm_neon.h>
 #include <stdint.h>
 #include <stddef.h>

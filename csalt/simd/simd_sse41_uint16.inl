@@ -26,6 +26,8 @@
 #ifndef CSALT_SIMD_SSE41_UINT16_INL
 #define CSALT_SIMD_SSE41_UINT16_INL
 
+#include "c_error.h"
+
 #include <smmintrin.h>   /* SSE4.1 (includes SSSE3, SSE3, SSE2) */
 #include <stdint.h>
 #include <stddef.h>

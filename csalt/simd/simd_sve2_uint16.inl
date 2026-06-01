@@ -27,6 +27,8 @@
 #ifndef CSALT_SIMD_SVE2_UINT16_INL
 #define CSALT_SIMD_SVE2_UINT16_INL
 
+#include "c_error.h"
+
 #include <arm_sve.h>
 #include <stdint.h>
 #include <stddef.h>

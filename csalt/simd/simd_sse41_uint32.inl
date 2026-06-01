@@ -26,6 +26,8 @@
 #ifndef CSALT_SIMD_SSE41_UINT32_INL
 #define CSALT_SIMD_SSE41_UINT32_INL
 
+#include "c_error.h"
+
 #include <smmintrin.h>   /* SSE4.1 (includes SSSE3, SSE3, SSE2) */
 #include <stdint.h>
 #include <stddef.h>
@@ -66,6 +68,43 @@ static size_t simd_lsearch_uint32(const uint32_t* data,
         if (data[i] == value) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint32(const uint32_t* data,
+                                           size_t          len,
+                                           uint32_t*       out) {
+    uint32_t cur_min = *out;
+    size_t   i       = 0u;
+ 
+    if (len >= 4u) {
+        __m128i vmin = _mm_set1_epi32((int)0xFFFFFFFF);
+ 
+        for (; i + 4u <= len; i += 4u) {
+            __m128i v = _mm_loadu_si128((const __m128i*)(data + i));
+            vmin = _mm_min_epu32(vmin, v);
+        }
+ 
+        /* Horizontal reduction: 4 → 2 → 1 */
+        __m128i shifted = _mm_srli_si128(vmin, 8);
+        vmin = _mm_min_epu32(vmin, shifted);
+        shifted = _mm_srli_si128(vmin, 4);
+        vmin = _mm_min_epu32(vmin, shifted);
+ 
+        uint32_t lane_min = (uint32_t)_mm_cvtsi128_si32(vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

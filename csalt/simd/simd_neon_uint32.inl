@@ -27,6 +27,8 @@
 #ifndef CSALT_SIMD_NEON_UINT32_INL
 #define CSALT_SIMD_NEON_UINT32_INL
 
+#include "c_error.h"
+
 #include <arm_neon.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -91,6 +93,38 @@ static size_t simd_lsearch_uint32(const uint32_t* data,
         if (data[i] == value) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint32(const uint32_t* data,
+                                           size_t          len,
+                                           uint32_t*       out) {
+    uint32_t cur_min = *out;
+    size_t   i       = 0u;
+ 
+    if (len >= 4u) {
+        uint32x4_t vmin = vdupq_n_u32(UINT32_MAX);
+ 
+        for (; i + 4u <= len; i += 4u) {
+            uint32x4_t v = vld1q_u32(data + i);
+            vmin = vminq_u32(vmin, v);
+        }
+ 
+        uint32_t lane_min = vminvq_u32(vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail */
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

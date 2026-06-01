@@ -27,6 +27,8 @@
 #ifndef CSALT_SIMD_SSE3_UINT16_INL
 #define CSALT_SIMD_SSE3_UINT16_INL
 
+#include "c_error.h"
+
 #include <tmmintrin.h>   /* SSSE3 (includes SSE2, SSE3) */
 #include <stdint.h>
 #include <stddef.h>

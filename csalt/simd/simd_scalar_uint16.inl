@@ -23,6 +23,8 @@
 #ifndef CSALT_SIMD_SCALAR_UINT16_INL
 #define CSALT_SIMD_SCALAR_UINT16_INL
 
+#include "c_error.h"
+
 #include <stdint.h>
 #include <stddef.h>
 // ================================================================================ 

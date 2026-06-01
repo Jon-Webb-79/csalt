@@ -1,4 +1,4 @@
-1. min
+1. min (uint64, int64, float, double, long double)
 2. max
 3. sum
 4. cumulative_sum

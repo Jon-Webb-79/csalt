@@ -27,6 +27,8 @@
 #ifndef CSALT_SIMD_SVE2_UINT32_INL
 #define CSALT_SIMD_SVE2_UINT32_INL
 
+#include "c_error.h"
+
 #include <arm_sve.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -67,6 +69,43 @@ static size_t simd_lsearch_uint32(const uint32_t* data,
         if (data[i] == value) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint32(const uint32_t* data,
+                                           size_t          len,
+                                           uint32_t*       out) {
+    uint32_t cur_min = *out;
+    size_t   i       = 0u;
+    uint64_t vl      = svcntw();
+ 
+    if (len >= vl) {
+        svuint32_t vmin  = svdup_n_u32(UINT32_MAX);
+        svbool_t   ptrue = svptrue_b32();
+ 
+        for (; i + vl <= len; i += vl) {
+            svuint32_t v = svld1_u32(ptrue, data + i);
+            vmin = svmin_u32_x(ptrue, vmin, v);
+        }
+ 
+        uint32_t lane_min = svminv_u32(ptrue, vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Predicated tail */
+    if (i < len) {
+        svbool_t   pred = svwhilelt_b32((uint64_t)i, (uint64_t)len);
+        svuint32_t v    = svld1_u32(pred, data + i);
+        svuint32_t vmin = svdup_n_u32(cur_min);
+        vmin = svmin_u32_x(pred, vmin, v);
+ 
+        uint32_t lane_min = svminv_u32(pred, vmin);
+        if (lane_min < cur_min) cur_min = lane_min;
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

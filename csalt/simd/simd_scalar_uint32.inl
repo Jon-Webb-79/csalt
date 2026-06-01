@@ -23,6 +23,8 @@
 #ifndef CSALT_SIMD_SCALAR_UINT32_INL
 #define CSALT_SIMD_SCALAR_UINT32_INL
 
+#include "c_error.h"
+
 #include <stdint.h>
 #include <stddef.h>
 // ================================================================================ 
@@ -37,6 +39,26 @@ static size_t simd_lsearch_uint32(const uint32_t* data,
         if (data[i] == value) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint32(const uint32_t* data,
+                                           size_t          len,
+                                           uint32_t*       out) {
+    uint32_t cur_min = *out;             /* caller seeds with UINT32_MAX */
+ 
+    for (size_t i = 0u; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) {
+                *out = 0u;
+                return NO_ERROR;
+            }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

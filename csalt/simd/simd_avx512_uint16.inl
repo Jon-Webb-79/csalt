@@ -27,6 +27,8 @@
 #ifndef CSALT_SIMD_AVX512_UINT16_INL
 #define CSALT_SIMD_AVX512_UINT16_INL
 
+#include "c_error.h"
+
 #include <immintrin.h>   /* AVX-512 */
 #include <stdint.h>
 #include <stddef.h>

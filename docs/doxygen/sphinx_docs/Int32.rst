@@ -102,6 +102,8 @@ Utility Operations
 
 .. doxygenfunction:: int32_tensors_equal
 
+.. doxygenfunction:: min_int32_tensor
+
 Introspection
 -------------
 

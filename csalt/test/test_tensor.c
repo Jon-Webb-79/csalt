@@ -17269,6 +17269,605 @@ static void test_uint32_tensors_equal_single_element_differs(void** state) {
     return_uint32_tensor(a);
     return_uint32_tensor(b);
 }
+// -------------------------------------------------------------------------------- 
+
+/** NULL tensor pointer must return NULL_POINTER. */
+static void test_min_uint32_tensor_null_tensor(void** state) {
+    (void)state;
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(NULL, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NULL value pointer must return NULL_POINTER. */
+static void test_min_uint32_tensor_null_value(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array_filled(3u, 10u);
+    assert_non_null(arr);
+    assert_int_equal(min_uint32_tensor(arr, NULL), NULL_POINTER);
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Empty array (len == 0) must return EMPTY. */
+static void test_min_uint32_tensor_empty(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(4u, false);
+    assert_non_null(arr);
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), EMPTY);
+    return_uint32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — single element
+// ================================================================================
+// ================================================================================
+ 
+/** Single-element array must return that element. */
+static void test_min_uint32_tensor_single_element(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(2u, false);
+    assert_non_null(arr);
+    push_back_uint32_array(arr, 420000u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 420000u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single-element array containing 0 must return 0 (early-exit path). */
+static void test_min_uint32_tensor_single_zero(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(2u, false);
+    assert_non_null(arr);
+    push_back_uint32_array(arr, 0u);
+ 
+    uint32_t val = 99999u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 0u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — minimum at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Minimum at the front of the array. */
+static void test_min_uint32_tensor_min_at_front(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint32_array(arr, 3u);
+    push_back_uint32_array(arr, 100000u);
+    push_back_uint32_array(arr, 200000u);
+    push_back_uint32_array(arr, 300000u);
+    push_back_uint32_array(arr, 400000u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 3u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum at the back of the array. */
+static void test_min_uint32_tensor_min_at_back(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint32_array(arr, 400000u);
+    push_back_uint32_array(arr, 300000u);
+    push_back_uint32_array(arr, 200000u);
+    push_back_uint32_array(arr, 100000u);
+    push_back_uint32_array(arr, 2u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 2u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum in the middle of the array. */
+static void test_min_uint32_tensor_min_at_middle(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint32_array(arr, 500000u);
+    push_back_uint32_array(arr, 400000u);
+    push_back_uint32_array(arr, 5u);
+    push_back_uint32_array(arr, 300000u);
+    push_back_uint32_array(arr, 200000u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 5u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — all identical
+// ================================================================================
+// ================================================================================
+ 
+/** All elements identical must return that value. */
+static void test_min_uint32_tensor_all_identical(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_uint32_array(arr, 770000u);
+    }
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 770000u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — boundary values
+// ================================================================================
+// ================================================================================
+ 
+/** All UINT32_MAX must return UINT32_MAX. */
+static void test_min_uint32_tensor_all_max(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_uint32_array(arr, UINT32_MAX);
+    }
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == UINT32_MAX);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All 0 must return 0 (early-exit on first element). */
+static void test_min_uint32_tensor_all_zero(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_uint32_array(arr, 0u);
+    }
+ 
+    uint32_t val = 99999u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 0u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — high-bit values
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Values above 0x80000000 — verifies that unsigned comparison treats
+ * these as large values, not as negative (the SSE2 bias trick must
+ * handle this correctly).
+ */
+static void test_min_uint32_tensor_high_bit_values(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint32_array(arr, 0xFFFFFFFFu);
+    push_back_uint32_array(arr, 0x80000001u);
+    push_back_uint32_array(arr, 0x80000000u);
+    push_back_uint32_array(arr, 42u);
+    push_back_uint32_array(arr, 0xFFFFFFFEu);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 42u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — early-exit (0) at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Zero at the front triggers immediate early-exit. */
+static void test_min_uint32_tensor_zero_at_front(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint32_array(arr, 0u);
+    push_back_uint32_array(arr, 500000u);
+    push_back_uint32_array(arr, 1000000u);
+    push_back_uint32_array(arr, 2000000u);
+ 
+    uint32_t val = 99999u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 0u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Zero in the middle triggers early-exit. */
+static void test_min_uint32_tensor_zero_at_middle(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint32_array(arr, 2000000u);
+    push_back_uint32_array(arr, 1000000u);
+    push_back_uint32_array(arr, 0u);
+    push_back_uint32_array(arr, 500000u);
+    push_back_uint32_array(arr, 250000u);
+ 
+    uint32_t val = 99999u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 0u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Zero at the back triggers early-exit on last element. */
+static void test_min_uint32_tensor_zero_at_back(void** state) {
+    (void)state;
+    uint32_tensor_t* arr = _make_uint32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_uint32_array(arr, 2000000u);
+    push_back_uint32_array(arr, 1000000u);
+    push_back_uint32_array(arr, 500000u);
+    push_back_uint32_array(arr, 250000u);
+    push_back_uint32_array(arr, 0u);
+ 
+    uint32_t val = 99999u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 0u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — large buffers (SIMD main-loop + tail)
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 1024 elements: exercises the full SIMD main-loop.
+ * Minimum (value 1) placed near the end so the loop must run completely.
+ */
+static void test_min_uint32_tensor_large_min_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_uint32_array(arr, 5000000u);
+    }
+    set_uint32_tensor_index(arr, 1020u, 1u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 1u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements all identical: verifies SIMD horizontal reduction
+ * produces the correct value when no element differs.
+ */
+static void test_min_uint32_tensor_large_all_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_uint32_array(arr, 1280000u);
+    }
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 1280000u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements with 0 at front: early-exit must work even in the
+ * very first SIMD vector.
+ */
+static void test_min_uint32_tensor_large_zero_at_front(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_uint32_array(arr, 5000000u);
+    }
+    set_uint32_tensor_index(arr, 0u, 0u);
+ 
+    uint32_t val = 99999u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 0u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — SIMD-width boundary lengths
+//
+// uint32 vector widths: SSE = 4 elements, AVX2 = 8, AVX-512 = 16
+// ================================================================================
+// ================================================================================
+ 
+/** Exactly 4 elements — one full SSE2/NEON vector, no scalar tail. */
+static void test_min_uint32_tensor_len_4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(8u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 4u; i++) {
+        push_back_uint32_array(arr, (uint32_t)(100000u + i));
+    }
+    set_uint32_tensor_index(arr, 3u, 7u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 7u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 5 elements — one SSE vector + 1 scalar-tail element. Min in the tail. */
+static void test_min_uint32_tensor_len_5_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(8u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_uint32_array(arr, 800000u);
+    }
+    set_uint32_tensor_index(arr, 4u, 3u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 3u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 8 elements — one full AVX2 vector, no tail. */
+static void test_min_uint32_tensor_len_8(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(12u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 8u; i++) {
+        push_back_uint32_array(arr, 1500000u);
+    }
+    set_uint32_tensor_index(arr, 5u, 11u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 11u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 9 elements — one AVX2 vector + 1 tail. Min in the tail. */
+static void test_min_uint32_tensor_len_9_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(12u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 9u; i++) {
+        push_back_uint32_array(arr, 1500000u);
+    }
+    set_uint32_tensor_index(arr, 8u, 4u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 4u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 16 elements — one full AVX-512 vector, no tail. */
+static void test_min_uint32_tensor_len_16(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(20u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        push_back_uint32_array(arr, 2000000u);
+    }
+    set_uint32_tensor_index(arr, 12u, 9u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 9u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 17 elements — one AVX-512 vector + 1 tail. Min in the tail. */
+static void test_min_uint32_tensor_len_17_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(20u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 17u; i++) {
+        push_back_uint32_array(arr, 2000000u);
+    }
+    set_uint32_tensor_index(arr, 16u, 6u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 6u);
+ 
+    return_uint32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — TENSOR_STRUCT (N-D) mode
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 4×4 matrix (TENSOR_STRUCT mode).  min must scan all 16 elements
+ * even though they are logically in rows/columns.
+ */
+static void test_min_uint32_tensor_nd_4x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    uint32_tensor_expect_t r = init_uint32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_uint32_tensor_index(mat, i, (uint32_t)(6000000u - i * 10000u));
+    }
+    /* Place the minimum at (2, 3) = flat index 11 */
+    size_t idx[] = { 2u, 3u };
+    set_uint32_tensor_nd_index(mat, idx, 7u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(mat, &val), NO_ERROR);
+    assert_true(val == 7u);
+ 
+    return_uint32_tensor(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 3-D tensor (2×3×4 = 24 elements, TENSOR_STRUCT mode).
+ * Minimum placed deep inside the third dimension.
+ */
+static void test_min_uint32_tensor_nd_2x3x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 2u, 3u, 4u };
+    uint32_tensor_expect_t r = init_uint32_tensor(3u, shape, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* t = r.u.value;
+ 
+    for (size_t i = 0u; i < 24u; i++) {
+        set_uint32_tensor_index(t, i, 1000000u);
+    }
+    /* Place min at (1, 2, 1) = flat index 21 */
+    size_t idx[] = { 1u, 2u, 1u };
+    set_uint32_tensor_nd_index(t, idx, 13u);
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(t, &val), NO_ERROR);
+    assert_true(val == 13u);
+ 
+    return_uint32_tensor(t);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_uint32_tensor — descending ramp
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Descending ramp: minimum is always the last element.
+ * Verifies the full scan runs to completion.
+ */
+static void test_min_uint32_tensor_descending_ramp(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    uint32_tensor_expect_t r = init_uint32_array(260u, false, alloc);
+    assert_true(r.has_value);
+    uint32_tensor_t* arr = r.u.value;
+ 
+    /* 250, 249, 248, ... , 1 — 250 elements, min is 1 at index 249 */
+    for (size_t i = 0u; i < 250u; i++) {
+        push_back_uint32_array(arr, (uint32_t)(250u - i));
+    }
+ 
+    uint32_t val = 0u;
+    assert_int_equal(min_uint32_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 1u);
+ 
+    return_uint32_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -17466,6 +18065,52 @@ const struct CMUnitTest test_uint32_tensor[] = {
     /* uint32_tensors_equal — single element */
     cmocka_unit_test(test_uint32_tensors_equal_single_element_equal),
     cmocka_unit_test(test_uint32_tensors_equal_single_element_differs),
+
+    /* min_uint32_tensor — null/guard */
+    cmocka_unit_test(test_min_uint32_tensor_null_tensor),
+    cmocka_unit_test(test_min_uint32_tensor_null_value),
+    cmocka_unit_test(test_min_uint32_tensor_empty),
+
+    /* min_uint32_tensor — single element */
+    cmocka_unit_test(test_min_uint32_tensor_single_element),
+    cmocka_unit_test(test_min_uint32_tensor_single_zero),
+
+    /* min_uint32_tensor — min at various positions */
+    cmocka_unit_test(test_min_uint32_tensor_min_at_front),
+    cmocka_unit_test(test_min_uint32_tensor_min_at_back),
+    cmocka_unit_test(test_min_uint32_tensor_min_at_middle),
+
+    /* min_uint32_tensor — all identical */
+    cmocka_unit_test(test_min_uint32_tensor_all_identical),
+
+    /* min_uint32_tensor — boundary values */
+    cmocka_unit_test(test_min_uint32_tensor_all_max),
+    cmocka_unit_test(test_min_uint32_tensor_all_zero),
+
+    /* min_uint32_tensor — high-bit values */
+    cmocka_unit_test(test_min_uint32_tensor_high_bit_values),
+
+    /* min_uint32_tensor — early-exit (0) at various positions */
+    cmocka_unit_test(test_min_uint32_tensor_zero_at_front),
+    cmocka_unit_test(test_min_uint32_tensor_zero_at_middle),
+    cmocka_unit_test(test_min_uint32_tensor_zero_at_back),
+
+    /* min_uint32_tensor — large buffers (SIMD main-loop + tail) */
+    cmocka_unit_test(test_min_uint32_tensor_large_min_near_end),
+    cmocka_unit_test(test_min_uint32_tensor_large_all_identical),
+    cmocka_unit_test(test_min_uint32_tensor_large_zero_at_front),
+
+    /* min_uint32_tensor — SIMD-width boundary lengths */
+    cmocka_unit_test(test_min_uint32_tensor_len_4),
+    cmocka_unit_test(test_min_uint32_tensor_len_5_min_in_tail),
+    cmocka_unit_test(test_min_uint32_tensor_len_8),
+    cmocka_unit_test(test_min_uint32_tensor_len_9_min_in_tail),
+    cmocka_unit_test(test_min_uint32_tensor_len_16),
+    cmocka_unit_test(test_min_uint32_tensor_len_17_min_in_tail),
+
+    /* min_uint32_tensor — TENSOR_STRUCT (N-D) mode */
+    cmocka_unit_test(test_min_uint32_tensor_nd_4x4),
+    cmocka_unit_test(test_min_uint32_tensor_nd_2x3x4),
 };
 
 const size_t test_uint32_tensor_count = sizeof(test_uint32_tensor) /
@@ -19303,6 +19948,649 @@ static void test_int32_tensors_equal_single_element_differs(void** state) {
     return_int32_tensor(a);
     return_int32_tensor(b);
 }
+// -------------------------------------------------------------------------------- 
+
+/** NULL tensor pointer must return NULL_POINTER. */
+static void test_min_int32_tensor_null_tensor(void** state) {
+    (void)state;
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(NULL, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NULL value pointer must return NULL_POINTER. */
+static void test_min_int32_tensor_null_value(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array_filled(3u, 10);
+    assert_non_null(arr);
+    assert_int_equal(min_int32_tensor(arr, NULL), NULL_POINTER);
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Empty array (len == 0) must return EMPTY. */
+static void test_min_int32_tensor_empty(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(4u, false);
+    assert_non_null(arr);
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), EMPTY);
+    return_int32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — single element
+// ================================================================================
+// ================================================================================
+ 
+/** Single-element array must return that element. */
+static void test_min_int32_tensor_single_element(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(2u, false);
+    assert_non_null(arr);
+    push_back_int32_array(arr, 420000);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 420000);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single negative element. */
+static void test_min_int32_tensor_single_negative(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(2u, false);
+    assert_non_null(arr);
+    push_back_int32_array(arr, -500000);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -500000);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single element equal to INT32_MIN triggers early-exit. */
+static void test_min_int32_tensor_single_int32_min(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(2u, false);
+    assert_non_null(arr);
+    push_back_int32_array(arr, INT32_MIN);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT32_MIN);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — minimum at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Minimum at the front of the array. */
+static void test_min_int32_tensor_min_at_front(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int32_array(arr, -1000000);
+    push_back_int32_array(arr, 100000);
+    push_back_int32_array(arr, 200000);
+    push_back_int32_array(arr, 300000);
+    push_back_int32_array(arr, 400000);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -1000000);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum at the back of the array. */
+static void test_min_int32_tensor_min_at_back(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int32_array(arr, 400000);
+    push_back_int32_array(arr, 300000);
+    push_back_int32_array(arr, 200000);
+    push_back_int32_array(arr, 100000);
+    push_back_int32_array(arr, -999999);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -999999);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum in the middle of the array. */
+static void test_min_int32_tensor_min_at_middle(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int32_array(arr, 500000);
+    push_back_int32_array(arr, 400000);
+    push_back_int32_array(arr, -770000);
+    push_back_int32_array(arr, 300000);
+    push_back_int32_array(arr, 200000);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -770000);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — all identical
+// ================================================================================
+// ================================================================================
+ 
+/** All elements identical (positive). */
+static void test_min_int32_tensor_all_identical_positive(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_int32_array(arr, 770000);
+    }
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 770000);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All elements identical (negative). */
+static void test_min_int32_tensor_all_identical_negative(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_int32_array(arr, -330000);
+    }
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -330000);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — boundary values
+// ================================================================================
+// ================================================================================
+ 
+/** All INT32_MAX must return INT32_MAX. */
+static void test_min_int32_tensor_all_max(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_int32_array(arr, INT32_MAX);
+    }
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT32_MAX);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All INT32_MIN must return INT32_MIN (early-exit on first element). */
+static void test_min_int32_tensor_all_min(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_int32_array(arr, INT32_MIN);
+    }
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT32_MIN);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — early-exit (INT32_MIN) at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** INT32_MIN at the front triggers immediate early-exit. */
+static void test_min_int32_tensor_int32_min_at_front(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int32_array(arr, INT32_MIN);
+    push_back_int32_array(arr, 500000);
+    push_back_int32_array(arr, 1000000);
+    push_back_int32_array(arr, -100);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT32_MIN);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** INT32_MIN in the middle. */
+static void test_min_int32_tensor_int32_min_at_middle(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int32_array(arr, 1000000);
+    push_back_int32_array(arr, 500000);
+    push_back_int32_array(arr, INT32_MIN);
+    push_back_int32_array(arr, -100);
+    push_back_int32_array(arr, 250000);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT32_MIN);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** INT32_MIN at the back. */
+static void test_min_int32_tensor_int32_min_at_back(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int32_array(arr, 1000000);
+    push_back_int32_array(arr, 500000);
+    push_back_int32_array(arr, -100);
+    push_back_int32_array(arr, 250000);
+    push_back_int32_array(arr, INT32_MIN);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT32_MIN);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — mixed positive and negative
+// ================================================================================
+// ================================================================================
+ 
+/** Mix of positive and negative values — negative minimum. */
+static void test_min_int32_tensor_mixed_signs(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(10u, false);
+    assert_non_null(arr);
+ 
+    push_back_int32_array(arr, 500000);
+    push_back_int32_array(arr, -200000);
+    push_back_int32_array(arr, 1000000);
+    push_back_int32_array(arr, -1200000);
+    push_back_int32_array(arr, 300000);
+    push_back_int32_array(arr, 0);
+    push_back_int32_array(arr, -1);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -1200000);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All positive values. */
+static void test_min_int32_tensor_all_positive(void** state) {
+    (void)state;
+    int32_tensor_t* arr = _make_int32_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_int32_array(arr, 1000000);
+    push_back_int32_array(arr, 500000);
+    push_back_int32_array(arr, 33);
+    push_back_int32_array(arr, INT32_MAX);
+    push_back_int32_array(arr, 800000);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, 33);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — large buffers (SIMD main-loop + tail)
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 1024 elements: min (-1000000) placed near the end.
+ * Exercises the full SIMD main-loop.
+ */
+static void test_min_int32_tensor_large_min_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_int32_array(arr, 500000);
+    }
+    set_int32_tensor_index(arr, 1020u, -1000000);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -1000000);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements all identical: verifies SIMD horizontal reduction
+ * produces the correct value when no element differs.
+ */
+static void test_min_int32_tensor_large_all_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_int32_array(arr, -330000);
+    }
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -330000);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * 1024 elements with INT32_MIN at front: early-exit in the first
+ * SIMD vector.
+ */
+static void test_min_int32_tensor_large_int32_min_at_front(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_int32_array(arr, 500000);
+    }
+    set_int32_tensor_index(arr, 0u, INT32_MIN);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, INT32_MIN);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — SIMD-width boundary lengths
+//
+// int32 vector widths: SSE = 4 elements, AVX2 = 8, AVX-512 = 16
+// ================================================================================
+// ================================================================================
+ 
+/** Exactly 4 elements — one full SSE2/NEON vector, no scalar tail. */
+static void test_min_int32_tensor_len_4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(8u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 4u; i++) {
+        push_back_int32_array(arr, 500000);
+    }
+    set_int32_tensor_index(arr, 3u, -7);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -7);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 5 elements — one SSE vector + 1 tail. Min in the tail. */
+static void test_min_int32_tensor_len_5_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(8u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_int32_array(arr, 800000);
+    }
+    set_int32_tensor_index(arr, 4u, -3);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -3);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 8 elements — one full AVX2 vector, no tail. */
+static void test_min_int32_tensor_len_8(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(12u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 8u; i++) {
+        push_back_int32_array(arr, 600000);
+    }
+    set_int32_tensor_index(arr, 5u, -11);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -11);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 9 elements — one AVX2 vector + 1 tail. Min in the tail. */
+static void test_min_int32_tensor_len_9_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(12u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 9u; i++) {
+        push_back_int32_array(arr, 600000);
+    }
+    set_int32_tensor_index(arr, 8u, -4);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -4);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 16 elements — one full AVX-512 vector, no tail. */
+static void test_min_int32_tensor_len_16(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(20u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        push_back_int32_array(arr, 700000);
+    }
+    set_int32_tensor_index(arr, 12u, -9);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -9);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 17 elements — one AVX-512 vector + 1 tail. Min in the tail. */
+static void test_min_int32_tensor_len_17_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(20u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 17u; i++) {
+        push_back_int32_array(arr, 700000);
+    }
+    set_int32_tensor_index(arr, 16u, -6);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -6);
+ 
+    return_int32_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — TENSOR_STRUCT (N-D) mode
+// ================================================================================
+// ================================================================================
+ 
+/** 4×4 matrix — min must scan across all 16 elements. */
+static void test_min_int32_tensor_nd_4x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    int32_tensor_expect_t r = init_int32_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_int32_tensor_index(mat, i, (int32_t)(1000000 - (int32_t)(i * 10000)));
+    }
+    size_t idx[] = { 2u, 3u };
+    set_int32_tensor_nd_index(mat, idx, -550000);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(mat, &val), NO_ERROR);
+    assert_int_equal(val, -550000);
+ 
+    return_int32_tensor(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 3-D tensor (2×3×4 = 24 elements). Min placed deep inside. */
+static void test_min_int32_tensor_nd_2x3x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 2u, 3u, 4u };
+    int32_tensor_expect_t r = init_int32_tensor(3u, shape, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* t = r.u.value;
+ 
+    for (size_t i = 0u; i < 24u; i++) {
+        set_int32_tensor_index(t, i, 500000);
+    }
+    size_t idx[] = { 1u, 2u, 1u };
+    set_int32_tensor_nd_index(t, idx, -880000);
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(t, &val), NO_ERROR);
+    assert_int_equal(val, -880000);
+ 
+    return_int32_tensor(t);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_int32_tensor — descending ramp
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Descending ramp from 100 down to -99: minimum is the last element.
+ */
+static void test_min_int32_tensor_descending_ramp(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    int32_tensor_expect_t r  = init_int32_array(260u, false, alloc);
+    assert_true(r.has_value);
+    int32_tensor_t* arr = r.u.value;
+ 
+    for (int i = 0; i < 200; i++) {
+        push_back_int32_array(arr, (int32_t)(100 - i));
+    }
+ 
+    int32_t val = 0;
+    assert_int_equal(min_int32_tensor(arr, &val), NO_ERROR);
+    assert_int_equal(val, -99);
+ 
+    return_int32_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -19497,6 +20785,55 @@ const struct CMUnitTest test_int32_tensor[] = {
     /* single element */
     cmocka_unit_test(test_int32_tensors_equal_single_element_equal),
     cmocka_unit_test(test_int32_tensors_equal_single_element_differs),
+
+    /* min_int32_tensor — null/guard */
+    cmocka_unit_test(test_min_int32_tensor_null_tensor),
+    cmocka_unit_test(test_min_int32_tensor_null_value),
+    cmocka_unit_test(test_min_int32_tensor_empty),
+
+    /* min_int32_tensor — single element */
+    cmocka_unit_test(test_min_int32_tensor_single_element),
+    cmocka_unit_test(test_min_int32_tensor_single_negative),
+    cmocka_unit_test(test_min_int32_tensor_single_int32_min),
+
+    /* min_int32_tensor — min at various positions */
+    cmocka_unit_test(test_min_int32_tensor_min_at_front),
+    cmocka_unit_test(test_min_int32_tensor_min_at_back),
+    cmocka_unit_test(test_min_int32_tensor_min_at_middle),
+
+    /* min_int32_tensor — all identical */
+    cmocka_unit_test(test_min_int32_tensor_all_identical_positive),
+    cmocka_unit_test(test_min_int32_tensor_all_identical_negative),
+
+    /* min_int32_tensor — boundary values */
+    cmocka_unit_test(test_min_int32_tensor_all_max),
+    cmocka_unit_test(test_min_int32_tensor_all_min),
+
+    /* min_int32_tensor — early-exit (INT32_MIN) at various positions */
+    cmocka_unit_test(test_min_int32_tensor_int32_min_at_front),
+    cmocka_unit_test(test_min_int32_tensor_int32_min_at_middle),
+    cmocka_unit_test(test_min_int32_tensor_int32_min_at_back),
+
+    /* min_int32_tensor — mixed positive and negative */
+    cmocka_unit_test(test_min_int32_tensor_mixed_signs),
+    cmocka_unit_test(test_min_int32_tensor_all_positive),
+
+    /* min_int32_tensor — large buffers (SIMD main-loop + tail) */
+    cmocka_unit_test(test_min_int32_tensor_large_min_near_end),
+    cmocka_unit_test(test_min_int32_tensor_large_all_identical),
+    cmocka_unit_test(test_min_int32_tensor_large_int32_min_at_front),
+
+    /* min_int32_tensor — SIMD-width boundary lengths */
+    cmocka_unit_test(test_min_int32_tensor_len_4),
+    cmocka_unit_test(test_min_int32_tensor_len_5_min_in_tail),
+    cmocka_unit_test(test_min_int32_tensor_len_8),
+    cmocka_unit_test(test_min_int32_tensor_len_9_min_in_tail),
+    cmocka_unit_test(test_min_int32_tensor_len_16),
+    cmocka_unit_test(test_min_int32_tensor_len_17_min_in_tail),
+
+    /* min_int32_tensor — TENSOR_STRUCT (N-D) mode */
+    cmocka_unit_test(test_min_int32_tensor_nd_4x4),
+    cmocka_unit_test(test_min_int32_tensor_nd_2x3x4),
 };
 
 const size_t test_int32_tensor_count = sizeof(test_int32_tensor) /
