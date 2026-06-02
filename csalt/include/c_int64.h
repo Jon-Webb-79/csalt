@@ -854,6 +854,44 @@ bracket_expect_t int64_tensor_bbsearch(const int64_tensor_t* t,
 bool int64_tensors_equal(const int64_tensor_t* one,
                         const int64_tensor_t* two,
                         bool                 meta);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the minimum element in an int64 tensor.
+ *
+ * Scans all len populated elements and writes the smallest value into
+ * the caller-provided output.  Uses a SIMD fast path when available
+ * (AVX2 via emulated signed min, AVX-512F via native _mm512_min_epi64,
+ * SVE/SVE2 via native svmin_s64_x) and falls back to scalar iteration
+ * otherwise.  The search short-circuits as soon as the global minimum
+ * for the type (INT64_MIN) is encountered.
+ *
+ * Note: SSE2/SSSE3/SSE4.1/AVX and NEON all use scalar loops because
+ * 64-bit elements yield only 2 lanes per 128-bit vector, making
+ * vectorized emulation slower than scalar.  AVX2's _mm256_cmpgt_epi64
+ * is natively signed, so no bias trick is needed (unlike uint64).
+ *
+ * Works on both TENSOR_STRUCT and ARRAY_STRUCT modes — the scan always
+ * covers exactly t->base->len elements.
+ *
+ * @param t      Pointer to the source int64 tensor. Must not be NULL.
+ * @param value  Pointer to an int64_t to receive the minimum value.
+ *               Must not be NULL.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER  if t, t->base, or value is NULL
+ *         - EMPTY         if t->base->data is NULL or t->base->len == 0
+ *
+ * @code{.c}
+ * int64_t min_val;
+ * error_code_t err = min_int64_tensor(arr, &min_val);
+ * if (err != NO_ERROR) {
+ *     fprintf(stderr, "%s\n", error_to_string(err));
+ * }
+ * printf("Minimum: %" PRId64 "\n", min_val);
+ * @endcode
+ */
+error_code_t min_int64_tensor(const int64_tensor_t* t, int64_t* value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

@@ -26,6 +26,8 @@
 // ================================================================================ 
 // ================================================================================ 
 
+#include "c_error.h"
+
 #include <emmintrin.h>   /* SSE2 */
 #include <stdint.h>
 #include <stddef.h>
@@ -88,6 +90,23 @@ static size_t simd_lsearch_uint64(const uint64_t* data,
         if (data[i] == value) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_uint64(const uint64_t* data,
+                                           size_t          len,
+                                           uint64_t*       out) {
+    uint64_t cur_min = *out;
+ 
+    for (size_t i = 0u; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

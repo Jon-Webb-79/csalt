@@ -27,6 +27,8 @@
 #ifndef CSALT_SIMD_AVX2_UINT64_INL
 #define CSALT_SIMD_AVX2_UINT64_INL
 
+#include "c_error.h"
+
 #include <immintrin.h>   /* AVX2 */
 #include <stdint.h>
 #include <stddef.h>
@@ -82,6 +84,64 @@ static size_t simd_lsearch_uint64(const uint64_t* data,
         if (data[i] == value) return i;
     }
     return SIZE_MAX;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline __m256i _avx2_min_epu64(__m256i a, __m256i b, __m256i bias) {
+    __m256i a_biased = _mm256_xor_si256(a, bias);
+    __m256i b_biased = _mm256_xor_si256(b, bias);
+    __m256i a_gt_b   = _mm256_cmpgt_epi64(a_biased, b_biased); /* -1 where a > b */
+    return _mm256_blendv_epi8(a, b, a_gt_b);  /* select b where a > b, else a */
+}
+ 
+static inline error_code_t simd_min_uint64(const uint64_t* data,
+                                           size_t          len,
+                                           uint64_t*       out) {
+    uint64_t cur_min = *out;
+    size_t   i       = 0u;
+ 
+    if (len >= 4u) {
+        __m256i bias = _mm256_set1_epi64x((long long)0x8000000000000000LL);
+        __m256i vmin = _mm256_set1_epi64x((long long)0xFFFFFFFFFFFFFFFFLL);
+ 
+        for (; i + 4u <= len; i += 4u) {
+            __m256i v = _mm256_loadu_si256((const __m256i*)(data + i));
+            vmin = _avx2_min_epu64(vmin, v, bias);
+        }
+ 
+        /* Horizontal reduction: 4 → 2 → 1 */
+        __m128i lo  = _mm256_castsi256_si128(vmin);
+        __m128i hi  = _mm256_extracti128_si256(vmin, 1);
+ 
+        /* 128-bit unsigned min using SSE4.2 _mm_cmpgt_epi64 */
+        __m128i bias128  = _mm_set1_epi64x((long long)0x8000000000000000LL);
+        __m128i lo_b     = _mm_xor_si128(lo, bias128);
+        __m128i hi_b     = _mm_xor_si128(hi, bias128);
+        __m128i lo_gt_hi = _mm_cmpgt_epi64(lo_b, hi_b);
+        __m128i v2       = _mm_blendv_epi8(lo, hi, lo_gt_hi);
+ 
+        /* 2 → 1 */
+        __m128i upper    = _mm_srli_si128(v2, 8);
+        __m128i v2_b     = _mm_xor_si128(v2, bias128);
+        __m128i upper_b  = _mm_xor_si128(upper, bias128);
+        __m128i v2_gt    = _mm_cmpgt_epi64(v2_b, upper_b);
+        __m128i v1       = _mm_blendv_epi8(v2, upper, v2_gt);
+ 
+        uint64_t lane_min = (uint64_t)_mm_extract_epi64(v1, 0);
+        if (lane_min < cur_min) cur_min = lane_min;
+        if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail */
+    for (; i < len; i++) {
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (cur_min == 0u) { *out = 0u; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

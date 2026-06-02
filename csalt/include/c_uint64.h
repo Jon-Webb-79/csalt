@@ -863,6 +863,43 @@ bracket_expect_t uint64_tensor_bbsearch(const uint64_tensor_t* t,
 bool uint64_tensors_equal(const uint64_tensor_t* one,
                          const uint64_tensor_t* two,
                          bool                  meta);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the minimum element in a uint64 tensor.
+ *
+ * Scans all len populated elements and writes the smallest value into
+ * the caller-provided output.  Uses a SIMD fast path when available
+ * (AVX2 via emulated unsigned min, AVX-512F via native _mm512_min_epu64,
+ * SVE/SVE2 via native svmin_u64_x) and falls back to scalar iteration
+ * otherwise.  The search short-circuits as soon as the global minimum
+ * for the type (0) is encountered.
+ *
+ * Note: SSE2/SSSE3/SSE4.1/AVX and NEON all use scalar loops because
+ * 64-bit elements yield only 2 lanes per 128-bit vector, making
+ * vectorized emulation slower than scalar.
+ *
+ * Works on both TENSOR_STRUCT and ARRAY_STRUCT modes — the scan always
+ * covers exactly t->base->len elements.
+ *
+ * @param t      Pointer to the source uint64 tensor. Must not be NULL.
+ * @param value  Pointer to a uint64_t to receive the minimum value.
+ *               Must not be NULL.
+ *
+ * @return NO_ERROR on success, or one of:
+ *         - NULL_POINTER  if t, t->base, or value is NULL
+ *         - EMPTY         if t->base->data is NULL or t->base->len == 0
+ *
+ * @code{.c}
+ * uint64_t min_val;
+ * error_code_t err = min_uint64_tensor(arr, &min_val);
+ * if (err != NO_ERROR) {
+ *     fprintf(stderr, "%s\n", error_to_string(err));
+ * }
+ * printf("Minimum: %" PRIu64 "\n", min_val);
+ * @endcode
+ */
+error_code_t min_uint64_tensor(const uint64_tensor_t* t, uint64_t* value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 
