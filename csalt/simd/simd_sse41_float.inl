@@ -26,10 +26,14 @@
 #ifndef CSALT_SIMD_SSE41_FLOAT_INL
 #define CSALT_SIMD_SSE41_FLOAT_INL
 
+#include "c_error.h"
+
 #include <smmintrin.h>   /* SSE4.1 (includes SSSE3, SSE3, SSE2) */
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <math.h>
+#include <float.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -115,6 +119,45 @@ static bool simd_floats_equal(const float* a,
         if (diff > tolerance) return false;
     }
     return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_float(const float* data,
+                                          size_t       len,
+                                          float*       out) {
+    float  cur_min = *out;
+    size_t i       = 0u;
+ 
+    if (len >= 4u) {
+        __m128 vmin    = _mm_set1_ps(*out);
+        __m128 has_nan = _mm_setzero_ps();
+ 
+        for (; i + 4u <= len; i += 4u) {
+            __m128 v = _mm_loadu_ps(data + i);
+            has_nan = _mm_or_ps(has_nan, _mm_cmpunord_ps(v, v));
+            vmin = _mm_min_ps(vmin, v);
+            if (_mm_movemask_ps(has_nan)) { *out = NAN; return NO_ERROR; }
+        }
+ 
+        __m128 shuf = _mm_movehl_ps(vmin, vmin);
+        vmin = _mm_min_ps(vmin, shuf);
+        shuf = _mm_shuffle_ps(vmin, vmin, _MM_SHUFFLE(1,1,1,1));
+        vmin = _mm_min_ps(vmin, shuf);
+        _mm_store_ss(&cur_min, vmin);
+ 
+        if (isinf(cur_min) && cur_min < 0.0f) { *out = -INFINITY; return NO_ERROR; }
+    }
+ 
+    for (; i < len; i++) {
+        if (isnan(data[i])) { *out = NAN; return NO_ERROR; }
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (isinf(cur_min) && cur_min < 0.0f) { *out = -INFINITY; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

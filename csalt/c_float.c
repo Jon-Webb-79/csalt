@@ -15,6 +15,8 @@
 #include "c_float.h"
 #include "c_dtypes.h"
 
+#include <float.h>
+
 #if defined(__AVX512BW__)
 #  include "simd_avx512_float.inl"
 #elif defined(__AVX2__)
@@ -347,6 +349,17 @@ bool float_tensors_equal(const float_tensor_t* one,
         one->base->len,
         tolerance
     );
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t min_float_tensor(const float_tensor_t* t, float* value) {
+    if (t == NULL || value == NULL)  return NULL_POINTER;
+    if (t->base == NULL)            return NULL_POINTER;
+    if (t->base->data == NULL)      return EMPTY;
+    if (t->base->len == 0u)         return EMPTY;
+ 
+    *value = INFINITY;
+    return simd_min_float((const float*)t->base->data, t->base->len, value);
 }
 // ================================================================================
 // ================================================================================

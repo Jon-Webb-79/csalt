@@ -22,9 +22,12 @@
  * Requires: -msse2 (implicit on x86-64)
  */
 
+#include "c_error.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <math.h>
+#include <float.h>
 #include <emmintrin.h>   /* SSE2 */
 
 // ================================================================================
@@ -443,6 +446,65 @@ static inline bool simd_is_all_zero_float(const float* data, size_t count) {
     }
  
     return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_float(const float* data,
+                                          size_t       len,
+                                          float*       out) {
+    float  cur_min = *out;               /* caller seeds with INFINITY */
+    size_t i       = 0u;
+ 
+    if (len >= 4u) {
+        __m128 vmin    = _mm_set1_ps(*out);
+        __m128 has_nan = _mm_setzero_ps();
+ 
+        for (; i + 4u <= len; i += 4u) {
+            __m128 v = _mm_loadu_ps(data + i);
+ 
+            /* Track NaN: cmpunord(v, v) is -1 for NaN lanes */
+            has_nan = _mm_or_ps(has_nan, _mm_cmpunord_ps(v, v));
+ 
+            /* MINPS: skips NaN (returns non-NaN operand), but that is
+             * correct for the min accumulation — NaN is caught above */
+            vmin = _mm_min_ps(vmin, v);
+ 
+            /* Early-exit on NaN detection */
+            if (_mm_movemask_ps(has_nan)) {
+                *out = NAN;
+                return NO_ERROR;
+            }
+        }
+ 
+        /* Horizontal reduction: 4 → 2 → 1 */
+        __m128 shuf = _mm_movehl_ps(vmin, vmin);       /* [2,3,2,3] */
+        vmin = _mm_min_ps(vmin, shuf);                  /* [min(0,2), min(1,3), ...] */
+        shuf = _mm_shuffle_ps(vmin, vmin, _MM_SHUFFLE(1,1,1,1));
+        vmin = _mm_min_ps(vmin, shuf);                  /* [min, ..., ..., ...] */
+ 
+        _mm_store_ss(&cur_min, vmin);
+ 
+        /* Check for -INFINITY after reduction */
+        if (isinf(cur_min) && cur_min < 0.0f) {
+            *out = -INFINITY;
+            return NO_ERROR;
+        }
+    }
+ 
+    /* Scalar tail */
+    for (; i < len; i++) {
+        if (isnan(data[i])) { *out = NAN; return NO_ERROR; }
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (isinf(cur_min) && cur_min < 0.0f) {
+                *out = -INFINITY;
+                return NO_ERROR;
+            }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

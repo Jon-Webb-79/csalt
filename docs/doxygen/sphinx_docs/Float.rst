@@ -102,6 +102,8 @@ Utility Operations
 
 .. doxygenfunction:: float_tensors_equal
 
+.. doxygenfunction:: min_float_tensor
+
 Introspection
 -------------
 

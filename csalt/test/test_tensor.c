@@ -28373,6 +28373,688 @@ static void test_float_tensors_equal_large_last_exceeds(void** state) {
     return_float_tensor(a);
     return_float_tensor(b);
 }
+// -------------------------------------------------------------------------------- 
+
+/** NULL tensor pointer must return NULL_POINTER. */
+static void test_min_float_tensor_null_tensor(void** state) {
+    (void)state;
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(NULL, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NULL value pointer must return NULL_POINTER. */
+static void test_min_float_tensor_null_value(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array_filled(3u, 10.0f);
+    assert_non_null(arr);
+    assert_int_equal(min_float_tensor(arr, NULL), NULL_POINTER);
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Empty array (len == 0) must return EMPTY. */
+static void test_min_float_tensor_empty(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(4u, false);
+    assert_non_null(arr);
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), EMPTY);
+    return_float_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — single element
+// ================================================================================
+// ================================================================================
+ 
+/** Single-element array must return that element. */
+static void test_min_float_tensor_single_element(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(2u, false);
+    assert_non_null(arr);
+    push_back_float_array(arr, 42.5f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 42.5f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single NaN element must return NaN. */
+static void test_min_float_tensor_single_nan(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(2u, false);
+    assert_non_null(arr);
+    push_back_float_array(arr, NAN);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single -INFINITY element must return -INFINITY. */
+static void test_min_float_tensor_single_neg_inf(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(2u, false);
+    assert_non_null(arr);
+    push_back_float_array(arr, -INFINITY);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isinf(val) && val < 0.0f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — minimum at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Minimum at the front. */
+static void test_min_float_tensor_min_at_front(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, -100.5f);
+    push_back_float_array(arr, 10.0f);
+    push_back_float_array(arr, 20.0f);
+    push_back_float_array(arr, 30.0f);
+    push_back_float_array(arr, 40.0f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -100.5f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum at the back. */
+static void test_min_float_tensor_min_at_back(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, 40.0f);
+    push_back_float_array(arr, 30.0f);
+    push_back_float_array(arr, 20.0f);
+    push_back_float_array(arr, 10.0f);
+    push_back_float_array(arr, -99.9f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -99.9f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum in the middle. */
+static void test_min_float_tensor_min_at_middle(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, 50.0f);
+    push_back_float_array(arr, 40.0f);
+    push_back_float_array(arr, -77.7f);
+    push_back_float_array(arr, 30.0f);
+    push_back_float_array(arr, 20.0f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -77.7f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — all identical
+// ================================================================================
+// ================================================================================
+ 
+/** All elements identical must return that value. */
+static void test_min_float_tensor_all_identical(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_float_array(arr, 77.77f);
+    }
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 77.77f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — NaN propagation
+// ================================================================================
+// ================================================================================
+ 
+/** NaN at the front — result must be NaN. */
+static void test_min_float_tensor_nan_at_front(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, NAN);
+    push_back_float_array(arr, 10.0f);
+    push_back_float_array(arr, 20.0f);
+    push_back_float_array(arr, 30.0f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN in the middle — result must be NaN. */
+static void test_min_float_tensor_nan_at_middle(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, 10.0f);
+    push_back_float_array(arr, 20.0f);
+    push_back_float_array(arr, NAN);
+    push_back_float_array(arr, 30.0f);
+    push_back_float_array(arr, 5.0f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN at the back — result must be NaN. */
+static void test_min_float_tensor_nan_at_back(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, 10.0f);
+    push_back_float_array(arr, 20.0f);
+    push_back_float_array(arr, 30.0f);
+    push_back_float_array(arr, 5.0f);
+    push_back_float_array(arr, NAN);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All NaN — result must be NaN. */
+static void test_min_float_tensor_all_nan(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_float_array(arr, NAN);
+    }
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_float_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — INFINITY handling
+// ================================================================================
+// ================================================================================
+ 
+/** -INFINITY at the front — early exit, result is -INFINITY. */
+static void test_min_float_tensor_neg_inf_at_front(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, -INFINITY);
+    push_back_float_array(arr, 10.0f);
+    push_back_float_array(arr, 20.0f);
+    push_back_float_array(arr, 30.0f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isinf(val) && val < 0.0f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** -INFINITY in the middle. */
+static void test_min_float_tensor_neg_inf_at_middle(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, 100.0f);
+    push_back_float_array(arr, 50.0f);
+    push_back_float_array(arr, -INFINITY);
+    push_back_float_array(arr, 25.0f);
+    push_back_float_array(arr, 10.0f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isinf(val) && val < 0.0f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** +INFINITY mixed with finite values — min must be the finite value. */
+static void test_min_float_tensor_pos_inf_with_finite(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, INFINITY);
+    push_back_float_array(arr, 100.0f);
+    push_back_float_array(arr, INFINITY);
+    push_back_float_array(arr, 3.0f);
+    push_back_float_array(arr, INFINITY);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 3.0f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN takes precedence over -INFINITY (NaN before -INFINITY). */
+static void test_min_float_tensor_nan_before_neg_inf(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, 100.0f);
+    push_back_float_array(arr, NAN);
+    push_back_float_array(arr, -INFINITY);
+    push_back_float_array(arr, 50.0f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN takes precedence over -INFINITY (-INFINITY before NaN). */
+static void test_min_float_tensor_neg_inf_before_nan(void** state) {
+    (void)state;
+    float_tensor_t* arr = _make_float_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_float_array(arr, 100.0f);
+    push_back_float_array(arr, -INFINITY);
+    push_back_float_array(arr, NAN);
+    push_back_float_array(arr, 50.0f);
+
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    /* -INFINITY found first triggers early-exit before NaN is reached */
+    assert_true(isnan(val));
+ 
+    return_float_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — large buffers (SIMD main-loop + tail)
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 1024 elements: min (-999.5) placed near the end.
+ */
+static void test_min_float_tensor_large_min_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_float_array(arr, 500.0f);
+    }
+    set_float_tensor_index(arr, 1020u, -999.5f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -999.5f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 1024 elements with NaN near the end. */
+static void test_min_float_tensor_large_nan_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_float_array(arr, 500.0f);
+    }
+    set_float_tensor_index(arr, 1020u, NAN);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 1024 elements all identical. */
+static void test_min_float_tensor_large_all_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_float_array(arr, -33.33f);
+    }
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -33.33f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — SIMD-width boundary lengths
+//
+// float vector widths: SSE = 4, AVX = 8, AVX-512 = 16, NEON = 4
+// ================================================================================
+// ================================================================================
+ 
+/** Exactly 4 elements — one full SSE/NEON vector, no tail. */
+static void test_min_float_tensor_len_4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(8u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 4u; i++) {
+        push_back_float_array(arr, 100.0f + (float)i);
+    }
+    set_float_tensor_index(arr, 3u, -7.5f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -7.5f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 5 elements — one SSE vector + 1 tail. Min in the tail. */
+static void test_min_float_tensor_len_5_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(8u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_float_array(arr, 80.0f);
+    }
+    set_float_tensor_index(arr, 4u, -3.3f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -3.3f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 8 elements — one full AVX vector, no tail. */
+static void test_min_float_tensor_len_8(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(12u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 8u; i++) {
+        push_back_float_array(arr, 150.0f);
+    }
+    set_float_tensor_index(arr, 5u, -11.1f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -11.1f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 9 elements — one AVX vector + 1 tail. Min in the tail. */
+static void test_min_float_tensor_len_9_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(12u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 9u; i++) {
+        push_back_float_array(arr, 150.0f);
+    }
+    set_float_tensor_index(arr, 8u, -4.4f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -4.4f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 16 elements — one full AVX-512 vector, no tail. */
+static void test_min_float_tensor_len_16(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(20u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        push_back_float_array(arr, 200.0f);
+    }
+    set_float_tensor_index(arr, 12u, -9.9f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -9.9f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 17 elements — one AVX-512 vector + 1 tail. Min in the tail. */
+static void test_min_float_tensor_len_17_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(20u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 17u; i++) {
+        push_back_float_array(arr, 200.0f);
+    }
+    set_float_tensor_index(arr, 16u, -6.6f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -6.6f);
+ 
+    return_float_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — TENSOR_STRUCT (N-D) mode
+// ================================================================================
+// ================================================================================
+ 
+/** 4×4 matrix — min must scan across all 16 elements. */
+static void test_min_float_tensor_nd_4x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    float_tensor_expect_t r = init_float_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_float_tensor_index(mat, i, 100.0f - (float)i);
+    }
+    size_t idx[] = { 2u, 3u };
+    set_float_tensor_nd_index(mat, idx, -55.5f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(mat, &val), NO_ERROR);
+    assert_true(val == -55.5f);
+ 
+    return_float_tensor(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 3-D tensor (2×3×4 = 24 elements). Min placed deep inside. */
+static void test_min_float_tensor_nd_2x3x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 2u, 3u, 4u };
+    float_tensor_expect_t r = init_float_tensor(3u, shape, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* t = r.u.value;
+ 
+    for (size_t i = 0u; i < 24u; i++) {
+        set_float_tensor_index(t, i, 50.0f);
+    }
+    size_t idx[] = { 1u, 2u, 1u };
+    set_float_tensor_nd_index(t, idx, -88.8f);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(t, &val), NO_ERROR);
+    assert_true(val == -88.8f);
+ 
+    return_float_tensor(t);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — N-D tensor with NaN
+// ================================================================================
+// ================================================================================
+ 
+/** 4×4 matrix with NaN — result must be NaN. */
+static void test_min_float_tensor_nd_4x4_with_nan(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    float_tensor_expect_t r = init_float_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_float_tensor_index(mat, i, 100.0f);
+    }
+    size_t idx[] = { 3u, 1u };
+    set_float_tensor_nd_index(mat, idx, NAN);
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(mat, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_float_tensor(mat);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_float_tensor — descending ramp
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Descending ramp: 100.0, 99.5, 99.0, ... — minimum is the last element.
+ */
+static void test_min_float_tensor_descending_ramp(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    float_tensor_expect_t r  = init_float_array(260u, false, alloc);
+    assert_true(r.has_value);
+    float_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 250u; i++) {
+        push_back_float_array(arr, 100.0f - (float)i * 0.5f);
+    }
+ 
+    float val = 0.0f;
+    assert_int_equal(min_float_tensor(arr, &val), NO_ERROR);
+    /* Last element: 100.0 - 249 * 0.5 = -24.5 */
+    assert_true(val == -24.5f);
+ 
+    return_float_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -28606,6 +29288,55 @@ const struct CMUnitTest test_float_tensor[] = {
     /* float_tensors_equal — large array SIMD path */
     cmocka_unit_test(test_float_tensors_equal_large_within_tolerance),
     cmocka_unit_test(test_float_tensors_equal_large_last_exceeds),
+
+    /* min_float_tensor — null/guard */
+    cmocka_unit_test(test_min_float_tensor_null_tensor),
+    cmocka_unit_test(test_min_float_tensor_null_value),
+    cmocka_unit_test(test_min_float_tensor_empty),
+
+    /* min_float_tensor — single element */
+    cmocka_unit_test(test_min_float_tensor_single_element),
+    cmocka_unit_test(test_min_float_tensor_single_nan),
+    cmocka_unit_test(test_min_float_tensor_single_neg_inf),
+
+    /* min_float_tensor — min at various positions */
+    cmocka_unit_test(test_min_float_tensor_min_at_front),
+    cmocka_unit_test(test_min_float_tensor_min_at_back),
+    cmocka_unit_test(test_min_float_tensor_min_at_middle),
+
+    /* min_float_tensor — all identical */
+    cmocka_unit_test(test_min_float_tensor_all_identical),
+
+    /* min_float_tensor — NaN propagation */
+    cmocka_unit_test(test_min_float_tensor_nan_at_front),
+    cmocka_unit_test(test_min_float_tensor_nan_at_middle),
+    cmocka_unit_test(test_min_float_tensor_nan_at_back),
+    cmocka_unit_test(test_min_float_tensor_all_nan),
+
+    /* min_float_tensor — INFINITY handling */
+    cmocka_unit_test(test_min_float_tensor_neg_inf_at_front),
+    cmocka_unit_test(test_min_float_tensor_neg_inf_at_middle),
+    cmocka_unit_test(test_min_float_tensor_pos_inf_with_finite),
+    cmocka_unit_test(test_min_float_tensor_nan_before_neg_inf),
+    cmocka_unit_test(test_min_float_tensor_neg_inf_before_nan),
+
+    /* min_float_tensor — large buffers */
+    cmocka_unit_test(test_min_float_tensor_large_min_near_end),
+    cmocka_unit_test(test_min_float_tensor_large_nan_near_end),
+    cmocka_unit_test(test_min_float_tensor_large_all_identical),
+
+    /* min_float_tensor — SIMD-width boundary lengths */
+    cmocka_unit_test(test_min_float_tensor_len_4),
+    cmocka_unit_test(test_min_float_tensor_len_5_min_in_tail),
+    cmocka_unit_test(test_min_float_tensor_len_8),
+    cmocka_unit_test(test_min_float_tensor_len_9_min_in_tail),
+    cmocka_unit_test(test_min_float_tensor_len_16),
+    cmocka_unit_test(test_min_float_tensor_len_17_min_in_tail),
+
+    /* min_float_tensor — TENSOR_STRUCT (N-D) mode */
+    cmocka_unit_test(test_min_float_tensor_nd_4x4),
+    cmocka_unit_test(test_min_float_tensor_nd_2x3x4),
+    cmocka_unit_test(test_min_float_tensor_nd_4x4_with_nan),
 };
 
 const size_t test_float_tensor_count = sizeof(test_float_tensor) /

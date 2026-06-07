@@ -24,9 +24,12 @@
  * Requires: -mfpu=neon (ARMv7) or implicit on AArch64
  */
 
+#include "c_error.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <math.h>
+#include <float.h>
 #include <arm_neon.h>
 
 // ================================================================================
@@ -467,6 +470,47 @@ static inline bool simd_is_all_zero_float(const float* data, size_t count) {
     }
  
     return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_float(const float* data,
+                                          size_t       len,
+                                          float*       out) {
+    float  cur_min = *out;
+    size_t i       = 0u;
+ 
+    if (len >= 4u) {
+        float32x4_t vmin    = vdupq_n_f32(*out);
+        uint32x4_t  has_nan = vdupq_n_u32(0u);
+ 
+        for (; i + 4u <= len; i += 4u) {
+            float32x4_t v = vld1q_f32(data + i);
+ 
+            /* NaN check: vceqq_f32(v, v) is 0 for NaN lanes */
+            uint32x4_t nan_mask = vmvnq_u32(vceqq_f32(v, v));
+            has_nan = vorrq_u32(has_nan, nan_mask);
+ 
+            vmin = vminq_f32(vmin, v);
+ 
+            /* Early-exit on NaN */
+            if (vmaxvq_u32(has_nan)) { *out = NAN; return NO_ERROR; }
+        }
+ 
+        cur_min = vminvq_f32(vmin);
+        if (isinf(cur_min) && cur_min < 0.0f) { *out = -INFINITY; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail */
+    for (; i < len; i++) {
+        if (isnan(data[i])) { *out = NAN; return NO_ERROR; }
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (isinf(cur_min) && cur_min < 0.0f) { *out = -INFINITY; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 #include "c_tensor.h"
 #include "c_error.h"
@@ -904,6 +905,56 @@ bool float_tensors_equal(const float_tensor_t* one,
                          const float_tensor_t* two,
                          float                 tolerance,
                          bool                  meta);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the minimum element in a float tensor.
+ *
+ * Scans all len populated elements and writes the smallest value into
+ * the caller-provided output.  Uses a SIMD fast path when available
+ * (SSE2/SSSE3/SSE4.1/AVX/AVX2/AVX-512F on x86-64,
+ * NEON/SVE/SVE2 on AArch64) and falls back to scalar iteration
+ * otherwise.
+ *
+ * NaN semantics — propagate:
+ *   If any element is NaN, the result written to *value is NaN and the
+ *   function returns NO_ERROR.  Callers can use isnan(*value) to detect
+ *   this case.  This matches NumPy's np.min behavior.
+ *
+ * IEEE 754 special values:
+ *   - -INFINITY is handled correctly and triggers an early exit (nothing
+ *     can be smaller).
+ *   - +INFINITY is treated as a normal large value.
+ *   - -0.0 and +0.0 compare equal per IEEE 754; either may be returned.
+ *
+ * All ISAs use separate NaN tracking because IEEE 754 MINPS/minNum
+ * semantics return the non-NaN operand when one input is NaN, which
+ * would silently drop NaN from the accumulation.
+ *
+ * Works on both TENSOR_STRUCT and ARRAY_STRUCT modes — the scan always
+ * covers exactly t->base->len elements.
+ *
+ * @param t      Pointer to the source float tensor. Must not be NULL.
+ * @param value  Pointer to a float to receive the minimum value.
+ *               Must not be NULL.  May be NaN if any element was NaN.
+ *
+ * @return NO_ERROR on success (including NaN propagation), or one of:
+ *         - NULL_POINTER  if t, t->base, or value is NULL
+ *         - EMPTY         if t->base->data is NULL or t->base->len == 0
+ *
+ * @code{.c}
+ * float min_val;
+ * error_code_t err = min_float_tensor(arr, &min_val);
+ * if (err != NO_ERROR) {
+ *     fprintf(stderr, "%s\n", error_to_string(err));
+ * } else if (isnan(min_val)) {
+ *     printf("Tensor contains NaN\n");
+ * } else {
+ *     printf("Minimum: %g\n", min_val);
+ * }
+ * @endcode
+ */
+error_code_t min_float_tensor(const float_tensor_t* t, float* value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

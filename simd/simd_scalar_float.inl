@@ -22,9 +22,12 @@
  * verified and the target compiled when no SIMD flag is set.
  */
 
+#include "c_error.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <math.h>
+#include <float.h>
 
 // ================================================================================
 // Scalar contains
@@ -219,6 +222,30 @@ static inline bool simd_is_all_zero_float(const float* data, size_t count) {
         if (data[i] != 0.0f) return false;
     }
     return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_float(const float* data,
+                                          size_t       len,
+                                          float*       out) {
+    float cur_min = *out;                /* caller seeds with INFINITY */
+ 
+    for (size_t i = 0u; i < len; i++) {
+        if (isnan(data[i])) {
+            *out = NAN;
+            return NO_ERROR;
+        }
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (isinf(cur_min) && cur_min < 0.0f) {
+                *out = -INFINITY;
+                return NO_ERROR;
+            }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 
