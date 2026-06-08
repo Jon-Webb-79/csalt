@@ -31581,6 +31581,685 @@ static void test_double_tensors_equal_large_last_exceeds(void** state) {
     return_double_tensor(a);
     return_double_tensor(b);
 }
+// -------------------------------------------------------------------------------- 
+
+/** NULL tensor pointer must return NULL_POINTER. */
+static void test_min_double_tensor_null_tensor(void** state) {
+    (void)state;
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(NULL, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NULL value pointer must return NULL_POINTER. */
+static void test_min_double_tensor_null_value(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array_filled(3u, 10.0);
+    assert_non_null(arr);
+    assert_int_equal(min_double_tensor(arr, NULL), NULL_POINTER);
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Empty array (len == 0) must return EMPTY. */
+static void test_min_double_tensor_empty(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(4u, false);
+    assert_non_null(arr);
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), EMPTY);
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_double_tensor — single element
+// ================================================================================
+// ================================================================================
+ 
+/** Single-element array must return that element. */
+static void test_min_double_tensor_single_element(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    push_back_double_array(arr, 42.5);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 42.5);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single NaN element must return NaN. */
+static void test_min_double_tensor_single_nan(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    push_back_double_array(arr, NAN);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single -INFINITY element must return -INFINITY. */
+static void test_min_double_tensor_single_neg_inf(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(2u, false);
+    assert_non_null(arr);
+    push_back_double_array(arr, -INFINITY);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isinf(val) && val < 0.0);
+ 
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_double_tensor — minimum at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Minimum at the front. */
+static void test_min_double_tensor_min_at_front(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, -100.5);
+    push_back_double_array(arr, 10.0);
+    push_back_double_array(arr, 20.0);
+    push_back_double_array(arr, 30.0);
+    push_back_double_array(arr, 40.0);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -100.5);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum at the back. */
+static void test_min_double_tensor_min_at_back(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, 40.0);
+    push_back_double_array(arr, 30.0);
+    push_back_double_array(arr, 20.0);
+    push_back_double_array(arr, 10.0);
+    push_back_double_array(arr, -99.9);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -99.9);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum in the middle. */
+static void test_min_double_tensor_min_at_middle(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, 50.0);
+    push_back_double_array(arr, 40.0);
+    push_back_double_array(arr, -77.7);
+    push_back_double_array(arr, 30.0);
+    push_back_double_array(arr, 20.0);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -77.7);
+ 
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_double_tensor — all identical
+// ================================================================================
+// ================================================================================
+ 
+/** All elements identical must return that value. */
+static void test_min_double_tensor_all_identical(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_double_array(arr, 77.77);
+    }
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 77.77);
+ 
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_double_tensor — NaN propagation
+// ================================================================================
+// ================================================================================
+ 
+/** NaN at the front — result must be NaN. */
+static void test_min_double_tensor_nan_at_front(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, NAN);
+    push_back_double_array(arr, 10.0);
+    push_back_double_array(arr, 20.0);
+    push_back_double_array(arr, 30.0);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN in the middle — result must be NaN. */
+static void test_min_double_tensor_nan_at_middle(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, 10.0);
+    push_back_double_array(arr, 20.0);
+    push_back_double_array(arr, NAN);
+    push_back_double_array(arr, 30.0);
+    push_back_double_array(arr, 5.0);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN at the back — result must be NaN. */
+static void test_min_double_tensor_nan_at_back(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, 10.0);
+    push_back_double_array(arr, 20.0);
+    push_back_double_array(arr, 30.0);
+    push_back_double_array(arr, 5.0);
+    push_back_double_array(arr, NAN);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All NaN — result must be NaN. */
+static void test_min_double_tensor_all_nan(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_double_array(arr, NAN);
+    }
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_double_tensor — INFINITY handling
+// ================================================================================
+// ================================================================================
+ 
+/** -INFINITY at the front — result is -INFINITY. */
+static void test_min_double_tensor_neg_inf_at_front(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, -INFINITY);
+    push_back_double_array(arr, 10.0);
+    push_back_double_array(arr, 20.0);
+    push_back_double_array(arr, 30.0);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isinf(val) && val < 0.0);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** -INFINITY in the middle. */
+static void test_min_double_tensor_neg_inf_at_middle(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, 100.0);
+    push_back_double_array(arr, 50.0);
+    push_back_double_array(arr, -INFINITY);
+    push_back_double_array(arr, 25.0);
+    push_back_double_array(arr, 10.0);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isinf(val) && val < 0.0);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** +INFINITY mixed with finite values — min must be the finite value. */
+static void test_min_double_tensor_pos_inf_with_finite(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, INFINITY);
+    push_back_double_array(arr, 100.0);
+    push_back_double_array(arr, INFINITY);
+    push_back_double_array(arr, 3.0);
+    push_back_double_array(arr, INFINITY);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 3.0);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN takes precedence over -INFINITY (NaN before -INFINITY). */
+static void test_min_double_tensor_nan_before_neg_inf(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, 100.0);
+    push_back_double_array(arr, NAN);
+    push_back_double_array(arr, -INFINITY);
+    push_back_double_array(arr, 50.0);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * -INFINITY before NaN in element order — NaN is in a later SIMD vector
+ * iteration (for SSE2 with 2-wide vectors) or same vector (for AVX with
+ * 4-wide).  NaN detection fires per-iteration, so NaN propagation wins.
+ */
+static void test_min_double_tensor_neg_inf_before_nan(void** state) {
+    (void)state;
+    double_tensor_t* arr = _make_double_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_double_array(arr, 100.0);
+    push_back_double_array(arr, -INFINITY);
+    push_back_double_array(arr, NAN);
+    push_back_double_array(arr, 50.0);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    /* NaN detected in a subsequent iteration — NaN propagation wins */
+    assert_true(isnan(val));
+ 
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_double_tensor — large buffers (SIMD main-loop + tail)
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 1024 elements: min (-999.5) placed near the end.
+ */
+static void test_min_double_tensor_large_min_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_double_array(arr, 500.0);
+    }
+    set_double_tensor_index(arr, 1020u, -999.5);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -999.5);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 1024 elements with NaN near the end. */
+static void test_min_double_tensor_large_nan_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_double_array(arr, 500.0);
+    }
+    set_double_tensor_index(arr, 1020u, NAN);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 1024 elements all identical. */
+static void test_min_double_tensor_large_all_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_double_array(arr, -33.33);
+    }
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -33.33);
+ 
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_double_tensor — SIMD-width boundary lengths
+//
+// double vector widths: SSE = 2, AVX = 4, AVX-512 = 8, NEON = scalar
+// ================================================================================
+// ================================================================================
+ 
+/** Exactly 2 elements — one full SSE2 vector, no tail. */
+static void test_min_double_tensor_len_2(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(4u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    push_back_double_array(arr, 100.0);
+    push_back_double_array(arr, -7.5);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -7.5);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 3 elements — one SSE2 vector + 1 tail. Min in the tail. */
+static void test_min_double_tensor_len_3_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(4u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    push_back_double_array(arr, 80.0);
+    push_back_double_array(arr, 80.0);
+    push_back_double_array(arr, -3.3);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -3.3);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 4 elements — one full AVX vector, no tail. */
+static void test_min_double_tensor_len_4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(8u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 4u; i++) {
+        push_back_double_array(arr, 150.0);
+    }
+    set_double_tensor_index(arr, 2u, -11.1);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -11.1);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 5 elements — one AVX vector + 1 tail. Min in the tail. */
+static void test_min_double_tensor_len_5_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(8u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_double_array(arr, 150.0);
+    }
+    set_double_tensor_index(arr, 4u, -4.4);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -4.4);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Exactly 8 elements — one full AVX-512 vector, no tail. */
+static void test_min_double_tensor_len_8(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(12u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 8u; i++) {
+        push_back_double_array(arr, 200.0);
+    }
+    set_double_tensor_index(arr, 5u, -9.9);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -9.9);
+ 
+    return_double_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 9 elements — one AVX-512 vector + 1 tail. Min in the tail. */
+static void test_min_double_tensor_len_9_min_in_tail(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(12u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 9u; i++) {
+        push_back_double_array(arr, 200.0);
+    }
+    set_double_tensor_index(arr, 8u, -6.6);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -6.6);
+ 
+    return_double_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_double_tensor — TENSOR_STRUCT (N-D) mode
+// ================================================================================
+// ================================================================================
+ 
+/** 4×4 matrix — min must scan across all 16 elements. */
+static void test_min_double_tensor_nd_4x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    double_tensor_expect_t r = init_double_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_double_tensor_index(mat, i, 100.0 - (double)i);
+    }
+    size_t idx[] = { 2u, 3u };
+    set_double_tensor_nd_index(mat, idx, -55.5);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(mat, &val), NO_ERROR);
+    assert_true(val == -55.5);
+ 
+    return_double_tensor(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 3-D tensor (2×3×4 = 24 elements). Min placed deep inside. */
+static void test_min_double_tensor_nd_2x3x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 2u, 3u, 4u };
+    double_tensor_expect_t r = init_double_tensor(3u, shape, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* t = r.u.value;
+ 
+    for (size_t i = 0u; i < 24u; i++) {
+        set_double_tensor_index(t, i, 50.0);
+    }
+    size_t idx[] = { 1u, 2u, 1u };
+    set_double_tensor_nd_index(t, idx, -88.8);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(t, &val), NO_ERROR);
+    assert_true(val == -88.8);
+ 
+    return_double_tensor(t);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 4×4 matrix with NaN — result must be NaN. */
+static void test_min_double_tensor_nd_4x4_with_nan(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    double_tensor_expect_t r = init_double_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_double_tensor_index(mat, i, 100.0);
+    }
+    size_t idx[] = { 3u, 1u };
+    set_double_tensor_nd_index(mat, idx, NAN);
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(mat, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_double_tensor(mat);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_double_tensor — descending ramp
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Descending ramp: 100.0, 99.5, 99.0, ... — minimum is the last element.
+ */
+static void test_min_double_tensor_descending_ramp(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    double_tensor_expect_t r = init_double_array(260u, false, alloc);
+    assert_true(r.has_value);
+    double_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 250u; i++) {
+        push_back_double_array(arr, 100.0 - (double)i * 0.5);
+    }
+ 
+    double val = 0.0;
+    assert_int_equal(min_double_tensor(arr, &val), NO_ERROR);
+    /* Last element: 100.0 - 249 * 0.5 = -24.5 */
+    assert_true(val == -24.5);
+ 
+    return_double_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -31813,6 +32492,55 @@ const struct CMUnitTest test_double_tensor[] = {
     /* double_tensors_equal — large array SIMD path */
     cmocka_unit_test(test_double_tensors_equal_large_within_tolerance),
     cmocka_unit_test(test_double_tensors_equal_large_last_exceeds),
+
+    /* min_double_tensor — null/guard */
+    cmocka_unit_test(test_min_double_tensor_null_tensor),
+    cmocka_unit_test(test_min_double_tensor_null_value),
+    cmocka_unit_test(test_min_double_tensor_empty),
+
+    /* min_double_tensor — single element */
+    cmocka_unit_test(test_min_double_tensor_single_element),
+    cmocka_unit_test(test_min_double_tensor_single_nan),
+    cmocka_unit_test(test_min_double_tensor_single_neg_inf),
+
+    /* min_double_tensor — min at various positions */
+    cmocka_unit_test(test_min_double_tensor_min_at_front),
+    cmocka_unit_test(test_min_double_tensor_min_at_back),
+    cmocka_unit_test(test_min_double_tensor_min_at_middle),
+
+    /* min_double_tensor — all identical */
+    cmocka_unit_test(test_min_double_tensor_all_identical),
+
+    /* min_double_tensor — NaN propagation */
+    cmocka_unit_test(test_min_double_tensor_nan_at_front),
+    cmocka_unit_test(test_min_double_tensor_nan_at_middle),
+    cmocka_unit_test(test_min_double_tensor_nan_at_back),
+    cmocka_unit_test(test_min_double_tensor_all_nan),
+
+    /* min_double_tensor — INFINITY handling */
+    cmocka_unit_test(test_min_double_tensor_neg_inf_at_front),
+    cmocka_unit_test(test_min_double_tensor_neg_inf_at_middle),
+    cmocka_unit_test(test_min_double_tensor_pos_inf_with_finite),
+    cmocka_unit_test(test_min_double_tensor_nan_before_neg_inf),
+    cmocka_unit_test(test_min_double_tensor_neg_inf_before_nan),
+
+    /* min_double_tensor — large buffers */
+    cmocka_unit_test(test_min_double_tensor_large_min_near_end),
+    cmocka_unit_test(test_min_double_tensor_large_nan_near_end),
+    cmocka_unit_test(test_min_double_tensor_large_all_identical),
+
+    /* min_double_tensor — SIMD-width boundary lengths */
+    cmocka_unit_test(test_min_double_tensor_len_2),
+    cmocka_unit_test(test_min_double_tensor_len_3_min_in_tail),
+    cmocka_unit_test(test_min_double_tensor_len_4),
+    cmocka_unit_test(test_min_double_tensor_len_5_min_in_tail),
+    cmocka_unit_test(test_min_double_tensor_len_8),
+    cmocka_unit_test(test_min_double_tensor_len_9_min_in_tail),
+
+    /* min_double_tensor — TENSOR_STRUCT (N-D) mode */
+    cmocka_unit_test(test_min_double_tensor_nd_4x4),
+    cmocka_unit_test(test_min_double_tensor_nd_2x3x4),
+    cmocka_unit_test(test_min_double_tensor_nd_4x4_with_nan),
 
 };
 
@@ -34060,6 +34788,550 @@ static void test_ldouble_tensors_equal_large_last_exceeds(void** state) {
     return_ldouble_tensor(a);
     return_ldouble_tensor(b);
 }
+// -------------------------------------------------------------------------------- 
+
+/** NULL tensor pointer must return NULL_POINTER. */
+static void test_min_ldouble_tensor_null_tensor(void** state) {
+    (void)state;
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(NULL, &val), NULL_POINTER);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NULL value pointer must return NULL_POINTER. */
+static void test_min_ldouble_tensor_null_value(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array_filled(3u, 10.0L);
+    assert_non_null(arr);
+    assert_int_equal(min_ldouble_tensor(arr, NULL), NULL_POINTER);
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Empty array (len == 0) must return EMPTY. */
+static void test_min_ldouble_tensor_empty(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(4u, false);
+    assert_non_null(arr);
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), EMPTY);
+    return_ldouble_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_ldouble_tensor — single element
+// ================================================================================
+// ================================================================================
+ 
+/** Single-element array must return that element. */
+static void test_min_ldouble_tensor_single_element(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, 42.5L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 42.5L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single NaN element must return NaN. */
+static void test_min_ldouble_tensor_single_nan(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, NAN);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Single -INFINITY element must return -INFINITY. */
+static void test_min_ldouble_tensor_single_neg_inf(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(2u, false);
+    assert_non_null(arr);
+    push_back_ldouble_array(arr, -INFINITY);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isinf(val) && val < 0.0L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_ldouble_tensor — minimum at various positions
+// ================================================================================
+// ================================================================================
+ 
+/** Minimum at the front. */
+static void test_min_ldouble_tensor_min_at_front(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, -100.5L);
+    push_back_ldouble_array(arr, 10.0L);
+    push_back_ldouble_array(arr, 20.0L);
+    push_back_ldouble_array(arr, 30.0L);
+    push_back_ldouble_array(arr, 40.0L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -100.5L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum at the back. */
+static void test_min_ldouble_tensor_min_at_back(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, 40.0L);
+    push_back_ldouble_array(arr, 30.0L);
+    push_back_ldouble_array(arr, 20.0L);
+    push_back_ldouble_array(arr, 10.0L);
+    push_back_ldouble_array(arr, -99.9L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -99.9L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** Minimum in the middle. */
+static void test_min_ldouble_tensor_min_at_middle(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, 50.0L);
+    push_back_ldouble_array(arr, 40.0L);
+    push_back_ldouble_array(arr, -77.7L);
+    push_back_ldouble_array(arr, 30.0L);
+    push_back_ldouble_array(arr, 20.0L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -77.7L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_ldouble_tensor — all identical
+// ================================================================================
+// ================================================================================
+ 
+/** All elements identical must return that value. */
+static void test_min_ldouble_tensor_all_identical(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 6u; i++) {
+        push_back_ldouble_array(arr, 77.77L);
+    }
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 77.77L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_ldouble_tensor — NaN propagation
+// ================================================================================
+// ================================================================================
+ 
+/** NaN at the front — result must be NaN. */
+static void test_min_ldouble_tensor_nan_at_front(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, NAN);
+    push_back_ldouble_array(arr, 10.0L);
+    push_back_ldouble_array(arr, 20.0L);
+    push_back_ldouble_array(arr, 30.0L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN in the middle — result must be NaN. */
+static void test_min_ldouble_tensor_nan_at_middle(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, 10.0L);
+    push_back_ldouble_array(arr, 20.0L);
+    push_back_ldouble_array(arr, NAN);
+    push_back_ldouble_array(arr, 30.0L);
+    push_back_ldouble_array(arr, 5.0L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN at the back — result must be NaN. */
+static void test_min_ldouble_tensor_nan_at_back(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, 10.0L);
+    push_back_ldouble_array(arr, 20.0L);
+    push_back_ldouble_array(arr, 30.0L);
+    push_back_ldouble_array(arr, 5.0L);
+    push_back_ldouble_array(arr, NAN);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** All NaN — result must be NaN. */
+static void test_min_ldouble_tensor_all_nan(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    for (size_t i = 0u; i < 5u; i++) {
+        push_back_ldouble_array(arr, NAN);
+    }
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_ldouble_tensor — INFINITY handling
+// ================================================================================
+// ================================================================================
+ 
+/** -INFINITY at the front — result is -INFINITY. */
+static void test_min_ldouble_tensor_neg_inf_at_front(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, -INFINITY);
+    push_back_ldouble_array(arr, 10.0L);
+    push_back_ldouble_array(arr, 20.0L);
+    push_back_ldouble_array(arr, 30.0L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isinf(val) && val < 0.0L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** -INFINITY in the middle. */
+static void test_min_ldouble_tensor_neg_inf_at_middle(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, 100.0L);
+    push_back_ldouble_array(arr, 50.0L);
+    push_back_ldouble_array(arr, -INFINITY);
+    push_back_ldouble_array(arr, 25.0L);
+    push_back_ldouble_array(arr, 10.0L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isinf(val) && val < 0.0L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** +INFINITY mixed with finite values — min must be the finite value. */
+static void test_min_ldouble_tensor_pos_inf_with_finite(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, INFINITY);
+    push_back_ldouble_array(arr, 100.0L);
+    push_back_ldouble_array(arr, INFINITY);
+    push_back_ldouble_array(arr, 3.0L);
+    push_back_ldouble_array(arr, INFINITY);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(val == 3.0L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** NaN before -INFINITY — NaN propagation wins. */
+static void test_min_ldouble_tensor_nan_before_neg_inf(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, 100.0L);
+    push_back_ldouble_array(arr, NAN);
+    push_back_ldouble_array(arr, -INFINITY);
+    push_back_ldouble_array(arr, 50.0L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/**
+ * -INFINITY before NaN in element order.  Scalar loop processes
+ * element-by-element: -INFINITY triggers early-exit before NaN is reached.
+ */
+static void test_min_ldouble_tensor_neg_inf_before_nan(void** state) {
+    (void)state;
+    ldouble_tensor_t* arr = _make_ldouble_array(8u, false);
+    assert_non_null(arr);
+ 
+    push_back_ldouble_array(arr, 100.0L);
+    push_back_ldouble_array(arr, -INFINITY);
+    push_back_ldouble_array(arr, NAN);
+    push_back_ldouble_array(arr, 50.0L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    /* Pure scalar: -INFINITY at index 1 triggers early-exit before
+     * NaN at index 2 is reached */
+    assert_true(isinf(val) && val < 0.0L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_ldouble_tensor — large buffer
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * 1024 elements: min (-999.5) placed near the end.
+ */
+static void test_min_ldouble_tensor_large_min_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_tensor_expect_t r = init_ldouble_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    ldouble_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_ldouble_array(arr, 500.0L);
+    }
+    set_ldouble_tensor_index(arr, 1020u, -999.5L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -999.5L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 1024 elements with NaN near the end. */
+static void test_min_ldouble_tensor_large_nan_near_end(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_tensor_expect_t r = init_ldouble_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    ldouble_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_ldouble_array(arr, 500.0L);
+    }
+    set_ldouble_tensor_index(arr, 1020u, NAN);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 1024 elements all identical. */
+static void test_min_ldouble_tensor_large_all_identical(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_tensor_expect_t r = init_ldouble_array(1100u, false, alloc);
+    assert_true(r.has_value);
+    ldouble_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 1024u; i++) {
+        push_back_ldouble_array(arr, -33.33L);
+    }
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    assert_true(val == -33.33L);
+ 
+    return_ldouble_tensor(arr);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_ldouble_tensor — TENSOR_STRUCT (N-D) mode
+// ================================================================================
+// ================================================================================
+ 
+/** 4×4 matrix — min must scan across all 16 elements. */
+static void test_min_ldouble_tensor_nd_4x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    ldouble_tensor_expect_t r = init_ldouble_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    ldouble_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_ldouble_tensor_index(mat, i, 100.0L - (long double)i);
+    }
+    size_t idx[] = { 2u, 3u };
+    set_ldouble_tensor_nd_index(mat, idx, -55.5L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(mat, &val), NO_ERROR);
+    assert_true(val == -55.5L);
+ 
+    return_ldouble_tensor(mat);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 3-D tensor (2×3×4 = 24 elements). Min placed deep inside. */
+static void test_min_ldouble_tensor_nd_2x3x4(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 2u, 3u, 4u };
+    ldouble_tensor_expect_t r = init_ldouble_tensor(3u, shape, alloc);
+    assert_true(r.has_value);
+    ldouble_tensor_t* t = r.u.value;
+ 
+    for (size_t i = 0u; i < 24u; i++) {
+        set_ldouble_tensor_index(t, i, 50.0L);
+    }
+    size_t idx[] = { 1u, 2u, 1u };
+    set_ldouble_tensor_nd_index(t, idx, -88.8L);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(t, &val), NO_ERROR);
+    assert_true(val == -88.8L);
+ 
+    return_ldouble_tensor(t);
+}
+ 
+// --------------------------------------------------------------------------------
+ 
+/** 4×4 matrix with NaN — result must be NaN. */
+static void test_min_ldouble_tensor_nd_4x4_with_nan(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    size_t shape[] = { 4u, 4u };
+    ldouble_tensor_expect_t r = init_ldouble_tensor(2u, shape, alloc);
+    assert_true(r.has_value);
+    ldouble_tensor_t* mat = r.u.value;
+ 
+    for (size_t i = 0u; i < 16u; i++) {
+        set_ldouble_tensor_index(mat, i, 100.0L);
+    }
+    size_t idx[] = { 3u, 1u };
+    set_ldouble_tensor_nd_index(mat, idx, NAN);
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(mat, &val), NO_ERROR);
+    assert_true(isnan(val));
+ 
+    return_ldouble_tensor(mat);
+}
+ 
+// ================================================================================
+// ================================================================================
+// min_ldouble_tensor — descending ramp
+// ================================================================================
+// ================================================================================
+ 
+/**
+ * Descending ramp: 100.0, 99.5, 99.0, ... — minimum is the last element.
+ */
+static void test_min_ldouble_tensor_descending_ramp(void** state) {
+    (void)state;
+    allocator_vtable_t alloc = heap_allocator();
+    ldouble_tensor_expect_t r = init_ldouble_array(260u, false, alloc);
+    assert_true(r.has_value);
+    ldouble_tensor_t* arr = r.u.value;
+ 
+    for (size_t i = 0u; i < 250u; i++) {
+        push_back_ldouble_array(arr, 100.0L - (long double)i * 0.5L);
+    }
+ 
+    long double val = 0.0L;
+    assert_int_equal(min_ldouble_tensor(arr, &val), NO_ERROR);
+    /* Last element: 100.0 - 249 * 0.5 = -24.5 */
+    assert_true(val == -24.5L);
+ 
+    return_ldouble_tensor(arr);
+}
 // ================================================================================
 // ================================================================================
 // TEST SUITE REGISTRY
@@ -34298,6 +35570,47 @@ const struct CMUnitTest test_ldouble_tensor[] = {
     /* ldouble_tensors_equal — large array */
     cmocka_unit_test(test_ldouble_tensors_equal_large_within_tolerance),
     cmocka_unit_test(test_ldouble_tensors_equal_large_last_exceeds),
+
+    /* min_ldouble_tensor — null/guard */
+    cmocka_unit_test(test_min_ldouble_tensor_null_tensor),
+    cmocka_unit_test(test_min_ldouble_tensor_null_value),
+    cmocka_unit_test(test_min_ldouble_tensor_empty),
+
+    /* min_ldouble_tensor — single element */
+    cmocka_unit_test(test_min_ldouble_tensor_single_element),
+    cmocka_unit_test(test_min_ldouble_tensor_single_nan),
+    cmocka_unit_test(test_min_ldouble_tensor_single_neg_inf),
+
+    /* min_ldouble_tensor — min at various positions */
+    cmocka_unit_test(test_min_ldouble_tensor_min_at_front),
+    cmocka_unit_test(test_min_ldouble_tensor_min_at_back),
+    cmocka_unit_test(test_min_ldouble_tensor_min_at_middle),
+
+    /* min_ldouble_tensor — all identical */
+    cmocka_unit_test(test_min_ldouble_tensor_all_identical),
+
+    /* min_ldouble_tensor — NaN propagation */
+    cmocka_unit_test(test_min_ldouble_tensor_nan_at_front),
+    cmocka_unit_test(test_min_ldouble_tensor_nan_at_middle),
+    cmocka_unit_test(test_min_ldouble_tensor_nan_at_back),
+    cmocka_unit_test(test_min_ldouble_tensor_all_nan),
+
+    /* min_ldouble_tensor — INFINITY handling */
+    cmocka_unit_test(test_min_ldouble_tensor_neg_inf_at_front),
+    cmocka_unit_test(test_min_ldouble_tensor_neg_inf_at_middle),
+    cmocka_unit_test(test_min_ldouble_tensor_pos_inf_with_finite),
+    cmocka_unit_test(test_min_ldouble_tensor_nan_before_neg_inf),
+    cmocka_unit_test(test_min_ldouble_tensor_neg_inf_before_nan),
+
+    /* min_ldouble_tensor — large buffers */
+    cmocka_unit_test(test_min_ldouble_tensor_large_min_near_end),
+    cmocka_unit_test(test_min_ldouble_tensor_large_nan_near_end),
+    cmocka_unit_test(test_min_ldouble_tensor_large_all_identical),
+
+    /* min_ldouble_tensor — TENSOR_STRUCT (N-D) mode */
+    cmocka_unit_test(test_min_ldouble_tensor_nd_4x4),
+    cmocka_unit_test(test_min_ldouble_tensor_nd_2x3x4),
+    cmocka_unit_test(test_min_ldouble_tensor_nd_4x4_with_nan),
 
 };
 

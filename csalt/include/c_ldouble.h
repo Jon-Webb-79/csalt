@@ -922,6 +922,51 @@ bool ldouble_tensors_equal(const ldouble_tensor_t* one,
                            const ldouble_tensor_t* two,
                            long double             tolerance,
                            bool                    meta);
+// -------------------------------------------------------------------------------- 
+
+/**
+ * @brief Find the minimum element in a long double tensor.
+ *
+ * Scans all len populated elements and writes the smallest value into
+ * the caller-provided output.  Uses a scalar loop on all platforms —
+ * no SIMD instructions exist for long double (x86 uses 80-bit extended
+ * precision; AArch64 uses 128-bit IEEE quad or 64-bit double, depending
+ * on the ABI — none fit standard SIMD lanes).
+ *
+ * NaN semantics — propagate:
+ *   If any element is NaN, the result written to *value is NaN and the
+ *   function returns NO_ERROR.  Callers can use isnan(*value) to detect
+ *   this case.
+ *
+ * IEEE 754 special values:
+ *   - -INFINITY is handled correctly and triggers an early exit.
+ *   - +INFINITY is treated as a normal large value.
+ *   - -0.0 and +0.0 compare equal per IEEE 754; either may be returned.
+ *
+ * Works on both TENSOR_STRUCT and ARRAY_STRUCT modes — the scan always
+ * covers exactly t->base->len elements.
+ *
+ * @param t      Pointer to the source ldouble tensor. Must not be NULL.
+ * @param value  Pointer to a long double to receive the minimum value.
+ *               Must not be NULL.  May be NaN if any element was NaN.
+ *
+ * @return NO_ERROR on success (including NaN propagation), or one of:
+ *         - NULL_POINTER  if t, t->base, or value is NULL
+ *         - EMPTY         if t->base->data is NULL or t->base->len == 0
+ *
+ * @code{.c}
+ * long double min_val;
+ * error_code_t err = min_ldouble_tensor(arr, &min_val);
+ * if (err != NO_ERROR) {
+ *     fprintf(stderr, "%s\n", error_to_string(err));
+ * } else if (isnan(min_val)) {
+ *     printf("Tensor contains NaN\n");
+ * } else {
+ *     printf("Minimum: %Lg\n", min_val);
+ * }
+ * @endcode
+ */
+error_code_t min_ldouble_tensor(const ldouble_tensor_t* t, long double* value);
 // ================================================================================ 
 // ================================================================================ 
 // ADD AND REMOVE DATA 

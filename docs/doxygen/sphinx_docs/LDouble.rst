@@ -102,6 +102,8 @@ Utility Operations
 
 .. doxygenfunction:: ldouble_tensors_equal
 
+.. doxygenfunction:: min_ldouble_tensor
+
 Introspection
 -------------
 

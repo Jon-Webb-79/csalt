@@ -310,6 +310,35 @@ bool ldouble_tensors_equal(const ldouble_tensor_t* one,
     }
     return true;
 }
+// -------------------------------------------------------------------------------- 
+
+error_code_t min_ldouble_tensor(const ldouble_tensor_t* t, long double* value) {
+    if (t == NULL || value == NULL)  return NULL_POINTER;
+    if (t->base == NULL)            return NULL_POINTER;
+    if (t->base->data == NULL)      return EMPTY;
+    if (t->base->len == 0u)         return EMPTY;
+ 
+    const long double* data    = (const long double*)t->base->data;
+    size_t             len     = t->base->len;
+    long double        cur_min = (long double)INFINITY;
+ 
+    for (size_t i = 0u; i < len; i++) {
+        if (isnan(data[i])) {
+            *value = NAN;
+            return NO_ERROR;
+        }
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (isinf(cur_min) && cur_min < 0.0L) {
+                *value = -INFINITY;
+                return NO_ERROR;
+            }
+        }
+    }
+ 
+    *value = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================
 // ================================================================================
 // eof
