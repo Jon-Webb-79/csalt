@@ -31,6 +31,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <float.h>
+#include <math.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -188,6 +190,76 @@ static bool simd_doubles_equal(const double* a,
         if (diff > tolerance) return false;
     }
     return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_double(const double* data,
+                                           size_t        len,
+                                           double*       out) {
+    double cur_min = *out;
+    size_t i       = 0u;
+ 
+    if (len >= 8u) {
+        __m512d  vmin    = _mm512_set1_pd(*out);
+        __mmask8 nan_acc = 0u;
+ 
+        for (; i + 8u <= len; i += 8u) {
+            __m512d v = _mm512_loadu_pd(data + i);
+            nan_acc |= _mm512_cmp_pd_mask(v, v, _CMP_UNORD_Q);
+            vmin = _mm512_min_pd(vmin, v);
+            if (nan_acc) { *out = NAN; return NO_ERROR; }
+        }
+ 
+        cur_min = _mm512_reduce_min_pd(vmin);
+        if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+    }
+ 
+    /* Handle 4-element AVX chunk */
+    if (i + 4u <= len) {
+        __m256d vmin    = _mm256_set1_pd(cur_min);
+        __m256d v       = _mm256_loadu_pd(data + i);
+        __m256d nan_chk = _mm256_cmp_pd(v, v, _CMP_UNORD_Q);
+        if (_mm256_movemask_pd(nan_chk)) { *out = NAN; return NO_ERROR; }
+        vmin = _mm256_min_pd(vmin, v);
+        i += 4u;
+ 
+        __m128d lo = _mm256_castpd256_pd128(vmin);
+        __m128d hi = _mm256_extractf128_pd(vmin, 1);
+        __m128d v2 = _mm_min_pd(lo, hi);
+        __m128d upper = _mm_unpackhi_pd(v2, v2);
+        v2 = _mm_min_pd(v2, upper);
+        _mm_store_sd(&cur_min, v2);
+ 
+        if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+    }
+ 
+    /* Handle 2-element SSE chunk */
+    if (i + 2u <= len) {
+        __m128d vmin    = _mm_set1_pd(cur_min);
+        __m128d v       = _mm_loadu_pd(data + i);
+        __m128d nan_chk = _mm_cmpunord_pd(v, v);
+        if (_mm_movemask_pd(nan_chk)) { *out = NAN; return NO_ERROR; }
+        vmin = _mm_min_pd(vmin, v);
+        i += 2u;
+ 
+        __m128d upper = _mm_unpackhi_pd(vmin, vmin);
+        vmin = _mm_min_pd(vmin, upper);
+        _mm_store_sd(&cur_min, vmin);
+ 
+        if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail (at most 1 element) */
+    for (; i < len; i++) {
+        if (isnan(data[i])) { *out = NAN; return NO_ERROR; }
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

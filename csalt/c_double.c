@@ -15,6 +15,8 @@
 #include "c_double.h"
 #include "c_dtypes.h"
 
+#include <math.h>
+
 #if defined(__AVX512BW__)
 #  include "simd_avx512_double.inl"
 #elif defined(__AVX2__)
@@ -339,6 +341,17 @@ bool double_tensors_equal(const double_tensor_t* one,
         one->base->len,
         tolerance
     );
+}
+// -------------------------------------------------------------------------------- 
+
+error_code_t min_double_tensor(const double_tensor_t* t, double* value) {
+    if (t == NULL || value == NULL)  return NULL_POINTER;
+    if (t->base == NULL)            return NULL_POINTER;
+    if (t->base->data == NULL)      return EMPTY;
+    if (t->base->len == 0u)         return EMPTY;
+ 
+    *value = INFINITY;
+    return simd_min_double((const double*)t->base->data, t->base->len, value);
 }
 // ================================================================================
 // ================================================================================

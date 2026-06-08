@@ -31,6 +31,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <float.h>
+#include <math.h>
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -107,6 +110,24 @@ static bool simd_doubles_equal(const double* a,
         if (diff > tolerance) return false;
     }
     return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_double(const double* data,
+                                           size_t        len,
+                                           double*       out) {
+    double cur_min = *out;
+ 
+    for (size_t i = 0u; i < len; i++) {
+        if (isnan(data[i])) { *out = NAN; return NO_ERROR; }
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

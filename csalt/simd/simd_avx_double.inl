@@ -31,6 +31,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <float.h>
+#include <math.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -169,7 +171,68 @@ static bool simd_doubles_equal(const double* a,
         if (diff > tolerance) return false;
     }
     return true;
+}
+// -------------------------------------------------------------------------------- 
 
+static inline error_code_t simd_min_double(const double* data,
+                                           size_t        len,
+                                           double*       out) {
+    double cur_min = *out;
+    size_t i       = 0u;
+ 
+    if (len >= 4u) {
+        __m256d vmin    = _mm256_set1_pd(*out);
+        __m256d has_nan = _mm256_setzero_pd();
+ 
+        for (; i + 4u <= len; i += 4u) {
+            __m256d v = _mm256_loadu_pd(data + i);
+            has_nan = _mm256_or_pd(has_nan,
+                                   _mm256_cmp_pd(v, v, _CMP_UNORD_Q));
+            vmin = _mm256_min_pd(vmin, v);
+            if (_mm256_movemask_pd(has_nan)) { *out = NAN; return NO_ERROR; }
+        }
+ 
+        /* Fold 256 → 128 */
+        __m128d lo = _mm256_castpd256_pd128(vmin);
+        __m128d hi = _mm256_extractf128_pd(vmin, 1);
+        __m128d v2 = _mm_min_pd(lo, hi);
+ 
+        /* Horizontal reduction: 2 → 1 */
+        __m128d upper = _mm_unpackhi_pd(v2, v2);
+        v2 = _mm_min_pd(v2, upper);
+        _mm_store_sd(&cur_min, v2);
+ 
+        if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+    }
+ 
+    /* Handle 2-element SSE chunk */
+    if (i + 2u <= len) {
+        __m128d vmin    = _mm_set1_pd(cur_min);
+        __m128d v       = _mm_loadu_pd(data + i);
+        __m128d nan_chk = _mm_cmpunord_pd(v, v);
+        if (_mm_movemask_pd(nan_chk)) { *out = NAN; return NO_ERROR; }
+        vmin = _mm_min_pd(vmin, v);
+        i += 2u;
+ 
+        __m128d upper = _mm_unpackhi_pd(vmin, vmin);
+        vmin = _mm_min_pd(vmin, upper);
+        _mm_store_sd(&cur_min, vmin);
+ 
+        if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+    }
+ 
+    /* Scalar tail (at most 1 element) */
+    for (; i < len; i++) {
+        if (isnan(data[i])) { *out = NAN; return NO_ERROR; }
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
+}
 // ================================================================================ 
 // ================================================================================ 
 #endif /* CSALT_SIMD_AVX_DOUBLE_INL */

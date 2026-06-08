@@ -30,6 +30,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <float.h>
+#include <math.h>
 // ================================================================================ 
 // ================================================================================ 
 
@@ -119,6 +121,43 @@ static bool simd_doubles_equal(const double* a,
         if (diff > tolerance) return false;
     }
     return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_double(const double* data,
+                                           size_t        len,
+                                           double*       out) {
+    double cur_min = *out;
+    size_t i       = 0u;
+ 
+    if (len >= 2u) {
+        __m128d vmin    = _mm_set1_pd(*out);
+        __m128d has_nan = _mm_setzero_pd();
+ 
+        for (; i + 2u <= len; i += 2u) {
+            __m128d v = _mm_loadu_pd(data + i);
+            has_nan = _mm_or_pd(has_nan, _mm_cmpunord_pd(v, v));
+            vmin = _mm_min_pd(vmin, v);
+            if (_mm_movemask_pd(has_nan)) { *out = NAN; return NO_ERROR; }
+        }
+ 
+        __m128d hi = _mm_unpackhi_pd(vmin, vmin);
+        vmin = _mm_min_pd(vmin, hi);
+        _mm_store_sd(&cur_min, vmin);
+ 
+        if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+    }
+ 
+    for (; i < len; i++) {
+        if (isnan(data[i])) { *out = NAN; return NO_ERROR; }
+        if (data[i] < cur_min) {
+            cur_min = data[i];
+            if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+        }
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 

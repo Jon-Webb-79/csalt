@@ -30,6 +30,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <float.h>
+#include <math.h>
+
 // ================================================================================ 
 // ================================================================================ 
 
@@ -107,6 +110,49 @@ static bool simd_doubles_equal(const double* a,
         if (diff > tolerance) return false;
     }
     return true;
+}
+// -------------------------------------------------------------------------------- 
+
+static inline error_code_t simd_min_double(const double* data,
+                                           size_t        len,
+                                           double*       out) {
+    double   cur_min = *out;
+    size_t   i       = 0u;
+    uint64_t vl      = svcntd();         /* double elements per SVE register */
+ 
+    if (len >= vl) {
+        svfloat64_t vmin  = svdup_n_f64(INFINITY);
+        svbool_t    ptrue = svptrue_b64();
+ 
+        for (; i + vl <= len; i += vl) {
+            svfloat64_t v = svld1_f64(ptrue, data + i);
+ 
+            svbool_t nan_pred = svcmpuo_f64(ptrue, v, v);
+            if (svptest_any(ptrue, nan_pred)) { *out = NAN; return NO_ERROR; }
+ 
+            vmin = svmin_f64_x(ptrue, vmin, v);
+        }
+ 
+        cur_min = svminv_f64(ptrue, vmin);
+        if (isinf(cur_min) && cur_min < 0.0) { *out = -INFINITY; return NO_ERROR; }
+    }
+ 
+    /* Predicated tail */
+    if (i < len) {
+        svbool_t    pred = svwhilelt_b64((uint64_t)i, (uint64_t)len);
+        svfloat64_t v    = svld1_f64(pred, data + i);
+ 
+        svbool_t nan_pred = svcmpuo_f64(pred, v, v);
+        if (svptest_any(pred, nan_pred)) { *out = NAN; return NO_ERROR; }
+ 
+        svfloat64_t vmin = svdup_n_f64(cur_min);
+        vmin = svmin_f64_x(pred, vmin, v);
+        double tail_min = svminv_f64(pred, vmin);
+        if (tail_min < cur_min) cur_min = tail_min;
+    }
+ 
+    *out = cur_min;
+    return NO_ERROR;
 }
 // ================================================================================ 
 // ================================================================================ 
